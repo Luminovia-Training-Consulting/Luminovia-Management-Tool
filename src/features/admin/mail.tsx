@@ -2,6 +2,7 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 import {
   ErrorState,
   Field,
@@ -10,9 +11,11 @@ import {
   PageHeading,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { installationBrand } from "../../lib/installation-brand";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
+import { academyMailPaths } from "../developer-api/academy-mail-contract";
 import "./mail-i18n";
 
 type Protocol = "smtp" | "imap";
@@ -55,17 +58,27 @@ type MailDraft = {
   imap: TransportDraft;
 };
 
+const academyMailConfiguration = z.fromJSONSchema(
+  academyMailPaths["/rest/v1/rpc/get_mail_configuration"].post.responses["200"]
+    .content["application/json"].schema,
+);
+
 /** Convert the safe server projection into form state without ever hydrating credentials. */
-function draftFrom(configuration: MailConfiguration): MailDraft {
+function draftFrom(
+  configuration: MailConfiguration,
+  academy: boolean,
+): MailDraft {
   return {
     version: configuration.version,
     smtp: {
       enabled: configuration.smtp.enabled,
-      host: configuration.smtp.host ?? "smtp.hostinger.com",
+      host: configuration.smtp.host ?? (academy ? "" : "smtp.hostinger.com"),
       port: String(configuration.smtp.port ?? 465),
       security: configuration.smtp.security ?? "implicit_tls",
       sender_email: configuration.smtp.sender_email ?? "",
-      sender_name: configuration.smtp.sender_name ?? "Luminovia Portal",
+      sender_name:
+        configuration.smtp.sender_name ??
+        (academy ? installationBrand.name : "Luminovia Portal"),
       username: "",
       password: "",
     },
@@ -115,24 +128,41 @@ function TestStatus({
 }
 
 /** Administer the single SMTP transport used by Auth and notifications plus optional IMAP checks. */
-export function AdminMailPage() {
+export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
   const { t } = useTranslation("adminMail");
   const { session } = useAuth();
   const online = useOnline();
   const cache = useQueryClient();
   const actor = session!.user.id;
-  const queryKey = ["admin-mail-configuration", actor] as const;
+  const queryKey = [
+    "admin-mail-configuration",
+    actor,
+    Boolean(academy),
+  ] as const;
+  const readOnly = academy === "grace";
   const configuration = useQuery({
     queryKey,
+    ...(academy && {
+      enabled: online,
+      gcTime: 0,
+      refetchInterval: 30_000,
+      refetchOnMount: "always" as const,
+      retry: false,
+    }),
     queryFn: async () => {
       const result = await db().rpc("get_mail_configuration");
       if (result.error) throw result.error;
-      return result.data as MailConfiguration;
+      return (
+        academy ? academyMailConfiguration.parse(result.data) : result.data
+      ) as MailConfiguration;
     },
   });
   const [edits, setDraft] = useState<MailDraft | null>(null);
   const draft =
-    edits ?? (configuration.data ? draftFrom(configuration.data) : null);
+    edits ??
+    (configuration.data
+      ? draftFrom(configuration.data, Boolean(academy))
+      : null);
   const [notice, setNotice] = useState<
     "saved" | "saveFailed" | "conflict" | "testFailed" | null
   >(null);
@@ -140,7 +170,7 @@ export function AdminMailPage() {
   const save = useMutation({
     mutationFn: async () => {
       requireOnline();
-      if (!draft || !configuration.data)
+      if (readOnly || !draft || !configuration.data)
         throw new Error("configuration_unavailable");
       const { data, error } = await db().rpc("save_mail_configuration", {
         p_expected_version: draft.version,
@@ -148,17 +178,21 @@ export function AdminMailPage() {
           ...draft.smtp,
           port: draft.smtp.port === "" ? null : Number(draft.smtp.port),
         },
-        p_imap: {
-          enabled: draft.imap.enabled,
-          host: draft.imap.host,
-          port: draft.imap.port === "" ? null : Number(draft.imap.port),
-          security: draft.imap.security,
-          username: draft.imap.username,
-          password: draft.imap.password,
-        },
+        p_imap: academy
+          ? { enabled: false }
+          : {
+              enabled: draft.imap.enabled,
+              host: draft.imap.host,
+              port: draft.imap.port === "" ? null : Number(draft.imap.port),
+              security: draft.imap.security,
+              username: draft.imap.username,
+              password: draft.imap.password,
+            },
       });
       if (error) throw error;
-      return data as MailConfiguration;
+      return (
+        academy ? academyMailConfiguration.parse(data) : data
+      ) as MailConfiguration;
     },
     onSuccess: (value) => {
       cache.setQueryData(queryKey, value);
@@ -170,7 +204,7 @@ export function AdminMailPage() {
         error &&
           typeof error === "object" &&
           "code" in error &&
-          error.code === "40001"
+          (error.code === "PT409" || error.code === "40001")
           ? "conflict"
           : "saveFailed",
       ),
@@ -178,7 +212,8 @@ export function AdminMailPage() {
   const test = useMutation({
     mutationFn: async (protocol: Protocol) => {
       requireOnline();
-      await save.mutateAsync();
+      if (readOnly) throw new Error("configuration_unavailable");
+      if (!academy || edits) await save.mutateAsync();
       const response = await db().functions.invoke("mail-admin", {
         body: { protocol },
       });
@@ -195,13 +230,24 @@ export function AdminMailPage() {
         error &&
           typeof error === "object" &&
           "code" in error &&
-          error.code === "40001"
+          (error.code === "PT409" || error.code === "40001")
           ? "conflict"
           : "testFailed",
       ),
   });
 
-  if (configuration.isPending) return <Loading />;
+  if (academy && !online) return <Notice>{t("academyOnline")}</Notice>;
+  if (
+    configuration.isPending ||
+    (academy && configuration.isFetching && !configuration.isFetchedAfterMount)
+  )
+    return <Loading />;
+  if (
+    configuration.error &&
+    "code" in configuration.error &&
+    configuration.error.code === "42501"
+  )
+    return <Notice kind="error">{t("noPermission")}</Notice>;
   if (configuration.isError || !configuration.data || !draft)
     return <ErrorState retry={() => void configuration.refetch()} />;
 
@@ -225,6 +271,7 @@ export function AdminMailPage() {
       saved = configuration.data[protocol];
     return (
       !online ||
+      readOnly ||
       save.isPending ||
       test.isPending ||
       !transport.enabled ||
@@ -234,7 +281,11 @@ export function AdminMailPage() {
   };
   return (
     <section className="mail-settings">
-      <PageHeading title={t("title")} description={t("description")} />
+      <PageHeading
+        title={t("title")}
+        description={t(academy ? "academyDescription" : "description")}
+      />
+      {readOnly && <Notice>{t("academyReadOnly")}</Notice>}
       {notice && (
         <Notice kind={notice === "saved" ? "success" : "error"}>
           {t(notice)}
@@ -248,7 +299,7 @@ export function AdminMailPage() {
           save.mutate();
         }}
       >
-        <fieldset>
+        <fieldset disabled={readOnly}>
           <legend>{t("smtp")}</legend>
           <label className="mail-enabled">
             <input
@@ -368,113 +419,117 @@ export function AdminMailPage() {
             </Button>
           </div>
         </fieldset>
-        <fieldset>
-          <legend>{t("imap")}</legend>
-          <label className="mail-enabled">
-            <input
-              type="checkbox"
-              checked={draft.imap.enabled}
-              onChange={(event) =>
-                change("imap", { enabled: event.currentTarget.checked })
-              }
-            />
-            <span>{t("enabled")}</span>
-          </label>
-          <div className="mail-fields">
-            <Field id="mail-imap-host" label={t("host")}>
+        {!academy && (
+          <fieldset>
+            <legend>{t("imap")}</legend>
+            <label className="mail-enabled">
               <input
-                type="text"
-                autoComplete="url"
-                maxLength={253}
-                value={draft.imap.host}
+                type="checkbox"
+                checked={draft.imap.enabled}
                 onChange={(event) =>
-                  change("imap", { host: event.currentTarget.value })
+                  change("imap", { enabled: event.currentTarget.checked })
                 }
               />
-            </Field>
-            <Field id="mail-imap-port" label={t("port")}>
-              <select
-                value={draft.imap.port}
-                onChange={(event) =>
-                  change("imap", { port: event.currentTarget.value })
+              <span>{t("enabled")}</span>
+            </label>
+            <div className="mail-fields">
+              <Field id="mail-imap-host" label={t("host")}>
+                <input
+                  type="text"
+                  autoComplete="url"
+                  maxLength={253}
+                  value={draft.imap.host}
+                  onChange={(event) =>
+                    change("imap", { host: event.currentTarget.value })
+                  }
+                />
+              </Field>
+              <Field id="mail-imap-port" label={t("port")}>
+                <select
+                  value={draft.imap.port}
+                  onChange={(event) =>
+                    change("imap", { port: event.currentTarget.value })
+                  }
+                >
+                  <option value="993">993</option>
+                  <option value="143">143</option>
+                </select>
+              </Field>
+              <Field id="mail-imap-security" label={t("security")}>
+                <select
+                  value={draft.imap.security}
+                  onChange={(event) =>
+                    change("imap", {
+                      security: event.currentTarget.value as SecurityMode,
+                    })
+                  }
+                >
+                  <option value="implicit_tls">{t("implicitTls")}</option>
+                  <option value="starttls">{t("startTls")}</option>
+                </select>
+              </Field>
+              <Field
+                id="mail-imap-user"
+                label={t("username")}
+                hint={
+                  configuration.data.imap.credentials_configured
+                    ? t("leaveBlank")
+                    : undefined
                 }
               >
-                <option value="993">993</option>
-                <option value="143">143</option>
-              </select>
-            </Field>
-            <Field id="mail-imap-security" label={t("security")}>
-              <select
-                value={draft.imap.security}
-                onChange={(event) =>
-                  change("imap", {
-                    security: event.currentTarget.value as SecurityMode,
-                  })
+                <input
+                  type="text"
+                  autoComplete="off"
+                  maxLength={254}
+                  value={draft.imap.username}
+                  onChange={(event) =>
+                    change("imap", { username: event.currentTarget.value })
+                  }
+                />
+              </Field>
+              <Field
+                id="mail-imap-password"
+                label={t("password")}
+                hint={
+                  configuration.data.imap.credentials_configured
+                    ? t("credentialsConfigured")
+                    : undefined
                 }
               >
-                <option value="implicit_tls">{t("implicitTls")}</option>
-                <option value="starttls">{t("startTls")}</option>
-              </select>
-            </Field>
-            <Field
-              id="mail-imap-user"
-              label={t("username")}
-              hint={
-                configuration.data.imap.credentials_configured
-                  ? t("leaveBlank")
-                  : undefined
-              }
-            >
-              <input
-                type="text"
-                autoComplete="off"
-                maxLength={254}
-                value={draft.imap.username}
-                onChange={(event) =>
-                  change("imap", { username: event.currentTarget.value })
-                }
-              />
-            </Field>
-            <Field
-              id="mail-imap-password"
-              label={t("password")}
-              hint={
-                configuration.data.imap.credentials_configured
-                  ? t("credentialsConfigured")
-                  : undefined
-              }
-            >
-              <input
-                type="password"
-                autoComplete="new-password"
-                maxLength={1024}
-                value={draft.imap.password}
-                onChange={(event) =>
-                  change("imap", { password: event.currentTarget.value })
-                }
-              />
-            </Field>
-          </div>
-          <TestStatus result={configuration.data.imap.last_test} t={t} />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={1024}
+                  value={draft.imap.password}
+                  onChange={(event) =>
+                    change("imap", { password: event.currentTarget.value })
+                  }
+                />
+              </Field>
+            </div>
+            <TestStatus result={configuration.data.imap.last_test} t={t} />
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={testDisabled("imap")}
+                onClick={(event) => runTest(event, "imap")}
+              >
+                {test.isPending ? t("testing") : t("imapTest")}
+              </Button>
+            </div>
+          </fieldset>
+        )}
+        {!readOnly && (
           <div className="form-actions">
             <Button
-              type="button"
-              variant="secondary"
-              disabled={testDisabled("imap")}
-              onClick={(event) => runTest(event, "imap")}
+              type="submit"
+              disabled={!online || save.isPending || test.isPending}
             >
-              {test.isPending ? t("testing") : t("imapTest")}
+              {save.isPending ? t("saving") : t("save")}
             </Button>
           </div>
-        </fieldset>
-        <div className="form-actions">
-          <Button
-            type="submit"
-            disabled={!online || save.isPending || test.isPending}
-          >
-            {save.isPending ? t("saving") : t("save")}
-          </Button>
-        </div>
+        )}
       </form>
     </section>
   );

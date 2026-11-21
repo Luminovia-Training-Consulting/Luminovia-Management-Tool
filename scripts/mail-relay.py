@@ -160,7 +160,7 @@ class PinnedSMTPSSL(smtplib.SMTP_SSL):
 
     def _get_socket(self, host: str, port: int, timeout: float | object) -> socket.socket:
         raw = pinned_socket(host, port, PinnedSMTP._timeout_value(timeout))
-        return self._context.wrap_socket(raw, server_hostname=host)
+        return self.context.wrap_socket(raw, server_hostname=host)
 
 
 class PinnedIMAP(imaplib.IMAP4):

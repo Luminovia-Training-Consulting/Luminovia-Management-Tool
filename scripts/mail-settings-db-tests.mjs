@@ -104,7 +104,7 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
             );
             await assert.rejects(
                 rpc(admin, "save_mail_configuration", [0, smtp, imap]),
-                /40001/,
+                /PT409/,
             );
             await assert.rejects(
                 rpc(admin, "save_mail_configuration", [1, {...smtp, extra: "ignored"}, imap]),

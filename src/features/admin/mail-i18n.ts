@@ -5,6 +5,12 @@ const de = {
   title: "E-Mail-Transport",
   description:
     "SMTP wird für Authentifizierung und Portalbenachrichtigungen gemeinsam verwendet. Zugangsdaten werden nur verschlüsselt gespeichert und nie erneut angezeigt.",
+  academyDescription:
+    "Richte den SMTP-Transport für Einladungen und die Passwort-Wiederherstellung dieser Akademie ein. Die Verbindungsprüfung versendet keine E-Mail. Zugangsdaten werden verschlüsselt gespeichert.",
+  academyReadOnly:
+    "Der E-Mail-Transport ist während der Kulanzfrist schreibgeschützt.",
+  academyOnline:
+    "Verbinde dich mit dem Internet, um den E-Mail-Transport zu öffnen.",
   smtp: "Ausgehender SMTP-Transport",
   imap: "Optionaler IMAP-Eingang",
   enabled: "Aktiviert",
@@ -48,6 +54,11 @@ const en: typeof de = {
   title: "Mail transport",
   description:
     "SMTP is shared by Auth and portal notifications. Credentials are stored encrypted and are never displayed again.",
+  academyDescription:
+    "Configure SMTP for invitations and password recovery in this academy. The connection check sends no email. Credentials are stored encrypted.",
+  academyReadOnly:
+    "Mail transport is read-only during the licence grace period.",
+  academyOnline: "Connect to the internet to open mail transport settings.",
   smtp: "Outbound SMTP transport",
   imap: "Optional inbound IMAP",
   enabled: "Enabled",

@@ -10,7 +10,7 @@ import sys
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 spec = importlib.util.spec_from_file_location(
     "mail_relay", Path(__file__).with_name("mail-relay.py")
@@ -213,6 +213,37 @@ class RelaySmtpTests(unittest.TestCase):
                 },
             ),
         )
+
+    def test_smtp_connection_check_authenticates_without_mail_commands(self):
+        connection = Mock()
+        connection.noop.return_value = (250, b"provider response")
+        settings = {
+            "host": "smtp.example.com",
+            "port": 465,
+            "security": "implicit_tls",
+            "username": "mailbox@example.com",
+            "password": "fictional-upstream-secret",
+        }
+        with patch.object(relay_module, "PinnedSMTPSSL", return_value=connection):
+            self.relay.check_smtp(settings)
+        self.assertEqual(
+            connection.mock_calls,
+            [
+                call.login(settings["username"], settings["password"]),
+                call.noop(),
+                call.close(),
+            ],
+        )
+
+    def test_implicit_tls_wraps_the_pinned_socket_with_the_original_hostname(self):
+        context = Mock()
+        raw = Mock()
+        connector = relay_module.PinnedSMTPSSL(timeout=3, context=context)
+        with patch.object(relay_module, "pinned_socket", return_value=raw) as pinned:
+            secured = connector._get_socket("smtp.example.com", 465, 3)
+        pinned.assert_called_once_with("smtp.example.com", 465, 3)
+        context.wrap_socket.assert_called_once_with(raw, server_hostname="smtp.example.com")
+        self.assertIs(secured, context.wrap_socket.return_value)
 
 
 class RelayControlTests(unittest.TestCase):

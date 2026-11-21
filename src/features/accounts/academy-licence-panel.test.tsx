@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { AcademyLicencePanel } from "./academy-licence-panel";
 import type { AcademyLicenceReceipt } from "./academy-licence-schema";
@@ -40,7 +41,9 @@ function setup(actor = "academy-admin") {
   });
   const view = render(
     <QueryClientProvider client={client}>
-      <AcademyLicencePanel actor={actor} />
+      <MemoryRouter>
+        <AcademyLicencePanel actor={actor} />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   return { client, view };
@@ -62,6 +65,9 @@ it("shows verified dates and current occupied and available quotas to the author
     name: "Academy licence and quotas",
   });
   expect(within(panel).getByText("Active", { exact: true })).toBeVisible();
+  expect(
+    within(panel).getByRole("link", { name: "Mail transport" }),
+  ).toHaveAttribute("href", "/administration/mail");
   expect(
     panel.querySelector('time[datetime="2041-03-01T10:30:00Z"]'),
   ).toHaveTextContent("UTC");
@@ -117,4 +123,7 @@ it("shows no quota values for an unauthorized course manager", async () => {
     screen.queryByText("Academy licence and quotas"),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Licensed seats")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Mail transport" }),
+  ).not.toBeInTheDocument();
 });

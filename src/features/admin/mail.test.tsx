@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
+import { installationBrand } from "../../lib/installation-brand";
 import { AdminMailPage, type MailConfiguration } from "./mail";
 
 const fake = vi.hoisted(() => ({
@@ -153,5 +154,76 @@ it("does not allow a test before credentials are configured or while SMTP is dis
     name: "SMTP-Verbindung testen",
   });
   expect(smtpTest).toBeDisabled();
+  expect(fake.invoke).not.toHaveBeenCalled();
+});
+
+it("uses the dedicated sender identity, offers SMTP only and saves before testing a changed configuration", async () => {
+  fake.configuration.smtp = {
+    ...fake.configuration.smtp,
+    host: null,
+    sender_name: null,
+  };
+  render(
+    <QueryClientProvider client={client}>
+      <AdminMailPage academy="active" />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByLabelText("Server")).toHaveValue("");
+  expect(screen.getByLabelText("Absendername")).toHaveValue(
+    installationBrand.name,
+  );
+  expect(screen.queryByText("Optionaler IMAP-Eingang")).not.toBeInTheDocument();
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText("Aktiviert"));
+  await user.type(screen.getByLabelText("Server"), "smtp.example.com");
+  await user.type(
+    screen.getByLabelText("Absender-E-Mail"),
+    "sender@example.com",
+  );
+  await user.type(screen.getByLabelText("Benutzername"), "sender@example.com");
+  await user.type(screen.getByLabelText("Passwort"), "fictional-only");
+  await user.click(
+    screen.getByRole("button", { name: "SMTP-Verbindung testen" }),
+  );
+  expect(await screen.findByText("Erfolgreich")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "save_mail_configuration",
+    expect.objectContaining({ p_imap: { enabled: false } }),
+  );
+  expect(fake.invoke.mock.calls).toEqual([
+    ["mail-admin", { body: { protocol: "smtp" } }],
+  ]);
+  expect(screen.getByLabelText("Passwort")).toHaveValue("");
+});
+
+it("keeps existing settings visible and read-only during grace", async () => {
+  render(
+    <QueryClientProvider client={client}>
+      <AdminMailPage academy="grace" />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByLabelText("Server")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "SMTP-Verbindung testen" }),
+  ).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Einstellungen speichern" }),
+  ).not.toBeInTheDocument();
+  expect(fake.invoke).not.toHaveBeenCalled();
+});
+
+it("refuses a direct mail settings URL after current server authority is denied", async () => {
+  fake.rpc.mockResolvedValueOnce({ data: null, error: { code: "42501" } });
+  render(
+    <QueryClientProvider client={client}>
+      <AdminMailPage academy="active" />
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByText(
+      "Für die E-Mail-Verwaltung ist Administration erforderlich.",
+    ),
+  ).toBeVisible();
+  expect(screen.queryByLabelText("Server")).not.toBeInTheDocument();
   expect(fake.invoke).not.toHaveBeenCalled();
 });

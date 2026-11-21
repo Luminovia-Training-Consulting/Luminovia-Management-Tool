@@ -40,11 +40,16 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration(?:\/mail)?|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/explorer").then((module) => ({
     default: module.AcademyApiExplorer,
+  })),
+);
+const AdminMailPage = lazy(() =>
+  import("../features/admin/mail").then((module) => ({
+    default: module.AdminMailPage,
   })),
 );
 
@@ -197,6 +202,11 @@ function AcademyInbox() {
   return <NotificationsPage academy={access} />;
 }
 
+function AcademyMailSettings() {
+  const access = useOutletContext<"active" | "grace">();
+  return <AdminMailPage academy={access} />;
+}
+
 function AcademyTimetableRoute() {
   const { session } = useAuth();
   return session && <AcademyTimetable actor={session.user.id} />;
@@ -223,6 +233,10 @@ export function AcademyRoutes() {
           <Route
             path="/administration"
             element={<AcademyAdministrationPage />}
+          />
+          <Route
+            path="/administration/mail"
+            element={<AcademyMailSettings />}
           />
           <Route path="/notifications" element={<AcademyInbox />} />
           <Route path="/timetable" element={<AcademyTimetableRoute />} />

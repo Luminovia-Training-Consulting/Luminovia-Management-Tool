@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Button } from "../../components/ui/button";
 import { useOnline } from "../../lib/online";
 import { academyLicenceQuery } from "./academy-licence-api";
 
 /** The private receipt endpoint decides whether the current account can see the panel. */
 export function AcademyLicencePanel({ actor }: { actor: string }) {
   const online = useOnline();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const query = useQuery({
     ...academyLicenceQuery(actor),
     enabled: Boolean(actor && online),
@@ -91,6 +93,9 @@ export function AcademyLicencePanel({ actor }: { actor: string }) {
         </dt>
         <dd>{integer.format(receipt.api_requests_per_minute)}</dd>
       </dl>
+      <Button asChild variant="secondary">
+        <Link to="/administration/mail">{t("mailSettings")}</Link>
+      </Button>
     </section>
   );
 }
