@@ -1090,6 +1090,19 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
     }
 });
 
+test("candidate API fixture adaptation recognizes historic formatting and rejects ambiguous guards", () => {
+    const source = readFileSync(resolve("scripts/testing/api.mjs"), "utf8");
+    const options = {project, apiPort: 44777};
+    const compact = source.replace(/^ {2}/gm, " ").replace(/^ +/gm, (spaces) => " ".repeat(Math.ceil(spaces.length / 2)));
+    for (const fixture of [source, compact]) {
+        const adapted = adaptCandidateApiFixture(fixture, options);
+        assert.match(adapted, /new URL\(url\)\.port,\s*"44777"/);
+        assert.match(adapted, /"https:\/\/127\.0\.0\.1:44777"/);
+    }
+    assert.throws(() => adaptCandidateApiFixture(source + "\n" + source, options), /Unknown API fixture port guard/);
+    assert.throws(() => adaptCandidateApiFixture(source.replace("new URL(url).port", "other.port"), options), /Unknown API fixture port guard/);
+});
+
 test("default CLI remains read-only even without a Docker executable", () => {
     const path = resolve(
         "deploy/hostinger/maintenance/selfhost-candidate-check.mjs",
