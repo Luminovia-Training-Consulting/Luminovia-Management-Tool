@@ -4,9 +4,12 @@
  * confirmed as the first administrator once the dedicated instance is prepared.
  */
 import { spawnSync } from "node:child_process";
+import { lstatSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
+import { isAbsolute, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
+import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 
 const sqlText = (value) => "'" + String(value).replaceAll("'", "''") + "'";
 const authIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -99,23 +102,89 @@ export async function configureAcademyCourseAccess(
   return current;
 }
 
-/** Use an explicit libpq service or host/database so psql cannot default to an unrelated DB. */
-function operatorSql(sql) {
-  if (!process.env.PGSERVICE && !(process.env.PGHOST && process.env.PGDATABASE))
-    throw new Error("academy_database_connection_required");
-  const result = spawnSync(
-    "psql",
-    ["-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-f", "-"],
-    {
-      input: sql,
-      encoding: "utf8",
-      timeout: 30000,
-      maxBuffer: 65536,
-    },
+/** Pin the private Compose target to this generated runtime and staged release. */
+export async function academyDatabaseComposeArguments(root, expected) {
+  if (!isAbsolute(root ?? "") || realpathSync(root) !== root)
+    throw new Error("academy_database_runtime_path");
+  const info = lstatSync(root);
+  if (!info.isDirectory() || info.uid !== process.getuid() || info.mode & 0o077)
+    throw new Error("academy_database_runtime_path");
+  const browser = join(root, "browser");
+  if (realpathSync(browser) !== browser)
+    throw new Error("academy_database_runtime_path");
+  const [identity, receipt] = await Promise.all(
+    [join(root, "installation.json"), join(browser, "release.json")].map(
+      async (path) =>
+        JSON.parse((await readAcademyOperatorInput(path)).toString("utf8")),
+    ),
   );
-  if (result.status !== 0)
-    throw new Error("academy_installation_database_rejected");
-  return result.stdout;
+  const project = "academy-" + expected.installation_id.replaceAll("-", "");
+  if (
+    identity.version !== 1 ||
+    identity.installation_id !== expected.installation_id ||
+    identity.edition !== expected.edition ||
+    identity.compose_project !== project ||
+    identity.browser_directory !== browser ||
+    receipt.version !== 1 ||
+    receipt.state !== "browser-staged" ||
+    receipt.release?.installation_id !== expected.installation_id ||
+    receipt.release?.edition !== expected.edition ||
+    receipt.release?.source_revision !== expected.release_commit
+  )
+    throw new Error("academy_database_runtime_release_mismatch");
+
+  return [
+    "compose",
+    "--env-file",
+    join(root, "runtime.env"),
+    "--project-name",
+    project,
+    "-f",
+    fileURLToPath(
+      new URL("../deploy/hostinger/selfhost/compose.yml", import.meta.url),
+    ),
+    "-f",
+    fileURLToPath(
+      new URL("../deploy/academy/compose.override.yml", import.meta.url),
+    ),
+    "exec",
+    "-T",
+    "db",
+    "psql",
+    "-U",
+    "postgres",
+    "-d",
+    "postgres",
+  ];
+}
+
+/** Always use an explicit private libpq target or the staged Compose project. */
+async function operatorSql(expected) {
+  const root = process.env.PORTAL_ACADEMY_RUNTIME_ROOT;
+  const privateLibpq =
+    process.env.PGSERVICE || (process.env.PGHOST && process.env.PGDATABASE);
+  if (Boolean(root) === Boolean(privateLibpq))
+    throw new Error("academy_database_connection_required");
+  const command = root ? "docker" : "psql";
+  const target = root
+    ? await academyDatabaseComposeArguments(root, expected)
+    : [];
+  return (sql) => {
+    const result = spawnSync(
+      command,
+      [...target, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+      {
+        input: sql,
+        encoding: "utf8",
+        timeout: 30000,
+        maxBuffer: 65536,
+        env: root ? { PATH: process.env.PATH } : process.env,
+      },
+    );
+    if (result.status !== 0)
+      throw new Error("academy_installation_database_rejected");
+    return result.stdout;
+  };
 }
 
 if (
@@ -153,14 +222,15 @@ if (
         release_commit: release,
       },
     };
+    const executeSql = await operatorSql(input.expected);
     const result = courseAccess
       ? await configureAcademyCourseAccess(
           { ...input, enabled: value === "on" },
-          operatorSql,
+          executeSql,
         )
       : await prepareAcademyInstallation(
           { ...input, firstAdministrator: value },
-          operatorSql,
+          executeSql,
         );
     console.log(JSON.stringify(result));
   } catch {

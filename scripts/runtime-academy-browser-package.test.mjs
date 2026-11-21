@@ -33,6 +33,7 @@ import {
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { installAcademyBrowser } from "./academy-install-browser.mjs";
+import { academyDatabaseComposeArguments } from "./academy-installation.mjs";
 import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
 import { planAcademyStaging } from "./academy-staging-plan.mjs";
 
@@ -1084,4 +1085,38 @@ test("with concurrent first installers one exact release wins atomically", async
   assert.ok(
     !readdirSync(root).some((name) => name.startsWith(".browser-stage-")),
   );
+});
+
+test("points database bootstrap only at the matching private staged Compose project", async (t) => {
+  const { root, inputs, expected } = await installFixture(t);
+  await assert.rejects(academyDatabaseComposeArguments(root, expected), {
+    code: "ENOENT",
+  });
+  await installAcademyBrowser(inputs);
+  const args = await academyDatabaseComposeArguments(root, expected);
+  assert.deepEqual(args.slice(0, 5), [
+    "compose",
+    "--env-file",
+    join(root, "runtime.env"),
+    "--project-name",
+    inputs.config.compose_project,
+  ]);
+  assert.deepEqual(args.slice(-8), [
+    "exec",
+    "-T",
+    "db",
+    "psql",
+    "-U",
+    "postgres",
+    "-d",
+    "postgres",
+  ]);
+  for (const mismatch of [
+    { edition: "customer-self-hosted" },
+    { release_commit: "b".repeat(40) },
+  ])
+    await assert.rejects(
+      academyDatabaseComposeArguments(root, { ...expected, ...mismatch }),
+      /academy_database_runtime_release_mismatch/,
+    );
 });

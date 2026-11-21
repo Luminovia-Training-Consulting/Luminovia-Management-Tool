@@ -3672,17 +3672,17 @@ Customer operators obtain the two trusted Ed25519 public keys and the expected i
 
 The [dedicated academy installation runbook](deploy/academy/README.md) pairs a fresh private backend with a customer-specific signed browser build. It covers the target JSON, independent credentials and volumes, first-administrator setup, loopback TLS checks and the explicit ingress profile.
 
-For the database, the operator uses an explicit private libpq target. Run the following after applying the pinned migrations to an empty database. First provision and pin its licence, then through private GoTrue administration create the confirmed administrator and pass that Auth UUID to the second command.
+For the database, the operator uses the staged local Compose installation or an explicit private libpq target. Run the following after applying the pinned migrations to an empty database. First provision and pin its licence, then through private GoTrue administration create the confirmed administrator and pass that Auth UUID to the second command.
 
 ```sh
-PGSERVICE=academy-private node scripts/academy-installation.mjs \
+PORTAL_ACADEMY_RUNTIME_ROOT="$runtime_root" node scripts/academy-installation.mjs \
   "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit"
 
-PGSERVICE=academy-private node scripts/academy-installation.mjs \
+PORTAL_ACADEMY_RUNTIME_ROOT="$runtime_root" node scripts/academy-installation.mjs \
   "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit" \
   --first-admin "$confirmed_auth_id"
 
-PGSERVICE=academy-private node scripts/academy-installation.mjs \
+PORTAL_ACADEMY_RUNTIME_ROOT="$runtime_root" node scripts/academy-installation.mjs \
   "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit" \
   --course-access on
 ```
