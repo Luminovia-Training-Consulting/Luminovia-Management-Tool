@@ -11,6 +11,7 @@ import {
   CourseChatAttachment,
   type CourseChatFile,
 } from "./course-chat-attachment";
+import { useCourseChatLive } from "./course-chat-live";
 import "./course-chat-i18n";
 
 type Room = { id: string; title: string | null; can_post: boolean };
@@ -23,6 +24,7 @@ type Message = {
   deleted_at: string | null;
   attachment: CourseChatFile | null;
 };
+const messagesPerPage = 50;
 
 /** Resolve room access independently from message history and drop the thread on denial. */
 export function CourseChat({ run, actor }: { run: string; actor: string }) {
@@ -100,9 +102,11 @@ function CourseChatThread({
 }) {
   const { t, i18n } = useTranslation("courseChat");
   const client = useQueryClient();
+  const heading = useRef<HTMLHeadingElement>(null);
   const messageField = useId();
   const attachmentField = useId();
   const [body, setBody] = useState("");
+  const [before, setBefore] = useState<{ at: string; id: string } | null>(null);
   const [attachment, setAttachment] = useState<{
     id: string;
     version: string;
@@ -113,18 +117,24 @@ function CourseChatThread({
   const uploadRetry = useRef<{ file: File; key: string } | null>(null);
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const historyKey = ["course-chat-messages", actor, run, room.id];
+  useCourseChatLive(actor, run, room.id);
   const messages = useQuery({
-    queryKey: historyKey,
+    queryKey: [...historyKey, before],
     queryFn: async () => {
       const { data, error } = await db().rpc("course_chat_messages", {
         p_room_id: room.id,
-        p_before_at: null,
-        p_before_id: null,
-        p_limit: 50,
+        p_before_at: before?.at ?? null,
+        p_before_id: before?.id ?? null,
+        p_limit: messagesPerPage + 1,
       });
       if (error) throw error;
       if (!Array.isArray(data)) throw new Error("invalid_course_chat_messages");
-      return data as Message[];
+      // SQL returns the window oldest-first. One look-ahead row means an
+      // older page exists, without loading unbounded history into the browser.
+      return {
+        items: data.slice(-messagesPerPage) as Message[],
+        more: data.length > messagesPerPage,
+      };
     },
     staleTime: 0,
     // The open course is revalidated frequently. Discard its private cache on exit.
@@ -192,6 +202,7 @@ function CourseChatThread({
     },
     onSuccess: async () => {
       retry.current = null;
+      setBefore(null);
       setBody("");
       setAttachment(null);
       setInvalidDrop(false);
@@ -209,17 +220,50 @@ function CourseChatThread({
   }
   return (
     <>
-      <h3>{room.title || t("title")}</h3>
-      <p className="muted">{t("latest")}</p>
+      <h3 ref={heading} tabIndex={-1}>
+        {room.title || t("title")}
+      </h3>
+      <p aria-live="polite" className="muted">
+        {t(before ? "earlier" : "latest")}
+      </p>
+      {(messages.data?.more || before) && (
+        <div className="form-actions">
+          {messages.isSuccess && messages.data.more && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const oldest = messages.data.items[0];
+                setBefore({ at: oldest.created_at, id: oldest.id });
+                heading.current?.focus();
+              }}
+            >
+              {t("olderMessages")}
+            </Button>
+          )}
+          {before && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setBefore(null);
+                heading.current?.focus();
+              }}
+            >
+              {t("latestMessages")}
+            </Button>
+          )}
+        </div>
+      )}
       {messages.isPending ? (
         <Loading />
       ) : messages.isError ? (
         <ErrorState retry={() => void messages.refetch()} />
-      ) : !messages.data.length ? (
+      ) : !messages.data.items.length ? (
         <p>{t("emptyMessages")}</p>
       ) : (
         <ol className="course-chat-messages">
-          {messages.data.map((message) => (
+          {messages.data.items.map((message) => (
             <li key={message.id}>
               <strong>{message.sender_name}</strong>
               <time dateTime={message.created_at}>

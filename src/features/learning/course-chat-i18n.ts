@@ -7,7 +7,10 @@ const pairs: Record<string, [string, string]> = {
     "No chat is available for this course yet.",
   ],
   emptyMessages: ["Noch keine Nachrichten.", "No messages yet."],
-  latest: ["Die neuesten 50 Nachrichten", "Latest 50 messages"],
+  latest: ["Neueste Nachrichten", "Latest messages"],
+  earlier: ["Frühere Nachrichten", "Earlier messages"],
+  olderMessages: ["Ältere Nachrichten laden", "Load older messages"],
+  latestMessages: ["Zu den neuesten Nachrichten", "Back to latest messages"],
   readOnly: [
     "Du kannst die Nachrichten dieses Kurses lesen.",
     "You can read messages for this course.",

@@ -13,8 +13,18 @@ const fake = vi.hoisted(() => ({
   uploadDocument: vi.fn(),
   downloadPortalDocument: vi.fn(),
   attachment: false,
+  channel: vi.fn(),
+  on: vi.fn(),
+  subscribe: vi.fn(),
+  removeChannel: vi.fn(),
 }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: fake.rpc,
+    channel: fake.channel,
+    removeChannel: fake.removeChannel,
+  }),
+}));
 vi.mock("../files/api", () => ({
   acceptedFiles: ".txt",
   uploadDocument: fake.uploadDocument,
@@ -33,6 +43,11 @@ beforeEach(async () => {
   fake.revoked = false;
   fake.canPost = true;
   fake.attachment = false;
+  const channel = { on: fake.on, subscribe: fake.subscribe };
+  fake.channel.mockReset().mockReturnValue(channel);
+  fake.on.mockReset().mockReturnValue(channel);
+  fake.subscribe.mockReset().mockReturnValue(channel);
+  fake.removeChannel.mockReset().mockResolvedValue("ok");
   fake.uploadDocument.mockReset();
   fake.downloadPortalDocument.mockReset();
   fake.rpc.mockReset().mockImplementation((name: string) => {
@@ -76,6 +91,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   client.clear();
 });
 
@@ -119,6 +135,7 @@ it("hides retained messages when a fresh course-room check revokes access", asyn
   expect(await screen.findByText(/course chat is unavailable/i)).toBeTruthy();
   expect(screen.queryByText("Fictional course question")).toBeNull();
   expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  expect(fake.removeChannel).toHaveBeenCalledOnce();
 });
 
 it("shows a scoped read-only room without offering to send", async () => {
@@ -194,4 +211,96 @@ it("downloads read-only history by message and exact version without querying do
     "exercise.txt",
     expect.any(AbortSignal),
   );
+});
+
+it("uses scoped metadata only to refresh real history and discards a detached channel", async () => {
+  show();
+  await screen.findByText("Fictional course question");
+  expect(fake.on.mock.calls.map(([type, filter]) => [type, filter])).toEqual([
+    [
+      "postgres_changes",
+      {
+        schema: "public",
+        table: "course_chat_activity",
+        filter: "room_id=eq.room-a",
+        event: "INSERT",
+      },
+    ],
+    [
+      "postgres_changes",
+      {
+        schema: "public",
+        table: "course_chat_activity",
+        filter: "room_id=eq.room-a",
+        event: "UPDATE",
+      },
+    ],
+  ]);
+  const called = (name: string) =>
+    fake.rpc.mock.calls.filter(([rpc]) => rpc === name).length;
+  const roomReads = called("course_chat_rooms");
+  const historyReads = called("course_chat_messages");
+  for (const [, , listener] of fake.on.mock.calls)
+    listener({ new: { body: "Untrusted event payload" } });
+  await waitFor(() => {
+    expect(called("course_chat_rooms")).toBe(roomReads + 1);
+    expect(called("course_chat_messages")).toBe(historyReads + 1);
+  });
+  expect(screen.queryByText("Untrusted event payload")).toBeNull();
+
+  const refresh = fake.on.mock.calls[0][2];
+  vi.useFakeTimers();
+  refresh();
+  cleanup();
+  const callsAfterUnmount = fake.rpc.mock.calls.length;
+  refresh();
+  expect(fake.removeChannel).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(175);
+  expect(fake.rpc.mock.calls).toHaveLength(callsAfterUnmount);
+});
+
+it("uses a bounded date and id cursor to show older history and can return to the latest page", async () => {
+  const user = userEvent.setup();
+  const original = fake.rpc.getMockImplementation();
+  const sameTimestamp = "2026-11-20T12:00:00Z";
+  fake.rpc.mockImplementation((name, args) => {
+    if (name !== "course_chat_messages") return original?.(name, args);
+    const page = args.p_before_id
+      ? [1]
+      : Array.from({ length: 51 }, (_, i) => i + 1);
+    return Promise.resolve({
+      error: null,
+      data: page.map((n) => ({
+        id: `message-${n}`,
+        sender_name: "Peer",
+        body: `Fictional message ${n}`,
+        created_at: sameTimestamp,
+        deleted_at: null,
+        attachment: null,
+      })),
+    });
+  });
+
+  show();
+  expect(await screen.findByText("Fictional message 2")).toBeVisible();
+  expect(screen.queryByText("Fictional message 1")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Load older messages" }));
+  expect(await screen.findByText("Fictional message 1")).toBeVisible();
+  expect(screen.queryByText("Fictional message 2")).toBeNull();
+  expect(fake.rpc).toHaveBeenCalledWith("course_chat_messages", {
+    p_room_id: "room-a",
+    p_before_at: sameTimestamp,
+    p_before_id: "message-2",
+    p_limit: 51,
+  });
+  expect(
+    screen.getByRole("heading", { name: "Fictional course room" }),
+  ).toHaveFocus();
+  expect(
+    screen.queryByRole("button", { name: "Load older messages" }),
+  ).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "Back to latest messages" }),
+  );
+  expect(await screen.findByText("Fictional message 2")).toBeVisible();
 });

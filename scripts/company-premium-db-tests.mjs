@@ -1,6 +1,7 @@
 /** Isolated SQL/RLS/API checks for the admin-only company Premium flag and retained course data. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {readFile} from "node:fs/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
@@ -300,6 +301,50 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
+        "Realtime activity carries only an opaque room revision and follows current chat scope",
+        async () => {
+            // Authenticate each query with the same actor claim used by Realtime's RLS check.
+            const events = async (who) => JSON.parse(await actor(
+                who, "select coalesce(jsonb_agg(to_jsonb(activity) order by room_id),'[]') from public.course_chat_activity activity",
+            ));
+            const eventFor = (entries, room) => entries.find((entry) => entry.room_id === room);
+            const initial = eventFor(await events(participant), roomA);
+            assert.deepEqual(Object.keys(initial).sort(), ["id", "revision", "room_id"]);
+            assert.deepEqual(await events(client), [initial]);
+            assert.deepEqual(await events(lecturer), [initial]);
+            assert.deepEqual(await events(manager), []);
+            assert.equal(await actor(client, `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
+            await assert.rejects(
+                sql("set role anon; select count(*) from public.course_chat_activity"), /42501/,
+            );
+            await assert.rejects(actor(participant,
+                "set local request.path='/course_chat_activity';select private.require_portal_access()"), /42501/);
+            await assert.rejects(actor(lecturer,
+                `update public.course_chat_activity set revision=gen_random_uuid() where room_id=${q(roomA)}`), /42501/);
+
+            // A rolled-back change cannot update a committed marker. A real edit
+            // changes the revision while retaining the opaque replica identity.
+            const updated = async () => eventFor(await events(participant), roomA);
+            await sql(`begin; update public.messages set body='Rolled back' where id=${q(courseChatMessageId)}; rollback;`);
+            assert.deepEqual(await updated(), initial);
+            await sql(`update public.messages set body=body where id=${q(courseChatMessageId)};`);
+            assert.equal((await updated()).id, initial.id);
+            assert.notEqual((await updated()).revision, initial.revision);
+            assert.equal(await sql("select relreplident from pg_class where oid='public.course_chat_activity'::regclass"), "d");
+
+            await sql(`update public.chat_members set removed_at=now() where room_id=${q(roomA)} and user_id=${q(participant)};`);
+            assert.deepEqual((await events(participant)).map((entry) => entry.room_id), [roomB]);
+            assert.ok(eventFor(await events(client), roomA));
+            await sql(`update public.chat_members set removed_at=null where room_id=${q(roomA)} and user_id=${q(participant)};`);
+
+            await sql(`update public.client_organisation_memberships set removed_at=now() where organisation_id=${q(companyA)} and user_id=${q(client)};`);
+            assert.deepEqual(await events(client), []);
+            await sql(`update public.client_organisation_memberships set removed_at=null where organisation_id=${q(companyA)} and user_id=${q(client)};`);
+            assert.ok(eventFor(await events(client), roomA));
+        },
+    );
+
+    await check(
         "Course chat drafts are owner scoped; only a clean exact version can be posted and read",
         async () => {
             const ownedDraft = await rpc(lecturer, "reserve_message_document", [
@@ -363,6 +408,11 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             );
             assert.equal(statusA.enabled, true);
             const off = await toggle(admin, companyA, false, statusA.version);
+            assert.deepEqual(
+                JSON.parse(await actor(participant, "select jsonb_agg(room_id) from public.course_chat_activity")),
+                [roomB],
+            );
+            assert.equal(await actor(client, "select count(*) from public.course_chat_activity"), "0");
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(client, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(client, "course_chat_messages", [roomA, null, null, 50]), /42501/);
@@ -517,3 +567,18 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
 });
 
 console.log(`PASS: ${checks} isolated company Premium database groups.`);
+
+
+/** Plain SQL fixtures omit Realtime by default. Exercise the exact migration's
+ * native-publication path separately without claiming WebSocket delivery. */
+await withTestDatabase("course_chat_publication", async ({sql}) => {
+    await sql("create publication supabase_realtime for table public.messages, public.chat_members");
+    await sql(await readFile(
+        new URL("../supabase/migrations/20261122007100_course_chat_activity.sql", import.meta.url),
+        "utf8",
+    ));
+    assert.equal(await sql(`select string_agg(tablename,',' order by tablename)
+        from pg_publication_tables where pubname='supabase_realtime' and schemaname='public'`),
+        "chat_members,course_chat_activity,messages");
+    console.log("PASS exact migration registers the metadata marker in the existing Realtime publication");
+}, {migrationsThrough: "20261122007099"});
