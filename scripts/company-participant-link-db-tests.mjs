@@ -131,6 +131,84 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     ),
     "f",
   );
+  const [template, run, foreignRun] = Array.from({ length: 3 }, randomUUID);
+  await sql(`insert into public.course_templates(id,title)
+    values(${q(template)},'Fictional scoped enrolment');
+    insert into public.course_runs(id,organisation_id,template_id)
+    values(${q(run)},${q(org)},${q(template)}),(${q(foreignRun)},${q(foreign)},${q(template)});
+    insert into public.course_sessions(course_run_id,starts_at,ends_at)
+    values(${q(run)},now()+interval '12 days',now()+interval '13 days');`);
+  const candidates = (who, courseId, search = "") =>
+    call(
+      who,
+      `public.course_enrolment_candidates(${q(courseId)},${q(search)})`,
+    );
+  const found = await candidates(company, run, learnerId.toLowerCase());
+  assertLmsResponse("course_enrolment_candidates", found);
+  assert.deepEqual(
+    found.map(({ user_id }) => user_id),
+    [learner],
+  );
+  assert.deepEqual(await candidates(company, run, "%"), []);
+  await assert.rejects(candidates(outsider, run), /42501/);
+  await assert.rejects(candidates(learner, run), /42501/);
+  await assert.rejects(candidates(company, foreignRun), /42501/);
+  await actor(
+    company,
+    `select public.manage_course_enrolment(${q(run)},${q(learner)},'enrolled')`,
+  );
+  assert.deepEqual(await candidates(company, run), []);
+  const eligible = await call(
+    learner,
+    `public.course_withdrawal_window(${q(run)})`,
+  );
+  assertLmsResponse("course_withdrawal_window", eligible);
+  assert.equal(eligible.can_withdraw, true);
+  assert.equal(
+    await actor(
+      learner,
+      `set local request.path='/rpc/course_withdrawal_window';select public.require_portal_access() is null`,
+    ),
+    "f",
+  );
+  await assert.rejects(
+    call(company, `public.course_withdrawal_window(${q(run)})`),
+    /42501/,
+  );
+  await assert.rejects(
+    call(stranger, `public.course_withdrawal_window(${q(run)})`),
+    /42501/,
+  );
+  await sql(`update public.course_sessions set starts_at=now()+interval '6 days',ends_at=now()+interval '7 days'
+    where course_run_id=${q(run)}`);
+  assert.equal(
+    (await call(learner, `public.course_withdrawal_window(${q(run)})`))
+      .can_withdraw,
+    false,
+  );
+  await assert.rejects(
+    actor(learner, `select public.cancel_own_course_enrolment(${q(run)})`),
+    /22023/,
+  );
+  await sql(`update public.course_sessions set starts_at=now()+interval '12 days',ends_at=now()+interval '13 days'
+    where course_run_id=${q(run)}`);
+  await actor(learner, `select public.cancel_own_course_enrolment(${q(run)})`);
+  assert.deepEqual(
+    (await candidates(company, run)).map(({ user_id }) => user_id),
+    [learner],
+  );
+  assert.equal(
+    (await call(company, `public.course_enrolments(${q(run)})`))[0].status,
+    "removed",
+  );
+  await assert.rejects(
+    call(learner, `public.course_withdrawal_window(${q(run)})`),
+    /42501/,
+  );
+  console.log(
+    "PASS scoped course candidates, own withdrawal window and committed future cancellation",
+  );
+
   const removed = await call(
     company,
     `public.remove_company_participant(${q(org)},${q(learner)},2,${q(randomUUID())})`,

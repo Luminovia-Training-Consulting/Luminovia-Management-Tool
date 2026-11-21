@@ -504,6 +504,44 @@ const nativePaths = {
     { p_course_run_id: uuid },
     courseEnrolmentsResult,
   ),
+  "/rest/v1/rpc/course_enrolment_candidates": {
+    post: {
+      ...rpc(
+        "courseEnrolmentCandidates",
+        "Premium LMS",
+        "Find participants eligible for course enrolment",
+        "Requires current Premium and course-management authority or a current contact of the exact company. Searches display names or Luminovia User IDs literally within active accepted company associations. Excludes current enrolled and completed entries. Returns at most 100 matches.",
+        {},
+        {
+          type: "array",
+          items: object({
+            user_id: uuid,
+            display_name: text,
+            luminovia_user_id: text,
+          }),
+          maxItems: 100,
+        },
+      ).post,
+      requestBody: {
+        required: true,
+        content: json({
+          ...object({
+            p_course_run_id: uuid,
+            p_search: { ...text, maxLength: 120, default: "" },
+          }),
+          required: ["p_course_run_id"],
+        }),
+      },
+    },
+  },
+  "/rest/v1/rpc/course_withdrawal_window": rpc(
+    "courseWithdrawalWindow",
+    "Premium LMS",
+    "Check the deadline for my course withdrawal",
+    "Only a current participant of the course can request this projection. The server checks the current enrolment and deadline using its clock. A subsequent withdrawal still rechecks authority and the deadline in PostgreSQL.",
+    { p_course_run_id: uuid },
+    object({ deadline_at: nullableDateTime, can_withdraw: boolean }),
+  ),
   "/rest/v1/rpc/manage_course_enrolment": voidRpc(
     "manageCourseEnrolment",
     "Premium LMS",
