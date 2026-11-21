@@ -66,6 +66,7 @@ function memberWrite(
   summary: string,
   description: string,
   request: z.ZodType,
+  conflict = "The expected state changed. Read the current directory.",
 ) {
   return {
     post: {
@@ -84,7 +85,7 @@ function memberWrite(
         "400": error("Invalid account ID, state or version"),
         "401": error("Authentication required"),
         "403": error("Current authority over the target account required"),
-        "409": error("The expected state changed. Read the current directory."),
+        "409": error(conflict),
       },
     },
   };
@@ -119,6 +120,7 @@ export const academyAdministrationPaths = {
       p_active: z.boolean(),
       p_expected_active: z.boolean(),
     }),
+    "The expected state changed or all licensed account seats are in use. A seat-limit conflict has details academy_seat_limit.",
   ),
   "/rest/v1/rpc/academy_set_management": memberWrite(
     "changeAcademyManagementDelegation",
@@ -167,7 +169,7 @@ export const academyAdministrationPaths = {
       operationId: "provisionAcademyCourseAccount",
       tags: ["Local academy administration"],
       summary: "Create or invite a local academy account",
-      description: `${write} Choose password creation or a configured native Auth email invitation. A learner requires one active local organisation. Only a current local administrator can provision a course manager. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
+      description: `${write} Choose password creation or a configured native Auth email invitation. A learner requires one active local organisation. Only a current local administrator can provision a course manager. A new request requires an available licensed account seat. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
       security: credentials,
       "x-portal-licence": "active",
       requestBody: { required: true, content: json(accountRequest) },
@@ -199,8 +201,10 @@ export const academyAdministrationPaths = {
           }),
         ),
         "409": error(
-          "Existing account, changed request or unavailable prior request",
-          z.strictObject({ error: z.literal("creation_conflict") }),
+          "Existing account, changed or unavailable request, or all licensed account seats are in use",
+          z.strictObject({
+            error: z.enum(["creation_conflict", "academy_seat_limit"]),
+          }),
         ),
         "413": error(
           "The request body exceeds the allowed size",

@@ -29,7 +29,7 @@ export interface Invitation<Role = AccountRole> {
 // Bounded RPC result; do not expose internal database errors to HTTP clients.
 interface RpcResult {
     data: unknown;
-    error?: { code?: string } | null;
+    error?: { code?: string; details?: string | null } | null;
 }
 
 // Separate caller-scoped database operations from server-only delivery/completion privileges.
@@ -291,7 +291,11 @@ export function createAccountHandler(deps: AccountDependencies) {
                 });
                 const reservationError = reservation.error?.code;
                 if (reservationError === "42501") return response(403, {error: "permission_required"});
-                if (reservationError === "PT409") return response(409, {error: "creation_conflict"});
+                if (reservationError === "PT409") {
+                    const error = reservation.error?.details === "academy_seat_limit"
+                        ? "academy_seat_limit" : "creation_conflict";
+                    return response(409, {error});
+                }
                 if (reservationError === "PT429") return response(429, {error: "creation_rate_limited"});
                 if (reservationError === "22023") return response(400, {error: "invalid_request"});
                 if (reservation.error || !object(reservation.data) || !uuid(reservation.data.creation_id))

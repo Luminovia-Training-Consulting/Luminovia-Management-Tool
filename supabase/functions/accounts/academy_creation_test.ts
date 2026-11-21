@@ -137,3 +137,25 @@ Deno.test("revoked creator receives 403 after a bound compensating Auth deletion
   assert.deepEqual(f.calls, ["reserve", "invite", "cleanup"]);
   assert.deepEqual(action, ["complete", "cleanup", "discard"]);
 });
+
+Deno.test("a fully occupied academy rejects creation before any native Auth or cleanup call", async () => {
+  for (
+    const [details, expected] of [
+      ["academy_seat_limit", "academy_seat_limit"],
+      [null, "creation_conflict"],
+    ]
+  ) {
+    const reservations: string[] = [];
+    const f = fixture({
+      rpc: (_token, name) => {
+        reservations.push(name);
+        return Promise.resolve({ data: null, error: { code: "PT409", details } });
+      },
+    });
+    const response = await f.request();
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: expected });
+    assert.deepEqual(reservations, ["reserve_academy_account"]);
+    assert.deepEqual(f.calls, []);
+  }
+});

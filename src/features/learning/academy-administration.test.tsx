@@ -209,3 +209,36 @@ it("lets an admin delegate to a current instructor and suspend the same retained
     screen.getByText(/Fictional instructor.*Course manager.*Inactive/),
   ).toBeVisible();
 });
+
+it("reports seat exhaustion for account creation and server-confirmed reactivation", async () => {
+  const inactive = { ...member, active: false };
+  read.mockResolvedValue({
+    can_write: true,
+    can_create_management: false,
+    organisations: [org],
+    accounts: [inactive],
+  });
+  createAccount.mockRejectedValue(new Error("academy_seat_limit"));
+  setActive.mockRejectedValue({
+    code: "PT409",
+    details: "academy_seat_limit",
+  });
+  const user = setup();
+  await user.type(await screen.findByLabelText("Display name"), "Instructor");
+  await user.type(
+    screen.getByLabelText("Email address"),
+    "teacher@example.invalid",
+  );
+  await user.click(screen.getByRole("button", { name: "Send invitation" }));
+  expect(
+    await screen.findByText("All licensed account seats are in use."),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: /Reactivate account/ }));
+  await waitFor(() => {
+    expect(
+      screen.getAllByText("All licensed account seats are in use."),
+    ).toHaveLength(2);
+  });
+  expect(setActive).toHaveBeenCalledWith(inactive, true);
+  expect(screen.getByText(/Fictional learner.*Inactive/)).toBeVisible();
+});

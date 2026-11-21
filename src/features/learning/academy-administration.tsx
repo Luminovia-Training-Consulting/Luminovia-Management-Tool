@@ -33,6 +33,19 @@ function failure(error: unknown, word: Localize) {
       : error && typeof error === "object" && "code" in error
         ? error.code
         : null;
+  if (
+    code === "academy_seat_limit" ||
+    (error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "PT409" &&
+      "details" in error &&
+      error.details === "academy_seat_limit")
+  )
+    return word(
+      "Alle lizenzierten Kontoplätze sind belegt.",
+      "All licensed account seats are in use.",
+    );
   if (code === "invitations_disabled")
     return word(
       "Der Einladungsversand ist noch nicht eingerichtet.",
