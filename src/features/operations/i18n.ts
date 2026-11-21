@@ -5,6 +5,10 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+    inspectCourseChat: ["Kurschat prüfen", "Inspect course chat"],
+    inspectCourseChatReason: ["Grund für den protokollierten Zugriff", "Reason for the audited access"],
+    inspectCourseChatOlder: ["Ältere Nachrichten anzeigen", "Show older messages"],
+    inspectCourseChatEmpty: ["Keine Textnachrichten vorhanden.", "No text messages found."],
     integrationTitle: ["API-Integrationen", "API integrations"],
     integrationScope: [
         "Schlüssel geben einem Server lesenden Zugriff auf veröffentlichte Kursnamen und Zeitzonen dieses Unternehmens. Pro Schlüssel sind 60 Abrufe pro Minute möglich.",

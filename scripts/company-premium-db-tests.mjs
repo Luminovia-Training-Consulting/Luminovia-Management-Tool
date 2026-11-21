@@ -319,6 +319,17 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(visibleChats.items[0].url, `/courses/${runB}/workspace#course-chat`);
             assert.equal(await actor(participant,
                 `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
+            await assert.rejects(rpc(admin, "inspect_company_course_chat", [companyA, runB, "Fictional audit", null, null]), /42501/);
+            await assert.rejects(rpc(manager, "inspect_company_course_chat", [companyA, runA, "Fictional audit", null, null]), /42501/);
+            await assert.rejects(rpc(participant, "inspect_company_course_chat", [companyA, runA, "Fictional audit", null, null]), /42501/);
+            await assert.rejects(rpc(secondAdmin, "inspect_company_course_chat", [companyA, runA, "short", null, null]), /22023/);
+            assert.equal(await actor(secondAdmin, `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
+            const auditChat = await rpc(secondAdmin, "inspect_company_course_chat", [companyA, runA, "Fictional audit", null, null]);
+            assert.deepEqual(auditChat.items.map((item) => item.id), [courseChatMessageId]);
+            assert.deepEqual(Object.keys(auditChat.items[0]).sort(), ["body", "created_at", "id", "room_title", "sender_name"]);
+            const auditDetail = JSON.parse(await sql(`select details from public.audit_events where action='course.chat_inspected' and resource_id=${q(runA)}`));
+            assert.equal(auditDetail.purpose, "Fictional audit");
+            assert.equal(auditDetail.premium_enabled, false);
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);

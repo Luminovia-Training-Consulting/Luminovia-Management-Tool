@@ -342,7 +342,9 @@ function ClientWorkspace({
                         </div>
                         {premiumSetting && (
                             <CompanyPremiumControl
+                                key={organisation.id}
                                 actor={actor}
+                                zone={organisation.time_zone}
                                 setting={premiumSetting}
                                 isAdmin={isAdmin}
                                 archived={Boolean(organisation.archived_at)}

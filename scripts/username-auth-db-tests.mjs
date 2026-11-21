@@ -6,11 +6,16 @@ import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 await withTestDatabase("username_auth", async ({sql}) => {
     const first = randomUUID();
     const second = randomUUID();
+    const guest = randomUUID();
+    const participant = randomUUID();
     await sql(`insert into auth.users(id,email,email_confirmed_at) values
         (${q(first)},'first@example.invalid',now()),
-        (${q(second)},'second@example.invalid',now());
+        (${q(second)},'second@example.invalid',now()),
+        (${q(guest)},'guest@example.invalid',now()),
+        (${q(participant)},'participant@example.invalid',now());
         insert into public.user_roles(user_id,role) values
-        (${q(first)},'lecturer'),(${q(second)},'lecturer');`);
+        (${q(first)},'lecturer'),(${q(second)},'lecturer'),
+        (${q(guest)},'guest'),(${q(participant)},'participant');`);
     const as = (id, statement) =>
         sql(`begin; set local role authenticated;
         set local request.jwt.claims=${q(JSON.stringify({sub: id, role: "authenticated", aal: "aal1"}))};
@@ -47,6 +52,10 @@ await withTestDatabase("username_auth", async ({sql}) => {
         first,
         "set local request.path='/rpc/account_username'; select public.require_portal_access()",
     );
+    for (const [id, alias] of [[guest, "course.guest"], [participant, "course.learner"]]) {
+        assert.deepEqual(JSON.parse(await as(id, "set local request.path='/rpc/account_username'; select public.require_portal_access(); select public.account_username()").then((value) => value.trim())), {username: null, version: 0});
+        await as(id, `set local request.path='/rpc/save_account_username'; select public.require_portal_access(); select public.save_account_username(${q(alias)},0)`);
+    }
     await sql(`update public.profiles set active=false where id=${q(first)}`);
     assert.equal(
         await sql("select public.login_email_for_alias('course.lead')"),

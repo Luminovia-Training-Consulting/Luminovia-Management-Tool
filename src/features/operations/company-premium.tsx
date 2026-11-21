@@ -8,6 +8,7 @@ import {Notice} from "../../components/common";
 import {requireOnline, useOnline} from "../../lib/online";
 import {db} from "../../lib/supabase";
 import type {CompanyPremiumSetting} from "./data";
+import {AuditedCourseChat} from "./audited-course-chat";
 import "./i18n";
 
 type PremiumCommandResult = {
@@ -41,11 +42,13 @@ export function CompanyPremiumControl({
                                           setting,
                                           isAdmin,
                                           archived = false,
+                                          zone,
                                       }: {
     actor: string;
     setting: CompanyPremiumSetting;
     isAdmin: boolean;
     archived?: boolean;
+    zone?: string;
 }) {
     const {t} = useTranslation("operations");
     const online = useOnline();
@@ -235,6 +238,14 @@ export function CompanyPremiumControl({
                                         completions: course.completion_records,
                                     })}
                                 </p>
+                                {isAdmin && course.course_group_messages > 0 && (
+                                    <AuditedCourseChat
+                                        key={course.run_id}
+                                        organisation={setting.organisation_id}
+                                        course={course.run_id}
+                                        zone={zone ?? "UTC"}
+                                    />
+                                )}
                             </article>
                         ))}
                     </div>
