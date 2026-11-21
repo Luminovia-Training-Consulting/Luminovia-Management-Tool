@@ -11,14 +11,14 @@ import {createServer} from "node:net";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
-import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, candidateApiSuites, candidateCommandFailure, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
+import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
 
 test("crash diagnostics retain a safe primary signal ahead of a recovery-error flood", () => {
     const secret = "fictional-candidate-password-12345";
     const token = "eyJmaWN0aW9uYWw.eyJmaXh0dXJlLnVzZXI.signature";
     const logs = [
         `2026-11-17 LOG: server process (PID 42) was terminated by signal 11: Segmentation fault ${secret}`,
-        `2026-11-17 LOG: statement: SELECT '${secret}'`,
+        `2026-11-17 LOG: statement: SELECT 'FATAL: private SQL ${secret}'`,
         ...Array.from(
             {length: 30},
             (_, i) => `FATAL: recovery ${i} ${secret} ${token}`,
@@ -48,6 +48,35 @@ test("diagnostics stay bounded and do not disclose arbitrary text on a PostgreSQ
         ),
     );
     assert.deepEqual(candidateServiceDiagnostics("auth", logs, []), []);
+});
+
+test("the scratch database retains memory defaults and emits the PostgreSQL signal log", () => {
+    const command = Object.freeze([
+        "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c",
+        "log_min_messages=fatal", "-c", "shared_buffers=128MB", "-c", "work_mem=4MB",
+    ]);
+    assert.deepEqual(candidateDatabaseCommand(command), [
+        "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c",
+        "log_min_messages=log", "-c", "shared_buffers=128MB", "-c", "work_mem=4MB",
+    ]);
+    assert.equal(command[4], "log_min_messages=fatal");
+    assert.equal(candidateDatabaseCommand(undefined), undefined);
+    const other = ["init", "log_min_messages=fatal"];
+    assert.equal(candidateDatabaseCommand(other), other);
+});
+
+test("memory diagnostics report an owned database worker OOM without copying other cgroup data", () => {
+    const inspection = {HostConfig: {Memory: 384 * 1024 ** 2}, State: {OOMKilled: false}};
+    assert.deepEqual(candidateDatabaseMemoryDiagnostics(
+        inspection,
+        "low 0\nhigh 0\nmax 5432\noom 3\noom_kill 1\noom_group_kill 0\nprivate value\n",
+    ), {containerOomKilled: false, limitBytes: 402653184, oom: 3, oom_kill: 1});
+    assert.deepEqual(candidateDatabaseMemoryDiagnostics({State: {OOMKilled: true}}, ""), {
+        containerOomKilled: true,
+    });
+    assert.deepEqual(candidateDatabaseMemoryDiagnostics({}, "oom_kill 1 private\noom 9999999999999999"), {
+        containerOomKilled: false,
+    });
 });
 
 // Model a valid allocator that always reuses the lowest released port. This

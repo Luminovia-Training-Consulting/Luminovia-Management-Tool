@@ -60,13 +60,42 @@ export function candidateServiceDiagnostics(service, logs, secrets) {
                 })
                 .slice(-4)
             : [];
+    const severity = service === "db"
+        ? /(?:^|\s)(?:ERROR|FATAL|PANIC):\s/
+        : /\b(error|fatal|panic)\b/i;
     const errors = lines
         .filter(
-            (line) => !crash.test(line) && /\b(error|fatal|panic)\b/i.test(line),
+            (line) => !crash.test(line) && severity.test(line) &&
+                (service !== "db" || !/\b(?:LOG|DETAIL|STATEMENT):\s/.test(line)),
         )
         .slice(-(20 - signals.length))
         .map((line) => line.slice(0, 500));
     return [...signals, ...errors];
+}
+
+/** Adjust only the in-memory Compose command for the owned verification database. */
+export function candidateDatabaseCommand(command) {
+    if (!Array.isArray(command) || command[0] !== "postgres") return command;
+    return command.map((argument, index) =>
+        argument === "log_min_messages=fatal" && command[index - 1] === "-c"
+            ? "log_min_messages=log"
+            : argument,
+    );
+}
+
+/** Docker inspect and cgroup counters are enough to separate a memory kill
+ * from other failure signals without printing process, query or container details. */
+export function candidateDatabaseMemoryDiagnostics(inspection, cgroupEvents) {
+    const counters = Object.fromEntries(
+        [...cgroupEvents.matchAll(/^(oom|oom_kill) (0|[1-9][0-9]{0,14})$/gm)]
+            .map(([, label, value]) => [label, Number(value)]),
+    );
+    const limit = inspection.HostConfig?.Memory;
+    return {
+        containerOomKilled: inspection.State?.OOMKilled === true,
+        ...(Number.isSafeInteger(limit) && limit > 0 ? {limitBytes: limit} : {}),
+        ...counters,
+    };
 }
 
 /** Preserve the primary failure and final cleanup context within the same
@@ -751,6 +780,9 @@ export async function checkCandidate({
                 service.ports = [];
             }
             configuration.services.db.container_name = "supabase_db_" + project;
+            configuration.services.db.command = candidateDatabaseCommand(
+                configuration.services.db.command,
+            );
             configuration.services.clamav.container_name =
                 "portal_scanner_" + project;
             configuration.services.web.ports = Object.entries(ports).map(
@@ -1142,9 +1174,24 @@ export async function checkCandidate({
         // the only evidence for intermittent Auth/PostgreSQL failures.
         for (const service of ["auth", "db"]) {
             try {
-                const id = await compose(["ps", "-q", service]);
+                const id = await compose(["ps", "--all", "-q", service]);
                 if (!id) continue;
-                await owned(id);
+                const inspection = await owned(id);
+                if (service === "db") {
+                    let cgroupEvents = "";
+                    if (inspection.HostConfig?.CgroupnsMode === "private") {
+                        try {
+                            cgroupEvents = await docker(
+                                ["exec", id, "cat", "/sys/fs/cgroup/memory.events"],
+                                {timeout: 3000},
+                            );
+                        } catch {
+                            // A stopped database or an older cgroup has only Docker's flag.
+                        }
+                    }
+                    const memory = candidateDatabaseMemoryDiagnostics(inspection, cgroupEvents);
+                    console.error(`Candidate db memory diagnostic: ${JSON.stringify(memory)}`);
+                }
                 const logs = await docker(["logs", "--tail", "2000", id], {
                     includeStderr: true,
                     timeout: 10000,
