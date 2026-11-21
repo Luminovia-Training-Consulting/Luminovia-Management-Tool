@@ -1,5 +1,5 @@
 /**
- * Native password sign-in and recovery requests. Validation/online notices support the UI; only
+ * Human password sign-in and recovery requests. Validation/online notices support the UI; only
  * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
  */
 import {useState} from "react";
@@ -15,11 +15,11 @@ import {Button} from "../../components/ui/button";
 import {Field, Loading, Notice} from "../../components/common";
 import {useOnline} from "../../lib/online";
 import {previewLoginEmail} from "./preview-login";
+import {signInHuman} from "./human-login-api";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
-const schema = z.object({email: z.email(), password: z.string().min(1)});
-const previewSchema = z.object({
-    email: z.union([z.email(), z.literal("admin")]),
+const schema = z.object({
+    email: z.string().trim().min(3).max(254),
     password: z.string().min(1),
 });
 
@@ -28,12 +28,6 @@ export function Login() {
     const {t} = useTranslation();
     const {session, loading} = useAuth();
     const online = useOnline();
-    const preview =
-        previewLoginEmail(
-            "admin",
-            window.location.origin,
-            import.meta.env.VITE_SUPABASE_URL,
-        ) !== "admin";
     const [recover, setRecover] = useState(false);
     const [recovering, setRecovering] = useState(false);
     const [message, setMessage] = useState("");
@@ -44,10 +38,10 @@ export function Login() {
         handleSubmit,
         formState: {errors, isSubmitting},
     } = useForm<z.infer<typeof schema>>({
-        resolver: zodResolver(preview ? previewSchema : schema),
+        resolver: zodResolver(schema),
     });
-    if (loading) return <Loading/>;
-    if (session) return <Navigate to="/" replace/>;
+    if (loading) return <Loading />;
+    if (session) return <Navigate to="/" replace />;
 
     async function submit(values: z.infer<typeof schema>) {
         setMessage("");
@@ -59,16 +53,8 @@ export function Login() {
                 window.location.origin,
                 import.meta.env.VITE_SUPABASE_URL,
             );
-            if (!z.email().safeParse(email).success) {
-                setFailed(true);
-                setMessage("validation");
-                return;
-            }
-            const {error} = await db().auth.signInWithPassword({
-                ...values,
-                email,
-            });
-            if (!error) return;
+            await signInHuman(email, values.password);
+            return;
         } catch {
             // Transport/storage failures may reject instead of returning an Auth error.
         }
@@ -115,16 +101,16 @@ export function Login() {
                     <p>{t("loginStory")}</p>
                 </div>
                 <div className="login-illustration" aria-hidden="true">
-                    <div className="arc arc-one"/>
-                    <div className="arc arc-two"/>
-                    <div className="arc arc-three"/>
+                    <div className="arc arc-one" />
+                    <div className="arc arc-two" />
+                    <div className="arc arc-three" />
                     <span>{t("tagline")}</span>
                 </div>
                 <p className="login-foot">IT · AI · BUSINESS</p>
             </section>
             <section className="login-panel">
                 <div className="login-card">
-                    <ShieldCheck size={30} className="blue"/>
+                    <ShieldCheck size={30} className="blue" />
                     <h2>{t(recover ? "forgot" : "login")}</h2>
                     <p>{t("invitationOnly")}</p>
                     {!isConfigured ? (
@@ -137,23 +123,21 @@ export function Login() {
                             onSubmit={
                                 recover
                                     ? (event) => {
-                                        event.preventDefault();
-                                        void recovery();
-                                    }
+                                          event.preventDefault();
+                                          void recovery();
+                                      }
                                     : handleSubmit(submit)
                             }
                             noValidate
                         >
                             <Field
                                 id="email"
-                                label={t(
-                                    preview && !recover ? "previewEmailOrUsername" : "email",
-                                )}
+                                label={t(recover ? "email" : "usernameOrEmail")}
                                 error={Boolean(errors.email)}
                             >
                                 <input
                                     id="email"
-                                    type={preview && !recover ? "text" : "email"}
+                                    type={recover ? "email" : "text"}
                                     autoComplete="username"
                                     {...register("email")}
                                     aria-invalid={Boolean(errors.email)}
@@ -180,14 +164,20 @@ export function Login() {
                                 </Notice>
                             )}
                             {recover ? (
-                                <Button type="submit" disabled={!online || recovering}>
+                                <Button
+                                    type="submit"
+                                    disabled={!online || recovering}
+                                >
                                     {t("recover")}
-                                    <ArrowRight size={18}/>
+                                    <ArrowRight size={18} />
                                 </Button>
                             ) : (
-                                <Button type="submit" disabled={isSubmitting || !online}>
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting || !online}
+                                >
                                     {t(isSubmitting ? "loading" : "login")}
-                                    <ArrowRight size={18}/>
+                                    <ArrowRight size={18} />
                                 </Button>
                             )}
                             <Button

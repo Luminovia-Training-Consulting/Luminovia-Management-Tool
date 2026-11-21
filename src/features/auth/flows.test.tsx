@@ -11,7 +11,8 @@ import {Password} from "./password";
 import {AuthCallback} from "./callback";
 
 const fake = vi.hoisted(() => ({
-    signInWithPassword: vi.fn(),
+    invoke: vi.fn(),
+    setSession: vi.fn(),
     resetPasswordForEmail: vi.fn(),
     updateUser: vi.fn(),
     verifyOtp: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock("./auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
     isConfigured: true,
-    db: () => ({auth: fake}),
+    db: () => ({auth: fake, functions: {invoke: fake.invoke}}),
 }));
 vi.mock("react-i18next", () => ({
     useTranslation: () => ({t: (key: string) => `${language.prefix}${key}`}),
@@ -34,6 +35,14 @@ beforeEach(() => {
     Object.values(fake).forEach((method) =>
         method.mockResolvedValue({data: {}, error: null}),
     );
+    fake.invoke.mockResolvedValue({
+        data: {access_token: "access", refresh_token: "refresh"},
+        error: null,
+    });
+    fake.setSession.mockResolvedValue({
+        data: {session: {access_token: "access"}},
+        error: null,
+    });
     Object.defineProperty(navigator, "onLine", {
         configurable: true,
         value: true,
@@ -49,18 +58,20 @@ function view(element: React.ReactNode) {
 
 describe("recoverable Auth request failures", () => {
     it("translates an existing recovery notice after language switching without resending", async () => {
-        const page = view(<Login/>);
+        const page = view(<Login />);
         await userEvent.type(
-            screen.getByLabelText("email"),
+            screen.getByLabelText("usernameOrEmail"),
             "person@example.invalid",
         );
         await userEvent.click(screen.getByRole("button", {name: "forgot"}));
         await userEvent.click(screen.getByRole("button", {name: "recover"}));
-        expect(await screen.findByRole("status")).toHaveTextContent("recoverSent");
+        expect(await screen.findByRole("status")).toHaveTextContent(
+            "recoverSent",
+        );
         language.prefix = "en:";
         page.rerender(
             <MemoryRouter>
-                <Login/>
+                <Login />
             </MemoryRouter>,
         );
         expect(screen.getByRole("status")).toHaveTextContent("en:recoverSent");
@@ -70,56 +81,89 @@ describe("recoverable Auth request failures", () => {
         expect(fake.resetPasswordForEmail).toHaveBeenCalledTimes(1);
     });
     it("translates the saved-password notice after language switching without repeating the mutation", async () => {
-        const page = view(<Password/>);
+        const page = view(<Password />);
         await userEvent.type(
             screen.getByLabelText("newPassword"),
             "ExamplePassword42!",
         );
-        await userEvent.click(screen.getByRole("button", {name: "setPassword"}));
+        await userEvent.click(
+            screen.getByRole("button", {name: "setPassword"}),
+        );
         expect(await screen.findByRole("status")).toHaveTextContent(
             "passwordSaved",
         );
         language.prefix = "en:";
         page.rerender(
             <MemoryRouter>
-                <Password/>
+                <Password />
             </MemoryRouter>,
         );
-        expect(screen.getByRole("status")).toHaveTextContent("en:passwordSaved");
+        expect(screen.getByRole("status")).toHaveTextContent(
+            "en:passwordSaved",
+        );
         expect(fake.updateUser).toHaveBeenCalledTimes(1);
     });
     it("rejects a seven-character password without calling Auth", async () => {
-        view(<Password/>);
+        view(<Password />);
         await userEvent.type(screen.getByLabelText("newPassword"), "Aa1!aaa");
-        await userEvent.click(screen.getByRole("button", {name: "setPassword"}));
+        await userEvent.click(
+            screen.getByRole("button", {name: "setPassword"}),
+        );
         expect(fake.updateUser).not.toHaveBeenCalled();
     });
     it("accepts an eight-character password through the password setup form", async () => {
-        view(<Password/>);
+        view(<Password />);
         await userEvent.type(screen.getByLabelText("newPassword"), "Aa1!aaaa");
-        await userEvent.click(screen.getByRole("button", {name: "setPassword"}));
+        await userEvent.click(
+            screen.getByRole("button", {name: "setPassword"}),
+        );
         expect(await screen.findByRole("status")).toHaveTextContent(
             "passwordSaved",
         );
         expect(fake.updateUser).toHaveBeenCalledWith({password: "Aa1!aaaa"});
     });
     it("does not impose the new-password minimum on existing-account sign-in", async () => {
-        view(<Login/>);
+        view(<Login />);
         await userEvent.type(
-            screen.getByLabelText("email"),
+            screen.getByLabelText("usernameOrEmail"),
             "legacy@example.invalid",
         );
         await userEvent.type(screen.getByLabelText("password"), "Old7!Aa");
         await userEvent.click(screen.getByRole("button", {name: "login"}));
-        expect(fake.signInWithPassword).toHaveBeenCalledWith({
-            email: "legacy@example.invalid",
-            password: "Old7!Aa",
+        expect(fake.invoke).toHaveBeenCalledWith("human-login", {
+            body: {
+                identifier: "legacy@example.invalid",
+                password: "Old7!Aa",
+            },
+        });
+        expect(fake.setSession).toHaveBeenCalledWith({
+            access_token: "access",
+            refresh_token: "refresh",
         });
     });
-    it("submits recovery with Enter instead of trying password sign-in", async () => {
-        view(<Login/>);
+    it("signs in by username through the same session exchange", async () => {
+        view(<Login />);
         await userEvent.type(
-            screen.getByLabelText("email"),
+            screen.getByLabelText("usernameOrEmail"),
+            "course.lead",
+        );
+        await userEvent.type(
+            screen.getByLabelText("password"),
+            "ExamplePassword42!",
+        );
+        await userEvent.click(screen.getByRole("button", {name: "login"}));
+        expect(fake.invoke).toHaveBeenCalledWith("human-login", {
+            body: {
+                identifier: "course.lead",
+                password: "ExamplePassword42!",
+            },
+        });
+        expect(fake.setSession).toHaveBeenCalledTimes(1);
+    });
+    it("submits recovery with Enter instead of trying password sign-in", async () => {
+        view(<Login />);
+        await userEvent.type(
+            screen.getByLabelText("usernameOrEmail"),
             "person@example.invalid",
         );
         await userEvent.click(screen.getByRole("button", {name: "forgot"}));
@@ -132,8 +176,10 @@ describe("recoverable Auth request failures", () => {
                 }),
             ),
         );
-        expect(fake.signInWithPassword).not.toHaveBeenCalled();
-        expect(await screen.findByRole("status")).toHaveTextContent("recoverSent");
+        expect(fake.invoke).not.toHaveBeenCalled();
+        expect(await screen.findByRole("status")).toHaveTextContent(
+            "recoverSent",
+        );
     });
 
     it("keeps one recovery request in flight and permits a retry after transport rejection", async () => {
@@ -143,9 +189,9 @@ describe("recoverable Auth request failures", () => {
                 reject = fail;
             }),
         );
-        view(<Login/>);
+        view(<Login />);
         await userEvent.type(
-            screen.getByLabelText("email"),
+            screen.getByLabelText("usernameOrEmail"),
             "person@example.invalid",
         );
         await userEvent.click(screen.getByRole("button", {name: "forgot"}));
@@ -158,16 +204,16 @@ describe("recoverable Auth request failures", () => {
         expect(await screen.findByRole("alert")).toHaveTextContent("error");
         expect(send).toBeEnabled();
         await userEvent.click(send);
-        expect(await screen.findByRole("status")).toHaveTextContent("recoverSent");
+        expect(await screen.findByRole("status")).toHaveTextContent(
+            "recoverSent",
+        );
     });
 
     it("turns a rejected sign-in promise into a visible retryable failure", async () => {
-        fake.signInWithPassword.mockRejectedValueOnce(
-            new Error("Transport unavailable"),
-        );
-        view(<Login/>);
+        fake.invoke.mockRejectedValueOnce(new Error("Transport unavailable"));
+        view(<Login />);
         await userEvent.type(
-            screen.getByLabelText("email"),
+            screen.getByLabelText("usernameOrEmail"),
             "person@example.invalid",
         );
         await userEvent.type(
@@ -175,22 +221,30 @@ describe("recoverable Auth request failures", () => {
             "ExamplePassword42!",
         );
         await userEvent.click(screen.getByRole("button", {name: "login"}));
-        expect(await screen.findByRole("alert")).toHaveTextContent("loginFailed");
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "loginFailed",
+        );
         expect(screen.getByRole("button", {name: "login"})).toBeEnabled();
     });
 
     it("clears an old password success before a rejected subsequent request", async () => {
-        view(<Password/>);
+        view(<Password />);
         await userEvent.type(
             screen.getByLabelText("newPassword"),
             "ExamplePassword42!",
         );
-        await userEvent.click(screen.getByRole("button", {name: "setPassword"}));
+        await userEvent.click(
+            screen.getByRole("button", {name: "setPassword"}),
+        );
         expect(await screen.findByRole("status")).toHaveTextContent(
             "passwordSaved",
         );
-        fake.updateUser.mockRejectedValueOnce(new Error("Transport unavailable"));
-        await userEvent.click(screen.getByRole("button", {name: "setPassword"}));
+        fake.updateUser.mockRejectedValueOnce(
+            new Error("Transport unavailable"),
+        );
+        await userEvent.click(
+            screen.getByRole("button", {name: "setPassword"}),
+        );
         expect(await screen.findByRole("alert")).toHaveTextContent("error");
         expect(screen.queryByRole("status")).not.toBeInTheDocument();
         expect(screen.getByRole("button", {name: "setPassword"})).toBeEnabled();
@@ -203,12 +257,20 @@ describe("recoverable Auth request failures", () => {
             "",
             `/auth/callback?type=invite&token_hash=${token}`,
         );
-        fake.verifyOtp.mockRejectedValueOnce(new Error("Transport unavailable"));
-        view(<AuthCallback/>);
+        fake.verifyOtp.mockRejectedValueOnce(
+            new Error("Transport unavailable"),
+        );
+        view(<AuthCallback />);
         expect(window.location.search).toBe("");
-        await userEvent.click(screen.getByRole("button", {name: "acceptInvite"}));
-        expect(await screen.findByRole("alert")).toHaveTextContent("inviteInvalid");
-        expect(screen.getByRole("button", {name: "acceptInvite"})).toBeEnabled();
+        await userEvent.click(
+            screen.getByRole("button", {name: "acceptInvite"}),
+        );
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "inviteInvalid",
+        );
+        expect(
+            screen.getByRole("button", {name: "acceptInvite"}),
+        ).toBeEnabled();
         expect(window.location.search).toBe("");
         expect(fake.verifyOtp).toHaveBeenCalledWith({
             token_hash: token,

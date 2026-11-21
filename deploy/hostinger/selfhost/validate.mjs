@@ -255,6 +255,7 @@ try {
         "accounts",
         "course-documents",
         "calendar-feed",
+        "human-login",
         "website-enquiries",
         "mail-admin",
     ];

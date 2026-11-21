@@ -14,7 +14,10 @@ const pairs: Record<string, [string, string]> = {
     supportDesk: ["Support", "Support desk"],
     websiteEnquiries: ["Website-Anfragen", "Website enquiries"],
     announcements: ["Ankündigungen", "Announcements"],
-    tryDemo: ["Demo mit Beispieldaten ausprobieren", "Try the sample-data demo"],
+    tryDemo: [
+        "Demo mit Beispieldaten ausprobieren",
+        "Try the sample-data demo",
+    ],
     helpGuides: ["Hilfe & Anleitungen", "Help & guides"],
     errorHelp: [
         "Problem verstehen und nächste Schritte finden",
@@ -69,12 +72,18 @@ const pairs: Record<string, [string, string]> = {
         "Keine Personen zu dieser Suche gefunden.",
         "No people match this search.",
     ],
-    peopleUnnamed: ["Person ohne Anzeigenamen", "Person without a display name"],
+    peopleUnnamed: [
+        "Person ohne Anzeigenamen",
+        "Person without a display name",
+    ],
     peopleActive: ["Aktiv", "Active"],
     peopleInactive: ["Gesperrt", "Suspended"],
     peopleDeactivate: ["Zugang sperren", "Suspend access"],
     peopleActivate: ["Zugang aktivieren", "Activate access"],
-    peopleDeactivateConfirm: ["Portalzugriff sperren?", "Suspend portal access?"],
+    peopleDeactivateConfirm: [
+        "Portalzugriff sperren?",
+        "Suspend portal access?",
+    ],
     peopleActivateConfirm: [
         "Portalzugriff aktivieren?",
         "Activate portal access?",
@@ -229,6 +238,22 @@ const pairs: Record<string, [string, string]> = {
     login: ["Anmelden", "Sign in"],
     logout: ["Abmelden", "Sign out"],
     email: ["E-Mail", "Email"],
+    usernameOrEmail: ["Benutzername oder E-Mail", "Username or email"],
+    username: ["Benutzername", "Username"],
+    usernameSave: ["Benutzername speichern", "Save username"],
+    usernameHelp: [
+        "3–32 Zeichen: Buchstaben, Zahlen, Punkt, Bindestrich oder Unterstrich. Beginnt mit einem Buchstaben.",
+        "3–32 characters: letters, digits, period, hyphen or underscore. Starts with a letter.",
+    ],
+    usernameSaved: ["Benutzername gespeichert.", "Username saved."],
+    usernameUnavailable: [
+        "Dieser Benutzername ist nicht verfügbar.",
+        "This username is unavailable.",
+    ],
+    usernameInvalid: [
+        "Gib einen gültigen Benutzernamen ein.",
+        "Enter a valid username.",
+    ],
     previewEmailOrUsername: ["E-Mail oder Benutzername", "Email or username"],
     password: ["Passwort", "Password"],
     forgot: ["Passwort vergessen?", "Forgot password?"],
@@ -350,8 +375,14 @@ const pairs: Record<string, [string, string]> = {
     myAssignments: ["Meine Aufträge", "My assignments"],
     openJobs: ["Offene Stellen", "Open jobs"],
     nextSessions: ["Deine nächsten Termine", "Your next sessions"],
-    noSessions: ["Noch keine bestätigten Termine.", "No confirmed sessions yet."],
-    greeting: ["Schön, dass du da bist, {{name}}.", "Good to see you, {{name}}."],
+    noSessions: [
+        "Noch keine bestätigten Termine.",
+        "No confirmed sessions yet.",
+    ],
+    greeting: [
+        "Schön, dass du da bist, {{name}}.",
+        "Good to see you, {{name}}.",
+    ],
     heroText: [
         "Finde deinen nächsten Lehrauftrag und behalte deine Termine im Blick.",
         "Find your next teaching assignment and keep your schedule in view.",
@@ -376,8 +407,8 @@ const pairs: Record<string, [string, string]> = {
         "Your email address was changed.",
     ],
     accountNameHelp: [
-        "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse.",
-        "Change your display name in your profile below. Sign in with your email address.",
+        "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse oder deinem Benutzernamen.",
+        "Change your display name in your profile below. Sign in with your email address or username.",
     ],
     aboutMe: ["Über mich", "About me"],
     manageExpertise: [
@@ -498,7 +529,10 @@ const pairs: Record<string, [string, string]> = {
         "Gültiger Rahmenvertrag erforderlich",
         "Valid master contract required",
     ],
-    safeLogin: ["Ein Konto. Dein Lehralltag.", "One account. Your teaching day."],
+    safeLogin: [
+        "Ein Konto. Dein Lehralltag.",
+        "One account. Your teaching day.",
+    ],
     loginStory: [
         "Aufträge entdecken, Wissen einbringen und gemeinsam etwas bewegen.",
         "Discover opportunities, contribute your expertise and make a difference together.",
