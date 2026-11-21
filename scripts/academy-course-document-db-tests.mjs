@@ -6,6 +6,7 @@ import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 const path = "/rpc/course_document_access";
+const commandPath = "/rpc/academy_course_material_action";
 const gate = (target = path, method = "POST") =>
   `set local request.path=${q(target)};set local request.method=${q(method)};select public.require_portal_access();`;
 const read = (share, kind = "resource") =>
@@ -36,7 +37,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       clientShare,
       otherShare,
       unscannedShare,
-    ] = Array.from({ length: 22 }, randomUUID);
+      foreignDocument,
+      foreignVersion,
+    ] = Array.from({ length: 24 }, randomUUID);
     const key = generateKeyPairSync("ed25519");
     const now = Date.now();
     const date = (offset) => new Date(now + offset * 86400000).toISOString();
@@ -76,8 +79,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       [client, "client"],
       [otherClient, "client"],
     ];
-    // An operator prepares the fictional retained bytes and shares; this
-    // acceptance step never opens browser upload or sharing in customer editions.
+    // The trusted fixture represents retained scanner output and prior shares.
     await sql(`insert into auth.users(id,email,email_confirmed_at) values
       ${users.map(([id]) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
       insert into public.user_roles(user_id,role) values
@@ -103,16 +105,21 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       insert into public.documents
         (id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
         values (${q(document)},${q(teacher)},${q(teacher)},'personal','material','current.txt','text/plain',
-          ${v2.length},'clean',${q(randomUUID())});
+          ${v2.length},'clean',${q(randomUUID())}),
+          (${q(foreignDocument)},${q(outside)},${q(outside)},'personal','material','outside.txt','text/plain',
+            ${v1.length},'clean',${q(randomUUID())});
       insert into public.document_versions
-        (id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+        (id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256,scanner_version)
         values (${q(sharedVersion)},${q(document)},${q(teacher)},${q(randomUUID())},1,${q(objectPath)},
-            'first.txt','text/plain',${v1.length},'clean',${q(hash(v1))}),
+            'first.txt','text/plain',${v1.length},'clean',${q(hash(v1))},'Fictional scanner receipt'),
           (${q(newerVersion)},${q(document)},${q(teacher)},${q(randomUUID())},2,${q("fictional/" + newerVersion)},
-            'current.txt','text/plain',${v2.length},'clean',${q(hash(v2))}),
+            'current.txt','text/plain',${v2.length},'clean',${q(hash(v2))},null),
           (${q(unhashedVersion)},${q(document)},${q(teacher)},${q(randomUUID())},3,${q("fictional/" + unhashedVersion)},
-            'unscanned.txt','text/plain',20,'clean',null);
+            'unscanned.txt','text/plain',20,'clean',null,'Fictional scanner receipt'),
+          (${q(foreignVersion)},${q(foreignDocument)},${q(outside)},${q(randomUUID())},1,${q("fictional/" + foreignVersion)},
+            'outside.txt','text/plain',${v1.length},'clean',${q(hash(v1))},'Fictional scanner receipt');
       update public.documents set current_version_id=${q(newerVersion)} where id=${q(document)};
+      update public.documents set current_version_id=${q(foreignVersion)} where id=${q(foreignDocument)};
       insert into private.course_resources(id,run_id,version_id,audience,category,created_by,ownership_kind)
         values (${q(share)},${q(run)},${q(sharedVersion)},'participants','material',${q(teacher)},'lecturer'),
           (${q(staffShare)},${q(run)},${q(sharedVersion)},'staff','material',${q(teacher)},'lecturer'),
@@ -122,6 +129,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
 
     const access = (who, selected = share, kind = "resource") =>
       actor(who, gate() + read(selected, kind)).then(JSON.parse);
+    const shareCall = (id = sharedVersion, course = run, audience = "all") =>
+      `select public.academy_course_material_action(${q(course)},'resource_share',${q(id)},${q(audience)},'material')`;
+    const command = (who, write = shareCall()) =>
+      actor(who, gate(commandPath) + write).then(JSON.parse);
+    const removeCall = (id) =>
+      `select public.academy_course_material_action(${q(run)},'resource_remove',${q(id)})`;
     const configure = (enabled, release = terms.release_commit) =>
       sql(
         `select private.configure_academy_course_access(${q(installation)},${q(release)},${enabled})`,
@@ -132,10 +145,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       );
     await assert.rejects(access(manager), /42501/);
     await assert.rejects(actor(manager, read(share)), /42501/);
+    await assert.rejects(command(teacher), /42501/);
+    await assert.rejects(actor(teacher, shareCall()), /42501/);
     await configure(true);
     for (const [target, method] of [
       [path, "GET"],
       [path, "HEAD"],
+      [commandPath, "GET"],
+      [commandPath, "HEAD"],
       ["/documents", "GET"],
       ["/document_versions", "GET"],
       ["/rpc/course_workspace_action", "POST"],
@@ -165,6 +182,39 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_assign_course_instructor(${q(run)},${q(teacher)},${q(randomUUID())})`,
     ).then(JSON.parse);
     assert.equal(assignment.status, "confirmed");
+    for (const who of [manager, learner, outside, client]) {
+      await assert.rejects(command(who), /42501/);
+    }
+    await assert.rejects(sql("set role anon; " + shareCall()), /42501/);
+    await assert.rejects(sql("set role service_role; " + shareCall()), /42501/);
+    for (const invalidVersion of [
+      foreignVersion,
+      newerVersion,
+      unhashedVersion,
+    ]) {
+      await assert.rejects(
+        command(teacher, shareCall(invalidVersion)),
+        /42501/,
+      );
+    }
+    await assert.rejects(
+      command(teacher, shareCall(sharedVersion, otherRun)),
+      /42501/,
+    );
+    await assert.rejects(
+      command(teacher, shareCall(sharedVersion, run, "public")),
+      /22023/,
+    );
+    await assert.rejects(
+      command(
+        teacher,
+        `select public.academy_course_material_action(${q(run)},'attendance_verify',${q(sharedVersion)})`,
+      ),
+      /22023/,
+    );
+    const published = await command(teacher);
+    assert.match(published.id, /^[0-9a-f-]{36}$/);
+    assert.deepEqual(await command(teacher), published);
     const exact = {
       id: sharedVersion,
       document_id: document,
@@ -178,6 +228,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     }
     assert.deepEqual(await access(teacher, staffShare), exact);
     assert.deepEqual(await access(client, clientShare), exact);
+    assert.deepEqual(await access(learner, published.id), exact);
+    await assert.rejects(command(manager, removeCall(published.id)), /42501/);
+    await assert.rejects(command(teacher, removeCall(otherShare)), /42501/);
+    assert.deepEqual(
+      await command(teacher, removeCall(published.id)),
+      published,
+    );
+    await assert.rejects(access(learner, published.id), /42501/);
+    assert.deepEqual(await command(teacher), published);
+    assert.deepEqual(await access(learner, published.id), exact);
     await assert.rejects(access(learner, staffShare), /42501/);
     await assert.rejects(access(learner, clientShare), /42501/);
     await assert.rejects(access(otherClient, clientShare), /42501/);
@@ -207,17 +267,28 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_release_course_instructor(${q(run)},${q(assignment.claim_id)},'Fictional assignment release',${q(randomUUID())})`,
     );
     await assert.rejects(access(teacher), /42501/);
+    await assert.rejects(command(teacher), /42501/);
+    await assert.rejects(command(teacher, removeCall(published.id)), /42501/);
     assert.deepEqual(await access(learner), exact);
     const nextRelease = "cd".repeat(20);
     await renew({ release_commit: nextRelease, issued_at: date(-7) });
     await assert.rejects(actor(manager, read(share)), /42501/);
     await configure(true, nextRelease);
+    const replacement = await actor(
+      manager,
+      gate("/rpc/academy_assign_course_instructor") +
+        `select public.academy_assign_course_instructor(${q(run)},${q(teacher)},${q(randomUUID())})`,
+    ).then(JSON.parse);
+    assert.equal(replacement.status, "confirmed");
+    assert.deepEqual(await command(teacher), published);
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
       expires_at: date(-2),
     });
     assert.deepEqual(await access(learner), exact);
+    await assert.rejects(command(teacher), /42501/);
+    await assert.rejects(actor(teacher, removeCall(published.id)), /42501/);
     await renew({
       release_commit: nextRelease,
       issued_at: date(-5),
@@ -232,7 +303,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "1",
     );
     console.log(
-      `PASS ${edition} course audience, exact scanned version, revocation and retained files after expiry`,
+      `PASS ${edition} publish/remove own exact scanned course material, audience and retained files after expiry`,
     );
   });
 }
