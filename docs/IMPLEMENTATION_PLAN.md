@@ -1499,3 +1499,9 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Update password-recovery, completed-course-review, tour-focus, scoped-picker and post-reload email-preference fixtures to current server/UI contracts based on the local browser trace.
 - [x] Use the mobile room-list back control before reselecting a chat after reload in the group-settings browser journey.
 - [ ] Complete local desktop/mobile browser phase and the current exact-head CI run; fix all new failures and repeat on the newest main SHA.
+## Exact-main CI follow-up — 21 November 2026
+
+- [x] Diagnose the system and native self-host failures on `27fbcc2489769818487fb7f0385b1ce3de60c100`: the guarded candidate API fixture adapter had stale indentation anchors.
+- [x] Correct the exact port/client anchors and verify all 28 candidate-check tests, then rerun `./portal check` successfully.
+- [ ] Push the repair directly to `main` and require the complete system, desktop/mobile browser, native self-host, security and publication-gate results on that exact head before any Hostinger update.
+- [ ] Repeat full native `./portal test` locally when Docker is available. This workstation run stopped before startup because the Docker daemon socket is unavailable; no database/API acceptance is inferred from it.

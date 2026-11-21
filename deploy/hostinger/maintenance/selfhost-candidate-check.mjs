@@ -281,18 +281,18 @@ export function candidateApiSuites(sourceRoot) {
 export function adaptCandidateApiFixture(source, {project, apiPort}) {
     assert.match(project, /^luminovia-portal-test-[a-f0-9]{24}$/);
     assert(Number.isInteger(apiPort) && apiPort > 1024 && apiPort <= 65535);
-    const port = '    "55321",\n    "Dedicated canonical API port required.",';
-    const client = "  const make = (key) =>";
+    const port = '        "55321",\n        "Dedicated canonical API port required.",';
+    const client = "    const make = (key) =>";
     assert.equal(source.split(port).length, 2, "Unknown API fixture port guard.");
     assert.equal(source.split(client).length, 2, "Unknown API fixture boundary.");
     // This scratch-only adapter preserves the original loopback/test guards and
     // binds the random port to this exact labelled project before any API client.
-    const identity = `  assert.equal(project, ${JSON.stringify(project)}, "Candidate fixture project mismatch.");
-  assert.equal(process.env.PORTAL_CANDIDATE_OWNER, project);
-  assert.equal(new URL(url).origin, ${JSON.stringify("https://127.0.0.1:" + apiPort)}, "Candidate fixture API mismatch.");
-  const { execFileSync } = await import("node:child_process");
-  const labels = JSON.parse(execFileSync("docker", ["inspect", "--format", "{{json .Config.Labels}}", "supabase_db_" + project], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 }));
-  assert.equal(labels[${JSON.stringify(ownershipLabel)}], project, "Candidate fixture database ownership mismatch.");
+    const identity = `    assert.equal(project, ${JSON.stringify(project)}, "Candidate fixture project mismatch.");
+    assert.equal(process.env.PORTAL_CANDIDATE_OWNER, project);
+    assert.equal(new URL(url).origin, ${JSON.stringify("https://127.0.0.1:" + apiPort)}, "Candidate fixture API mismatch.");
+    const { execFileSync } = await import("node:child_process");
+    const labels = JSON.parse(execFileSync("docker", ["inspect", "--format", "{{json .Config.Labels}}", "supabase_db_" + project], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 }));
+    assert.equal(labels[${JSON.stringify(ownershipLabel)}], project, "Candidate fixture database ownership mismatch.");
 `;
     return source
         .replace(port, port.replace('"55321"', JSON.stringify(String(apiPort))))
