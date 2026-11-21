@@ -4,85 +4,40 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {createClient} from "@supabase/supabase-js";
-import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {withApiFixture} from "./testing/api.mjs";
+import {quoteSql as q} from "./testing/database.mjs";
+import {enablePremiumAndLinkParticipant} from "./testing/company-participant.mjs";
 
-if (process.env.PORTAL_TEST_MODE !== "1")
-    throw new Error(
-        "Operations mutations require the explicit isolated test mode. Use ./portal test.",
-    );
-process.loadEnvFile(".env.test.local");
-const url = process.env.SUPABASE_URL;
-assert.ok(
-    url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
-    "Operations tests only use loopback Supabase",
-);
-/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
-const make = (key) =>
-    createClient(url, key, {
-        auth: {persistSession: false, autoRefreshToken: false},
-    });
-const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
-const users = [];
-const orgs = [];
-const templates = [];
-const runs = [];
-const jobs = [];
-const clients = [];
-const tag = randomUUID();
-let count = 0;
+await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql}) => {
+    const orgs = [];
+    const templates = [];
+    const runs = [];
+    const jobs = [];
+    const tag = randomUUID();
+    let count = 0;
 
-/** Requires actual SDK success before returning the response data. */
-async function checked(request, label) {
-    const {data, error} = await request;
-    assert.equal(error, null, `${label}: ${error?.message}`);
-    return data;
-}
+    async function test(name, fn) {
+        await fn();
+        count++;
+        console.log(`PASS ${name}`);
+    }
 
-/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
-async function fixture(role) {
-    const email = `operations-${role}-${tag}@example.invalid`;
-    const result = await checked(
-        service.auth.admin.createUser({
-            email,
-            password: process.env.E2E_PASSWORD,
-            email_confirm: true,
-        }),
-        "Create temporary operation account",
-    );
-    users.push(result.user.id);
-    await checked(
-        service.from("user_roles").insert({user_id: result.user.id, role}),
-        "Set temporary role",
-    );
-    const client = make(process.env.SUPABASE_ANON_KEY);
-    clients.push(client);
-    await checked(
-        client.auth.signInWithPassword({
-            email,
-            password: process.env.E2E_PASSWORD,
-        }),
-        "Actual Auth sign-in",
-    );
-    return {client, id: result.user.id};
-}
+    async function requireParticipantDenial(request) {
+        const response = await request;
+        assert.equal(response.status, 403);
+        assert.equal(response.error?.code, "42501");
+        assert.equal(response.data, null);
+    }
 
-/** Runs a named assertion group; any failed assertion must stop the run. */
-async function test(name, fn) {
-    await fn();
-    count++;
-    console.log(`PASS ${name}`);
-}
-
-try {
-    const admin = await fixture("admin"),
-        lecturer = await fixture("lecturer"),
-        participant = await fixture("participant");
-    await checked(
-        service.from("user_roles").insert({user_id: participant.id, role: "client"}),
-        "Give enrolled learner a current operational portal role",
-    );
-    await assertPasswordOnly(admin.client);
+    const admin = await actor("operations-admin", "admin"),
+        lecturer = await actor("operations-lecturer", "lecturer"),
+        participant = await actor("operations-participant", "participant"),
+        company = await actor("operations-company", "client");
+    defer(() => cleanupOperationFixtures({
+        service, checked, sql, jobs, runs, templates, orgs,
+        companyId: company.id, participantId: participant.id,
+    }));
+    await passwordOnly(admin.client);
     const base = {
         name: `Fictional operations ${tag}`,
         country: "DE",
@@ -111,7 +66,7 @@ try {
             ).error,
         );
     });
-    let org, contact, template, run, copyRun, job, participantRoom;
+    let org, contact, template, run, copyRun, job;
     await test("Password-only admin creates organisation, private notes and business contact", async () => {
         org = await checked(
             admin.client.rpc("save_organisation", {p_id: null, p_payload: base}),
@@ -236,41 +191,15 @@ try {
             "Create actual run",
         );
         runs.push(run);
-        for (const actor of [lecturer, participant]) {
-            assert.equal(
-                (
-                    await checked(
-                        actor.client.from("course_runs").select("id").eq("id", run),
-                        "Draft run RLS",
-                    )
-                ).length,
-                0,
-            );
-            assert.equal(
-                (
-                    await checked(
-                        actor.client
-                            .from("course_templates")
-                            .select("id")
-                            .eq("id", template),
-                        "Draft template RLS",
-                    )
-                ).length,
-                0,
-            );
-            assert.equal(
-                (
-                    await checked(
-                        actor.client
-                            .from("course_sessions")
-                            .select("id")
-                            .eq("course_run_id", run),
-                        "Draft session RLS",
-                    )
-                ).length,
-                0,
-            );
-        }
+        const directCourseRows = (who) => [
+            who.client.from("course_runs").select("id").eq("id", run),
+            who.client.from("course_templates").select("id").eq("id", template),
+            who.client.from("course_sessions").select("id").eq("course_run_id", run),
+        ];
+        for (const request of directCourseRows(lecturer))
+            assert.deepEqual(await checked(request, "Draft course RLS"), []);
+        for (const request of directCourseRows(participant))
+            await requireParticipantDenial(request);
     });
     await test("Publication reveals course data without exposing customer contacts or notes", async () => {
         await checked(
@@ -307,41 +236,15 @@ try {
             ).name,
             base.name,
         );
-        for (const actor of [lecturer, participant]) {
-            assert.equal(
-                (
-                    await checked(
-                        actor.client
-                            .from("organisation_contacts")
-                            .select("*")
-                            .eq("organisation_id", org),
-                        "Contact privacy",
-                    )
-                ).length,
-                0,
-            );
-            assert.equal(
-                (
-                    await checked(
-                        actor.client
-                            .from("organisation_private_details")
-                            .select("*")
-                            .eq("organisation_id", org),
-                        "Note privacy",
-                    )
-                ).length,
-                0,
-            );
-        }
-        assert.equal(
-            (
-                await checked(
-                    participant.client.from("course_runs").select("id").eq("id", run),
-                    "Unenrolled participant privacy",
-                )
-            ).length,
-            0,
-        );
+        const directCompanyRows = (who) => [
+            who.client.from("organisation_contacts").select("id").eq("organisation_id", org),
+            who.client.from("organisation_private_details").select("organisation_id").eq("organisation_id", org),
+        ];
+        for (const request of directCompanyRows(lecturer))
+            assert.deepEqual(await checked(request, "Private company data"), []);
+        for (const request of directCompanyRows(participant))
+            await requireParticipantDenial(request);
+        await requireParticipantDenial(participant.client.rpc("course_workspace", {p_run_id: run}));
     });
     await test("Safe template/run copies omit assignments, contracts and chat members", async () => {
         const copyTemplate = await checked(
@@ -513,51 +416,42 @@ try {
         assert.equal(Number(saved.total_amount), 1000);
         assert.equal(saved.terms, "Fixed accepted terms");
     });
-    await test("Participant course membership grants only its course and revocation removes it", async () => {
-        participantRoom = await checked(
-            admin.client.rpc("create_chat_group", {
-                p_title: `Participant ${tag}`,
-                p_member_ids: [participant.id],
-                p_kind: "participant_course",
-                p_job_id: job,
-            }),
-            "Create explicit course membership",
-        );
-        assert.equal(
-            (
-                await checked(
-                    participant.client.from("course_runs").select("id").eq("id", run),
-                    "Enrolled course",
-                )
-            ).length,
-            1,
-        );
-        assert.equal(
-            (
-                await checked(
-                    participant.client.from("jobs").select("id").eq("id", job),
-                    "Commercial job hidden",
-                )
-            ).length,
-            0,
-        );
-        await checked(
-            admin.client.rpc("manage_chat_member", {
-                p_room_id: participantRoom,
-                p_user_id: participant.id,
-                p_remove: true,
-            }),
-            "Revoke explicit membership",
-        );
-        assert.equal(
-            (
-                await checked(
-                    participant.client.from("course_runs").select("id").eq("id", run),
-                    "Revoked course",
-                )
-            ).length,
-            0,
-        );
+    await test("An enrolled participant gets course and chat scope through Premium and loses both on removal", async () => {
+        const roomTitle = `Participant ${tag}`;
+        const roomArgs = {
+            p_title: roomTitle,
+            p_member_ids: [participant.id],
+            p_kind: "participant_course",
+            p_job_id: job,
+        };
+        await requireParticipantDenial(admin.client.rpc("create_chat_group", roomArgs));
+        await checked(admin.client.rpc("manage_client_organisation", {
+            p_user_id: company.id,
+            p_organisation_id: org,
+            p_remove: false,
+        }), "Link the actual customer actor");
+        await enablePremiumAndLinkParticipant({
+            admin, company, learner: participant, organisation: org, service, checked,
+        });
+        const enrol = (status) => admin.client.rpc("manage_course_enrolment", {
+            p_course_run_id: run,
+            p_user_id: participant.id,
+            p_status: status,
+        });
+        await checked(enrol("enrolled"), "Enrol the consenting participant in the assigned course");
+        const room = await checked(admin.client.rpc("create_chat_group", roomArgs), "Create the scoped course channel");
+        const workspace = (id) => participant.client.rpc("course_workspace", {p_run_id: id});
+        const own = await checked(workspace(run), "Read enrolled course through the participant projection");
+        assert.equal(own.id, run);
+        assert.equal(own.access.learner, true);
+        await requireParticipantDenial(workspace(copyRun));
+        await requireParticipantDenial(participant.client.from("course_runs").select("id").eq("id", run));
+        await requireParticipantDenial(participant.client.from("jobs").select("id").eq("id", job));
+        const courseRooms = () => participant.client.rpc("course_chat_rooms", {p_run_id: run});
+        assert.deepEqual(await checked(courseRooms()), [{id: room, title: roomTitle, can_post: true}]);
+        await checked(enrol("removed"), "Revoke the exact participant enrolment");
+        await requireParticipantDenial(workspace(run));
+        await requireParticipantDenial(courseRooms());
     });
     await test("Contact updates/archive and organisation archive are recoverable and audited", async () => {
         await checked(
@@ -630,7 +524,9 @@ try {
     console.log(
         `PASS: ${count} real password-only operations API cases; private customer/contact boundaries, reusable content, safe copies, publication/enrolment/revocation and immutable accepted course blocks.`,
     );
-} finally {
+});
+
+async function cleanupOperationFixtures({service, checked, sql, jobs, runs, templates, orgs, companyId, participantId}) {
     if (jobs.length) {
         const claims = await checked(
             service.from("job_claims").select("id").in("job_id", jobs),
@@ -718,6 +614,11 @@ try {
             );
         }
         await checked(
+            service.from("course_enrolments").delete()
+                .eq("user_id", participantId).in("course_run_id", runs),
+            "Delete exact fictional participant enrolment history",
+        );
+        await checked(
             service.from("course_sessions").delete().in("course_run_id", runs),
             "Delete QA course sessions",
         );
@@ -731,21 +632,16 @@ try {
             service.from("course_templates").delete().in("id", templates),
             "Delete QA templates",
         );
-    if (orgs.length)
+    if (orgs.length) {
+        await sql(`delete from private.company_premium_audit where organisation_id in(${orgs.map(q).join(",")});`);
+        await checked(
+            service.from("client_organisation_memberships").delete()
+                .eq("user_id", companyId).in("organisation_id", orgs),
+            "Delete exact fictional company memberships",
+        );
         await checked(
             service.from("organisations").delete().in("id", orgs),
             "Delete QA organisations",
         );
-    if (users.length) {
-        await checked(
-            service.from("audit_events").delete().in("actor_id", users),
-            "Delete only temporary actor audit",
-        );
-        for (const id of users)
-            await checked(
-                service.auth.admin.deleteUser(id),
-                "Delete temporary operation account",
-            );
     }
-    for (const client of clients) await client.removeAllChannels();
 }
