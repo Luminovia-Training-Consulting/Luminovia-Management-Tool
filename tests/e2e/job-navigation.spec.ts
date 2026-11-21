@@ -108,9 +108,12 @@ test("opens only the assigned course, member chat and own assignment calendar", 
     await page.goto(`/jobs/${job}`);
     await page.getByRole("link", {name: "Zum Kalender", exact: true}).click();
     await expect(page).toHaveURL(new RegExp(`/calendar\\?assignment=${job}`));
-    await expect(
-        page.getByRole("grid").getByRole("link", {name: new RegExp(title)}),
-    ).toBeVisible();
+    const assignment = page.locator(".calendar-panel").getByRole("link", {
+        name: title,
+        exact: true,
+    });
+    await expect(assignment).toBeVisible();
+    await expect(assignment).toHaveAttribute("href", `/jobs/${job}`);
     await page.goto(`/jobs/${job}`);
     await checked(
         service

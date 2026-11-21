@@ -78,13 +78,18 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                 id: privateEvent,
                 user_id: owner.id,
                 title: "PRIVATE APPOINTMENT",
-                starts_at: new Date(Date.now() + 4 * 86400000).toISOString(),
-                ends_at: new Date(Date.now() + 4 * 86400000 + 3600000).toISOString(),
+                starts_at: starts,
+                ends_at: ends,
                 time_zone: "Europe/Berlin",
             }),
         );
         await login(page, owner.email);
-        await page.goto("/calendar");
+        await page.goto(`/calendar?assignment=${job}`);
+        const views = page.getByRole("group", {
+            name: "Kalenderansicht",
+            exact: true,
+        });
+        await views.getByRole("button", {name: "Monat", exact: true}).click();
         await page.getByText("Kalenderfarben", {exact: true}).click();
         await page
             .getByLabel("Eigene private Termine", {exact: true})
@@ -112,6 +117,18 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                 .filter({hasText: "Fictional offline teaching"})
                 .first(),
         ).toHaveCSS("background-color", "rgb(245, 221, 231)");
+        await views.getByRole("button", {name: "Termine", exact: true}).click();
+        for (const [title, colour] of [
+            ["PRIVATE APPOINTMENT", "rgb(230, 224, 240)"],
+            ["Fictional offline teaching", "rgb(245, 221, 231)"],
+        ]) {
+            await expect(
+                page.locator(".fc-list-event")
+                    .filter({hasText: title})
+                    .locator(".fc-list-event-dot")
+                    .first(),
+            ).toHaveCSS("border-top-color", colour);
+        }
         await page.reload();
         await page.getByText("Kalenderfarben", {exact: true}).click();
         await expect(

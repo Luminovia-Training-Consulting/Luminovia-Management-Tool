@@ -555,6 +555,7 @@ export function CalendarPage() {
           title: e.title,
           start: e.starts_at,
           end: e.ends_at,
+          display: "block",
           color: "#1749b5",
           textColor: "#ffffff",
           extendedProps: { kind: "global", ...emptyMetadata },
@@ -574,6 +575,7 @@ export function CalendarPage() {
                     ?.title ?? t("courses"),
                 start: s.starts_at,
                 end: s.ends_at,
+                display: "block",
                 color: customerCreated
                   ? colors.customer_event_color
                   : "#326c58",
@@ -619,6 +621,7 @@ export function CalendarPage() {
           title: e.title,
           start: e.starts_at,
           end: e.ends_at,
+          display: "block",
           color: colors.personal_event_color,
           textColor: "#17283a",
           extendedProps: { kind: "private", ...emptyMetadata },
@@ -634,6 +637,7 @@ export function CalendarPage() {
                 t("assignment"),
               start: s.starts_at,
               end: s.ends_at,
+              display: "block",
               color: customerCreated
                 ? colors.customer_event_color
                 : colors.assignment_event_color,
