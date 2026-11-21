@@ -233,6 +233,14 @@ export function projectConfig(cwd = root) {
     };
 }
 
+/** Allow the built PWA to sign in only on the canonical disposable test project. */
+export function localEdgeOrigins({id, site}) {
+    const origins = [site, site.replace("127.0.0.1", "localhost")];
+    if (/^luminovia-portal-test-[a-f0-9]{8}$/.test(id ?? "") && site === "http://127.0.0.1:5273")
+        origins.push("http://127.0.0.1:4273");
+    return origins;
+}
+
 /** Rejects remote targets, embedded credentials and unrelated protocols for local HTTP probes. */
 export function localUrl(value, label = "URL") {
     const url = new URL(value);

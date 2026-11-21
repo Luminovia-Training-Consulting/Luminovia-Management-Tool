@@ -6,7 +6,7 @@ import {createHash, randomBytes} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {basename, join} from "node:path";
 import test from "node:test";
-import {cleanEnvironment} from "./runtime-lib.mjs";
+import {cleanEnvironment, localEdgeOrigins} from "./runtime-lib.mjs";
 import {browserAcceptance, browserFailure, browserPlan, browserProjectSelection,} from "./testing/browser-evidence.mjs";
 import {runtimeTestArguments, runtimeTestPhasePlan,} from "./runtime-test-phase.mjs";
 import {runBounded} from "./testing/run-bounded.mjs";
@@ -642,6 +642,23 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     assert.equal(pwaDiscovery.signal, desktop.signal);
     assert.equal(pwa.env.E2E_PWA, "1");
     assert.equal(pwa.env.E2E_BASE_URL, "http://127.0.0.1:4273");
+    const applicationOrigin = desktop.env.E2E_BASE_URL;
+    const projectId = seed.env.PORTAL_DB_CONTAINER.replace("supabase_db_", "");
+    assert.deepEqual(localEdgeOrigins({id: projectId, site: applicationOrigin}), [
+        applicationOrigin,
+        "http://localhost:5273",
+        pwa.env.E2E_BASE_URL,
+    ]);
+    for (const id of ["luminovia-portal", "luminovia-portal-github-123456abcdef", projectId + "-other"]) {
+        assert.deepEqual(localEdgeOrigins({id, site: applicationOrigin}), [
+            applicationOrigin,
+            "http://localhost:5273",
+        ]);
+    }
+    assert.deepEqual(localEdgeOrigins({id: projectId, site: "http://127.0.0.1:5173"}), [
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ]);
     assert.equal(browser.snapshots, 1);
     assert.equal(browser.released, 1);
     assert(browser.copies.some(([path]) => path.endsWith(".local/screenshots")));

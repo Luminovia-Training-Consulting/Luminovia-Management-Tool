@@ -6,7 +6,7 @@ import {spawn} from "node:child_process";
 import {appendFileSync, existsSync} from "node:fs";
 import {join} from "node:path";
 import {createServer} from "node:net";
-import {cleanEnvironment, command, migrationDigest, privateDirectory, privateWrite, projectConfig, readEnvFile, redact, root, runtimeDir, runtimeVersion, supabase, waitForHttp, writeState,} from "./runtime-lib.mjs";
+import {cleanEnvironment, command, localEdgeOrigins, migrationDigest, privateDirectory, privateWrite, projectConfig, readEnvFile, redact, root, runtimeDir, runtimeVersion, supabase, waitForHttp, writeState,} from "./runtime-lib.mjs";
 import {ensureLoopbackNetwork, removeLoopbackNetwork, stackNeedsNetworkMigration, verifyLoopbackBindings,} from "./runtime-network.mjs";
 import {ensureLocalAccounts} from "./local-bootstrap.mjs";
 
@@ -212,7 +212,7 @@ try {
         Object.entries({
             ...extra,
             PORTAL_INVITES_ENABLED: "true",
-            PORTAL_ALLOWED_ORIGINS: `${origin},${origin.replace("127.0.0.1", "localhost")}`,
+            PORTAL_ALLOWED_ORIGINS: localEdgeOrigins(config).join(","),
             PORTAL_APP_ORIGIN: origin,
         })
             .map(([k, v]) => `${k}=${v}`)

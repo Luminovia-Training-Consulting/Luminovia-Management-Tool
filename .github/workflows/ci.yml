@@ -229,6 +229,8 @@ jobs:
           path: |
             .local/tests/*/browser/application/results/**/error-context.md
             .local/tests/*/browser/application/results/**/test-failed-*.png
+            .local/tests/*/browser/pwa/results/**/error-context.md
+            .local/tests/*/browser/pwa/results/**/test-failed-*.png
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3
