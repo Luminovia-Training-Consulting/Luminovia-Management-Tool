@@ -14,6 +14,8 @@ const optionalUsername = {
   pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$",
 };
 const welcomeText = { type: "string", maxLength: 4000 };
+const nullableUuid = { type: ["string", "null"], format: "uuid" };
+const nullableDateTime = { type: ["string", "null"], format: "date-time" };
 const object = (properties: Record<string, unknown>) => ({
   type: "object",
   properties,
@@ -60,6 +62,156 @@ const rpc = (
     },
   },
 });
+
+const workspaceAction = {
+  post: {
+    ...rpc(
+      "courseWorkspaceAction",
+      "Premium LMS",
+      "Update a course resource or attendance record",
+      "The action is limited here to the documented resource and attendance commands. Current Premium, course role, ownership and version checks are enforced by the database. Resource sharing requires an already clean personal material version; the caller cannot choose ownership.",
+      {},
+      {
+        type: "object",
+        properties: { id: nullableUuid, saved: boolean },
+        required: ["id"],
+        additionalProperties: false,
+      },
+    ).post,
+    requestBody: {
+      required: true,
+      content: json({
+        oneOf: [
+          object({
+            p_run_id: uuid,
+            p_action: { const: "resource_share" },
+            p_payload: object({
+              version_id: uuid,
+              audience: { enum: ["staff", "client", "participants", "all"] },
+              category: { enum: ["material", "report"] },
+            }),
+            p_expected_version: version,
+          }),
+          object({
+            p_run_id: uuid,
+            p_action: { const: "resource_remove" },
+            p_payload: object({ id: uuid }),
+            p_expected_version: version,
+          }),
+          object({
+            p_run_id: uuid,
+            p_action: { const: "resource_acknowledge" },
+            p_payload: object({ id: uuid }),
+            p_expected_version: version,
+          }),
+          object({
+            p_run_id: uuid,
+            p_action: { const: "attendance_report" },
+            p_payload: object({ session_id: uuid }),
+            p_expected_version: version,
+          }),
+          object({
+            p_run_id: uuid,
+            p_action: { const: "attendance_verify" },
+            p_payload: object({
+              session_id: uuid,
+              user_id: uuid,
+              state: { enum: ["attended", "absent"] },
+              minutes: { type: "integer", minimum: 0 },
+              reason: { type: "string", minLength: 3, maxLength: 500 },
+            }),
+            p_expected_version: version,
+          }),
+        ],
+      }),
+    },
+  },
+};
+
+const courseDocuments = {
+  post: {
+    operationId: "downloadCourseDocument",
+    tags: ["Premium LMS"],
+    summary: "Download an authorized course PDF or resource",
+    description:
+      "Returns protected bytes only after current access and file integrity checks. The id is an exam share, resource, completion record or course run for attendance, respectively.",
+    requestBody: {
+      required: true,
+      content: json(
+        object({
+          kind: { enum: ["resource", "exam", "completion", "attendance"] },
+          id: uuid,
+        }),
+      ),
+    },
+    responses: {
+      "200": {
+        description: "Authorized document bytes",
+        content: {
+          "application/pdf": { schema: { type: "string", format: "binary" } },
+          "application/octet-stream": {
+            schema: { type: "string", format: "binary" },
+          },
+        },
+      },
+      "400": { description: "Invalid request" },
+      "401": { description: "Authentication required" },
+      "403": { description: "Document unavailable" },
+      "503": { description: "Document access or integrity unavailable" },
+    },
+  },
+};
+
+const courseMaterialUpload = {
+  post: {
+    operationId: "uploadCourseMaterial",
+    tags: ["Premium LMS"],
+    summary: "Upload and scan personal course material",
+    description:
+      "Upload an allowed material file to the caller's personal documents. Share its returned clean current_version_id with course_workspace_action resource_share. Upload alone does not make it visible to a course. The gateway validates bytes, scope and current permissions.",
+    requestBody: {
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: object({
+            file: { type: "string", format: "binary" },
+            scope: { const: "personal" },
+            kind: { const: "material" },
+            client_id: uuid,
+          }),
+        },
+      },
+    },
+    responses: {
+      "200": {
+        description: "Clean, authorized personal document",
+        content: json({
+          type: "object",
+          required: ["document"],
+          properties: {
+            document: {
+              type: "object",
+              required: ["id", "status", "current_version_id"],
+              properties: {
+                id: uuid,
+                status: { const: "clean" },
+                current_version_id: uuid,
+              },
+              additionalProperties: true,
+            },
+          },
+          additionalProperties: false,
+        }),
+      },
+      "400": { description: "Invalid file or request" },
+      "401": { description: "Authentication required" },
+      "403": { description: "Upload not allowed" },
+      "409": { description: "Conflicting retry or replacement" },
+      "422": { description: "Malware scan rejected" },
+      "503": { description: "Scanner or upload unavailable" },
+    },
+  },
+};
 
 const nativePaths = {
   "/rest/v1/rpc/account_username": rpc(
@@ -131,6 +283,82 @@ const nativePaths = {
       p_audience: { enum: ["students", "exam_staff"] },
     },
     uuid,
+  ),
+  "/rest/v1/rpc/remove_course_exam_pdf": rpc(
+    "removeCourseExamPdf",
+    "Premium LMS",
+    "Remove a course exam share",
+    "Authorized course exam editors can remove the share; the underlying uploaded version is retained.",
+    { ...course, p_exam_id: uuid },
+    { type: "null" },
+  ),
+  "/rest/v1/rpc/course_chat_rooms": rpc(
+    "courseChatRooms",
+    "Premium LMS",
+    "List accessible course participant chat rooms",
+    "Requires current course access and Premium. Only participant course rooms are returned; private and operational chat directories are excluded.",
+    course,
+    {
+      type: "array",
+      items: object({ id: uuid, title: { type: ["string", "null"] } }),
+    },
+  ),
+  "/rest/v1/rpc/course_chat_messages": rpc(
+    "courseChatMessages",
+    "Premium LMS",
+    "Read text history from a course participant room",
+    "Requires current room access. Deleted bodies are null; attachment metadata is omitted.",
+    {
+      p_room_id: uuid,
+      p_before_at: nullableDateTime,
+      p_before_id: nullableUuid,
+      p_limit: { type: "integer", minimum: 1, maximum: 100 },
+    },
+    {
+      type: "array",
+      items: object({
+        id: uuid,
+        sender_id: uuid,
+        sender_name: text,
+        body: { type: ["string", "null"] },
+        created_at: { type: "string", format: "date-time" },
+        deleted_at: nullableDateTime,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/send_course_chat_message": rpc(
+    "sendCourseChatMessage",
+    "Premium LMS",
+    "Post a text message in a course participant room",
+    "Requires current course Premium, room access and active enrolment for participants. The client ID makes retries idempotent. Files and mentions are not supported by this operation.",
+    {
+      p_room_id: uuid,
+      p_body: { type: "string", minLength: 1 },
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/course_workspace_action": workspaceAction,
+  "/functions/v1/course-documents": courseDocuments,
+  "/functions/v1/files": courseMaterialUpload,
+  "/rest/v1/rpc/company_monthly_accepted_spending": rpc(
+    "companyMonthlyAcceptedSpending",
+    "Company spending",
+    "Read accepted gross course spending by local month",
+    "Only current company memberships are returned. Pass null for all accessible organisations; a UUID selects one accessible organisation. The chart groups the returned rows by organisation and currency.",
+    { p_organisation_id: nullableUuid },
+    {
+      type: "array",
+      items: object({
+        organisation_id: uuid,
+        organisation_name: text,
+        time_zone: text,
+        currency: { enum: ["EUR", "AUD"] },
+        month_start: { type: "string", format: "date" },
+        gross_amount: { type: "number" },
+        claim_count: { type: "integer", minimum: 0 },
+      }),
+    },
   ),
   "/rest/v1/rpc/company_participant_access": rpc(
     "companyParticipantAccess",
