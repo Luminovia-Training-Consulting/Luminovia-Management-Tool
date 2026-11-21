@@ -1,0 +1,143 @@
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { AcademyApiExplorer, ApiExplorer } from "./explorer";
+import type { ExplorerRequest } from "./requests";
+
+const fake = vi.hoisted(() => ({
+  actor: "academy-user" as string | null,
+  getSession: vi.fn(),
+  swagger: vi.fn(),
+}));
+vi.mock("../../lib/installation-brand", async (load) => {
+  const source = await load<typeof import("../../lib/installation-brand")>();
+  return {
+    ...source,
+    installationBrand: {
+      ...source.internalInstallationBrand,
+      edition: "customer-self-hosted",
+      installationId: "b2656a34-5f19-460d-8e8b-d90b33c5dca2",
+      name: "Fictional training academy",
+    },
+  };
+});
+vi.mock("../auth/auth-context", () => ({
+  useAuth: () => ({ session: fake.actor && { user: { id: fake.actor } } }),
+}));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({ auth: { getSession: fake.getSession } }),
+}));
+vi.mock("swagger-ui-react", () => ({
+  default: (props: unknown) => {
+    fake.swagger(props);
+    return <div aria-label="Swagger" />;
+  },
+}));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ i18n: { language: "en" } }),
+}));
+
+const backend = "https://academy.example.invalid/backend";
+const workspace = {
+  url: `${backend}/rest/v1/rpc/course_workspace`,
+  method: "POST",
+};
+const session = {
+  data: { session: { user: { id: "academy-user" }, access_token: "fixture" } },
+};
+const latest = () =>
+  fake.swagger.mock.lastCall?.[0] as {
+    spec: { info: { title: string }; paths: Record<string, unknown> };
+    supportedSubmitMethods: string[];
+    requestInterceptor: (request: ExplorerRequest) => Promise<ExplorerRequest>;
+  };
+
+beforeEach(() => {
+  fake.actor = "academy-user";
+  fake.swagger.mockClear();
+  fake.getSession.mockReset().mockResolvedValue(session);
+  vi.stubEnv("VITE_SUPABASE_URL", backend);
+  vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "fictional-publishable");
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
+
+it("shows the academy RPCs and full JSON download, with live requests off until approved", async () => {
+  const user = userEvent.setup();
+  render(<AcademyApiExplorer />);
+  expect(latest().spec.info.title).toBe("Fictional training academy API");
+  expect(
+    Object.keys(latest().spec.paths).every((path) =>
+      path.startsWith("/rest/v1/rpc/"),
+    ),
+  ).toBe(true);
+  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
+    "href",
+    "/api/openapi.json",
+  );
+  expect(latest().supportedSubmitMethods).toEqual([]);
+  await expect(latest().requestInterceptor(workspace)).rejects.toThrow(
+    "api_session_required",
+  );
+  expect(fake.getSession).not.toHaveBeenCalled();
+  await user.click(
+    screen.getByRole("button", { name: "Authorize with my account" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Disable requests" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(latest().supportedSubmitMethods).toEqual(["get", "post"]);
+  await expect(latest().requestInterceptor(workspace)).resolves.toMatchObject({
+    headers: { Authorization: "Bearer fixture" },
+  });
+});
+
+it("stops a pending authorisation when requests are disabled and clears opt-in on account changes", async () => {
+  const user = userEvent.setup();
+  const view = render(<AcademyApiExplorer />);
+  await user.click(
+    screen.getByRole("button", { name: "Authorize with my account" }),
+  );
+  let resolve: (value: typeof session) => void = () => undefined;
+  fake.getSession.mockImplementationOnce(
+    () =>
+      new Promise((confirmed) => {
+        resolve = confirmed;
+      }),
+  );
+  const interceptor = latest().requestInterceptor;
+  const rejected = expect(interceptor(workspace)).rejects.toThrow(
+    "api_session_required",
+  );
+  await user.click(screen.getByRole("button", { name: "Disable requests" }));
+  await user.click(
+    screen.getByRole("button", { name: "Authorize with my account" }),
+  );
+  resolve(session);
+  await rejected;
+  fake.actor = "another-academy-user";
+  view.rerender(<AcademyApiExplorer />);
+  expect(latest().supportedSubmitMethods).toEqual([]);
+  fake.actor = "academy-user";
+  view.rerender(<AcademyApiExplorer />);
+  expect(latest().supportedSubmitMethods).toEqual([]);
+});
+
+it("preserves the internal explorer catalogue and interactive methods", async () => {
+  const user = userEvent.setup();
+  render(<ApiExplorer />);
+  expect(latest().spec.info.title).toBe("Luminovia Portal API");
+  expect(latest().spec.paths).toHaveProperty("/functions/v1/accounts/v1/me");
+  await user.click(
+    screen.getByRole("button", { name: "Authorize with my account" }),
+  );
+  expect(latest().supportedSubmitMethods).toEqual([
+    "get",
+    "post",
+    "patch",
+    "put",
+    "delete",
+  ]);
+});

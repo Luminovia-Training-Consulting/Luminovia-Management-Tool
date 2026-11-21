@@ -985,3 +985,19 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     },
   };
 }
+
+/** Keep Edge and file operations in the downloadable academy contract. */
+export function academyExplorerOpenApi(
+  backend: string,
+  brand: AcademyIdentity,
+) {
+  const document = academyOpenApi(backend, brand);
+  return {
+    ...document,
+    paths: Object.fromEntries(
+      Object.entries(document.paths).filter(([path]) =>
+        /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path),
+      ),
+    ),
+  };
+}

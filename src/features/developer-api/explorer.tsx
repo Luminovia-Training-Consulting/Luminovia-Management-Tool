@@ -1,19 +1,60 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
+import "./explorer.css";
 import { Button } from "../../components/ui/button";
 import { PageHeading } from "../../components/common";
+import {
+  installationBrand,
+  internalInstallationBrand,
+  type InstallationBrand,
+} from "../../lib/installation-brand";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 import { portalOpenApi } from "./contract";
 import { authorizeExplorerRequest } from "./requests";
 
 export function ApiExplorer() {
-  const { i18n } = useTranslation();
+  return <Explorer brand={internalInstallationBrand} />;
+}
+
+/** Installed academy API operations, with session credentials confined to local RPCs. */
+export function AcademyApiExplorer() {
+  return <Explorer brand={installationBrand} />;
+}
+
+function Explorer({ brand }: { brand: InstallationBrand }) {
   const { session } = useAuth();
+  const actor = session?.user.id;
+  return (
+    <ExplorerSession brand={brand} actor={actor} key={actor ?? "signed-out"} />
+  );
+}
+
+function ExplorerSession({
+  brand,
+  actor,
+}: {
+  brand: InstallationBrand;
+  actor?: string;
+}) {
+  const { i18n } = useTranslation();
   const de = i18n.language.startsWith("de");
-  const [authorized, setAuthorized] = useState(false);
+  const academy = brand.edition !== "internal";
+  const [approval, setApproval] = useState<number | null>(null);
+  const permit = useRef(0);
+  const authorized = approval !== null;
+  useEffect(
+    () => () => {
+      permit.current += 1;
+    },
+    [],
+  );
+  function toggleRequests() {
+    permit.current += 1;
+    setApproval(actor && !authorized ? permit.current : null);
+  }
   const backend = useMemo(
     () =>
       new URL(
@@ -23,25 +64,30 @@ export function ApiExplorer() {
     [],
   );
   const spec = useMemo(() => {
-    const document = portalOpenApi(backend, false);
+    const document = portalOpenApi(backend, false, brand);
     return { ...document, security: [], components: {} };
-  }, [backend]);
+  }, [backend, brand]);
 
   return (
     <>
       <PageHeading
         title={de ? "API-Dokumentation" : "API documentation"}
         description={
-          de
-            ? "Durchsuche die dokumentierten Schnittstellen und führe Anfragen mit deinem aktuellen Konto aus."
-            : "Search the documented operations and send requests with your current account."
+          academy
+            ? de
+              ? "Führe dokumentierte LMS-Datenbankanfragen mit deinem Konto aus. Der JSON-Download enthält zusätzlich die Datei- und Kontoschnittstellen."
+              : "Run documented LMS database requests with your account. The JSON download also includes file and account operations."
+            : de
+              ? "Durchsuche die dokumentierten Schnittstellen und führe Anfragen mit deinem aktuellen Konto aus."
+              : "Search the documented operations and send requests with your current account."
         }
       />
       <div className="button-row">
         <Button
           type="button"
           aria-pressed={authorized}
-          onClick={() => setAuthorized(!authorized)}
+          disabled={!actor}
+          onClick={toggleRequests}
         >
           {authorized
             ? de
@@ -67,7 +113,7 @@ export function ApiExplorer() {
             : "Requests are disabled."}
       </p>
       <section
-        className="panel"
+        className={academy ? "panel academy-api-explorer" : "panel"}
         style={{
           colorScheme: "light",
           background: "white",
@@ -83,20 +129,27 @@ export function ApiExplorer() {
           queryConfigEnabled={false}
           requestSnippetsEnabled={false}
           supportedSubmitMethods={
-            authorized ? ["get", "post", "patch", "put", "delete"] : []
+            authorized
+              ? academy
+                ? ["get", "post"]
+                : ["get", "post", "patch", "put", "delete"]
+              : []
           }
           showMutatedRequest={false}
           persistAuthorization={false}
           requestInterceptor={async (request) => {
-            if (!authorized || !session)
+            if (!approval || !actor || permit.current !== approval)
               throw new Error("api_session_required");
-            return authorizeExplorerRequest(
+            const permitted = await authorizeExplorerRequest(
               request,
               backend,
               import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              session.user.id,
+              actor,
               async () => (await db().auth.getSession()).data.session,
+              brand,
             );
+            if (!permit.current) throw new Error("api_session_required");
+            return permitted;
           }}
         />
       </section>

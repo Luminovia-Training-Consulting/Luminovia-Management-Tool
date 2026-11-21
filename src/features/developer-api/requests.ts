@@ -1,3 +1,4 @@
+import type { InstallationBrand } from "../../lib/installation-brand";
 import { isDocumentedRequest } from "./contract";
 
 /** Swagger request fields used by the exact-backend session boundary. */
@@ -19,8 +20,9 @@ export async function authorizeExplorerRequest(
     user: { id: string };
     access_token: string;
   } | null>,
+  brand?: InstallationBrand,
 ): Promise<ExplorerRequest> {
-  if (!isDocumentedRequest(request.url, request.method, backend)) {
+  if (!isDocumentedRequest(request.url, request.method, backend, brand)) {
     throw new Error("api_request_destination_denied");
   }
   const session = await currentSession();
@@ -35,11 +37,18 @@ export async function authorizeExplorerRequest(
           "cookie",
           "accept-profile",
           "content-profile",
+          "x-http-method-override",
+          "x-http-method",
+          "x-method-override",
         ].includes(key.toLowerCase()),
     ),
   );
   return {
     ...request,
+    ...(brand &&
+      brand.edition !== "internal" && {
+        url: new URL(request.url, backend.replace(/\/+$/, "") + "/").href,
+      }),
     headers: {
       ...headers,
       apikey: publishableKey,

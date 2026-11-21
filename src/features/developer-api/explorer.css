@@ -1,0 +1,21 @@
+.academy-api-explorer {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 480px) {
+  .academy-api-explorer .swagger-ui .wrapper {
+    padding-inline: 0;
+  }
+
+  .academy-api-explorer .swagger-ui .opblock-summary-control {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .academy-api-explorer .swagger-ui .opblock-summary-path {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

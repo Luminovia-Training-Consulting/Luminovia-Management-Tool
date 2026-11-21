@@ -3,7 +3,7 @@ import {
   type InstallationBrand,
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
-import { academyOpenApi } from "./academy-contract.ts";
+import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
@@ -1580,7 +1580,9 @@ export function portalOpenApi(
 ) {
   return brand.edition === "internal"
     ? internalOpenApi(backend, includeNonInteractive, brand)
-    : academyOpenApi(backend, brand);
+    : includeNonInteractive
+      ? academyOpenApi(backend, brand)
+      : academyExplorerOpenApi(backend, brand);
 }
 
 function internalOpenApi(
@@ -1645,8 +1647,9 @@ export function isDocumentedRequest(
   rawUrl: string,
   method: string,
   backend: string,
+  brand?: InstallationBrand,
 ) {
-  const target = URL.parse(rawUrl, backend + "/");
+  const target = URL.parse(rawUrl, backend.replace(/\/+$/, "") + "/");
   const base = URL.parse(backend);
   if (!target || !base) return false;
   const verb = method.toLowerCase();
@@ -1660,6 +1663,13 @@ export function isDocumentedRequest(
   const prefix = base.pathname.replace(/\/+$/, "");
   if (!target.pathname.startsWith(prefix + "/")) return false;
   const route = target.pathname.slice(prefix.length);
+  if (brand && brand.edition !== "internal") {
+    if (target.search || (verb !== "get" && verb !== "post")) return false;
+    const operations = academyExplorerOpenApi(backend, brand).paths;
+    return (
+      Object.hasOwn(operations, route) && Object.hasOwn(operations[route], verb)
+    );
+  }
   if (Object.hasOwn(paths, route)) return Object.hasOwn(paths[route], verb);
   return Object.entries(paths).some(([path, operations]) => {
     if (!path.includes("{") || !Object.hasOwn(operations, verb)) return false;
