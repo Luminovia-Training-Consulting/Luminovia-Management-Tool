@@ -19,7 +19,9 @@ await withTestDatabase(
       template,
       run,
       courseSession,
-    ] = Array.from({ length: 9 }, randomUUID);
+      anotherCourseSession,
+      topic,
+    ] = Array.from({ length: 11 }, randomUUID);
     const actors = [
       [admin, "admin"],
       [lecturer, "lecturer"],
@@ -39,7 +41,12 @@ await withTestDatabase(
           values(${q(template)},'Fictional workshop','Fictional workshop description');
         insert into public.course_runs(id,template_id,organisation_id) values(${q(run)},${q(template)},${q(organisation)});
         insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
-          values(${q(courseSession)},${q(run)},now()+interval '10 days',now()+interval '10 days 1 hour');
+          values(${q(courseSession)},${q(run)},now()+interval '10 days',now()+interval '10 days 1 hour'),
+                (${q(anotherCourseSession)},${q(run)},now()+interval '11 days',now()+interval '11 days 1 hour');
+        insert into public.topics(id,label_de,label_en,kind)
+          values(${q(topic)},'Fiktives Thema','Fictional topic','topic');
+        insert into public.lecturer_topics(user_id,topic_id,verified)
+          values(${q(lecturer)},${q(topic)},false);
     `);
 
     /** Read or mutate exclusively using the public authenticated contracts. */
@@ -71,10 +78,11 @@ await withTestDatabase(
             ${
               linked
                 ? `insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at)
-                   select ${q(job)},id,starts_at,ends_at from public.course_sessions where id=${q(courseSession)}`
+                   select ${q(job)},id,starts_at,ends_at from public.course_sessions where course_run_id=${q(run)}`
                 : `insert into public.job_sessions(job_id,starts_at,ends_at)
                    values(${q(job)},now()+interval '5 days',now()+interval '5 days 1 hour')`
             };
+            insert into public.job_requirements(job_id,topic_id) values(${q(job)},${q(topic)});
         `);
       if (linked) {
         // Capture a real role-based quote and accepted revenue row for the company.
@@ -128,7 +136,7 @@ await withTestDatabase(
     const nextEnd = new Date(Date.parse(next) + 3600000).toISOString();
     const changes = {
       location: "Fictional venue",
-      terms: "Jointly accepted revised terms",
+      terms: "Jointly accepted revised terms ".repeat(300).trim(),
       amount: 125,
       total_amount: 125,
       sessions: [{ starts_at: next, ends_at: nextEnd }],
@@ -244,11 +252,32 @@ await withTestDatabase(
     await assert.rejects(draft(client, linked.claim, { amount: 1 }), /42501/);
     await assert.rejects(
       draft(client, linked.claim, { sessions: changes.sessions }),
-      /learning and attendance evidence/,
+      /must keep its session count/,
     );
+    const linkedRows = () =>
+      sql(`
+      select jsonb_agg(jsonb_build_object('offer',j.id,'course',s.id,
+          'starts_at',s.starts_at,'ends_at',s.ends_at,'matched',s.starts_at=j.starts_at and s.ends_at=j.ends_at)
+        order by j.starts_at)
+      from public.job_sessions j join public.course_sessions s on s.id=j.course_session_id
+      where j.job_id=${q(linked.job)}
+    `).then(JSON.parse);
+    const originals = await linkedRows();
+    const moveByDay = (row) => ({
+      starts_at: new Date(Date.parse(row.starts_at) + 86400000).toISOString(),
+      ends_at: new Date(Date.parse(row.ends_at) + 86400000).toISOString(),
+    });
+    // The first destination is the old second slot. Both existing IDs must
+    // survive and the immediate job-session exclusion must still be enforced.
+    const moved = originals.map(moveByDay);
     const companyChange = await draft(client, linked.claim, {
       location: "Fictional company venue",
+      sessions: moved,
     });
+    assert.equal(
+      (await current(companyChange, client)).schedule_editable,
+      true,
+    );
     assert.equal((await current(companyChange, client)).original.amount, null);
     assert.equal((await current(companyChange, client)).original.terms, null);
     await assert.rejects(current(companyChange, otherClient), /42501/);
@@ -261,14 +290,55 @@ await withTestDatabase(
       await sql(`select venue from public.course_runs where id=${q(run)}`),
       "Fictional company venue",
     );
+    const rescheduled = await linkedRows();
+    assert.deepEqual(
+      rescheduled.map(({ offer, course }) => [offer, course]),
+      originals.map(({ offer, course }) => [offer, course]),
+    );
+    assert.deepEqual(
+      rescheduled.map((row) => [
+        Date.parse(row.starts_at),
+        Date.parse(row.ends_at),
+        row.matched,
+      ]),
+      moved.map((row) => [
+        Date.parse(row.starts_at),
+        Date.parse(row.ends_at),
+        true,
+      ]),
+    );
     assert.equal(
-      await sql(
-        `select id from public.course_sessions where course_run_id=${q(run)}`,
-      ),
-      courseSession,
+      await sql(`select count(*) from public.assignment_sessions s
+      join private.assignment_session_supersessions x on x.session_id=s.id
+      where s.claim_id=${q(linked.claim)} and s.released_at is not null`),
+      "2",
     );
     console.log(
-      "PASS company-only operational proposals, confidentiality and linked course session preservation",
+      "PASS company-scoped same-count rescheduling preserves course and job identities through a slot collision",
+    );
+
+    const delayed = await draft(admin, linked.claim, {
+      sessions: rescheduled.map(moveByDay),
+    });
+    await advance(delayed, "submit", admin);
+    await advance(delayed, "accept", admin);
+    await advance(delayed, "accept", lecturer);
+    await sql(`insert into private.course_attendance_audit(session_id,user_id,actor_id,new_state,reason)
+      values(${q(courseSession)},${q(other)},${q(admin)},'{"state":"absent"}','Fictional retained correction')`);
+    await assert.rejects(
+      advance(delayed, "apply", admin),
+      /dependent records or another owner/,
+    );
+    assert.equal((await current(delayed)).schedule_editable, false);
+    assert.deepEqual(await linkedRows(), rescheduled);
+    assert.equal(
+      await sql(
+        `select count(*) from private.course_attendance_audit where session_id=${q(courseSession)}`,
+      ),
+      "1",
+    );
+    console.log(
+      "PASS evidence arriving after consent blocks the schedule move and retains its original record",
     );
 
     const revenueBefore = await sql(

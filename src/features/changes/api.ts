@@ -52,6 +52,7 @@ export const assignmentChangeSchema = z.object({
   customer_view: z.boolean().optional(),
   requested_by_customer: z.boolean().optional(),
   commissioned: z.boolean().optional(),
+  schedule_editable: z.boolean().optional(),
   can_edit: z.boolean(),
   can_submit: z.boolean(),
   can_respond: z.boolean(),
@@ -79,6 +80,7 @@ const candidateSchema = z.object({
   can_price: z.boolean(),
   customer_view: z.boolean().optional(),
   commissioned: z.boolean(),
+  schedule_editable: z.boolean().optional(),
   current: snapshotSchema,
 });
 export type AssignmentChange = z.infer<typeof assignmentChangeSchema>;

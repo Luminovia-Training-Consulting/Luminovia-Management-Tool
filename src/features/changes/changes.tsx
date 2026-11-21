@@ -79,7 +79,7 @@ const formSchema = z.object({
   reason: z.string().trim().min(5).max(2000),
   location: z.string().max(500),
   scope: z.string().max(12000),
-  terms: z.string().trim().min(1).max(8000),
+  terms: z.string().trim().min(1).max(12000),
   amount: z.string(),
   total_amount: z.string(),
   rate_unit: z.enum([
@@ -98,7 +98,7 @@ const formSchema = z.object({
 });
 // Customer forms deliberately contain no private terms or compensation. Their
 // hidden defaults must not require invented terms merely to pass form validation.
-const customerFormSchema = formSchema.extend({ terms: z.string().max(8000) });
+const customerFormSchema = formSchema.extend({ terms: z.string().max(12000) });
 /** Edit one captured draft snapshot. Polling does not replace reviewed fields;
  * zoned inputs become explicit instants before the server revalidates them. */
 function ChangeForm({
@@ -125,6 +125,10 @@ function ChangeForm({
   const candidate = candidates.find((item) => item.claim_id === selected);
   const source = original?.proposed ?? candidate?.current;
   const [formSource] = useState(() => source);
+  const linkedCourse = Boolean(source?.course_run_id);
+  const scheduleEditable =
+    !linkedCourse ||
+    (original?.schedule_editable ?? candidate?.schedule_editable ?? false);
   const zone = source?.time_zone ?? "Europe/Berlin";
   const customerView =
     original?.customer_view ?? candidate?.customer_view ?? false;
@@ -186,10 +190,9 @@ function ChangeForm({
         location: values.location,
         scope: values.scope,
       };
-      // Linked course sessions keep their identities so attendance, course
-      // resources and completion data remain attached. Unchanged inputs keep
-      // their exact instants even when the local editor shows whole minutes.
-      if (!source?.course_run_id && !values.cancel) {
+      // Unchanged inputs retain exact instants even if the local editor
+      // displays whole minutes. The server rechecks linked-course eligibility.
+      if (scheduleEditable && !values.cancel) {
         const initial = defaults(formSource).sessions;
         changes.sessions = values.sessions.map((item, index) => {
           const existing = formSource?.sessions[index];
@@ -349,12 +352,13 @@ function ChangeForm({
           </Field>
         </fieldset>
       )}
-      {source?.course_run_id ? (
+      {!scheduleEditable ? (
         <p className="muted">{t("linkedSessions")}</p>
       ) : (
         <fieldset className="changes-sessions">
           <legend>{t("sessions")}</legend>
           <p className="muted">{t("dateHint", { zone })}</p>
+          {linkedCourse && <p className="muted">{t("linkedSessionCount")}</p>}
           {fields.map((item, index) => (
             <div key={item.id} className="changes-session">
               <Field
@@ -381,24 +385,28 @@ function ChangeForm({
                   {...register(`sessions.${index}.ends_at`)}
                 />
               </Field>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={fields.length <= 1}
-                onClick={() => remove(index)}
-              >
-                {t("removeSession")}
-              </Button>
+              {!linkedCourse && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={fields.length <= 1}
+                  onClick={() => remove(index)}
+                >
+                  {t("removeSession")}
+                </Button>
+              )}
             </div>
           ))}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={fields.length >= 60}
-            onClick={() => append({ starts_at: "", ends_at: "" })}
-          >
-            {t("addSession")}
-          </Button>
+          {!linkedCourse && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={fields.length >= 60}
+              onClick={() => append({ starts_at: "", ends_at: "" })}
+            >
+              {t("addSession")}
+            </Button>
+          )}
         </fieldset>
       )}
       {!customerView && (

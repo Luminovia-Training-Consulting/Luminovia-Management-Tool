@@ -3,7 +3,9 @@
 import i18n from "../../lib/i18n";
 const de = {
   linkedSessions:
-    "Termine eines verknüpften Kurses bleiben mit ihren Anwesenheits- und Lernnachweisen verbunden. Hier kannst du Ort und Leistungsumfang ändern.",
+    "Die Termine dieses Kurses sind an weitere Vorgänge gebunden. Du kannst Ort und Leistungsumfang ändern.",
+  linkedSessionCount:
+    "Beim Verschieben bleiben die vorhandenen Kurstermine und ihre Anzahl erhalten.",
   title: "Änderungsanträge",
   intro:
     "Bestätigte Aufträge gemeinsam ändern: Original und Änderung bleiben nachvollziehbar erhalten.",
@@ -92,7 +94,9 @@ const de = {
 };
 const en = {
   linkedSessions:
-    "Linked course sessions stay attached to attendance and learning records. You can change the location and scope here.",
+    "This course schedule has dependent records. You can change its location and scope here.",
+  linkedSessionCount:
+    "Rescheduling keeps the existing course sessions and their count.",
   title: "Change requests",
   intro:
     "Agree changes to confirmed assignments while retaining the original and its amendment history.",

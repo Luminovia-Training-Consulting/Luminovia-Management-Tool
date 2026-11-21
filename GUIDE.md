@@ -3486,10 +3486,12 @@ in place and records the reason. A new version requires fresh consent.
 
 This workflow covers future, unstarted, single-position assignments with no
 invoice or invoice-review history. For standalone jobs, a proposal can replace
-the complete schedule. For a dedicated course, the workflow retains session
-identities and their attendance and learning evidence. It supports changes to
-location, scope and, with permission, terms or net pay. Company contacts can
-propose location and scope for their company’s assignment and can read their
+the complete schedule. A dedicated course can move its existing sessions when
+the assignment covers the full schedule and there are no enrolments, confirmed
+schedules or dependent records. The course and job session identifiers stay
+stable. The workflow also supports changes to location, scope and, with
+permission, terms or net pay. Company contacts can propose available schedule,
+location and scope changes for their company’s assignment and can read their
 own proposals. Their view hides lecturer terms, compensation and decision notes.
 
 Commissioned net changes require gross-finance authority, retain the original
