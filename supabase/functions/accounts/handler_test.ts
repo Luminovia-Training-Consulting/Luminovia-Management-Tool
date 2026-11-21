@@ -208,6 +208,7 @@ function fixture(overrides: Partial<AccountDependencies> = {}) {
         appOrigin: "http://127.0.0.1:5273",
         invitationsEnabled: true,
         openapi: accountOpenApi,
+        canPublishOpenApi: () => Promise.resolve(true),
         authenticate: async () => {
             calls.push("authenticate");
             return true;
@@ -660,3 +661,21 @@ Deno.test(
         assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
     },
 );
+Deno.test("Static internal OpenAPI is unavailable to customer editions or an unavailable edition authority", async () => {
+    const url = "http://localhost/accounts/openapi.json";
+    const customer = fixture({canPublishOpenApi: () => Promise.resolve(false)});
+    const missingAuthority = fixture({canPublishOpenApi: undefined});
+    const failedAuthority = fixture({
+        canPublishOpenApi: () => Promise.reject(new Error("temporary_backend_error")),
+    });
+    for (const [test, code, error] of [
+        [customer, 404, "not_found"],
+        [missingAuthority, 404, "not_found"],
+        [failedAuthority, 503, "service_unavailable"],
+    ] as const) {
+        const reply = await test.handler(new Request(url));
+        assert.equal(reply.status, code);
+        assert.deepEqual(await reply.json(), {error});
+        assert.match(reply.headers.get("cache-control") ?? "", /no-store/);
+    }
+});

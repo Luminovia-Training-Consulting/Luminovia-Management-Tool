@@ -49,6 +49,16 @@ Deno.serve(
         origins,
         appOrigin,
         openapi: accountOpenApi,
+        canPublishOpenApi: async () => {
+            // The static internal facade description is itself edition scoped.
+            // Consult the trusted bootstrap read rather than a build variable.
+            const result = await service.rpc("installation_capabilities")
+                .abortSignal(AbortSignal.timeout(3000));
+            if (result.error || typeof result.data?.edition !== "string") {
+                throw new Error("installation_unavailable");
+            }
+            return result.data.edition === "internal";
+        },
         invitationsEnabled:
             Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
             origins.includes(appOrigin),

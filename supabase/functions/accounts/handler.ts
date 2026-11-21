@@ -70,6 +70,8 @@ export interface AccountDependencies {
         operationId: string,
     ) => Promise<DeletionResult>;
     openapi: unknown;
+    /** The static account contract belongs to the current internal edition. */
+    canPublishOpenApi?: () => Promise<boolean>;
 }
 
 // Validate an input UUID's format; a valid identifier grants no access.
@@ -238,7 +240,12 @@ export function createAccountHandler(deps: AccountDependencies) {
         const path =
             "/" + (index >= 0 ? segments.slice(index + 1) : segments).join("/");
         if (path === "/openapi.json" && request.method === "GET") {
-            return response(200, deps.openapi);
+            try {
+                if (await deps.canPublishOpenApi?.()) return response(200, deps.openapi);
+                return response(404, {error: "not_found"});
+            } catch {
+                return response(503, {error: "service_unavailable"});
+            }
         }
         const token = /^Bearer (\S+)$/.exec(
             request.headers.get("authorization") ?? "",
