@@ -7,6 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {checked} from "./helpers/accounts-support";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -151,12 +152,15 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             })
         ).error,
     ).toBeNull();
+    const policy = await ownerApi.rpc("commission_access");
+    expect(policy.error).toBeNull();
+    expect(policy.data?.policy_version).toEqual(expect.any(Number));
     expect(
         (
             await ownerApi.rpc("configure_compensation_policy", {
                 p_regular_percent: 32,
                 p_senior_percent: 74,
-                p_expected_version: 0,
+                p_expected_version: policy.data.policy_version,
             })
         ).error,
     ).toBeNull();
@@ -314,26 +318,28 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
         await teacherPage
             .getByRole("button", {name: "Auftrag übernehmen", exact: true})
             .click();
-        await expect(teacherPage.getByRole("status")).toContainText(
-            /bestätigt|übernommen/i,
-        );
+        await expect(teacherPage.getByRole("status").filter({
+            hasText: /^Dein Auftrag ist bestätigt\.$/,
+        })).toBeVisible();
+        // Backdate only the fictional isolated schedule, then re-read the
+        // course screen so the real final-session gate recalculates eligibility.
         const acceptedClaim = await checked(
-            service
+            service()
                 .from("job_claims")
                 .select("id")
                 .eq("job_id", linked.job_id)
                 .eq("lecturer_id", lecturer.id)
                 .eq("status", "confirmed")
                 .single(),
-            "Read the accepted claim for its course invoice link",
+            {requireData: true},
         );
         const scheduled = await checked(
-            service
+            service()
                 .from("job_sessions")
                 .select("id,starts_at,ends_at")
                 .eq("job_id", linked.job_id)
                 .order("starts_at"),
-            "Read isolated accepted schedule for the time-gate fixture",
+            {requireData: true},
         );
         expect(scheduled.length).toBeGreaterThan(0);
         const latestEnd = Math.max(
@@ -342,36 +348,35 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             shift = Date.now() - 86400000 - latestEnd;
         for (const session of scheduled) {
             await checked(
-                service
+                service()
                     .from("job_sessions")
                     .update({
                         starts_at: new Date(Date.parse(session.starts_at) + shift).toISOString(),
                         ends_at: new Date(Date.parse(session.ends_at) + shift).toISOString(),
                     })
                     .eq("id", session.id),
-                "Advance one isolated accepted schedule past its final session",
             );
         }
         const assignedSessions = await checked(
-            service
+            service()
                 .from("assignment_sessions")
                 .select("id,starts_at,ends_at")
                 .eq("claim_id", acceptedClaim.id),
-            "Read the assigned schedule snapshot for the time-gate fixture",
+            {requireData: true},
         );
         expect(assignedSessions.length).toBe(scheduled.length);
         for (const session of assignedSessions) {
             await checked(
-                service
+                service()
                     .from("assignment_sessions")
                     .update({
                         starts_at: new Date(Date.parse(session.starts_at) + shift).toISOString(),
                         ends_at: new Date(Date.parse(session.ends_at) + shift).toISOString(),
                     })
                     .eq("id", session.id),
-                "Advance one isolated assignment snapshot with its session",
             );
         }
+        await teacherPage.reload();
         await teacherPage
             .getByRole("button", {name: "Rechnung einreichen", exact: true})
             .click();

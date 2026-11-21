@@ -195,9 +195,10 @@ test("real private upload exposes authorized scan and current-version details, d
     await confirmation
         .getByRole("button", {name: `${renamed} wiederherstellen`, exact: true})
         .click();
-    await expect(archive.getByRole("status")).toHaveText(
-        "Material wiederhergestellt.",
-    );
+    // The scan list refresh may show a loading status alongside the receipt.
+    await expect(archive.getByRole("status").filter({
+        hasText: /^Material wiederhergestellt\.$/,
+    })).toBeVisible();
     await archive.getByRole("button", {name: "Schließen", exact: true}).click();
     await expect(page.getByText(renamed, {exact: true})).toBeVisible();
 });

@@ -284,6 +284,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
             .eq("title", staffTitle)
             .single();
     expect(uploaded.error).toBeNull();
+    if (!uploaded.data) throw new Error("Expected the scanned fixture version");
     expect(uploaded.data).toMatchObject({
         owner_id: lecturer.id,
         uploaded_by: administrator.id,
@@ -339,11 +340,12 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     const eur = await acceptedJob(lecturer, "EUR", 123.45, 2);
     const aud = await acceptedJob(lecturer, "AUD", 456.78, 3);
     await page.goto("/finance");
+    // The trend chart uses its own currency headings below the summary cards.
     await expect(
-        page.getByRole("heading", {name: "EUR", exact: true}),
+        page.getByRole("heading", {name: "EUR", level: 2, exact: true}),
     ).toBeVisible();
     await expect(
-        page.getByRole("heading", {name: "AUD", exact: true}),
+        page.getByRole("heading", {name: "AUD", level: 2, exact: true}),
     ).toBeVisible();
     await page
         .getByRole("button", {name: "Rechnung einreichen", exact: true})

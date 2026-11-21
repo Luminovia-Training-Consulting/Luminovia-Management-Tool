@@ -6,6 +6,7 @@ import {expect, test} from "@playwright/test";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
+import {checked} from "./helpers/accounts-support";
 
 test.skip(
     !process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -40,7 +41,8 @@ test("actual Auth invitation link opens password setup and the invited account c
             },
         });
         expect(error).toBeNull();
-        expect(data.user).toBeTruthy();
+        if (!data.user || !data.properties)
+            throw new Error("Fictional Auth invitation failed");
         const role = await service
             .from("user_roles")
             .insert({user_id: data.user.id, role: "lecturer"});

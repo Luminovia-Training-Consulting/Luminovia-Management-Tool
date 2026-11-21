@@ -53,9 +53,10 @@ test("individual account roles, scoped invitations and linked status management 
         expect(groupBox).not.toBeNull();
         expect(deleteBox).not.toBeNull();
         expect(roleBox).not.toBeNull();
-        expect(groupBox!.right).toBeLessThanOrEqual(width + 1);
-        expect(deleteBox!.right).toBeLessThanOrEqual(width + 1);
-        expect(roleBox!.right).toBeLessThanOrEqual(width + 1);
+        // Playwright reports x/y/width/height rather than DOMRect.right.
+        expect(groupBox!.x + groupBox!.width).toBeLessThanOrEqual(width + 1);
+        expect(deleteBox!.x + deleteBox!.width).toBeLessThanOrEqual(width + 1);
+        expect(roleBox!.x + roleBox!.width).toBeLessThanOrEqual(width + 1);
         const overlap =
             deleteBox!.x < roleBox!.x + roleBox!.width &&
             roleBox!.x < deleteBox!.x + deleteBox!.width &&
@@ -98,6 +99,7 @@ test("individual account roles, scoped invitations and linked status management 
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const actualRoles = await checked(
         service.from("user_roles").select("role").eq("user_id", teacher.id),
+        {requireData: true},
     );
     expect(actualRoles.map((row) => row.role).sort()).toEqual([
         "lecturer",
@@ -138,6 +140,7 @@ test("individual account roles, scoped invitations and linked status management 
         (
             await checked(
                 service.from("user_roles").select("role").eq("user_id", invited!.id),
+                {requireData: true},
             )
         ).map((row) => row.role),
     ).toEqual(["senior_lecturer"]);

@@ -206,7 +206,10 @@ test("combined filters find a real job, claim confirms all five sessions and imm
     await page
         .getByRole("button", {name: "Auftrag übernehmen", exact: true})
         .click();
-    await expect(page.getByRole("status")).toContainText(/bestätigt|übernommen/i);
+    // Wait for the actual claim receipt while the page may refresh related panels.
+    await expect(page.getByRole("status").filter({
+        hasText: /^Dein Auftrag ist bestätigt\.$/,
+    })).toBeVisible();
     const {client, user} = await signInApi(process.env.E2E_LECTURER_EMAIL!);
     const {data: claims, error} = await client
         .from("job_claims")

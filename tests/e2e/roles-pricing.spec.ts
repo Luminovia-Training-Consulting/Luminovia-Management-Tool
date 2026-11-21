@@ -17,6 +17,13 @@ test("management assigns only subordinate roles while only administration sees a
     const peer = await actor(`Peer Manager ${suffix}`, "management");
     const admin = await actor(`Policy Admin ${suffix}`, "admin");
     const teacher = await actor(`Delegated Teacher ${suffix}`, "lecturer");
+    // Bind actions to the exact account row while search refreshes the page.
+    const accountRow = (email: string) => page.locator(".account-list").getByRole("listitem").filter({
+        has: page.getByText(email, {exact: true}),
+    });
+    const teacherRoles = accountRow(teacher.email).getByRole("button", {
+        name: "Rollen bearbeiten", exact: true,
+    });
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const orgRequests: string[] = [];
     page.on("request", (request) => {
@@ -39,23 +46,19 @@ test("management assigns only subordinate roles while only administration sees a
         });
         for (const protectedAccount of [manager, peer, admin]) {
             await search.fill(protectedAccount.name);
+            const row = accountRow(protectedAccount.email);
             await expect(
-                page.getByText(protectedAccount.email, {exact: true}),
+                row,
             ).toBeVisible();
             await expect(
-                page.getByRole("button", {
+                row.getByRole("button", {
                     name: "Rollen bearbeiten",
                     exact: true,
                 }),
             ).toHaveCount(0);
         }
         await search.fill(teacher.name);
-        await page
-            .getByRole("button", {
-                name: "Rollen bearbeiten",
-                exact: true,
-            })
-            .click();
+        await teacherRoles.click();
         const roles = page.getByRole("dialog", {
             name: "Rollen bearbeiten",
             exact: true,
@@ -94,6 +97,7 @@ test("management assigns only subordinate roles while only administration sees a
         ).toBeVisible();
         const committed = await checked(
             service.from("user_roles").select("role").eq("user_id", teacher.id),
+            {requireData: true},
         );
         expect(committed.map((row) => row.role).sort()).toEqual([
             "guest",
@@ -156,12 +160,7 @@ test("management assigns only subordinate roles while only administration sees a
         await page
             .getByRole("searchbox", {name: "Konten suchen", exact: true})
             .fill(teacher.name);
-        await page
-            .getByRole("button", {
-                name: "Rollen bearbeiten",
-                exact: true,
-            })
-            .click();
+        await teacherRoles.click();
         const compensation = page
             .getByRole("heading", {name: "Dozentenhonorar", exact: true})
             .locator("..");
@@ -181,12 +180,7 @@ test("management assigns only subordinate roles while only administration sees a
         await page
             .getByRole("searchbox", {name: "Konten suchen", exact: true})
             .fill(teacher.name);
-        await page
-            .getByRole("button", {
-                name: "Rollen bearbeiten",
-                exact: true,
-            })
-            .click();
+        await teacherRoles.click();
         const reloadedCompensation = page
             .getByRole("heading", {name: "Dozentenhonorar", exact: true})
             .locator("..");
