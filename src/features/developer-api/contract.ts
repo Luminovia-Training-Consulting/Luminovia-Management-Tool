@@ -19,6 +19,12 @@ import {
 import { z } from "zod";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
+import {
+  readinessListSchema,
+  readinessReceiptSchema,
+  readinessSettingsInputSchema,
+  readinessTaskInputSchema,
+} from "../readiness/schema.ts";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -360,6 +366,10 @@ const courseRunRequest = {
   }),
   required: ["template_id", "sessions"],
 };
+const readinessRun = { p_course_run_id: uuid };
+const readinessVersion = { p_expected_version: version, ...idempotency };
+const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
+
 const nativePaths = {
   "/rest/v1/rpc/save_course_run": rpc(
     "saveCourseRun",
@@ -383,6 +393,68 @@ const nativePaths = {
     "Creates an unpublished copy of the template reference and scheduled sessions and returns its ID.",
     { p_id: uuid },
     uuid,
+  ),
+  "/rest/v1/rpc/course_readiness": rpc(
+    "courseReadiness",
+    "Course readiness",
+    "Read current course readiness",
+    "Course managers and currently assigned lecturers can read the applicable checks, actor-scoped jobs and clean document references. Omit the course ID or send null for up to 250 current courses. An exact course ID returns a one-item array and requires access to that course. Manager-only navigation and assignee choices are scoped to the current actor.",
+    { p_course_run_id: nullableUuid },
+    z.toJSONSchema(readinessListSchema),
+    ["p_course_run_id"],
+  ),
+  "/rest/v1/rpc/save_readiness_settings": rpc(
+    "saveReadinessSettings",
+    "Course readiness",
+    "Save the course preparation requirements",
+    "Requires course-management authority. Submit every editable setting with the current settings version. Readiness and confirmation state are server-derived. A successful call returns the course ID. Reuse the request ID only for the same payload and expected version. A stale expected version returns HTTP 409.",
+    {
+      ...readinessRun,
+      p_payload: z.toJSONSchema(readinessSettingsInputSchema),
+      ...readinessVersion,
+    },
+    readinessReceipt,
+  ),
+  "/rest/v1/rpc/confirm_course_sessions": rpc(
+    "confirmCourseSessions",
+    "Course readiness",
+    "Confirm the current course schedule",
+    "Requires course-management authority and at least one session. Binds confirmation to the current persisted course schedule and settings version. A subsequent schedule change invalidates confirmation. Returns the course ID. A stale expected version returns HTTP 409.",
+    { ...readinessRun, ...readinessVersion },
+    readinessReceipt,
+  ),
+  "/rest/v1/rpc/save_readiness_task": rpc(
+    "saveReadinessTask",
+    "Course readiness",
+    "Create, update or archive a course preparation task",
+    "Requires course-management authority. Send a null task ID, expected version zero and archived=false to create. Updates and archival require the current task version. The acting manager or a currently assigned active lecturer can be the responsible person. Returns the task ID. A stale expected version returns HTTP 409.",
+    {
+      ...readinessRun,
+      p_task_id: nullableUuid,
+      p_payload: z.toJSONSchema(readinessTaskInputSchema),
+      ...readinessVersion,
+    },
+    readinessReceipt,
+  ),
+  "/rest/v1/rpc/complete_readiness_task": rpc(
+    "completeReadinessTask",
+    "Course readiness",
+    "Record or revoke preparation task completion",
+    "Requires the responsible assignee with current course access or course-management authority. Submit the current version of an active task. Returns the task ID. An identical actor-bound retry returns the same result. A stale expected version returns HTTP 409.",
+    { p_task_id: uuid, p_completed: boolean, ...readinessVersion },
+    readinessReceipt,
+  ),
+  "/rest/v1/rpc/acknowledge_course_instructions": rpc(
+    "acknowledgeCourseInstructions",
+    "Course readiness",
+    "Acknowledge the current course instructions",
+    "Requires a current confirmed lecturer assignment and nonempty authored instructions. Acknowledges the exact instruction version and returns the receipt ID. An identical actor-bound retry and repeat acknowledgement of that version return the same ID. An obsolete instruction version returns HTTP 409.",
+    {
+      ...readinessRun,
+      p_instruction_version: { ...version, minimum: 1 },
+      ...idempotency,
+    },
+    readinessReceipt,
   ),
   "/rest/v1/rpc/assignment_changes": {
     post: {

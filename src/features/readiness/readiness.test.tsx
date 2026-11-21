@@ -267,42 +267,45 @@ it("reuses the task creation request on an uncertain response instead of duplica
     archived: false,
   });
 });
-it("completes only a versioned permitted task and does not optimistically show completion", async () => {
-  data[0].tasks = [
-    {
-      id: task,
-      title: "Fictional assigned task",
-      required: true,
-      responsible_user_id: teacher,
-      responsible_name: "Fictional teacher",
-      due_at: null,
-      completed_at: null,
-      version: 8,
-      can_complete: true,
-    },
-  ];
-  mount();
-  state.rpc.mockImplementation((name) =>
-    name === "complete_readiness_task"
-      ? response(null, { code: "40001", message: "stale" })
-      : response(structuredClone(data)),
-  );
-  await userEvent.click(
-    await screen.findByRole("button", {
-      name: "Als erledigt bestätigen",
-    }),
-  );
-  await screen.findByText(/Die Daten wurden zwischenzeitlich geändert/);
-  expect(state.rpc).toHaveBeenCalledWith("complete_readiness_task", {
-    p_task_id: task,
-    p_completed: true,
-    p_expected_version: 8,
-    p_request_id: expect.any(String),
-  });
-  expect(
-    screen.queryByRole("button", { name: "Erledigung zurücknehmen" }),
-  ).not.toBeInTheDocument();
-});
+it.each(["PT409", "40001"])(
+  "keeps prior completion state after a versioned task returns %s",
+  async (code) => {
+    data[0].tasks = [
+      {
+        id: task,
+        title: "Fictional assigned task",
+        required: true,
+        responsible_user_id: teacher,
+        responsible_name: "Fictional teacher",
+        due_at: null,
+        completed_at: null,
+        version: 8,
+        can_complete: true,
+      },
+    ];
+    mount();
+    state.rpc.mockImplementation((name) =>
+      name === "complete_readiness_task"
+        ? response(null, { code, message: "stale" })
+        : response(structuredClone(data)),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Als erledigt bestätigen",
+      }),
+    );
+    await screen.findByText(/Die Daten wurden zwischenzeitlich geändert/);
+    expect(state.rpc).toHaveBeenCalledWith("complete_readiness_task", {
+      p_task_id: task,
+      p_completed: true,
+      p_expected_version: 8,
+      p_request_id: expect.any(String),
+    });
+    expect(
+      screen.queryByRole("button", { name: "Erledigung zurücknehmen" }),
+    ).not.toBeInTheDocument();
+  },
+);
 it("does not expose management controls to an assigned lecturer and disables online actions offline", async () => {
   data[0].can_manage = false;
   state.online = false;

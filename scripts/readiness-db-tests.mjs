@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 const admin = "e8000000-0000-4000-8000-000000000001";
 const teacher = "e8000000-0000-4000-8000-000000000002";
@@ -38,10 +39,20 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
         checks++;
         console.log(`PASS ${name}`);
     };
+    const read = async (who, run = null, aal = "aal1") => {
+        const result = JSON.parse(await actor(
+            who, `select public.course_readiness(${run ? quoteSql(run) : ""})`, aal,
+        ));
+        assertLmsResponse("course_readiness", result);
+        return result;
+    };
     const snap = async (run, who = admin, aal = "aal1") =>
-        JSON.parse(
-            await actor(who, `select public.course_readiness('${run}')`, aal),
-        )[0];
+        (await read(who, run, aal))[0];
+    const receipt = async (name, request) => {
+        const result = await request;
+        assertLmsResponse(name, result);
+        return result;
+    };
     const testCheck = (state, code) =>
         state.checks.find((item) => item.code === code);
     const settings = (overrides = {}) => ({
@@ -63,17 +74,17 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
         who = admin,
         aal = "aal1",
     ) =>
-        actor(
+        receipt("save_readiness_settings", actor(
             who,
             `select public.save_readiness_settings('${run}',${quoteSql(JSON.stringify(values))}::jsonb,${version ?? (await snap(run)).settings.version},'${key}')`,
             aal,
-        );
+        ));
     const confirm = async (run, version, key = randomUUID()) =>
-        actor(
+        receipt("confirm_course_sessions", actor(
             admin,
             `select public.confirm_course_sessions('${run}',${version ?? (await snap(run)).settings.version},'${key}')`,
             "aal1",
-        );
+        ));
     const file = async (
         owner,
         {
@@ -231,10 +242,8 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 assert.equal(testCheck(state, code).complete, false, code);
             assert.equal(state.settings.version, 0);
             await assert.rejects(snap(run, peer, "aal1"), /42501/);
-            assert.deepEqual(
-                JSON.parse(await actor(peer, "select public.course_readiness()")),
-                [],
-            );
+            assert.deepEqual(await read(peer), []);
+            await assert.rejects(read(participant, run), /42501/);
         },
     );
     await check(
@@ -251,7 +260,16 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 state.checks.filter((c) => c.applicable).length,
                 state.applicable_count,
             );
-            assert.equal((await snap(run, teacher, "aal1")).can_manage, false);
+            const taught = await snap(run, teacher);
+            assert.equal(taught.can_manage, false);
+            assert.equal(taught.can_acknowledge, true);
+            assert.deepEqual(taught.responsible_people, []);
+            assert.equal(testCheck(taught, "agreement").href, null);
+            assert.equal(testCheck(state, "agreement").href, "/contracts");
+            assert.deepEqual(
+                state.responsible_people.map(({id, acknowledged}) => [id, acknowledged]),
+                [[teacher, false], [admin, undefined]],
+            );
             assert.equal(
                 await sql(
                     `select to_jsonb(c) from public.job_claims c where id='${claim}'`,
@@ -433,7 +451,7 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 `update public.course_sessions set ends_at=ends_at+interval '1 minute' where course_run_id='${run}'`,
             );
             assert.equal(testCheck(await snap(run), "sessions").complete, false);
-            await assert.rejects(confirm(run, before.settings.version - 1), /40001/);
+            await assert.rejects(confirm(run, before.settings.version - 1), /PT409/);
             await confirm(run);
             assert.equal(testCheck(await snap(run), "sessions").complete, true);
             assert.equal(testCheck(await snap(run), "lecturer").complete, false);
@@ -471,7 +489,9 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 save(run, settings({instructions: "Choice two"}), next),
             ]);
             assert.equal(attempts.filter((r) => r.status === "fulfilled").length, 1);
-            assert.equal(attempts.filter((r) => r.status === "rejected").length, 1);
+            const conflicts = attempts.filter((result) => result.status === "rejected");
+            assert.equal(conflicts.length, 1);
+            assert.match(conflicts[0].reason.message, /PT409/);
         },
     );
     await check(
@@ -490,10 +510,10 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
             const version = state.settings.instruction_version,
                 key = randomUUID();
             const ack = (who, v = version, k = key) =>
-                actor(
+                receipt("acknowledge_course_instructions", actor(
                     who,
                     `select public.acknowledge_course_instructions('${run}',${v},'${k}')`,
-                );
+                ));
             await assert.rejects(ack(peer), /42501/);
             await assert.rejects(ack(admin), /42501/);
             const first = await ack(teacher);
@@ -507,7 +527,7 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                     instructions: "Fictional changed instructions",
                 }),
             );
-            await assert.rejects(ack(teacher, version, randomUUID()), /40001/);
+            await assert.rejects(ack(teacher, version, randomUUID()), /PT409/);
             assert.equal(testCheck(await snap(run), "instructions").complete, false);
             assert.equal(
                 await sql(
@@ -529,24 +549,30 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 archived: false,
             };
             const createTask = (who = admin, aal = "aal1") =>
-                actor(
+                receipt("save_readiness_task", actor(
                     who,
                     `select public.save_readiness_task('${run}',null,${quoteSql(JSON.stringify(values))},0,'${randomUUID()}')`,
                     aal,
-                );
+                ));
             await assert.rejects(createTask(teacher, "aal1"), /42501/);
             const task = await createTask(admin, "aal1");
+            for (const taskId of ["null", quoteSql(task)]) {
+                await assert.rejects(
+                    actor(admin, `select public.save_readiness_task('${run}',${taskId},${quoteSql(JSON.stringify(values))},4,'${randomUUID()}')`),
+                    /PT409/,
+                );
+            }
             let state = await snap(run);
             assert.equal(testCheck(state, "tasks").complete, false);
             const complete = (who, version, decision = true, key = randomUUID()) =>
-                actor(
+                receipt("complete_readiness_task", actor(
                     who,
                     `select public.complete_readiness_task('${task}',${decision},${version},'${key}')`,
-                );
+                ));
             await assert.rejects(complete(peer, 1), /42501/);
             await complete(teacher, 1);
             assert.equal(testCheck(await snap(run), "tasks").complete, true);
-            await assert.rejects(complete(teacher, 1), /40001/);
+            await assert.rejects(complete(teacher, 1), /PT409/);
             await complete(teacher, 2, false);
             assert.equal(testCheck(await snap(run), "tasks").complete, false);
             assert.equal(

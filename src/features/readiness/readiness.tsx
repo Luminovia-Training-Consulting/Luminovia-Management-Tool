@@ -41,6 +41,10 @@ import {
   saveReadinessSettings,
   saveReadinessTask,
 } from "./api";
+import {
+  readinessSettingsInputSchema,
+  readinessTaskInputSchema,
+} from "./schema";
 import "./i18n";
 import "./readiness.css";
 
@@ -52,25 +56,16 @@ const flags = [
   "instructions_required",
 ] as const;
 const settingsFormSchema = z.object({
-  materials_required: z.boolean(),
-  customer_required: z.boolean(),
-  contact_required: z.boolean(),
-  agreement_required: z.boolean(),
-  instructions_required: z.boolean(),
-  instructions: z.string().max(20000),
+  ...readinessSettingsInputSchema.shape,
   meeting_url: z
     .string()
     .trim()
     .max(2000)
-    .refine((v) => !v || Boolean(meetingHref(v))),
+    .refine((value) => !value || Boolean(meetingHref(value))),
   preparation_deadline: z.string(),
 });
-const taskFormSchema = z.object({
-  title: z.string().trim().min(1).max(500),
-  responsible_user_id: z.string().uuid(),
-  required: z.boolean(),
+const taskFormSchema = readinessTaskInputSchema.extend({
   due_at: z.string(),
-  archived: z.boolean(),
 });
 
 /** Render an instant in its intended zone for editing; conversion back to an instant is validated when saving. */
@@ -98,7 +93,7 @@ function WriteError({ error }: { error: unknown }) {
     error &&
     typeof error === "object" &&
     "code" in error &&
-    error.code === "40001",
+    (error.code === "PT409" || error.code === "40001"),
   );
   return <Notice kind="error">{t(stale ? "stale" : "error")}</Notice>;
 }
