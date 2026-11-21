@@ -158,6 +158,17 @@ const pairs: Record<string, [string, string]> = {
     attendanceCorrectionReason: ["Begründung der Korrektur", "Reason for correction"],
     workspaceOffline: ["Verbinde dich mit dem Internet, um den aktuellen Zugriff auf den Kursarbeitsbereich zu prüfen.", "Connect to the internet to check current access to the course workspace."],
     attendanceInvalidTime: ["Diese Uhrzeit existiert nicht oder ist wegen der Zeitumstellung doppelt. Wähle eine eindeutige Uhrzeit in der Kurszeitzone.", "This time is skipped or repeated during a clock change. Choose an unambiguous time in the course’s time zone."],
+    attendanceImport: ["Anwesenheit aus CSV übernehmen", "Import attendance from CSV"],
+    attendanceImportHelp: [
+        "Nutze die CSV-Vorlage für diesen Termin. Trage present, absent oder excused ein. Leere Statuszeilen bleiben unverändert. Optionale Zeitangaben benötigen einen UTC-Offset. Korrekturen brauchen einen Grund.",
+        "Use this session’s CSV template. Enter present, absent or excused. Blank status rows remain unchanged. Optional times require a UTC offset. Corrections require a reason."
+    ],
+    attendanceImportTemplate: ["CSV-Vorlage laden", "Download CSV template"],
+    attendanceImportFile: ["CSV-Inhalt prüfen", "Review CSV file"],
+    attendanceImportInvalid: ["CSV-Inhalt in Zeile {{row}} prüfen. Die gesamte Datei muss gültig sein.", "Check CSV row {{row}}. The full file must be valid."],
+    attendanceImportConfirm: ["{{count}} Änderungen verbindlich speichern", "Confirm and save {{count}} changes"],
+    attendanceImportSaved: ["{{count}} Änderungen gespeichert.", "Saved {{count}} changes."],
+    attendanceImportFailed: ["Änderungen konnten nicht bestätigt werden. Lade das Register neu und prüfe den Stand vor einem weiteren Import.", "The changes could not be confirmed. Reload the register and verify its state before another import."],
     attendanceSaveFailed: ["Anwesenheit konnte nicht gespeichert werden. Bitte Daten und Berechtigung prüfen.", "Attendance could not be saved. Check details and access."],
     attendanceNoParticipants: ["Keine eingeschriebenen Teilnehmenden.", "No enrolled participants."],
     attendanceEvidence: ["PDF-Anwesenheitsnachweise", "PDF attendance evidence"],

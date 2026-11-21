@@ -1,4 +1,5 @@
 /** Staff/company session register and protected PDF evidence on the existing file path. */
+import {AttendanceImportPanel} from "./attendance-import-panel";
 import {useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {DateTime} from "luxon";
@@ -125,6 +126,10 @@ export function AttendancePanel({course, actor}: {course: CourseWorkspace; actor
                 {query.data.rows.map((row) => <RowEditor key={`${row.user_id}:${row.version}`}
                     course={course} actor={actor} session={session} row={row}/>)}
             </ul>
+            {query.data.rows.length > 0 && (
+                <AttendanceImportPanel key={session} run={course.id} session={session} rows={query.data.rows}
+                    onSaved={() => client.invalidateQueries({queryKey: attendanceRegisterKey(actor, course.id, session)})}/>
+            )}
             <h3>{t("attendanceEvidence")}</h3>
             <form onSubmit={(event) => {event.preventDefault(); upload.mutate();}}>
                 <Field id="attendance-pdf" label={t("attendancePdfLabel")}>

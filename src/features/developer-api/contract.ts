@@ -376,6 +376,31 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/course_workspace_action": workspaceAction,
+  "/rest/v1/rpc/import_course_session_attendance": rpc(
+    "importCourseSessionAttendance",
+    "Premium LMS",
+    "Apply a reviewed session register import",
+    "Checks current Premium, session authority, enrolment and the expected version of every row. One invalid or stale row rolls back the entire command.",
+    {
+      ...course,
+      p_session_id: uuid,
+      p_rows: {
+        type: "array",
+        minItems: 1,
+        maxItems: 200,
+        items: object({
+          user_id: uuid,
+          status: attendanceStatus,
+          arrival_at: nullableDateTime,
+          departure_at: nullableDateTime,
+          note: { ...text, maxLength: 1000 },
+          reason: { ...text, maxLength: 500 },
+          expected_version: version,
+        }),
+      },
+    },
+    object({ saved: { type: "integer", minimum: 1, maximum: 200 } }),
+  ),
   "/rest/v1/rpc/course_session_register": rpc(
     "courseSessionRegister",
     "Premium LMS",

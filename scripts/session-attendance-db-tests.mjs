@@ -92,6 +92,18 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
       where id=${q(attached.resource_id)}`),/Retained attendance evidence cannot be unshared/);
     await assert.rejects(rpc(participant,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
     assert.equal((await rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)])).sha256,repeat("a",64));
+    const beforeImport = (await register(company)).rows[0];
+    const importRow = {user_id:participant,status:"present",arrival_at:null,departure_at:null,
+        note:"Fictional CSV correction",reason:"Paper register confirmed",expected_version:beforeImport.version};
+    const importRows = (who, rows) => rpc(who,"import_course_session_attendance",[q(run),q(session),q(JSON.stringify(rows))]);
+    await assert.rejects(importRows(participant,[importRow]),/42501/);
+    await assert.rejects(importRows(company,[importRow,importRow]),/22023/);
+    await assert.rejects(importRows(company,[{...importRow,arrival_at:"2026-11-20T02:30"}]),/22023/);
+    await assert.rejects(importRows(company,[importRow,{...importRow,user_id:outsider,expected_version:0}]),/42501/);
+    assert.deepEqual((await register(company)).rows[0],beforeImport);
+    assert.deepEqual(await importRows(company,[importRow]),{saved:1});
+    assert.equal((await register(company)).rows[0].note,"Fictional CSV correction");
+    await assert.rejects(importRows(company,[importRow]),/40001/);
     const toggle = actor(admin, `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});select pg_sleep(0.7)`);
     let holdsPremiumLock = false;
     for (let index = 0; index < 30 && !holdsPremiumLock; index++) {
