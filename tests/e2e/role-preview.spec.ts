@@ -28,7 +28,7 @@ test("management/lecturer/company previews do not impersonate or issue live busi
                 .from("user_roles")
                 .select("role")
                 .eq("user_id", administrator.id),
-            "Read fictional preview actor roles",
+            {requireData: true},
         );
         await login(page, administrator.email);
         await page.goto("/");
@@ -48,9 +48,10 @@ test("management/lecturer/company previews do not impersonate or issue live busi
         ).toBeVisible();
         await expect(page.getByRole("search")).toHaveCount(0);
         await expect(page.locator(".notification-menu")).toHaveCount(0);
-        await page
-            .getByRole("link", {name: "Kurse & Durchführung", exact: true})
-            .click();
+        // The same permitted link is shown inside the mobile header menu.
+        const mobileMenu = page.locator('summary[aria-controls="mobile-shell-navigation"]');
+        if (await mobileMenu.isVisible()) await mobileMenu.click();
+        await page.getByRole("link", {name: "Kurse & Durchführung", exact: true}).click();
         await expect(page).toHaveURL(/\/courses$/);
         await expect(
             page.getByRole("heading", {name: "Beispielansicht: Verwaltung"}),
@@ -70,7 +71,7 @@ test("management/lecturer/company previews do not impersonate or issue live busi
                 .from("user_roles")
                 .select("role")
                 .eq("user_id", administrator.id),
-            "Recheck actual preview actor roles",
+            {requireData: true},
         );
         expect(after).toEqual(before);
 

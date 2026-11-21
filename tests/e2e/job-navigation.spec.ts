@@ -103,7 +103,7 @@ test("opens only the assigned course, member chat and own assignment calendar", 
     await chat.click();
     await expect(page).toHaveURL(new RegExp(`/chats\\?room=${room}`));
     await expect(
-        page.getByText("Fictional course chat", {exact: true}).first(),
+        page.getByRole("heading", {name: "Fictional course chat", exact: true}),
     ).toBeVisible();
     await page.goto(`/jobs/${job}`);
     await page.getByRole("link", {name: "Zum Kalender", exact: true}).click();
