@@ -32,6 +32,7 @@ await withTestDatabase(
    insert into public.chat_members(room_id,user_id) values (${q(roomA)},${q(admin)}),(${q(roomA)},${q(member)}),(${q(roomB)},${q(admin)}),(${q(roomB)},${q(other)});
    insert into private.participant_chat_origins(room_id,user_id,manual) values (${q(roomA)},${q(admin)},true),(${q(roomA)},${q(member)},true),(${q(roomB)},${q(admin)},true),(${q(roomB)},${q(other)},true);
    insert into public.messages(id,room_id,sender_id,client_id,request_hash,body) values(${q(message)},${q(roomB)},${q(admin)},${q(randomUUID())},'fixture','Fictional text');
+   insert into public.messages(room_id,sender_id,client_id,request_hash,body) values(${q(roomA)},${q(admin)},${q(randomUUID())},'fixture','Fictional other room text');
    insert into private.chat_hidden_messages(user_id,message_id) values (${q(other)},${q(message)});
    create schema storage; create table storage.objects(bucket_id text,name text,primary key(bucket_id,name));
    create trigger permanent_deletion_storage_fence before insert or update on storage.objects for each row execute function private.guard_deleted_storage_path();`);
@@ -73,15 +74,17 @@ await withTestDatabase(
             console.log(`PASS ${name}`);
         };
         await check(
-            "Room and account previews include only matching provenance rows and existing hidden-message scope",
+            "Room and account previews include matching provenance, hidden rows and the room activity marker",
             async () => {
                 const a = await preview("account", member),
                     r = await preview("chat_room", roomB);
                 assert.equal(a.can_confirm, true);
                 assert.equal(a.counts["private.participant_chat_origins"], 1);
-                assert.equal(r.can_confirm, true);
+                assert.equal("public.course_chat_activity" in a.counts, false);
+                assert.equal(r.can_confirm, true, JSON.stringify(r.blockers));
                 assert.equal(r.counts["private.participant_chat_origins"], 2);
                 assert.equal(r.counts["private.chat_hidden_messages"], 1);
+                assert.equal(r.counts["public.course_chat_activity"], 1);
                 const wiki = JSON.parse(
                     await sql(
                         `select private.deletion_scope('wiki_page',${q(randomUUID())})`,
@@ -92,6 +95,16 @@ await withTestDatabase(
                         (entry) => entry.table === "private.wiki_revision_attachments",
                     ),
                 );
+            },
+        );
+        await check(
+            "A changed room activity revision invalidates the reviewed plan before confirmation",
+            async () => {
+                const r = await preview("chat_room", roomB);
+                await sql(
+                    `update public.course_chat_activity set revision=gen_random_uuid() where room_id=${q(roomB)}`,
+                );
+                await assert.rejects(confirm(r), /scope changed/i);
             },
         );
         await check(
@@ -125,7 +138,7 @@ await withTestDatabase(
             },
         );
         await check(
-            "Confirmed room deletion removes its provenance and hidden rows, preserving other rooms",
+            "Confirmed room deletion removes its provenance, hidden rows and activity, preserving other rooms",
             async () => {
                 await apply(await preview("chat_room", roomB));
                 assert.equal(
@@ -139,6 +152,10 @@ await withTestDatabase(
                         `select count(*) from private.chat_hidden_messages where message_id=${q(message)}`,
                     ),
                     "0",
+                );
+                assert.deepEqual(
+                    JSON.parse(await sql("select jsonb_agg(room_id) from public.course_chat_activity")),
+                    [roomA],
                 );
                 assert.equal(
                     await sql(

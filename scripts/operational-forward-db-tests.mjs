@@ -272,6 +272,16 @@ export async function runOperationalForwardChecks({
                         mode +
                         ": smart targets and terminal directed reconciliation compose",
                         async () => {
+                            // Current course targets are available only with an
+                            // explicit organisation entitlement. The historical
+                            // upgrade branch predates that operation.
+                            if (
+                                (await sql("select to_regprocedure('public.set_company_premium(uuid,boolean,integer,uuid)') is not null")) === "t"
+                            )
+                                await actor(
+                                    admin,
+                                    `select public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`,
+                                );
                             const work = randomUUID(),
                                 preparation = randomUUID();
                             await sql(

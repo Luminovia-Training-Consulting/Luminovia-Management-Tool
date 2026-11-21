@@ -110,6 +110,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
                                     currency = "AUD",
                                     commissioned = true,
                                     day = 5,
+                                    scheduleEditable = false,
                                 } = {}) => {
                 const payload = {
                     title: "Fictional forecast amendment",
@@ -137,7 +138,29 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
                             customer_name: "Fictional no-ledger customer",
                         }),
                 };
-                const job = await call(
+                let job;
+                if (scheduleEditable) {
+                    // A company request owns its published schedule. Use a
+                    // directly managed linked run for the permitted move.
+                    const [template, run] = Array.from({length: 2}, randomUUID);
+                    job = randomUUID();
+                    await sql(`
+                      insert into public.course_templates(id,title) values(${q(template)},${q(payload.title)});
+                      insert into public.course_runs(id,template_id,organisation_id,time_zone)
+                        values(${q(run)},${q(template)},${q(org)},'UTC');
+                      insert into public.course_sessions(course_run_id,starts_at,ends_at)
+                        select ${q(run)},session.starts_at,session.ends_at
+                        from jsonb_to_recordset(${q(JSON.stringify(payload.sessions))}::jsonb)
+                          session(starts_at timestamptz, ends_at timestamptz);
+                      insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,
+                        time_zone,amount,total_amount,currency,rate_unit,terms,requires_contract)
+                        values(${q(job)},${q(run)},${q(payload.title)},'Fictional academy','online','published',
+                          'UTC',100,200,${q(currency)},'per_day',${q(payload.terms)},false);
+                      insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at)
+                        select ${q(job)},id,starts_at,ends_at from public.course_sessions where course_run_id=${q(run)};
+                    `);
+                    await call(admin, `public.set_job_commission(${q(job)},100,200,null)`);
+                } else job = await call(
                     admin,
                     commissioned
                         ? `public.create_capacity_job(${q(JSON.stringify(payload))},1,${q(randomUUID())},${q(org)},null)`
@@ -163,7 +186,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
                 sql(
                     `select jsonb_build_object('claim',(select to_jsonb(c)from public.job_claims c where id=${q(fixture.claim)}),'ledger',(select to_jsonb(l)from private.claim_revenue_ledger l where claim_id=${q(fixture.claim)}))`,
                 );
-            const fixture = await make();
+            const fixture = await make({scheduleEditable: mode === "current_source"});
             const immutableBefore = await original(fixture);
 
             await check(

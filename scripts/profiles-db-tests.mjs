@@ -118,6 +118,7 @@ try {
  insert into public.course_templates(id,title) values('${template}','Fictional completed course');
  insert into public.course_runs(id,template_id,organisation_id,published) values('${run}','${template}','${org}',false);
  insert into public.course_sessions(course_run_id,starts_at,ends_at) values('${run}',now()-interval '2 day',now()-interval '1 day');`);
+    await rpc(admin, "set_company_premium", [org, true, 0, randomUUID()]);
     /** Creates a controlled actual course assignment so reviews check real participation eligibility. */
     const seedAssignment = async (target, course, starts, ends) => {
         const job = randomUUID(),
@@ -250,11 +251,9 @@ try {
                 people.map((x) => x.id),
                 [lecturer],
             );
-            assert.ok(
-                (await rpc(client, "profile_courses", [lecturer])).every(
-                    (x) => x.title === "Fictional completed course",
-                ),
-            );
+            const courses = await rpc(client, "profile_courses", [lecturer]);
+            assert.equal(courses.length, 3);
+            assert.ok(courses.every((x) => x.title === "Fictional completed course"));
             await sql(
                 `update public.client_organisation_memberships set removed_at=now() where user_id='${client}'`,
             );
@@ -278,11 +277,9 @@ try {
                 "now()-interval '2 day'",
                 "now()-interval '1 day'",
             );
-            await rpc(
-                admin,
-                "manage_course_enrolment",
-                [selfRun, admin, "completed"],
-                "aal1",
+            await assert.rejects(
+                rpc(admin, "manage_course_enrolment", [selfRun, admin, "completed"]),
+                /Active company participant required/,
             );
             await assert.rejects(
                 rpc(admin, "submit_course_review", [
@@ -296,7 +293,7 @@ try {
         },
     );
     await check(
-        "Retired participant accounts cannot use learner, directory, or review APIs",
+        "Unassociated participant identities have no directory, learner or review access for this company",
         async () => {
             for (const account of [student, stranger]) {
                 await assert.rejects(
@@ -305,14 +302,15 @@ try {
                 );
                 await assert.rejects(rpc(account, "profile_courses", [lecturer]));
                 await assert.rejects(rpc(account, "course_enrolments", [run]));
-                await assert.rejects(rpc(account, "reviewable_courses"));
+                assert.deepEqual(await rpc(account, "reviewable_courses"), []);
                 await assert.rejects(
                     rpc(account, "submit_course_review", [
                         run,
                         lecturer,
                         5,
-                        "Retired role",
+                        "Unassociated reviewer",
                     ]),
+                    /Company membership or completed enrolment required/,
                 );
             }
             assert.equal(

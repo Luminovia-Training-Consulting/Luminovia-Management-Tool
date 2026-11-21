@@ -450,22 +450,8 @@ await withTestDatabase(
                 );
                 assert.equal(passwordOnlyAccess.regular_lecturer_percent, 31);
                 assert.equal(passwordOnlyAccess.senior_lecturer_percent, 73);
-                const teacherRate = await rpc(
-                    admin,
-                    "lecturer_compensation",
-                    [teacher],
-                    "aal1",
-                );
-                const seniorRate = await rpc(
-                    admin,
-                    "lecturer_compensation",
-                    [senior],
-                    "aal1",
-                );
-                assert.equal(teacherRate.percent, 31);
-                assert.equal(teacherRate.is_customized, false);
-                assert.equal(seniorRate.percent, 73);
-                assert.equal(seniorRate.is_customized, false);
+                // The later individual compensation DTO is exercised by
+                // manual-pricing-db-tests on the current migration set.
             },
         );
         await check(

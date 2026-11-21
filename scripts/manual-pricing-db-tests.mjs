@@ -4,12 +4,13 @@ import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("manual_pricing", async ({sql, actor}) => {
-    const admin = randomUUID(),
+    const senior = randomUUID(),
+        admin = randomUUID(),
         manager = randomUUID(),
         teacher = randomUUID(),
         peer = randomUUID();
     await sql(
-        `insert into auth.users(id) values('${admin}'),('${manager}'),('${teacher}'),('${peer}');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${teacher}','lecturer'),('${peer}','lecturer')`,
+        `insert into auth.users(id) values('${admin}'),('${manager}'),('${teacher}'),('${peer}'),('${senior}');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${teacher}','lecturer'),('${peer}','lecturer'),('${senior}','senior_lecturer')`,
     );
     const config = async (user = teacher) =>
         JSON.parse(
@@ -158,6 +159,8 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
     // An old global rank-policy edit must never override a person's configured pay.
     const personal = (await offers(teacher)).find((x) => x.id === third);
     await actor(admin, "select public.configure_compensation_policy(31,73,0)");
+    assert.deepEqual(await config(peer), {...defaults, percent: 31});
+    assert.deepEqual(await config(senior), {...defaults, percent: 73});
     assert.deepEqual(
         (await offers(teacher)).find((x) => x.id === third),
         personal,
