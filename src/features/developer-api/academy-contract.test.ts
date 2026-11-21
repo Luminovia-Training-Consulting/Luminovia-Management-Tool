@@ -209,7 +209,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
             name: "mode",
             in: "query",
             required: true,
-            schema: { const: "academy-material" },
+            schema: {
+              type: "string",
+              enum: ["academy-material", "academy-student-exam"],
+            },
           },
         ]),
         requestBody: {
@@ -249,7 +252,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           { properties: { p_action: { const: "resource_remove" } } },
         ],
       });
+      expect(intake.description).toContain("publishAcademyStudentExamPdf");
       for (const servicePath of [
+        "/rest/v1/rpc/reserve_academy_student_exam_pdf",
         "/rest/v1/rpc/reserve_academy_course_material",
         "/rest/v1/rpc/academy_course_material_status",
         "/rest/v1/rpc/academy_course_material_scan",

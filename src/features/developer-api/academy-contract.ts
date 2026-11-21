@@ -165,8 +165,8 @@ const materialUpload = {
   post: {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
-    summary: "Upload and scan an assigned lecturer’s course material",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Only the currently assigned lecturer can upload their own material. Use the same client ID, course, name and bytes to retry an interrupted upload. The response confirms a clean scan of the exact stored version. To share it, pass document.current_version_id to publishAcademyCourseMaterial.`,
+    summary: "Upload and scan course material or a student exam PDF",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or publishAcademyStudentExamPdf for the selected mode.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -174,7 +174,10 @@ const materialUpload = {
         name: "mode",
         in: "query",
         required: true,
-        schema: { const: "academy-material" },
+        schema: {
+          type: "string",
+          enum: ["academy-material", "academy-student-exam"],
+        },
       },
       {
         name: "Origin",
@@ -210,11 +213,11 @@ const materialUpload = {
         "authentication_required",
       ]),
       "403": intakeError(
-        "Origin, current course assignment or licence denied",
+        "Origin, current course access, exam setting or licence denied",
         ["origin_not_allowed", "access_denied", "upload_not_allowed"],
       ),
       "409": intakeError(
-        "The same request was used for different material or the version changed",
+        "The same request was used for a different file or mode, or the version changed",
         ["idempotency_conflict", "version_superseded"],
       ),
       "413": intakeError("The file was empty or exceeded the allowed size", [

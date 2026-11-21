@@ -10,6 +10,31 @@ const pairs: Record<string, [string, string]> = {
   ],
   saveSetting: ["Prüfungseinstellung speichern", "Save exam setting"],
   upload: ["PDF hochladen und freigeben", "Upload and share PDF"],
+  studentUploadFile: [
+    "Neue Prüfungsaufgaben (PDF)",
+    "New student exam paper (PDF)",
+  ],
+  scanStudentPdf: [
+    "Prüfungsdatei prüfen und freigeben",
+    "Scan and publish exam paper",
+  ],
+  scanningStudentPdf: ["Prüfungsdatei wird geprüft …", "Scanning exam paper…"],
+  publishingStudentPdf: [
+    "Geprüfte Prüfungsdatei wird freigegeben …",
+    "Publishing scanned exam paper…",
+  ],
+  retryStudentPublication: [
+    "Freigabe der geprüften Datei erneut versuchen",
+    "Retry publishing scanned exam paper",
+  ],
+  studentPublicationFailed: [
+    "Die Datei ist geprüft. Versuche die Freigabe erneut.",
+    "The PDF was scanned. Retry publishing the same version.",
+  ],
+  studentScanFailed: [
+    "Die Dateiprüfung konnte nicht bestätigt werden. Prüfe PDF, Größe und Verbindung.",
+    "The scan could not be confirmed. Check the PDF, file size and connection.",
+  ],
   file: ["Prüfungsdatei (PDF)", "Exam file (PDF)"],
   retainedPdf: [
     "Bereits geprüfte Prüfungsdatei",

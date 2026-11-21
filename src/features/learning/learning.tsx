@@ -1049,7 +1049,7 @@ function CourseWorkspaceLayout({
           {examVisible && (
             <div className="course-room-section" id="course-exam">
               <CourseExams
-                key={course.exams.version ?? course.exams.required.toString()}
+                key={`${actor}:${course.id}:${course.exams.version ?? course.exams.required}`}
                 course={course}
                 actor={actor}
                 academy={academy}

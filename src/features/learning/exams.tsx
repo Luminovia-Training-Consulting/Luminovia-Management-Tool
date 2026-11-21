@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
-import { uploadDocument } from "../files/api";
+import { uploadAcademyStudentExamPdf, uploadDocument } from "../files/api";
 import {
   courseWorkspaceKey,
   downloadCourseDocument,
@@ -32,12 +32,20 @@ export function CourseExams({
   );
   const [file, setFile] = useState<File | null>(null);
   const [version, setVersion] = useState("");
+  const [examFile, setExamFile] = useState<{
+    bytes: File;
+    uploadId: string;
+  } | null>(null);
+  const [scannedExamVersion, setScannedExamVersion] = useState<string | null>(
+    null,
+  );
+  const [fileInputRevision, setFileInputRevision] = useState(0);
   const canEdit = course.exams.can_edit && academy !== "grace";
-  const canPublishRetained =
+  const canPublishStudentPaper =
     academy === "active" && canEdit && course.exams.required;
   const options = useQuery({
     queryKey: ["academy-student-exam-pdf-options", actor, course.id],
-    enabled: Boolean(canPublishRetained && online),
+    enabled: Boolean(canPublishStudentPaper && online),
     retry: false,
     staleTime: 0,
     queryFn: async ({ signal }) => {
@@ -93,24 +101,56 @@ export function CourseExams({
       void refresh();
     },
   });
+  const publishVersion = async (selected: string) => {
+    if (!online || !canPublishStudentPaper)
+      throw new Error("exam_editor_required");
+    const { data, error } = await db().rpc("share_course_exam_pdf", {
+      p_run_id: course.id,
+      p_version_id: selected,
+      p_audience: "students",
+    });
+    if (error || typeof data !== "string")
+      throw error ?? new Error("unconfirmed");
+  };
   const publish = useMutation({
     mutationFn: async (selected: string) => {
-      if (
-        !online ||
-        !canPublishRetained ||
-        !options.data?.some((option) => option.id === selected)
-      )
+      if (!options.data?.some((option) => option.id === selected))
         throw new Error("exam_editor_required");
-      const { data, error } = await db().rpc("share_course_exam_pdf", {
-        p_run_id: course.id,
-        p_version_id: selected,
-        p_audience: "students",
-      });
-      if (error || typeof data !== "string")
-        throw error ?? new Error("unconfirmed");
+      await publishVersion(selected);
     },
     onSuccess: async () => {
       setVersion("");
+      await Promise.all([refresh(), options.refetch()]);
+    },
+  });
+  const uploadExam = useMutation({
+    mutationFn: async () => {
+      if (!online || !canPublishStudentPaper || !examFile)
+        throw new Error("exam_editor_required");
+      let approved = scannedExamVersion;
+      if (!approved) {
+        if (
+          !examFile.bytes.name.toLowerCase().endsWith(".pdf") ||
+          examFile.bytes.size < 1 ||
+          examFile.bytes.size > 10 * 1024 * 1024
+        )
+          throw new Error("pdf_required");
+        const document = await uploadAcademyStudentExamPdf(
+          examFile.bytes,
+          course.id,
+          examFile.uploadId,
+        );
+        if (document.status !== "clean" || !document.current_version_id)
+          throw new Error("clean_version_required");
+        approved = document.current_version_id;
+        setScannedExamVersion(approved);
+      }
+      await publishVersion(approved);
+    },
+    onSuccess: async () => {
+      setExamFile(null);
+      setScannedExamVersion(null);
+      setFileInputRevision((value) => value + 1);
       await Promise.all([refresh(), options.refetch()]);
     },
   });
@@ -225,8 +265,60 @@ export function CourseExams({
           )}
         </>
       )}
-      {canPublishRetained && online && (
+      {canPublishStudentPaper && online && (
         <>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (examFile && !uploadExam.isPending && !publish.isPending)
+                uploadExam.mutate();
+            }}
+          >
+            <Field id="academy-new-exam-pdf" label={t("studentUploadFile")}>
+              <input
+                id="academy-new-exam-pdf"
+                key={fileInputRevision}
+                type="file"
+                accept=".pdf,application/pdf"
+                disabled={uploadExam.isPending || publish.isPending}
+                onChange={(event) => {
+                  const bytes = event.target.files?.[0];
+                  uploadExam.reset();
+                  setScannedExamVersion(null);
+                  setExamFile(
+                    bytes ? { bytes, uploadId: crypto.randomUUID() } : null,
+                  );
+                }}
+              />
+            </Field>
+            <Button
+              disabled={!examFile || uploadExam.isPending || publish.isPending}
+            >
+              {t(
+                scannedExamVersion
+                  ? "retryStudentPublication"
+                  : "scanStudentPdf",
+              )}
+            </Button>
+            {uploadExam.isPending && (
+              <p role="status">
+                {t(
+                  scannedExamVersion
+                    ? "publishingStudentPdf"
+                    : "scanningStudentPdf",
+                )}
+              </p>
+            )}
+            {uploadExam.isError && (
+              <Notice kind="error">
+                {t(
+                  scannedExamVersion
+                    ? "studentPublicationFailed"
+                    : "studentScanFailed",
+                )}
+              </Notice>
+            )}
+          </form>
           {options.isPending && <Loading />}
           {options.isError && (
             <ErrorState retry={() => void options.refetch()} />
@@ -238,7 +330,8 @@ export function CourseExams({
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                if (version && !publish.isPending) publish.mutate(version);
+                if (version && !publish.isPending && !uploadExam.isPending)
+                  publish.mutate(version);
               }}
             >
               <Field id="academy-exam-pdf" label={t("retainedPdf")}>
@@ -246,7 +339,7 @@ export function CourseExams({
                   id="academy-exam-pdf"
                   value={version}
                   onChange={(event) => setVersion(event.target.value)}
-                  disabled={publish.isPending}
+                  disabled={publish.isPending || uploadExam.isPending}
                 >
                   <option value="">{t("selectRetainedPdf")}</option>
                   {options.data.map((option) => (
@@ -257,7 +350,9 @@ export function CourseExams({
                   ))}
                 </select>
               </Field>
-              <Button disabled={!version || publish.isPending}>
+              <Button
+                disabled={!version || publish.isPending || uploadExam.isPending}
+              >
                 {t("publishRetainedPdf")}
               </Button>
             </form>
@@ -303,7 +398,8 @@ export function CourseExams({
       {(setting.isSuccess ||
         share.isSuccess ||
         remove.isSuccess ||
-        publish.isSuccess) && <Notice>{t("saved")}</Notice>}
+        publish.isSuccess ||
+        uploadExam.isSuccess) && <Notice>{t("saved")}</Notice>}
       {(setting.isError ||
         share.isError ||
         publish.isError ||

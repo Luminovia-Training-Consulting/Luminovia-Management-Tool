@@ -1,5 +1,6 @@
 /** Parse the narrow course-material multipart transport before file-side effects. */
 export const academyMaterialQuery = "?mode=academy-material";
+export const academyStudentExamQuery = "?mode=academy-student-exam";
 export const academyMaterialMaxBytes = 10 * 1024 * 1024;
 
 export function academyMaterialCourse(form: FormData, intake: boolean): string | null {

@@ -202,8 +202,46 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         values(${q(unsafeShare)},${q(run)},${q(answer)},'participants','material',${q(teacher)});
       alter table private.course_resources enable trigger guard_course_dedicated_document;`);
 
+    const reserveName = "reserve_academy_student_exam_pdf";
+    const statusName = "academy_course_material_status";
+    const scanName = "academy_course_material_scan";
+    const reserve = (
+      who,
+      key = randomUUID(),
+      course = run,
+      sha = digest,
+      name = "fresh paper.pdf",
+    ) =>
+      actor(
+        who,
+        gate(reserveName) +
+          `select public.reserve_academy_student_exam_pdf(${q(course)},${q(name)},${bytes.length},${q(key)},${q(sha)})`,
+      ).then(JSON.parse);
+    const uploadStatus = (who, file, course = run) =>
+      actor(
+        who,
+        gate(statusName) +
+          `select public.academy_course_material_status(${q(course)},${q(file.document_id)},${q(file.version_id)})`,
+      ).then((value) => (value ? JSON.parse(value) : null));
+    const scannerCall = (file, action, lease, sha, receipt) =>
+      `select public.academy_course_material_scan(${[file.document_id, file.version_id, action, lease, sha, receipt].map((value) => (value == null ? "null" : q(value))).join(",")})`;
+    const worker = (file, action, lease, sha, receipt) =>
+      sql(
+        "begin;set local role service_role;" +
+          gate(scanName) +
+          scannerCall(file, action, lease, sha, receipt) +
+          ";commit;",
+      );
+    const materialShare = (who, file) =>
+      actor(
+        who,
+        gate("academy_course_material_action") +
+          `select public.academy_course_material_action(${q(run)},'resource_share',${q(file.version_id)},'participants','material')`,
+      );
+
     await assert.rejects(list(teacher), /42501/);
     await assert.rejects(share(teacher, version), /42501/);
+    await assert.rejects(reserve(teacher), /42501/);
     await set(teacher, true, 0);
     assert.deepEqual(await list(teacher), []);
     assert.deepEqual(
@@ -269,6 +307,97 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       /latest\.pdf|fictional answer key/,
     );
 
+    // Scoped intake uses the same immutable native worker and clean-version lease.
+    for (const who of [learner, stranger, outside])
+      await assert.rejects(reserve(who), /42501/);
+    await assert.rejects(reserve(client, undefined, otherRun), /42501/);
+    await assert.rejects(
+      reserve(teacher, undefined, run, digest, "exam.txt"),
+      /22023/,
+    );
+    await assert.rejects(actor(teacher, gate(reserveName, "GET")), /42501/);
+    const uploadKey = randomUUID();
+    const newPaper = await reserve(teacher, uploadKey);
+    assert.equal(newPaper.status, "quarantined");
+    assert.deepEqual(await reserve(teacher, uploadKey), newPaper);
+    await assert.rejects(
+      reserve(teacher, uploadKey, run, "f".repeat(64)),
+      /PT409/,
+    );
+    await assert.rejects(
+      actor(
+        teacher,
+        gate("reserve_academy_course_material") +
+          `select public.reserve_academy_course_material(${q(run)},'fresh paper.pdf','application/pdf',${bytes.length},${q(uploadKey)},${q(digest)})`,
+      ),
+      /PT409/,
+    );
+    for (const who of [manager, client])
+      assert.equal((await reserve(who)).status, "quarantined");
+    for (const who of [learner, client, manager])
+      assert.equal(await uploadStatus(who, newPaper), null);
+    await assert.rejects(share(teacher, newPaper.version_id), /42501/);
+    await assert.rejects(
+      actor(
+        teacher,
+        gate(scanName) + scannerCall(newPaper, "begin", null, digest),
+      ),
+      /42501/,
+    );
+    await assert.rejects(
+      worker(newPaper, "begin", null, "e".repeat(64)),
+      /42501/,
+    );
+    const lease = await worker(newPaper, "begin", null, digest);
+    await assert.rejects(
+      worker(newPaper, "clean", randomUUID(), digest, scanner),
+      /42501/,
+    );
+    await worker(newPaper, "clean", lease, digest, scanner);
+    await worker(newPaper, "end", lease);
+    const clean = await uploadStatus(teacher, newPaper);
+    assert.equal(clean.document.status, "clean");
+    assert.equal(clean.document.current_version_id, newPaper.version_id);
+    assert.equal(clean.sha256, digest);
+    await assert.rejects(materialShare(teacher, newPaper), /42501/);
+    await assert.rejects(
+      share(teacher, newPaper.version_id, "exam_staff"),
+      /42501/,
+    );
+    const freshShare = await share(teacher, newPaper.version_id);
+    assert.equal(await share(teacher, newPaper.version_id), freshShare);
+    assert.equal((await facts(learner, freshShare)).id, newPaper.version_id);
+    await assert.rejects(facts(learner, freshShare, "resource"), /42501/);
+
+    const companyPaper = await reserve(client);
+    const companyLease = await worker(companyPaper, "begin", null, digest);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    assert.equal(await uploadStatus(client, companyPaper), null);
+    await assert.rejects(
+      worker(companyPaper, "clean", companyLease, digest, scanner),
+      /42501/,
+    );
+    await worker(companyPaper, "end", companyLease);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    await assert.rejects(
+      worker(companyPaper, "clean", companyLease, digest, scanner),
+      /42501/,
+    );
+    const currentLease = await worker(companyPaper, "begin", null, digest);
+    await worker(companyPaper, "clean", currentLease, digest, scanner);
+    await worker(companyPaper, "end", currentLease);
+    const companyShare = await share(client, companyPaper.version_id);
+    assert.equal(
+      (await facts(learner, companyShare)).id,
+      companyPaper.version_id,
+    );
+
+    const offPaper = await reserve(teacher);
+    const offLease = await worker(offPaper, "begin", null, digest);
     const origin = "https://academy.example.invalid";
     let switchOff = false;
     const handler = createCourseDocumentHandler({
@@ -321,6 +450,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(list(teacher), /42501/);
     await assert.rejects(share(teacher, version), /42501/);
     await assert.rejects(facts(learner, published), /42501/);
+    assert.equal(await uploadStatus(teacher, offPaper), null);
+    await assert.rejects(
+      worker(offPaper, "clean", offLease, digest, scanner),
+      /42501/,
+    );
+    await worker(offPaper, "end", offLease);
     await set(teacher, true, 2);
 
     await sql(
@@ -349,6 +484,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal((await workspace(teacher)).exams.can_edit, false);
     await assert.rejects(share(teacher, latest), /42501/);
     await assert.rejects(list(teacher), /42501/);
+    await assert.rejects(reserve(teacher), /42501/);
     await renew({
       release_commit: nextRelease,
       issued_at: date(-5),
@@ -360,10 +496,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       await sql(
         `select count(*) from private.course_exam_documents where run_id=${q(run)} and removed_at is null`,
       ),
-      "4",
+      "6",
     );
     console.log(
-      `PASS ${edition} exact scanned student publication, learner download, revocation during byte read, retained answer isolation and grace`,
+      `PASS ${edition} student exam scanner intake, current-role/requirement revocation, exact publication and learner download, retained answers and grace`,
     );
   });
 }

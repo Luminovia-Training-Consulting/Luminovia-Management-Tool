@@ -9,11 +9,15 @@ import i18n from "../../lib/i18n";
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   upload: vi.fn(),
+  uploadExam: vi.fn(),
   download: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 vi.mock("../../lib/online", () => ({ useOnline: () => true }));
-vi.mock("../files/api", () => ({ uploadDocument: fake.upload }));
+vi.mock("../files/api", () => ({
+  uploadDocument: fake.upload,
+  uploadAcademyStudentExamPdf: fake.uploadExam,
+}));
 vi.mock("./api", () => ({
   courseWorkspaceKey: (actor: string, run: string) => [
     "course-workspace",
@@ -72,6 +76,7 @@ beforeEach(async () => {
     status: "clean",
     current_version_id: "clean-version",
   });
+  fake.uploadExam.mockReset();
   fake.download.mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => {
@@ -131,6 +136,7 @@ it("submits only the exact academy setting and never offers PDF actions", async 
   const user = userEvent.setup();
   show(course(false, true, false), "active");
   expect(screen.queryByLabelText("Exam file (PDF)")).toBeNull();
+  expect(screen.queryByLabelText("New student exam paper (PDF)")).toBeNull();
   await user.selectOptions(
     screen.getByRole("combobox", { name: "Course exam" }),
     "yes",
@@ -155,6 +161,7 @@ it("shows the last exam decision without controls or PDF metadata in grace", () 
     screen.queryByRole("button", { name: "Save exam setting" }),
   ).toBeNull();
   expect(screen.queryByText("Fictional exam.pdf")).toBeNull();
+  expect(screen.queryByLabelText("New student exam paper (PDF)")).toBeNull();
 });
 
 it("publishes only the selected previously scanned student PDF, without an upload or answer-key control", async () => {
@@ -195,6 +202,59 @@ it("publishes only the selected previously scanned student PDF, without an uploa
   ).toBeNull();
   expect(screen.queryByLabelText("Exam file (PDF)")).toBeNull();
   expect(fake.upload).not.toHaveBeenCalled();
+});
+
+it("retries publishing the exact scanned exam PDF for a company editor without uploading it again", async () => {
+  const user = userEvent.setup();
+  const publish = vi
+    .fn()
+    .mockResolvedValueOnce({ data: null, error: { code: "unavailable" } })
+    .mockResolvedValueOnce({ data: "published-paper", error: null });
+  fake.rpc.mockImplementation((method, input) =>
+    method === "academy_student_exam_pdf_options"
+      ? { abortSignal: async () => ({ data: [], error: null }) }
+      : publish(method, input),
+  );
+  fake.uploadExam.mockResolvedValue({
+    status: "clean",
+    current_version_id: "exact-new-version",
+  });
+  show(course(true, true, false), "active");
+  const paper = new File(["%PDF-1.7 fictional"], "New exam.pdf", {
+    type: "application/pdf",
+  });
+  await user.upload(
+    screen.getByLabelText("New student exam paper (PDF)"),
+    paper,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Scan and publish exam paper" }),
+  );
+  expect(
+    await screen.findByText(
+      "The PDF was scanned. Retry publishing the same version.",
+    ),
+  ).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Retry publishing scanned exam paper" }),
+  );
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.uploadExam).toHaveBeenCalledExactlyOnceWith(
+    paper,
+    "fictional-course",
+    expect.any(String),
+  );
+  expect(fake.upload).not.toHaveBeenCalled();
+  expect(publish.mock.calls).toEqual(
+    Array.from({ length: 2 }, () => [
+      "share_course_exam_pdf",
+      {
+        p_run_id: "fictional-course",
+        p_version_id: "exact-new-version",
+        p_audience: "students",
+      },
+    ]),
+  );
 });
 
 it("lets a grace-period learner download only a published student paper", async () => {

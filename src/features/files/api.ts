@@ -88,6 +88,19 @@ export function uploadAcademyCourseMaterial(
   );
 }
 
+/** Upload a student paper into its course-only exam reservation. */
+export function uploadAcademyStudentExamPdf(
+  file: File,
+  courseId: string,
+  clientId: string,
+) {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("academy_course_id", courseId);
+  form.set("client_id", clientId);
+  return transferUpload(form, endpoint() + "?mode=academy-student-exam");
+}
+
 async function transferUpload(
   form: FormData,
   path: string,
