@@ -117,6 +117,29 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   // Simulate direct RPC execution, independently of the HTTP pre-request hook.
   const directMeeting = (who, url, version) =>
     actor(who, meetingWrite(url, version));
+  const initialWelcome = [
+    "Bring your notebook",
+    "Practise the basics",
+    "Open the course workspace",
+  ];
+  const welcome = (who, course = run) =>
+    call(who, "course_welcome_content", [course], "GET").then(JSON.parse);
+  const publishWelcome = (
+    who,
+    version,
+    content = initialWelcome,
+    course = run,
+  ) =>
+    call(who, "publish_course_welcome_content", [
+      course,
+      ...content,
+      version,
+    ]).then(JSON.parse);
+  const directWelcome = (who, version) =>
+    actor(
+      who,
+      `select public.publish_course_welcome_content(${[run, ...initialWelcome, version].map(q).join(",")})`,
+    );
   const candidateConfiguration = configure(installation, terms.release_commit);
   await assert.rejects(actor(admin, candidateConfiguration), /42501/);
   await assert.rejects(
@@ -132,6 +155,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(enrol(admin, participant), /42501/);
   await assert.rejects(meeting(admin, initialLink, 0), /42501/);
   await assert.rejects(directMeeting(admin, initialLink, 0), /42501/);
+  await assert.rejects(welcome(admin), /42501/);
+  await assert.rejects(publishWelcome(admin, 0), /42501/);
+  await assert.rejects(directWelcome(admin, 0), /42501/);
   await assert.rejects(
     actor(
       admin,
@@ -183,6 +209,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     ["/rpc/academy_assign_course_instructor", "GET"],
     ["/rpc/set_course_meeting_link", "GET"],
     ["/rpc/set_course_meeting_link", "HEAD"],
+    ["/rpc/publish_course_welcome_content", "GET"],
+    ["/rpc/publish_course_welcome_content", "HEAD"],
   ]) {
     await assert.rejects(
       actor(
@@ -226,6 +254,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   });
   await assert.rejects(meeting(teacher, initialLink, 0), /42501/);
   await assert.rejects(workspace(teacher, run), /42501/);
+  await assert.rejects(publishWelcome(teacher, 0), /42501/);
+  await assert.rejects(welcome(participant), /42501/);
   await assert.rejects(workspace(participant, run), /42501/);
   await assert.rejects(enrol(teacher, participant), /42501/);
   await assert.rejects(enrol(admin, foreign), /42501/);
@@ -246,6 +276,19 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.equal(participantView.meeting_link.can_edit, false);
   await assert.rejects(meeting(participant, initialLink, 0), /42501/);
   await assert.rejects(meeting(foreign, initialLink, 0), /42501/);
+  assert.deepEqual(await welcome(participant), {
+    version: 0,
+    description: "",
+    objectives: "",
+    joining_instructions: "",
+    published_at: null,
+  });
+  await assert.rejects(welcome(foreign), /42501/);
+  await assert.rejects(publishWelcome(participant, 0), /42501/);
+  await assert.rejects(
+    publishWelcome(admin, 0, ["x".repeat(4001), "", ""]),
+    /22023/,
+  );
   await assert.rejects(meeting(admin, "http://example.invalid", 0), /22023/);
   assert.deepEqual(
     (await workspaces(participant)).map(({ id }) => id),
@@ -269,6 +312,35 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   const result = await assign(admin, run, teacher);
   assert.equal(result.status, "confirmed");
   assert.equal((await workspace(teacher, run)).access.teacher, true);
+  await assert.rejects(
+    publishWelcome(teacher, 0, initialWelcome, conflictingRun),
+    /42501/,
+  );
+  const welcomeV1 = await publishWelcome(teacher, 0);
+  assert.deepEqual(await welcome(participant), welcomeV1);
+  assert.deepEqual(Object.keys(welcomeV1).sort(), [
+    "description",
+    "joining_instructions",
+    "objectives",
+    "published_at",
+    "version",
+  ]);
+  assert.equal(welcomeV1.version, 1);
+  assert.equal(welcomeV1.joining_instructions, initialWelcome[2]);
+  const concurrentRevisions = await Promise.allSettled([
+    publishWelcome(teacher, 1, ["Read chapter one", "", ""]),
+    publishWelcome(admin, 1, ["Read chapter two", "", ""]),
+  ]);
+  assert.equal(
+    concurrentRevisions.filter(({ status }) => status === "fulfilled").length,
+    1,
+  );
+  const staleRevision = concurrentRevisions.find(
+    ({ status }) => status === "rejected",
+  );
+  assert.match(String(staleRevision?.reason), /PT409/);
+  const currentWelcome = await welcome(participant);
+  assert.equal(currentWelcome.version, 2);
   assert.deepEqual(await meeting(teacher, initialLink, 0), {
     url: initialLink,
     version: 1,
@@ -395,6 +467,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     can_edit: false,
   });
   await assert.rejects(meeting(admin, null, 2), /42501/);
+  assert.deepEqual(await welcome(participant), currentWelcome);
+  await assert.rejects(publishWelcome(admin, 2), /42501/);
+  await assert.rejects(directWelcome(teacher, 2), /42501/);
   await assert.rejects(directMeeting(teacher, null, 2), /42501/);
   await assert.rejects(assign(admin, run, teacher), /42501/);
   await assert.rejects(enrol(admin, participant, "removed"), /42501/);
@@ -416,6 +491,13 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(workspaces(participant), /42501/);
   await assert.rejects(workspace(admin, run), /42501/);
   await assert.rejects(directMeeting(admin, null, 2), /42501/);
+  await assert.rejects(welcome(participant), /42501/);
+  assert.equal(
+    await sql(
+      `select count(*) from private.course_welcome_revisions where course_run_id=${q(run)}`,
+    ),
+    "2",
+  );
   assert.equal(
     await sql(
       `select url from private.course_meeting_links where course_run_id=${q(run)}`,
@@ -435,6 +517,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "1",
   );
   await renew({ release_commit: nextRelease, issued_at: date(-4) });
+  assert.deepEqual(await welcome(participant), currentWelcome);
   assert.equal((await workspace(participant, run)).access.learner, true);
   assert.deepEqual(await meeting(admin, null, 2), {
     url: null,
@@ -449,7 +532,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     false,
   );
   console.log(
-    `PASS ${edition} course scope, assignments, enrolments, meeting links, release binding, grace/read-only, expiry and dormant browser`,
+    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, release binding, grace/read-only, expiry and dormant browser`,
   );
 };
 

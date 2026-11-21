@@ -55,7 +55,10 @@ await withTestDatabase("course_welcome_test", async ({ sql, actor }) => {
   assert.equal((await fetch(learner)).description, "First version");
   await assert.rejects(fetch(stranger), /Course unavailable/i);
   await assert.rejects(publish(learner, 1, "Learner edit"), /editor required/i);
-  await assert.rejects(publish(client, 0, "Stale edit"), /welcome changed/i);
+  await assert.rejects(
+    publish(client, 0, "Stale edit"),
+    /PT409.*welcome changed/i,
+  );
   assert.equal((await publish(admin, 1, "Current version")).version, 2);
   assert.equal((await toggle(false, 1)).status, "updated");
   await assert.rejects(fetch(learner), /Course unavailable/i);
