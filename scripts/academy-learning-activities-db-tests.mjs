@@ -204,6 +204,18 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       /42501/,
     );
     assert.deepEqual(await download(teacher, record.id), facts);
+    const notices = (who) => rpc(who, "notification_inbox").then(JSON.parse);
+    assert.equal(
+      (await notices(learner)).items.find(
+        ({ kind }) => kind === "course_completion_issued",
+      )?.href,
+      `/courses/${course}/workspace#course-learning`,
+    );
+    assert.ok(
+      !(await notices(peer)).items.some(
+        ({ kind }) => kind === "course_completion_issued",
+      ),
+    );
     await sql(
       `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, issued_at: date(-5), starts_at: date(-4), expires_at: date(-1) }))})`,
     );
@@ -217,6 +229,16 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       reason: "Fictional reason",
     });
     await assert.rejects(download(learner, record.id), /42501/);
+    assert.ok(
+      (await notices(learner)).items.some(
+        ({ kind }) => kind === "course_completion_revoked",
+      ),
+    );
+    assert.ok(
+      !(await notices(learner)).items.some(
+        ({ kind }) => kind === "course_completion_issued",
+      ),
+    );
     await assert.rejects(payload(learner, "completion_issue"), /22023/);
     await configure(false);
     await assert.rejects(workspace(learner), /42501/);

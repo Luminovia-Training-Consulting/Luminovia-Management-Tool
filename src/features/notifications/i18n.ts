@@ -100,6 +100,7 @@ const de = {
   course_resource_shared: "Kursunterlage freigegeben",
   course_quiz_published: "Kursquiz verfügbar",
   course_attendance_updated: "Anwesenheit aktualisiert",
+  academy_course_enrolled: "Zum Kurs angemeldet",
   course_completion_issued: "Abschlussnachweis erstellt",
   course_completion_revoked: "Abschlussnachweis widerrufen",
 };
@@ -197,6 +198,7 @@ const en: Record<keyof typeof de, string> = {
   course_resource_shared: "Course resource shared",
   course_quiz_published: "Course quiz available",
   course_attendance_updated: "Attendance updated",
+  academy_course_enrolled: "Enrolled in course",
   course_completion_issued: "Completion document issued",
   course_completion_revoked: "Completion document revoked",
 };

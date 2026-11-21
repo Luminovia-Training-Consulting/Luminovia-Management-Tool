@@ -302,6 +302,7 @@ const courseDocumentDownload = {
 };
 const expectedVersion = { type: "integer", minimum: 0 };
 const academyActivityActions = new Set([
+  "resource_acknowledge",
   "feedback",
   "quiz_config",
   "quiz_attempt",
@@ -367,7 +368,7 @@ const coursePaths = {
       ...notificationPaths["/rest/v1/rpc/notification_inbox"].post,
       operationId: "readAcademyNotifications",
       tags: ["Licensed course profile"],
-      description: `${readAccess} Only the current account's visible notices for course messages, shared material and own attendance are returned. Uses a stable timestamp and ID cursor.`,
+      description: `${readAccess} Returns the current account's visible course messages, shared material, enrolment, attendance and completion notices. Uses a stable timestamp and ID cursor.`,
       security: credentials,
       "x-portal-licence": "active-or-grace",
     },
@@ -616,8 +617,8 @@ const coursePaths = {
   "/functions/v1/course-documents": courseDocumentDownload,
   "/rest/v1/rpc/academy_learning_action": courseOperation(
     "saveAcademyLearningActivity",
-    "Save feedback, a quiz or a completion action",
-    "Course staff author revisioned quizzes and can revoke a completion record. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
+    "Acknowledge material or save a learning activity",
+    "Acknowledge an exact currently visible course resource. Course staff author revisioned quizzes and can revoke a completion record. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
     "active",
     {
       ...record(

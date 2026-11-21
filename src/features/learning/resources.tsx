@@ -17,6 +17,7 @@ import {
   courseWorkspaceKey,
   downloadCourseDocument,
   shareAcademyCourseMaterial,
+  removeAcademyCourseMaterial,
 } from "./api";
 
 /** Preserve the exact authorised byte gateway for resources and certificates. */
@@ -65,11 +66,13 @@ export function Resources({
   course,
   actor,
   readOnly = false,
+  academy = false,
   academyCanUpload = false,
 }: {
   course: CourseWorkspace;
   actor: string;
   readOnly?: boolean;
+  academy?: boolean;
   academyCanUpload?: boolean;
 }) {
   const { t } = useTranslation("learning");
@@ -97,7 +100,17 @@ export function Resources({
     }: {
       action: string;
       payload: Record<string, unknown>;
-    }) => courseAction(course.id, action, payload),
+    }) => {
+      if (
+        academy &&
+        action === "resource_remove" &&
+        typeof payload.id === "string"
+      )
+        return removeAcademyCourseMaterial(course.id, payload.id);
+      return academy
+        ? courseAction(course.id, action, payload, 0, true)
+        : courseAction(course.id, action, payload);
+    },
     onSuccess: refresh,
   });
   const upload = useMutation({
@@ -167,7 +180,7 @@ export function Resources({
                 id={resource.id}
                 name={resource.name}
               />
-              {!readOnly && (
+              {(!readOnly || academy) && (
                 <Button
                   variant="ghost"
                   disabled={!online || save.isPending || resource.acknowledged}
@@ -181,7 +194,7 @@ export function Resources({
                   {t(resource.acknowledged ? "acknowledged" : "acknowledge")}
                 </Button>
               )}
-              {!readOnly && resource.can_remove && (
+              {(!readOnly || academyCanUpload) && resource.can_remove && (
                 <Button
                   variant="ghost"
                   disabled={!online || save.isPending}
