@@ -19,6 +19,8 @@
 - [x] Document current, retained and empty attendance correction receipt shapes in OpenAPI and validate their scope against real SQL.
 - [x] Allow an assigned academy lecturer to publish or withdraw the exact retained clean version of their own course material. Validate both dedicated editions in PostgreSQL and PostgREST.
 - [x] Document ten licensed course endpoints in each branded package. Verify successful PostgreSQL responses and the exact signed archive layouts for both editions.
+- [x] Connect normal email/username authentication to the dedicated role and licence scope through the existing Edge handler. Native GoTrue and PostgREST confirm stable identities and bounded service calls.
+- [x] Enter only the verified course area from branded desktop and mobile builds, preserving direct links and rechecking the current installation/profile on reconnect. Both browser layouts and the full local source suite passed with fictional transport. Native joined browser/provider acceptance is tracked separately.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links

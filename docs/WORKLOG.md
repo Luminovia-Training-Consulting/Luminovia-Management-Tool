@@ -1,3 +1,13 @@
+# 21 November 2026 — Normal dedicated academy course entry
+
+Both dedicated editions now open a branded course area through the usual login. A course session verifies the branded installation ID and edition, the current licence and the exact server-enabled course profile before mounting the signed-in routes. Direct links open only a verified workspace. Active profiles can use the available course controls. During grace the course, welcome content, meeting link, retained material and chat remain readable.
+
+The existing Deno login function now calls the dedicated service-only rate limiter, alias resolver and bounded active-account check. Native GoTrue and PostgREST verified real email and username sign-ins to the same Auth identity in both editions. Anonymous and ordinary user calls cannot invoke the privileged helpers, and the service role cannot read the general profile table through the dedicated REST gateway.
+
+The integrated source check passed TypeScript, ESLint, formatting, code quality, all 1,084 frontend tests with coverage and the production build. All 124 Edge tests passed. Both actual branded Chromium builds passed their course-entry and revocation scenarios at desktop and Pixel 7 sizes with fictional transport. Full customer administration, fresh course-material intake and the final hosted release are still open.
+
+The isolated internal Chromium run also completed the corrected calendar subscription, responsive layout, offline and assignment-link journeys on both desktop and mobile with real GoTrue, PostgREST 16.5 and the Deno login handler. The retained-data candidate exposed a bulk fixture write that lacked a leading session UUID. Real PostgREST reproduced that failure and verified the updated fixture, the same invoice request's early denial and the confirmed final-session transition.
+
 # 21 November 2026 — Dedicated course messages, files and typed attendance history
 
 Both dedicated editions can open one course text channel from the licensed course profile. The channel binds the acting manager, currently assigned instructors and currently enrolled participants. PostgreSQL confirms idempotent room creation and posting, immediate revocation, preservation of messages, and visibility of only the opaque Realtime marker to current members. Pinned GoTrue and PostgREST exercised the actual room, history and send routes with password tokens. A native Realtime 2.161.0 WebSocket received the exact opaque marker for the enrolled learner. The same connection received no marker after profile closure and resumed delivery after re-enabling the profile. Full browser activation remains pending.
