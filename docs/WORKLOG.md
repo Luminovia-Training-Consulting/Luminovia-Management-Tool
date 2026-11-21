@@ -1,3 +1,23 @@
+# 21 November 2026 — Standalone Academy participation and encrypted recovery
+
+The dedicated participation export reports learner reference, enrolment, attendance totals and completion status in German or English. Company and lecturer access uses the current course scope on every page. The report omits notes, exam answers and completion snapshots. PostgreSQL exercises both academy editions and refusal in the internal edition. Component tests cover two-page download, denial after the first page and unavailable offline export. Chromium with native GoTrue and PostgREST verified the CSV download and the absence of the export action for learners on desktop and mobile.
+
+The independent cold backup and restore command checks the customer UUID, source revision, existing private installation and separate empty restore namespace. It encrypts PostgreSQL, Auth, Storage, signed browser and private environment together. Native PostgreSQL 17.12 and real age tests recovered a working login, migrated metadata and exact file bytes. The full independent Docker and ACME rehearsal remains pending.
+
+Hosting migration and external SMTP were deferred at the user's request. The staged CMS publication workflow was cancelled. The latest website-only publication preceded that decision. Current work targets the source and disposable local verification.
+
+# 21 November 2026 — Public academy links
+
+A confirmed local administrator can publish versioned support, privacy, legal notice and terms URLs for a licensed academy. The bilingual sign-in and academy pages display only the configured links. The database validates exact HTTPS links and rejects stale versions, role loss and writes during licence grace. Links appear through an anonymous public projection bound to the installation. The existing name and theme endpoints retain their original wire shape.
+
+Both editions passed native PostgreSQL and their documented response contract. Chromium verified publishing and removing links, anonymous sign-in, learner access and layout on German mobile dark customer-managed and English desktop light customer-self-hosted installations. Fifty focused UI and contract tests passed.
+
+# 21 November 2026 — Signed webhooks for both dedicated academies
+
+Local administrators can create and revoke organisation-scoped signed course webhooks and inspect delivery history. The operator maps each alias to a reviewed HTTPS receiver in the private worker environment. The revision-bound outbox reuses the internal HMAC protocol, event IDs and retry policy. No dedicated webhook subscription grants a general API credential.
+
+Both academy editions passed PostgreSQL and local HTTP delivery with the real worker. Checks covered tenant scope, transactional rollback, identical event IDs on retry, revoked leases and administrator authority, licence grace, a replacement release, and scanned learner-facing materials. Chromium with native Auth and PostgREST covered subscription and confirmed revocation on English desktop and German mobile. The new exact academy catalogue contains 58 operations, and its verifier authenticated a signed predecessor archive. An external receiver has not been configured.
+
 # 21 November 2026 — Job discovery query and typed portal contracts
 
 Multiple isolated Docker jobs hit PostgreSQL statement timeouts during the authenticated 1,057-offer discovery fixture. A forward migration skips candidate-level monetary quotes when the filter and sort do not need them. Each returned item still uses the existing actor-scoped quote, and monetary candidates still use current price visibility and bounds. On the same native PostgREST 16.5 executable and local PostgreSQL host, median time for eleven newest pages dropped from 1.991 s to 1.080 s. Full paging, stale cursors, title and amount sorting, manager nulls, private views and role revocation passed. The new migration follows the separately published academy branding migration.

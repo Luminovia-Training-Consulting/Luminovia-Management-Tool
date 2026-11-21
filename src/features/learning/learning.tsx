@@ -43,6 +43,7 @@ import { CourseMeetingLinkEditor } from "./meeting-link";
 import { courseClassroom } from "./meeting-url";
 import { CourseExams } from "./exams";
 import { AttendancePanel } from "./attendance";
+import { CourseParticipationReport } from "./course-participation-report";
 import { AcademyInstructors } from "./academy-instructors";
 import { AcademyCoursePublication } from "./academy-publication";
 import { AcademyCompanyInvitation } from "./academy-company-invitation";
@@ -1160,6 +1161,9 @@ function CourseWorkspaceLayout({
                 academy={academy}
               />
             </div>
+          )}
+          {academy && editor && (
+            <CourseParticipationReport key={course.id} courseId={course.id} />
           )}
           <CourseChat
             run={course.id}

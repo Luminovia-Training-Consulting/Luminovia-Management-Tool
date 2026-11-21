@@ -22,7 +22,20 @@ import {
   academyBrandingRequest,
   academyBrandingSettings,
 } from "../branding/academy-branding-schema.ts";
+import {
+  companyCourseWebhook,
+  companyWebhookDestination,
+  companyWebhookListSchema,
+} from "./course-webhook-contract.ts";
+import {
+  academyBrandLinkRequest,
+  academyBrandLinkSettings,
+} from "../branding/academy-brand-links-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
+import {
+  courseParticipationReportRequest,
+  courseParticipationReportSchema,
+} from "../learning/course-participation-report-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
@@ -138,6 +151,21 @@ function courseChatSend(...args: Parameters<typeof courseOperation>) {
     },
   };
 }
+
+const academyWebhookSubscribe = courseOperation(
+  "subscribeAcademyCourseWebhook",
+  "Subscribe an organisation to signed course events",
+  "Requires the current confirmed local installation administrator. The operator assigns the receiver alias to an exact approved HTTPS endpoint. The 180-day subscription has a one-time signing key. Revoke the subscription and create another to rotate its signing key.",
+  "active",
+  record({
+    p_organisation: uuid,
+    p_destination: companyWebhookDestination,
+  }),
+  record({
+    id: uuid,
+    signing_secret: { type: "string", pattern: "^[0-9a-f]{64}$" },
+  }),
+);
 
 const run = { p_run_id: uuid };
 const materialAudience = { enum: ["staff", "client", "participants", "all"] };
@@ -745,6 +773,14 @@ const coursePaths = {
     materialAction,
     record({ id: uuid }),
   ),
+  "/rest/v1/rpc/academy_course_participation_report": courseOperation(
+    "readAcademyCourseParticipationReport",
+    "Read a scoped participation report",
+    "Requires current course management, assigned lecturer or organisation contact access. Results include attendance totals and completion status for enrolled and completed learners. Pass next_after as p_after_user_id for the next page.",
+    "active-or-grace",
+    z.toJSONSchema(courseParticipationReportRequest),
+    z.toJSONSchema(courseParticipationReportSchema),
+  ),
   "/rest/v1/rpc/course_session_register": courseOperation(
     "readAcademyCourseAttendanceRegister",
     "Read the attendance register for an exact course session",
@@ -949,7 +985,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.23.0",
+      version: "1.25.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1026,8 +1062,88 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           },
         },
       },
+      "/rest/v1/rpc/company_course_webhook_list": courseOperation(
+        "listAcademyCourseWebhooks",
+        "List company course webhooks",
+        "Requires the current confirmed local installation administrator. Signing keys are omitted. The response shows recent delivery states for the selected organisation.",
+        "active",
+        record({ p_organisation: uuid }),
+        companyWebhookListSchema,
+      ),
+      "/rest/v1/rpc/academy_subscribe_course_webhook": {
+        post: {
+          ...academyWebhookSubscribe.post,
+          responses: {
+            ...academyWebhookSubscribe.post.responses,
+            "409": error(
+              "An active subscription already uses this organisation's receiver alias",
+            ),
+          },
+        },
+      },
+      "/rest/v1/rpc/academy_revoke_course_webhook": {
+        post: {
+          operationId: "revokeAcademyCourseWebhook",
+          tags: ["Licensed course profile"],
+          summary: "Revoke a company course webhook",
+          description:
+            "Requires the current confirmed local installation administrator and an active licence. Queued deliveries are cancelled. A network request that was already sent may finish.",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(
+              record({ p_organisation: uuid, p_subscription: uuid }),
+            ),
+          },
+          responses: {
+            "204": { description: "Revocation confirmed." },
+            "400": error("Invalid input"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+          },
+        },
+      },
+      "/rest/v1/rpc/academy_public_brand_links": {
+        get: {
+          operationId: "readAcademyPublicBrandLinks",
+          tags: ["Installation"],
+          summary: "Read the academy's public support and legal links",
+          description:
+            "Available before sign-in. Null values omit the corresponding footer link.",
+          security: [{ apiKey: [] }],
+          responses: { "200": ok(z.toJSONSchema(academyBrandLinkSettings)) },
+        },
+      },
+      "/rest/v1/rpc/save_academy_public_brand_links": {
+        post: {
+          operationId: "saveAcademyPublicBrandLinks",
+          tags: ["Installation"],
+          summary: "Save the academy's public support and legal links",
+          description:
+            "Requires the current confirmed local administrator, active licence and the last read version. Each absolute HTTPS URL is public. A null value hides the corresponding link.",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(z.toJSONSchema(academyBrandLinkRequest)),
+          },
+          responses: {
+            "200": ok(z.toJSONSchema(academyBrandLinkSettings)),
+            "400": error("Invalid link or version"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Public links changed since the last read"),
+          },
+        },
+      },
       ...coursePaths,
     },
+    webhooks: { companyCourseEvent: companyCourseWebhook },
     components: {
       securitySchemes: {
         apiKey: {
@@ -1057,7 +1173,9 @@ export function academyExplorerOpenApi(
   backend: string,
   brand: AcademyIdentity,
 ) {
-  const document = academyOpenApi(backend, brand);
+  // The receiver contract is downloadable documentation, not a callable Swagger operation.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { webhooks, ...document } = academyOpenApi(backend, brand);
   return {
     ...document,
     paths: Object.fromEntries(

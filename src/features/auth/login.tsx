@@ -4,7 +4,7 @@
  */
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { useAcademyBrand } from "../branding/academy-branding";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,7 +26,7 @@ const schema = z.object({
 });
 
 /** Use native sign-in and recovery requests with separate form states. */
-export function Login() {
+export function Login({ footer }: { footer?: ReactNode } = {}) {
   const brand = useAcademyBrand();
   const { t } = useTranslation();
   const { session, loading } = useAuth();
@@ -206,6 +206,7 @@ export function Login() {
             )}
             <Link to="/help">{t("helpGuides")}</Link>
           </div>
+          {footer}
         </div>
       </section>
     </div>

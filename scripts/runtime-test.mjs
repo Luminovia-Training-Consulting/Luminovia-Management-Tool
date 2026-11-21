@@ -350,6 +350,11 @@ try {
         // These checks use fixtures and owned proxy containers, never the hosted VM.
         const hosting = join(scratch, "deploy/hostinger");
         if (existsSync(hosting)) {
+            if (existsSync(join(hosting, "test_reset_live.py"))) {
+                await step("Operator reset guards and recovery", "python3", [
+                    join(hosting, "test_reset_live.py"),
+                ]);
+            }
             if (existsSync(join(hosting, "backups"))) {
                 // The crypto fixtures otherwise skip successfully when their tools are
                 // absent. Require real age binaries before claiming complete local QA.

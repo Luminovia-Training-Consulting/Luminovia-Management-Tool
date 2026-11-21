@@ -12,6 +12,7 @@ const readPaths = [
   "/rest/v1/rpc/course_chat_rooms",
   "/rest/v1/rpc/course_chat_messages",
   "/rest/v1/rpc/course_session_register",
+  "/rest/v1/rpc/academy_course_participation_report",
   "/rest/v1/rpc/notification_inbox",
   "/rest/v1/rpc/academy_course_publication",
   "/rest/v1/rpc/academy_timetable",
@@ -96,8 +97,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(Object.keys(spec.paths).sort()).toEqual(
         [
           bootstrap,
+          "/rest/v1/rpc/company_course_webhook_list",
+          "/rest/v1/rpc/academy_subscribe_course_webhook",
+          "/rest/v1/rpc/academy_revoke_course_webhook",
           "/rest/v1/rpc/academy_public_branding",
           "/rest/v1/rpc/save_academy_public_branding",
+          "/rest/v1/rpc/academy_public_brand_links",
+          "/rest/v1/rpc/save_academy_public_brand_links",
           upload,
           examDownload,
           ...mailPaths,
@@ -111,7 +117,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           ...draftPaths,
         ].sort(),
       );
-      expect(spec).not.toHaveProperty("webhooks");
+      expect(spec.webhooks.companyCourseEvent.post.operationId).toBe(
+        "receiveCompanyCourseEvent",
+      );
       expect(Object.keys(spec.components.securitySchemes).sort()).toEqual([
         "apiKey",
         "bearerAuth",

@@ -6,6 +6,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useMatch,
   useOutletContext,
   useParams,
 } from "react-router-dom";
@@ -32,6 +33,7 @@ import { LearningHubPage } from "../features/learning/course-hub";
 import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
+import { AcademyBrandLinksFooter } from "../features/branding/academy-brand-links-panel";
 import { AcademyBrandProvider } from "../features/branding/academy-brand-provider";
 import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
@@ -72,7 +74,7 @@ function AcademyLogin() {
       <div className="login-preferences">
         <Preferences />
       </div>
-      <Login />
+      <Login footer={<AcademyBrandLinksFooter />} />
     </>
   );
 }
@@ -215,6 +217,7 @@ function AcademyTimetableRoute() {
 }
 
 export function AcademyRoutes() {
+  const signingIn = useMatch("/login");
   return (
     <AcademyBrandProvider>
       <Routes>
@@ -257,6 +260,7 @@ export function AcademyRoutes() {
         </Route>
         <Route path="*" element={<AcademyNotFound />} />
       </Routes>
+      {!signingIn && <AcademyBrandLinksFooter />}
     </AcademyBrandProvider>
   );
 }

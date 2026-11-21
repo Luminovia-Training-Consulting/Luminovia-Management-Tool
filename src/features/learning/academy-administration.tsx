@@ -24,7 +24,9 @@ import type {
 } from "../accounts/academy-schema";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
+import { AcademyBrandLinksEditor } from "../branding/academy-brand-links-panel";
 import { AcademyBrandEditor } from "../branding/academy-brand-editor";
+import { AcademyWebhookPanel } from "./academy-webhook-panel";
 import { AcademyRoleEditor } from "./academy-role-editor";
 
 type Localize = (de: string, en: string) => string;
@@ -506,7 +508,15 @@ export function AcademyAdministrationPage() {
         title={word("Akademie verwalten", "Academy administration")}
       />
       <AcademyLicencePanel actor={actor} />
-      {can_create_management && <AcademyBrandEditor />}
+      {can_create_management && (
+        <>
+          <AcademyBrandEditor />
+          <AcademyBrandLinksEditor />
+        </>
+      )}
+      {can_create_management && organisations.length > 0 && (
+        <AcademyWebhookPanel actor={actor} organisations={organisations} />
+      )}
       {can_write ? (
         <>
           <OrganisationForm word={word} changed={changed} />

@@ -1,6 +1,29 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  participationReport: ["Teilnahmebericht", "Participation report"],
+  exportParticipation: [
+    "Teilnahmebericht als CSV exportieren",
+    "Export participation report as CSV",
+  ],
+  exportingParticipation: ["Bericht wird erstellt …", "Preparing report…"],
+  participationExportFailed: [
+    "Der Teilnahmebericht konnte nicht erstellt werden.",
+    "Could not export the participation report.",
+  ],
+  reportName: ["Teilnehmende", "Participant"],
+  reportLearnerId: ["Teilnehmenden-ID", "Participant ID"],
+  reportEnrolment: ["Einschreibung", "Enrolment"],
+  "reportEnrolment.enrolled": ["Eingeschrieben", "Enrolled"],
+  "reportEnrolment.completed": ["Abgeschlossen", "Completed"],
+  reportSessionCount: ["Geplante Termine", "Scheduled sessions"],
+  reportPresent: ["Anwesend", "Present"],
+  reportAbsent: ["Abwesend", "Absent"],
+  reportExcused: ["Entschuldigt", "Excused"],
+  reportCompletion: ["Abschlussnachweis", "Completion record"],
+  "reportCompletion.issued": ["Ausgestellt", "Issued"],
+  "reportCompletion.revoked": ["Widerrufen", "Revoked"],
+  "reportCompletion.not_issued": ["Ausstehend", "Not issued"],
   companyInvitations: ["Unternehmenseinladungen", "Company invitations"],
   acceptCompanyInvitation: [
     "Einladung von {{name}} annehmen",

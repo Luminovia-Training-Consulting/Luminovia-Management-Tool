@@ -24,6 +24,10 @@ This pass covers source implementation and local tests. CI, deployment, producti
 - [x] Add an isolated mail-capture override. Verify actual Auth invitation and password recovery from the rendered settings with the pinned GoTrue and Mailpit binaries. Verify that the link belongs to the selected academy origin.
 - [x] Apply an exact signed academy upgrade with source-checked migration history and preserve the Auth identity, original password and enrolled course. Restore PostgreSQL and Storage into a separate native runtime and verify the uploaded bytes.
 - [x] Support versioned local administrator branding for both academies, with anonymous login presentation, a typed API and restoration of the signed defaults.
+- [x] Publish versioned local support, privacy, legal notice and terms links in the anonymous sign-in and authenticated academy footer. Verify both editions with native PostgreSQL, GoTrue, PostgREST and Chromium, including stale saves and missing authority.
+- [x] Deliver scoped course webhooks in both dedicated academies through the private shared worker. Local PostgreSQL, HTTP and Chromium witnessed revocation, retry and exact release fencing. External receiver onboarding remains operational.
+- [x] Produce DE/EN CSV participation reports with per-course attendance counts and completion states. The dedicated API rechecks learner cohort, course scope and licence on each page.
+- [x] Provide a cold, encrypted Academy backup and restore command with a separate age identity, installed-revision and archive checks, and restoration into a new empty target. Native PostgreSQL recovery and byte-level checks passed.
 - [ ] Boot each fresh dedicated target with all pinned services, apply migrations, pin its licence, confirm first-admin, and repeat course, SMTP, PWA and backup/restore acceptance on the explicit target.
 
 - [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.

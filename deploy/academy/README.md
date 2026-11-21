@@ -15,6 +15,8 @@ The command creates a private directory with empty `data`, `backups` and `browse
 
 Build and sign the matching brand and edition using the [browser package commands](../../DEVELOPMENT.md#white-label-browser-build). Obtain the signed licence, detached browser signature and two trusted public keys through the agreed delivery channels. Keep both signing keys with their respective issuers. Store the exact source commit in the independently reviewed target JSON.
 
+After setup, a confirmed local administrator opens **Academy administration → Public links** to set the academy's support, privacy policy, legal notice and terms URLs. Use publicly intended HTTPS addresses. Blank fields hide the corresponding links. These settings appear before sign-in and in the academy footer. Editing requires an active licence.
+
 The target JSON copies `version`, `installation_id`, `edition`, `portal_origin`, `api_base_url`, `compose_project`, `backend_network`, `data_directory` and `backup_directory` from `installation.json`. Add the remaining site selections. The following example shows those additional fields for an isolated rehearsal.
 
 ```json
@@ -98,6 +100,31 @@ The dedicated public API has one shared allowance per Envoy instance. The signed
 
 Verify the private first administrator, dedicated edition, licence limits, normal account sign-in, author/publish/enrol and learner journeys, protected objects, ClamAV, Realtime, current email routes and the encrypted backup/recovery target. When the customer's DNS and firewall are authorised and verified, the `ingress` profile starts Caddy on the generated address. Review certificate issuance and the browser edition, hostname and protected API against that particular environment. A fresh-install receipt is separate from approval of any data migration, upgrade, commercial handover or public deployment.
 
+## Encrypted recovery for a dedicated installation
+
+The operator command uses Linux, Python 3.12 or later, the local rootful Docker socket and the distribution's `age` package. Create the recovery identity on a separate trusted machine with `age-keygen`. Keep the private key there and provide only its X25519 public recipient to the academy. Keep a separate record of the expected installation UUID, runtime path, signed release, deployment source and the backup SHA-256.
+
+Close ingress and allow in-flight requests to complete. Stop the entire dedicated Compose project. Include the mail-capture profile and override if they were used. Keep the stopped containers for the command's ownership and mount checks.
+
+```sh
+academy_compose --profile ingress --profile mail-capture stop --timeout 90
+sudo python3 deploy/academy/recovery.py backup \
+  "$runtime_root" "$installation_id" "$release_commit" --recipient "$age_recipient"
+```
+
+The command verifies the dedicated mounts and cold database state before encrypting files directly to an archive in the private `backups` directory. The archive contains the physical PostgreSQL 17 cluster, including Auth, roles, databases and migration ledger, Storage objects, local mail capture if present, browser release, private runtime and configuration volumes. Deno and scanner signature caches are rebuilt from the reviewed images. Copy the encrypted set off the deployment machine while preserving private permissions, confirm its SHA-256 using the recorded value, then resume the approved original services.
+
+To rehearse or recover, use an independent host with an empty Compose namespace and the same absolute runtime path. Keep ingress closed. Use only an archive from the agreed recovery storage and make sure the original installation's Linux ownership is usable on the recovery machine.
+
+```sh
+sudo python3 deploy/academy/recovery.py restore \
+  "$runtime_root" "$installation_id" "$release_commit" \
+  --bundle "$encrypted_recovery_set" --identity "$private_age_key" \
+  --sha256 "$trusted_backup_sha256"
+```
+
+Restoration verifies the archive against the independently recorded SHA-256 and authenticates its encrypted bytes before publishing the new runtime. It refuses existing runtimes, Compose services, networks and volumes. The receipt records the exact database and Storage image references. Start the restored backend using the original reviewed source and these exact images, first in isolation. Verify the migration ledger, an existing user's password, course permissions and a protected file's bytes. Verify scanner, SMTP, licences and ingress on the particular target before serving traffic. A change to PostgreSQL, the public domain or the database release uses a separate upgrade procedure after this exact recovery.
+
 ## Upgrade an existing academy
 
 Use a newer signed licence issued for the same installation and edition and the new source revision. Record the current receipt and actual backend image digests. Rehearse the recovery set and upgrade in an independently provisioned copy before maintaining an installation that holds customer records. Quiesce application writers before taking the recovery set. Include PostgreSQL databases and roles, the physical Storage mount, private runtime and signing/encryption configuration, and the persistent configuration volumes. Keep the encrypted recovery set and independent decryption key on different storage. Record the source revision and migration inventory with the set.
@@ -116,3 +143,15 @@ node scripts/academy-install-browser.mjs "$runtime_root" "$new_target_json" \
 The replacement compares the currently installed revision, verifies the signed candidate and exchanges the browser directories without modifying database or Storage data. The old signed browser stays in a private `.browser-previous-*` directory inside the same runtime. A Docker or filesystem error stops the upgrade. If the previous browser directory is ambiguous after interrupted maintenance, inspect each `release.json` before resuming.
 
 From the new checkout, run `--migrate` and prepare the new licence using the same commands as above. Use the same existing database. Enable the new course profile, recreate the ingress containers to use the new private bind mounts, and verify the licensed rate limit, retained accounts and courses, real protected file bytes and the exact release before reopening customer traffic. After accepting new writes, recover forward or perform a separately authorised recovery. A previous browser copy alone cannot rewind the database or the verified licence.
+
+## Signed course webhooks
+
+Open **Academy administration → Signed course webhooks** as a local administrator and select the organisation. Register a receiver alias such as `course-sync`. Copy the one-time signing key to the receiver's secret store. Subscriptions expire after 180 days. To rotate the key, revoke the subscription, then register it again and update the receiver. The delivery list shows attempts and outcomes without printing secrets. The organisation always comes from the current course and subscription.
+
+On the installation host, keep the [webhook worker environment](webhook-worker.env.example) in a root-owned file with mode 0600 outside the browser and source directories. Use the academy's own `api_base_url` and read the service-role key from its private runtime environment. Map only reviewed aliases for this installation to exact, public HTTPS receiver URLs with trusted certificates. A different company needs a different `<organisation-id>/<alias>` entry. Delivery is inactive until the operator starts the worker with a destination map.
+
+```sh
+node --env-file="$runtime_root/runtime.env.webhooks.env" scripts/company-course-webhook-worker.mjs --watch
+```
+
+Run the worker from the reviewed release checkout with its locked production dependencies under the installation supervisor. The same command without `--watch` processes one finite batch. The [receiver example](../../scripts/examples/verify-company-course-webhook.mjs) verifies the syntax, message timestamp, event ID and HMAC before interpreting the payload. Store each verified event ID atomically with its downstream change and acknowledge repeats. Delivery can arrive out of order. Queued events are bound to the exact active release and never transfer to a replacement release. A disabled or expired licensed profile pauses delivery and invalidates the worker's ability to prepare an event.

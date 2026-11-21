@@ -45,6 +45,7 @@ export async function verifyWebhookDeliveryHttp({
   course,
   publishNext,
   revoke,
+  enforcePortalGate = false,
 }) {
   const key = randomBytes(24).toString("hex");
   const calls = [];
@@ -58,6 +59,11 @@ export async function verifyWebhookDeliveryHttp({
       const body = JSON.parse(await readBytes(request));
       const route = request.url;
       calls.push(route);
+      const gate = enforcePortalGate
+        ? "set request.method='POST'; set request.path=" +
+          q(route.slice("/rest/v1".length)) +
+          "; select public.require_portal_access(); "
+        : "";
       let statement;
       if (route === "/rest/v1/rpc/lease_company_course_webhook") {
         assert.deepEqual(body, { p_destinations: [destination] });
@@ -65,14 +71,14 @@ export async function verifyWebhookDeliveryHttp({
       } else if (route === "/rest/v1/rpc/prepare_company_course_webhook") {
         statement = `select coalesce(public.prepare_company_course_webhook(${q(body.p_id)},${q(body.p_token)}),'null')`;
       } else if (route === "/rest/v1/rpc/finish_company_course_webhook") {
-        await sql(`set role service_role;
+        await sql(`set role service_role; ${gate}
           select public.finish_company_course_webhook(${q(body.p_id)},${q(body.p_token)},${q(body.p_result)})`);
         response.writeHead(204).end();
         return;
       } else {
         assert.fail("Unexpected worker RPC");
       }
-      const value = await sql("set role service_role; " + statement);
+      const value = await sql("set role service_role; " + gate + statement);
       response
         .writeHead(200, { "Content-Type": "application/json" })
         .end(value);

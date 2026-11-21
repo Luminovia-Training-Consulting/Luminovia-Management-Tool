@@ -69,6 +69,10 @@ const pairs: Record<string, [string, string]> = {
     "Das Abonnement für „{{alias}}“ dauerhaft widerrufen?",
     "Permanently revoke the subscription for “{{alias}}”?",
   ],
+  webhookAcademyHelp: [
+    "Kursereignisse werden signiert an den hinterlegten HTTPS-Empfänger gesendet. Die Serververwaltung richtet den Alias für dieses Unternehmen ein. Ein Abonnement gilt bis zu 180 Tage.",
+    "Signed course events are sent to the configured HTTPS receiver. The installation operator assigns the alias to this organisation. A subscription lasts for up to 180 days.",
+  ],
   webhookRequiresKey: [
     "Erstelle zuerst einen aktiven Integrationsschlüssel für dieses Unternehmen.",
     "Create an active integration key for this company first.",

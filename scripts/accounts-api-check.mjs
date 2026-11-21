@@ -334,12 +334,16 @@ try {
     assert.equal(own.body.profile.luminovia_user_id, teacherPublicId);
     assert.equal(
         (
-            await request(admin, `users/${teacher.id}/roles`, "PUT", {
-                roles: ["participant"],
+            await request(admin, `users/${peer.id}/roles`, "PUT", {
+                roles: ["lecturer", "participant"],
             })
         ).status,
-        400,
+        200,
     );
+    assert.deepEqual((await request(peer, "me")).body.roles, [
+        "lecturer",
+        "participant",
+    ]);
     assert.equal(
         (
             await request(admin, `users/${admin.id}/roles`, "PUT", {

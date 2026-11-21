@@ -166,3 +166,35 @@
 .academy-header {
   border-top: 3px solid var(--academy-accent, var(--brand));
 }
+
+.academy-public-links {
+  padding: 0.5rem 1rem;
+  border-block-start: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.login-card .academy-public-links {
+  margin-block-start: 1rem;
+  padding-inline: 0;
+  background: transparent;
+}
+
+.login-card .academy-public-links nav {
+  justify-content: flex-start;
+}
+
+.academy-public-links nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 1.25rem;
+}
+
+.academy-public-links a {
+  display: inline-flex;
+  min-block-size: 44px;
+  align-items: center;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}

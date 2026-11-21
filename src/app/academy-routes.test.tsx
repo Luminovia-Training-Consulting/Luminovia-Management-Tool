@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../lib/i18n";
+import type { AcademyBrandLinks } from "../features/branding/academy-brand-links-schema";
 import type { CourseWorkspace } from "../features/learning/api";
 import { App } from "./app";
 
@@ -35,6 +36,8 @@ const fake = vi.hoisted(() => ({
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
   administration: false,
+  brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
+  brandLinkConflict: false,
   draftScheduleRevision: 1,
   withdrawalAvailable: false,
   withdrawn: false,
@@ -191,11 +194,23 @@ beforeEach(async () => {
   fake.publication = null;
   fake.publicationAttempts = 0;
   fake.administration = false;
+  fake.brandLinks = null;
+  fake.brandLinkConflict = false;
   fake.draftScheduleRevision = 1;
   fake.withdrawalAvailable = false;
   fake.withdrawn = false;
   fake.rpc.mockImplementation(
-    (name: string, input?: { p_capacity?: number }) => {
+    (
+      name: string,
+      input?: {
+        p_capacity?: number;
+        p_support_url?: string | null;
+        p_privacy_url?: string | null;
+        p_legal_url?: string | null;
+        p_terms_url?: string | null;
+        p_expected_version?: number;
+      },
+    ) => {
       let data: unknown;
       let error = null;
       switch (name) {
@@ -209,6 +224,31 @@ beforeEach(async () => {
             marketplace_available: false,
             company_premium_switch_available: false,
           };
+          break;
+        case "academy_public_brand_links":
+          data = {
+            installation_id: fake.returnedInstallation,
+            version: 0,
+            support_url: null,
+            privacy_url: null,
+            legal_url: null,
+            terms_url: null,
+            ...fake.brandLinks,
+          };
+          break;
+        case "save_academy_public_brand_links":
+          if (fake.brandLinkConflict) {
+            error = { code: "PT409" };
+          } else {
+            fake.brandLinks = {
+              version: (input?.p_expected_version ?? 0) + 1,
+              support_url: input?.p_support_url ?? null,
+              privacy_url: input?.p_privacy_url ?? null,
+              legal_url: input?.p_legal_url ?? null,
+              terms_url: input?.p_terms_url ?? null,
+            };
+            data = { installation_id: fake.installation, ...fake.brandLinks };
+          }
           break;
         case "portal_access":
           if (!fake.profile) error = { code: "42501" };
@@ -912,9 +952,17 @@ it("rejects internal paths in the dedicated app without making protected backend
   expect(await screen.findByRole("heading")).toHaveTextContent(
     /could not be found/i,
   );
-  expect(fake.rpc.mock.calls).toEqual([
-    ["academy_public_branding", {}, { get: true }],
-  ]);
+  expect(fake.rpc).toHaveBeenCalledTimes(2);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_branding",
+    {},
+    { get: true },
+  );
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_brand_links",
+    {},
+    { get: true },
+  );
   expect(fake.from).not.toHaveBeenCalled();
 });
 
@@ -924,9 +972,20 @@ it("waits for authentication before restoring the signed-out visitor's course li
   expect(
     await screen.findByRole("heading", { name: "Fictional Academy" }),
   ).toBeVisible();
-  expect(fake.rpc.mock.calls).toEqual([
-    ["academy_public_branding", {}, { get: true }],
-  ]);
+  // The login panel replaces the global footer during the redirect.
+  expect(new Set(fake.rpc.mock.calls.map(([name]) => name))).toEqual(
+    new Set(["academy_public_branding", "academy_public_brand_links"]),
+  );
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_branding",
+    {},
+    { get: true },
+  );
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_brand_links",
+    {},
+    { get: true },
+  );
   fake.actor = "fictional-learner";
   page.rerender();
   expect(await screen.findByText("Scanned workbook.pdf")).toBeVisible();
@@ -934,6 +993,112 @@ it("waits for authentication before restoring the signed-out visitor's course li
   expect(screen.getByRole("link", { name: "Materials" })).toHaveAttribute(
     "aria-current",
     "location",
+  );
+});
+
+it("shows customer legal links before sign-in in German", async () => {
+  await i18n.changeLanguage("de");
+  fake.actor = null;
+  fake.brandLinks = {
+    version: 2,
+    support_url: "https://help.example.invalid/contact",
+    privacy_url: "https://academy.example.invalid/datenschutz",
+    legal_url: "https://academy.example.invalid/impressum",
+    terms_url: null,
+  };
+  open("/login");
+  const links = await screen.findByRole("navigation", {
+    name: "Support und Rechtliches",
+  });
+  expect(
+    within(links).getByRole("link", { name: "Datenschutz" }),
+  ).toHaveAttribute("href", "https://academy.example.invalid/datenschutz");
+  expect(
+    within(links).getByRole("link", { name: "Impressum" }),
+  ).toHaveAttribute("rel", "noopener noreferrer");
+  expect(
+    within(links).queryByRole("link", { name: "Nutzungsbedingungen" }),
+  ).toBeNull();
+  expect(fake.rpc).toHaveBeenCalledTimes(2);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_branding",
+    {},
+    { get: true },
+  );
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_brand_links",
+    {},
+    { get: true },
+  );
+});
+
+it("saves public links from the admin editor and immediately updates the footer", async () => {
+  fake.administration = true;
+  open("/administration");
+  const user = userEvent.setup();
+  const support = await screen.findByLabelText("Support");
+  const save = screen.getByRole("button", { name: "Save links" });
+
+  await user.type(support, "http://example.invalid");
+  expect(save).toBeDisabled();
+  await user.clear(support);
+  await user.type(support, "https://help.example.invalid");
+  await user.click(save);
+  expect(await screen.findByText("Links saved.")).toBeVisible();
+  const footer = await screen.findByRole("navigation", {
+    name: "Support and legal information",
+  });
+  expect(within(footer).getByRole("link", { name: "Support" })).toHaveAttribute(
+    "href",
+    "https://help.example.invalid",
+  );
+  expect(fake.rpc).toHaveBeenCalledWith("save_academy_public_brand_links", {
+    p_expected_version: 0,
+    p_support_url: "https://help.example.invalid",
+    p_privacy_url: null,
+    p_legal_url: null,
+    p_terms_url: null,
+  });
+
+  await user.clear(support);
+  await user.click(save);
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("navigation", {
+        name: "Support and legal information",
+      }),
+    ).toBeNull(),
+  );
+  expect(fake.brandLinks?.version).toBe(2);
+});
+
+it("keeps the administrator's draft until they reload links from the server after a conflict", async () => {
+  fake.administration = true;
+  fake.brandLinkConflict = true;
+  open("/administration");
+  const user = userEvent.setup();
+  const support = await screen.findByLabelText("Support");
+  await user.type(support, "https://draft.example.invalid");
+  await user.click(screen.getByRole("button", { name: "Save links" }));
+  expect(
+    await screen.findByText(/The links were updated elsewhere/),
+  ).toBeVisible();
+  expect(support).toHaveValue("https://draft.example.invalid");
+  expect(
+    screen.queryByRole("navigation", { name: "Support and legal information" }),
+  ).toBeNull();
+  fake.brandLinks = {
+    version: 1,
+    support_url: "https://published.example.invalid",
+    privacy_url: null,
+    legal_url: null,
+    terms_url: null,
+  };
+  await user.click(
+    screen.getByRole("button", { name: "Reload current links" }),
+  );
+  await waitFor(() =>
+    expect(support).toHaveValue("https://published.example.invalid"),
   );
 });
 

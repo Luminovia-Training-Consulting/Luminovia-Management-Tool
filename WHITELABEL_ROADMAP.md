@@ -46,7 +46,7 @@ The product must be **customer branded end to end**, use an authentic course/par
 
 Both dedicated editions use validated customer branding in the shell, PWA assets and API documentation. A server-verified identity and signed licence bind the browser, database and enrolled customer to the exact release. The installer gives each academy its own domain, keys, database, storage, mail configuration and network. The internal edition continues to use its original packaging and commercial workflows. [Installation runbook](deploy/academy/README.md)
 
-Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
+Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped attendance and participation reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
 
 Release gates still cover the complete target installation, public domain/TLS, SMTP and dedicated delivery, migration and recovery of retained customer data, operational handoff and commercial fulfilment. The acceptance matrix below tracks those separately.
 
@@ -292,7 +292,9 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-03 — Branding, domains & welcome (P0)
 
-- [ ] Vendor-side academy provision wizard; customer-side brand settings with company name, logo, favicon, PWA, themes, documents/emails/Swagger title.
+- [x] Local administrators can publish the name, short name, accent and public legal/support links. Both editions verify the anonymous sign-in and responsive academy pages. The signed build supplies the logo, favicon, PWA icons and browser defaults.
+- [ ] Vendor-side academy provisioning wizard and customer-facing asset upload and preview.
+- [x] Allow each academy administrator to publish or remove local support, privacy, legal notice and terms links. Confirm safe public display before sign-in and edit denial for learners in both editions.
 - [ ] Customer domain/TLS/redirects, Auth callback URLs, verified sender and domain-safe PWA/cache.
 - [x] Provide private SMTP administration for confirmed local administrators with encrypted credentials and exact TLS/STARTTLS connection checks. Verify saved configuration, refusal after role loss and read-only grace in both editions.
 - [ ] Remove unnecessary Luminovia branding from all customer-facing surfaces; retain mandatory legal notices.
@@ -304,12 +306,14 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Provision confirmed company contacts for one organisation. Allow them to request learner invitations from their own courses under the shared licensed seats and invitation budgets, with a scoped and opaque receipt.
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
 - [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
-- [ ] Provide local integration identities, scoped keys, rotation/revocation, signed webhooks and replay/idempotency management.
+- [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
+- [ ] Complete dedicated inbound integration identities and scoped API credentials. Verify configured external receiver onboarding.
 
 ### WL-05 — Self-hosted installation & update lifecycle (P0)
 
 - [x] Customer-neutral runtime configuration and secret generation, independently scoped Compose and storage, explicit ingress and first-install staging of the exact signed licensed browser. Both built editions passed the isolated CLI, pinned Caddy/Envoy TLS and signed API allowance checks. [Installation runbook](deploy/academy/README.md)
-- [ ] Independent full-stack startup and health confirmation, issuer-to-operator onboarding, DNS and ACME, SMTP delivery, upgrade/reinstallation with retained data and complete encrypted backup/restore.
+- [x] Signed browser replacement, exact-source database migration and independent encrypted backup and restore commands. Local verification includes retained sign-in, course enrolment, Storage bytes and a new isolated recovery target.
+- [ ] Independent full-stack startup and health confirmation on the final target, issuer-to-operator onboarding, DNS and ACME, real SMTP delivery and the full Docker upgrade and recovery rehearsal.
 - [ ] Version inventory, support diagnostics, security/maintenance policy, explicit rollbacks and recovery runbook.
 
 ### WL-06 — Licence sales & fulfilment operations (P1)

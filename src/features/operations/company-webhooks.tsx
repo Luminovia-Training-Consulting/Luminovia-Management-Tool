@@ -31,21 +31,23 @@ export function CompanyWebhooks({
   actor,
   organisation,
   zone,
-  keys,
+  keys = [],
   archived,
-  canSubscribePremium,
+  canSubscribePremium = false,
+  academy = false,
 }: {
   actor: string;
   organisation: string;
   zone: string;
-  keys: {
+  keys?: {
     id: string;
     label: string;
     expires_at: string;
     revoked_at: string | null;
   }[];
   archived: boolean;
-  canSubscribePremium: boolean;
+  canSubscribePremium?: boolean;
+  academy?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const online = useOnline();
@@ -72,6 +74,8 @@ export function CompanyWebhooks({
     (key) => !key.revoked_at && Date.parse(key.expires_at) > openedAt,
   );
 
+  const canCreate = !archived && (academy || eligibleKeys.length > 0);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -82,18 +86,27 @@ export function CompanyWebhooks({
     try {
       requireOnline();
       if (revoke) {
-        const result = await db().rpc("company_course_webhook_revoke", {
+        const args = {
           p_organisation: organisation,
           p_subscription: revoke.id,
-        });
+        };
+        const result = academy
+          ? await db().rpc("academy_revoke_course_webhook", args)
+          : await db().rpc("company_course_webhook_revoke", args);
         if (result.error) throw result.error;
       } else {
-        const result = await db().rpc("company_course_webhook_subscribe", {
+        const args = {
           p_organisation: organisation,
-          p_integration: String(data.get("integration")),
           p_destination: String(data.get("destination")).trim(),
-          p_premium_events: canSubscribePremium && data.has("premiumEvents"),
-        });
+        };
+        const result = academy
+          ? await db().rpc("academy_subscribe_course_webhook", args)
+          : await db().rpc("company_course_webhook_subscribe", {
+              ...args,
+              p_integration: String(data.get("integration")),
+              p_premium_events:
+                canSubscribePremium && data.has("premiumEvents"),
+            });
         if (result.error || typeof result.data?.signing_secret !== "string")
           throw new Error("webhook_subscription_failed");
         if (form.isConnected) setSecret(result.data.signing_secret);
@@ -124,7 +137,7 @@ export function CompanyWebhooks({
       <summary>{t("webhookTitle")}</summary>
       {open && (
         <>
-          <p>{t("webhookHelp")}</p>
+          <p>{t(academy ? "webhookAcademyHelp" : "webhookHelp")}</p>
           {online && subscriptions.isPending && <Loading />}
           {online && subscriptions.isError && (
             <ErrorState retry={() => void subscriptions.refetch()} />
@@ -146,13 +159,13 @@ export function CompanyWebhooks({
                     {subscriptions.data.map((subscription) => (
                       <li key={subscription.id}>
                         <strong>{subscription.destination}</strong> ·{" "}
-                        {subscription.integration_label} ·{" "}
+                        {!academy && <>{subscription.integration_label} · </>}
                         {t(
                           subscription.active
                             ? "webhookActive"
                             : "webhookInactive",
                         )}
-                        {subscription.premium_events && (
+                        {!academy && subscription.premium_events && (
                           <> · {t("webhookPremium")}</>
                         )}
                         {subscription.active && (
@@ -192,35 +205,37 @@ export function CompanyWebhooks({
                   </ul>
                 </>
               )}
-              {!revoke && !archived && !eligibleKeys.length && (
+              {!academy && !revoke && !archived && !canCreate && (
                 <p>{t("webhookRequiresKey")}</p>
               )}
-              {(revoke || (!archived && eligibleKeys.length > 0)) && (
+              {(revoke || canCreate) && (
                 <form onSubmit={submit}>
                   {revoke ? (
                     <p>{t("webhookConfirm", { alias: revoke.destination })}</p>
                   ) : (
                     <>
-                      <Field
-                        id={fieldPrefix + "-integration"}
-                        label={t("webhookKey")}
-                      >
-                        <select
+                      {!academy && (
+                        <Field
                           id={fieldPrefix + "-integration"}
-                          name="integration"
-                          required
-                          defaultValue=""
+                          label={t("webhookKey")}
                         >
-                          <option value="" disabled>
-                            {t("webhookChooseKey")}
-                          </option>
-                          {eligibleKeys.map((key) => (
-                            <option value={key.id} key={key.id}>
-                              {key.label}
+                          <select
+                            id={fieldPrefix + "-integration"}
+                            name="integration"
+                            required
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              {t("webhookChooseKey")}
                             </option>
-                          ))}
-                        </select>
-                      </Field>
+                            {eligibleKeys.map((key) => (
+                              <option value={key.id} key={key.id}>
+                                {key.label}
+                              </option>
+                            ))}
+                          </select>
+                        </Field>
+                      )}
                       <Field
                         id={fieldPrefix + "-alias"}
                         label={t("webhookAlias")}
