@@ -62,6 +62,8 @@ const create = "/rest/v1/rpc/create_accounting_export";
 const reverse = "/rest/v1/rpc/reverse_customer_invoice_payment";
 const addCredit = "/rest/v1/rpc/register_customer_credit_note";
 const credits = "/rest/v1/rpc/accounting_customer_credit_notes";
+const settlement = "/rest/v1/rpc/accounting_customer_settlement";
+const refund = "/rest/v1/rpc/record_customer_invoice_refund";
 
 const input = (path: keyof typeof accountingPaths) =>
   z.fromJSONSchema(
@@ -200,6 +202,50 @@ describe("accounting OpenAPI contracts", () => {
             credit_note_reference: item.reference,
           },
         ],
+        has_more: false,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("publishes the separate dependent balance and a historic refund receipt command", () => {
+    expect(input(settlement).safeParse({ p_invoice_id: id }).success).toBe(
+      true,
+    );
+    const request = {
+      p_invoice_id: id,
+      p_amount: "13.45",
+      p_refunded_at: instant,
+      p_reference: "Fictional bank reference",
+      p_request_id: id,
+    };
+    expect(input(refund).safeParse(request).success).toBe(true);
+    expect(
+      input(refund).safeParse({ ...request, p_amount: 13.45 }).success,
+    ).toBe(false);
+    expect(
+      input(refund).safeParse({ ...request, p_refunded_at: "2026-11-22" })
+        .success,
+    ).toBe(false);
+    const customerBalance = {
+      invoice_id: id,
+      currency: "AUD",
+      can_manage: false,
+      original_total: "200.03",
+      credit_total: "20.00",
+      net_total: "180.03",
+      received_total: "200.03",
+      refunded_total: "13.45",
+      retained_total: "186.58",
+      outstanding_total: "0.00",
+      refund_due_total: "6.55",
+      status: "refund_due",
+      credit_applications: null,
+      refunds: null,
+    };
+    expect(result(settlement).safeParse(customerBalance).success).toBe(true);
+    expect(
+      result(lookup).safeParse({
+        items: [{ ...invoice, created_at: instant, refund_due_total: "6.55" }],
         has_more: false,
       }).success,
     ).toBe(false);

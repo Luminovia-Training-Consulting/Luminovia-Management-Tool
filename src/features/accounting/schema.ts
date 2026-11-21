@@ -165,3 +165,81 @@ export const customerCreditNotePageSchema = z.object({
   has_more: z.boolean(),
 });
 export type CustomerCreditNote = z.infer<typeof customerCreditNoteSchema>;
+
+const creditApplicationSchema = z.object({
+  id: uuid,
+  credit_note_id: uuid,
+  reference: z.string(),
+  amount: accountingDecimal,
+  reverses_id: uuid.nullable(),
+  reason: z.string(),
+  created_at: instant,
+});
+const customerRefundSchema = z.object({
+  id: uuid,
+  amount: accountingDecimal,
+  reference: z.string(),
+  reverses_id: uuid.nullable(),
+  refunded_at: instant.nullable(),
+  created_at: instant,
+});
+export const customerSettlementSchema = z
+  .object({
+    invoice_id: uuid,
+    currency: accountingCurrency,
+    can_manage: z.boolean(),
+    original_total: accountingDecimal,
+    credit_total: accountingDecimal,
+    net_total: accountingDecimal,
+    received_total: accountingDecimal,
+    refunded_total: accountingDecimal,
+    retained_total: accountingDecimal,
+    outstanding_total: accountingDecimal,
+    refund_due_total: accountingDecimal,
+    status: z.enum([
+      "open",
+      "partially_paid",
+      "settled",
+      "fully_credited",
+      "refund_due",
+      "refunded",
+    ]),
+    credit_applications: z.array(creditApplicationSchema).nullable(),
+    refunds: z.array(customerRefundSchema).nullable(),
+  })
+  .superRefine((value, context) => {
+    if (
+      [
+        value.original_total,
+        value.credit_total,
+        value.net_total,
+        value.received_total,
+        value.refunded_total,
+        value.retained_total,
+        value.outstanding_total,
+        value.refund_due_total,
+      ].some((amount) => !accountingDecimal.safeParse(amount).success)
+    )
+      return;
+    const original = accountingCents(value.original_total),
+      net = accountingCents(value.net_total),
+      received = accountingCents(value.received_total),
+      retained = accountingCents(value.retained_total),
+      outstanding = net > retained ? net - retained : 0n,
+      refundable = retained > net ? retained - net : 0n;
+    if (
+      original - accountingCents(value.credit_total) !== net ||
+      received > original ||
+      received - accountingCents(value.refunded_total) !== retained ||
+      accountingCents(value.outstanding_total) !== outstanding ||
+      accountingCents(value.refund_due_total) !== refundable ||
+      (value.credit_applications !== null) !== value.can_manage ||
+      (value.refunds !== null) !== value.can_manage
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Inconsistent customer settlement balances or disclosure",
+      });
+    }
+  });
+export type CustomerSettlement = z.infer<typeof customerSettlementSchema>;

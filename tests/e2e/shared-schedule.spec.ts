@@ -9,7 +9,7 @@ test.skip(
   "Shared schedule writes require the disposable portal test project.",
 );
 
-test("staff and both lecturers approve adding a shared session in the internal portal", async ({
+test("staff and both lecturers amend the future of a started shared course", async ({
   page,
   browser,
 }, testInfo) => {
@@ -38,6 +38,7 @@ test("staff and both lecturers approve adding a shared session in the internal p
     .set({ hour: 10 });
   const newStart = firstStart.plus({ days: 2 });
   const session = randomUUID();
+  const remainingSession = randomUUID();
   const company = randomUUID();
   const template = randomUUID();
   const course = randomUUID();
@@ -60,12 +61,20 @@ test("staff and both lecturers approve adding a shared session in the internal p
     }),
   );
   await checked(
-    service.from("course_sessions").insert({
-      id: session,
-      course_run_id: course,
-      starts_at: firstStart.toISO(),
-      ends_at: firstStart.plus({ hours: 1 }).toISO(),
-    }),
+    service.from("course_sessions").insert([
+      {
+        id: session,
+        course_run_id: course,
+        starts_at: firstStart.toISO(),
+        ends_at: firstStart.plus({ hours: 1 }).toISO(),
+      },
+      {
+        id: remainingSession,
+        course_run_id: course,
+        starts_at: firstStart.plus({ days: 1 }).toISO(),
+        ends_at: firstStart.plus({ days: 1, hours: 1 }).toISO(),
+      },
+    ]),
   );
   const managerApi = await signedIn(manager);
   const defaults = await checked(
@@ -111,6 +120,32 @@ test("staff and both lecturers approve adding a shared session in the internal p
   }
   const firstClaim = await claim(firstApi);
   const secondClaim = await claim(secondApi);
+  // Move the fixture clock boundary after the first real claimable session.
+  const taught = firstStart.minus({ days: 62 });
+  const historical = {
+    starts_at: taught.toISO(),
+    ends_at: taught.plus({ hours: 1 }).toISO(),
+  };
+  await checked(
+    service.from("course_sessions").update(historical).eq("id", session),
+  );
+  await checked(
+    service
+      .from("job_sessions")
+      .update(historical)
+      .eq("course_session_id", session),
+  );
+  const historicalAllocations = await checked(
+    service
+      .from("assignment_sessions")
+      .update(historical)
+      .in("claim_id", [firstClaim, secondClaim])
+      .eq("starts_at", firstStart.toISO())
+      .select("id")
+      .order("id"),
+    { requireData: true },
+  );
+  expect(historicalAllocations).toHaveLength(2);
 
   await login(page, manager.email);
   await page.goto("/changes");
@@ -133,6 +168,18 @@ test("staff and both lecturers approve adding a shared session in the internal p
   await expect(
     form.getByLabel(/^(Leistungsumfang|Scope of work)$/),
   ).toHaveCount(0);
+  await expect(
+    form.getByText(/^(Begonnene Termine|Sessions already started)/),
+  ).toBeVisible();
+  await expect(form.getByLabel(/^(Beginn|Start) 1$/)).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  await expect(
+    form
+      .getByRole("button", { name: /^(Termin entfernen|Remove session)$/ })
+      .first(),
+  ).toBeDisabled();
   await form
     .getByLabel(/^(Begründung|Reason)$/)
     .fill(
@@ -142,10 +189,10 @@ test("staff and both lecturers approve adding a shared session in the internal p
     .getByRole("button", { name: /^(Termin hinzufügen|Add session)$/ })
     .click();
   await form
-    .getByLabel(/^(Beginn|Start) 2$/)
+    .getByLabel(/^(Beginn|Start) 3$/)
     .fill(newStart.toFormat("yyyy-MM-dd'T'HH:mm"));
   await form
-    .getByLabel(/^(Ende|Finish) 2$/)
+    .getByLabel(/^(Ende|Finish) 3$/)
     .fill(newStart.plus({ hours: 1 }).toFormat("yyyy-MM-dd'T'HH:mm"));
   await form
     .getByRole("button", {
@@ -242,10 +289,23 @@ test("staff and both lecturers approve adding a shared session in the internal p
         .order("starts_at"),
       { requireData: true },
     );
-    expect(updated).toHaveLength(2);
+    expect(updated).toHaveLength(3);
     expect(updated[0].id).toBe(session);
-    expect(Date.parse(updated[0].starts_at)).toBe(firstStart.toMillis());
-    expect(Date.parse(updated[1].starts_at)).toBe(newStart.toMillis());
+    expect(Date.parse(updated[0].starts_at)).toBe(taught.toMillis());
+    expect(updated[1].id).toBe(remainingSession);
+    expect(Date.parse(updated[2].starts_at)).toBe(newStart.toMillis());
+    expect(
+      await checked(
+        service
+          .from("assignment_sessions")
+          .select("id")
+          .in("claim_id", [firstClaim, secondClaim])
+          .eq("starts_at", historical.starts_at)
+          .is("released_at", null)
+          .order("id"),
+        { requireData: true },
+      ),
+    ).toEqual(historicalAllocations);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(

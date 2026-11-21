@@ -256,6 +256,37 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await credit.getByRole("button", { name: "Schließen", exact: true }).click();
   await expect(card.getByText("166.69 AUD", { exact: true })).toBeVisible();
 
+  const settlementAction = card.getByRole("button", {
+    name: "Kundensaldo",
+    exact: true,
+  });
+  const settlement = page.getByRole("dialog", {
+    name: "Kundensaldo",
+    exact: true,
+  });
+  await settlementAction.click();
+  await settlement
+    .getByLabel("Vorgang", { exact: true })
+    .selectOption("applyCredit");
+  await settlement
+    .getByLabel("Beleg oder Buchung", { exact: true })
+    .selectOption({ label: `${creditReference} · 20.05 AUD` });
+  await settlement
+    .getByLabel("Begründung des Vorgangs", { exact: true })
+    .fill("Fictional checked credit allocation");
+  await settlement
+    .getByRole("button", { name: "Gutschrift anrechnen", exact: true })
+    .click();
+  await expect(
+    settlement.getByText("146.64 AUD", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    settlement.getByText("179.98 AUD", { exact: true }),
+  ).toBeVisible();
+  await settlement
+    .getByRole("button", { name: "Schließen", exact: true })
+    .click();
+
   await card
     .getByRole("checkbox", {
       name: `Rechnung ${number} auswählen`,
@@ -284,6 +315,55 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   const csv = (await contents(await downloadPromise)).toString("utf8");
   expect(csv).toContain(`"'${number}"`);
   expect(csv).toContain('"\'+FICTIONAL-REMITTANCE"');
+
+  await card
+    .getByRole("button", { name: "Zahlung dokumentieren", exact: true })
+    .click();
+  await payment
+    .getByLabel("Betrag (z. B. 100.01)", { exact: true })
+    .fill("166.69");
+  await payment
+    .getByLabel("Tatsächlicher Zahlungszeitpunkt (UTC)", { exact: true })
+    .fill("2001-02-04T12:00");
+  await payment
+    .getByLabel("Zahlungsreferenz", { exact: true })
+    .fill("Fictional late original payment");
+  await payment
+    .getByRole("button", { name: "Zahlung erfassen", exact: true })
+    .click();
+  await expect(payment).not.toBeVisible();
+
+  await settlementAction.click();
+  await expect(
+    settlement.getByText("Rückzahlung offen", { exact: true }),
+  ).toBeVisible();
+  await settlement
+    .getByLabel("Vorgang", { exact: true })
+    .selectOption("recordRefund");
+  await settlement
+    .getByLabel("Tatsächlich erstatteter Betrag in AUD", { exact: true })
+    .fill("10,00");
+  await settlement
+    .getByLabel("Tatsächlicher Rückzahlungszeitpunkt (UTC)", { exact: true })
+    .fill("2001-02-05T09:30");
+  await settlement
+    .getByLabel("Referenz der ausgeführten Rückzahlung", { exact: true })
+    .fill("Fictional partial refund");
+  await settlement
+    .getByRole("checkbox", {
+      name: "Ich bestätige, dass die Rückzahlung bereits ausgeführt wurde.",
+    })
+    .check();
+  await settlement
+    .getByRole("button", { name: "Rückzahlung dokumentieren", exact: true })
+    .click();
+  await expect(
+    settlement.getByText("10.05 AUD", { exact: true }),
+  ).toBeVisible();
+  await settlement
+    .getByRole("button", { name: "Schließen", exact: true })
+    .click();
+
   const context = await browser.newContext({
     viewport: page.viewportSize(),
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
@@ -316,6 +396,25 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
         exact: true,
       }),
     ).toHaveCount(0);
+    await clientCard
+      .getByRole("button", { name: "Kundensaldo", exact: true })
+      .click();
+    const customerBalance = clientPage.getByRole("dialog", {
+      name: "Kundensaldo",
+      exact: true,
+    });
+    await expect(
+      customerBalance.getByText("10.05 AUD", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      customerBalance.getByLabel("Vorgang", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      customerBalance.getByText("Fictional partial refund", { exact: false }),
+    ).toHaveCount(0);
+    await customerBalance
+      .getByRole("button", { name: "Schließen", exact: true })
+      .click();
     const document = json.invoices[0];
     const pdfPromise = clientPage.waitForEvent("download", { timeout: 20000 });
     // Keep a failed gateway request visible even if Chromium never emits a download.

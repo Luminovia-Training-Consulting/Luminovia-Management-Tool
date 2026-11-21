@@ -27,6 +27,10 @@ import { commercialKeys } from "./api";
 import type { CommercialAccess, EarningRecord, InvoiceRecord } from "./types";
 import type { InvoiceException } from "./invoice-exception-schema";
 import type { InvoiceSeriesRecord } from "./invoice-series-schema";
+import type {
+  InvoiceSeriesCorrection,
+  InvoiceSeriesCorrectionOptions,
+} from "./invoice-series-correction-schema";
 
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -48,6 +52,8 @@ let earnings: EarningRecord[];
 let reviewCandidates: Record<string, unknown>[];
 let exceptionalApprovals: InvoiceException[];
 let seriesEntries: InvoiceSeriesRecord[];
+let corrections: InvoiceSeriesCorrection[];
+let correctionOptions: InvoiceSeriesCorrectionOptions | null;
 let invoices: InvoiceRecord[];
 let access: CommercialAccess;
 
@@ -112,6 +118,8 @@ beforeEach(async () => {
   reviewCandidates = [];
   exceptionalApprovals = [];
   seriesEntries = [];
+  corrections = [];
+  correctionOptions = null;
   invoices = [invoice()];
   state.rpc.mockReset();
   state.mutate
@@ -152,6 +160,16 @@ beforeEach(async () => {
       return Promise.resolve({ data: invoices, error: null });
     if (name === "invoice_series_records")
       return Promise.resolve({ data: seriesEntries, error: null });
+    if (name === "invoice_series_corrections")
+      return Promise.resolve({
+        data: {
+          entries: corrections,
+          options: (payload as { p_all: boolean }).p_all
+            ? correctionOptions
+            : null,
+        },
+        error: null,
+      });
     if (name === "invoice_payments" || name === "company_invoice_reviews")
       return Promise.resolve({ data: [], error: null });
     return state.mutate(name, payload);
@@ -888,4 +906,223 @@ it("labels a zero-balance close as fully credited and offers no payment action",
     screen.queryByRole("button", { name: "Zahlung eintragen" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Rechnung prüfen" })).toBeVisible();
+});
+
+const correctionId = "265492ea-05d9-4299-b663-6cd9dba13fc0";
+
+function correction(): InvoiceSeriesCorrection {
+  return {
+    id: correctionId,
+    title: "Fictional reviewed overpayment",
+    claim_id: seriesClaim,
+    currency: "EUR",
+    contract_version: 2,
+    reviewed_total: 70,
+    credited: 90,
+    balance: -20,
+    repaid: 0,
+    outstanding: 20,
+    due_on: "2030-06-01",
+    proposed_at: "2030-05-20T10:00:00Z",
+    responded_at: null,
+    withdrawn_at: null,
+    withdrawal_note: null,
+    dispute_note: null,
+    note: "Fictional reviewed correction evidence.",
+    state: "proposed",
+    credits: seriesEntry().credits,
+    repayments: [],
+  };
+}
+
+function managementCorrection() {
+  earnings = [
+    { ...earning(seriesClaim), lecturer_id: "fictional-other-lecturer" },
+  ];
+  const options = {
+    claim_id: seriesClaim,
+    currency: "EUR",
+    ceiling: 120,
+    credited: 90,
+    contracts: [
+      {
+        id: seriesContract,
+        kind: "master",
+        version: 2,
+        effective_from: "2030-01-01T00:00:00Z",
+      },
+    ],
+  } as const;
+  correctionOptions = {
+    ...options,
+    contracts: [...options.contracts],
+    can_propose: true,
+  };
+  state.mutate.mockImplementation((name) =>
+    Promise.resolve({
+      data:
+        name === "invoice_series_options"
+          ? {
+              ...options,
+              can_interim: false,
+              can_final: true,
+              approvals: [],
+            }
+          : seriesEntryId,
+      error: null,
+    }),
+  );
+  view(["/finance"], ["management"]);
+}
+
+it("requires the lecturer to confirm the displayed negative balance and reviewed terms", async () => {
+  access.can_manage_finance = false;
+  await i18n.changeLanguage("en");
+  corrections = [correction()];
+  view();
+  const region = await screen.findByRole("heading", {
+    name: "Correction of excess interim payments",
+  });
+  expect(region).toBeVisible();
+  expect(screen.getByText("-€20.00")).toBeVisible();
+  const acknowledge = screen.getByRole("button", {
+    name: "Acknowledge correction",
+  });
+  expect(acknowledge).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Record received repayment" }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("checkbox", { name: /I reviewed the contract version/ }),
+  );
+  await userEvent.click(acknowledge);
+  await waitFor(() =>
+    expect(calls("acknowledge_invoice_series_correction")).toEqual([
+      [
+        "acknowledge_invoice_series_correction",
+        { p_correction_id: correctionId },
+      ],
+    ]),
+  );
+});
+
+it("lets the lecturer submit a reasoned dispute without acknowledging", async () => {
+  access.can_manage_finance = false;
+  corrections = [correction()];
+  view();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Korrektur beanstanden" }),
+  );
+  const button = screen.getByRole("button", { name: "Korrektur beanstanden" });
+  expect(button).toBeDisabled();
+  await userEvent.type(
+    screen.getByLabelText(/Begründung/),
+    "Fiktiver Einwand zur Leistung.",
+  );
+  await userEvent.click(button);
+  await waitFor(() =>
+    expect(calls("dispute_invoice_series_correction")).toEqual([
+      [
+        "dispute_invoice_series_correction",
+        {
+          p_correction_id: correctionId,
+          p_note: "Fiktiver Einwand zur Leistung.",
+        },
+      ],
+    ]),
+  );
+  expect(calls("acknowledge_invoice_series_correction")).toHaveLength(0);
+});
+
+it("lets a manager propose a reviewed zero entitlement without recording money", async () => {
+  managementCorrection();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Rechnungsserie öffnen" }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Rechnungsserie öffnen" }),
+  );
+  await userEvent.click(
+    await dialog.findByText("Überzahlung zur Prüfung vorlegen", {
+      selector: "summary",
+    }),
+  );
+  const form = within(
+    await dialog.findByRole("group", {
+      name: "Überzahlung zur Prüfung vorlegen",
+    }),
+  );
+  await userEvent.type(
+    form.getByLabelText("Geprüfter Gesamtanspruch (EUR)"),
+    "0",
+  );
+  fireEvent.change(form.getByLabelText("Vereinbarte Fälligkeit"), {
+    target: { value: "2030-05-01" },
+  });
+  await userEvent.type(
+    form.getByLabelText(/Prüfnotiz/),
+    "Fiktive Vertragsfassung geprüft.",
+  );
+  expect(form.getByText(/Saldo nach Abschlägen: -90,00/)).toBeVisible();
+  await userEvent.click(
+    form.getByRole("button", { name: "Korrektur vorlegen" }),
+  );
+  await waitFor(() =>
+    expect(calls("propose_invoice_series_correction")).toHaveLength(1),
+  );
+  expect(calls("propose_invoice_series_correction")[0][1]).toEqual({
+    p_claim_id: seriesClaim,
+    p_contract_id: seriesContract,
+    p_reviewed_total: 0,
+    p_due_on: "2030-05-01",
+    p_note: "Fiktive Vertragsfassung geprüft.",
+    p_client_id: expect.any(String),
+  });
+  expect(calls("record_invoice_series_repayment")).toHaveLength(0);
+});
+
+it("caps the recorded repayment at the acknowledged outstanding amount", async () => {
+  corrections = [
+    {
+      ...correction(),
+      state: "acknowledged",
+      responded_at: "2030-05-21T10:00:00Z",
+    },
+  ];
+  managementCorrection();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Rechnungsserie öffnen" }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Rechnungsserie öffnen" }),
+  );
+  const receipt = within(
+    await dialog.findByRole("group", { name: "Rückzahlungseingang erfassen" }),
+  );
+  const amount = receipt.getByLabelText("Geprüfter Betrag (EUR)");
+  await userEvent.type(amount, "20,01");
+  fireEvent.change(receipt.getByLabelText("Eingangsdatum"), {
+    target: { value: "2030-05-01" },
+  });
+  await userEvent.type(
+    receipt.getByLabelText("Referenz des Zahlungseingangs"),
+    "FIKT-REF",
+  );
+  const submit = receipt.getByRole("button", {
+    name: "Rückzahlungseingang erfassen",
+  });
+  expect(submit).toBeDisabled();
+  await userEvent.clear(amount);
+  await userEvent.type(amount, "10,25");
+  await userEvent.click(submit);
+  await waitFor(() =>
+    expect(calls("record_invoice_series_repayment")).toHaveLength(1),
+  );
+  expect(calls("record_invoice_series_repayment")[0][1]).toEqual({
+    p_correction_id: correctionId,
+    p_amount: 10.25,
+    p_received_on: "2030-05-01",
+    p_reference: "FIKT-REF",
+    p_client_id: expect.any(String),
+  });
 });

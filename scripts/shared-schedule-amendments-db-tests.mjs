@@ -205,6 +205,11 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
       ).toISOString(),
       ends_at: new Date(Date.parse(slot.ends_at) + days * day).toISOString(),
     }));
+  const allocations = () =>
+    sql(`select jsonb_agg(to_jsonb(session) order by id) from public.assignment_sessions session
+    where claim_id in (${q(firstClaim)}, ${q(secondClaim)}) and released_at is null`).then(
+      JSON.parse,
+    );
   const draft = (who, claim, changes) =>
     rpc(
       who,
@@ -301,6 +306,7 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
 
   const initialJobVersions = await jobVersions();
   const base = await schedule();
+  const originalAllocations = await allocations();
   const retained = await originalClaims();
   const requested = move(base, 1);
   const options = await rpc(manager, "changeable_assignments");
@@ -470,7 +476,22 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     join public.assignment_sessions session on session.id=superseded.session_id
     join private.assignment_amendments amendment on amendment.id=superseded.amendment_id
     where amendment.change_id in (${q(root)},${q(sibling)}) and session.released_at is not null`),
-    "4",
+    "2",
+  );
+  const unchangedAllocations = originalAllocations.filter(
+    ({ starts_at, ends_at }) =>
+      requested.some(
+        (slot) =>
+          Date.parse(slot.starts_at) === Date.parse(starts_at) &&
+          Date.parse(slot.ends_at) === Date.parse(ends_at),
+      ),
+  );
+  assert.equal(unchangedAllocations.length, 2);
+  assert.deepEqual(
+    (await allocations()).filter(({ id }) =>
+      unchangedAllocations.some((slot) => slot.id === id),
+    ),
+    unchangedAllocations,
   );
   assert.deepEqual(await originalClaims(), retained);
   assert.deepEqual(
@@ -525,11 +546,6 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
       returning id`);
   }
   const attendanceReceipt = await pinAttendance(pinnedSlot);
-  const allocations = () =>
-    sql(`select jsonb_agg(to_jsonb(session) order by id) from public.assignment_sessions session
-    where claim_id in (${q(firstClaim)}, ${q(secondClaim)}) and released_at is null`).then(
-      JSON.parse,
-    );
   const oldAllocations = await allocations();
   const added = await draft(manager, firstClaim, {
     sessions: [...move(moved, 0), ...move(moved.slice(-1), 2 / 24)],
@@ -605,6 +621,110 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     /changed session has retained attendance evidence/,
   );
   assert.deepEqual(await schedule(), keep);
+  // Advance the first slot into teaching history without changing its IDs.
+  // Both exact attendance receipts already exist when the amendment is drafted.
+  await act(
+    manager,
+    later,
+    "withdraw",
+    "Fictional replacement of a blocked proposal.",
+  );
+  const firstSlot = keep[0];
+  await sql(`
+    update public.course_sessions set starts_at=date_trunc('second',now())-interval '2 days',
+        ends_at=date_trunc('second',now())-interval '2 days'+interval '1 hour'
+      where id=${q(firstSlot.id)};
+    update public.job_sessions offer set starts_at=session.starts_at, ends_at=session.ends_at
+      from public.course_sessions session where offer.course_session_id=session.id and session.id=${q(firstSlot.id)};
+    update public.assignment_sessions allocation set starts_at=session.starts_at, ends_at=session.ends_at
+      from public.course_sessions session where session.id=${q(firstSlot.id)}
+        and allocation.claim_id in (${q(firstClaim)}, ${q(secondClaim)})
+        and allocation.released_at is null and allocation.starts_at=${q(firstSlot.starts_at)}::timestamptz;
+  `);
+  const teachingHistory = await schedule();
+  const historicalAllocations = (await allocations()).filter(
+    ({ starts_at }) =>
+      Date.parse(starts_at) === Date.parse(teachingHistory[0].starts_at),
+  );
+  assert.equal(historicalAllocations.length, 2);
+  const historicalDelivery = historicalAllocations.find(
+    ({ claim_id }) => claim_id === firstClaim,
+  );
+  assert(historicalDelivery);
+  const evidence = {
+    outcome: "completed",
+    actual_start: new Date(
+      Date.parse(teachingHistory[0].starts_at),
+    ).toISOString(),
+    actual_end: new Date(Date.parse(teachingHistory[0].ends_at)).toISOString(),
+    time_zone: "Europe/Berlin",
+    notes: "Fictional completed delivery",
+    correction_reason: "",
+  };
+  await rpc(
+    first,
+    "save_delivery_draft",
+    historicalDelivery.id,
+    0,
+    evidence,
+    randomUUID(),
+  );
+  await rpc(first, "submit_delivery", historicalDelivery.id, 1, randomUUID());
+  const deliveryReceipt =
+    await sql(`select latest_submission_id from private.delivery_records
+    where session_id=${q(historicalDelivery.id)}`);
+  assert(deliveryReceipt);
+  assert(
+    (await rpc(manager, "changeable_assignments")).some(
+      ({ claim_id }) => claim_id === firstClaim,
+    ),
+  );
+  await assert.rejects(
+    draft(manager, firstClaim, {
+      sessions: [
+        ...move(teachingHistory.slice(1), 0),
+        ...move(teachingHistory.slice(1), 2 / 24),
+      ],
+    }),
+    /PT409|PT422/,
+  );
+  await assert.rejects(
+    draft(manager, firstClaim, {
+      sessions: [
+        ...move(teachingHistory.slice(0, 1), -1),
+        ...move(teachingHistory.slice(1), 0),
+      ],
+    }),
+    /22023/,
+  );
+
+  const remainder = await draft(manager, firstClaim, {
+    sessions: [
+      ...move(teachingHistory, 0),
+      ...move(teachingHistory.slice(1), 2 / 24),
+    ],
+  });
+  await act(manager, remainder, "submit");
+  await approve(remainder, await siblingOf(remainder));
+  await act(manager, remainder, "apply");
+  const extended = await schedule();
+  assert.equal(extended.length, 3);
+  assert.deepEqual(extended.slice(0, 2), teachingHistory);
+  assert.deepEqual(
+    (await allocations()).filter(({ id }) =>
+      historicalAllocations.some((slot) => slot.id === id),
+    ),
+    historicalAllocations,
+  );
+  assert.deepEqual(await originalClaims(), retained);
+  assert.equal(
+    await sql(`select latest_submission_id from private.delivery_records
+    where session_id=${q(historicalDelivery.id)}`),
+    deliveryReceipt,
+  );
+  console.log(
+    "PASS a started shared course can amend future sessions while retaining original allocations and attendance evidence",
+  );
   await rpc(manager, "set_company_premium", company, false, 1, randomUUID());
   assert.equal(
     (

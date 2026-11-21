@@ -224,6 +224,73 @@ describe("contractual invoice series", () => {
       paths[prefix + "revoke_invoice_series_entry"].post.responses,
     ).toHaveProperty("204");
   });
+
+  it("documents the reviewed correction, acknowledgement and actual repayment evidence", () => {
+    expect(
+      requestSchema(prefix + "propose_invoice_series_correction"),
+    ).toMatchObject({
+      additionalProperties: false,
+      required: [
+        "p_claim_id",
+        "p_contract_id",
+        "p_reviewed_total",
+        "p_due_on",
+        "p_note",
+        "p_client_id",
+      ],
+      properties: {
+        p_reviewed_total: { minimum: 0, multipleOf: 0.01 },
+        p_due_on: { format: "date" },
+      },
+    });
+    expect(
+      requestSchema(prefix + "record_invoice_series_repayment"),
+    ).toMatchObject({
+      required: [
+        "p_correction_id",
+        "p_amount",
+        "p_received_on",
+        "p_reference",
+        "p_client_id",
+      ],
+      properties: {
+        p_amount: { exclusiveMinimum: 0, multipleOf: 0.01 },
+        p_received_on: { format: "date" },
+      },
+    });
+    expect(
+      paths[prefix + "invoice_series_corrections"].post.responses["200"],
+    ).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            properties: {
+              entries: {
+                items: {
+                  properties: {
+                    balance: { exclusiveMaximum: 0 },
+                    repayments: {
+                      items: {
+                        properties: { received_on: { format: "date" } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    for (const action of [
+      "acknowledge_invoice_series_correction",
+      "dispute_invoice_series_correction",
+      "withdraw_invoice_series_correction",
+      "void_invoice_series_repayment",
+    ]) {
+      expect(paths[prefix + action].post.responses).toHaveProperty("204");
+    }
+  });
 });
 
 describe("installation and integration credential contracts", () => {

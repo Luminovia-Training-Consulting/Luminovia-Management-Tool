@@ -42,6 +42,12 @@ Current administrators can choose management, lecturer, company and learner prev
 
 The owner deferred Hostinger migration and provider acceptance for this source pass.
 
+### Core workflow progress
+
+- Fully staffed shared courses can now amend upcoming sessions after teaching starts. The versioned approval requires all affected lecturers. The application preserves started slots, attendance, delivery and assignment references, agreed rates and applicable billing units. Both native Chromium profiles and two staffing arrangements in PostgreSQL passed the corresponding workflow.
+- Internal finance can apply customer credit notes, reverse applications and record actual refunds against the net overpayment. Independent finance and the affected lecturer can also agree an overpayment correction for settled teaching instalments, with separate receipt and reversal records. The [implementation plan](docs/IMPLEMENTATION_PLAN.md#core-function-review) tracks reporting and acceptance that still need work.
+- The Academy enables capacity confirmation only for a valid changed group size and keeps the course notebook and feedback in separately keyed panels. The routed regression checks both interactions.
+
 ## 2. Source coverage and planned change areas
 
 The following summary preserves the A–N structure of the original roadmap while adding the new Premium LMS areas. **Existing source** means components were found/documented in the repository, not that the new requirements have passed complete acceptance.

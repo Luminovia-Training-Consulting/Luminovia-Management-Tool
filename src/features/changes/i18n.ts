@@ -10,15 +10,17 @@ const de = {
   intro:
     "Bestätigte Aufträge gemeinsam ändern: Original und Änderung bleiben nachvollziehbar erhalten.",
   scopeHint:
-    "Änderbar sind Aufträge, die noch nicht begonnen haben und noch nie abgerechnet wurden. Bei gemeinsamen Terminen muss jede bereits bestätigte Lehrkraft zustimmen.",
+    "Einzelaufträge sind vor Beginn änderbar. Bei gemeinsamen Kursen können berechtigte Personen noch ausstehende Termine ändern, sofern alle bestätigten Lehrkräfte zustimmen und keine Rechnung vorliegt.",
   sharedScheduleHelp:
     "Beim Einreichen erhält jede betroffene Lehrkraft einen eigenen Antrag mit denselben Terminen.",
   sharedSessionCount:
     "Du kannst Termine hinzufügen oder entfernen. Wenn sich die Anzahl ändert, bleiben Einträge mit Terminen verbunden, deren Datum und Uhrzeit gleich bleiben.",
+  sharedStartedSessions:
+    "Begonnene Termine und ihre Nachweise bleiben erhalten. Bearbeite die noch ausstehenden Termine.",
   sharedUnavailable:
     "Für diesen Kurs ist derzeit keine gemeinsame Terminänderung möglich. Prüfe den Kurs und seine Aufträge, bevor du einen neuen Antrag erstellst.",
   sharedQuantity:
-    "Die Anzahl der Termine kann sich bei gleichbleibender vereinbarter Unterrichtsdauer oder Anzahl abrechenbarer Tage ändern. Prüfe die Termine und die vereinbarte Vergütung.",
+    "Die vereinbarte Unterrichtsdauer oder Anzahl abrechenbarer Tage muss erhalten bleiben. Prüfe die Termine und die vereinbarte Vergütung.",
   sharedClaimDeadline:
     "Der erste neue Termin darf frühestens mit Ablauf der Annahmefrist für freie Plätze beginnen.",
   sharedLecturer: "Lehrkraft für diese Zustimmung: {{name}}",
@@ -124,15 +126,17 @@ const en = {
   intro:
     "Agree changes to confirmed assignments while retaining the original and its amendment history.",
   scopeHint:
-    "Assignments can be changed before work starts or any invoice exists. Every lecturer who has already accepted must consent to changes to shared dates.",
+    "Individual assignments can change before work starts. For shared courses, authorised staff can amend future sessions before invoicing with consent from every confirmed lecturer.",
   sharedScheduleHelp:
     "Submitting sends each affected lecturer a separate request with the same dates.",
   sharedSessionCount:
     "You can add or remove sessions. When the session count changes, existing records stay linked to sessions with the exact same dates and times.",
+  sharedStartedSessions:
+    "Sessions already started and their evidence stay in place. Edit the remaining sessions.",
   sharedUnavailable:
     "A shared schedule change is currently unavailable for this course. Check the course and its assignments before creating another request.",
   sharedQuantity:
-    "Session counts can change when the agreed teaching duration or number of billable days is preserved. Check the dates and the agreed compensation.",
+    "The agreed teaching duration or number of billable days must be preserved. Check the dates and the agreed compensation.",
   sharedClaimDeadline:
     "The first new session cannot start before the claim deadline for open positions.",
   sharedLecturer: "Lecturer for this approval: {{name}}",

@@ -64,6 +64,7 @@ import {
 } from "./invoice-exception";
 import type { InvoiceException } from "./invoice-exception-schema";
 import type { InvoiceSeriesRecord } from "./invoice-series-schema";
+import { MyInvoiceSeriesCorrections } from "./invoice-series-correction";
 import {
   InvoiceSeriesSummary,
   ManageInvoiceSeries,
@@ -1142,6 +1143,9 @@ export function FinancePage() {
         />
       )}
       {canSubmit && <MyInvoiceReviewRequests actor={actor} zone={zone} />}
+      {canSubmit && !effectiveAll && (
+        <MyInvoiceSeriesCorrections actor={actor} />
+      )}
       {canSubmit && (
         <MyInvoiceExceptions
           actor={actor}
@@ -1420,6 +1424,7 @@ export function FinancePage() {
           actor={actor}
           claimId={manageSeries.claim_id}
           title={manageSeries.title}
+          canManageCorrections={manageSeries.lecturer_id !== actor}
           close={() => setManageSeries(null)}
         />
       )}

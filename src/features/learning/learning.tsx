@@ -1180,14 +1180,14 @@ function CourseWorkspaceLayout({
             <div className="course-room-section" id="course-learning">
               {academy && (learner || course.access.staff) && (
                 <AcademyNotebook
-                  key={`${course.id}:${course.notebook?.version ?? 0}`}
+                  key={`notebook:${actor}:${course.id}:${course.notebook?.version ?? 0}`}
                   course={course}
                   actor={actor}
                   academy={academy}
                 />
               )}
               <Feedback
-                key={`${course.id}:${course.feedback?.version ?? 0}`}
+                key={`feedback:${actor}:${course.id}:${course.feedback?.version ?? 0}`}
                 course={course}
                 actor={actor}
                 academy={academy}

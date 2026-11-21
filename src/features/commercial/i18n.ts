@@ -291,6 +291,98 @@ const pairs: Record<string, [string, string]> = {
     "Lade die Schlussrechnung als PDF hoch. Betrag und Fälligkeit werden aus der Freigabe übernommen.",
     "Upload the final invoice PDF. The amount and due date come from the approval.",
   ],
+  correctionHeading: [
+    "Korrektur überzahlter Abschläge",
+    "Correction of excess interim payments",
+  ],
+  correctionPropose: [
+    "Überzahlung zur Prüfung vorlegen",
+    "Propose an overpayment correction",
+  ],
+  correctionProposalHelp: [
+    "Prüfe Vertragsfassung, Abschlagszahlungen und die vereinbarte Rückzahlungsfrist. Die dozierende Person erhält den Vorschlag zur Bestätigung.",
+    "Verify the contract version, interim receipts and agreed repayment date. The lecturer receives the proposal for confirmation.",
+  ],
+  correctionSend: ["Korrektur vorlegen", "Submit correction proposal"],
+  correctionReviewed: [
+    "Geprüfter Gesamtanspruch",
+    "Reviewed total entitlement",
+  ],
+  correctionInterimPaid: ["Gezahlte Abschläge", "Paid instalments"],
+  correctionBalance: [
+    "Saldo nach Abschlägen",
+    "Balance after interim payments",
+  ],
+  correctionRepaymentAgreed: ["Vereinbarte Rückzahlung", "Agreed repayment"],
+  correctionOutstanding: ["Offene Rückzahlung", "Remaining repayment"],
+  correctionEvidence: [
+    "Verrechnete Zahlungsbelege",
+    "Credited payment records",
+  ],
+  correctionExport: [
+    "Korrekturbeleg als CSV",
+    "Download correction receipt as CSV",
+  ],
+  correctionAcknowledge: ["Korrektur bestätigen", "Acknowledge correction"],
+  correctionConfirmDetails: [
+    "Ich habe Vertragsfassung, Betrag, Zahlungsbelege und Fälligkeit geprüft und bestätige die Korrektur.",
+    "I reviewed the contract version, amount, payment records and due date and agree to this correction.",
+  ],
+  correctionDispute: ["Korrektur beanstanden", "Dispute correction"],
+  correctionWithdraw: ["Korrektur zurückziehen", "Withdraw correction"],
+  correctionVoid: [
+    "Rückzahlungseintrag berichtigen",
+    "Void recorded repayment",
+  ],
+  correctionReason: [
+    "Begründung (mindestens 10 Zeichen)",
+    "Reason (at least 10 characters)",
+  ],
+  correctionDisputeReason: ["Einwand", "Dispute"],
+  correctionWithdrawReason: ["Rücknahmegrund", "Withdrawal reason"],
+  correctionCancel: ["Abbrechen", "Cancel"],
+  correctionReceipt: ["Rückzahlungsbeleg", "Repayment receipt"],
+  correctionReceiptReference: [
+    "Referenz des Zahlungseingangs",
+    "Repayment reference",
+  ],
+  correctionReceivedOn: ["Eingangsdatum", "Date received"],
+  correctionReceiptVoided: ["Eintrag berichtigt", "Entry voided"],
+  correctionRepaymentHistory: ["Erfasste Rückzahlungen", "Recorded repayments"],
+  correctionRecordReceipt: [
+    "Rückzahlungseingang erfassen",
+    "Record received repayment",
+  ],
+  correctionActualReceiptHelp: [
+    "Erfasse nur bereits erhaltenes Geld. Verwende das tatsächliche Eingangsdatum, auch wenn es vor der Bestätigung liegt.",
+    "Record money already received. Use the actual receipt date, including when it precedes acknowledgement.",
+  ],
+  correctionDuplicateReceipt: [
+    "Diese Zahlungsreferenz wurde bereits erfasst.",
+    "This repayment reference has already been recorded.",
+  ],
+  correctionConflict: [
+    "Der Stand der Korrektur hat sich geändert. Lade die aktuellen Daten und prüfe den offenen Betrag.",
+    "The correction has changed. Reload the latest details and check the outstanding amount.",
+  ],
+  correctionStatus_proposed: [
+    "Bestätigung ausstehend",
+    "Awaiting confirmation",
+  ],
+  correctionStatus_stale: [
+    "Erneute Finanzprüfung erforderlich",
+    "Finance review required",
+  ],
+  correctionStatus_disputed: ["Beanstandet", "Disputed"],
+  correctionStatus_acknowledged: [
+    "Bestätigt · Rückzahlung offen",
+    "Acknowledged · repayment outstanding",
+  ],
+  correctionStatus_settled: [
+    "Rückzahlung vollständig erfasst",
+    "Repayment fully recorded",
+  ],
+  correctionStatus_withdrawn: ["Zurückgezogen", "Withdrawn"],
   invoiceSeriesManage: ["Rechnungsserie öffnen", "Open invoice series"],
   invoiceSeriesInterim: ["Abschlagsrechnung", "Interim invoice"],
   invoiceSeriesFinal: [

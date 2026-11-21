@@ -11,6 +11,7 @@ import {
   accountingSourceSchema,
   customerCreditNoteInputSchema,
   customerCreditNotePageSchema,
+  customerSettlementSchema,
 } from "../accounting/schema.ts";
 import { nativeExplorerPaths } from "./native-contract.ts";
 
@@ -40,6 +41,7 @@ function accountingOperation(
   description: string,
   input: z.ZodObject,
   result: z.ZodType,
+  conflict = "An agreement or invoice number is already registered.",
 ) {
   const native = nativeExplorerPaths[`/rest/v1/rpc/${name}`]?.post;
   return {
@@ -71,7 +73,7 @@ function accountingOperation(
         "404": error(
           "The supplied named arguments do not match the accounting RPC.",
         ),
-        "409": error("An agreement or invoice number is already registered."),
+        "409": error(conflict),
       },
     },
   };
@@ -144,7 +146,7 @@ export const accountingPaths = {
   ),
   "/rest/v1/rpc/record_customer_invoice_payment": accountingOperation(
     "record_customer_invoice_payment",
-    "Requires finance.gross.read. Records a received payment in the invoice currency, up to the outstanding balance. The receipt identifies the payment ledger entry.",
+    "Requires finance.gross.read. Records an actual payment in the original invoice currency up to the remaining original invoice amount. An incoming payment after a credit may create refundable surplus in the customer settlement.",
     z.strictObject({
       p_invoice_id: id,
       p_amount: accountingDecimal.describe(
@@ -181,7 +183,7 @@ export const accountingPaths = {
   ),
   "/rest/v1/rpc/reverse_customer_invoice_payment": accountingOperation(
     "reverse_customer_invoice_payment",
-    "Requires finance.gross.read. Appends a reversal for an original payment on this invoice that has no previous reversal. The receipt identifies the reversal ledger entry.",
+    "Requires finance.gross.read. Appends an exact correction for a payment on this invoice that has no earlier reversal. An active recorded refund must remain backed by sufficient actual cash and an applied credit.",
     z.strictObject({
       p_invoice_id: id,
       p_payment_id: id,
@@ -189,5 +191,61 @@ export const accountingPaths = {
       p_request_id: requestId,
     }),
     accountingReceiptSchema,
+    "The payment reversal would invalidate an active recorded refund.",
+  ),
+  "/rest/v1/rpc/accounting_customer_settlement": accountingOperation(
+    "accounting_customer_settlement",
+    "Reads a separate net balance for the original customer invoice, including applied credits, actual cash receipts and recorded refunds. Current customer members can read only their own invoice totals. Gross-finance staff can also read the append-only application and refund histories.",
+    z.strictObject({ p_invoice_id: id }),
+    customerSettlementSchema,
+  ),
+  "/rest/v1/rpc/apply_customer_invoice_credit_note": accountingOperation(
+    "apply_customer_invoice_credit_note",
+    "Requires internal gross-finance authority. Applies the full amount of an already-registered credit note to its original invoice. The original invoice, received payments and earlier exports remain separate from the new net balance.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_credit_note_id: id,
+      p_reason: z.string().min(5).max(1000),
+      p_request_id: requestId,
+    }),
+    accountingReceiptSchema,
+    "The same credit note already has an active application.",
+  ),
+  "/rest/v1/rpc/reverse_customer_invoice_credit_note": accountingOperation(
+    "reverse_customer_invoice_credit_note",
+    "Requires internal gross-finance authority. Appends an exact correction to an active credit application. A reversal must keep all recorded refunds backed by applied credit and received cash.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_application_id: id,
+      p_reason: z.string().min(5).max(1000),
+      p_request_id: requestId,
+    }),
+    accountingReceiptSchema,
+    "The application was already reversed or its reversal would invalidate a recorded refund.",
+  ),
+  "/rest/v1/rpc/record_customer_invoice_refund": accountingOperation(
+    "record_customer_invoice_refund",
+    "Requires internal gross-finance authority. Records an already-completed refund in the original currency up to the refundable overpayment. Supplies a historic instant and a distinct transaction reference. The command only records accounting evidence.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_amount: accountingDecimal,
+      p_refunded_at: instant,
+      p_reference: z.string().min(1).max(120),
+      p_request_id: requestId,
+    }),
+    accountingReceiptSchema,
+    "The amount exceeds the refundable balance or the transaction reference was already recorded.",
+  ),
+  "/rest/v1/rpc/reverse_customer_invoice_refund": accountingOperation(
+    "reverse_customer_invoice_refund",
+    "Requires internal gross-finance authority. Corrects an existing refund entry through an exact reversal. The original receipt remains in the historical record.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_refund_id: id,
+      p_reason: z.string().min(5).max(1000),
+      p_request_id: requestId,
+    }),
+    accountingReceiptSchema,
+    "The refund record was already reversed.",
   ),
 };

@@ -15,6 +15,52 @@ import {
 } from "./academy-publication-schema";
 import "./i18n";
 
+/** Keep the action tied to an edited, valid group size. */
+function CourseCapacityForm({
+  field,
+  confirmedCapacity,
+  review,
+}: {
+  field: string;
+  confirmedCapacity: number | null;
+  review: (capacity: number) => void;
+}) {
+  const { t } = useTranslation("learning");
+  const [draft, setDraft] = useState(
+    confirmedCapacity === null ? "" : String(confirmedCapacity),
+  );
+  const capacity = academyCourseCapacity.safeParse(Number(draft));
+  const changed = capacity.success && capacity.data !== confirmedCapacity;
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (changed) review(capacity.data);
+      }}
+    >
+      <Field id={field} label={t("academyCourseCapacity")}>
+        <input
+          name="capacity"
+          type="number"
+          min="1"
+          max="10000"
+          step="1"
+          value={draft}
+          onChange={(event) => setDraft(event.currentTarget.value)}
+          required
+        />
+      </Field>
+      <Button type="submit" disabled={!changed}>
+        {t(
+          confirmedCapacity === null
+            ? "academyPublishCourse"
+            : "academyChangeCapacity",
+        )}
+      </Button>
+    </form>
+  );
+}
+
 /** Show the confirmed course state and let a course manager review publication. */
 export function AcademyCoursePublication({
   courseId,
@@ -97,42 +143,15 @@ export function AcademyCoursePublication({
         <AcademyDraftSchedule courseId={courseId} actor={actor} />
       )}
       {current && !readOnly && (
-        <form
-          key={current.capacity ?? "draft"}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            const capacity = academyCourseCapacity.safeParse(
-              Number(form.get("capacity")),
-            );
-            if (capacity.success && capacity.data !== current.capacity) {
-              publish.reset();
-              setReviewed({
-                capacity: capacity.data,
-                previous: current.capacity,
-              });
-            }
+        <CourseCapacityForm
+          key={`${actor}:${courseId}:${current.capacity ?? "draft"}`}
+          field={field}
+          confirmedCapacity={current.capacity}
+          review={(capacity) => {
+            publish.reset();
+            setReviewed({ capacity, previous: current.capacity });
           }}
-        >
-          <Field id={field} label={t("academyCourseCapacity")}>
-            <input
-              name="capacity"
-              type="number"
-              min="1"
-              max="10000"
-              step="1"
-              defaultValue={current.capacity ?? undefined}
-              required
-            />
-          </Field>
-          <Button type="submit">
-            {t(
-              current.published
-                ? "academyChangeCapacity"
-                : "academyPublishCourse",
-            )}
-          </Button>
-        </form>
+        />
       )}
       <Dialog
         open={!readOnly && reviewed !== undefined}

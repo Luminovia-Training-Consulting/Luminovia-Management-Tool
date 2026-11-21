@@ -992,15 +992,25 @@ it("confirms course publication online and retries the reviewed capacity", async
 });
 
 it("reviews a revised capacity against the current confirmed group size", async () => {
+  const logError = vi.spyOn(console, "error");
   fake.publication = { published: true, capacity: 3 };
   open(`/courses/${id}/workspace`);
   const user = userEvent.setup();
   const capacity = await screen.findByRole("spinbutton", {
     name: "Maximum group size",
   });
+  const change = screen.getByRole("button", { name: "Change group size" });
+  expect(change).toBeDisabled();
+  await user.clear(capacity);
+  expect(change).toBeDisabled();
+  await user.type(capacity, "5");
+  expect(change).toBeEnabled();
+  await user.clear(capacity);
+  await user.type(capacity, "3");
+  expect(change).toBeDisabled();
   await user.clear(capacity);
   await user.type(capacity, "5");
-  await user.click(screen.getByRole("button", { name: "Change group size" }));
+  await user.click(change);
   expect(
     fake.rpc.mock.calls.some(
       ([name]) => name === "academy_set_course_capacity",
@@ -1015,11 +1025,17 @@ it("reviews a revised capacity against the current confirmed group size", async 
   expect(
     await screen.findByText("Course published. Maximum group size 5."),
   ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Change group size" }),
+  ).toBeDisabled();
   expect(fake.rpc).toHaveBeenCalledWith("academy_set_course_capacity", {
     p_course_id: id,
     p_expected_capacity: 3,
     p_capacity: 5,
   });
+  expect(logError.mock.calls.map(([message]) => message)).not.toContainEqual(
+    expect.stringContaining("Encountered two children with the same key"),
+  );
 });
 
 it("keeps publication read-only in licence grace", async () => {

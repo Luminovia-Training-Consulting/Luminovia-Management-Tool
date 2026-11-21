@@ -50,6 +50,7 @@ import {
   invoiceSeriesOptionsSchema,
   invoiceSeriesRecordsSchema,
 } from "../commercial/invoice-series-schema.ts";
+import { invoiceSeriesCorrectionsSchema } from "../commercial/invoice-series-correction-schema.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { profileContracts } from "./profile-contract.ts";
@@ -245,7 +246,7 @@ const scheduleChangeResponses = {
   "422": {
     ...error,
     description:
-      "A count change would alter the agreed day or time-based billed units.",
+      "The schedule change would alter the agreed day or time-based billed units.",
   },
   "423": {
     ...error,
@@ -1601,6 +1602,85 @@ const nativePaths = {
     },
     uuid,
   ),
+  "/rest/v1/rpc/invoice_series_corrections": rpc(
+    "invoiceSeriesCorrections",
+    "Finance",
+    "List corrections for overpaid lecturer instalments",
+    "Lecturers can list their own corrections. Current internal finance staff can query a particular assignment and read the approved contract and payment amounts available for review. The response retains exact credited receipts and all repayment entries, including their void history.",
+    { p_claim_id: nullableUuid, p_all: boolean },
+    z.toJSONSchema(invoiceSeriesCorrectionsSchema),
+  ),
+  "/rest/v1/rpc/propose_invoice_series_correction": rpc(
+    "proposeInvoiceSeriesCorrection",
+    "Finance",
+    "Propose a correction after reviewing paid instalments",
+    "Requires internal finance authority, an executed contract, a reviewed total below the actual unvoided instalment payments, and an agreed deadline. The amount is in the original currency. Retry delivery uncertainty with the same client ID and values.",
+    {
+      p_claim_id: uuid,
+      p_contract_id: uuid,
+      p_reviewed_total: {
+        type: "number",
+        minimum: 0,
+        maximum: 9999999999.99,
+        multipleOf: 0.01,
+      },
+      p_due_on: date,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/acknowledge_invoice_series_correction": voidRpc(
+    "acknowledgeInvoiceSeriesCorrection",
+    "Finance",
+    "Acknowledge a current correction as the assigned lecturer",
+    "Requires the assigned lecturer and an unchanged set of paid receipts. Acknowledgement stores a response and opens repayment recording.",
+    { p_correction_id: uuid },
+  ),
+  "/rest/v1/rpc/dispute_invoice_series_correction": voidRpc(
+    "disputeInvoiceSeriesCorrection",
+    "Finance",
+    "Dispute a correction as the assigned lecturer",
+    "The assigned lecturer can dispute a current proposal and record a reason. Finance must review the dispute before proposing a new correction.",
+    {
+      p_correction_id: uuid,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+  ),
+  "/rest/v1/rpc/withdraw_invoice_series_correction": voidRpc(
+    "withdrawInvoiceSeriesCorrection",
+    "Finance",
+    "Withdraw a correction before repayment",
+    "Requires internal finance authority and a reason. The reviewed values and all prior responses remain in history.",
+    {
+      p_correction_id: uuid,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+  ),
+  "/rest/v1/rpc/record_invoice_series_repayment": rpc(
+    "recordInvoiceSeriesRepayment",
+    "Finance",
+    "Record a received lecturer repayment",
+    "Internal finance staff can record receipt up to the remaining amount on an acknowledged correction. The receipt date must have arrived in the current operator's date zone. Retry with the same client ID and exact input.",
+    {
+      p_correction_id: uuid,
+      p_amount: { type: "number", exclusiveMinimum: 0, multipleOf: 0.01 },
+      p_received_on: date,
+      p_reference: { ...text, minLength: 3, maxLength: 200 },
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/void_invoice_series_repayment": voidRpc(
+    "voidInvoiceSeriesRepayment",
+    "Finance",
+    "Void a repayment receipt with an audit reason",
+    "Internal finance staff can correct an erroneous receipt. The original amount, date and reference remain in the audit and the outstanding amount is recalculated.",
+    {
+      p_repayment_id: uuid,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+  ),
   "/rest/v1/rpc/invoice_exception_options": rpc(
     "invoiceExceptionOptions",
     "Finance",
@@ -1853,7 +1933,7 @@ const nativePaths = {
     "changeableAssignments",
     "Assignments",
     "Find assignments that can be amended",
-    "Lists scoped future assignments with their current schedules and permission flags. The shared-schedule-only flag identifies candidates that allow a coordinated date change. Eligibility is checked again when a proposal is saved or applied.",
+    "Lists scoped assignments with their current schedules and permission flags. Dedicated assignments must be unstarted. The shared-schedule-only flag identifies courses with an eligible future portion that can be changed in coordination with each affected lecturer.",
     {},
     changeCandidatesResult,
   ),
@@ -1863,7 +1943,7 @@ const nativePaths = {
         "saveAssignmentChange",
         "Assignments",
         "Save a versioned change proposal",
-        "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared proposal changes only the schedule. Eligible additions or removals retain the exact surviving session references, agreed fees and the billed units. A proposed first date must respect any current claim deadline and learner withdrawal rights.",
+        "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared proposal changes only the schedule. Retain the exact intervals of started sessions and sessions carrying delivery evidence. Eligible additions or removals preserve surviving session references, agreed fees and billed units. A proposed first date must respect current claim deadlines and learner withdrawal rights.",
         {
           p_id: nullableUuid,
           p_claim_id: uuid,

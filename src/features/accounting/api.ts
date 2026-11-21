@@ -12,6 +12,7 @@ import {
   accountingPageSchema,
   accountingReceiptSchema,
   customerCreditNotePageSchema,
+  customerSettlementSchema,
   type AccountingExport,
   type AccountingSource,
 } from "./schema";
@@ -30,6 +31,8 @@ export const accountingKeys = {
   all: (actor: string) => ["accounting", actor] as const,
   customerCreditNotes: (actor: string, invoice: string) =>
     ["accounting", actor, "customer-credit-notes", invoice] as const,
+  customerSettlement: (actor: string, invoice: string) =>
+    ["accounting", actor, "customer-settlement", invoice] as const,
 };
 /** Capabilities come from current SQL authority; UI choices grant no access. */
 export const accountingAccessQuery = (actor: string) =>
@@ -113,11 +116,31 @@ export const customerCreditNotesQuery = (actor: string, invoice: string) =>
     },
     retry: false,
   });
+export const customerSettlementQuery = (actor: string, invoice: string) =>
+  queryOptions({
+    queryKey: accountingKeys.customerSettlement(actor, invoice),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("accounting_customer_settlement", { p_invoice_id: invoice })
+        .abortSignal(signal);
+      if (error) throw error;
+      const settlement = customerSettlementSchema.parse(data);
+      if (settlement.invoice_id !== invoice)
+        throw new Error("customer_settlement_invoice_mismatch");
+      return settlement;
+    },
+    staleTime: 0,
+    retry: false,
+  });
 /** Mutations require confirmed online receipts and never update caches optimistically. */
 export async function accountingWrite(
   name:
     | "register_customer_invoice"
     | "register_customer_credit_note"
+    | "apply_customer_invoice_credit_note"
+    | "reverse_customer_invoice_credit_note"
+    | "record_customer_invoice_refund"
+    | "reverse_customer_invoice_refund"
     | "record_customer_invoice_payment"
     | "reverse_customer_invoice_payment",
   payload: Record<string, unknown>,

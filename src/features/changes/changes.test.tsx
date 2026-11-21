@@ -324,6 +324,57 @@ it("submits only the shared dates and explains the independent consent in both l
     ),
   );
 });
+it("keeps the exact started session while editing the remaining shared schedule", async () => {
+  const candidate = candidates[0];
+  candidate.current.course_run_id = "ed000000-0000-4000-8000-000000000013";
+  candidate.schedule_editable = true;
+  candidate.shared_schedule_only = true;
+  const historicalSession = {
+    starts_at: "2001-01-01T08:00:15Z",
+    ends_at: "2001-01-01T09:00:15Z",
+  };
+  candidate.current.sessions.unshift(historicalSession);
+  await i18n.changeLanguage("en");
+  mount("/changes");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Create change request" }),
+  );
+  expect(screen.getByText(/Sessions already started/)).toBeVisible();
+  expect(screen.getByLabelText("Start 1")).toHaveAttribute("readonly");
+  expect(screen.getByLabelText("Finish 1")).toHaveAttribute("readonly");
+  expect(screen.getByLabelText("Start 2")).not.toHaveAttribute("readonly");
+  const remove = screen.getAllByRole("button", { name: "Remove session" });
+  expect(remove[0]).toBeDisabled();
+  expect(remove[1]).toBeEnabled();
+  fireEvent.change(screen.getByLabelText("Start 2"), {
+    target: { value: "2045-01-01T09:15" },
+  });
+  await user.type(
+    screen.getByLabelText("Reason"),
+    "Fictional remaining course change",
+  );
+  await user.click(screen.getByRole("button", { name: "Save draft online" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.objectContaining({
+        p_payload: {
+          reason: "Fictional remaining course change",
+          changes: {
+            sessions: [
+              historicalSession,
+              {
+                starts_at: "2045-01-01T08:15:00.000Z",
+                ends_at: "2045-01-01T09:00:00Z",
+              },
+            ],
+          },
+        },
+      }),
+    ),
+  );
+});
 it("displays group progress and waits for every required approval before offering application", async () => {
   data[0] = {
     ...data[0],

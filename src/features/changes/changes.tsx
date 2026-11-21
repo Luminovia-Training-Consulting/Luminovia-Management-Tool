@@ -118,6 +118,7 @@ function ChangeForm({
   const online = useOnline(),
     client = useQueryClient(),
     request = useRequest();
+  const [openedAt] = useState(Date.now);
   const [invalidTime, setInvalidTime] = useState(false),
     [invalidMoney, setInvalidMoney] = useState(false);
   const [invalidLocation, setInvalidLocation] = useState(false);
@@ -147,6 +148,13 @@ function ChangeForm({
   const sharedSchedule =
     original?.shared_schedule_only ?? candidate?.shared_schedule_only ?? false;
   const sessionCountEditable = !linkedCourse || sharedSchedule;
+  const startedSessions = new Set(
+    sharedSchedule
+      ? (source?.sessions ?? []).flatMap((session, index) =>
+          Date.parse(session.starts_at) <= openedAt ? [index] : [],
+        )
+      : [],
+  );
   const canPrice =
     !sharedSchedule && (original?.can_price ?? candidate?.can_price ?? false);
   const commissioned =
@@ -417,44 +425,54 @@ function ChangeForm({
               {t(sharedSchedule ? "sharedSessionCount" : "linkedSessionCount")}
             </p>
           )}
-          {fields.map((item, index) => (
-            <div key={item.id} className="changes-session">
-              <Field
-                id={`change-start-${index}`}
-                label={`${t("start")} ${index + 1}`}
-                error={
-                  Boolean(errors.sessions?.[index]?.starts_at) || invalidTime
-                }
-              >
-                <input
-                  type="datetime-local"
-                  {...register(`sessions.${index}.starts_at`)}
-                />
-              </Field>
-              <Field
-                id={`change-end-${index}`}
-                label={`${t("end")} ${index + 1}`}
-                error={
-                  Boolean(errors.sessions?.[index]?.ends_at) || invalidTime
-                }
-              >
-                <input
-                  type="datetime-local"
-                  {...register(`sessions.${index}.ends_at`)}
-                />
-              </Field>
-              {sessionCountEditable && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={fields.length <= 1}
-                  onClick={() => remove(index)}
+          {startedSessions.size > 0 && (
+            <p className="muted">{t("sharedStartedSessions")}</p>
+          )}
+          {fields.map((item, index) => {
+            const started =
+              item.sourceIndex !== null &&
+              startedSessions.has(item.sourceIndex);
+            return (
+              <div key={item.id} className="changes-session">
+                <Field
+                  id={`change-start-${index}`}
+                  label={`${t("start")} ${index + 1}`}
+                  error={
+                    Boolean(errors.sessions?.[index]?.starts_at) || invalidTime
+                  }
                 >
-                  {t("removeSession")}
-                </Button>
-              )}
-            </div>
-          ))}
+                  <input
+                    type="datetime-local"
+                    readOnly={started}
+                    {...register(`sessions.${index}.starts_at`)}
+                  />
+                </Field>
+                <Field
+                  id={`change-end-${index}`}
+                  label={`${t("end")} ${index + 1}`}
+                  error={
+                    Boolean(errors.sessions?.[index]?.ends_at) || invalidTime
+                  }
+                >
+                  <input
+                    type="datetime-local"
+                    readOnly={started}
+                    {...register(`sessions.${index}.ends_at`)}
+                  />
+                </Field>
+                {sessionCountEditable && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={started || fields.length <= 1}
+                    onClick={() => remove(index)}
+                  >
+                    {t("removeSession")}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
           {sessionCountEditable && (
             <Button
               type="button"

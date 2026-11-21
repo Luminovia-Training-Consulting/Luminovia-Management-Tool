@@ -11,6 +11,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { commercialKeys, invoiceSeriesOptionsQuery } from "./api";
 import type { InvoiceSeriesRecord } from "./invoice-series-schema";
+import { ManageInvoiceSeriesCorrections } from "./invoice-series-correction";
 import "./i18n";
 
 function amountInCents(input: string) {
@@ -126,11 +127,13 @@ export function ManageInvoiceSeries({
   actor,
   claimId,
   title,
+  canManageCorrections,
   close,
 }: {
   actor: string;
   claimId: string;
   title: string;
+  canManageCorrections: boolean;
   close: () => void;
 }) {
   const { t, i18n } = useTranslation("commercial");
@@ -230,6 +233,11 @@ export function ManageInvoiceSeries({
       {!online && <Notice>{t("failed")}</Notice>}
       {online && options.isPending && <Loading />}
       {options.isError && <ErrorState retry={() => void options.refetch()} />}
+      <ManageInvoiceSeriesCorrections
+        actor={actor}
+        claimId={claimId}
+        canManage={canManageCorrections}
+      />
       {rules && (
         <div className="invoice-exception">
           <p>

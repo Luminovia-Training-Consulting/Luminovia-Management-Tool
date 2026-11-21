@@ -37,12 +37,14 @@ import {
   accountingWrite,
   createAccountingExport,
   customerClaimsQuery,
+  customerSettlementQuery,
   downloadAccounting,
   type AccountingExport,
   type AccountingInvoice,
   type AccountingSource,
 } from "./api";
 import { CustomerCreditNotes } from "./credit-notes";
+import { CustomerSettlementPanel } from "./customer-settlement";
 import "./i18n";
 import "./accounting.css";
 
@@ -354,6 +356,12 @@ function CustomerPaymentForm({
   const { t } = useTranslation("accounting");
   const online = useOnline();
   const client = useQueryClient();
+  const settlement = useQuery(customerSettlementQuery(actor, invoice.id));
+  const settlementData = settlement.data;
+  const remainingReceipt = settlementData
+    ? accountingCents(settlementData.original_total) -
+      accountingCents(settlementData.received_total)
+    : 0n;
   const [amount, setAmount] = useState("");
   const [at, setAt] = useState("");
   const [reference, setReference] = useState("");
@@ -374,8 +382,7 @@ function CustomerPaymentForm({
         if (
           !instant ||
           accountingCents(amount) <= 0n ||
-          accountingCents(amount) >
-            accountingCents(invoice.outstanding_total) ||
+          accountingCents(amount) > remainingReceipt ||
           !reference.trim()
         )
           throw new Error("accounting_invalid");
@@ -400,10 +407,27 @@ function CustomerPaymentForm({
     },
   });
   const busy = write.isPending || !online;
+  if (
+    settlement.isPending ||
+    (!settlement.isFetchedAfterMount && settlement.isFetching)
+  )
+    return <Loading />;
+  if (settlement.isError || !settlementData?.can_manage)
+    return <ErrorState retry={() => void settlement.refetch()} />;
   return (
     <div>
       <p>
-        {invoice.number} · {invoice.outstanding_total} {invoice.currency}
+        {invoice.number} ·{" "}
+        {t("netDueAmount", {
+          amount: settlementData.outstanding_total,
+          currency: invoice.currency,
+        })}
+      </p>
+      <p className="accounting-hint">
+        {t("maximumActualReceipt", {
+          amount: accountingAmount(remainingReceipt),
+          currency: invoice.currency,
+        })}
       </p>
       <p className="accounting-hint">{t("paymentHint")}</p>
       <form
@@ -443,10 +467,7 @@ function CustomerPaymentForm({
             onChange={(e) => setReference(e.target.value)}
           />
         </Field>
-        <Button
-          type="submit"
-          disabled={busy || invoice.outstanding_total === "0.00"}
-        >
+        <Button type="submit" disabled={busy || remainingReceipt <= 0n}>
           {t("savePayment")}
         </Button>
       </form>
@@ -516,6 +537,8 @@ export function AccountingPage() {
   const [creditInvoice, setCreditInvoice] = useState<AccountingInvoice | null>(
     null,
   );
+  const [settlementInvoice, setSettlementInvoice] =
+    useState<AccountingInvoice | null>(null);
   const [saved, setSaved] = useState(false);
   const [snapshot, setSnapshot] = useState<AccountingExport | null>(null);
   const [denied, setDenied] = useState(false);
@@ -588,6 +611,7 @@ export function AccountingPage() {
             setRegister(false);
             setPayment(null);
             setCreditInvoice(null);
+            setSettlementInvoice(null);
             setDenied(false);
           })()
         }
@@ -737,7 +761,13 @@ export function AccountingPage() {
                 <dd>
                   {i.paid_total} {i.currency}
                 </dd>
-                <dt>{t("outstanding")}</dt>
+                <dt>
+                  {t(
+                    i.kind === "customer_invoice"
+                      ? "originalInvoiceOutstanding"
+                      : "outstanding",
+                  )}
+                </dt>
                 <dd>
                   {i.outstanding_total} {i.currency}
                 </dd>
@@ -745,7 +775,13 @@ export function AccountingPage() {
                 <dd>{i.issued_on}</dd>
                 <dt>{t("due")}</dt>
                 <dd>{i.due_on}</dd>
-                <dt>{t("status")}</dt>
+                <dt>
+                  {t(
+                    i.kind === "customer_invoice"
+                      ? "originalInvoiceStatus"
+                      : "status",
+                  )}
+                </dt>
                 <dd>
                   {t(
                     i.status !== "paid"
@@ -764,6 +800,14 @@ export function AccountingPage() {
                 >
                   {t("document")}
                 </Button>
+                {i.kind === "customer_invoice" && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setSettlementInvoice(i)}
+                  >
+                    {t("customerSettlement")}
+                  </Button>
+                )}
                 {i.kind === "customer_invoice" &&
                   access.data.can_manage_customer_invoices && (
                     <>
@@ -826,6 +870,23 @@ export function AccountingPage() {
           <CustomerInvoiceForm
             actor={actor}
             onDone={complete}
+            onDenied={() => setDenied(true)}
+          />
+        )}
+      </Dialog>
+      <Dialog
+        open={Boolean(settlementInvoice) && sourceAllowed}
+        onOpenChange={(open) => {
+          if (!open) setSettlementInvoice(null);
+        }}
+        title={t("customerSettlement")}
+        description={t("customerSettlementHint")}
+      >
+        {settlementInvoice && sourceAllowed && (
+          <CustomerSettlementPanel
+            key={settlementInvoice.id}
+            actor={actor}
+            invoice={settlementInvoice}
             onDenied={() => setDenied(true)}
           />
         )}

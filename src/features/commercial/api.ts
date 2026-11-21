@@ -14,6 +14,7 @@ import {
   invoiceSeriesOptionsSchema,
   invoiceSeriesRecordsSchema,
 } from "./invoice-series-schema";
+import { invoiceSeriesCorrectionsSchema } from "./invoice-series-correction-schema";
 import type {
   CommercialAccess,
   CommercialPerson,
@@ -414,6 +415,29 @@ export const invoiceSeriesOptionsQuery = (actor: string, claimId: string) =>
       });
       if (error) throw error;
       return invoiceSeriesOptionsSchema.parse(data);
+    },
+    retry: false,
+  });
+
+export const invoiceSeriesCorrectionsQuery = (
+  actor: string,
+  claimId: string | null,
+  all: boolean,
+) =>
+  queryOptions({
+    queryKey: [
+      ...commercialKeys.finance(actor),
+      "invoice-series-corrections",
+      claimId,
+      all,
+    ],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_series_corrections", {
+        p_claim_id: claimId,
+        p_all: all,
+      });
+      if (error) throw error;
+      return invoiceSeriesCorrectionsSchema.parse(data);
     },
     retry: false,
   });

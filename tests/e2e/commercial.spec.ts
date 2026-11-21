@@ -2,7 +2,7 @@
  * Browser workflows for executed-contract evidence, original currencies and invoice/payment states.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
-import {expect, type Page, test} from "@playwright/test";
+import {expect, type Browser, type Page, test, type TestInfo} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {createHash, randomUUID} from "node:crypto";
@@ -887,10 +887,15 @@ test("a scanned exceptional invoice can be submitted and downloaded through the 
     }
 });
 
-test("a closing invoice credits two paid interim invoices in the same series", async ({
-    page,
-    browser,
-}, testInfo) => {
+test("a closing invoice credits two paid interim invoices in the same series", async ({page, browser}, testInfo) => {
+    await checkInvoiceSeries(page, browser, testInfo, false);
+});
+
+test("an invoice-series overpayment is acknowledged and settled with separately recorded repayments", async ({page, browser}, testInfo) => {
+    await checkInvoiceSeries(page, browser, testInfo, true);
+});
+
+async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestInfo, overpayment: boolean) {
     test.setTimeout(180_000);
     const lecturer = await account("lecturer", "series-lecturer");
     const administrator = await account("admin", "series-finance");
@@ -1029,6 +1034,89 @@ test("a closing invoice credits two paid interim invoices in the same series", a
         await pay(secondNumber, "59.75");
 
         await finishAcceptedJob(job, 2, "2035-05-17T08:00:00Z");
+        if (overpayment) {
+            const postedDate = DateTime.utc().minus({days: 1}).toISODate()!;
+            const managerApi = await actor(administrator);
+            const lecturerApi = await actor(lecturer);
+            await openSeries();
+            await managementDialog.locator("summary").filter({hasText: /^Überzahlung zur Prüfung vorlegen$/}).click();
+            const proposal = managementDialog.getByRole("group", {name: "Überzahlung zur Prüfung vorlegen", exact: true});
+            await proposal.getByLabel("Geprüfter Gesamtanspruch (EUR)", {exact: true}).fill("75");
+            await proposal.getByLabel("Vereinbarte Fälligkeit", {exact: true}).fill(dueOn);
+            await proposal.getByLabel("Prüfnotiz (mindestens 10 Zeichen)", {exact: true})
+                .fill("Fiktive Prüfung der Überzahlung und der erfassten Abschlagszahlungen.");
+            await expect(proposal.getByText(/Saldo nach Abschlägen: [-−]35,00\s*€/)).toBeVisible();
+            const proposed = financePage.waitForResponse((response) =>
+                new URL(response.url()).pathname === "/rest/v1/rpc/propose_invoice_series_correction" &&
+                response.request().method() === "POST");
+            await proposal.getByRole("button", {name: "Korrektur vorlegen", exact: true}).click();
+            const proposalResponse = await proposed;
+            expect(proposalResponse.status(), await proposalResponse.text()).toBe(200);
+            const correctionId = await proposalResponse.json();
+
+            await page.goto("/finance");
+            const card = page.locator("section.invoice-review-request-list").filter({
+                has: page.getByRole("heading", {name: "Korrektur überzahlter Abschläge", exact: true}),
+            }).locator("article").filter({hasText: job.title});
+            await expect(card.getByText("Bestätigung ausstehend", {exact: true})).toBeVisible();
+            await card.getByText("Verrechnete Zahlungsbelege", {exact: true}).click();
+            await expect(card.getByText(new RegExp(firstNumber + ".*50,25"))).toBeVisible();
+            await expect(card.getByText(new RegExp(secondNumber + ".*59,75"))).toBeVisible();
+            const confirm = card.getByRole("button", {name: "Korrektur bestätigen", exact: true});
+            await expect(confirm).toBeDisabled();
+            await card.getByRole("checkbox", {name: /Ich habe Vertragsfassung/}).check();
+            await confirm.click();
+            await expect(card.getByText("Bestätigt · Rückzahlung offen", {exact: true})).toBeVisible();
+
+            const refundInputs = () => managementDialog.getByRole("group", {name: "Rückzahlungseingang erfassen", exact: true});
+            const registerReceipt = async (amount: string, reference: string) => {
+                const fields = refundInputs();
+                await fields.getByLabel("Geprüfter Betrag (EUR)", {exact: true}).fill(amount);
+                await fields.getByLabel("Eingangsdatum", {exact: true}).fill(postedDate);
+                await fields.getByLabel("Referenz des Zahlungseingangs", {exact: true}).fill(reference);
+                const receipt = financePage.waitForResponse((response) =>
+                    new URL(response.url()).pathname === "/rest/v1/rpc/record_invoice_series_repayment" &&
+                    response.request().method() === "POST");
+                await fields.getByRole("button", {name: "Rückzahlungseingang erfassen", exact: true}).click();
+                const response = await receipt;
+                expect(response.status(), await response.text()).toBe(200);
+                return await response.json();
+            };
+            await openSeries();
+            const firstReceipt = await registerReceipt("20", `R-${tag}-1`);
+            await expect(managementDialog.getByText(/^15,00\s*€$/)).toBeVisible();
+            const lastReceipt = await registerReceipt("15", `R-${tag}-2`);
+            await expect(managementDialog.getByText("Rückzahlung vollständig erfasst", {exact: true})).toBeVisible();
+            await managementDialog.getByText("Verrechnete Zahlungsbelege", {exact: true}).click();
+            const download = financePage.waitForEvent("download");
+            await managementDialog.getByRole("button", {name: "Korrekturbeleg als CSV", exact: true}).click();
+            const saved = await download;
+            expect(await saved.failure()).toBeNull();
+            const csv = await readFile((await saved.path())!, "utf8");
+            expect(csv).toContain(firstNumber);
+            expect(csv).toContain(lastReceipt);
+            expect(csv).toContain(postedDate);
+
+            await page.reload();
+            await expect(card.getByText("Rückzahlung vollständig erfasst", {exact: true})).toBeVisible();
+            const retained = await lecturerApi.rpc("invoice_series_corrections", {p_claim_id: null, p_all: false});
+            expect(retained.error).toBeNull();
+            expect(retained.data.entries).toEqual([expect.objectContaining({
+                id: correctionId, state: "settled", balance: -35, credited: 110, repaid: 35, outstanding: 0,
+                repayments: expect.arrayContaining([
+                    expect.objectContaining({id: firstReceipt, amount: 20, received_on: postedDate}),
+                    expect.objectContaining({id: lastReceipt, amount: 15, received_on: postedDate}),
+                ]),
+            })]);
+            const earlier = await managerApi.rpc("invoice_records", {p_all: true});
+            expect(earlier.error).toBeNull();
+            expect(earlier.data.filter((invoice: {id: string}) => [firstInvoice, secondInvoice].includes(invoice.id)))
+                .toEqual(expect.arrayContaining([
+                    expect.objectContaining({id: firstInvoice, status: "paid", total_amount: 50.25, paid_amount: 50.25}),
+                    expect.objectContaining({id: secondInvoice, status: "paid", total_amount: 59.75, paid_amount: 59.75}),
+                ]));
+            return;
+        }
         const closingApproval = await approve("final", "230");
         const closingInvoice = await submit("final", closingNumber, /Rechnungsbetrag: 120,00\s*€/);
         const lecturerApi = await actor(lecturer);
@@ -1054,4 +1142,4 @@ test("a closing invoice credits two paid interim invoices in the same series", a
     } finally {
         await financeContext.close();
     }
-});
+}
