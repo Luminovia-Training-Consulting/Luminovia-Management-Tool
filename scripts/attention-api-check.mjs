@@ -9,12 +9,16 @@ await withApiFixture(
         const owner = await actor("attention-owner", "lecturer"),
             peer = await actor("attention-peer", "lecturer"),
             admin = await actor("attention-admin", "admin"),
-            users = [owner.id, peer.id, admin.id];
+            users = [owner.id, peer.id, admin.id],
+            room = randomUUID();
         defer(async () => {
             await checked(
                 service.from("notifications").delete().in("user_id", users),
                 "Remove only own attention notices",
             );
+            await sql(`delete from public.messages where room_id='${room}';
+              delete from public.chat_members where room_id='${room}';
+              delete from public.chat_rooms where id='${room}';`);
         });
         const preferences = async (who) =>
             checked(
@@ -121,17 +125,37 @@ await withApiFixture(
             kind: ["claim_confirmed", "claim_cancelled", "contract_available"][i],
             resource_id: randomUUID(),
         }));
-        const optional = Array.from({length: 17}, () => ({
+        // Keep real chat membership and message visibility in the quiet-hours path.
+        await checked(service.from("chat_rooms").insert({
+            id: room, title: "Fictional attention room", kind: "topic", owner_id: peer.id,
+        }));
+        await checked(service.from("chat_members").insert(
+            [owner.id, peer.id].map((user_id) => ({room_id: room, user_id})),
+        ));
+        const messages = Array.from({length: 18}, () => ({
+            id: randomUUID(), room_id: room, sender_id: peer.id,
+            client_id: randomUUID(), request_hash: "fictional-attention-resource",
+            body: "Fictional chat update",
+        }));
+        await checked(service.from("messages").insert(messages));
+        const optional = messages.slice(0, -1).map(({id}) => ({
                 id: randomUUID(),
                 user_id: owner.id,
                 kind: "chat_message",
-                resource_id: randomUUID(),
+                resource_id: id,
             })),
+            unavailable = randomUUID(),
             foreign = randomUUID();
         await checked(
             service.from("notifications").insert([
                 ...optional,
                 ...critical,
+                {
+                    id: unavailable,
+                    user_id: owner.id,
+                    kind: "chat_message",
+                    resource_id: randomUUID(),
+                },
                 {
                     id: foreign,
                     user_id: peer.id,
@@ -150,7 +174,9 @@ await withApiFixture(
         assert.equal(inbox.unread_count, 20);
         assert.equal(inbox.items.length, 20);
         assert.ok(
-            inbox.items.every((item) => item.read_at === null && item.id !== foreign),
+            inbox.items.every((item) =>
+                item.read_at === null && item.id !== foreign && item.id !== unavailable,
+            ),
         );
         assert.deepEqual(
             new Set(inbox.items.map((item) => item.id)),
@@ -227,9 +253,9 @@ await withApiFixture(
             service.from("notifications").insert({
                 user_id: owner.id,
                 kind: "chat_message",
-                resource_id: randomUUID(),
+                resource_id: messages.at(-1).id,
             }),
-            "Disabled legacy optional category remains independent",
+            "Disabled legacy category suppresses an otherwise authorized message",
         );
         assert.equal(
             (
