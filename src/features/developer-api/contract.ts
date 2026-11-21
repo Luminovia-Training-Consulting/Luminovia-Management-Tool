@@ -1,4 +1,8 @@
 import {
+  searchKinds,
+  unifiedSearchPageSchema,
+} from "../search/unified-schema.ts";
+import {
   internalMailDownload,
   internalMailRead,
 } from "./academy-mail-contract.ts";
@@ -128,6 +132,15 @@ const boolean = { type: "boolean" };
 const version = { type: "integer", minimum: 0 };
 const text = { type: "string" };
 const date = { type: "string", format: "date" };
+const managedProfileFields = {
+  display_name: { ...text, maxLength: 120 },
+  locale: { enum: ["de", "en"] },
+  time_zone: {
+    ...text,
+    description:
+      "Time zone name recognized by the server, such as Europe/Berlin.",
+  },
+};
 const operationsPeriod = { p_from: date, p_until: date };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
@@ -820,6 +833,45 @@ const jobViewMutation = (
 });
 
 const nativePaths = {
+  "/rest/v1/rpc/managed_profile": rpc(
+    "native_managed_profile",
+    "Accounts",
+    "Read the editable fields of a subordinate account",
+    "Requires current account-management authority over the target, even if the target account is inactive. Private contact fields, authentication data and role changes are outside this operation.",
+    { p_user_id: uuid },
+    object(managedProfileFields),
+  ),
+  "/rest/v1/rpc/save_managed_profile": rpc(
+    "native_save_managed_profile",
+    "Accounts",
+    "Update the editable fields of a subordinate account",
+    "Send the three new fields and the three previously read values. The operation trims the new display name, validates the time zone, records a privacy-safe audit entry and rejects a stale snapshot with 40001.",
+    {
+      p_user_id: uuid,
+      p_payload: object({
+        ...managedProfileFields,
+        display_name: { ...managedProfileFields.display_name, minLength: 1 },
+      }),
+      p_expected: object(managedProfileFields),
+    },
+    object(managedProfileFields),
+  ),
+  "/rest/v1/rpc/unified_search": rpc(
+    "native_unified_search",
+    "Search",
+    "Search records visible to the signed-in account",
+    "Search text is trimmed and matched literally. Use an empty kind to search all applicable categories. Standalone learners can search their permitted courses and chats. Supply the three next_cursor fields together for pagination, or omit all three for the first page.",
+    {
+      p_query: { ...text, minLength: 2, maxLength: 100 },
+      p_kind: { enum: ["", ...searchKinds], default: "" },
+      p_after_kind: { enum: [...searchKinds, null] },
+      p_after_title: { type: ["string", "null"], maxLength: 1000 },
+      p_after_id: nullableUuid,
+      p_limit: { type: "integer", minimum: 1, maximum: 80, default: 40 },
+    },
+    z.toJSONSchema(unifiedSearchPageSchema),
+    ["p_kind", "p_after_kind", "p_after_title", "p_after_id", "p_limit"],
+  ),
   ...sessionPaths(false),
   ...internalMailRead,
   "/rest/v1/rpc/course_class_options": rpc(

@@ -1,7 +1,14 @@
 /** Disposable PostgreSQL replay: actual resource ACLs, pagination and revocation. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+
+const searchResponse = z.fromJSONSchema(
+    portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/unified_search"]
+        .post.responses["200"].content["application/json"].schema,
+);
 
 await withTestDatabase("unified_search", async ({sql, actor}) => {
     const [owner, peer, admin, learner] = Array.from({length: 4}, randomUUID);
@@ -15,13 +22,13 @@ await withTestDatabase("unified_search", async ({sql, actor}) => {
         cursor = null,
         aal = "aal1",
     ) =>
-        JSON.parse(
+        searchResponse.parse(JSON.parse(
             await actor(
                 who,
                 `select public.unified_search(${q(text)},${q(kind)},${cursor ? q(cursor.kind) : "null"},${cursor ? q(cursor.title) : "null"},${cursor ? q(cursor.id) : "null"},40)`,
                 aal,
             ),
-        );
+        ));
     const [ownFile, foreignFile, room, msg, task, template, run, otherRun] =
         Array.from({length: 8}, randomUUID);
     await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)values(${q(ownFile)},${q(owner)},${q(owner)},'personal','material','Needle file ä %_&?#.pdf','application/pdf',1,'clean',${q(randomUUID())}),(${q(foreignFile)},${q(peer)},${q(peer)},'personal','material','Needle private peer.pdf','application/pdf',1,'clean',${q(randomUUID())});
@@ -74,12 +81,12 @@ await withTestDatabase("unified_search", async ({sql, actor}) => {
     const other = await search(peer, "Needle", "chats");
     assert.ok(other.items.some((row) => row.id === msg));
     assert.ok(other.items.some((row) => row.id === visibleMessage));
-    const singlePage = JSON.parse(
+    const singlePage = searchResponse.parse(JSON.parse(
         await actor(
             owner,
             "select public.unified_search('Needle','chats',null,null,null,1)",
         ),
-    );
+    ));
     assert.equal(singlePage.items.length, 1);
     assert.equal(singlePage.items[0].id, visibleMessage);
     assert.equal(singlePage.has_more, false);

@@ -6,7 +6,8 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { PortalSearch } from "./search";
-import { unifiedSearchPageSchema, unifiedSearchQuery } from "./unified-api";
+import { unifiedSearchQuery } from "./unified-api";
+import { unifiedSearchPageSchema } from "./unified-schema";
 
 const state = vi.hoisted(() => ({ rpc: vi.fn(), actor: "actor-a" }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));

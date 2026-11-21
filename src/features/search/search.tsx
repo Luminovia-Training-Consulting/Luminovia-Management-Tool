@@ -11,7 +11,8 @@ import {
   Loading,
   PageHeading,
 } from "../../components/common";
-import { searchKinds, unifiedSearchQuery } from "./unified-api";
+import { unifiedSearchQuery } from "./unified-api";
+import { searchKinds } from "./unified-schema";
 import "./unified-i18n";
 import "./unified.css";
 

@@ -1,7 +1,16 @@
 /** Actual scoped profile-edit RPC checks: hierarchy, privacy, concurrency and validation. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+
+const {paths} = portalOpenApi("https://portal.example.invalid");
+const readProfile = paths["/rest/v1/rpc/managed_profile"].post;
+const writeProfile = paths["/rest/v1/rpc/save_managed_profile"].post;
+const readResponse = z.fromJSONSchema(readProfile.responses["200"].content["application/json"].schema);
+const writeResponse = z.fromJSONSchema(writeProfile.responses["200"].content["application/json"].schema);
+const writeRequest = z.fromJSONSchema(writeProfile.requestBody.content["application/json"].schema);
 
 await withTestDatabase("managed_profile", async ({sql, actor}) => {
     const admin = randomUUID(),
@@ -12,7 +21,9 @@ await withTestDatabase("managed_profile", async ({sql, actor}) => {
         `insert into auth.users(id,email) values${[admin, manager, lecturer, owner].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer'),('${owner}','owner');update public.profiles set display_name='Fictional person',phone='private'`,
     );
     const read = (who, id) =>
-        actor(who, `select public.managed_profile('${id}')`).then(JSON.parse);
+        actor(who, `select public.managed_profile('${id}')`)
+            .then(JSON.parse)
+            .then((body) => readResponse.parse(body));
     const save = (who, id, payload, expected) =>
         actor(
             who,
@@ -29,7 +40,11 @@ await withTestDatabase("managed_profile", async ({sql, actor}) => {
         locale: "en",
         time_zone: "Australia/Brisbane",
     };
-    await save(manager, lecturer, values, old);
+    writeRequest.parse({p_user_id: lecturer, p_payload: values, p_expected: old});
+    assert.deepEqual(
+        writeResponse.parse(JSON.parse(await save(manager, lecturer, values, old))),
+        values,
+    );
     assert.deepEqual(await read(admin, lecturer), values);
     await assert.rejects(
         save(manager, lecturer, {...values, display_name: "Stale"}, old),
