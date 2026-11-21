@@ -8,6 +8,7 @@ import {ErrorState, Field, Loading, Notice} from "../../components/common";
 import {requireOnline, useOnline} from "../../lib/online";
 import {db} from "../../lib/supabase";
 import {commercialKeys, invoiceReviewCandidatesQuery, invoiceReviewCasesQuery,} from "./api";
+import "./i18n";
 import type {InvoiceReviewCandidate, InvoiceReviewCase} from "./types";
 
 /** Translate the closed database reason enum without rendering provider/database messages. */
@@ -159,9 +160,10 @@ export function InvoiceReviewQueue({actor}: { actor: string }) {
                   rows={3}
                   maxLength={1000}
                   value={note}
-                  onChange={(event) =>
-                      setNotes((current) => ({...current, [review.id]: event.currentTarget.value}))
-                  }
+                  onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      setNotes((current) => ({...current, [review.id]: value}));
+                  }}
               />
                         </Field>
                         <Button

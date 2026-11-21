@@ -383,7 +383,7 @@ it("the Files upload dialog never loads jobs for browsing/personal uploads and c
             expect.any(Function),
         ),
     );
-    expect(state.from).not.toHaveBeenCalled();
+    expect(state.from.mock.calls).toEqual([["user_roles"]]);
 });
 it("topic group creation does not request offers and participant creation submits the real job binding after course validation", async () => {
     mockPicker();

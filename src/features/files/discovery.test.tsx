@@ -2,6 +2,7 @@ import {act, cleanup, fireEvent, render, screen, waitFor, within,} from "@testin
 import userEvent from "@testing-library/user-event";
 import {focusManager, QueryClient, QueryClientProvider,} from "@tanstack/react-query";
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
+import {MemoryRouter} from "react-router-dom";
 import i18n from "../../lib/i18n";
 import {documentDiscoveryQuery} from "./discovery-api";
 import {FilesPage, JobDocuments, SubjectDocuments} from "./files";
@@ -30,6 +31,7 @@ vi.mock("../../lib/queries", () => ({
         queryFn: async () => [],
     }),
     jobsQuery: {queryKey: ["jobs"], queryFn: async () => []},
+    userRolesQuery: () => ({queryKey: ["user-roles"], queryFn: async () => ["lecturer"]}),
 }));
 vi.mock("../../lib/supabase", () => ({
     db: () => ({
@@ -114,7 +116,7 @@ function mount(view = <FilesPage/>) {
     return {
         client,
         ...render(
-            <QueryClientProvider client={client}>{view}</QueryClientProvider>,
+            <QueryClientProvider client={client}><MemoryRouter>{view}</MemoryRouter></QueryClientProvider>,
         ),
     };
 }
@@ -147,7 +149,7 @@ it("finds an authorized old file beyond the actual 1000-row list-response contra
     clients.push(client);
     render(
         <QueryClientProvider client={client}>
-            <FilesPage/>
+            <MemoryRouter><FilesPage/></MemoryRouter>
         </QueryClientProvider>,
     );
     expect(
@@ -310,7 +312,7 @@ it("retains stale drafts and disables offline organisation changes", async () =>
     state.online = false;
     view.rerender(
         <QueryClientProvider client={clients[0]}>
-            <FilesPage/>
+            <MemoryRouter><FilesPage/></MemoryRouter>
         </QueryClientProvider>,
     );
     expect(
