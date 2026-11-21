@@ -175,14 +175,22 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         ).error?.code,
         "22023",
     );
-    await checked(
-        service.from("notifications").insert({
-            user_id: owner.id,
-            kind: "chat_message",
-            resource_id: randomUUID(),
-        }),
-        "Insert optional disabled event",
+    room = await checked(
+        owner.client.rpc("create_dm", {p_user_id: peer.id}),
+        "Create actual private chat",
     );
+    const suppressedMessage = await checked(
+        peer.client.rpc("send_message", {
+            p_room_id: room,
+            p_body: "Fictional optional message after opting out",
+            p_client_id: randomUUID(),
+        }),
+        "Send a current event to the opted-out recipient",
+    );
+    assert.equal(await sql(
+        `select count(*) from public.notifications where kind='chat_message'
+           and user_id=${q(owner.id)} and resource_id=${q(suppressedMessage)}`,
+    ), "0", "Notice suppression applies even to a real current message");
     assert.ok(
         !(
             await checked(
@@ -191,11 +199,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
             )
         ).items.some((item) => item.kind === "chat_message"),
     );
-    room = await checked(
-        owner.client.rpc("create_dm", {p_user_id: peer.id}),
-        "Create actual private chat",
-    );
-    await checked(
+    const message = await checked(
         owner.client.rpc("send_message", {
             p_room_id: room,
             p_body: "Fictional notification message",
@@ -221,8 +225,11 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
             "Revalidate old chat notification",
         )
     ).items.find((item) => item.id === messageNotice.id);
-    assert.equal(revoked.href, null);
-    assert.equal(revoked.title, "");
+    assert.equal(revoked, undefined);
+    assert.equal(await sql(
+        `select count(*) from public.notifications where id=${q(messageNotice.id)}
+           and user_id=${q(peer.id)} and resource_id=${q(message)}`,
+    ), "1", "The inbox hides the revoked receipt while its row remains retained");
     assert.ok(
         Number.isInteger(
             await checked(

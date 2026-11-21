@@ -127,6 +127,8 @@ await withApiFixture(async ({actor, passwordOnly, sql, defer, checked}) => {
     );
     const firstNotice = await notification(first);
     assert.ok(firstNotice);
+    const visibleNotice = (await inbox()).items.find((item) => item.id === firstNotice.id);
+    assert.equal(visibleNotice?.href, `/chats?room=${room}`);
     pass(
         "actual Auth/current-member picker, structured send and exact retry binding",
     );
@@ -351,7 +353,10 @@ await withApiFixture(async ({actor, passwordOnly, sql, defer, checked}) => {
     );
     assert.equal(staleNotice, undefined);
     assert.equal(
-        await sql(`select count(*) from public.notifications where id='${firstNotice.id}'`),
+        await sql(
+            `select count(*) from public.notifications where id=${q(firstNotice.id)}
+               and user_id=${q(target.id)} and resource_id=${q(first)}`,
+        ),
         "1",
         "The source notice remains retained while its removed chat target is hidden",
     );
