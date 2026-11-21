@@ -4,6 +4,12 @@
   overflow-x: auto;
 }
 
+.academy-api-explorer .swagger-ui :is(.btn.execute, .btn.btn-clear) {
+  min-width: max-content;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
 @media (max-width: 480px) {
   .academy-api-explorer .swagger-ui .wrapper {
     padding-inline: 0;
@@ -21,16 +27,7 @@
 
   .academy-api-explorer
     .swagger-ui
-    :is(.execute-wrapper, .opblock-body > .btn-group) {
+    :is(.execute-wrapper, .opblock-body .btn-group) {
     padding: 12px;
-  }
-
-  .academy-api-explorer
-    .swagger-ui
-    :is(.execute-wrapper, .opblock-body > .btn-group)
-    .btn {
-    min-width: 0;
-    padding-inline: 12px;
-    white-space: nowrap;
   }
 }
