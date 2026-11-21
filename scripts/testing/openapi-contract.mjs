@@ -10,6 +10,11 @@ export function rpcResponse(name) {
     return parseResponse(operation, "200");
 }
 
+/** Verify parsed JSON from an internal Edge or RPC operation against its published status schema. */
+export function portalJsonResponse(path, status, payload) {
+    return parseResponse(paths[path].post, String(status))(JSON.stringify(payload));
+}
+
 /** Account HTTP operations forward native projections or confirmed worker receipts. */
 export function accountResponse(path, method, status = "200") {
     return parseResponse(accountOpenApi.paths[path][method], status);

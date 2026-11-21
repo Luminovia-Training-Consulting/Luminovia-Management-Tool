@@ -45,6 +45,23 @@ const metadataFields = {
 export type PortalDocument = z.infer<z.ZodObject<typeof metadataFields>> &
   Partial<z.infer<z.ZodObject<typeof personalFields>>>;
 
+/** General uploads return row metadata. Course-chat receipts omit the retry fields. */
+export const cleanUploadReceipt = z.strictObject({
+  document: z.strictObject({
+    ...metadataFields,
+    kind: documentKind,
+    size_bytes: z
+      .number()
+      .int()
+      .min(1)
+      .max(100 * 1024 * 1024),
+    status: z.literal("clean"),
+    current_version_id: id,
+    client_id: id.optional(),
+    message_only: z.boolean().optional(),
+  }),
+});
+
 export const documentCursorSchema = z.object({ at: instant, id });
 const discoveryRows = z.array(
   z.object({ ...metadataFields, ...personalFields }),

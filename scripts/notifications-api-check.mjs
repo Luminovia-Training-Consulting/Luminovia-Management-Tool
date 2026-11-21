@@ -4,6 +4,12 @@ import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {
+    attentionWireSchema,
+    inboxWireSchema,
+    notificationPreferencesSchema,
+    savedAttentionSchema,
+} from "../src/features/notifications/schema.ts";
 
 await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
     const owner = await actor("inbox-owner", "lecturer"),
@@ -59,10 +65,18 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         owner.client.rpc("notification_inbox", {p_limit: 20}),
         "Read actual notification page",
     );
+    inboxWireSchema.parse(page);
+    assert.equal(page.quiet_active, false);
+    assert.equal(Object.hasOwn(page, "attention_count"), false);
     assert.equal(page.items.length, 20);
     assert.equal(page.unread_count, 45);
     assert.ok(!page.items.some((item) => item.id === foreign));
     const last = page.items.at(-1);
+    const brokenCursor = await owner.client.rpc("notification_inbox", {
+        p_before_at: last.created_at,
+    });
+    assert.equal(brokenCursor.status, 400);
+    assert.equal(brokenCursor.error?.code, "22023");
     const next = await checked(
         owner.client.rpc("notification_inbox", {
             p_limit: 20,
@@ -71,6 +85,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         }),
         "Read stable next cursor",
     );
+    inboxWireSchema.parse(next);
     assert.equal(
         new Set([...page.items, ...next.items].map((item) => item.id)).size,
         40,
@@ -80,6 +95,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         p_ids: [rows[0].id, foreign],
         p_read: true,
     });
+    assert.equal(forged.status, 403);
     assert.equal(forged.error?.code, "42501");
     assert.equal(
         (
@@ -136,6 +152,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         owner.client.rpc("notification_preferences"),
         "Actual own defaults",
     );
+    notificationPreferencesSchema.parse(preferences);
     const payload = {
         chat: false,
         forum: false,
@@ -152,7 +169,10 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         ),
     );
     assert.equal(saves.filter((result) => !result.error).length, 1);
-    assert.equal(saves.find((result) => result.error)?.error.code, "PT409");
+    const conflict = saves.find((result) => result.error);
+    assert.equal(conflict?.status, 409);
+    assert.equal(conflict?.error.code, "PT409");
+    notificationPreferencesSchema.parse(saves.find((result) => !result.error).data);
     assert.equal(
         (
             await checked(
@@ -230,6 +250,31 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         `select count(*) from public.notifications where id=${q(messageNotice.id)}
            and user_id=${q(peer.id)} and resource_id=${q(message)}`,
     ), "1", "The inbox hides the revoked receipt while its row remains retained");
+    const initialAttention = attentionWireSchema.parse(
+        await checked(owner.client.rpc("attention_preferences"), "Read quiet-hours defaults"),
+    );
+    const utcHour = new Date(page.as_of).getUTCHours();
+    const hour = (delta) => `${String((utcHour + 24 + delta) % 24).padStart(2, "0")}:00`;
+    const quietWindow = {enabled: true, start_time: hour(-2), end_time: hour(3), time_zone: "UTC"};
+    const savedAttention = savedAttentionSchema.parse(await checked(
+        owner.client.rpc("save_attention_preferences", {
+            p_payload: quietWindow,
+            p_expected_version: initialAttention.version,
+        }),
+        "Save the active quiet-hours window through REST",
+    ));
+    assert.equal(savedAttention.version, initialAttention.version + 1);
+    const staleAttention = await owner.client.rpc("save_attention_preferences", {
+        p_payload: quietWindow,
+        p_expected_version: initialAttention.version,
+    });
+    assert.equal(staleAttention.status, 409);
+    assert.equal(staleAttention.error?.code, "PT409");
+    const quiet = inboxWireSchema.parse(
+        await checked(owner.client.rpc("notification_inbox"), "Read the quiet-mode wire projection"),
+    );
+    assert.equal(quiet.quiet_active, true);
+    assert.equal(quiet.attention_count, 0);
     assert.ok(
         Number.isInteger(
             await checked(

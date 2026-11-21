@@ -41,6 +41,15 @@ import {
   companyCourseOperationPaths,
 } from "./company-course-index-contract.ts";
 import { companyIntegrationScopes } from "../operations/company-integration-scopes.ts";
+import {
+  commonDocumentErrors,
+  documentGatewayError,
+  fileByteContent,
+  fileMediaTypes,
+  gatewayOriginHeader,
+  privateDownloadHeaders,
+  renderedDocumentErrors,
+} from "./document-transport-contract.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import {
   courseParticipationReportRequest,
@@ -103,16 +112,6 @@ const error = (description: string) => ({
 });
 const credentials = [{ apiKey: [], bearerAuth: [] }];
 const materialBytes = 10 * 1024 * 1024;
-const materialMime = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "text/plain",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-];
 const readAccess =
   "Requires an operator-enabled course profile for the exact installed release, an active or grace-period licence and current course authority. Licence grace permits reads only.";
 const writeAccess =
@@ -228,7 +227,7 @@ const materialUploadResult = record({
       room_id: nullable(uuid),
       job_id: nil,
       original_name: { ...string, minLength: 1, maxLength: 200 },
-      mime_type: { enum: materialMime },
+      mime_type: { enum: fileMediaTypes },
       size_bytes: { type: "integer", minimum: 1, maximum: materialBytes },
       status: { const: "clean" },
       current_version_id: uuid,
@@ -257,15 +256,6 @@ const materialUploadResult = record({
     ],
   },
 });
-function intakeError(description: string, codes: string[]) {
-  return {
-    description,
-    content: content(
-      record({ error: { enum: codes }, document_id: uuid }, ["error"]),
-    ),
-  };
-}
-
 const materialUpload = {
   post: {
     operationId: "uploadAcademyCourseMaterial",
@@ -299,10 +289,7 @@ const materialUpload = {
         schema: z.toJSONSchema(academyLogoVersion),
       },
       {
-        name: "Origin",
-        in: "header",
-        required: true,
-        schema: { ...string, format: "uri" },
+        ...gatewayOriginHeader,
         example: "https://academy.example.invalid",
       },
     ],
@@ -350,7 +337,7 @@ const materialUpload = {
               },
             ],
           },
-          encoding: { file: { contentType: materialMime.join(", ") } },
+          encoding: { file: { contentType: fileMediaTypes.join(", ") } },
         },
       },
     },
@@ -358,40 +345,37 @@ const materialUpload = {
       "200": ok({
         anyOf: [materialUploadResult, z.toJSONSchema(academyPublicLogo)],
       }),
-      "400": intakeError("Invalid request fields or multipart file", [
-        "invalid_request",
-      ]),
-      "401": intakeError("Authentication required", [
-        "authentication_required",
-      ]),
-      "403": intakeError(
+      ...commonDocumentErrors,
+      "403": documentGatewayError(
         "Origin, current course access, exam setting or licence denied",
         ["origin_not_allowed", "access_denied", "upload_not_allowed"],
       ),
-      "409": intakeError(
+      "409": documentGatewayError(
         "The same request was used for a different file or mode, or the version changed",
         ["idempotency_conflict", "version_superseded", "logo_changed"],
       ),
-      "413": intakeError("The file was empty or exceeded the allowed size", [
-        "file_size",
-      ]),
-      "415": intakeError("Unsupported or inconsistent file type", [
+      "413": documentGatewayError(
+        "The file was empty or exceeded the allowed size",
+        ["file_size"],
+      ),
+      "415": documentGatewayError("Unsupported or inconsistent file type", [
         "unsupported_type",
         "invalid_logo",
       ]),
-      "422": intakeError("The scanner rejected the file", ["scan_rejected"]),
-      "503": intakeError(
+      "422": documentGatewayError(
+        "The scanner rejected the file",
+        ["scan_rejected"],
+        true,
+      ),
+      "503": documentGatewayError(
         "Storage, scan or upload barrier could not be confirmed",
         ["deletion_unavailable", "scanner_unavailable", "upload_failed"],
+        true,
       ),
     },
   },
 };
 
-const examFileError = (description: string, codes: string[]) => ({
-  description,
-  content: content(record({ error: { enum: codes } })),
-});
 const withdrawalOperation = courseOperation(
   "withdrawAcademyExamPdf",
   "Withdraw a published exam PDF",
@@ -441,14 +425,7 @@ const courseDocumentDownload = {
     description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. To download scanned evidence, use attendance_evidence and the evidence ID from that register. The caller’s authority and facts are checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
-    parameters: [
-      {
-        name: "Origin",
-        in: "header",
-        required: true,
-        schema: { ...string, format: "uri" },
-      },
-    ],
+    parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
       content: content({
@@ -478,42 +455,13 @@ const courseDocumentDownload = {
       "200": {
         description:
           "Private course document, chat attachment or attendance report",
-        headers: {
-          "Cache-Control": { schema: string },
-          "Content-Disposition": { schema: string },
-        },
+        headers: privateDownloadHeaders,
         content: {
-          "application/pdf": { schema: { ...string, format: "binary" } },
-          ...Object.fromEntries(
-            materialMime
-              .filter((mime) => mime !== "application/pdf")
-              .map((mime) => [
-                mime,
-                { schema: { ...string, format: "binary" } },
-              ]),
-          ),
+          ...fileByteContent,
           "text/csv": { schema: string },
         },
       },
-      "400": examFileError("Invalid request", ["invalid_request"]),
-      "401": examFileError("Authentication required", [
-        "authentication_required",
-      ]),
-      "403": examFileError(
-        "Origin, current publication or course access denied",
-        [
-          "origin_not_allowed",
-          "document_unavailable",
-          "document_changed_or_revoked",
-        ],
-      ),
-      "422": examFileError("PDF font cannot represent a retained character", [
-        "unsupported_glyph",
-      ]),
-      "503": examFileError("PDF unavailable", [
-        "document_unavailable",
-        "document_integrity_failed",
-      ]),
+      ...renderedDocumentErrors,
     },
   },
 };

@@ -1411,9 +1411,38 @@ describe("documented Premium course and spending operations", () => {
       [
         {
           properties: {
-            kind: { enum: ["resource", "exam", "completion", "attendance"] },
+            kind: { enum: ["resource", "exam", "completion", "wiki_resource"] },
           },
           required: ["kind", "id"],
+        },
+        {
+          properties: {
+            kind: { const: "attendance" },
+            format: { const: "pdf" },
+          },
+          required: ["kind", "id"],
+        },
+        {
+          properties: {
+            kind: { const: "qualification_passport" },
+            locale: { enum: ["de", "en"] },
+          },
+          required: ["kind", "locale"],
+        },
+        {
+          properties: { kind: { const: "request_resource" } },
+          required: ["kind", "id", "request_id"],
+        },
+        {
+          properties: { kind: { const: "assignment_confirmation" } },
+          required: ["kind", "id"],
+        },
+        {
+          properties: {
+            kind: { const: "earnings_statement" },
+            all: { type: "boolean" },
+          },
+          required: ["kind", "from", "until"],
         },
         {
           properties: { kind: { const: "course_chat_attachment" } },
@@ -1426,6 +1455,34 @@ describe("documented Premium course and spending operations", () => {
       ],
     );
     expect(
+      paths["/functions/v1/course-documents"].post.responses,
+    ).toMatchObject({
+      "200": {
+        headers: {
+          "Cache-Control": { schema: { const: "no-store, private" } },
+        },
+        content: { "text/plain": { schema: { format: "binary" } } },
+      },
+      "403": {
+        content: {
+          "application/json": {
+            schema: {
+              required: ["error"],
+              properties: {
+                error: {
+                  enum: [
+                    "origin_not_allowed",
+                    "document_unavailable",
+                    "document_changed_or_revoked",
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
       requestSchema("/rest/v1/rpc/send_course_chat_attachment").required,
     ).toEqual([
       "p_room_id",
@@ -1435,6 +1492,41 @@ describe("documented Premium course and spending operations", () => {
       "p_version_id",
     ]);
     expect(paths["/functions/v1/files"].post).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                properties: {
+                  document: {
+                    required: expect.arrayContaining([
+                      "id",
+                      "owner_id",
+                      "scope",
+                      "size_bytes",
+                      "status",
+                      "current_version_id",
+                    ]),
+                  },
+                },
+              },
+            },
+          },
+        },
+        "422": {
+          content: {
+            "application/json": {
+              schema: {
+                required: ["error"],
+                properties: {
+                  error: { enum: ["scan_rejected"] },
+                  document_id: { format: "uuid" },
+                },
+              },
+            },
+          },
+        },
+      },
       requestBody: {
         content: {
           "multipart/form-data": {

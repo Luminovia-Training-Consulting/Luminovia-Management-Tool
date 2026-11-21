@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {eventually, subscribeToRoom} from "./testing/realtime.mjs";
+import {setTimeout as delay} from "node:timers/promises";
+import {portalJsonResponse} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
     async ({actor, passwordOnly, checked, service, sql, defer, url}) => {
@@ -25,9 +28,44 @@ await withApiFixture(
             job = randomUUID(),
             claim = randomUUID(),
             contact = randomUUID();
-        let document;
+        let room;
         const users = [admin.id, teacher.id, learner.id, peer.id, client.id];
         defer(async () => {
+            if (room) {
+                await sql(
+                    `delete from public.messages where room_id = ${q(room)};
+                     delete from public.chat_members where room_id = ${q(room)};`,
+                );
+            }
+            await sql(`delete from private.course_resources where run_id = ${q(run)};`);
+            const uploads = await checked(
+                service.from("documents").select("id").in("owner_id", users),
+                "Read only documents owned by the course fixture",
+            );
+            for (const document of uploads) {
+                const versions = await checked(
+                    service
+                        .from("document_versions")
+                        .select("object_path")
+                        .eq("document_id", document.id),
+                );
+                const paths = versions.map((v) => v.object_path);
+                if (paths.length) {
+                    await checked(service.storage.from("portal-clean").remove(paths));
+                    await checked(service.storage.from("portal-quarantine").remove(paths));
+                }
+                await checked(
+                    service
+                        .from("documents")
+                        .update({current_version_id: null})
+                        .eq("id", document.id),
+                );
+                await checked(
+                    service.from("document_versions").delete().eq("document_id", document.id),
+                );
+                await checked(service.from("documents").delete().eq("id", document.id));
+            }
+            if (room) await sql(`delete from public.chat_rooms where id = ${q(room)};`);
             await sql(
                 `delete
            from private.company_premium_commands
@@ -56,9 +94,6 @@ await withApiFixture(
           delete
           from private.course_attendance
           where session_id = ${q(session)};
-          delete
-          from private.course_resources
-          where run_id = ${q(run)};
           delete
           from public.course_enrolments
           where course_run_id = ${q(run)};
@@ -90,30 +125,6 @@ await withApiFixture(
           from public.organisations
           where id = ${q(org)};`,
             );
-            if (document) {
-                const versions = await checked(
-                    service
-                        .from("document_versions")
-                        .select("object_path")
-                        .eq("document_id", document.id),
-                );
-                const paths = versions.map((v) => v.object_path);
-                await checked(service.storage.from("portal-clean").remove(paths));
-                await checked(service.storage.from("portal-quarantine").remove(paths));
-                await checked(
-                    service
-                        .from("documents")
-                        .update({current_version_id: null})
-                        .eq("id", document.id),
-                );
-                await checked(
-                    service
-                        .from("document_versions")
-                        .delete()
-                        .eq("document_id", document.id),
-                );
-                await checked(service.from("documents").delete().eq("id", document.id));
-            }
         });
         await sql(
             `insert into public.organisations(id, name)
@@ -240,7 +251,7 @@ await withApiFixture(
         });
         const body = await uploaded.json();
         assert.equal(uploaded.status, 200);
-        document = body.document;
+        const {document} = portalJsonResponse("/functions/v1/files", uploaded.status, body);
         assert.equal(document.status, "clean");
         const resource = (
             await action(admin, "resource_share", {
@@ -250,22 +261,50 @@ await withApiFixture(
             })
         ).id;
 
-        async function download(who, kind, id) {
+        async function download(who, kind, id, options = {}) {
             return await fetch(`${url}/functions/v1/course-documents`, {
                 method: "POST",
                 headers: {
                     ...(await headers(who)),
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({kind, id}),
+                body: JSON.stringify({ kind, id, ...options }),
                 signal: AbortSignal.timeout(30000),
             });
         }
 
         const material = await download(learner, "resource", resource);
         assert.equal(material.status, 200);
+        assert.equal(material.headers.get("cache-control"), "no-store, private");
+        assert.equal(material.headers.get("x-content-type-options"), "nosniff");
+        assert.match(material.headers.get("content-disposition"), /^attachment;/);
+        assert.match(material.headers.get("content-type"), /^text\/plain(?:;|$)/i);
         assert.deepEqual(new Uint8Array(await material.arrayBuffer()), bytes);
-        assert.equal((await download(client, "resource", resource)).status, 403);
+        const originDenial = await fetch(`${url}/functions/v1/course-documents`, {
+            method: "POST",
+            headers: {
+                ...(await headers(learner)),
+                Origin: "https://untrusted.example.invalid",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({kind: "resource", id: resource}),
+            signal: AbortSignal.timeout(30_000),
+        });
+        assert.equal(originDenial.status, 403);
+        assert.deepEqual(
+            portalJsonResponse("/functions/v1/course-documents", originDenial.status, await originDenial.json()),
+            {error: "origin_not_allowed"},
+        );
+        const clientDenial = await download(client, "resource", resource);
+        assert.equal(clientDenial.status, 403);
+        assert.deepEqual(
+            portalJsonResponse("/functions/v1/course-documents", clientDenial.status, await clientDenial.json()),
+            {error: "document_unavailable"},
+        );
+        assert.equal(
+            (await download(learner, "resource", resource, { unknown: true })).status,
+            400,
+        );
         assert.equal((await download(peer, "resource", resource)).status, 403);
         const replacement = new FormData();
         replacement.set(
@@ -294,8 +333,10 @@ await withApiFixture(
         const stillReviewed = await download(learner, "resource", resource);
         assert.equal(stillReviewed.status, 200);
         assert.deepEqual(new Uint8Array(await stillReviewed.arrayBuffer()), bytes);
-        const directDocument = await learner.client.from("documents")
-            .select("id").eq("id", document.id);
+        const directDocument = await learner.client
+            .from("documents")
+            .select("id")
+            .eq("id", document.id);
         assert.equal(directDocument.status, 403);
         assert.equal(directDocument.error?.code, "42501");
         assert.equal(directDocument.data, null);
@@ -388,6 +429,117 @@ await withApiFixture(
             (await download(learner, "completion", completion)).status,
             403,
         );
+        room = await checked(
+            admin.client.rpc("create_chat_group", {
+                p_title: "Fictional participant transport",
+                p_member_ids: [],
+                p_kind: "participant_course",
+                p_job_id: job,
+            }),
+            "Open an actual Premium participant room",
+        );
+        assert.ok(room);
+        assert.ok(
+            (
+                await checked(
+                    learner.client.rpc("course_chat_rooms", { p_run_id: run }),
+                )
+            ).some((entry) => entry.id === room),
+        );
+        const teacherEvents = [],
+            learnerEvents = [],
+            peerEvents = [];
+        for (const [who, events] of [
+            [teacher, teacherEvents],
+            [learner, learnerEvents],
+            [peer, peerEvents],
+        ]) {
+            const { session } = await checked(who.client.auth.getSession());
+            await who.client.realtime.setAuth(session.access_token);
+            await subscribeToRoom(
+                who.client,
+                room,
+                "course_chat_activity",
+                ["INSERT", "UPDATE"],
+                events,
+            );
+        }
+        const attachmentForm = new FormData();
+        attachmentForm.set(
+            "file",
+            new File([bytes], "Course-chat-note.txt", { type: "text/plain" }),
+        );
+        attachmentForm.set("scope", "room");
+        attachmentForm.set("kind", "chat");
+        attachmentForm.set("room_id", room);
+        attachmentForm.set("message_only", "true");
+        attachmentForm.set("course_chat", "true");
+        attachmentForm.set("client_id", randomUUID());
+        const attachmentUpload = await fetch(`${url}/functions/v1/files`, {
+            method: "POST",
+            headers: await headers(teacher),
+            body: attachmentForm,
+            signal: AbortSignal.timeout(90_000),
+        });
+        const attachmentReceipt = await attachmentUpload.json();
+        assert.equal(
+            attachmentUpload.status,
+            200,
+            JSON.stringify(attachmentReceipt),
+        );
+        const {document: attachment} = portalJsonResponse(
+            "/functions/v1/files", attachmentUpload.status, attachmentReceipt,
+        );
+        assert.equal(attachment.room_id, room);
+        assert.equal(
+            teacherEvents.length,
+            0,
+            "An unpublished draft emits no course activity",
+        );
+        const message = await checked(
+            teacher.client.rpc("send_course_chat_attachment", {
+                p_room_id: room,
+                p_body: "Fictional course note",
+                p_client_id: randomUUID(),
+                p_document_id: attachment.id,
+                p_version_id: attachment.current_version_id,
+            }),
+        );
+        await eventually(
+            () => teacherEvents.length === 1 && learnerEvents.length === 1,
+            "Teacher and enrolled learner receive the committed opaque update",
+        );
+        const firstActivity = teacherEvents[0];
+        assert.deepEqual(learnerEvents[0], firstActivity);
+        assert.deepEqual(Object.keys(firstActivity).sort(), [
+            "id",
+            "revision",
+            "room_id",
+        ]);
+        assert.equal(firstActivity.room_id, room);
+        assert.equal(peerEvents.length, 0);
+        const chatVersion = { version_id: attachment.current_version_id };
+        const publishedFile = await download(
+            learner,
+            "course_chat_attachment",
+            message,
+            chatVersion,
+        );
+        assert.equal(publishedFile.status, 200);
+        assert.deepEqual(new Uint8Array(await publishedFile.arrayBuffer()), bytes);
+        assert.equal(
+            (await download(peer, "course_chat_attachment", message, chatVersion))
+                .status,
+            403,
+        );
+        assert.equal(
+            (
+                await download(learner, "course_chat_attachment", message, {
+                    version_id: randomUUID(),
+                })
+            ).status,
+            403,
+        );
         await checked(
             admin.client.rpc("manage_course_enrolment", {
                 p_course_run_id: run,
@@ -396,8 +548,39 @@ await withApiFixture(
             }),
         );
         assert.equal((await download(learner, "resource", resource)).status, 403);
-        console.log(
-            "PASS: actual Auth/password-only authentication/REST/ClamAV/private Storage and exact Edge Unicode PDFs: shared client preparation/contact, immutable material version/receipt, notebook/Q&A isolation, verified attendance, eligible quiz and completion issuance, deterministic own document, authorized attendance report, explicit revocation and removed-enrolment denial.",
+        assert.equal(
+            (await download(learner, "course_chat_attachment", message, chatVersion))
+                .status,
+            403,
         );
+        assert.equal(
+            (await learner.client.rpc("course_chat_messages", { p_room_id: room }))
+                .error?.code,
+            "42501",
+        );
+        await checked(
+            teacher.client.rpc("send_course_chat_message", {
+                p_room_id: room,
+                p_body: "Fictional note sent after withdrawal",
+                p_client_id: randomUUID(),
+            }),
+        );
+        await eventually(
+            () =>
+                teacherEvents.some(
+                    (event) => event.revision !== firstActivity.revision,
+                ),
+            "Teacher's existing Realtime channel receives the next revision",
+        );
+        await delay(1200);
+        assert.deepEqual(
+            learnerEvents,
+            [firstActivity],
+            "The previously connected learner receives no new event",
+        );
+        assert.deepEqual(peerEvents, []);
     },
+);
+console.log(
+    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, protected Unicode PDFs, private attachments, opaque activity, and revocation of both existing live subscriptions and exact-version download rights.",
 );

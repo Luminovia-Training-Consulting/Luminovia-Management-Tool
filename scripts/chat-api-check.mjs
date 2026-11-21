@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {setTimeout as delay} from "node:timers/promises";
 import {createClient} from "@supabase/supabase-js";
+import { eventually, subscribeToRoom } from "./testing/realtime.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -65,50 +66,6 @@ async function fixture(index, role) {
     );
     await client.realtime.setAuth(auth.session.access_token);
     return {client, id: created.user.id};
-}
-
-/** Connects a real Realtime subscription for this identity and waits until it is ready. */
-async function subscribe(client, room, events, name) {
-    const channel = client
-        .channel(`qa-chat-${name}-${randomUUID()}`, {
-            config: {postgres_changes_options: {wait: true, timeout: 15000}},
-        })
-        .on(
-            "postgres_changes",
-            {
-                event: "INSERT",
-                schema: "public",
-                table: "messages",
-                filter: `room_id=eq.${room}`,
-            },
-            (payload) => events.push(payload.new),
-        );
-    await new Promise((resolve, reject) => {
-        const timeout = setTimeout(
-            () => reject(new Error("Actual chat Realtime subscription timeout")),
-            25_000,
-        );
-        channel.subscribe((status, error) => {
-            if (status === "SUBSCRIBED") {
-                clearTimeout(timeout);
-                resolve();
-            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-                clearTimeout(timeout);
-                reject(error ?? new Error(status));
-            }
-        });
-    });
-    return channel;
-}
-
-/** Bounds the wait for an observable event; a timeout remains a test failure. */
-async function eventually(predicate, label, ms = 10_000) {
-    const deadline = Date.now() + ms;
-    while (Date.now() < deadline) {
-        if (predicate()) return;
-        await delay(50);
-    }
-    assert.fail(label);
 }
 
 try {
@@ -311,9 +268,15 @@ try {
     const ownerEvents = [],
         memberEvents = [],
         outsiderEvents = [];
-    await subscribe(a.client, group, ownerEvents, "owner");
-    await subscribe(b.client, group, memberEvents, "member");
-    await subscribe(outsider.client, group, outsiderEvents, "outsider");
+    await subscribeToRoom(a.client, group, "messages", ["INSERT"], ownerEvents);
+    await subscribeToRoom(b.client, group, "messages", ["INSERT"], memberEvents);
+    await subscribeToRoom(
+        outsider.client,
+        group,
+        "messages",
+        ["INSERT"],
+        outsiderEvents,
+    );
     const visible = await checked(
         a.client.rpc("send_message", {
             p_room_id: group,

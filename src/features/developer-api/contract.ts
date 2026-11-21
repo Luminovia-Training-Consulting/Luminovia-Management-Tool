@@ -56,6 +56,16 @@ import {
 } from "../commercial/invoice-series-schema.ts";
 import { invoiceSeriesCorrectionsSchema } from "../commercial/invoice-series-correction-schema.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
+import {
+  commonDocumentErrors,
+  documentGatewayError,
+  fileByteContent,
+  fileMediaTypes,
+  gatewayOriginHeader,
+  privateDownloadHeaders,
+  renderedDocumentErrors,
+} from "./document-transport-contract.ts";
+import { cleanUploadReceipt } from "../files/schema.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { profileContracts } from "./profile-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
@@ -181,7 +191,6 @@ const object = (properties: Record<string, unknown>) => ({
   additionalProperties: false,
 });
 const json = (schema: unknown) => ({ "application/json": { schema } });
-const bytes = { type: "string", format: "binary" };
 const courseChatAuditReason = { ...text, minLength: 8, maxLength: 300 };
 const courseChatAttachment = {
   anyOf: [
@@ -302,15 +311,48 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. The id is an exam share, resource, completion record, course run for attendance, or message for a chat attachment. A chat request uses the exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
+    parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
       content: json({
         oneOf: [
           object({
-            kind: { enum: ["resource", "exam", "completion", "attendance"] },
+            kind: {
+              enum: ["resource", "exam", "completion", "wiki_resource"],
+            },
             id: uuid,
           }),
+          {
+            ...object({
+              kind: { const: "attendance" },
+              id: uuid,
+              format: { const: "pdf", default: "pdf" },
+            }),
+            required: ["kind", "id"],
+          },
+          object({
+            kind: { const: "qualification_passport" },
+            locale: { enum: ["de", "en"] },
+          }),
+          object({
+            kind: { const: "request_resource" },
+            id: uuid,
+            request_id: uuid,
+          }),
+          object({
+            kind: { const: "assignment_confirmation" },
+            id: uuid,
+          }),
+          {
+            ...object({
+              kind: { const: "earnings_statement" },
+              from: date,
+              until: date,
+              all: { ...boolean, default: false },
+            }),
+            required: ["kind", "from", "until"],
+          },
           object({
             kind: { const: "course_chat_attachment" },
             id: uuid,
@@ -329,16 +371,10 @@ const courseDocuments = {
     responses: {
       "200": {
         description: "Authorized document bytes",
-        content: {
-          "application/pdf": { schema: bytes },
-          "application/octet-stream": { schema: bytes },
-          "*/*": { schema: bytes },
-        },
+        headers: privateDownloadHeaders,
+        content: fileByteContent,
       },
-      "400": { description: "Invalid request" },
-      "401": { description: "Authentication required" },
-      "403": { description: "Document unavailable" },
-      "503": { description: "Document access or integrity unavailable" },
+      ...renderedDocumentErrors,
     },
   },
 };
@@ -352,10 +388,12 @@ const fileGateway = {
     summary: "Upload scanned documents or read authorized bytes",
     description:
       "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status.",
+    parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
       content: {
         "multipart/form-data": {
+          encoding: { file: { contentType: fileMediaTypes.join(", ") } },
           schema: {
             type: "object",
             required: ["file", "client_id"],
@@ -427,39 +465,55 @@ const fileGateway = {
       "200": {
         description:
           "Clean document metadata after upload or authorized bytes for a download.",
+        headers: {
+          "Cache-Control": privateDownloadHeaders["Cache-Control"],
+          "X-Content-Type-Options":
+            privateDownloadHeaders["X-Content-Type-Options"],
+          "Content-Disposition": {
+            ...privateDownloadHeaders["Content-Disposition"],
+            description: "Present for binary responses only.",
+          },
+        },
         content: {
-          ...json({
-            type: "object",
-            required: ["document"],
-            properties: {
-              document: {
-                type: "object",
-                required: ["id", "status", "current_version_id"],
-                properties: {
-                  id: uuid,
-                  status: { const: "clean" },
-                  current_version_id: uuid,
-                },
-                additionalProperties: true,
-              },
-            },
-            additionalProperties: false,
-          }),
-          "application/octet-stream": { schema: bytes },
-          "image/png": { schema: bytes },
-          "application/pdf": { schema: bytes },
-          "*/*": { schema: bytes },
+          ...json(z.toJSONSchema(cleanUploadReceipt)),
+          ...fileByteContent,
         },
       },
-      "400": { description: "Invalid file or request" },
-      "401": { description: "Authentication required" },
-      "403": { description: "Upload not allowed" },
-      "404": { description: "File unavailable" },
-      "409": { description: "Conflicting retry or replacement" },
-      "413": { description: "File size limit exceeded" },
-      "415": { description: "Unsupported file type" },
-      "422": { description: "Malware scan rejected" },
-      "503": { description: "Scanner or upload unavailable" },
+      ...commonDocumentErrors,
+      "400": documentGatewayError("Invalid file or request", [
+        "invalid_request",
+        "avatar_image_invalid",
+      ]),
+      "403": documentGatewayError("Origin, upload or file access denied", [
+        "origin_not_allowed",
+        "access_denied",
+        "upload_not_allowed",
+      ]),
+      "404": documentGatewayError("File unavailable", [
+        "file_not_found",
+        "avatar_unavailable",
+      ]),
+      "409": documentGatewayError("Unclean file or conflicting retry", [
+        "file_not_clean",
+        "idempotency_conflict",
+        "version_superseded",
+      ]),
+      "413": documentGatewayError("File empty or size limit exceeded", [
+        "file_size",
+      ]),
+      "415": documentGatewayError("Unsupported file type", [
+        "unsupported_type",
+      ]),
+      "422": documentGatewayError(
+        "Malware scan rejected",
+        ["scan_rejected"],
+        true,
+      ),
+      "503": documentGatewayError(
+        "Scanner or upload unavailable",
+        ["scanner_unavailable", "upload_failed", "deletion_unavailable"],
+        true,
+      ),
     },
   },
 };

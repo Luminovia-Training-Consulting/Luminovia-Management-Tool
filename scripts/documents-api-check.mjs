@@ -9,6 +9,7 @@ import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
 import {createClient} from "@supabase/supabase-js";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {portalJsonResponse} from "./testing/openapi-contract.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -124,7 +125,7 @@ try {
     const key = randomUUID();
     const stored = await upload(a, bytes, "lesson.txt", {}, key);
     assert.equal(stored.status, 200, JSON.stringify(stored.body));
-    const doc = stored.body.document;
+    const {document: doc} = portalJsonResponse("/functions/v1/files", stored.status, stored.body);
     assert.equal(doc.status, "clean");
     assert.equal(doc.owner_id, a.id);
     const retry = await upload(a, bytes, "lesson.txt", {}, key);
@@ -152,7 +153,8 @@ try {
     const own = await download(a, doc.id);
     assert.equal(own.status, 200);
     assert.deepEqual(new Uint8Array(await own.arrayBuffer()), bytes);
-    assert.match(own.headers.get("cache-control"), /no-store/);
+    assert.equal(own.headers.get("cache-control"), "no-store, private");
+    assert.equal(own.headers.get("x-content-type-options"), "nosniff");
     assert.match(own.headers.get("content-disposition"), /^attachment/);
     for (const actor of [b, admin]) {
         assert.deepEqual(
@@ -186,6 +188,19 @@ try {
             .error,
     );
     assert.equal((await upload(a, bytes, "forged.pdf")).status, 415);
+    const empty = await upload(a, new Uint8Array());
+    assert.deepEqual(empty, {status: 413, body: {error: "file_size"}});
+    const oversized = await fetch(`${url}/functions/v1/files`, {
+        method: "POST",
+        headers: {...(await headers(a)), "Content-Type": "application/json"},
+        body: JSON.stringify({action: "download", id: doc.id, padding: " ".repeat(4096)}),
+        signal: AbortSignal.timeout(30_000),
+    });
+    assert.equal(oversized.status, 413);
+    assert.deepEqual(
+        portalJsonResponse("/functions/v1/files", oversized.status, await oversized.json()),
+        {error: "file_size"},
+    );
     const replacedBytes = new TextEncoder().encode(
         "New fictional immutable version.",
     );

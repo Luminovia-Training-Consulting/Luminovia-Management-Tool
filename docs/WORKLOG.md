@@ -36,6 +36,12 @@ The broader isolated SQL run passed all 157 earlier database suites with the pat
 
 The release workflow now checks out `refs/heads/main` and compares the checkout to the approved revision before dependency installation. The release-policy test exercises both a matching checkout and a newer commit arriving after the gate. Validation workflows run with CMS publication disabled.
 
+## 22 November 2026 — Protected HTTP and course Realtime contract
+
+The downloadable Portal contract describes the existing document request variants, upload metadata, binary media types and typed denial responses. Both editions share the protection headers and error definitions. The API reference explains the course activity event and the separate, permission-filtered notification inbox.
+
+The isolated Docker test used the real Auth, PostgREST, Edge, Storage, ClamAV and Realtime services. A teacher published a scanned attachment through the participant channel. The enrolled learner saw the same opaque room revision and could download the exact stored bytes. After enrolment was revoked, the existing learner session lost the exact-version download, history and subsequent Realtime updates. The teacher's unchanged channel still received the next event. The notification suite checked actual HTTP 400 for an incomplete cursor, 409 for stale settings, and the quiet-hours response. The files suite exercised private cache headers, empty-file and oversized JSON errors, exact upload metadata and fail-closed scanner recovery. TypeScript and 71 focused contract tests passed.
+
 # 22 November 2026 — Customer credit-note evidence and reviewed export dates
 
 Gross-finance staff can register an already-issued credit note against its original customer invoice. The record retains the clean PDF version and digest, external reference, original currency and reviewed amount. Duplicate requests have one receipt and concurrent amounts are capped against the original invoice. Authorised staff can download the exact version after reopening the dialog. The source invoice's balances, accepted charges, payment records and existing accounting/1 export remain unchanged.
