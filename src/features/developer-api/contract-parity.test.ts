@@ -348,16 +348,43 @@ describe("documented Premium course and spending operations", () => {
     expect(source("supabase/functions/files/index.ts")).toContain(
       "request.headers.get('content-type')?.startsWith('multipart/form-data')",
     );
+    expect(requestSchema("/functions/v1/course-documents").oneOf).toMatchObject(
+      [
+        {
+          properties: {
+            kind: { enum: ["resource", "exam", "completion", "attendance"] },
+          },
+          required: ["kind", "id"],
+        },
+        {
+          properties: { kind: { const: "course_chat_attachment" } },
+          required: ["kind", "id", "version_id"],
+        },
+        {
+          properties: { kind: { const: "course_chat_attachment" } },
+          required: ["kind", "id", "version_id", "organisation_id", "reason"],
+        },
+      ],
+    );
     expect(
-      requestSchema("/functions/v1/course-documents").properties.kind.enum,
-    ).toEqual(["resource", "exam", "completion", "attendance"]);
+      requestSchema("/rest/v1/rpc/send_course_chat_attachment").required,
+    ).toEqual([
+      "p_room_id",
+      "p_body",
+      "p_client_id",
+      "p_document_id",
+      "p_version_id",
+    ]);
     expect(paths["/functions/v1/files"].post).toMatchObject({
       requestBody: {
         content: {
           "multipart/form-data": {
             schema: {
               required: ["file", "client_id"],
-              properties: { message_only: { const: "true" } },
+              properties: {
+                message_only: { const: "true" },
+                course_chat: { const: "true" },
+              },
             },
           },
           "application/json": {
@@ -403,6 +430,8 @@ describe("documented Premium course and spending operations", () => {
   it("never offers internal or service-key operations to the session explorer", () => {
     for (const path of [
       "/rest/v1/rpc/course_document_access",
+      "/rest/v1/rpc/course_chat_attachment_access",
+      "/rest/v1/rpc/reserve_course_chat_document",
       "/rest/v1/rpc/course_resource_command",
       "/rest/v1/rpc/deletion_upload_begin",
       "/functions/v1/company-integration",

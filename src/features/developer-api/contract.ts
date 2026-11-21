@@ -25,6 +25,18 @@ const object = (properties: Record<string, unknown>) => ({
   additionalProperties: false,
 });
 const json = (schema: unknown) => ({ "application/json": { schema } });
+const bytes = { type: "string", format: "binary" };
+const courseChatAuditReason = { ...text, minLength: 8, maxLength: 300 };
+const courseChatAttachment = {
+  anyOf: [
+    { type: "null" },
+    object({
+      version_id: uuid,
+      name: text,
+      size_bytes: { type: "integer", minimum: 1 },
+    }),
+  ],
+};
 const error = {
   description: "PostgREST error",
   content: json({
@@ -134,26 +146,39 @@ const courseDocuments = {
   post: {
     operationId: "downloadCourseDocument",
     tags: ["Premium LMS"],
-    summary: "Download an authorized course PDF or resource",
+    summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. The id is an exam share, resource, completion record or course run for attendance, respectively.",
+      "Returns protected bytes only after current access and file integrity checks. The id is an exam share, resource, completion record, course run for attendance, or message for a chat attachment. A chat request uses the exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
     requestBody: {
       required: true,
-      content: json(
-        object({
-          kind: { enum: ["resource", "exam", "completion", "attendance"] },
-          id: uuid,
-        }),
-      ),
+      content: json({
+        oneOf: [
+          object({
+            kind: { enum: ["resource", "exam", "completion", "attendance"] },
+            id: uuid,
+          }),
+          object({
+            kind: { const: "course_chat_attachment" },
+            id: uuid,
+            version_id: uuid,
+          }),
+          object({
+            kind: { const: "course_chat_attachment" },
+            id: uuid,
+            version_id: uuid,
+            organisation_id: uuid,
+            reason: courseChatAuditReason,
+          }),
+        ],
+      }),
     },
     responses: {
       "200": {
         description: "Authorized document bytes",
         content: {
-          "application/pdf": { schema: { type: "string", format: "binary" } },
-          "application/octet-stream": {
-            schema: { type: "string", format: "binary" },
-          },
+          "application/pdf": { schema: bytes },
+          "application/octet-stream": { schema: bytes },
+          "*/*": { schema: bytes },
         },
       },
       "400": { description: "Invalid request" },
@@ -216,6 +241,11 @@ const fileGateway = {
                 description:
                   "Restricts a chat upload to an authorized room message. Requires room scope, chat kind and room_id. Omit job_id, replace_id and owner_id.",
               },
+              course_chat: {
+                const: "true",
+                description:
+                  "Use for a Premium participant course room. Requires message_only=true, scope=room, kind=chat and room_id.",
+              },
             },
             additionalProperties: false,
           },
@@ -261,11 +291,10 @@ const fileGateway = {
             },
             additionalProperties: false,
           }),
-          "application/octet-stream": {
-            schema: { type: "string", format: "binary" },
-          },
-          "image/png": { schema: { type: "string", format: "binary" } },
-          "application/pdf": { schema: { type: "string", format: "binary" } },
+          "application/octet-stream": { schema: bytes },
+          "image/png": { schema: bytes },
+          "application/pdf": { schema: bytes },
+          "*/*": { schema: bytes },
         },
       },
       "400": { description: "Invalid file or request" },
@@ -380,7 +409,7 @@ const nativePaths = {
     {
       ...organisation,
       ...course,
-      p_reason: { ...text, minLength: 8, maxLength: 300 },
+      p_reason: courseChatAuditReason,
       p_before_at: nullableDateTime,
       p_before_id: nullableUuid,
     },
@@ -394,6 +423,7 @@ const nativePaths = {
           sender_name: text,
           room_title: { type: ["string", "null"] },
           body: text,
+          attachment: courseChatAttachment,
         }),
       },
       next_cursor: {
@@ -422,8 +452,8 @@ const nativePaths = {
   "/rest/v1/rpc/course_chat_messages": rpc(
     "courseChatMessages",
     "Premium LMS",
-    "Read text history from a course participant room",
-    "Requires current room access or read authority for a linked company contact on that Premium course. Deleted bodies are null; attachment metadata is omitted.",
+    "Read messages from a course participant room",
+    "Requires current room access or read authority for a linked company contact on that Premium course. Deleted bodies are null. Use the message ID and returned attachment version at course-documents to request authorized bytes.",
     {
       p_room_id: uuid,
       p_before_at: nullableDateTime,
@@ -439,6 +469,7 @@ const nativePaths = {
         body: { type: ["string", "null"] },
         created_at: { type: "string", format: "date-time" },
         deleted_at: nullableDateTime,
+        attachment: courseChatAttachment,
       }),
     },
   ),
@@ -451,6 +482,20 @@ const nativePaths = {
       p_room_id: uuid,
       p_body: { type: "string", minLength: 1 },
       p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/send_course_chat_attachment": rpc(
+    "sendCourseChatAttachment",
+    "Premium LMS",
+    "Post a scanned attachment in a course participant room",
+    "First upload the file using the course chat form fields at the files gateway. Pass the returned document ID and exact clean version. Current room, Premium and sender ownership are rechecked. Reuse the client ID and unchanged payload when retrying the post.",
+    {
+      p_room_id: uuid,
+      p_body: text,
+      p_client_id: uuid,
+      p_document_id: uuid,
+      p_version_id: uuid,
     },
     uuid,
   ),
