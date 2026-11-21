@@ -45,6 +45,7 @@ import { CourseExams } from "./exams";
 import { AttendancePanel } from "./attendance";
 import { AcademyInstructors } from "./academy-instructors";
 import { AcademyCoursePublication } from "./academy-publication";
+import { AcademyCompanyInvitation } from "./academy-company-invitation";
 import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
@@ -1136,6 +1137,14 @@ function CourseWorkspaceLayout({
           )}
           {canManageEnrolments && (
             <div className="course-room-section" id="course-enrolments">
+              {academy === "active" &&
+                course.lms_enabled &&
+                course.access.client && (
+                  <AcademyCompanyInvitation
+                    key={`${actor}:${course.id}`}
+                    courseId={course.id}
+                  />
+                )}
               <CourseEnrolmentsPanel
                 course={course}
                 actor={actor}

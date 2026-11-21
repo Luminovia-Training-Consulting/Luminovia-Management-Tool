@@ -329,6 +329,161 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     await assert.rejects(activation(newManager, manager, false, true), /42501/);
 
+    const contactEmail = "company-contact@example.invalid";
+    await assert.rejects(
+      reserve(
+        newManager,
+        randomUUID(),
+        contactEmail,
+        "client",
+        org.id,
+        "invite",
+      ),
+      /42501/,
+    );
+    const contactRequest = await reserve(
+      admin,
+      randomUUID(),
+      contactEmail,
+      "client",
+      org.id,
+      "invite",
+    );
+    const contact = randomUUID();
+    await sql(
+      `insert into auth.users(id,email,email_confirmed_at) values(${q(contact)},${q(contactEmail)},now())`,
+    );
+    assert.equal(
+      (await finish(contactRequest.creation_id, contact, "complete")).status,
+      "created",
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from public.client_organisation_memberships where user_id=${q(contact)} and organisation_id=${q(org.id)} and removed_at is null`,
+      ),
+      "1",
+    );
+    assert.equal(
+      (await rpc(admin, "academy_administration")).accounts.find(
+        (item) => item.id === contact,
+      )?.role,
+      "client",
+    );
+    assert.equal(
+      (await rpc(newManager, "academy_administration")).accounts.some(
+        (item) => item.id === contact,
+      ),
+      false,
+    );
+    await assert.rejects(activation(newManager, contact, false, true), /42501/);
+
+    const [foreignCompany, foreignRun] = Array.from({ length: 2 }, randomUUID);
+    await sql(`insert into public.organisations(id,name) values(${q(foreignCompany)},'Unrelated training company');
+      insert into public.course_runs(id,template_id,organisation_id) values(${q(foreignRun)},${q(template)},${q(foreignCompany)});`);
+    const companyCommand = (creator, request, address, course) =>
+      `public.reserve_academy_company_invitation(${q(creator)},${q(request)},${q(address)},'Fictional invited learner',${q(course)})`;
+    const companyInvite = async (creator, request, address, course = run) =>
+      JSON.parse(
+        await sql(`
+      begin; set local role service_role; set local request.path='/rpc/reserve_academy_company_invitation';
+      set local request.method='POST'; select public.require_portal_access();
+      select ${companyCommand(creator, request, address, course)}; commit;`),
+      );
+    const companyRequest = randomUUID(),
+      companyLearnerEmail = "company-learner@example.invalid";
+    await assert.rejects(
+      actor(
+        contact,
+        `select ${companyCommand(contact, companyRequest, companyLearnerEmail, run)}`,
+      ),
+      /42501/,
+    );
+    await assert.rejects(
+      companyInvite(contact, companyRequest, companyLearnerEmail, foreignRun),
+      /42501/,
+    );
+    await assert.rejects(
+      companyInvite(lecturer, companyRequest, companyLearnerEmail),
+      /42501/,
+    );
+    await assert.rejects(
+      reserve(
+        contact,
+        companyRequest,
+        companyLearnerEmail,
+        "participant",
+        org.id,
+        "invite",
+      ),
+      /42501/,
+    );
+    const signedCompanyRequest = await companyInvite(
+      contact,
+      companyRequest,
+      companyLearnerEmail,
+    );
+    assert.equal(signedCompanyRequest.status, "reserved");
+    assert.equal(
+      (await companyInvite(contact, companyRequest, companyLearnerEmail))
+        .status,
+      "in_progress",
+    );
+    assert.deepEqual(
+      await companyInvite(contact, randomUUID(), companyLearnerEmail),
+      { status: "requested" },
+    );
+    await assert.rejects(
+      companyInvite(contact, companyRequest, "changed@example.invalid"),
+      /PT409/,
+    );
+    const phoneLearner = randomUUID();
+    await sql(
+      `insert into auth.users(id,email) values(${q(phoneLearner)},${q(companyLearnerEmail)})`,
+    );
+    assert.equal(
+      (await finish(signedCompanyRequest.creation_id, phoneLearner, "complete"))
+        .status,
+      "created",
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from private.company_participant_memberships where user_id=${q(phoneLearner)} and organisation_id=${q(org.id)} and status='active'`,
+      ),
+      "1",
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from public.course_enrolments where user_id=${q(phoneLearner)}`,
+      ),
+      "0",
+    );
+    const pendingCompanyEmail = "company-revoked@example.invalid";
+    const pendingCompany = await companyInvite(
+      contact,
+      randomUUID(),
+      pendingCompanyEmail,
+    );
+    const pendingLearner = randomUUID();
+    await sql(`insert into auth.users(id,email) values(${q(pendingLearner)},${q(pendingCompanyEmail)});
+      update public.client_organisation_memberships set removed_at=now() where user_id=${q(contact)} and organisation_id=${q(org.id)}`);
+    await assert.rejects(
+      finish(pendingCompany.creation_id, pendingLearner, "complete"),
+      /42501/,
+    );
+    assert.equal(
+      (await finish(pendingCompany.creation_id, pendingLearner, "cleanup"))
+        .status,
+      "cleanup",
+    );
+    await sql(`delete from auth.users where id=${q(pendingLearner)};
+      update public.client_organisation_memberships set removed_at=null where user_id=${q(contact)} and organisation_id=${q(org.id)};
+      update private.academy_account_requests set created_at=now()-interval '16 minutes' where email=${q(contactEmail)};`);
+    assert.equal(
+      (await finish(pendingCompany.creation_id, pendingLearner, "discard"))
+        .status,
+      "failed",
+    );
+
     const revokedAdmin = randomUUID();
     const revokedManager = randomUUID();
     const managerToCreate = "reserved-management@example.invalid";
@@ -420,6 +575,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       `select private.apply_verified_installation_licence(${q(JSON.stringify(grace))}::jsonb)`,
     );
     assert.equal((await rpc(admin, "academy_administration")).can_write, false);
+    await assert.rejects(
+      companyInvite(contact, randomUUID(), "grace-invite@example.invalid"),
+      /42501/,
+    );
     await assert.rejects(activation(admin, newManager, false, true), /42501/);
     await assert.rejects(delegation(admin, lecturer, true, 2), /42501/);
     await assert.rejects(

@@ -170,6 +170,7 @@ function AccountForm({
   changed: () => Promise<unknown>;
 }) {
   const [role, setRole] = useState<AcademyManagedAccount["role"]>("lecturer");
+  const requiresOrganisation = role === "participant" || role === "client";
   const [mode, setMode] = useState<"invite" | "password">("invite");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result>();
@@ -190,10 +191,9 @@ function AccountForm({
         email: String(data.get("email") ?? ""),
         role,
         mode,
-        organisation_id:
-          role === "participant"
-            ? String(data.get("organisation") ?? "")
-            : null,
+        organisation_id: requiresOrganisation
+          ? String(data.get("organisation") ?? "")
+          : null,
         ...(mode === "password"
           ? { password: String(data.get("password") ?? "") }
           : {}),
@@ -259,19 +259,28 @@ function AccountForm({
                 {word("Teilnehmende", "Learner")}
               </option>
               {canCreateManagement && (
-                <option value="management">
-                  {word("Kursmanagement", "Course manager")}
-                </option>
+                <>
+                  <option value="management">
+                    {word("Kursmanagement", "Course manager")}
+                  </option>
+                  <option value="client">
+                    {word("Unternehmenskontakt", "Company contact")}
+                  </option>
+                </>
               )}
             </select>
           </Field>
-          {role === "participant" && (
+          {requiresOrganisation && (
             <Field
               id="academy-account-organisation"
-              label={word(
-                "Organisation für die Teilnahme",
-                "Learner organisation",
-              )}
+              label={
+                role === "client"
+                  ? word("Unternehmen", "Company")
+                  : word(
+                      "Organisation für die Teilnahme",
+                      "Learner organisation",
+                    )
+              }
             >
               <select name="organisation" required defaultValue="">
                 <option value="" disabled>
@@ -327,7 +336,7 @@ function AccountForm({
           )}
           <Button
             type="submit"
-            disabled={role === "participant" && organisations.length === 0}
+            disabled={requiresOrganisation && organisations.length === 0}
           >
             {mode === "invite"
               ? word("Einladung senden", "Send invitation")
@@ -358,6 +367,7 @@ function MemberRow({
   const roleLabels = {
     lecturer: word("Lehrende", "Instructor"),
     participant: word("Teilnehmende", "Learner"),
+    client: word("Unternehmenskontakt", "Company contact"),
     management: word("Kursmanagement", "Course manager"),
   };
   const statusLabel = !account.active

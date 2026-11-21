@@ -9,7 +9,7 @@ export const academyManagedAccount = z.strictObject({
   id: z.uuid(),
   display_name: z.string(),
   active: z.boolean(),
-  role: z.enum(["lecturer", "participant", "management"]),
+  role: z.enum(["lecturer", "participant", "management", "client"]),
   confirmed: z.boolean(),
   management_delegated: z.boolean(),
   management_version: z.number().int().nonnegative(),
@@ -29,3 +29,7 @@ export const academyAccountReceipt = z.discriminatedUnion("status", [
   z.strictObject({ status: z.literal("created"), user_id: z.uuid() }),
   z.strictObject({ status: z.literal("in_progress") }),
 ]);
+
+export const academyInvitationReceipt = z.strictObject({
+  status: z.literal("requested"),
+});

@@ -66,6 +66,10 @@ Deno.serve(
             const user = await caller(token).auth.getUser(token);
             return !user.error && Boolean(user.data.user);
         },
+        resolveAcademyActor: async (token) => {
+            const user = await caller(token).auth.getUser(token);
+            return user.error ? null : user.data.user?.id ?? null;
+        },
         authenticate: async (token) => {
             const client = caller(token);
             const user = await client.auth.getUser(token);

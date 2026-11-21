@@ -57,9 +57,9 @@ function fixture(overrides: Partial<AccountDependencies> = {}) {
   });
   return {
     calls,
-    request: (data: unknown = payload) =>
+    request: (data: unknown = payload, path = "users") =>
       handler(
-        new Request(origin + "/functions/v1/accounts/v1/academy/users", {
+        new Request(origin + "/functions/v1/accounts/v1/academy/" + path, {
           method: "POST",
           headers: {
             authorization: "Bearer academy-session",
@@ -78,6 +78,47 @@ Deno.test("academy invitation uses the caller reservation and exact local member
   assert.equal(result.status, 201);
   assert.deepEqual(await result.json(), { status: "created", user_id: userId });
   assert.deepEqual(f.calls, ["reserve", "invite", "complete"]);
+});
+
+Deno.test("company invitation uses the authenticated actor, scoped course and an opaque receipt", async () => {
+  const company = {email: payload.email, display_name: payload.display_name,
+    idempotency_key: payload.idempotency_key, course_id: organisation};
+  const actions: string[] = [];
+  const f = fixture({
+    resolveAcademyActor: async (token) => token === "academy-session" ? userId : null,
+    privilegedRpc: async (name, args) => {
+      actions.push(name);
+      if (name === "reserve_academy_company_invitation") {
+        assert.deepEqual(args, {p_creator: userId, p_course_id: organisation,
+          p_email: company.email, p_display_name: company.display_name, p_request_id: company.idempotency_key});
+        return {data: {status: "reserved", creation_id: id}};
+      }
+      assert.equal(name, "finish_academy_account");
+      return {data: {status: "created", user_id: userId}};
+    },
+    sendInvitation: async (item) => {
+      assert.equal(item.role, "participant");
+      actions.push("email");
+      return userId;
+    },
+  });
+  const path = "company-invitations";
+  for (const extra of [{actor_id: id}, {role: "client"}, {organisation_id: id}, {password: "Fictional6!Password"}]) {
+    assert.equal((await f.request({...company, ...extra}, path)).status, 400);
+  }
+  assert.deepEqual(actions, []);
+  const accepted = await f.request(company, path);
+  assert.equal(accepted.status, 202);
+  assert.deepEqual(await accepted.json(), {status: "requested"});
+  assert.deepEqual(actions, ["reserve_academy_company_invitation", "email", "finish_academy_account"]);
+
+  for (const denial of ["PT429", "42501"]) {
+    const limited = fixture({resolveAcademyActor: async () => userId,
+      privilegedRpc: async () => ({data: null, error: {code: denial}})});
+    const response = await limited.request(company, path);
+    assert.equal(response.status, denial === "PT429" ? 202 : 403);
+    assert.deepEqual(limited.calls, []);
+  }
 });
 
 Deno.test("academy role injection, a missing organisation and disabled invitation cannot reach Auth", async () => {

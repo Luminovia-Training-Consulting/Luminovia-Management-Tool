@@ -6,6 +6,7 @@ import { accountRequest } from "./api";
 import {
   academyAccountReceipt,
   academyAdministration,
+  academyInvitationReceipt,
   academyManagedAccount,
   academyOrganisation,
   type AcademyManagedAccount,
@@ -40,6 +41,18 @@ export async function createAcademyOrganisation(
   });
   if (error) throw error;
   return academyOrganisation.parse(data);
+}
+
+export async function inviteAcademyLearner(invitation: {
+  idempotency_key: string;
+  course_id: string;
+  display_name: string;
+  email: string;
+}) {
+  requireOnline();
+  return academyInvitationReceipt.parse(
+    await accountRequest("academy/company-invitations", "POST", invitation),
+  );
 }
 
 export async function createAcademyAccount(account: {

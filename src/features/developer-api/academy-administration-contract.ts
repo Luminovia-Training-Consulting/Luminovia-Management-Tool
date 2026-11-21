@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   academyAccountReceipt,
   academyAdministration,
+  academyInvitationReceipt,
   academyManagedAccount,
   academyOrganisation,
 } from "../accounts/academy-schema.ts";
@@ -37,6 +38,7 @@ const account = {
 const instructor = { role: z.literal("lecturer"), organisation_id: z.null() };
 const learner = { role: z.literal("participant"), organisation_id: z.uuid() };
 const manager = { role: z.literal("management"), organisation_id: z.null() };
+const companyContact = { role: z.literal("client"), organisation_id: z.uuid() };
 const invite = { mode: z.literal("invite") };
 const create = {
   mode: z.literal("password"),
@@ -54,9 +56,11 @@ const accountRequest = z.union([
   z.strictObject({ ...account, ...instructor, ...invite }),
   z.strictObject({ ...account, ...learner, ...invite }),
   z.strictObject({ ...account, ...manager, ...invite }),
+  z.strictObject({ ...account, ...companyContact, ...invite }),
   z.strictObject({ ...account, ...instructor, ...create }),
   z.strictObject({ ...account, ...learner, ...create }),
   z.strictObject({ ...account, ...manager, ...create }),
+  z.strictObject({ ...account, ...companyContact, ...create }),
 ]);
 const isolatedReceipt = academyAccountReceipt.options[0];
 const inProgress = academyAccountReceipt.options[1];
@@ -169,7 +173,7 @@ export const academyAdministrationPaths = {
       operationId: "provisionAcademyCourseAccount",
       tags: ["Local academy administration"],
       summary: "Create or invite a local academy account",
-      description: `${write} Choose password creation or a configured native Auth email invitation. A learner requires one active local organisation. Only a current local administrator can provision a course manager. A new request requires an available licensed account seat. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
+      description: `${write} Choose password creation or a configured native Auth email invitation. A learner or company contact requires one active local organisation. Only a current local administrator can provision a company contact or course manager. A new request requires an available licensed account seat. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
       security: credentials,
       "x-portal-licence": "active",
       requestBody: { required: true, content: json(accountRequest) },
@@ -229,6 +233,63 @@ export const academyAdministrationPaths = {
               "creation_disabled",
               "creation_unavailable",
               "invitations_disabled",
+              "service_unavailable",
+            ]),
+          }),
+        ),
+      },
+    },
+  },
+  "/functions/v1/accounts/v1/academy/company-invitations": {
+    post: {
+      operationId: "requestAcademyCompanyInvitation",
+      tags: ["Local academy administration"],
+      summary: "Request an email invitation from a company course workspace",
+      description:
+        "A current, confirmed company contact can request an invitation within their own company on an active academy licence. The server resolves the company from the course. The response acknowledges a request and has no account, enrolment or delivery details. Repeat an unchanged request with its original idempotency key.",
+      security: credentials,
+      "x-portal-licence": "active",
+      requestBody: {
+        required: true,
+        content: json(z.strictObject({ ...account, course_id: z.uuid() })),
+      },
+      responses: {
+        "202": {
+          description: "Invitation requested",
+          content: json(academyInvitationReceipt),
+        },
+        "400": error(
+          "Invalid invitation request",
+          z.strictObject({ error: z.literal("invalid_request") }),
+        ),
+        "401": error(
+          "Authentication required",
+          z.strictObject({ error: z.literal("authentication_required") }),
+        ),
+        "403": error(
+          "Current company membership, an active licence and an allowed origin are required",
+          z.strictObject({
+            error: z.enum(["permission_required", "origin_not_allowed"]),
+          }),
+        ),
+        "409": error(
+          "The idempotency key was already used with different fields",
+          z.strictObject({ error: z.literal("creation_conflict") }),
+        ),
+        "413": error(
+          "Request body exceeds the allowed size",
+          z.strictObject({ error: z.literal("request_too_large") }),
+        ),
+        "415": error(
+          "The request body must be JSON",
+          z.strictObject({ error: z.literal("json_required") }),
+        ),
+        "503": error(
+          "Invitation service is disabled or unavailable",
+          z.strictObject({
+            error: z.enum([
+              "invitations_disabled",
+              "creation_unavailable",
               "service_unavailable",
             ]),
           }),

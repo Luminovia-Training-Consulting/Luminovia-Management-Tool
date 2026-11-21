@@ -112,6 +112,17 @@ const pairs: Record<string, [string, string]> = {
   ],
   academyConfirm: ["Bestätigen", "Confirm"],
   workspaceParticipants: ["Teilnehmende", "Participants"],
+  academyInviteLearner: ["Teilnehmende einladen", "Invite a participant"],
+  academyInvitationName: ["Anzeigename", "Display name"],
+  academyInvitationEmail: ["E-Mail-Adresse", "Email address"],
+  academyInvitationRequested: [
+    "Einladung angefordert. Die Kurseinschreibung erfolgt separat.",
+    "Invitation requested. Course enrolment is separate.",
+  ],
+  academyInvitationUnavailable: [
+    "Die Einladung konnte nicht angefordert werden. Versuche es erneut oder wende dich an die Administration.",
+    "Could not request the invitation. Try again or contact your administrator.",
+  ],
   workspaceRegister: ["Anwesenheit", "Attendance"],
   workspaceActivities: ["Lernaktivitäten", "Learning activities"],
   workspaceNextSession: ["Nächster Termin", "Next session"],

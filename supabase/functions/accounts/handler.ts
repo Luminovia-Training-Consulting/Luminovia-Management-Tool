@@ -39,6 +39,7 @@ export interface AccountDependencies {
     invitationsEnabled: boolean;
     authenticate: (token: string) => Promise<boolean>;
     authenticateAcademy?: (token: string) => Promise<boolean>;
+    resolveAcademyActor?: (token: string) => Promise<string | null>;
     rpc: (
         token: string,
         name: string,
@@ -261,34 +262,51 @@ export function createAccountHandler(deps: AccountDependencies) {
         )?.[1];
         if (!token) return response(401, {error: "authentication_required"});
         try {
-            if (path === "/v1/academy/users") {
+            const companyInvitation = path === "/v1/academy/company-invitations";
+            if (path === "/v1/academy/users" || companyInvitation) {
                 if (request.method !== "POST") return response(405, {error: "method_not_allowed"});
-                if (!(await deps.authenticateAcademy?.(token)))
+                const companyActor = companyInvitation ? await deps.resolveAcademyActor?.(token) : null;
+                if (companyInvitation ? !uuid(companyActor) : !(await deps.authenticateAcademy?.(token)))
                     return response(401, {error: "authentication_required"});
                 const input = await body(request);
                 if (!object(input)) return response(400, {error: "invalid_request"});
-                const {mode, password, role, organisation_id, ...metadata} = input;
+                let course: unknown;
+                let account = input;
+                if (companyInvitation) {
+                    const {course_id, email, display_name, idempotency_key, ...extra} = input;
+                    if (!uuid(course_id) || Object.keys(extra).length > 0)
+                        return response(400, {error: "invalid_request"});
+                    course = course_id;
+                    account = {email, display_name, idempotency_key, mode: "invite", role: "participant", organisation_id: course_id};
+                }
+                const {mode, password, role, organisation_id, ...metadata} = account;
                 const base = parseInvitation(metadata);
                 if (!base?.display_name ||
-                    (role !== "lecturer" && role !== "participant" && role !== "management") ||
-                    (role === "participant" ? !uuid(organisation_id) : organisation_id !== null) ||
+                    (role !== "lecturer" && role !== "participant" && role !== "management" && role !== "client") ||
+                    (role === "participant" || role === "client" ? !uuid(organisation_id) : organisation_id !== null) ||
                     (mode !== "password" && mode !== "invite") ||
                     (mode === "password" ? !validAccountPassword(password) : password !== undefined))
                     return response(400, {error: "invalid_request"});
                 if (!deps.privilegedRpc || !deps.removeCreatedAccount ||
                     (mode === "password" ? !deps.createAccount : !deps.invitationsEnabled))
                     return response(503, {error: mode === "invite" ? "invitations_disabled" : "creation_disabled"});
-                const invitation: Invitation<ProvisionedRole> = {
-                    ...base, role, organisation_id: role === "participant" ? organisation_id as string : null,
-                };
-                const reservation = await deps.rpc(token, "reserve_academy_account", {
+                const invitation: Invitation<ProvisionedRole> = {...base, role,
+                    organisation_id: !companyInvitation && typeof organisation_id === "string" ? organisation_id : null};
+                const requestFields = {
                     p_request_id: invitation.idempotency_key,
                     p_email: invitation.email,
                     p_display_name: invitation.display_name,
+                };
+                const reservation = companyInvitation
+                    ? await deps.privilegedRpc("reserve_academy_company_invitation", {
+                        ...requestFields, p_creator: companyActor, p_course_id: course,
+                    }) : await deps.rpc(token, "reserve_academy_account", {
+                    ...requestFields,
                     p_role: invitation.role,
                     p_organisation_id: invitation.organisation_id,
                     p_mode: mode,
                 });
+                const requested = () => response(202, {status: "requested"});
                 const reservationError = reservation.error?.code;
                 if (reservationError === "42501") return response(403, {error: "permission_required"});
                 if (reservationError === "PT409") {
@@ -296,19 +314,20 @@ export function createAccountHandler(deps: AccountDependencies) {
                         ? "academy_seat_limit" : "creation_conflict";
                     return response(409, {error});
                 }
-                if (reservationError === "PT429") return response(429, {error: "creation_rate_limited"});
+                if (reservationError === "PT429") return companyInvitation ? requested() : response(429, {error: "creation_rate_limited"});
                 if (reservationError === "22023") return response(400, {error: "invalid_request"});
+                if (companyInvitation && object(reservation.data) && reservation.data.status === "requested") return requested();
                 if (reservation.error || !object(reservation.data) || !uuid(reservation.data.creation_id))
                     return response(503, {error: "creation_unavailable"});
 
                 const record = reservation.data;
                 const creationId = record.creation_id;
                 const receipt = (status: number, userId: string) =>
-                    response(status, {status: "created", user_id: userId});
+                    companyInvitation ? requested() : response(status, {status: "created", user_id: userId});
                 if (record.status === "created" && uuid(record.user_id)) return receipt(200, record.user_id);
-                if (record.status === "in_progress") return response(202, {status: "in_progress"});
+                if (record.status === "in_progress") return companyInvitation ? requested() : response(202, {status: "in_progress"});
                 if (record.status !== "reserved" && record.status !== "cleanup")
-                    return response(409, {error: "creation_conflict"});
+                    return companyInvitation ? requested() : response(409, {error: "creation_conflict"});
 
                 const finish = (decision: "complete" | "cleanup" | "discard", id: string | null) =>
                     deps.privilegedRpc!("finish_academy_account", {
@@ -333,16 +352,22 @@ export function createAccountHandler(deps: AccountDependencies) {
                     }
                 }
                 const cleanup = await finish("cleanup", createdId);
-                if (cleanup.error || !object(cleanup.data)) return response(502, {error: "creation_failed"});
+                if (cleanup.error || !object(cleanup.data)) return companyInvitation ? requested() : response(502, {error: "creation_failed"});
                 if (cleanup.data.status === "created" && uuid(cleanup.data.user_id))
                     return receipt(200, cleanup.data.user_id);
                 if (cleanup.data.status === "cleanup" && uuid(cleanup.data.user_id)) {
                     const id = cleanup.data.user_id;
-                    await deps.removeCreatedAccount(id);
-                    const discarded = await finish("discard", id);
-                    if (discarded.error || !object(discarded.data) || discarded.data.status !== "failed")
-                        return response(502, {error: "creation_failed"});
+                    try {
+                        await deps.removeCreatedAccount(id);
+                        const discarded = await finish("discard", id);
+                        if (discarded.error || !object(discarded.data) || discarded.data.status !== "failed")
+                            return companyInvitation ? requested() : response(502, {error: "creation_failed"});
+                    } catch (error) {
+                        if (!companyInvitation) throw error;
+                        return requested();
+                    }
                 }
+                if (companyInvitation) return requested();
                 return completionCode === "42501"
                     ? response(403, {error: "permission_required"})
                     : response(502, {error: "creation_failed"});

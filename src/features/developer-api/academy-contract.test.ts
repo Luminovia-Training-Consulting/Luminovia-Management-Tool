@@ -57,6 +57,7 @@ const administrationPaths = [
   "/rest/v1/rpc/academy_set_member_active",
   "/rest/v1/rpc/academy_set_management",
   "/functions/v1/accounts/v1/academy/users",
+  "/functions/v1/accounts/v1/academy/company-invitations",
 ] as const;
 const personalPaths = [
   "/rest/v1/rpc/academy_personal_settings",
