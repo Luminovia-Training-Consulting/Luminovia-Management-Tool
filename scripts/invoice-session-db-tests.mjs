@@ -18,21 +18,19 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
         `insert into auth.users(id,email) values('${lecturer}','invoice-owner@example.invalid'),('${otherLecturer}','other-invoice-owner@example.invalid'),('${manager}','invoice-manager@example.invalid');insert into public.user_roles(user_id,role) values('${lecturer}','lecturer'),('${otherLecturer}','lecturer'),('${manager}','management');`,
     );
     /** Invoke a public invoice RPC under the requested identity claim. */
-    const rpc = (who, name, args = []) =>
-        actor(
-            who,
-            `select public.${name}(${args
-                .map((value) =>
-                    value === null
-                        ? "null"
-                        : Array.isArray(value)
-                            ? q(`{${value.join(",")}}`)
-                            : typeof value === "boolean" || typeof value === "number"
-                                ? String(value)
-                                : q(typeof value === "object" ? JSON.stringify(value) : value),
-                )
-                .join(",")})`,
-        ).then((value) => JSON.parse(value));
+    const rpc = (who, name, args = []) => {
+        const inputs = args.map((value) => {
+            if (value === null) return "null";
+            if (Array.isArray(value)) return q(`{${value.join(",")}}`);
+            if (typeof value === "boolean" || typeof value === "number") return String(value);
+            return q(typeof value === "object" ? JSON.stringify(value) : value);
+        }).join(",");
+        const call = `public.${name}(${inputs})`;
+        const result = ["invoice_review_cases", "my_invoice_review_candidates"].includes(name)
+            ? `select coalesce(jsonb_agg(result), '[]'::jsonb) from ${call} result`
+            : `select to_jsonb(${call})`;
+        return actor(who, result).then((value) => value ? JSON.parse(value) : null);
+    };
 
     const futureClaim = randomUUID(),
         completedClaim = randomUUID(),
@@ -97,7 +95,7 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
     await check(
         "Invoice eligibility uses the final scheduled assignment session, not attendance or quizzes",
         async () => {
-            const early = await assert.rejects(
+            await assert.rejects(
                 rpc(lecturer, "submit_invoice", [
                     "FUTURE-1",
                     [futureClaim],
@@ -108,7 +106,6 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
                 ]),
                 /invoice_not_ready/,
             );
-            assert.ok(early);
             const invoice = await rpc(lecturer, "submit_invoice", [
                 "COMPLETED-1",
                 [completedClaim],
