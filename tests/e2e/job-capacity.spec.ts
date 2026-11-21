@@ -136,6 +136,8 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     await expect(target).toHaveClass(/offer-column-target/);
     await page.keyboard.press("Escape");
     await expect(handle).not.toHaveAttribute("aria-grabbed", "true");
+    await expect(handle).toBeFocused();
+    await expect(handle).toBeInViewport();
     expect(
         requests,
         "Navigating and cancelling never requests a server mutation",
