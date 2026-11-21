@@ -1,6 +1,8 @@
 /** Exercises dedicated academy licence, course access and assignments on disposable databases. */
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -25,6 +27,29 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     foreign,
     membership,
   ] = Array.from({ length: 11 }, randomUUID);
+  const { paths } = academyOpenApi("https://academy.example.invalid", {
+    name: "Practice Academy",
+    installationId: installation,
+    edition,
+  });
+  const responseSchemas = new Map(
+    Object.entries(paths).map(([path, operations]) => {
+      const operation = operations.get ?? operations.post;
+      return [
+        path.split("/").at(-1),
+        z.fromJSONSchema(
+          operation.responses["200"].content["application/json"].schema,
+        ),
+      ];
+    }),
+  );
+  const testedContracts = new Set();
+  const checkResponse = (endpoint, payload) => {
+    const result = responseSchemas.get(endpoint).safeParse(payload);
+    assert.ok(result.success, `${endpoint} response: ${result.error?.message}`);
+    testedContracts.add(endpoint);
+    return payload;
+  };
   const key = generateKeyPairSync("ed25519");
   const now = Date.now();
   const date = (days) => new Date(now + days * 86_400_000).toISOString();
@@ -54,6 +79,15 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     sql,
   );
   assert.equal(prepared.licence_status, "active");
+  const capability = async () =>
+    checkResponse(
+      "installation_capabilities",
+      JSON.parse(
+        await sql(`begin;set local role anon;${gate("installation_capabilities", "GET")}
+      select public.installation_capabilities();commit;`),
+      ),
+    );
+  assert.deepEqual(await capability(), prepared);
   assert.equal(prepared.customer_ready, false);
   assert.deepEqual(
     await prepareAcademyInstallation(
@@ -94,11 +128,22 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     insert into private.company_participant_memberships(
       organisation_id,user_id,status,link_request_id,invited_by,joined_at
     ) values(${q(org)},${q(participant)},'active',${q(membership)},${q(admin)},now());`);
-  const call = (who, endpoint, args = [], method = "POST") =>
-    actor(
+  const call = async (who, endpoint, args = [], method = "POST") => {
+    const value = await actor(
       who,
       `${gate(endpoint, method)} select public.${endpoint}(${args.map(q).join(",")})`,
     );
+    if (responseSchemas.has(endpoint)) {
+      const payload = [
+        "academy_ensure_course_chat",
+        "send_course_chat_message",
+      ].includes(endpoint)
+        ? value
+        : JSON.parse(value);
+      checkResponse(endpoint, payload);
+    }
+    return value;
+  };
   const workspace = (who, course) =>
     call(who, "course_workspace", [course], "GET").then(JSON.parse);
   const workspaces = (who) =>
@@ -113,7 +158,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     actor(
       who,
       `${gate("set_course_meeting_link")} ${meetingWrite(url, version, course)}`,
-    ).then(JSON.parse);
+    ).then((value) =>
+      checkResponse("set_course_meeting_link", JSON.parse(value)),
+    );
   // Simulate direct RPC execution, independently of the HTTP pre-request hook.
   const directMeeting = (who, url, version) =>
     actor(who, meetingWrite(url, version));
@@ -192,6 +239,19 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     JSON.parse(await sql("select public.installation_capabilities()")),
     prepared,
   );
+  const assertDocumentedGate = async (grace = false) => {
+    for (const [path, operations] of Object.entries(paths)) {
+      const method = operations.get ? "GET" : "POST";
+      const endpoint = path.split("/").at(-1);
+      const request = actor(admin, gate(endpoint, method));
+      if (grace && operations.post?.["x-portal-licence"] === "active") {
+        await assert.rejects(request, /42501/);
+      } else {
+        await request;
+      }
+    }
+  };
+  await assertDocumentedGate();
   await assert.rejects(workspaces(guest), /42501/);
   for (const role of ["anon", "service_role"]) {
     await assert.rejects(
@@ -555,6 +615,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     starts_at: date(-5),
     expires_at: date(-2),
   });
+  await assertDocumentedGate(true);
   assert.equal((await workspace(participant, run)).access.learner, true);
   assert.deepEqual((await workspace(teacher, run)).meeting_link, {
     url: updatedLink,
@@ -641,11 +702,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   });
   await sql(configure(installation, nextRelease, false));
   await assert.rejects(workspace(admin, run), /42501/);
-  assert.equal(
-    JSON.parse(await sql("select public.installation_capabilities()"))
-      .customer_ready,
-    false,
-  );
+  assert.equal((await capability()).customer_ready, false);
+  assert.deepEqual(testedContracts, new Set(responseSchemas.keys()));
   console.log(
     `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
   );

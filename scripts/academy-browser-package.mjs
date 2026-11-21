@@ -37,6 +37,7 @@ import {
   ZipWriter,
 } from "@zip.js/zip.js";
 import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { loadAcademyBrand } from "./academy-brand-config.ts";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
 import { validatePublicConfig } from "./public-config.ts";
@@ -219,7 +220,12 @@ function hasPrivateMaterial(source) {
 }
 
 /** Associate every render surface and its dormant public contract with the same customer build. */
-function validateBrowserOutput(files, brand, approvedBrandAssets) {
+function validateBrowserOutput(
+  files,
+  brand,
+  approvedBrandAssets,
+  allowHistoricApi = false,
+) {
   for (const name of fixedFiles)
     if (!files.has(name))
       throw new Error("Required customer browser files are missing.");
@@ -243,23 +249,6 @@ function validateBrowserOutput(files, brand, approvedBrandAssets) {
       "The browser entry point references missing runtime assets.",
     );
   const api = JSON.parse(text(files.get("api/openapi.json")));
-  deepStrictEqual(
-    Object.keys(api).sort(),
-    [
-      "components",
-      "info",
-      "openapi",
-      "paths",
-      "servers",
-      "x-portal-installation",
-    ],
-    "The dormant customer API contains unexpected metadata.",
-  );
-  if (
-    api.openapi !== "3.1.0" ||
-    !/^\d+\.\d+\.\d+$/.test(api.info?.version ?? "")
-  )
-    throw new Error("The customer API revision is invalid.");
   const pwa = JSON.parse(text(files.get("manifest.webmanifest")));
   const worker = text(files.get("sw.js"));
   if (
@@ -312,27 +301,40 @@ function validateBrowserOutput(files, brand, approvedBrandAssets) {
     },
     "The API installation identity is missing or mismatched.",
   );
-  deepStrictEqual(api.paths, {}, "Customer API must remain dormant.");
-  deepStrictEqual(
-    api.components,
-    { securitySchemes: {} },
-    "Customer API must omit operational schemas.",
-  );
-  deepStrictEqual(
-    api.servers,
-    [{ url: backendUrl(brand.backend) }],
-    "The API server differs from the intended browser backend.",
-  );
+  const apiBackend = backendUrl(brand.backend);
+  const expectedApi = academyOpenApi(apiBackend, brand);
+  // The previous release catalogue was intentionally empty. An older signed
+  // archive remains verifiable while this source only packages the current one.
+  if (allowHistoricApi && api.info?.version === "1.1.0") {
+    deepStrictEqual(
+      api,
+      {
+        ...expectedApi,
+        info: {
+          title: `${brand.name} API`,
+          version: "1.1.0",
+          description:
+            "Customer operations become available only when the installation has passed the edition readiness checks.",
+        },
+        paths: {},
+        components: { securitySchemes: {} },
+      },
+      "Historic customer API differs from the original catalogue.",
+    );
+  } else {
+    deepStrictEqual(
+      api,
+      expectedApi,
+      "Customer API differs from the reviewed course profile.",
+    );
+  }
   if (
-    api.info?.title !== `${brand.name} API` ||
     !worker.includes("brand/academy-logo.png") ||
     !worker.includes("icons/icon-512.png") ||
     !worker.includes("push-sw.js") ||
     /(?:luminovia-logo|["']\/?demo(?:[/.-]|["']))/.test(worker)
   )
-    throw new Error(
-      "Customer API title or PWA cache does not pass edition preflight.",
-    );
+    throw new Error("The PWA cache does not pass edition preflight.");
   for (const [path, bytes] of files) {
     if (!/\.(?:js|css|html|json|webmanifest|txt)$/.test(path)) continue;
     const source = text(bytes);
@@ -486,7 +488,7 @@ async function verifyAcademyArchive(directory, manifest) {
     manifest.files,
     "Customer browser inventory does not match.",
   );
-  validateBrowserOutput(files, manifest);
+  validateBrowserOutput(files, manifest, undefined, true);
 }
 
 /** Verify the package contents against its inventory. This checks integrity against the supplied manifest. */

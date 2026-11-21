@@ -27,6 +27,7 @@ import {
   verifyAcademyBrowserRelease,
   writeAcademyBrowserPackage,
 } from "./academy-browser-package.mjs";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
 
 const metadata = {
@@ -55,18 +56,7 @@ const fixture = (t) => {
       typeof value === "string" ? value : JSON.stringify(value),
     );
   };
-  const api = {
-    openapi: "3.1.0",
-    info: { title: `${metadata.name} API`, version: "1.1.0" },
-    paths: {},
-    components: { securitySchemes: {} },
-    servers: [{ url: metadata.backend }],
-    "x-portal-installation": {
-      installation_id: metadata.installationId,
-      edition: metadata.edition,
-      customer_ready: false,
-    },
-  };
+  const api = academyOpenApi(metadata.backend, metadata);
   file("api/openapi.json", api);
   file(
     "index.html",
@@ -201,7 +191,7 @@ test("creates a deterministic ZIP inventory of exactly the verified customer bro
   await assert.rejects(write(output, allowed), /EEXIST/);
 });
 
-test("rejects a changed installation, enabled API operation or wrong customer logo", async (t) => {
+test("rejects a changed installation, undocumented API operation or wrong customer logo", async (t) => {
   const { dist, file, api, write, output } = fixture(t);
   file("api/openapi.json", {
     ...api,
@@ -215,7 +205,7 @@ test("rejects a changed installation, enabled API operation or wrong customer lo
     ...api,
     paths: { "/rest/v1/rpc/admin_update": { post: {} } },
   });
-  await assert.rejects(write(), /must remain dormant/);
+  await assert.rejects(write(), /differs from the reviewed course profile/);
   file("api/openapi.json", api);
   const allowed = new Map([
     [
@@ -225,6 +215,44 @@ test("rejects a changed installation, enabled API operation or wrong customer lo
   ]);
   file("brand/academy-logo.png", "wrong fictional logo bytes");
   await assert.rejects(write(output, allowed), /different|match/);
+});
+
+test("verifies the exact historic empty catalogue as an existing archive", async (t) => {
+  const { api, dist, file, output, write } = fixture(t);
+  const historicApi = {
+    ...api,
+    paths: {},
+    components: { securitySchemes: {} },
+    info: {
+      title: api.info.title,
+      version: "1.1.0",
+      description:
+        "Customer operations become available only when the installation has passed the edition readiness checks.",
+    },
+  };
+  file("api/openapi.json", historicApi);
+  await assert.rejects(write(), /differs from the reviewed course profile/);
+  file("api/openapi.json", api);
+  const manifest = await write();
+  const writer = new ZipWriter(new Uint8ArrayWriter(), {
+    level: 0,
+    useWebWorkers: false,
+  });
+  const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+  for (const entry of manifest.files) {
+    const bytes =
+      entry.path === "api/openapi.json"
+        ? Buffer.from(JSON.stringify(historicApi))
+        : readFileSync(join(dist, entry.path));
+    await writer.add(`browser/${entry.path}`, new Uint8ArrayReader(bytes));
+    entry.bytes = bytes.length;
+    entry.sha256 = sha256(bytes);
+  }
+  const historicArchive = await writer.close();
+  manifest.archive.sha256 = sha256(historicArchive);
+  writeFileSync(join(output, archiveName), historicArchive);
+  writeFileSync(join(output, "manifest.json"), JSON.stringify(manifest));
+  assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
 });
 
 test("rejects hidden, runtime, vendor and private build paths", async (t) => {

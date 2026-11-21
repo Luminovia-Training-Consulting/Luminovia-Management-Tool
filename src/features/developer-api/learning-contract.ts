@@ -12,7 +12,10 @@ const dateTime = { ...text, format: "date-time" };
 const integer = { type: "integer", minimum: 0 };
 const score = { ...integer, maximum: 100 };
 const rating = { ...integer, minimum: 1, maximum: 5 };
-const itemList = (items: object) => ({ type: "array", items });
+const itemList = <Item extends object>(items: Item) => ({
+  type: "array",
+  items,
+});
 const nullable = (schema: object) => ({ anyOf: [schema, { type: "null" }] });
 const record = <Fields extends Record<string, unknown>>(
   properties: Fields,

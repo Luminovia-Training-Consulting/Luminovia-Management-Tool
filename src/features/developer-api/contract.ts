@@ -3,6 +3,7 @@ import {
   type InstallationBrand,
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
+import { academyOpenApi } from "./academy-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   courseEnrolmentsResult,
@@ -1223,8 +1224,27 @@ const companyCourseWebhook = {
 /** Publish only supported, explicitly described product operations. */
 export function portalOpenApi(
   backend: string,
+  includeNonInteractive?: boolean,
+): ReturnType<typeof internalOpenApi>;
+export function portalOpenApi(
+  backend: string,
+  includeNonInteractive: boolean,
+  brand: InstallationBrand,
+): ReturnType<typeof internalOpenApi> | ReturnType<typeof academyOpenApi>;
+export function portalOpenApi(
+  backend: string,
   includeNonInteractive = true,
   brand: InstallationBrand = installationBrand,
+) {
+  return brand.edition === "internal"
+    ? internalOpenApi(backend, includeNonInteractive, brand)
+    : academyOpenApi(backend, brand);
+}
+
+function internalOpenApi(
+  backend: string,
+  includeNonInteractive: boolean,
+  brand: InstallationBrand,
 ) {
   const documentedPaths: typeof paths = includeNonInteractive
     ? {
@@ -1235,27 +1255,6 @@ export function portalOpenApi(
         "/functions/v1/company-integration": integrationPath,
       }
     : paths;
-  // Customer package readiness is currently fail-closed. Do not advertise the
-  // internal marketplace, account or commercial endpoints through its public contract.
-  if (brand.edition !== "internal")
-    return {
-      openapi: accountOpenApi.openapi,
-      info: {
-        title: `${brand.name} API`,
-        version: "1.1.0",
-        description:
-          "Customer operations become available only when the installation has passed the edition readiness checks.",
-      },
-      paths: {} as typeof paths,
-      webhooks: undefined,
-      "x-portal-installation": {
-        installation_id: brand.installationId,
-        edition: brand.edition,
-        customer_ready: false,
-      },
-      servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
-      components: { securitySchemes: {} },
-    };
   return {
     ...accountOpenApi,
     info: {
