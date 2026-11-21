@@ -18,8 +18,12 @@ test("calendar secret links and explicit minimal offline schedule survive reload
         claim = randomUUID(),
         assignment = randomUUID(),
         privateEvent = randomUUID();
-    const starts = new Date(Date.now() + 2 * 86400000).toISOString(),
-        ends = new Date(Date.now() + 2 * 86400000 + 3600000).toISOString();
+    const day = new Date(Date.now() + 2 * 86400000);
+    day.setUTCHours(9, 0, 0, 0);
+    const starts = day.toISOString(),
+        ends = new Date(day.getTime() + 3600000).toISOString(),
+        privateStarts = new Date(day.getTime() + 3 * 3600000).toISOString(),
+        privateEnds = new Date(day.getTime() + 4 * 3600000).toISOString();
     try {
         await checked(
             service.from("organisations").insert({
@@ -78,8 +82,8 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                 id: privateEvent,
                 user_id: owner.id,
                 title: "PRIVATE APPOINTMENT",
-                starts_at: starts,
-                ends_at: ends,
+                starts_at: privateStarts,
+                ends_at: privateEnds,
                 time_zone: "Europe/Berlin",
             }),
         );
