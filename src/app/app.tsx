@@ -17,6 +17,8 @@ import {Preferences, Shell} from "./shell";
 import {ErrorState, Loading, Notice} from "../components/common";
 import {isConfigured} from "../lib/supabase";
 import {useOnline} from "../lib/online";
+import {installationBrand, portalInternalEdition} from "../lib/installation-brand";
+import {CustomerInstallationAccess} from "../features/auth/installation-access";
 import {Button} from "../components/ui/button";
 import {Dashboard} from "../features/dashboard/dashboard";
 import {WelcomeGuidePage} from "../features/onboarding/welcome";
@@ -65,11 +67,14 @@ const ApiExplorer = lazy(() =>
         default: module.ApiExplorer,
     })),
 );
-const DemoPage = lazy(() =>
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
+
+// The compile-time condition removes the entire demo chunk from customer builds.
+const DemoPage = __PORTAL_INTERNAL_EDITION__ ? lazy(() =>
     import("../features/demo/demo").then((module) => ({
         default: module.DemoPage,
     })),
-);
+) : null;
 const HelpCenter = lazy(() =>
     import("../features/help/help").then((module) => ({
         default: module.HelpCenter,
@@ -209,14 +214,14 @@ function Protected() {
     const {session, loading, error} = useAuth();
     if (loading) return <Loading/>;
     if (error) return <ErrorState/>;
-    return isConfigured && session ? (
-        // Auth clears remote queries separately. Remount private local state too
-        // when a different account signs in through another tab/native Auth event.
-        <PortalAccess key={session.user.id}>
-            <Outlet/>
-        </PortalAccess>
-    ) : (
-        <Navigate to="/login" replace/>
+    if (!isConfigured || !session) return <Navigate to="/login" replace/>;
+    // Auth clears remote queries separately. Remount private local state too
+    // when a different account signs in through another tab/native Auth event.
+    const portal = <PortalAccess key={session.user.id}><Outlet/></PortalAccess>;
+    return portalInternalEdition ? portal : (
+        <CustomerInstallationAccess key={session.user.id} actor={session.user.id}>
+            {portal}
+        </CustomerInstallationAccess>
     );
 }
 
@@ -257,7 +262,7 @@ export function App() {
             <AppNotices/>
             <Suspense fallback={<Loading/>}>
                 <Routes>
-                    <Route path="/demo/*" element={<DemoPage/>}/>
+                    {DemoPage && <Route path="/demo/*" element={<DemoPage/>}/>}
                     <Route path="/help" element={<HelpCenter/>}/>
                     <Route
                         path="/login"
@@ -390,7 +395,7 @@ export class ErrorBoundary extends Component<
         return this.state.hasError ? (
             <div className="state">
                 <Notice kind="error">
-                    Luminovia Portal · Bitte neu laden. / Please reload.
+                    {installationBrand.name} · Bitte neu laden. / Please reload.
                 </Notice>
                 <Button onClick={() => window.location.reload()}>
                     Neu laden / Reload

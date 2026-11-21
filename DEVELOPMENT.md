@@ -3613,3 +3613,29 @@ These tags are not production approvals or new Semver releases. They do not chan
 Bug reports and feature requests start with the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Blank issues are disabled in favour of the forms. This is a setting of the chooser interface, not a technical restriction on the issue API.
 
 Private vulnerability reporting is linked from [SECURITY](SECURITY.md). It, Secret Scanning and Push Protection were enabled and read back in earlier administration tasks; their current settings were not re-read during this documentation audit. Private reporting alone does not enable the other controls. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.
+## White-label browser build
+
+A default build uses the Luminovia internal edition. To preview a customer brand, set `PORTAL_ACADEMY_BRAND_FILE` to an absolute operator-owned JSON path and provide the usual public Supabase URL and publishable key. The JSON file contains only public display configuration. Keep licence material, credentials and operator configuration outside it.
+
+```json
+{
+  "edition": "customer-self-hosted",
+  "installationId": "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
+  "name": "Example & Practice Academy",
+  "shortName": "Example Academy",
+  "defaultLanguage": "en",
+  "defaultTheme": "dark",
+  "themeColor": "#102857",
+  "files": {
+    "logo": "logo.png",
+    "icon192": "icon-192.png",
+    "icon512": "icon-512.png",
+    "maskable512": "maskable-512.png",
+    "appleTouchIcon": "apple-touch-icon.png"
+  }
+}
+```
+
+Use `customer-self-hosted` or `customer-managed`. Keep every raster file adjacent to the JSON. Use PNGs with edges no larger than 2048 × 1024 for the logo, and exact square dimensions matching the icon names (180 px for the Apple touch icon). The build validates the format, sizes and chunk checksums, strips ancillary metadata outside the render allowlist and rejects symlinks and traversal. Use self-assembled brand assets with rights appropriate for the chosen installation.
+
+The build replaces logos, browser and PWA metadata, default language and appearance, and the public API title. Customer packages exclude the Luminovia demo chunks, public demo navigation and vendor brand images. A customer session gets private pages only after the same configured backend confirms a matching installation ID and edition, a current licence, and explicit customer LMS readiness. The current customer API document contains no operational paths and current customer database readiness remains false until the operational edition gates are implemented.

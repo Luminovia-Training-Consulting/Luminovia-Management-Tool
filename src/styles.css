@@ -2938,7 +2938,7 @@ legend {
     }
 
     .topbar:before {
-        content: "Luminovia";
+        content: var(--portal-mobile-brand, "Luminovia");
         font-family: "Space Grotesk";
         font-weight: 650;
         font-size: 19px;
@@ -4453,3 +4453,5 @@ summary:focus-visible {
         padding: 0.2rem;
     }
 }
+/* Customer short names may be longer than the internal logo wordmark. */
+.installation-brand-name { overflow-wrap: anywhere; }

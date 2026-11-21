@@ -2,6 +2,7 @@
  * Public return route for invitations and recovery. Process actual Auth state or the invitation
  * token and navigate only after confirmed completion.
  */
+import {installationBrand, portalInternalEdition} from "../../lib/installation-brand";
 import {useEffect, useState} from "react";
 import {Navigate, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
@@ -57,8 +58,8 @@ export function AuthCallback() {
         <main className="callback-layout">
             <section className="panel">
                 <img
-                    src="/brand/luminovia-logo-full.webp"
-                    alt="Luminovia Training & Consulting"
+                    src={installationBrand.logo}
+                    alt={portalInternalEdition ? "Luminovia Training & Consulting" : installationBrand.name}
                 />
                 <h1>{t("acceptInvite")}</h1>
                 <p>{t("inviteWelcome")}</p>

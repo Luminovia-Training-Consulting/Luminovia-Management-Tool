@@ -2,6 +2,7 @@
  * Shared DE/EN dictionary and active-language initialization. Translation keys affect UI text
  * only; authored business content keeps its original language.
  */
+import {installationBrand} from "./installation-brand";
 import i18n from "i18next";
 import {initReactI18next} from "react-i18next";
 import {readPreference, writePreference} from "./preferences";
@@ -265,8 +266,8 @@ const pairs: Record<string, [string, string]> = {
         "If an account exists, you will receive a recovery link.",
     ],
     invitationOnly: [
-        "Willkommen im Luminovia Portal. Melde dich mit deinem eingeladenen Konto an.",
-        "Welcome to Luminovia Portal. Sign in with your invited account.",
+        "Willkommen bei {{academy}}. Melde dich mit deinem eingeladenen Konto an.",
+        "Welcome to {{academy}}. Sign in with your invited account.",
     ],
     invitationNote: [
         "Der Zugang erfolgt ausschließlich per Einladung.",
@@ -557,12 +558,13 @@ const pairs: Record<string, [string, string]> = {
 const de = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[0]]));
 const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
 const saved = readPreference("language");
-document.documentElement.lang = saved === "en" ? "en" : "de";
+const language = saved === "de" || saved === "en" ? saved : installationBrand.defaultLanguage;
+document.documentElement.lang = language;
 void i18n.use(initReactI18next).init({
     resources: {de: {translation: de}, en: {translation: en}},
-    lng: saved === "en" ? "en" : "de",
+    lng: language,
     fallbackLng: "de",
-    interpolation: {escapeValue: false},
+    interpolation: {escapeValue: false, defaultVariables: {academy: installationBrand.name}},
 });
 i18n.on("languageChanged", (language) => {
     writePreference("language", language);

@@ -2,6 +2,7 @@
 import {useEffect, useId, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {readPreference, uiLocalChangeEvent, writePreference,} from "../lib/preferences";
+import {installationBrand} from "../lib/installation-brand";
 import type {UiPreferencesPatch} from "../lib/ui-preferences-api";
 
 const themeChanged = "luminovia-theme-changed";
@@ -10,7 +11,7 @@ function readTheme() {
     const saved = readPreference("theme");
     return saved && ["light", "dark", "system"].includes(saved)
         ? saved
-        : "system";
+        : installationBrand.defaultTheme;
 }
 
 /** A single stored value drives every control and the actual document theme. */

@@ -1,4 +1,5 @@
 /** Ticket ownership and current support capability govern replies, internal notes and dedicated scanned attachments; support never grants unrelated private-resource access. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
+import {installationBrand} from "../../lib/installation-brand";
 import {useRef, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {Link, useNavigate, useParams} from "react-router-dom";
@@ -194,7 +195,7 @@ function TicketList({
     return (
         <>
             <PageHeading
-                eyebrow="Luminovia Portal"
+                eyebrow={installationBrand.name}
                 title={t("title")}
                 description={t("description")}
                 action={

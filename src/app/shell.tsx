@@ -19,6 +19,7 @@ import {useAuth} from "../features/auth/auth-context";
 import {useAuthorizationRefresh} from "../features/auth/authorization-refresh";
 import {db} from "../lib/supabase";
 import {permissionsQuery, profileQuery, userRolesQuery} from "../lib/queries";
+import {installationBrand, portalInternalEdition} from "../lib/installation-brand";
 import {Button} from "../components/ui/button";
 import {ErrorState, Loading, Notice} from "../components/common";
 import "../features/learning/i18n";
@@ -325,10 +326,10 @@ export function Shell() {
             </a>
             <aside className="sidebar" aria-label={t("menu")}>
                 <NavLink className="sidebar-brand" to="/">
-                    <img src="/brand/luminovia-logo-mark-160.webp" alt=""/>
-                    <span>
-            Luminovia <small>Portal</small>
-          </span>
+                    <img src={installationBrand.mark} alt=""/>
+                    {portalInternalEdition
+                        ? <span>{installationBrand.shortName} <small>Portal</small></span>
+                        : <span className="installation-brand-name">{installationBrand.shortName}</span>}
                 </NavLink>
                 <Button
                     variant="ghost"

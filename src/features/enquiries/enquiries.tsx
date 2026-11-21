@@ -1,4 +1,5 @@
 /** Private management inbox and course conversion UI; never submits public website input. */
+import {installationBrand} from "../../lib/installation-brand";
 import {useRef, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {Link, useParams} from "react-router-dom";
@@ -41,7 +42,7 @@ function EnquiryList({actor}: { actor: string }) {
     return (
         <>
             <PageHeading
-                eyebrow="Luminovia Portal"
+                eyebrow={installationBrand.name}
                 title={t("title")}
                 description={t("description")}
             />

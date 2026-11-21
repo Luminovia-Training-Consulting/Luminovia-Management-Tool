@@ -5,6 +5,7 @@ import {ErrorState, Loading, Notice} from "../../components/common";
 import {Button} from "../../components/ui/button";
 import {db} from "../../lib/supabase";
 import {useAuth} from "./auth-context";
+import {portalInternalEdition} from "../../lib/installation-brand";
 import type {ReactNode} from "react";
 
 export function PortalAccess({children}: { children: ReactNode }) {
@@ -28,9 +29,11 @@ export function PortalAccess({children}: { children: ReactNode }) {
         return (
             <main className="auth-page">
                 <Notice kind="error">
-                    {de
-                        ? "Dieses Portal ist für Unternehmen, Dozent:innen und das Luminovia-Team bestimmt. Dein Konto hat keinen Portalzugriff."
-                        : "This portal is for companies, lecturers and the Luminovia team. Your account does not have portal access."}
+                    {portalInternalEdition
+                        ? (de
+                            ? "Dieses Portal ist für Unternehmen, Dozent:innen und das Luminovia-Team bestimmt. Dein Konto hat keinen Portalzugriff."
+                            : "This portal is for companies, lecturers and the Luminovia team. Your account does not have portal access.")
+                        : (de ? "Dein Konto hat keinen Zugang zu dieser Akademie." : "Your account does not have access to this academy.")}
                 </Notice>
                 <Button onClick={() => void db().auth.signOut()}>
                     {de ? "Abmelden" : "Sign out"}

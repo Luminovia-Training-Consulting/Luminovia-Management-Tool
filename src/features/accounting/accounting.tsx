@@ -1,5 +1,6 @@
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
+import {installationBrand} from "../../lib/installation-brand";
 import { useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -590,7 +591,7 @@ export function AccountingPage() {
   return (
     <>
       <PageHeading
-        eyebrow="Luminovia Portal"
+        eyebrow={installationBrand.name}
         title={t("title")}
         description={t("description")}
         action={

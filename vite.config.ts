@@ -10,6 +10,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
 import { portalOpenApi } from "./src/features/developer-api/contract.ts";
+import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
 
 export default defineConfig(({ mode }) => {
   // VITE_ values enter the browser bundle. The shared validator rejects
@@ -20,13 +21,58 @@ export default defineConfig(({ mode }) => {
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
     mode === "production",
   );
+  const {brand, assets} = loadAcademyBrand(process.env.PORTAL_ACADEMY_BRAND_FILE, resolve("public"));
+  const internal = brand.edition === "internal";
+  const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const openApiPath = "/api/openapi.json";
   const openApi =
-    JSON.stringify(portalOpenApi(env.VITE_SUPABASE_URL ?? ""), null, 2) + "\n";
+    JSON.stringify(portalOpenApi(env.VITE_SUPABASE_URL ?? "", true, brand), null, 2) + "\n";
   return {
+    publicDir: internal ? "public" : false,
+    define: {
+      __PORTAL_INSTALLATION_BRAND__: JSON.stringify(brand),
+      __PORTAL_INTERNAL_EDITION__: JSON.stringify(internal),
+    },
+    ...(!internal && {server: {fs: {deny: [
+      ".env", ".env.*", "*.{crt,pem}", "**/.git/**",
+      "**/public/brand/luminovia-logo-*", "**/public/icons/**", "**/src/features/demo/**",
+    ]}}}),
     plugins: [
       react(),
       tailwindcss(),
+      {
+        name: "portal-academy-assets",
+        transformIndexHtml(html) {
+          if (internal) return html;
+          const description = brand.defaultLanguage === "de"
+            ? `${brand.name} · Kurse und Lernbereiche`
+            : `${brand.name} · Courses and learning workspaces`;
+          return html.replace('lang="de"', `lang="${brand.defaultLanguage}"`)
+            .replace('<title>Luminovia Portal</title>', `<title>${escapeHtml(brand.name)}</title>`)
+            .replace('content="#172b4b"', `content="${brand.themeColor}"`)
+            .replace('Luminovia Portal – gemeinsam lehren, lernen und organisieren.', escapeHtml(description));
+        },
+        configureServer(server) {
+          if (internal) return;
+          // Serve the same reviewed assets in isolated previews without exposing the vendor public directory.
+          server.middlewares.use((req, res, next) => {
+            const path = req.url?.split("?")[0]?.slice(1) ?? "";
+            const bytes = assets.get(path);
+            if (!bytes || (req.method !== "GET" && req.method !== "HEAD")) return next();
+            const contentType = path.endsWith(".png") ? "image/png"
+              : path.endsWith(".woff2") ? "font/woff2"
+              : path.endsWith(".js") ? "text/javascript" : "text/plain; charset=utf-8";
+            res.setHeader("Content-Type", contentType);
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.end(req.method === "HEAD" ? undefined : bytes);
+          });
+        },
+        generateBundle() {
+          for (const [fileName, source] of assets) {
+            this.emitFile({type: "asset", fileName, source});
+          }
+        },
+      },
       {
         name: "portal-openapi-document",
         configureServer(server) {
@@ -76,27 +122,18 @@ export default defineConfig(({ mode }) => {
         // Do not discard an in-progress form by immediately activating a new
         // service worker; the interface offers the update to the user.
         registerType: "prompt",
-        includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"],
+        ...(internal && {includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"]}),
         manifest: {
-          name: "Luminovia Portal",
-          short_name: "Luminovia",
-          description: "Training & Consulting · Portal",
-          lang: "de",
+          name: brand.name,
+          short_name: brand.shortName,
+          description: internal ? "Training & Consulting · Portal" : brand.name,
+          lang: brand.defaultLanguage,
           start_url: "/",
           scope: "/",
           display: "standalone",
-          theme_color: "#172b4b",
+          theme_color: brand.themeColor,
           background_color: "#f8f5ee",
-          icons: [
-            { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-            {
-              src: "/icons/maskable-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable",
-            },
-          ],
+          icons: [...brand.pwaIcons],
         },
         workbox: {
           importScripts: ["/push-sw.js"],

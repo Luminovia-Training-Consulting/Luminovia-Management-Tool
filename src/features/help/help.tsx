@@ -2,6 +2,7 @@
  * Public, authored help with URL-selected articles and search across both languages. Reading,
  * filtering and recovery guidance require no backend data and send no support messages.
  */
+import {installationBrand, portalInternalEdition} from "../../lib/installation-brand";
 import {useEffect, useRef, useState} from "react";
 import {Link, useLocation, useSearchParams} from "react-router-dom";
 import {useTranslation} from "react-i18next";
@@ -102,6 +103,18 @@ const recovery = [
     },
 ];
 
+/** Customer launch help is limited to installing/opening an account and viewing settings. */
+const visibleHelpModules = portalInternalEdition ? guideModules : [
+    ...guideModules.filter(({id}) => id === "settings"),
+    {
+        ...guideModules.find(({id}) => id === "security")!,
+        steps: {
+            de: ["Melde dich mit deiner E-Mail-Adresse oder deinem Benutzernamen an.", "Nutze die Passwort-Wiederherstellung auf der Anmeldeseite, wenn du deinen Zugang verloren hast."],
+            en: ["Sign in with your email address or username.", "Use password recovery on the sign-in page if you lose access."],
+        },
+    },
+];
+
 /** Search titles, steps and recovery text in both authored languages regardless of the selected UI language. */
 function searchText(module: GuideModule) {
     return [
@@ -132,7 +145,7 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
     const searchInput = useRef<HTMLInputElement>(null);
     const articleHeading = useRef<HTMLHeadingElement>(null);
     const topic = params.get("topic");
-    const selected = guideModules.find((module) => module.id === topic);
+    const selected = visibleHelpModules.find((module) => module.id === topic);
     const troubleshooting = topic === "troubleshooting";
     useEffect(() => {
         // URL navigation should reveal the chosen instructions to keyboard users too.
@@ -140,7 +153,7 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
         articleHeading.current?.focus();
     }, [location.key]);
     const needle = query.trim().toLocaleLowerCase();
-    const results = guideModules.filter((module) =>
+    const results = visibleHelpModules.filter((module) =>
         searchText(module).includes(needle),
     );
 
@@ -159,11 +172,10 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
             </a>
             {!embedded && (
                 <header className="help-header">
-                    <Link className="help-brand" to="/help" aria-label="Luminovia Portal">
-                        <img src="/brand/luminovia-logo-mark-160.webp" alt=""/>
-                        <span>
-              Luminovia <small>PORTAL</small>
-            </span>
+                    <Link className="help-brand" to="/help" aria-label={installationBrand.name}>
+                        <img src={installationBrand.mark} alt=""/>
+                        {portalInternalEdition ? <span>{installationBrand.shortName} <small>PORTAL</small></span>
+                            : <span className="installation-brand-name">{installationBrand.shortName}</span>}
                     </Link>
                     <div className="help-header-actions">
                         <Preferences/>
@@ -173,21 +185,24 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
             )}
             <Content id="help-main" className="help-main" tabIndex={-1}>
                 <section className="help-hero" aria-labelledby="help-title">
-                    <div className="eyebrow">LUMINOVIA PORTAL</div>
+                    <div className="eyebrow">{installationBrand.name}</div>
                     <h1 id="help-title">{text(labels.title)}</h1>
-                    <p>{text(labels.subtitle)}</p>
+                    <p>{text(portalInternalEdition ? labels.subtitle : {
+                        de: "Hilfe zu Anmeldung, Kontozugang und Darstellung deiner Akademie.",
+                        en: "Help with sign-in, account access and appearance for your academy.",
+                    })}</p>
                     <div className="help-actions">
                         <Button asChild variant="secondary">
                             <Link to="/api/docs">
                                 {i18n.language.startsWith("de") ? "API-Dokumentation" : "API documentation"}
                             </Link>
                         </Button>
-                        <Button asChild>
+                        {portalInternalEdition && <Button asChild>
                             <Link to="/demo">
                                 {text(labels.demo)}
                                 <ArrowRight size={18} aria-hidden="true"/>
                             </Link>
-                        </Button>
+                        </Button>}
                         <Button
                             variant="secondary"
                             onClick={() => choose("troubleshooting")}
@@ -253,16 +268,16 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
                             </ol>
                         </section>
                         <div className="help-actions">
-                            <Button asChild>
+                            {portalInternalEdition && <Button asChild>
                                 <Link to={`/demo${selected.path === "/" ? "" : selected.path}`}>
                                     {text(labels.practice)}
                                 </Link>
-                            </Button>
+                            </Button>}
                             <Button asChild variant="secondary">
                                 <Link to={selected.path}>{text(labels.real)}</Link>
                             </Button>
                         </div>
-                        <p className="help-fine-print">{text(labels.access)}</p>
+                        {portalInternalEdition && <p className="help-fine-print">{text(labels.access)}</p>}
                     </article>
                 )}
                 {troubleshooting && !needle && (
@@ -274,7 +289,7 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
                             {text(labels.troubleshooting)}
                         </h2>
                         <div className="help-recovery-grid">
-                            {recovery.map((item) => (
+                            {recovery.filter(({topic}) => visibleHelpModules.some(({id}) => id === topic)).map((item) => (
                                 <article key={item.title.en}>
                                     <h3>{text(item.title)}</h3>
                                     <p>{text(item.body)}</p>

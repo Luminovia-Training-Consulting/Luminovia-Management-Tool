@@ -1,3 +1,4 @@
+import {installationBrand, type InstallationBrand} from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
@@ -1083,7 +1084,11 @@ const companyCourseWebhook = {
 };
 
 /** Publish only supported, explicitly described product operations. */
-export function portalOpenApi(backend: string, includeNonInteractive = true) {
+export function portalOpenApi(
+  backend: string,
+  includeNonInteractive = true,
+  brand: InstallationBrand = installationBrand,
+) {
   const documentedPaths: typeof paths = includeNonInteractive
     ? {
         ...nativeDownloadPaths,
@@ -1093,10 +1098,24 @@ export function portalOpenApi(backend: string, includeNonInteractive = true) {
         "/functions/v1/company-integration": integrationPath,
       }
     : paths;
+  // Customer package readiness is currently fail-closed. Do not advertise the
+  // internal marketplace, account or commercial endpoints through its public contract.
+  if (brand.edition !== "internal") return {
+    openapi: accountOpenApi.openapi,
+    info: {
+      title: `${brand.name} API`,
+      version: "1.1.0",
+      description: "Customer operations become available only when the installation has passed the edition readiness checks.",
+    },
+    paths: {} as typeof paths,
+    webhooks: undefined,
+    servers: [{url: backend.replace(/\/+$/, "") || "/"}],
+    components: {securitySchemes: {}},
+  };
   return {
     ...accountOpenApi,
     info: {
-      title: "Luminovia Portal API",
+      title: `${brand.name} API`,
       version: "1.1.0",
       description:
         "Account and business contracts with native RPC schemas derived from the migrated database. Current permissions, company scope and entitlements still apply. The repository API reference describes feature-specific JSON payloads and integration flows.",

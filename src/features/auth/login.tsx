@@ -2,6 +2,7 @@
  * Human password sign-in and recovery requests. Validation/online notices support the UI; only
  * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
  */
+import {installationBrand, portalInternalEdition} from "../../lib/installation-brand";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {z} from "zod";
@@ -95,21 +96,21 @@ export function Login() {
             <section className="login-story">
                 <img
                     className="brand-full"
-                    src="/brand/luminovia-logo-full.webp"
-                    alt="Luminovia Training & Consulting"
+                    src={installationBrand.logo}
+                    alt={portalInternalEdition ? "Luminovia Training & Consulting" : ""}
                 />
                 <div>
-                    <span className="eyebrow">LUMINOVIA PORTAL</span>
-                    <h1>{t("safeLogin")}</h1>
-                    <p>{t("loginStory")}</p>
+                    {portalInternalEdition && <span className="eyebrow">{installationBrand.name}</span>}
+                    <h1>{portalInternalEdition ? t("safeLogin") : installationBrand.name}</h1>
+                    {portalInternalEdition && <p>{t("loginStory")}</p>}
                 </div>
                 <div className="login-illustration" aria-hidden="true">
                     <div className="arc arc-one" />
                     <div className="arc arc-two" />
                     <div className="arc arc-three" />
-                    <span>{t("tagline")}</span>
+                    {portalInternalEdition && <span>{t("tagline")}</span>}
                 </div>
-                <p className="login-foot">IT · AI · BUSINESS</p>
+                {portalInternalEdition && <p className="login-foot">IT · AI · BUSINESS</p>}
             </section>
             <section className="login-panel">
                 <div className="login-card">
@@ -198,9 +199,9 @@ export function Login() {
                     )}
                     <p className="fine-print">{t("invitationNote")}</p>
                     <div className="login-learning-links">
-                        <Button asChild variant="secondary">
+                        {portalInternalEdition && <Button asChild variant="secondary">
                             <Link to="/demo">{t("tryDemo")}</Link>
-                        </Button>
+                        </Button>}
                         <Link to="/help">{t("helpGuides")}</Link>
                     </div>
                 </div>
