@@ -25,6 +25,9 @@
 - [x] Accept assigned lecturer material uploads through the existing quarantine and scanner. Both dedicated editions passed exact bytes, no raw Storage access, repeated request, changed digest, scanner rejection and retained-object checks using pinned Storage and ClamAV.
 - [x] Publish the twelve-operation branded contract with the exact active-licence upload and publication scope. Keep the scanner and reservation internals closed to the catalogue.
 - [x] Verify the typed preparation, institution-enquiry, support and integration-key contracts against migrated role fixtures, and correct their obsolete-version HTTP responses on both pinned PostgREST versions.
+- [x] Open the exact session's manual register in both dedicated editions. Real Chromium verifies persisted lecturer changes and the learner's private view. SQL and native HTTP cover scoped company access, concurrency, closure and licence grace.
+- [x] Document and verify private calendar and notification preference, inbox and device contracts. Exclude secret inputs and responses from the interactive explorer. Both pinned PostgREST versions return HTTP 409 for the confirmed stale calendar and quiet-hours writes.
+- [x] Allow the canonical owned preview origin during isolated browser acceptance. Actual Deno and all four desktop/mobile built-PWA checks passed with the corrected origin configuration.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links
