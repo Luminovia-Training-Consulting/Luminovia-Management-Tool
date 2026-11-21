@@ -69,15 +69,17 @@ test("actual Auth invitation link opens password setup and the invited account c
     await page
         .getByRole("button", {name: "Passwort festlegen", exact: true})
         .click();
-    await expect(page.getByRole("status")).toContainText(
-        "Dein Passwort wurde gespeichert.",
-    );
+    // Mandatory password setup releases portal access and opens the workspace.
+    // Sign in again below to prove the new password survived sign-out.
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("region", {name: "Arbeitsbereich"})).toBeVisible();
     await page.getByRole("button", {name: "Abmelden", exact: true}).click();
     await expect(page).toHaveURL(/\/login/);
     await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page.getByLabel("Passwort", {exact: true}).fill(password);
     await page.getByRole("button", {name: "Anmelden", exact: true}).click();
     await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("region", {name: "Arbeitsbereich"})).toBeVisible();
 });
 
 test("real browser password recovery consumes a Mailpit email and keeps the PKCE verifier", async ({
