@@ -22,6 +22,8 @@ import { notificationPaths } from "./notifications-contract.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
+import { academyClassPaths } from "./academy-class-contract.ts";
+import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
 import { academyPersonalSettingsPaths } from "./academy-personal-settings-contract.ts";
 import {
   academyTimetableRequestSchema,
@@ -112,6 +114,21 @@ function courseOperation(
         ...(staleVersion
           ? { "409": error("The expected version is stale") }
           : {}),
+      },
+    },
+  };
+}
+
+function courseChatSend(...args: Parameters<typeof courseOperation>) {
+  const { post } = courseOperation(...args);
+  return {
+    post: {
+      ...post,
+      responses: {
+        ...post.responses,
+        "429": error(
+          "The current message budget has been used. Retry the same request after the cooldown.",
+        ),
       },
     },
   };
@@ -618,6 +635,8 @@ const coursePaths = {
   ),
   ...academyAdministrationPaths,
   ...academyLicencePaths,
+  ...academyClassPaths,
+  ...academyChatProtectionPaths,
   ...academyPersonalSettingsPaths,
   "/rest/v1/rpc/academy_timetable": courseOperation(
     "readAcademyTimetable",
@@ -886,7 +905,7 @@ const coursePaths = {
     messagePage,
     messages,
   ),
-  "/rest/v1/rpc/send_course_chat_attachment": courseOperation(
+  "/rest/v1/rpc/send_course_chat_attachment": courseChatSend(
     "sendAcademyCourseChatAttachment",
     "Post a message with one scanned course-chat attachment",
     "Requires current course room membership and the sender's own exact clean draft from academy-course-chat. The message body may be empty. Retry with the same client ID, room, body, document and version. The message is created only after the scan is confirmed.",
@@ -900,7 +919,7 @@ const coursePaths = {
     }),
     uuid,
   ),
-  "/rest/v1/rpc/send_course_chat_message": courseOperation(
+  "/rest/v1/rpc/send_course_chat_message": courseChatSend(
     "sendAcademyCourseChatMessage",
     "Post text to a course participant room",
     "Requires current room membership. The body must include text. Reuse the client ID, room and body to retry the same send. Returns the message ID.",
@@ -924,7 +943,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.21.0",
+      version: "1.22.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

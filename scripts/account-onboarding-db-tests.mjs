@@ -35,6 +35,9 @@ await withTestDatabase("account_onboarding", async ({ sql, actor }) => {
     "new@example.invalid",
   );
   assert.equal(await actor(ordinary, "select public.portal_access()"), "t");
+  await sql(
+    "begin; set local role service_role; select public.require_portal_access(); rollback;",
+  );
   for (const id of [invited, temporary]) {
     assert.equal(
       await actor(id, "select private.own_password_setup_required()"),

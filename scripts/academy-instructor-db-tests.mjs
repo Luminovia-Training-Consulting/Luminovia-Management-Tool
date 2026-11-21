@@ -43,6 +43,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/functions/v1/accounts/v1/academy/users",
             "/rest/v1/rpc/academy_administration",
             "/rest/v1/rpc/academy_licence_receipt",
+            "/rest/v1/rpc/course_class_options",
+            "/rest/v1/rpc/set_course_class",
+            "/rest/v1/rpc/course_chat_protection",
+            "/rest/v1/rpc/set_course_chat_protection",
             "/rest/v1/rpc/academy_create_organisation",
             "/rest/v1/rpc/academy_set_member_active",
             "/rest/v1/rpc/academy_personal_settings",
@@ -908,6 +912,33 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(workspace(admin, run), /42501/);
   assert.equal((await capability()).customer_ready, false);
   assert.deepEqual(testedContracts, new Set(responseSchemas.keys()));
+
+  // A second lecturer can teach the same sessions. Removing one allocation
+  // leaves the other instructor's classroom authority and enrolments intact.
+  await sql(configure(installation, nextRelease));
+  const coInstructor = randomUUID();
+  await sql(`
+    insert into auth.users(id,email,email_confirmed_at)
+      values(${q(coInstructor)}, 'co-instructor@example.invalid', now());
+    insert into public.user_roles(user_id,role) values(${q(coInstructor)}, 'lecturer');
+  `);
+  const coAssignment = await assign(admin, run, coInstructor, randomUUID());
+  assert.equal(coAssignment.status, "confirmed");
+  assert.equal((await workspace(teacher, run)).access.teacher, true);
+  assert.equal((await workspace(coInstructor, run)).access.teacher, true);
+  await meeting(coInstructor, initialLink, 3);
+  assert.deepEqual(
+    await call(admin, "academy_release_course_instructor", [
+      run,
+      coAssignment.claim_id,
+      "Fictional teaching team change",
+      randomUUID(),
+    ]).then(JSON.parse),
+    { status: "cancelled", claim_id: coAssignment.claim_id },
+  );
+  await assert.rejects(workspace(coInstructor, run), /42501/);
+  assert.equal((await workspace(teacher, run)).access.teacher, true);
+  assert.equal((await workspace(participant, run)).access.learner, true);
   console.log(
     `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text and exact attachment chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
   );

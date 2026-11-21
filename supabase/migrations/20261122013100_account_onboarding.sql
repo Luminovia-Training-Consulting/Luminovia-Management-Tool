@@ -94,8 +94,10 @@ begin
     raise exception 'Expected the current REST pre-request gate';
   end if;
   execute replace(source, anchor, anchor ||
-    E'  if current_setting(''role'', true) = ''authenticated'' and private.own_password_setup_required() then\n' ||
-    E'    raise exception ''Personal password setup required'' using errcode = ''PT428'';\n  end if;\n');
+    E'  if current_setting(''role'', true) = ''authenticated'' then\n' ||
+    E'    if private.own_password_setup_required() then\n' ||
+    E'      raise exception ''Personal password setup required'' using errcode = ''PT428'';\n' ||
+    E'    end if;\n  end if;\n');
 end;
 $$;
 
