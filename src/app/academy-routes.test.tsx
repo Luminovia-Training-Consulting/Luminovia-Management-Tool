@@ -466,7 +466,11 @@ it("opens the course hub without activating the full edition and reuses scoped a
   ).toBeNull();
   expect(screen.getByRole("button", { name: /acknowledge/i })).toBeVisible();
   expect(screen.queryByRole("button", { name: /unshare/i })).toBeNull();
-  expect(document.querySelector('input[type="file"]')).toBeNull();
+  const picker = screen.getByLabelText("Attach file");
+  expect(picker).toBeVisible();
+  expect([...document.querySelectorAll('input[type="file"]')]).toEqual([
+    picker,
+  ]);
   expect(fake.from).not.toHaveBeenCalled();
   expect(fake.rpc.mock.calls.map(([name]) => name)).toEqual(
     expect.arrayContaining([

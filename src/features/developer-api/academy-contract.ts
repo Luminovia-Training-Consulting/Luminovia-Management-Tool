@@ -166,6 +166,8 @@ const materialUploadResult = record({
     }),
     oneOf: [
       {
+        type: "object",
+        required: ["scope", "kind", "room_id"],
         properties: {
           scope: { const: "personal" },
           kind: { const: "material" },
@@ -173,6 +175,8 @@ const materialUploadResult = record({
         },
       },
       {
+        type: "object",
+        required: ["scope", "kind", "room_id"],
         properties: {
           scope: { const: "room" },
           kind: { const: "chat" },
@@ -242,8 +246,16 @@ const materialUpload = {
               ["client_id", "file"],
             ),
             oneOf: [
-              { required: ["academy_course_id"] },
-              { required: ["academy_room_id"] },
+              {
+                type: "object",
+                properties: { academy_course_id: uuid },
+                required: ["academy_course_id"],
+              },
+              {
+                type: "object",
+                properties: { academy_room_id: uuid },
+                required: ["academy_room_id"],
+              },
             ],
           },
           encoding: { file: { contentType: materialMime.join(", ") } },
