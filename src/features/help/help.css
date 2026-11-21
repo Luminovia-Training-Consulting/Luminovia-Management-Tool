@@ -3,333 +3,333 @@
  * Responsive grids and wrapping keep long instructions and navigation usable on narrow screens.
  */
 .help-page {
-    min-height: 100dvh;
-    background: var(--paper);
-    color: var(--ink);
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .help-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem clamp(1rem, 4vw, 4rem);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .help-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 1.2rem;
-    font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .help-brand img {
-    width: 44px;
-    height: 44px;
+  width: 44px;
+  height: 44px;
 }
 
 .help-brand small {
-    display: block;
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
+  display: block;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
 }
 
 .help-header-actions,
 .help-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .help-header-actions > a {
-    color: var(--ink);
+  color: var(--ink);
 }
 
 .help-main {
-    width: min(1200px, 100%);
-    margin: auto;
-    padding: 2rem clamp(1rem, 3vw, 2rem) 4rem;
+  width: min(1200px, 100%);
+  margin: auto;
+  padding: 2rem clamp(1rem, 3vw, 2rem) 4rem;
 }
 
 .help-hero {
-    padding: clamp(1.5rem, 4vw, 3rem);
-    border: 1px solid var(--line);
-    border-radius: 2rem 2rem 2rem 0.5rem;
-    background: var(--surface);
-    border-top: 7px solid #1749b5;
-    position: relative;
-    overflow: hidden;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--line);
+  border-radius: 2rem 2rem 2rem 0.5rem;
+  background: var(--surface);
+  border-top: 7px solid #1749b5;
+  position: relative;
+  overflow: hidden;
 }
 
 .help-hero::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: linear-gradient(
-            to right,
-            #ffae9a 0% 14.28%,
-            #ffc68e 14.28% 28.56%,
-            #ffdb76 28.56% 42.84%,
-            #b8edd9 42.84% 57.12%,
-            #1749b5 57.12% 71.4%,
-            #7d88d8 71.4% 85.68%,
-            #ded2fa 85.68%
-    );
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    #ffae9a 0% 14.28%,
+    #ffc68e 14.28% 28.56%,
+    #ffdb76 28.56% 42.84%,
+    #b8edd9 42.84% 57.12%,
+    #1749b5 57.12% 71.4%,
+    #7d88d8 71.4% 85.68%,
+    #ded2fa 85.68%
+  );
 }
 
 .help-hero h1 {
-    margin: 0.6rem 0 1rem;
-    font-size: clamp(2rem, 5vw, 3.3rem);
-    line-height: 1.15;
+  margin: 0.6rem 0 1rem;
+  font-size: clamp(2rem, 5vw, 3.3rem);
+  line-height: 1.15;
 }
 
 .help-hero p {
-    max-width: 70ch;
-    margin: 0 0 1.5rem;
-    color: var(--muted);
-    line-height: 1.7;
+  max-width: 70ch;
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .help-tools {
-    display: flex;
-    gap: 1rem;
-    align-items: end;
-    margin: 2rem 0;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  margin: 2rem 0;
+  flex-wrap: wrap;
 }
 
 .help-search {
-    display: grid;
-    gap: 0.5rem;
-    flex: 1 1 20rem;
-    font-weight: 600;
+  display: grid;
+  gap: 0.5rem;
+  flex: 1 1 20rem;
+  font-weight: 600;
 }
 
 .help-search > span {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .help-search input {
-    width: 100%;
-    padding: 0.85rem;
-    min-width: 0;
+  width: 100%;
+  padding: 0.85rem;
+  min-width: 0;
 }
 
 .help-article,
 .help-recovery {
-    padding: clamp(1rem, 3vw, 2rem);
-    margin-bottom: 2rem;
-    border: 1px solid var(--line);
-    border-radius: 1.5rem;
-    background: var(--surface);
+  padding: clamp(1rem, 3vw, 2rem);
+  margin-bottom: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--surface);
 }
 
 .help-article h2,
 .help-recovery h2 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    margin: 0.6rem 0 1rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin: 0.6rem 0 1rem;
 }
 
 .help-article p,
 .help-article li,
 .help-recovery p,
 .help-info {
-    line-height: 1.75;
+  line-height: 1.75;
 }
 
 .help-article li {
-    padding-left: 0.35rem;
-    margin-bottom: 0.7rem;
+  padding-left: 0.35rem;
+  margin-bottom: 0.7rem;
 }
 
 .help-article ol {
-    padding-left: 1.5rem;
-    list-style: decimal;
+  padding-left: 1.5rem;
+  list-style: decimal;
 }
 
 .help-problem {
-    border-left: 4px solid #7d88d8;
-    padding: 0.2rem 1rem;
-    margin: 1.5rem 0;
-    background: var(--paper);
+  border-left: 4px solid #7d88d8;
+  padding: 0.2rem 1rem;
+  margin: 1.5rem 0;
+  background: var(--paper);
 }
 
 .help-fine-print,
 .help-result-count {
-    color: var(--muted);
-    font-size: 0.9rem;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .help-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .help-card {
-    display: grid;
-    align-content: start;
-    gap: 0.65rem;
-    padding: 1.4rem;
-    border: 1px solid var(--line);
-    border-top: 5px solid var(--help-accent);
-    border-radius: 1.2rem 1.2rem 1.2rem 0.4rem;
-    color: var(--ink);
-    background: var(--surface);
-    text-decoration: none;
-    min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--help-accent);
+  border-radius: 1.2rem 1.2rem 1.2rem 0.4rem;
+  color: var(--ink);
+  background: var(--surface);
+  text-decoration: none;
+  min-width: 0;
 }
 
 .help-card h3,
 .help-card p {
-    margin: 0;
+  margin: 0;
 }
 
 .help-card h3 {
-    font-size: 1.1rem;
+  font-size: 1.1rem;
 }
 
 .help-card p {
-    color: var(--muted);
-    line-height: 1.65;
+  color: var(--muted);
+  line-height: 1.65;
 }
 
 .help-card:hover {
-    outline: 2px solid var(--help-accent);
-    outline-offset: 2px;
+  outline: 2px solid var(--help-accent);
+  outline-offset: 2px;
 }
 
 .help-accent-0 {
-    --help-accent: #ffae9a;
+  --help-accent: #ffae9a;
 }
 
 .help-accent-1 {
-    --help-accent: #ffc68e;
+  --help-accent: #ffc68e;
 }
 
 .help-accent-2 {
-    --help-accent: #ffdb76;
+  --help-accent: #ffdb76;
 }
 
 .help-accent-3 {
-    --help-accent: #b8edd9;
+  --help-accent: #b8edd9;
 }
 
 .help-accent-4 {
-    --help-accent: #1749b5;
+  --help-accent: #1749b5;
 }
 
 .help-accent-5 {
-    --help-accent: #7d88d8;
+  --help-accent: #7d88d8;
 }
 
 .help-accent-6 {
-    --help-accent: #ded2fa;
+  --help-accent: #ded2fa;
 }
 
 .help-recovery-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .help-recovery-grid article {
-    padding: 1rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: var(--paper);
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
 }
 
 .help-recovery-grid h3 {
-    margin: 0 0 0.5rem;
+  margin: 0 0 0.5rem;
 }
 
 .help-recovery-grid a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--brand);
 }
 
 .help-support {
-    border-top: 1px solid var(--line);
-    margin-top: 1.5rem;
-    padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
 }
 
 .help-empty {
-    padding: 2rem 0;
+  padding: 2rem 0;
 }
 
 @media (max-width: 850px) {
-    .help-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .help-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 580px) {
-    .help-header {
-        flex-wrap: wrap;
-    }
+  .help-header {
+    flex-wrap: wrap;
+  }
 
-    .help-header-actions {
-        width: 100%;
-        justify-content: space-between;
-        gap: 0.5rem;
-    }
+  .help-header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
 
-    .help-main {
-        padding-top: 1rem;
-    }
+  .help-main {
+    padding-top: 1rem;
+  }
 
-    .help-grid,
-    .help-recovery-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
+  .help-grid,
+  .help-recovery-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-    .help-actions {
-        align-items: stretch;
-    }
+  .help-actions {
+    align-items: stretch;
+  }
 
-    .help-actions .button {
-        white-space: normal;
-        height: auto;
-        min-height: 44px;
-    }
+  .help-actions .button {
+    white-space: normal;
+    height: auto;
+    min-height: 44px;
+  }
 
-    .help-article {
-        overflow-wrap: anywhere;
-    }
+  .help-article {
+    overflow-wrap: anywhere;
+  }
 }
 
 .help-page.help-embedded {
-    min-height: 0;
-    background: transparent;
+  min-height: 0;
+  background: transparent;
 }
 
 .help-embedded .help-main {
-    width: 100%;
-    max-width: none;
-    padding: 0;
+  width: 100%;
+  max-width: none;
+  padding: 0;
 }
 
 .help-embedded .help-hero {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 .replacement-discovery > summary {
-    padding: 0.7rem;
-    cursor: pointer;
-    font-weight: 700;
+  padding: 0.7rem;
+  cursor: pointer;
+  font-weight: 700;
 }

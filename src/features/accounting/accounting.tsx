@@ -1,6 +1,6 @@
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
-import {installationBrand} from "../../lib/installation-brand";
+import { installationBrand } from "../../lib/installation-brand";
 import { useRef, useState } from "react";
 import {
   useInfiniteQuery,

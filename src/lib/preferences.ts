@@ -11,18 +11,18 @@ export const uiLocalChangeEvent = "luminovia-ui-local-change";
  * language changes or theme controls. Auth persistence keeps the Supabase SDK's separate contract.
  */
 export function readPreference(name: Preference) {
-    try {
-        return localStorage.getItem(`luminovia.${name}`);
-    } catch {
-        return null;
-    }
+  try {
+    return localStorage.getItem(`luminovia.${name}`);
+  } catch {
+    return null;
+  }
 }
 
 /** Persist the UI choice best-effort without resetting active forms on storage failure. */
 export function writePreference(name: Preference, value: string) {
-    try {
-        localStorage.setItem(`luminovia.${name}`, value);
-    } catch {
-        // Keep the current interface state; do not loop or reset an active form.
-    }
+  try {
+    localStorage.setItem(`luminovia.${name}`, value);
+  } catch {
+    // Keep the current interface state; do not loop or reset an active form.
+  }
 }

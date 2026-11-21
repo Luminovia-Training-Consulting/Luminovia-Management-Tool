@@ -1,37 +1,37 @@
 /** Layout and visible workflow states for replacements, using the existing theme and brand tokens across responsive sizes. */
 .replacement-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
-    gap: 1rem;
-    margin-block: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
 }
 
 .replacement-card {
-    min-width: 0;
-    border-top: 4px solid var(--mint, #b8edd9);
+  min-width: 0;
+  border-top: 4px solid var(--mint, #b8edd9);
 }
 
 .replacement-card ol {
-    padding-inline-start: 1.3rem;
+  padding-inline-start: 1.3rem;
 }
 
 .replacement-card li {
-    margin-block: 0.5rem;
-    overflow-wrap: anywhere;
+  margin-block: 0.5rem;
+  overflow-wrap: anywhere;
 }
 
 .replacement-card dd {
-    margin-inline-start: 0;
-    font-weight: 600;
-    margin-block-end: 0.8rem;
+  margin-inline-start: 0;
+  font-weight: 600;
+  margin-block-end: 0.8rem;
 }
 
 .replacement-text {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .replacement-emergency {
-    display: inline-block;
-    margin-inline-start: 0.7rem;
+  display: inline-block;
+  margin-inline-start: 0.7rem;
 }

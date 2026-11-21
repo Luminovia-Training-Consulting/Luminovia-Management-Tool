@@ -1,22 +1,22 @@
 /* Wrapping keeps the same search controls usable on narrow installed PWAs. */
 .search-page-form {
-    align-items: end;
-    flex-wrap: wrap;
+  align-items: end;
+  flex-wrap: wrap;
 }
 
 .search-page-form .field {
-    flex: 1 1 220px;
-    margin-bottom: 0;
-    min-width: 0;
+  flex: 1 1 220px;
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .search-page-form > .button {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 @media (max-width: 600px) {
-    .search-page-form .field,
-    .search-page-form > .button {
-        flex-basis: 100%;
-    }
+  .search-page-form .field,
+  .search-page-form > .button {
+    flex-basis: 100%;
+  }
 }

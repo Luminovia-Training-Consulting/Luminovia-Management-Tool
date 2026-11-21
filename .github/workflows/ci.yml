@@ -4,9 +4,9 @@
 name: Portal checks
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       expected_commit:
@@ -175,7 +175,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser-project: [ desktop-chromium, mobile-chromium ]
+        browser-project: [desktop-chromium, mobile-chromium]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -297,7 +297,7 @@ jobs:
         run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   preview-package:
     name: PR preview package
-    needs: [ quality, coverage, verify, verify-selfhost, verify-browser, scope ]
+    needs: [quality, coverage, verify, verify-selfhost, verify-browser, scope]
     # Required final gate: even a canceled/failed scope or dependency must
     # explicitly fail here, rather than turn every remaining status into skipped.
     if: always() && github.event_name == 'pull_request'
@@ -359,7 +359,7 @@ jobs:
     concurrency:
       group: cms-release-${{ github.sha }}
       cancel-in-progress: false
-    needs: [ quality, coverage, verify, verify-selfhost, verify-browser ]
+    needs: [quality, coverage, verify, verify-selfhost, verify-browser]
     if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 15

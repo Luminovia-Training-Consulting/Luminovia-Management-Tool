@@ -1,4 +1,7 @@
-import {installationBrand, type InstallationBrand} from "../../lib/installation-brand.ts";
+import {
+  installationBrand,
+  type InstallationBrand,
+} from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
@@ -1110,23 +1113,25 @@ export function portalOpenApi(
     : paths;
   // Customer package readiness is currently fail-closed. Do not advertise the
   // internal marketplace, account or commercial endpoints through its public contract.
-  if (brand.edition !== "internal") return {
-    openapi: accountOpenApi.openapi,
-    info: {
-      title: `${brand.name} API`,
-      version: "1.1.0",
-      description: "Customer operations become available only when the installation has passed the edition readiness checks.",
-    },
-    paths: {} as typeof paths,
-    webhooks: undefined,
-    "x-portal-installation": {
-      installation_id: brand.installationId,
-      edition: brand.edition,
-      customer_ready: false,
-    },
-    servers: [{url: backend.replace(/\/+$/, "") || "/"}],
-    components: {securitySchemes: {}},
-  };
+  if (brand.edition !== "internal")
+    return {
+      openapi: accountOpenApi.openapi,
+      info: {
+        title: `${brand.name} API`,
+        version: "1.1.0",
+        description:
+          "Customer operations become available only when the installation has passed the edition readiness checks.",
+      },
+      paths: {} as typeof paths,
+      webhooks: undefined,
+      "x-portal-installation": {
+        installation_id: brand.installationId,
+        edition: brand.edition,
+        customer_ready: false,
+      },
+      servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
+      components: { securitySchemes: {} },
+    };
   return {
     ...accountOpenApi,
     info: {

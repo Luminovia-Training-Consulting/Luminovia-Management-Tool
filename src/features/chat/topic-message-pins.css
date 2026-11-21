@@ -1,29 +1,29 @@
 /* Keep group-wide pinned context bounded without relying on color in either theme. */
 .chat-topic-pins {
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
-    padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0.65rem 1rem;
 }
 
 .chat-topic-pins h3 {
-    margin: 0 0 0.35rem;
-    font-size: 0.95rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
 }
 
 .chat-topic-pins ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 12rem;
-    overflow: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 12rem;
+  overflow: auto;
 }
 
 .chat-topic-pins li {
-    border-top: 1px solid var(--line);
-    padding: 0.35rem 0;
-    overflow-wrap: anywhere;
+  border-top: 1px solid var(--line);
+  padding: 0.35rem 0;
+  overflow-wrap: anywhere;
 }
 
 .chat-topic-pins p {
-    margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }

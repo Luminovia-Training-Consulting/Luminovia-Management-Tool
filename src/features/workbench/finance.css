@@ -1,126 +1,126 @@
 .finance-period {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: end;
-    margin-bottom: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1.25rem;
 }
 
 .finance-period p {
-    flex-basis: 100%;
-    margin: 0;
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .finance-period .field {
-    min-width: 0;
-    flex: 1 1 14rem;
+  min-width: 0;
+  flex: 1 1 14rem;
 }
 
 .finance-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.65rem;
-    margin: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 1rem 0;
 }
 
 .finance-actions .button,
 .finance-review .button {
-    height: auto;
-    white-space: normal;
-    max-width: 100%;
-    text-align: start;
+  height: auto;
+  white-space: normal;
+  max-width: 100%;
+  text-align: start;
 }
 
 .finance-time-form fieldset {
-    border: 0;
-    padding: 0;
-    min-width: 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 .finance-time-form input,
 .finance-time-form select,
 .finance-time-form textarea {
-    max-width: 100%;
-    min-width: 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .finance-time-list {
-    display: grid;
-    gap: 1rem;
-    margin-top: 1rem;
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
 .finance-review {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .finance-history {
-    padding-left: 1.5rem;
+  padding-left: 1.5rem;
 }
 
 .finance-history > li {
-    margin-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .finance-history p {
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 .control-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-    gap: 1rem;
-    margin: 1.25rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
 }
 
 .control-grid ul {
-    padding-left: 1.25rem;
+  padding-left: 1.25rem;
 }
 
 .control-grid li {
-    margin: 0.75rem 0;
-    overflow-wrap: anywhere;
+  margin: 0.75rem 0;
+  overflow-wrap: anywhere;
 }
 
 .finance-table-scroll {
-    overflow-x: auto;
-    max-width: 100%;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 /* Match the existing visible keyboard-focus treatment for this scroll target. */
 .finance-table-scroll:focus-visible {
-    outline: 3px solid var(--brand);
-    outline-offset: 3px;
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
 }
 
 .finance-table {
-    border-collapse: collapse;
-    width: 100%;
-    min-width: 50rem;
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 50rem;
 }
 
 .finance-table th,
 .finance-table td {
-    text-align: start;
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--border);
+  text-align: start;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .finance-table caption {
-    text-align: start;
-    font-weight: 700;
-    padding: 0.75rem;
+  text-align: start;
+  font-weight: 700;
+  padding: 0.75rem;
 }
 
 .finance-scenario {
-    display: flex;
-    gap: 1rem;
-    align-items: end;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
 }
 
 .finance-scenario .field {
-    min-width: 0;
-    flex: 1 1 16rem;
+  min-width: 0;
+  flex: 1 1 16rem;
 }

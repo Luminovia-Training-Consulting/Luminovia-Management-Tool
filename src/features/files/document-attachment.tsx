@@ -2,71 +2,71 @@
  * One attachment backed by the existing document projection. Current access errors replace
  * retained metadata; downloads still use the authenticated file gateway.
  */
-import {useState} from "react";
-import {useQuery} from "@tanstack/react-query";
-import {useTranslation} from "react-i18next";
-import {FileDown, FileText} from "lucide-react";
-import {useAuth} from "../auth/auth-context";
-import {useOnline} from "../../lib/online";
-import {Button} from "../../components/ui/button";
-import {Notice} from "../../components/common";
-import {documentQuery, saveDownload} from "./api";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { FileDown, FileText } from "lucide-react";
+import { useAuth } from "../auth/auth-context";
+import { useOnline } from "../../lib/online";
+import { Button } from "../../components/ui/button";
+import { Notice } from "../../components/common";
+import { documentQuery, saveDownload } from "./api";
 import "./i18n";
 
 /** Load the attached document row and download its explicitly selected clean version. */
-export function DocumentAttachment({documentId}: { documentId: string }) {
-    const {t} = useTranslation("files");
-    const online = useOnline();
-    const {session} = useAuth();
-    const actor = session?.user.id ?? "";
-    const [failed, setFailed] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const file = useQuery({
-        ...documentQuery(actor, documentId),
-        enabled: Boolean(actor) && online,
-    });
-    if (file.isPending)
-        return (
-            <span className="muted" role="status">
-        {t("loading", {ns: "translation"})}
-      </span>
-        );
-    if (file.isError || !file.data)
-        return <span className="muted">{t("error")}</span>;
+export function DocumentAttachment({ documentId }: { documentId: string }) {
+  const { t } = useTranslation("files");
+  const online = useOnline();
+  const { session } = useAuth();
+  const actor = session?.user.id ?? "";
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const file = useQuery({
+    ...documentQuery(actor, documentId),
+    enabled: Boolean(actor) && online,
+  });
+  if (file.isPending)
     return (
-        <div className="document-attachment">
-            <FileText size={18}/>
-            <div>
-                <strong>{file.data.original_name}</strong>
-                <small>
-                    {t(file.data.status === "clean" ? "clean" : file.data.status)}
-                </small>
-            </div>
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`${t("download")}: ${file.data.original_name}`}
-                disabled={!online || busy || file.data.status !== "clean"}
-                onClick={async () => {
-                    setFailed(false);
-                    setBusy(true);
-                    try {
-                        await saveDownload(
-                            documentId,
-                            file.data!.original_name,
-                            file.data!.current_version_id,
-                        );
-                    } catch {
-                        setFailed(true);
-                    } finally {
-                        setBusy(false);
-                    }
-                }}
-            >
-                <FileDown size={18}/>
-            </Button>
-            {failed && <Notice kind="error">{t("error")}</Notice>}
-        </div>
+      <span className="muted" role="status">
+        {t("loading", { ns: "translation" })}
+      </span>
     );
+  if (file.isError || !file.data)
+    return <span className="muted">{t("error")}</span>;
+  return (
+    <div className="document-attachment">
+      <FileText size={18} />
+      <div>
+        <strong>{file.data.original_name}</strong>
+        <small>
+          {t(file.data.status === "clean" ? "clean" : file.data.status)}
+        </small>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`${t("download")}: ${file.data.original_name}`}
+        disabled={!online || busy || file.data.status !== "clean"}
+        onClick={async () => {
+          setFailed(false);
+          setBusy(true);
+          try {
+            await saveDownload(
+              documentId,
+              file.data!.original_name,
+              file.data!.current_version_id,
+            );
+          } catch {
+            setFailed(true);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <FileDown size={18} />
+      </Button>
+      {failed && <Notice kind="error">{t("error")}</Notice>}
+    </div>
+  );
 }

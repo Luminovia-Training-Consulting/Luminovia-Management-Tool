@@ -3,7 +3,7 @@ name: Pull request metadata
 run-name: "PR #${{ github.event.pull_request.number || inputs.pull_request_number }} metadata"
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
     types:
       [
         opened,

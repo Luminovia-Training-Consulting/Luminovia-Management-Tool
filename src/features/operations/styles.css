@@ -3,303 +3,303 @@
  * variables.
  */
 .operations-layout {
-    display: grid;
-    grid-template-columns: 290px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
 }
 
 .operations-directory ul {
-    display: grid;
-    gap: 8px;
-    max-height: 650px;
-    overflow: auto;
-    padding: 3px;
+  display: grid;
+  gap: 8px;
+  max-height: 650px;
+  overflow: auto;
+  padding: 3px;
 }
 
 .operations-select {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    width: 100%;
-    min-height: 56px;
-    text-align: left;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--ink);
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 56px;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
 }
 
 .operations-select[aria-pressed="true"] {
-    background: var(--blue-soft);
-    border-color: var(--brand);
+  background: var(--blue-soft);
+  border-color: var(--brand);
 }
 
 .operations-select small {
-    display: block;
-    color: var(--muted);
+  display: block;
+  color: var(--muted);
 }
 
 .operations-detail h3 {
-    margin-top: 24px;
+  margin-top: 24px;
 }
 
 /* Keep private business contacts in their own readable organization-detail group. */
 .operations-contact-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
 }
 
 .operations-contact {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 19px;
-    background: var(--paper);
-    overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 19px;
+  background: var(--paper);
+  overflow-wrap: anywhere;
 }
 
 .operations-contact h3 {
-    margin: 0;
-    font-size: 17px;
+  margin: 0;
+  font-size: 17px;
 }
 
 .operations-contact p {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .operations-contact .text-link {
-    display: flex;
-    justify-content: flex-start;
-    overflow-wrap: anywhere;
+  display: flex;
+  justify-content: flex-start;
+  overflow-wrap: anywhere;
 }
 
 .operations-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
 }
 
 .operations-toolbar {
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .operations-toolbar .field {
-    margin: 0;
-    flex: 1;
-    min-width: 180px;
+  margin: 0;
+  flex: 1;
+  min-width: 180px;
 }
 
 /* Long translated tab labels must not expand the mobile layout viewport. */
 .operations-toolbar .segmented {
-    flex-wrap: wrap;
+  flex-wrap: wrap;
 }
 
 .operations-toolbar > p {
-    width: 100%;
-    margin: 0;
-    font-size: 12px;
+  width: 100%;
+  margin: 0;
+  font-size: 12px;
 }
 
 .operations-courses-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 21px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 21px;
 }
 
 .operations-course h2 {
-    font-size: 22px;
+  font-size: 22px;
 }
 
 .operations-course p {
-    font-size: 13px;
+  font-size: 13px;
 }
 
 .operations-course .operations-actions {
-    border-top: 1px solid var(--line);
-    margin-top: 19px;
-    padding-top: 13px;
+  border-top: 1px solid var(--line);
+  margin-top: 19px;
+  padding-top: 13px;
 }
 
 .operations-course .button-ghost {
-    padding: 8px;
-    font-size: 11px;
+  padding: 8px;
+  font-size: 11px;
 }
 
 .operations-session-summary {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    color: var(--muted);
-    margin-top: 21px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  margin-top: 21px;
 }
 
 .operations-topic-field {
-    border: 1px solid var(--line);
-    padding: 17px;
-    border-radius: 12px;
-    margin-bottom: 20px;
+  border: 1px solid var(--line);
+  padding: 17px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
 .operations-topic-field legend {
-    padding: 0 7px;
+  padding: 0 7px;
 }
 
 .operations-detail > p,
 .operations-detail > small {
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1100px) {
-    .operations-layout {
-        grid-template-columns: 1fr;
-    }
+  .operations-layout {
+    grid-template-columns: 1fr;
+  }
 
-    .operations-directory ul {
-        max-height: 220px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .operations-directory ul {
+    max-height: 220px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 650px) {
-    .operations-courses-grid,
-    .operations-contact-list {
-        grid-template-columns: 1fr;
-    }
+  .operations-courses-grid,
+  .operations-contact-list {
+    grid-template-columns: 1fr;
+  }
 
-    .operations-directory ul {
-        grid-template-columns: 1fr;
-    }
+  .operations-directory ul {
+    grid-template-columns: 1fr;
+  }
 
-    .operations-detail .section-heading {
-        flex-wrap: wrap;
-    }
+  .operations-detail .section-heading {
+    flex-wrap: wrap;
+  }
 
-    .operations-course {
-        padding: 22px;
-    }
+  .operations-course {
+    padding: 22px;
+  }
 }
 
 /* Course catalogue cards use the same alternating pastel accents as the design board. */
 .operations-course {
-    --course-accent: var(--mint);
-    border-top: 5px solid var(--course-accent);
-    background: linear-gradient(
-            155deg,
-            color-mix(in srgb, var(--course-accent) 22%, var(--surface)),
-            var(--surface) 50%
-    );
-    min-width: 0;
+  --course-accent: var(--mint);
+  border-top: 5px solid var(--course-accent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--course-accent) 22%, var(--surface)),
+    var(--surface) 50%
+  );
+  min-width: 0;
 }
 
 .operations-course:nth-child(4n + 2) {
-    --course-accent: var(--peach);
+  --course-accent: var(--peach);
 }
 
 .operations-course:nth-child(4n + 3) {
-    --course-accent: var(--lilac);
+  --course-accent: var(--lilac);
 }
 
 .operations-course:nth-child(4n) {
-    --course-accent: var(--coral);
+  --course-accent: var(--coral);
 }
 
 .operations-course .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .operations-course .tags .badge {
-    background: color-mix(in srgb, var(--course-accent) 55%, var(--surface));
-    color: var(--ink);
-    border-color: transparent;
-    padding: 4px 9px;
+  background: color-mix(in srgb, var(--course-accent) 55%, var(--surface));
+  color: var(--ink);
+  border-color: transparent;
+  padding: 4px 9px;
 }
 
 .operations-course .section-heading > svg {
-    box-sizing: content-box;
-    padding: 9px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--course-accent) 45%, var(--surface));
-    color: var(--ink);
-    flex-shrink: 0;
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--course-accent) 45%, var(--surface));
+  color: var(--ink);
+  flex-shrink: 0;
 }
 
 .company-premium-control,
 .retained-course-list {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
 }
 
 .company-premium-status {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .premium-status-on {
-    background: var(--status-success-surface);
-    color: var(--status-success-ink);
+  background: var(--status-success-surface);
+  color: var(--status-success-ink);
 }
 
 .premium-status-off {
-    background: var(--status-danger-surface);
-    color: var(--status-danger-ink);
+  background: var(--status-danger-surface);
+  color: var(--status-danger-ink);
 }
 
 .premium-switch {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 9px;
-    min-height: 42px;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 42px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-weight: 750;
 }
 
 .premium-switch-on {
-    background: var(--status-success-surface);
-    color: var(--status-success-ink);
+  background: var(--status-success-surface);
+  color: var(--status-success-ink);
 }
 
 .premium-switch-off {
-    background: var(--status-danger-surface);
-    color: var(--status-danger-ink);
+  background: var(--status-danger-surface);
+  color: var(--status-danger-ink);
 }
 
 .premium-switch-indicator {
-    width: 12px;
-    height: 12px;
-    flex: 0 0 auto;
-    border: 2px solid currentColor;
-    border-radius: 50%;
-    background: currentColor;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .premium-switch:focus-visible {
-    outline: 3px solid var(--focus-ring);
-    outline-offset: 3px;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
 }
 
 .retained-course {
-    min-width: 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .retained-course h3,
 .retained-course p {
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }

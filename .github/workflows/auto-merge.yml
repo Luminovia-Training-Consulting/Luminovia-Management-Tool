@@ -3,8 +3,8 @@
 name: Verified automatic merge
 on:
   workflow_run:
-    workflows: [ Portal checks, Security analysis, Pull request metadata ]
-    types: [ completed ]
+    workflows: [Portal checks, Security analysis, Pull request metadata]
+    types: [completed]
   workflow_dispatch:
   schedule:
     # Recheck delayed CodeQL findings without requiring another PR code push.
