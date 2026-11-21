@@ -83,7 +83,7 @@ async function visitDemoSection(page: Page, path: string) {
     return;
   }
   await page
-    .getByRole("button", { name: /Weitere Demo-Bereiche|More demo sections/ })
+    .getByRole("button", { name: /Mehr Demo-Bereiche|More demo sections/ })
     .click();
   await page.locator(`#demo-mobile-navigation a[href="/demo${path}"]`).click();
 }
@@ -123,7 +123,7 @@ test("mobile demo navigation explains and permits access to its remaining sectio
     if (testInfo.project.name === "mobile-chromium") {
         await expect(page.locator(".demo-mobile-nav")).toBeVisible();
         await page
-            .getByRole("button", {name: "Weitere Demo-Bereiche", exact: true})
+            .getByRole("button", {name: "Mehr Demo-Bereiche", exact: true})
             .click();
         const nav = page.locator("#demo-mobile-navigation");
         await expect(nav).toBeVisible();
@@ -382,11 +382,11 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
                                                                                                            page,
                                                                                                        }) => {
     await page.goto("/demo");
-  await page.locator("#demo-role").selectOption("management");
+  await page.locator("#demo-role").selectOption("admin");
   const desktopNavigation = page.locator(".demo-sidebar nav");
   const mobile = !(await desktopNavigation.isVisible());
   if (mobile)
-    await page.getByRole("button", { name: "Weitere Demo-Bereiche" }).click();
+    await page.getByRole("button", { name: "Mehr Demo-Bereiche" }).click();
   const navigation = mobile
     ? page.locator("#demo-mobile-navigation")
     : desktopNavigation;
@@ -586,4 +586,43 @@ test("Premium learner demo mirrors scoped course navigation and keeps practice l
   await expect(page.getByRole("heading", {name: /Network basics/})).toBeVisible();
   await expect(page.getByText("Fictional completion record · Network basics")).toHaveCount(0);
   await expect(page.getByRole("radio", {name: "4", exact: true})).not.toBeChecked();
+});
+
+test("LMS demo shares a practice course across roles and keeps the learner view private", async ({page}, testInfo) => {
+  await page.goto("/demo/courses/linux-basics/workspace?role=management");
+  const role = page.locator("#demo-role");
+  await expect(role).toHaveValue("management");
+  await page.getByLabel("Willkommen im Kurs", {exact: true}).fill("Fiktiver Kursstart im Demo-Raum.");
+  await page.getByRole("button", {name: "Begrüßung veröffentlichen"}).click();
+  await page.getByRole("button", {name: "Beispiel-Meeting freigeben"}).click();
+  await page.getByText("Materialien", {exact: true}).click();
+  await page.getByRole("button", {name: "Beispielmaterial freigeben"}).click();
+  await page.getByText("Einladungen & Einschreibung", {exact: true}).click();
+  await page.getByLabel("Fiktive Person").selectOption("Kim Beispiel");
+  await page.getByRole("button", {name: "Einladung in der Demo vormerken"}).click();
+  await page.getByRole("button", {name: "Kim Beispiel einschreiben"}).click();
+  await page.getByText("Anwesenheitsliste", {exact: true}).click();
+  await page.getByLabel("Demo Alex", {exact: true}).selectOption("present");
+  await page.getByLabel("Kim Beispiel", {exact: true}).selectOption("absent");
+  await accessibleWithoutOverflow(page);
+  await page.screenshot({path: testInfo.outputPath("lms-staff-workspace-light-de.png"), fullPage: true});
+
+  await role.selectOption("participant");
+  await expect(page.getByText("Fiktiver Kursstart im Demo-Raum.")).toBeVisible();
+  await expect(page.getByText("Arbeitsblatt zur Wiederholung")).toBeVisible();
+  await expect(page.getByText("Anwesend", {exact: true})).toBeVisible();
+  await expect(page.getByText("Kim Beispiel", {exact: true})).toHaveCount(0);
+  await expect(page.getByText("Anwesenheitsliste", {exact: true})).toHaveCount(0);
+  await page.getByRole("button", {name: "Beispiel-Meeting öffnen"}).click();
+  await expect(page.getByRole("status")).toContainText("Kamera und Mikrofon bleiben aus");
+  await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+  await expect(page.getByText("Present", {exact: true})).toBeVisible();
+  await accessibleWithoutOverflow(page);
+
+  await role.selectOption("lecturer");
+  await expect(page.getByText("Invitations & enrolment", {exact: true})).toHaveCount(0);
+  await page.locator(".demo-practice-section > summary").filter({hasText: /^Exam$/}).click();
+  await page.getByRole("checkbox", {name: "Exam required"}).uncheck();
+  await role.selectOption("participant");
+  await expect(page.getByRole("link", {name: "Exam", exact: true})).toHaveCount(0);
 });

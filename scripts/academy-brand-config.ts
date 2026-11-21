@@ -34,6 +34,7 @@ const customerSchema = z.strictObject({
   defaultLanguage: z.enum(["de", "en"]),
   defaultTheme: z.enum(["light", "dark", "system"]),
   themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  publicDemo: z.boolean().default(false),
   files: z.strictObject({
     logo: pngFile,
     icon192: pngFile,
@@ -144,9 +145,11 @@ export function loadAcademyBrand(
 ): {
   brand: InstallationBrand;
   assets: ReadonlyMap<string, Buffer>;
+  publicDemo: boolean;
 } {
   const assets = new Map<string, Buffer>();
-  if (file === undefined) return { brand: internalInstallationBrand, assets };
+  if (file === undefined)
+    return { brand: internalInstallationBrand, assets, publicDemo: true };
   if (!isAbsolute(file))
     throw new Error(
       "PORTAL_ACADEMY_BRAND_FILE must be an absolute local filename.",
@@ -159,8 +162,8 @@ export function loadAcademyBrand(
       z.strictObject({ edition: z.literal("internal") }).safeParse(input)
         .success
     )
-      return { brand: internalInstallationBrand, assets };
-    const { files, ...settings } = customerSchema.parse(input);
+      return { brand: internalInstallationBrand, assets, publicDemo: true };
+    const { files, publicDemo, ...settings } = customerSchema.parse(input);
     const logo = "/brand/academy-logo.png";
     const favicon = "/icons/icon-192.png";
     const appleTouchIcon = "/icons/apple-touch-icon.png";
@@ -195,6 +198,7 @@ export function loadAcademyBrand(
         pwaIcons,
       },
       assets,
+      publicDemo,
     };
   } catch {
     // Build logs must neither display rejected configuration values nor expose local file paths.

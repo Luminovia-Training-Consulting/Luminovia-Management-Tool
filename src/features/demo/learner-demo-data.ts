@@ -1,5 +1,6 @@
 /** Fictional course data and restricted learner routes for the public demo. */
-import { guideModules, type GuideModule } from "../help/catalog";
+import guideModules from "@edition-demo-guides";
+import type { GuideModule } from "../help/guide";
 
 export const courses = [
   {
@@ -31,6 +32,66 @@ export const courses = [
 ] as const;
 
 export type FictionalCourse = (typeof courses)[number];
+
+export type DemoRole =
+  "lecturer" | "management" | "admin" | "client" | "participant";
+
+export const attendanceValues = [
+  "unmarked",
+  "present",
+  "absent",
+  "excused",
+] as const;
+export type Attendance = (typeof attendanceValues)[number];
+export type CourseMessage = { role: DemoRole; text: string };
+
+export const demoLearner = "Demo Alex";
+export const inviteCandidates = ["Sam Beispiel", "Kim Beispiel"];
+
+export type CoursePractice = {
+  welcome: string;
+  meeting: boolean;
+  materials: boolean;
+  examRequired: boolean;
+  examPublished: boolean;
+  className: string;
+  invited: string[];
+  enrolled: string[];
+  attendance: Record<string, Record<string, Attendance>>;
+  messages: CourseMessage[];
+};
+
+/** An independent set of examples for each course, destroyed by the demo reset. */
+export function initialCoursePractice(): Record<string, CoursePractice> {
+  return Object.fromEntries(
+    courses.map((course): [string, CoursePractice] => [
+      course.id,
+      {
+        welcome: "",
+        meeting: false,
+        materials: false,
+        examRequired: course.exam,
+        examPublished: course.exam,
+        className: "",
+        invited: [],
+        enrolled: [demoLearner],
+        attendance: {},
+        messages: [],
+      },
+    ]),
+  );
+}
+
+export const demoCoursePath = (course: FictionalCourse) =>
+  `/demo/courses/${course.id}/workspace`;
+
+export const demoRoleLabel = {
+  lecturer: "lecturer",
+  management: "management",
+  admin: "roleAdmin",
+  client: "roleCompany",
+  participant: "participant",
+} as const;
 
 /** Run IDs are slugs of the two fictional courses rather than arbitrary portal IDs. */
 export function findFictionalCourse(path: string) {

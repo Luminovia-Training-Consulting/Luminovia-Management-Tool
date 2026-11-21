@@ -14,6 +14,8 @@
 | Notifications | Inbox, read-state, categories, quiet hours and local push and mail adapters have existing fixtures. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
 | API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed contracts including internal accounting, role-aware job discovery, calendar assignment metadata and the company participant centre. | Complete the remaining generic request and response schemas and verify the full permission and error matrix. The [generated API reference](../API_REFERENCE.md) tracks the current migrated inventory. |
 
+The internal and dedicated portals share the role preview selector. Current administrators can open management, lecturer, company and learner views. Current management can open company and learner views. Hidden choices are stored per account and installation on the current browser. The selected view uses fictional examples. The public LMS demo accepts a role entry link and is included in dedicated packages only when explicitly enabled.
+
 This pass covers source implementation and local tests. CI, deployment, production mail and hosting acceptance are tracked separately.
 
 ## Open product work after the 21 November source review

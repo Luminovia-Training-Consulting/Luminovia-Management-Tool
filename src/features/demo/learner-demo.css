@@ -113,6 +113,91 @@
   border: 1px solid var(--line);
 }
 
+.demo-learner-disclosure + .demo-learner-disclosure {
+  margin-block-start: 0.65rem;
+}
+
+.demo-learner-own-attendance {
+  color: var(--muted);
+  margin-inline-start: 0.45rem;
+}
+
+.demo-practice-stats,
+.demo-practice-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0.8rem;
+}
+
+.demo-practice-stats > div {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--brand) 9%, var(--surface));
+}
+
+.demo-practice-stats > div:nth-child(2) {
+  background: color-mix(in srgb, var(--mint) 13%, var(--surface));
+}
+
+.demo-practice-stats > div:nth-child(3) {
+  background: color-mix(in srgb, var(--lilac) 12%, var(--surface));
+}
+
+.demo-practice-stats strong {
+  font-size: 1.2rem;
+}
+
+.demo-practice-section > summary {
+  cursor: pointer;
+  min-block-size: 44px;
+}
+
+.demo-practice-section > summary > :is(svg, h2) {
+  display: inline;
+  margin: 0 0 0 0.4rem;
+  vertical-align: middle;
+}
+
+.demo-practice-section > summary h2 {
+  font-size: 1.08rem;
+}
+
+.demo-practice-section-body,
+.demo-practice-section-body form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.demo-practice-section-body {
+  justify-items: start;
+  padding-block-start: 0.75rem;
+}
+
+.demo-practice-section-body form,
+.demo-practice-roster {
+  inline-size: min(100%, 39rem);
+}
+
+.demo-practice-section-body form button {
+  justify-self: start;
+}
+
+.demo-practice-invited {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.demo-practice-invited li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .demo-learner-disclosure summary {
   cursor: pointer;
   display: list-item;

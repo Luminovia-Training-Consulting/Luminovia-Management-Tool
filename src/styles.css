@@ -628,6 +628,10 @@ legend {
   overflow-wrap: anywhere;
 }
 
+.role-preview > .button {
+  margin-block-start: 1rem;
+}
+
 .page-heading p {
   color: var(--muted);
   font-size: 14px;
@@ -849,6 +853,79 @@ legend {
   max-width: 180px;
   min-width: 0;
   padding: 7px 9px;
+}
+
+.role-preview-controls,
+.academy-preview-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.role-preview-options {
+  position: relative;
+}
+
+.role-preview-options summary {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 0.65rem;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.role-preview-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.role-preview-options summary:hover,
+.role-preview-options[open] summary {
+  background: var(--blue-soft);
+}
+
+.role-preview-options fieldset {
+  position: absolute;
+  z-index: 10;
+  inset-inline-end: 0;
+  min-inline-size: min(13rem, 55vw);
+  width: max-content;
+  max-inline-size: 55vw;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.role-preview-options legend {
+  padding-inline: 0.3rem;
+  background: var(--surface);
+  font-weight: 650;
+}
+
+.role-preview-options label {
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-preview-options input {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+}
+
+.role-preview-identity {
+  max-inline-size: 12rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .preferences {
@@ -2216,9 +2293,13 @@ legend {
 
   .role-preview-switch select {
     max-width: 112px;
-    min-height: 38px;
+    min-height: 44px;
     padding: 5px;
     font-size: 10px;
+  }
+
+  .role-preview-identity {
+    display: none;
   }
 
   .topbar-actions .preferences select {
@@ -4326,6 +4407,21 @@ tr + tr td {
     width: auto;
     justify-content: flex-end;
     gap: 8px;
+  }
+
+  .topbar-actions:has(> .role-preview-controls) {
+    flex-wrap: wrap;
+  }
+
+  .role-preview-options {
+    position: static;
+  }
+
+  .role-preview-options fieldset {
+    inset-block-start: 100%;
+    inset-inline: 0.75rem;
+    width: auto;
+    max-inline-size: none;
   }
 
   .topbar-actions > .notification-menu {

@@ -38,6 +38,8 @@ See the [current implementation matrix](docs/IMPLEMENTATION_PLAN.md#requested-ch
 - Native Chromium has exercised the public demo, meeting links, protected documents, attendance import, course chat and PWA behaviour in the tested desktop and mobile profiles. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) identifies the narrower evidence for each feature and the pending combined acceptance matrix.
 - The current authenticated API inventory and browser RPC types are regenerated from the migrated database. Internal Premium now has closed schemas for school-class assignment and course-chat protection. Other operations still need closed request or response schemas, detailed per-role HTTP coverage and API parity checks. The [API reference](API_REFERENCE.md) records the exact inventory.
 
+Current administrators can choose management, lecturer, company and learner previews beside the notification bell. Management sees company and learner previews. The browser remembers the visibility choices for that account and installation. Throughout a preview the shell displays fictional scope and leaves protected live views unmounted.
+
 The owner deferred Hostinger migration and provider acceptance for this source pass.
 
 ## 2. Source coverage and planned change areas
@@ -463,7 +465,7 @@ A development agent must implement actual automated tests, not only describe the
 - **Polish and accessibility:** check keyboard interaction, focus, error/empty/loading states, WCAG 2.2 AA contrast, 390/768/1280/1920px layouts, German and English UI, browser history and light/dark screenshot comparisons.
 - **Technical tests:** component/visual/E2E tests must ensure route availability, faithful layout, functional simulated workflows, safe link destinations and no Supabase business mutations. Preserve fictional development/test fixtures and example course data used by isolated testing; those fixtures must never seed real production automatically.
 
-**White-label distinction:** Customer white-label editions will *not* ship this Luminovia public demo. That packaging rule belongs to the separate commercial roadmap; it never removes the Luminovia demo from the core edition.
+The internal portal serves its own demo at `/demo`. White-label operators can include a separate customer-branded LMS sandbox in their signed build. [White-label roadmap](WHITELABEL_ROADMAP.md)
 
 ### B. Accounts, pricing, roles and contracts
 

@@ -85,6 +85,9 @@ vi.mock("@tanstack/react-query", async (original) => {
 afterEach(() => {
   cleanup();
   localStorage.removeItem("luminovia.sidebar-collapsed");
+  for (const key of Object.keys(localStorage))
+    if (key.startsWith("portal.role-preview.hidden."))
+      localStorage.removeItem(key);
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
   access.roles = [];
@@ -150,7 +153,7 @@ function setup(
   );
   const client = new QueryClient();
   client.setQueryData(["private", "actor"], "Owned private data");
-  render(
+  const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Suspense fallback={<p>Waiting for route</p>}>
@@ -173,9 +176,14 @@ function setup(
           </Routes>
         </Suspense>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return { client, user: userEvent.setup() };
+  const view = render(tree());
+  return {
+    client,
+    user: userEvent.setup(),
+    rerender: () => view.rerender(tree()),
+  };
 }
 
 it("focuses the resume control after a lazy settings route loads on Escape", async () => {
@@ -319,6 +327,50 @@ it("previews management views with fictional cards without mounting the live rou
 
   await user.selectOptions(mode, "live");
   expect(await screen.findByText("Live courses route")).toBeVisible();
+});
+
+it("lets administrators customise previews and stops a selected view when role authority changes", async () => {
+  access.roles = ["admin"];
+  const { user, rerender } = setup();
+  const select = screen.getByRole("combobox", { name: "Navigationsvorschau" });
+  await user.selectOptions(select, "lecturer");
+  await user.click(screen.getByLabelText("Ansichten auswählen"));
+  await user.click(screen.getByRole("checkbox", { name: "Dozent:in" }));
+  expect(screen.getByText(/Die Vorschau ist pausiert/)).toBeVisible();
+  expect(screen.queryByText("Private workspace")).toBeNull();
+  expect(
+    within(select).queryByRole("option", { name: "Dozent:in" }),
+  ).toBeNull();
+  await user.selectOptions(select, "participant");
+  expect(
+    screen.getByRole("heading", { name: "Beispielansicht: Teilnehmende" }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole("complementary")).queryByRole("link", {
+      name: "Verwaltung",
+    }),
+  ).toBeNull();
+
+  access.roles = ["lecturer"];
+  rerender();
+  expect(screen.getByText(/Die Vorschau ist pausiert/)).toBeVisible();
+  expect(screen.queryByText("Private workspace")).toBeNull();
+  await user.selectOptions(select, "live");
+  expect(screen.getByText("Private workspace")).toBeVisible();
+  expect(
+    screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
+  ).toBeNull();
+});
+
+it("offers management only company and learner previews", () => {
+  access.roles = ["management"];
+  setup();
+  const select = screen.getByRole("combobox", { name: "Navigationsvorschau" });
+  expect(
+    within(select)
+      .getAllByRole("option")
+      .map((option) => option.getAttribute("value")),
+  ).toEqual(["live", "company", "participant"]);
 });
 
 /** Observe real router transitions; the history action is outside the More disclosure. */

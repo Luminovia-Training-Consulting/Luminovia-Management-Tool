@@ -64,6 +64,16 @@ const pairs = {
     "Diese eigenständige Übungsumgebung sendet keine Nachrichten oder E-Mails, lädt keine Dateien hoch und verändert keine echten Konten, Aufträge oder Rechnungen. Deine Übungseingaben bleiben nur bis zum Neuladen im Arbeitsspeicher dieses Tabs.",
     "This separate practice environment sends no messages or emails, uploads no files and changes no real accounts, jobs or invoices. Practice input stays only in this tab's memory until reload.",
   ],
+  academyIsolation: [
+    "Diese Übungsumgebung enthält nur fiktive Kursdaten. Eingaben bleiben bis zum Neuladen in diesem Tab.",
+    "This practice workspace uses fictional course data. Changes last only in this tab until you reload.",
+  ],
+  manageOffers: ["Zur Auftragsverwaltung", "Manage offers"],
+  staffJobs: ["Aufträge verwalten", "Manage jobs"],
+  staffJobsHint: [
+    "Prüfe veröffentlichte Angebote und Belegungen. Zur Übernahme wechselt die Lehrkraft in ihre eigene Ansicht.",
+    "Review published offers and allocations. Lecturers claim offers from their own view.",
+  ],
   role: ["Demo-Rolle", "Demo role"],
   roleHint: [
     "Die Auswahl ändert nur die fiktive Navigation. Sie erteilt keine Rechte im echten Portal und erzeugt keine Geschäftsdaten.",
@@ -92,8 +102,8 @@ const pairs = {
     "Participants use shared course information and their own reviews. Internal jobs and finances are outside their view.",
   ],
   navigation: ["Demo-Bereiche", "Demo sections"],
-  navigationMore: ["Weitere Demo-Bereiche", "More demo sections"],
-  learnerMore: ["Weitere", "More"],
+  navigationMore: ["Mehr Demo-Bereiche", "More demo sections"],
+  compactMore: ["Mehr", "More"],
   navigationScroll: [
     "Alle Bereiche ansehen: Auf kleinen Bildschirmen in der Liste nach unten scrollen.",
     "Browse all sections: on smaller screens, scroll down within the list.",

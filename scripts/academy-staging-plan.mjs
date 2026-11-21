@@ -290,6 +290,7 @@ export async function planAcademyStaging({
       archive_sha256: manifest.archive.sha256,
       licence_state: licenceState,
       browser_public_key_sha256: sha256(browser.VITE_SUPABASE_PUBLISHABLE_KEY),
+      ...(manifest.publicDemo && { public_demo: true }),
     },
     licensed_limits: terms.limits,
     infrastructure: {

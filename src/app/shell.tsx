@@ -39,7 +39,16 @@ import {
   Wallet,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
-import { type PreviewRole, RolePreview } from "./role-preview";
+import {
+  RolePreview,
+  RolePreviewControls,
+  RolePreviewUnavailable,
+} from "./role-preview";
+import {
+  availableRolePreviews,
+  type PreviewRole,
+  useRolePreview,
+} from "./role-preview-state";
 import { PortalNavigation } from "../components/portal-navigation";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import {
@@ -121,7 +130,6 @@ export function Shell() {
       return true;
     }
   });
-  const [chosenPreview, setPreviewMode] = useState<PreviewRole | null>(null);
   const [uiSaveFailed, setUiSaveFailed] = useState(false);
   // Hydrate for the active account once, independent of the translated render.
   // A new language must never trigger a read of the value still being saved.
@@ -182,9 +190,10 @@ export function Shell() {
         // Keep the current shell usable when browser storage is unavailable.
       }
       setUiSaveFailed(false);
-      void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
-        setUiSaveFailed(true),
-      );
+      if (!previewActive)
+        void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
+          setUiSaveFailed(true),
+        );
       return next;
     });
   }
@@ -215,12 +224,22 @@ export function Shell() {
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
   );
-  const previewAllowed =
-    roles.data?.some((role) =>
-      ["owner", "admin", "management"].includes(role),
-    ) ?? false;
-  const previewMode =
-    previewAllowed && online && !guestOnly ? chosenPreview : null;
+  const confirmedRoles =
+    online && profile.isSuccess && profile.data?.active && roles.isSuccess
+      ? roles.data
+      : [];
+  const previews = useRolePreview(
+    actor,
+    availableRolePreviews(
+      confirmedRoles?.some((role) => role === "owner" || role === "admin")
+        ? "administrator"
+        : confirmedRoles?.includes("management")
+          ? "management"
+          : null,
+    ),
+  );
+  const previewActive = previews.requested !== null;
+  const previewMode = previews.current;
   const navigation = participantOnly
     ? [
         { to: "/learning", icon: GraduationCap, label: "myCourses" },
@@ -307,7 +326,6 @@ export function Shell() {
       { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
       { to: "/forum", icon: MessageCircle, label: "forum" },
       { to: "/topics", icon: BookOpen, label: "topics" },
-      { to: "/admin", icon: Settings2, label: "admin" },
       { to: "/settings", icon: Settings2, label: "settings" },
       { to: "/profile", icon: UserRound, label: "profile" },
     ],
@@ -336,9 +354,18 @@ export function Shell() {
       { to: "/settings", icon: Settings2, label: "settings" },
       { to: "/profile", icon: UserRound, label: "profile" },
     ],
+    participant: [
+      { to: "/learning", icon: GraduationCap, label: "myCourses" },
+      { to: "/my-reviews", icon: FileCheck2, label: "myReviews" },
+      { to: "/notifications", icon: Bell, label: "notifications" },
+      { to: "/profile", icon: UserRound, label: "profile" },
+    ],
   } satisfies Record<PreviewRole, typeof navigation>;
-  const visibleNavigation =
-    previewMode && previewAllowed ? previewNavigation[previewMode] : navigation;
+  const visibleNavigation = previewMode
+    ? previewNavigation[previewMode]
+    : previewActive
+      ? []
+      : navigation;
 
   async function logout() {
     setSignoutFailed(false);
@@ -370,21 +397,40 @@ export function Shell() {
 
   // Paused role reads cannot replace the existing actor-scoped offline schedule
   // fallback or conceal a profile already known to be inactive/missing.
-  if (online && !profileDenied && !profile.isError && roles.isPending)
+  if (
+    !previewActive &&
+    online &&
+    !profileDenied &&
+    !profile.isError &&
+    roles.isPending
+  )
     return <Loading />;
-  if (online && !profileDenied && !profile.isError && roles.isError)
+  if (
+    !previewActive &&
+    online &&
+    !profileDenied &&
+    !profile.isError &&
+    roles.isError
+  )
     return <ErrorState retry={() => void roles.refetch()} />;
-  if (guestOnly && !guestRouteAllowed(location.pathname))
+  if (!previewActive && guestOnly && !guestRouteAllowed(location.pathname))
     return <Navigate to="/profile" replace />;
   // Keep standalone learners out of operational page loaders, including on direct links.
   if (
+    !previewActive &&
     participantOnly &&
     !/^\/(?:learning|my-reviews|notifications|profile|api\/docs|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(
       location.pathname,
     )
   )
     return <Navigate to="/learning" replace />;
-  if (online && !profileDenied && !profile.isError && !limitedAccount) {
+  if (
+    !previewActive &&
+    online &&
+    !profileDenied &&
+    !profile.isError &&
+    !limitedAccount
+  ) {
     if (
       !staff &&
       /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
@@ -503,7 +549,7 @@ export function Shell() {
       </aside>
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
-          {!limitedAccount && !previewMode && (
+          {!limitedAccount && !previewActive && (
             <form
               className="global-search header-global-search"
               role="search"
@@ -525,64 +571,52 @@ export function Shell() {
             </form>
           )}
           <div className="topbar-actions">
-            {previewAllowed && !guestOnly && (
-              <label className="role-preview-switch">
-                <span>{t("viewPreview")}</span>
-                <select
-                  aria-label={t("viewPreview")}
-                  value={previewMode ?? "live"}
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    setSearch("");
-                    setPreviewMode(
-                      value === "live" ? null : (value as PreviewRole),
-                    );
-                  }}
-                >
-                  <option value="live">{t("liveView")}</option>
-                  <option value="management">{t("previewManagement")}</option>
-                  <option value="lecturer">{t("previewLecturer")}</option>
-                  <option value="company">{t("previewCompany")}</option>
-                </select>
-              </label>
-            )}
-            {profile.data?.active && online && !guestOnly && !previewMode && (
+            <RolePreviewControls state={previews} />
+            {profile.data?.active && online && !guestOnly && !previewActive && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
-            <Preferences onSave={saveUiPreferences} />
-            <details className="account-menu" ref={accountMenu}>
-              <summary title={t("profile")}>
-                {limitedAccount ? (
-                  <span className="profile-avatar" aria-hidden="true">
-                    {profile.data?.display_name?.slice(0, 1) || "G"}
+            <Preferences
+              onSave={previewActive ? undefined : saveUiPreferences}
+            />
+            {previewActive ? (
+              <span className="role-preview-identity">
+                {profile.data?.display_name}
+              </span>
+            ) : (
+              <details className="account-menu" ref={accountMenu}>
+                <summary title={t("profile")}>
+                  {limitedAccount ? (
+                    <span className="profile-avatar" aria-hidden="true">
+                      {profile.data?.display_name?.slice(0, 1) || "G"}
+                    </span>
+                  ) : (
+                    <Avatar
+                      userId={actor}
+                      name={profile.data?.display_name ?? ""}
+                      decorative
+                    />
+                  )}
+                  <span>
+                    {profile.data?.display_name}
+                    <small>{t("profile")}</small>
                   </span>
-                ) : (
-                  <Avatar
-                    userId={actor}
-                    name={profile.data?.display_name ?? ""}
-                    decorative
-                  />
-                )}
-                <span>
-                  {profile.data?.display_name}
-                  <small>{t("profile")}</small>
-                </span>
-                <span aria-hidden="true">⌄</span>
-              </summary>
-              <div className="account-menu-panel">
-                <NavLink to="/profile">{t("profile")}</NavLink>
-                {!participantOnly && (
-                  <NavLink to="/settings">{t("settings")}</NavLink>
-                )}
-                <button
-                  type="button"
-                  disabled={signoutPending}
-                  onClick={() => void logout()}
-                >
-                  {t("logout")}
-                </button>
-              </div>
-            </details>
+                  <span aria-hidden="true">⌄</span>
+                </summary>
+                <div className="account-menu-panel">
+                  <NavLink to="/profile">{t("profile")}</NavLink>
+                  {!participantOnly && (
+                    <NavLink to="/settings">{t("settings")}</NavLink>
+                  )}
+                  <button
+                    type="button"
+                    disabled={signoutPending}
+                    onClick={() => void logout()}
+                  >
+                    {t("logout")}
+                  </button>
+                </div>
+              </details>
+            )}
             <Button
               variant="ghost"
               className="mobile-signout"
@@ -600,7 +634,7 @@ export function Shell() {
                 <Menu size={20} aria-hidden="true" />
               </summary>
               <div className="mobile-menu-panel">
-                {!limitedAccount && !previewMode && (
+                {!limitedAccount && !previewActive && (
                   <form
                     className="global-search mobile-global-search"
                     role="search"
@@ -626,7 +660,7 @@ export function Shell() {
                 {profile.data?.active &&
                   online &&
                   !guestOnly &&
-                  !previewMode && (
+                  !previewActive && (
                     <NotificationsMenu
                       id={session!.user.id}
                       zone={profile.data.time_zone}
@@ -651,7 +685,13 @@ export function Shell() {
           {uiSaveFailed && (
             <Notice kind="error">{t("uiPreferenceNotSaved")}</Notice>
           )}
-          {profileDenied ? (
+          {previewActive ? (
+            previewMode ? (
+              <RolePreview role={previewMode} path={location.pathname} />
+            ) : (
+              <RolePreviewUnavailable />
+            )
+          ) : profileDenied ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : minimalOffline ? (
             <>
@@ -671,8 +711,6 @@ export function Shell() {
             <ErrorState retry={() => void profile.refetch()} />
           ) : !profile.data?.active ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
-          ) : previewMode && previewAllowed ? (
-            <RolePreview role={previewMode} path={location.pathname} />
           ) : limitedAccount ? (
             <Outlet />
           ) : (

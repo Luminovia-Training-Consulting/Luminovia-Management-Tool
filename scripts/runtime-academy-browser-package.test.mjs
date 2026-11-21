@@ -53,7 +53,7 @@ const metadata = {
 };
 const runtimePath = "assets/index-AbCdef90.js";
 const archiveName = "academy-browser.zip";
-const fixture = (t) => {
+const fixture = (t, buildMetadata = metadata) => {
   const root = mkdtempSync(join(tmpdir(), "academy-browser-test-"));
   t.after(() => rmSync(root, { force: true, recursive: true }));
   const dist = join(root, "dist");
@@ -66,7 +66,7 @@ const fixture = (t) => {
       typeof value === "string" ? value : JSON.stringify(value),
     );
   };
-  const api = academyOpenApi(metadata.backend, metadata);
+  const api = academyOpenApi(buildMetadata.backend, buildMetadata);
   file("api/openapi.json", api);
   file(
     "index.html",
@@ -117,22 +117,26 @@ const fixture = (t) => {
     writeAcademyBrowserPackage({
       dist,
       output: directory,
-      metadata,
+      metadata: buildMetadata,
       approvedBrandAssets: assets,
     });
   return { root, dist, output, file, api, write };
 };
 
 /** Generate independent fictional vendor trust roots and a clock-controlled licence. */
-function releaseFixture(t, now = Date.parse("2040-06-01T00:00:00.000Z")) {
-  const files = fixture(t);
+function releaseFixture(
+  t,
+  now = Date.parse("2040-06-01T00:00:00.000Z"),
+  buildMetadata = metadata,
+) {
+  const files = fixture(t, buildMetadata);
   const issuer = generateKeyPairSync("ed25519");
   const signer = generateKeyPairSync("ed25519");
   const day = (offset) => new Date(now + offset * 86_400_000).toISOString();
   const expected = {
-    installation_id: metadata.installationId,
-    edition: metadata.edition,
-    release_commit: metadata.sourceRevision,
+    installation_id: buildMetadata.installationId,
+    edition: buildMetadata.edition,
+    release_commit: buildMetadata.sourceRevision,
   };
   const terms = {
     ...expected,
@@ -483,6 +487,42 @@ test("rejects known private credentials or demo markers embedded inside a plausi
   }
 });
 
+for (const edition of ["customer-managed", "customer-self-hosted"]) {
+  test(`binds the fictional public demo to the signed ${edition} package`, async (t) => {
+    const { dist, file, output, write, signRelease, verifyRelease } =
+      releaseFixture(t, undefined, { ...metadata, edition, publicDemo: true });
+    const index = readFileSync(join(dist, "index.html"), "utf8");
+    const demoEntry = "assets/demo-AbCdef90.js";
+    const demoMarker = '<meta name="portal-public-demo" content="enabled">';
+
+    await assert.rejects(write(), /public demo does not match/);
+    file("index.html", index.replace("</head>", demoMarker + "</head>"));
+    await assert.rejects(write(), /public demo does not match/);
+    for (const blocked of [
+      "/brand/luminovia-logo-mark-160.webp",
+      "sb_secret_" + "fictionalcredentialexample",
+    ]) {
+      file(demoEntry, `console.log(${JSON.stringify(blocked)});`);
+      await assert.rejects(write(), /Unapproved demo or private/);
+    }
+
+    file(demoEntry, 'console.log("DEMO · Fictional data only");');
+    const manifest = await write();
+    assert.equal(manifest.publicDemo, true);
+    assert.equal(manifest.edition, edition);
+    const signature = await signRelease();
+    assert.equal((await verifyRelease(signature)).manifest.publicDemo, true);
+
+    delete manifest.publicDemo;
+    writeFileSync(join(output, "manifest.json"), JSON.stringify(manifest));
+    await assert.rejects(verifyRelease(signature), /release_signature/);
+    await assert.rejects(
+      verifyAcademyBrowserPackage(output),
+      /Unexpected entry/,
+    );
+  });
+}
+
 test("refuses checksum tampering and an untrusted ZIP link even with a reissued checksum", async (t) => {
   const { output, write } = fixture(t);
   const manifest = await write();
@@ -696,8 +736,12 @@ test("runs both operator commands and keeps trust files and detached output outs
   assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
 });
 
-async function stagingFixture(t, now = Date.parse("2040-06-01T00:00:00.000Z")) {
-  const fixture = releaseFixture(t, now);
+async function stagingFixture(
+  t,
+  now = Date.parse("2040-06-01T00:00:00.000Z"),
+  buildMetadata = metadata,
+) {
+  const fixture = releaseFixture(t, now, buildMetadata);
   const key = "sb_publishable_FictionalStagingPublicKey8271";
   const config = {
     version: 1,
@@ -723,6 +767,20 @@ async function stagingFixture(t, now = Date.parse("2040-06-01T00:00:00.000Z")) {
     VITE_SUPABASE_PUBLISHABLE_KEY: key,
   };
   fixture.file(runtimePath, "export const key = `" + key + "`;");
+  if (buildMetadata.publicDemo) {
+    const index = readFileSync(join(fixture.dist, "index.html"), "utf8");
+    fixture.file(
+      "index.html",
+      index.replace(
+        "</head>",
+        '<meta name="portal-public-demo" content="enabled"></head>',
+      ),
+    );
+    fixture.file(
+      "assets/demo-AbCdef90.js",
+      'console.log("DEMO · Fictional data only");',
+    );
+  }
   const manifest = await fixture.write();
   const signature = await fixture.signRelease();
   const inputs = {
@@ -801,6 +859,14 @@ test("derives a tenant-specific staging handoff for the exact active browser rel
   ])
     assert.equal(serialized.includes(privateValue), false);
   assert.deepEqual(await planAcademyStaging(inputs), plan);
+});
+
+test("carries the signed public demo choice into the staging receipt", async (t) => {
+  const { inputs } = await stagingFixture(t, undefined, {
+    ...metadata,
+    publicDemo: true,
+  });
+  assert.equal((await planAcademyStaging(inputs)).release.public_demo, true);
 });
 
 test("rejects wrong release or target binding, damaged content and every inactive licence state", async (t) => {

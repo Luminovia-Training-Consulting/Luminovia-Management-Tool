@@ -42,7 +42,7 @@ test("management/lecturer/company previews do not impersonate or issue live busi
         await expect(
             page.getByRole("heading", {name: "Beispielansicht: Verwaltung"}),
         ).toBeVisible();
-        await expect(page.getByText(/Aktiver Beispielbereich.*Kurse/)).toBeVisible();
+        await expect(page.getByText(/Aktiver Beispielbereich/)).toBeVisible();
         await expect(
             page.getByText("Fiktive offene Plätze und bestätigte Zuordnungen."),
         ).toBeVisible();
@@ -65,6 +65,18 @@ test("management/lecturer/company previews do not impersonate or issue live busi
         await expect(
             page.getByRole("heading", {name: "Beispielansicht: Unternehmen"}),
         ).toBeVisible();
+        await page.getByLabel("Ansichten auswählen").click();
+        await page.getByRole("checkbox", {name: "Dozent:in", exact: true}).uncheck();
+        await expect(selector.getByRole("option", {name: "Dozent:in", exact: true})).toHaveCount(0);
+        await page.getByLabel("Ansichten auswählen").click();
+        await selector.selectOption("participant");
+        await expect(
+            page.getByRole("heading", {name: "Beispielansicht: Teilnehmende"}),
+        ).toBeVisible();
+        await expect(
+            page.getByRole("link", {name: "Diese Rolle in der Demo ausprobieren"}),
+        ).toHaveAttribute("href", "/demo?role=participant");
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         expect(violations).toEqual([]);
         const after = await checked(
             service

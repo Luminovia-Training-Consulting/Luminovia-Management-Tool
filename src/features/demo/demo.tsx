@@ -37,14 +37,24 @@ import {
   PortalNavigation,
   type PortalNavigationItem,
 } from "../../components/portal-navigation";
-import { guideModules, guideText } from "../help/catalog";
+import { installationBrand } from "../../lib/installation-brand";
+import guideModules from "@edition-demo-guides";
+import { guideText } from "../help/guide";
+import { StaffCoursePractice } from "./course-practice";
 import { LearnerDemo } from "./learner-demo";
-import { findFictionalCourse, learnerDemoModules } from "./learner-demo-data";
+import {
+  courses,
+  demoCoursePath,
+  demoRoleLabel,
+  findFictionalCourse,
+  initialCoursePractice,
+  learnerDemoModules,
+  type CoursePractice,
+  type DemoRole,
+} from "./learner-demo-data";
 import "./i18n";
 import "./demo.css";
 
-/** Change the educational perspective only; this selector never establishes a real role. */
-type DemoRole = "lecturer" | "management" | "admin" | "client" | "participant";
 type Outcome = "success" | "filled" | "conflict" | "qualification" | "offline";
 const demoPath = (path: string) => `/demo${path === "/" ? "" : path}`;
 const sessions = ["2030-05-06T08:00:00Z", "2030-05-07T08:00:00Z"];
@@ -72,11 +82,33 @@ const demoIcons: Record<string, LucideIcon> = {
   "/learning": GraduationCap,
 };
 
-/** Select only fictional guide modules suitable for the chosen demo perspective. */
+const academyDemo = installationBrand.edition !== "internal";
+const academyPaths = [
+  "/",
+  "/calendar",
+  "/courses",
+  "/chats",
+  "/files",
+  "/notifications",
+  "/profile",
+  "/settings",
+  "/admin/accounts",
+];
+const demoRoles = Object.keys(demoRoleLabel) as DemoRole[];
+
+/** Select fictional sections only; this never assigns a real role or permission. */
 function demoModulesForRole(role: DemoRole) {
   if (role === "participant") return learnerDemoModules;
   return guideModules.filter((module) => {
-    if (role === "management" || role === "admin") return true;
+    if (academyDemo && !academyPaths.includes(module.path)) return false;
+    if (role === "admin") return true;
+    if (role === "management")
+      return ![
+        "/admin/accounts",
+        "/admin/audit",
+        "/client",
+        "/my-reviews",
+      ].includes(module.path);
     if (module.permission || module.path.startsWith("/admin")) return false;
     if (module.roles?.length) {
       return role === "client"
@@ -85,9 +117,14 @@ function demoModulesForRole(role: DemoRole) {
             module.roles.includes("senior_lecturer");
     }
     if (role === "client")
-      return !["/jobs", "/availability", "/people", "/my-reviews"].includes(
-        module.path,
-      );
+      return ![
+        "/jobs",
+        "/availability",
+        "/people",
+        "/my-reviews",
+        "/contracts",
+        "/finance",
+      ].includes(module.path);
     return !["/client", "/clients", "/my-reviews"].includes(module.path);
   });
 }
@@ -96,10 +133,14 @@ function demoModulesForRole(role: DemoRole) {
 function demoNavigationItems(
   role: DemoRole,
   locale: string,
+  staffJobs: string,
 ): PortalNavigationItem[] {
   return demoModulesForRole(role).map((module) => ({
     to: demoPath(module.path),
-    label: guideText(module.title, locale),
+    label:
+      module.path === "/jobs" && role !== "lecturer"
+        ? staffJobs
+        : guideText(module.title, locale),
     icon: demoIcons[module.path] ?? BookOpen,
     end: module.path === "/" || module.path === "/learning",
   }));
@@ -113,6 +154,12 @@ function demoDashboardStats(
   messageCount: number,
   publishedJob: boolean,
 ) {
+  if (academyDemo)
+    return [
+      { label: "statOwnedCourses", value: 2 },
+      { label: "calendar", value: sessions.length },
+      { label: "messages", value: messageCount },
+    ];
   if (role === "management")
     return [
       { label: "statOpenOffers", value: publishedJob ? 2 : 1 },
@@ -149,6 +196,9 @@ export function DemoPage() {
   const mobileNavigation = useRef<HTMLDetailsElement>(null);
   const restoreLauncherFocus = useRef(false);
   const [role, setRole] = useState<DemoRole>(() => {
+    const requested = new URLSearchParams(location.search).get("role");
+    if (requested && demoRoles.includes(requested as DemoRole))
+      return requested as DemoRole;
     const initialPath = location.pathname.replace(/^\/demo|\/$/g, "");
     if (
       initialPath === "/learning" ||
@@ -162,8 +212,8 @@ export function DemoPage() {
   });
   const visibleModules = useMemo(() => demoModulesForRole(role), [role]);
   const navigationItems = useMemo(
-    () => demoNavigationItems(role, i18n.language),
-    [i18n.language, role],
+    () => demoNavigationItems(role, i18n.language, t("staffJobs")),
+    [i18n.language, role, t],
   );
   const mobileNavigationItems = useMemo(() => {
     const paths =
@@ -179,12 +229,28 @@ export function DemoPage() {
   // Resolve URLs only against authored catalog entries; unknown destinations use the first section.
   const queryModule = new URLSearchParams(location.search).get("module");
   const requestedPath = location.pathname.replace(/^\/demo|\/$/g, "") || "/";
-  const learnerCourse =
-    role === "participant" ? findFictionalCourse(requestedPath) : undefined;
+  const activeCourse = findFictionalCourse(requestedPath);
+  const learnerCourse = role === "participant" ? activeCourse : undefined;
+  const staffCourse = role !== "participant" ? activeCourse : undefined;
+  const [coursePractice, setCoursePractice] = useState(initialCoursePractice);
+  const activePractice = activeCourse && coursePractice[activeCourse.id];
+
+  function updateCourse(change: (current: CoursePractice) => CoursePractice) {
+    if (!activeCourse) return;
+    setCoursePractice((previous) => ({
+      ...previous,
+      [activeCourse.id]: change(previous[activeCourse.id]),
+    }));
+  }
   const selected = visibleModules.find((item) =>
     queryModule
       ? item.id === queryModule
-      : item.path === (learnerCourse ? "/learning" : requestedPath),
+      : item.path ===
+        (learnerCourse
+          ? "/learning"
+          : staffCourse
+            ? "/courses"
+            : requestedPath),
   );
   const module = selected ?? visibleModules[0] ?? guideModules[0];
   const index = visibleModules.indexOf(module);
@@ -225,7 +291,7 @@ export function DemoPage() {
   /** Change only the local perspective; each real account permission remains untouched. */
   function changeRole(nextRole: DemoRole) {
     setRole(nextRole);
-    if (nextRole === "participant") navigate("/demo/learning");
+    if (nextRole === "participant" && !activeCourse) navigate("/demo/learning");
     setTour(false);
     setComplete(false);
     report("");
@@ -242,8 +308,8 @@ export function DemoPage() {
       navigate(demoPath(visibleModules[0]?.path ?? "/"), { replace: true });
   }, [navigate, selectionIsVisible, visibleModules]);
   useEffect(() => {
-    if (!learnerCourse || !location.hash) heading.current?.focus();
-  }, [learnerCourse, location.hash, location.pathname, queryModule, role]);
+    if (!activeCourse || !location.hash) heading.current?.focus();
+  }, [activeCourse, location.hash, location.pathname, queryModule, role]);
   useEffect(() => {
     // Pause/finish remove their triggering button. Restore keyboard focus to
     // the surviving launcher after its new label/ref have been committed.
@@ -282,6 +348,7 @@ export function DemoPage() {
     setContentPosts({});
     setChecked([]);
     setCourseFilter("all");
+    setCoursePractice(initialCoursePractice());
     setTour(false);
     setComplete(false);
     setRole("lecturer");
@@ -298,7 +365,14 @@ export function DemoPage() {
       i18n.language.startsWith("en") ? "en-GB" : "de-DE",
       { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" },
     ).format(new Date(iso));
-  const description = guideText(module.summary, i18n.language);
+  const courseSection = activeCourse || path === "/courses";
+  const academyGuide = academyDemo && path !== "/admin/accounts";
+  const staffJobs = path === "/jobs" && role !== "lecturer";
+  const description = academyGuide
+    ? learner("academyGuide")
+    : staffJobs
+      ? t("staffJobsHint")
+      : guideText(module.summary, i18n.language);
   const customLearnerView = role === "participant" && path !== "/profile";
   // One exercise represents one complete block. Once claimed, its title and
   // accepted sessions stay fixed until an explicit reset starts a new round.
@@ -336,10 +410,8 @@ export function DemoPage() {
       </a>
       <aside className="sidebar demo-sidebar" aria-label={t("navigation")}>
         <Link className="sidebar-brand" to="/demo">
-          <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
-          <span>
-            Luminovia <small>Portal</small>
-          </span>
+          <img src={installationBrand.mark} alt="" />
+          <span>{installationBrand.name}</span>
         </Link>
         <div className="rainbow" />
         <p className="sidebar-kicker">{t("badge")}</p>
@@ -360,14 +432,16 @@ export function DemoPage() {
               </Link>
             </Button>
           )}
-          <p className="sidebar-note">{t("isolation")}</p>
+          <p className="sidebar-note">
+            {t(academyDemo ? "academyIsolation" : "isolation")}
+          </p>
         </div>
       </aside>
       <div className="workspace demo-workspace">
         <header className="topbar demo-topbar">
           <Link className="demo-topbar-brand" to="/demo">
-            <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
-            <span>Luminovia</span>
+            <img src={installationBrand.mark} alt="" />
+            <span>{installationBrand.shortName}</span>
           </Link>
           <div className="topbar-actions demo-topbar-actions">
             <label className="demo-role-control" htmlFor="demo-role">
@@ -379,33 +453,21 @@ export function DemoPage() {
                   changeRole(event.currentTarget.value as DemoRole)
                 }
               >
-                {(
-                  [
-                    "lecturer",
-                    "management",
-                    "admin",
-                    "client",
-                    "participant",
-                  ] as const
-                ).map((value) => (
+                {demoRoles.map((value) => (
                   <option key={value} value={value}>
-                    {t(
-                      value === "client"
-                        ? "roleCompany"
-                        : value === "admin"
-                          ? "roleAdmin"
-                          : value,
-                    )}
+                    {t(demoRoleLabel[value])}
                   </option>
                 ))}
               </select>
             </label>
             <Preferences />
-            <Button asChild variant="secondary">
-              <Link className="demo-help-link" to="/help">
-                {t("help")}
-              </Link>
-            </Button>
+            {!academyDemo && (
+              <Button asChild variant="secondary">
+                <Link className="demo-help-link" to="/help">
+                  {t("help")}
+                </Link>
+              </Button>
+            )}
             <Link className="demo-login-link" to="/login">
               {t("login")}
             </Link>
@@ -434,21 +496,25 @@ export function DemoPage() {
         <main id="demo-main" className="main-content demo-main">
           <div className="demo-safety" role="note">
             <FlaskConical aria-hidden="true" size={20} />
-            <span>{t("isolation")}</span>
+            <span>{t(academyDemo ? "academyIsolation" : "isolation")}</span>
           </div>
           {!selected && <p role="alert">{t("invalid")}</p>}
           <PageHeading
             eyebrow={t("badge")}
             title={
-              learnerCourse
-                ? t(learnerCourse.title)
+              activeCourse
+                ? t(activeCourse.title)
                 : path === "/"
                   ? t("title")
-                  : guideText(module.title, i18n.language)
+                  : staffJobs
+                    ? t("staffJobs")
+                    : guideText(module.title, i18n.language)
             }
             description={
-              learnerCourse
-                ? learner("workspaceIntro")
+              courseSection
+                ? learner(
+                    staffCourse ? "staffWorkspaceIntro" : "workspaceIntro",
+                  )
                 : path === "/"
                   ? t("intro")
                   : description
@@ -463,7 +529,9 @@ export function DemoPage() {
             }
           />
           <p className="demo-perspective">
-            {t(`role${role[0].toUpperCase()}${role.slice(1)}`)}
+            {academyDemo
+              ? t(demoRoleLabel[role])
+              : t(`role${role[0].toUpperCase()}${role.slice(1)}`)}
           </p>
           <section className="demo-tour" aria-label={t("tour")}>
             <div className="demo-tour-top">
@@ -555,9 +623,23 @@ export function DemoPage() {
             </nav>
           )}
           {role === "participant" && (
-            <LearnerDemo path={path} course={learnerCourse} />
+            <LearnerDemo
+              path={path}
+              course={learnerCourse}
+              practice={activePractice}
+              update={updateCourse}
+            />
           )}
-          {!customLearnerView && (
+          {staffCourse && activePractice && role !== "participant" && (
+            <StaffCoursePractice
+              key={staffCourse.id + role}
+              role={role}
+              course={staffCourse}
+              practice={activePractice}
+              update={updateCourse}
+            />
+          )}
+          {!customLearnerView && !staffCourse && (
             <div className="demo-content-grid">
               <section
                 className="panel demo-practice"
@@ -568,7 +650,13 @@ export function DemoPage() {
                   <h2 id="demo-practice-heading">{t("practice")}</h2>
                 </div>
                 <span className="demo-sample-label">{t("sample")}</span>
-                {path === "/jobs" ? (
+                {path === "/jobs" && role !== "lecturer" ? (
+                  <div className="demo-course-card">
+                    <h3>{offerTitle}</h3>
+                    <p>{t(claimed ? "reserved" : "available")}</p>
+                    <Link to="/demo/admin">{t("manageOffers")}</Link>
+                  </div>
+                ) : path === "/jobs" ? (
                   <>
                     <h3>{offerTitle}</h3>
                     {publishedJob && <p>{t("adminPublished")}</p>}
@@ -626,7 +714,13 @@ export function DemoPage() {
                 ) : path === "/calendar" || path === "/availability" ? (
                   <>
                     <h3>{t("calendar")}</h3>
-                    {claimed ? (
+                    {academyDemo ? (
+                      <ul>
+                        {sessions.map((session) => (
+                          <li key={session}>{date(session)} · Europe/Berlin</li>
+                        ))}
+                      </ul>
+                    ) : claimed ? (
                       <>
                         <p>{t("assignment")}</p>
                         <h3>{offerTitle}</h3>
@@ -718,10 +812,17 @@ export function DemoPage() {
                   <>
                     <h3>{t("fee")}</h3>
                     <p>{t("financeHint")}</p>
-                    <Button disabled={invoice} onClick={() => setInvoice(true)}>
-                      {t("invoice")}
-                    </Button>
-                    {invoice && <p role="status">{t("invoiceSaved")}</p>}
+                    {role === "lecturer" && (
+                      <Button
+                        disabled={invoice}
+                        onClick={() => setInvoice(true)}
+                      >
+                        {t("invoice")}
+                      </Button>
+                    )}
+                    {role === "lecturer" && invoice && (
+                      <p role="status">{t("invoiceSaved")}</p>
+                    )}
                   </>
                 ) : path === "/admin" ? (
                   <>
@@ -889,6 +990,9 @@ export function DemoPage() {
                           {t("sampleOrganisation")} · {date(sessions[0])}
                         </p>
                         <div className="demo-course-links">
+                          <Link to={demoCoursePath(courses[0])}>
+                            {learner("openWorkspace")}
+                          </Link>
                           <Link to="/demo/calendar">{t("sampleSchedule")}</Link>
                           <Link to="/demo/chats">{t("sampleChat")}</Link>
                           <Link to="/demo/files">{t("sampleFiles")}</Link>
@@ -904,6 +1008,9 @@ export function DemoPage() {
                             {t("sampleOrganisation")} · {t("samplePastDate")}
                           </p>
                           <div className="demo-course-links">
+                            <Link to={demoCoursePath(courses[1])}>
+                              {learner("openWorkspace")}
+                            </Link>
                             <Link to="/demo/files">{t("sampleFiles")}</Link>
                           </div>
                         </article>
@@ -952,22 +1059,34 @@ export function DemoPage() {
                   <BookOpen aria-hidden="true" size={20} />
                   <h2 id="demo-steps-heading">{t("steps")}</h2>
                 </div>
-                <ol>
-                  {guideText(module.steps, i18n.language).map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-                <h3>{guideText(module.problem, i18n.language)}</h3>
-                <ul>
-                  {guideText(module.resolution, i18n.language).map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ul>
-                <Button asChild variant="secondary">
-                  <Link to={`/help?topic=${encodeURIComponent(module.id)}`}>
-                    {t("help")}
-                  </Link>
-                </Button>
+                {academyGuide || staffJobs ? (
+                  <p>{description}</p>
+                ) : (
+                  <>
+                    <ol>
+                      {guideText(module.steps, i18n.language).map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                    <h3>{guideText(module.problem, i18n.language)}</h3>
+                    <ul>
+                      {guideText(module.resolution, i18n.language).map(
+                        (step) => (
+                          <li key={step}>{step}</li>
+                        ),
+                      )}
+                    </ul>
+                    {!academyDemo && (
+                      <Button asChild variant="secondary">
+                        <Link
+                          to={`/help?topic=${encodeURIComponent(module.id)}`}
+                        >
+                          {t("help")}
+                        </Link>
+                      </Button>
+                    )}
+                  </>
+                )}
               </section>
             </div>
           )}
@@ -990,9 +1109,7 @@ export function DemoPage() {
           }}
         >
           <Menu size={20} aria-hidden="true" />
-          <span>
-            {t(role === "participant" ? "learnerMore" : "navigationMore")}
-          </span>
+          <span>{t("compactMore")}</span>
         </button>
       </div>
     </div>

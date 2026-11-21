@@ -245,6 +245,7 @@ const pairs: Record<string, [string, string]> = {
   logout: ["Abmelden", "Sign out"],
   academyAdministration: ["Akademie verwalten", "Academy administration"],
   academySettings: ["Kontoeinstellungen", "Account settings"],
+  academyOpenDemo: ["LMS-Demo öffnen", "Open LMS demo"],
   email: ["E-Mail", "Email"],
   usernameOrEmail: ["Benutzername oder E-Mail", "Username or email"],
   username: ["Benutzername", "Username"],

@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
     mode === "production",
   );
-  const { brand, assets } = loadAcademyBrand(
+  const { brand, assets, publicDemo } = loadAcademyBrand(
     process.env.PORTAL_ACADEMY_BRAND_FILE,
     resolve("public"),
   );
@@ -51,6 +51,11 @@ export default defineConfig(({ mode }) => {
             ? "src/features/help/catalog.ts"
             : "src/features/help/academy-catalog.ts",
         ),
+        "@edition-demo-guides": resolve(
+          internal
+            ? "src/features/demo/internal-demo-guides.ts"
+            : "src/features/demo/academy-demo-guides.ts",
+        ),
       },
     },
     define: {
@@ -59,6 +64,7 @@ export default defineConfig(({ mode }) => {
       __PORTAL_ACADEMY_EXPLORER__: JSON.stringify(
         academyExplorerOpenApi(env.VITE_SUPABASE_URL ?? "", brand),
       ),
+      __PORTAL_PUBLIC_DEMO__: JSON.stringify(publicDemo),
     },
     ...(!internal && {
       server: {
@@ -70,7 +76,7 @@ export default defineConfig(({ mode }) => {
             "**/.git/**",
             "**/public/brand/luminovia-logo-*",
             "**/public/icons/**",
-            "**/src/features/demo/**",
+            ...(!publicDemo ? ["**/src/features/demo/**"] : []),
           ],
         },
       },
@@ -86,7 +92,7 @@ export default defineConfig(({ mode }) => {
             brand.defaultLanguage === "de"
               ? `${brand.name} · Kurse und Lernbereiche`
               : `${brand.name} · Courses and learning workspaces`;
-          return html
+          const branded = html
             .replace('lang="de"', `lang="${brand.defaultLanguage}"`)
             .replace(
               "<title>Luminovia Portal</title>",
@@ -97,6 +103,12 @@ export default defineConfig(({ mode }) => {
               "Luminovia Portal – gemeinsam lehren, lernen und organisieren.",
               escapeHtml(description),
             );
+          return publicDemo
+            ? branded.replace(
+                "</head>",
+                '  <meta name="portal-public-demo" content="enabled">\n  </head>',
+              )
+            : branded;
         },
         configureServer(server) {
           if (internal) return;
@@ -221,6 +233,7 @@ export default defineConfig(({ mode }) => {
             /^\/functions\//,
             /^\/realtime\//,
             /^\/api\/openapi\.json$/,
+            ...(!publicDemo ? [/^\/demo(?:\/|$)/] : []),
           ],
         },
       }),

@@ -18,6 +18,10 @@ import type { CourseWorkspace } from "../features/learning/api";
 import { App } from "./app";
 
 vi.mock("@edition-routes", () => import("./academy-routes"));
+vi.mock(
+  "@edition-demo-guides",
+  () => import("../features/demo/academy-demo-guides"),
+);
 vi.mock("@edition-help", () => import("../features/help/academy-catalog"));
 
 const fake = vi.hoisted(() => ({
@@ -40,7 +44,8 @@ const fake = vi.hoisted(() => ({
   notificationRead: false,
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
-  administration: false,
+  administration: false as boolean | "management",
+  publicDemo: false,
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
   brandLinkConflict: false,
   draftScheduleRevision: 1,
@@ -51,6 +56,9 @@ vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
   return {
     ...source,
+    get publicDemoEnabled() {
+      return fake.publicDemo;
+    },
     portalInternalEdition: false,
     installationBrand: {
       ...source.internalInstallationBrand,
@@ -202,6 +210,7 @@ beforeEach(async () => {
   fake.publication = null;
   fake.publicationAttempts = 0;
   fake.administration = false;
+  fake.publicDemo = false;
   fake.brandLinks = null;
   fake.brandLinkConflict = false;
   fake.draftScheduleRevision = 1;
@@ -411,7 +420,8 @@ beforeEach(async () => {
           data = fake.administration
             ? {
                 can_write: fake.licence === "active",
-                can_create_management: fake.licence === "active",
+                can_create_management:
+                  fake.licence === "active" && fake.administration === true,
                 organisations: [],
                 accounts: [],
               }
@@ -808,6 +818,72 @@ it("does not show administration or its navigation link to a learner", async () 
   expect(
     screen.queryByRole("button", { name: "Save organisation" }),
   ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("combobox", { name: "Navigation preview" }),
+  ).toBeNull();
+});
+
+it("opens scoped fictional academy previews and restores the same live course", async () => {
+  fake.administration = true;
+  open(`/courses/${id}/workspace`);
+  expect(await screen.findByText("Protected course briefing")).toBeVisible();
+  const select = await screen.findByRole("combobox", {
+    name: "Navigation preview",
+  });
+  await userEvent.selectOptions(select, "lecturer");
+  expect(
+    screen.getByRole("heading", { name: "Sample view: Lecturer" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Course materials and attendance" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Protected course briefing")).toBeNull();
+  expect(
+    screen.queryByRole("heading", { name: "Earnings overview" }),
+  ).toBeNull();
+  await userEvent.selectOptions(select, "participant");
+  expect(
+    screen.getByRole("heading", { name: "Sample view: Participant" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Academy administration" }),
+  ).toBeNull();
+  await userEvent.selectOptions(select, "live");
+  expect(await screen.findByText("Protected course briefing")).toBeVisible();
+});
+
+it("uses local authority and active licence for the academy preview list", async () => {
+  fake.administration = "management";
+  const view = open("/learning");
+  const select = await screen.findByRole("combobox", {
+    name: "Navigation preview",
+  });
+  expect(
+    within(select)
+      .getAllByRole("option")
+      .map((option) => option.getAttribute("value")),
+  ).toEqual(["live", "company", "participant"]);
+  fake.administration = false;
+  await userEvent.selectOptions(select, "company");
+  await act(async () =>
+    view.client.invalidateQueries({ queryKey: ["academy-administration"] }),
+  );
+  expect(await screen.findByText(/Your preview is paused/)).toBeVisible();
+});
+
+it("keeps the public academy demo disabled unless its build opted in", async () => {
+  fake.actor = null;
+  const view = open("/demo");
+  expect(await screen.findByRole("heading")).toHaveTextContent(
+    /could not be found/i,
+  );
+  fake.rpc.mockClear();
+  fake.publicDemo = true;
+  view.rerender();
+  await waitFor(() =>
+    expect(document.querySelector(".demo-safety")).not.toBeNull(),
+  );
+  expect(fake.rpc).not.toHaveBeenCalled();
 });
 
 it("edits a draft schedule using its last confirmed revision and stable session ID", async () => {

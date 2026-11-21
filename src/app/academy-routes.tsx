@@ -39,6 +39,13 @@ import { AcademyBrandProvider } from "../features/branding/academy-brand-provide
 import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
 import { db, isConfigured } from "../lib/supabase";
+import { publicDemoEnabled } from "../lib/installation-brand";
+import {
+  RolePreview,
+  RolePreviewControls,
+  RolePreviewUnavailable,
+} from "./role-preview";
+import { availableRolePreviews, useRolePreview } from "./role-preview-state";
 import "./academy-routes.css";
 
 const courseId =
@@ -56,9 +63,18 @@ const AdminMailPage = lazy(() =>
     default: module.AdminMailPage,
   })),
 );
+declare const __PORTAL_PUBLIC_DEMO__: boolean;
+const AcademyDemoPage = __PORTAL_PUBLIC_DEMO__
+  ? lazy(() =>
+      import("../features/demo/demo").then((module) => ({
+        default: module.DemoPage,
+      })),
+    )
+  : null;
 
 function AcademyLogin() {
   const { session } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const path = location.state?.returnTo;
   if (session)
@@ -75,7 +91,18 @@ function AcademyLogin() {
       <div className="login-preferences">
         <Preferences />
       </div>
-      <Login footer={<AcademyBrandLinksFooter />} />
+      <Login
+        footer={
+          <>
+            {publicDemoEnabled && (
+              <Button variant="secondary" asChild>
+                <Link to="/demo">{t("academyOpenDemo")}</Link>
+              </Button>
+            )}
+            <AcademyBrandLinksFooter />
+          </>
+        }
+      />
     </>
   );
 }
@@ -98,46 +125,118 @@ function AcademySession() {
 }
 
 function AcademyCourseProfile() {
-  const brand = useAcademyBrand();
   const { session } = useAuth();
-  const { t, i18n } = useTranslation();
   if (!session) return null;
   return (
     <AcademyCourseAccess actor={session.user.id}>
       {(access) => (
-        <>
-          <a href="#academy-main" className="skip-link">
-            {t("skip")}
-          </a>
-          <header className="academy-header">
-            <Link to="/learning" className="academy-brand">
-              <AcademyBrandImage fallback={brand.mark} alt="" />
-              <span>{brand.name}</span>
-            </Link>
-            <div className="academy-header-actions">
+        <AcademyWorkspaceFrame
+          key={session.user.id}
+          actor={session.user.id}
+          access={access}
+        />
+      )}
+    </AcademyCourseAccess>
+  );
+}
+
+function AcademyWorkspaceFrame({
+  actor,
+  access,
+}: {
+  actor: string;
+  access: "active" | "grace";
+}) {
+  const brand = useAcademyBrand();
+  const online = useOnline();
+  const { pathname } = useLocation();
+  const { t, i18n } = useTranslation();
+  const administration = useQuery({
+    ...academyAdministrationQuery(actor),
+    enabled: online,
+    refetchInterval: (query) => (online && query.state.data ? 15_000 : false),
+  });
+  const authority =
+    online && administration.isFetchedAfterMount && administration.isSuccess
+      ? administration.data
+      : null;
+  const previews = useRolePreview(
+    actor,
+    availableRolePreviews(
+      access === "active" && authority?.can_write
+        ? authority.can_create_management
+          ? "administrator"
+          : "management"
+        : null,
+    ),
+  );
+  return (
+    <>
+      <a href="#academy-main" className="skip-link">
+        {t("skip")}
+      </a>
+      <header className="academy-header">
+        <Link to="/learning" className="academy-brand">
+          <AcademyBrandImage fallback={brand.mark} alt="" />
+          <span>{brand.name}</span>
+        </Link>
+        <div className="academy-header-actions">
+          <RolePreviewControls state={previews} />
+          {previews.requested ? (
+            previews.current && (
+              <nav
+                className="academy-preview-navigation"
+                aria-label={t("viewPreview")}
+              >
+                <Button asChild variant="secondary">
+                  <Link to="/learning">{t("myCourses")}</Link>
+                </Button>
+                <AcademyTimetableLink />
+                {previews.current === "management" && (
+                  <Button asChild variant="secondary">
+                    <Link to="/administration">
+                      {t("academyAdministration")}
+                    </Link>
+                  </Button>
+                )}
+                <Button asChild variant="secondary">
+                  <Link to="/notifications">{t("notifications")}</Link>
+                </Button>
+              </nav>
+            )
+          ) : (
+            <>
               <AcademyTimetableLink />
-              <AcademyAdministrationLink actor={session.user.id} />
+              {authority && (
+                <Button variant="secondary" asChild>
+                  <Link to="/administration">{t("academyAdministration")}</Link>
+                </Button>
+              )}
               <NotificationsMenu
-                id={session.user.id}
+                id={actor}
                 zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
                 academy={access}
               />
               <Button asChild variant="secondary">
                 <Link to="/settings">{t("academySettings")}</Link>
               </Button>
-              <AcademyAppearancePreferences
-                actor={session.user.id}
-                access={access}
-              />
-              <Button
-                variant="secondary"
-                onClick={() => void db().auth.signOut()}
-              >
-                {t("logout")}
-              </Button>
-            </div>
-          </header>
-          <main id="academy-main" className="academy-main" tabIndex={-1}>
+              <AcademyAppearancePreferences actor={actor} access={access} />
+            </>
+          )}
+          <Button variant="secondary" onClick={() => void db().auth.signOut()}>
+            {t("logout")}
+          </Button>
+        </div>
+      </header>
+      <main id="academy-main" className="academy-main" tabIndex={-1}>
+        {previews.requested ? (
+          previews.current ? (
+            <RolePreview academy role={previews.current} path={pathname} />
+          ) : (
+            <RolePreviewUnavailable />
+          )
+        ) : (
+          <>
             {access === "grace" && (
               <Notice>
                 {i18n.language.startsWith("de")
@@ -146,26 +245,10 @@ function AcademyCourseProfile() {
               </Notice>
             )}
             <Outlet context={access} />
-          </main>
-        </>
-      )}
-    </AcademyCourseAccess>
-  );
-}
-
-function AcademyAdministrationLink({ actor }: { actor: string }) {
-  const online = useOnline();
-  const { t } = useTranslation();
-  const query = useQuery({
-    ...academyAdministrationQuery(actor),
-    enabled: online,
-  });
-  if (!online || !query.isFetchedAfterMount || !query.isSuccess || !query.data)
-    return null;
-  return (
-    <Button variant="secondary" asChild>
-      <Link to="/administration">{t("academyAdministration")}</Link>
-    </Button>
+          </>
+        )}
+      </main>
+    </>
   );
 }
 
@@ -219,6 +302,9 @@ function AcademyTimetableRoute() {
 
 export default function AcademyRoutes() {
   const signingIn = useMatch("/login");
+  const openingDemo = useMatch("/demo/*");
+  if (openingDemo && publicDemoEnabled && AcademyDemoPage)
+    return <AcademyDemoPage />;
   return (
     <AcademyBrandProvider>
       <Routes>

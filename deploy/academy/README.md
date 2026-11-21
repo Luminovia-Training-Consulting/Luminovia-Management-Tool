@@ -30,6 +30,8 @@ The command creates a private directory with empty `data`, `backups` and `browse
 
 Build and sign the matching brand and edition using the [browser package commands](../../DEVELOPMENT.md#white-label-browser-build). Obtain the signed licence, detached browser signature and two trusted public keys through the agreed delivery channels. Keep both signing keys with their respective issuers. Store the exact source commit in the independently reviewed target JSON.
 
+To publish the fictional demo at the academy domain's `/demo`, set `"publicDemo": true` in the brand file before building and signing. The release manifest and staging receipt record the opt-in, and the package verifier checks the compiled demo files. A regular customer package leaves the public demo disabled by default. Apply changes to this option with the next signed source release on an existing installation.
+
 After setup, a confirmed local administrator opens **Academy administration → Public links** to set the academy's support, privacy policy, legal notice and terms URLs. Use publicly intended HTTPS addresses. Blank fields hide the corresponding links. These settings appear before sign-in and in the academy footer. Editing requires an active licence.
 
 In **Academy administration → Academy logo**, a confirmed administrator can preview and publish an RGB or RGBA PNG up to 512 pixels per edge and 256 KiB. The application displays it only after a clean scan. **Use package logo** restores the original logo after confirmation. The current image is included in the database backup. The signed application icons remain part of the browser package.

@@ -6,6 +6,16 @@ Native PostgreSQL and PostgREST 16.5 exercised role and Premium checks, scope, p
 
 The roadmap now records the existing Swagger downloads, scoped integration credentials and the bounded supported linked-schedule changes. The bilingual course-index quickstarts run with curl, Python and TypeScript. Four loopback tests exercise the actual Edge handler, scoped catalogue reads, paging, revoked credentials and redirect denial. Joint schedule changes, exception invoicing and the wider role-browser acceptance remain open.
 
+# 21 November 2026 — Interactive LMS demo and scoped role previews
+
+The public internal `/demo` uses one fictional course across the administrator, management, lecturer, company and learner perspectives. Publishing a welcome note, changing the meeting and material release, requiring an exam, recording attendance, grouping classes, practising enrolment or posting course messages updates the same exercise. Learners see their own applicable sample data. Reset clears the exercise.
+
+The signed customer build can opt into a separate branded demo with `publicDemo: true`. The customer catalogue omits vendor business modules and optional public practice only uses packaged sample data. Both editions' default packages omit the route. Desktop and mobile Chromium exercised both editions with and without the opt-in, customer branding, German and dark mode, role choices and PWA installability over loopback.
+
+An active administrator can preview management, lecturer, company and learner navigation beside notifications. Management can choose company or learner. The browser stores hidden choices for the active installation and account. The preview replaces the live outlet with fictional content. Hiding a selected view or losing permission pauses the example instead of opening live content. Pinned GoTrue and PostgREST verified the choices, persistence and no live business requests during preview in the internal and both academy editions.
+
+The existing CMS domain still serves its older not-found screen at `/demo`. Hostinger migration remains deferred. Source, loopback previews and signed customer packages are verified independently. The combined source checker still reports five exports from the preceding edition split. A clean replay of baseline `b850c431` reports the same list.
+
 # 21 November 2026 — Standalone Premium LMS without brokerage or accounting
 
 The two dedicated browser packages compile the local LMS, administration, help and API explorer. The build excludes internal marketplace, commercial records, finance and accounting modules as well as their Workbox cache entries. Old business bookmarks lead to the local not-found view. German and English Academy administration labels identify internal instructors and training coordinators. The scoped course index and protected Academy branding upload remain available.

@@ -7,6 +7,12 @@ const de = {
   modeManagement: "Verwaltung",
   modeLecturer: "Dozent:in",
   modeCompany: "Unternehmen",
+  modeParticipant: "Teilnehmende",
+  customise: "Ansichten auswählen",
+  unavailableShort: "Vorschau pausiert",
+  unavailable:
+    "Die Vorschau ist pausiert. Wechsle zum Live-Konto oder warte auf die Bestätigung deiner Berechtigungen.",
+  openDemo: "Diese Rolle in der Demo ausprobieren",
   previewTitle: "Beispielansicht: {{role}}",
   previewDescription:
     "Frei erfundene Beispiele. Konto, Berechtigungen und reale Datenzugriffe bleiben unverändert.",
@@ -34,6 +40,21 @@ const de = {
   companyParticipantsBody: "Fiktive Personenzahl und Kurszuordnungen.",
   companyInvoices: "Rechnungen",
   companyInvoicesBody: "Fiktive Rechnungs- und Zahlungsstatus.",
+  academySchedule: "Unterrichtstermine",
+  academyScheduleBody:
+    "Beispieltermine mit Unterrichtszeiten und Kurszuordnungen.",
+  lecturerLearning: "Kursmaterial und Anwesenheit",
+  lecturerLearningBody:
+    "Beispiele für die Unterrichtsvorbereitung, geteilte Materialien und das Sitzungsregister.",
+  learnerCourses: "Meine Lernkurse",
+  learnerCoursesBody:
+    "Beispielkurse mit Begrüßung, Dozent:in und dem nächsten Unterrichtstermin.",
+  learnerMaterials: "Freigegebenes Lernmaterial",
+  learnerMaterialsBody:
+    "Beispieldateien und Übungen für eingeschriebene Teilnehmende.",
+  learnerProgress: "Mein Lernfortschritt",
+  learnerProgressBody:
+    "Beispielstatus für Übungen, Kursabschluss und Nachweis.",
 };
 const en: typeof de = {
   live: "Live account",
@@ -41,6 +62,12 @@ const en: typeof de = {
   modeManagement: "Management",
   modeLecturer: "Lecturer",
   modeCompany: "Company",
+  modeParticipant: "Participant",
+  customise: "Choose visible views",
+  unavailableShort: "Preview paused",
+  unavailable:
+    "Your preview is paused. Return to the live account or wait for your permissions to be confirmed.",
+  openDemo: "Try this role in the demo",
   previewTitle: "Sample view: {{role}}",
   previewDescription:
     "Wholly fictional examples. The signed-in account, permissions and real data access are unchanged.",
@@ -68,6 +95,21 @@ const en: typeof de = {
   companyParticipantsBody: "Fictional headcount and course memberships.",
   companyInvoices: "Invoices",
   companyInvoicesBody: "Fictional invoice and payment states.",
+  academySchedule: "Class schedule",
+  academyScheduleBody:
+    "Example sessions with class times and course assignments.",
+  lecturerLearning: "Course materials and attendance",
+  lecturerLearningBody:
+    "Examples for lesson preparation, shared materials and the session register.",
+  learnerCourses: "My learning courses",
+  learnerCoursesBody:
+    "Example courses with a welcome, lecturer and the next class.",
+  learnerMaterials: "Shared learning materials",
+  learnerMaterialsBody:
+    "Example documents and exercises for enrolled participants.",
+  learnerProgress: "My learning progress",
+  learnerProgressBody:
+    "Example progress for exercises, course completion and the completion record.",
 };
 i18n.addResourceBundle("de", "rolePreview", de);
 i18n.addResourceBundle("en", "rolePreview", en);

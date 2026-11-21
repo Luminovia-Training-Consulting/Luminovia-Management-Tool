@@ -16,7 +16,14 @@ import {
 import { Button } from "../../components/ui/button";
 import { Field } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import { courses, type FictionalCourse } from "./learner-demo-data";
+import { CourseMessages, SampleLesson, SampleMeeting } from "./course-practice";
+import {
+  courses,
+  demoLearner,
+  demoCoursePath,
+  type CoursePractice,
+  type FictionalCourse,
+} from "./learner-demo-data";
 import "./learner-demo-i18n";
 import "./learner-demo.css";
 
@@ -28,22 +35,22 @@ const workspaceSections = [
   { id: "course-learning", label: "learning", Icon: GraduationCap },
 ] as const;
 
-const workspacePath = (course: FictionalCourse) =>
-  `/demo/courses/${course.id}/workspace`;
-
 /** Keep each course's exercises independent while the participant browses between routes. */
 export function LearnerDemo({
   path,
   course,
+  practice,
+  update,
 }: {
   path: string;
   course?: FictionalCourse;
+  practice?: CoursePractice;
+  update: (change: (current: CoursePractice) => CoursePractice) => void;
 }) {
   const { t, i18n } = useTranslation("learnerDemo");
   const { t: demo } = useTranslation("demo");
   const location = useLocation();
   const [filter, setFilter] = useState("all");
-  const [messages, setMessages] = useState<Record<string, string[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizResults, setQuizResults] = useState<
@@ -54,19 +61,20 @@ export function LearnerDemo({
   const [rating, setRating] = useState("");
   const [comment, setComment] = useState("");
   const [review, setReview] = useState<{ rating: string; comment: string }>();
+  const examVisible = practice?.examRequired === true;
   const sections = workspaceSections.filter(
-    (section) => course?.exam || section.id !== "course-exam",
+    (section) => examVisible || section.id !== "course-exam",
   );
 
   useEffect(() => {
     if (!course) return;
     const id = location.hash.slice(1);
     const section = workspaceSections.find((item) => item.id === id);
-    if (!section || (section.id === "course-exam" && !course.exam)) return;
+    if (!section || (section.id === "course-exam" && !examVisible)) return;
     const target = document.getElementById(id);
     target?.focus({ preventScroll: true });
     target?.scrollIntoView?.({ block: "start" });
-  }, [course, location.hash]);
+  }, [course, examVisible, location.hash]);
 
   /** Match the real course panel headings and their stable deep-link targets. */
   function panel(
@@ -90,7 +98,7 @@ export function LearnerDemo({
     );
   }
 
-  if (course) {
+  if (course && practice) {
     const draft = drafts[course.id] ?? "";
     const answer = answers[course.id] ?? "";
     const result = quizResults[course.id];
@@ -104,7 +112,7 @@ export function LearnerDemo({
           {sections.map(({ id, label, Icon }) => (
             <Link
               key={id}
-              to={`${workspacePath(course)}#${id}`}
+              to={`${demoCoursePath(course)}#${id}`}
               aria-current={location.hash === `#${id}` ? "location" : undefined}
             >
               <Icon size={18} aria-hidden="true" />
@@ -117,7 +125,7 @@ export function LearnerDemo({
           <>
             <div className="demo-learner-welcome">
               <h3>{t("welcome")}</h3>
-              <p>{t(course.welcome)}</p>
+              <p>{practice.welcome || t(course.welcome)}</p>
             </div>
             <div className="demo-learner-overview-grid">
               <div>
@@ -128,6 +136,11 @@ export function LearnerDemo({
                       <time dateTime={iso}>
                         {dateTime(iso, i18n.language, "Europe/Berlin")}
                       </time>
+                      {practice.attendance[iso]?.[demoLearner] && (
+                        <span className="demo-learner-own-attendance">
+                          {t(practice.attendance[iso][demoLearner])}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -136,49 +149,60 @@ export function LearnerDemo({
               <div>
                 <h3>{t("contact")}</h3>
                 <p>{t("contactName")}</p>
+                {practice.className && (
+                  <p>
+                    {t("classLabel")}: {practice.className}
+                  </p>
+                )}
               </div>
             </div>
+            {practice.meeting && <SampleMeeting />}
           </>,
         )}
         {panel(
           "course-materials",
-          <details className="demo-learner-disclosure">
-            <summary>
-              {t("openMaterial")}: {t(course.resource)}
-            </summary>
-            <p>{t(course.resourceBody)}</p>
-          </details>,
+          <>
+            <details className="demo-learner-disclosure">
+              <summary>
+                {t("openMaterial")}: {t(course.resource)}
+              </summary>
+              <p>{t(course.resourceBody)}</p>
+            </details>
+            {practice.materials && <SampleLesson />}
+          </>,
         )}
-        {course.exam &&
+        {examVisible &&
           panel(
             "course-exam",
-            <details className="demo-learner-disclosure">
-              <summary>{t("examPreview")}</summary>
-              <p>{t("examBody")}</p>
-            </details>,
+            practice.examPublished ? (
+              <details className="demo-learner-disclosure">
+                <summary>{t("examPreview")}</summary>
+                <p>
+                  {t(
+                    course.id === "linux-basics"
+                      ? "examBody"
+                      : "networkQuestion",
+                  )}
+                </p>
+              </details>
+            ) : (
+              <p>{t("examNotPublished")}</p>
+            ),
           )}
         {panel(
           "course-chat",
           <>
-            <ol className="demo-messages">
-              <li>
-                <strong>{t("contactName")}</strong>
-                <p>{t("chatPrompt")}</p>
-              </li>
-              {(messages[course.id] ?? []).map((message, index) => (
-                <li key={index}>
-                  <strong>Demo Alex</strong>
-                  <p>{message}</p>
-                </li>
-              ))}
-            </ol>
+            <CourseMessages messages={practice.messages} />
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!draft.trim()) return;
-                setMessages((current) => ({
+                update((current) => ({
                   ...current,
-                  [course.id]: [...(current[course.id] ?? []), draft.trim()],
+                  messages: [
+                    ...current.messages,
+                    { role: "participant", text: draft.trim() },
+                  ],
                 }));
                 setDrafts((current) => ({ ...current, [course.id]: "" }));
               }}
@@ -328,7 +352,7 @@ export function LearnerDemo({
         <p role="status">{t(read ? "read" : "unread")}</p>
         <div className="demo-learner-actions">
           <Button asChild variant="secondary">
-            <Link to={`${workspacePath(courses[0])}#course-materials`}>
+            <Link to={`${demoCoursePath(courses[0])}#course-materials`}>
               {t("openMaterial")}
             </Link>
           </Button>
@@ -375,7 +399,7 @@ export function LearnerDemo({
             </div>
             <Button asChild variant="secondary">
               <Link
-                to={workspacePath(item)}
+                to={demoCoursePath(item)}
                 aria-label={`${t("openWorkspace")}: ${demo(item.title)}`}
               >
                 {t("openWorkspace")} <ArrowRight size={18} aria-hidden="true" />

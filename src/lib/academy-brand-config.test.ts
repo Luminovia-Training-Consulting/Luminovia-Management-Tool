@@ -78,6 +78,19 @@ it("retains the internal brand by default", () => {
     name: "Luminovia Portal",
   });
   expect(result.assets.size).toBe(0);
+  expect(result.publicDemo).toBe(true);
+});
+
+it("requires an explicit customer boolean to publish the academy demo", () => {
+  expect(load().publicDemo).toBe(false);
+  for (const enabled of [true, false]) {
+    writeFileSync(config, JSON.stringify({ ...settings, publicDemo: enabled }));
+    const result = load();
+    expect(result.publicDemo).toBe(enabled);
+    expect(result.brand).not.toHaveProperty("publicDemo");
+  }
+  writeFileSync(config, JSON.stringify({ ...settings, publicDemo: "true" }));
+  expect(load).toThrow(/^Invalid academy brand file or image assets/);
 });
 
 it("packages the exact approved customer assets and its scoped licensed API", () => {

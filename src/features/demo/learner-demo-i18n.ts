@@ -2,6 +2,58 @@
 import i18n from "../../lib/i18n";
 
 const pairs = {
+  academyGuide: [
+    "Öffne einen Beispielkurs und wechsle die Demo-Rolle, um dieselben Kursdaten aus einer anderen Perspektive zu prüfen.",
+    "Open a sample course and switch demo roles to review the same course from another perspective.",
+  ],
+  staffWorkspaceIntro: [
+    "Probe Kursfreigaben, Anwesenheit und Zusammenarbeit. Prüfe anschließend die Sicht der Teilnehmenden.",
+    "Practise course sharing, attendance and collaboration. Then check the participant view.",
+  ],
+  backStaff: ["Zur Kursübersicht", "Back to all courses"],
+  delivery: ["Kursinformation & Meeting", "Course information & meeting"],
+  publishWelcome: ["Begrüßung veröffentlichen", "Publish welcome"],
+  shareMeeting: ["Beispiel-Meeting freigeben", "Share sample meeting"],
+  unshareMeeting: ["Meeting-Freigabe aufheben", "Remove meeting access"],
+  joinMeeting: ["Beispiel-Meeting öffnen", "Open sample meeting"],
+  leaveMeeting: ["Beispiel-Meeting verlassen", "Leave sample meeting"],
+  meetingJoined: [
+    "Beispiel-Meeting geöffnet. Kamera und Mikrofon bleiben aus.",
+    "Sample meeting opened. Camera and microphone stay off.",
+  ],
+  labSheet: ["Arbeitsblatt zur Wiederholung", "Revision worksheet"],
+  labSheetBody: [
+    "Notiere zwei Beispiele aus diesem Kurs und erkläre sie deiner Lerngruppe.",
+    "Write down two examples from this course and explain them to your study group.",
+  ],
+  shareMaterial: ["Beispielmaterial freigeben", "Share sample material"],
+  unshareMaterial: ["Material-Freigabe aufheben", "Remove material access"],
+  examRequired: ["Klausur erforderlich", "Exam required"],
+  publishExam: ["Beispielklausur freigeben", "Publish sample exam"],
+  withdrawExam: ["Klausur-Freigabe aufheben", "Withdraw sample exam"],
+  examNotPublished: [
+    "Die Klausur ist angekündigt. Die Aufgaben sind noch nicht freigegeben.",
+    "The exam is planned. The questions are not available yet.",
+  ],
+  enabled: ["Erforderlich", "Required"],
+  disabled: ["Aus", "Off"],
+  attendance: ["Anwesenheitsliste", "Attendance register"],
+  unmarked: ["Offen", "Unmarked"],
+  present: ["Anwesend", "Present"],
+  absent: ["Abwesend", "Absent"],
+  excused: ["Entschuldigt", "Excused"],
+  enrolment: ["Einladungen & Einschreibung", "Invitations & enrolment"],
+  learners: ["Teilnehmende", "Participants"],
+  selectInvitee: ["Fiktive Person", "Fictional person"],
+  chooseLearner: ["Person wählen", "Select a person"],
+  inviteLearner: [
+    "Einladung in der Demo vormerken",
+    "Record invitation in demo",
+  ],
+  enrolLearner: ["{{name}} einschreiben", "Enrol {{name}}"],
+  classLabel: ["Schulklasse", "School class"],
+  saveClass: ["Klasse zuordnen", "Assign class"],
+  localChangeSaved: ["In der Demo gespeichert.", "Saved in this demo."],
   workspaceIntro: [
     "Dein Zugang zu den freigegebenen Inhalten dieses fiktiven Kurses.",
     "Your access to the materials shared in this fictional course.",

@@ -227,6 +227,119 @@ describe("public fictional demo boundary", () => {
 });
 
 describe("connected fictional workflows", () => {
+  it("hands shared course work across staff, company and participant views without revealing a register", () => {
+    open("/demo/courses/linux-basics/workspace?role=lecturer");
+    const role = screen.getByLabelText("Demo-Rolle");
+    expect(role).toHaveValue("lecturer");
+    expect(
+      screen.queryByText("Einladungen & Einschreibung"),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Willkommen im Kurs"), {
+      target: { value: "Willkommen zur fiktiven Übung." },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Begrüßung veröffentlichen" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispiel-Meeting freigeben" }),
+    );
+    fireEvent.click(
+      screen.getByRole("heading", { name: "Materialien" }).closest("summary")!,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispielmaterial freigeben" }),
+    );
+    fireEvent.click(
+      screen.getByRole("heading", { name: "Klausur" }).closest("summary")!,
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Klausur erforderlich" }),
+    );
+
+    fireEvent.change(role, { target: { value: "client" } });
+    fireEvent.click(
+      screen
+        .getByRole("heading", { name: "Einladungen & Einschreibung" })
+        .closest("summary")!,
+    );
+    fireEvent.change(screen.getByLabelText("Fiktive Person"), {
+      target: { value: "Sam Beispiel" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Einladung in der Demo vormerken" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Sam Beispiel einschreiben" }),
+    );
+    fireEvent.change(screen.getByLabelText("Schulklasse"), {
+      target: { value: "Linux A" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Klasse zuordnen" }));
+    fireEvent.click(
+      screen
+        .getByRole("heading", { name: "Anwesenheitsliste" })
+        .closest("summary")!,
+    );
+    fireEvent.change(screen.getByLabelText("Demo Alex"), {
+      target: { value: "excused" },
+    });
+    fireEvent.change(screen.getByLabelText("Sam Beispiel"), {
+      target: { value: "absent" },
+    });
+
+    fireEvent.change(role, { target: { value: "participant" } });
+    expect(screen.getByText("Willkommen zur fiktiven Übung.")).toBeVisible();
+    expect(screen.getByText("Schulklasse: Linux A")).toBeVisible();
+    expect(screen.getByText("Entschuldigt")).toBeVisible();
+    expect(screen.queryByText("Abwesend")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sam Beispiel")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Anwesenheitsliste" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Klausur" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Arbeitsblatt zur Wiederholung")).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispiel-Meeting öffnen" }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Kamera und Mikrofon bleiben aus",
+    );
+    expect(network).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Demo zurücksetzen" }));
+    fireEvent.change(role, { target: { value: "participant" } });
+    expect(
+      screen.queryByText("Willkommen zur fiktiven Übung."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Arbeitsblatt zur Wiederholung"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Klausur" })).toBeVisible();
+  });
+
+  it("makes a lecturer claim and staff management controls mutually exclusive", () => {
+    open("/demo/jobs?role=management");
+    expect(screen.getByLabelText("Demo-Rolle")).toHaveValue("management");
+    expect(
+      screen.queryByRole("button", { name: "Auftrag zur Probe übernehmen" }),
+    ).not.toBeInTheDocument();
+    const nav = within(document.querySelector(".demo-sidebar")!);
+    expect(
+      nav.queryByRole("link", { name: "Konten & Einladungen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      nav.queryByRole("link", { name: "Administrationsprotokoll" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Demo-Rolle"), {
+      target: { value: "admin" },
+    });
+    expect(
+      nav.getByRole("link", { name: "Konten & Einladungen" }),
+    ).toBeVisible();
+  });
+
   it("offers role-scoped dashboard shortcuts and filters only fictional courses", async () => {
     open();
     const shortcuts = screen.getByRole("navigation", {
@@ -381,6 +494,9 @@ describe("connected fictional workflows", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Demo-Angebot veröffentlichen" }),
     );
+    fireEvent.change(screen.getByLabelText("Demo-Rolle"), {
+      target: { value: "lecturer" },
+    });
     section("/jobs");
     expect(
       screen.getByRole("heading", { level: 3, name: "Fictional SQL workshop" }),
