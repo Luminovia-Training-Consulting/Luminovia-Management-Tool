@@ -284,6 +284,10 @@ const pairs: Record<string, [string, string]> = {
     "Anwesenheit konnte nicht gespeichert werden. Bitte Daten und Berechtigung prüfen.",
     "Attendance could not be saved. Check details and access.",
   ],
+  attendanceChanged: [
+    "Dieser Eintrag wurde inzwischen geändert. Lade die Anwesenheitsliste neu, bevor du ihn erneut bearbeitest.",
+    "This entry has changed. Reload the attendance register before editing it again.",
+  ],
   attendanceNoParticipants: [
     "Keine eingeschriebenen Teilnehmenden.",
     "No enrolled participants.",

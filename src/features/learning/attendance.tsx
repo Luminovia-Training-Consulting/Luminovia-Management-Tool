@@ -77,6 +77,8 @@ function RowEditor({
       });
     },
   });
+  const stale =
+    save.isError && "code" in save.error && save.error.code === "PT409";
   return (
     <li className="panel learning-panel">
       <h4>{row.name}</h4>
@@ -135,6 +137,7 @@ function RowEditor({
             disabled={
               !online ||
               save.isPending ||
+              stale ||
               (row.version > 0 && reason.trim().length < 3)
             }
             onClick={() => save.mutate(status)}
@@ -146,11 +149,25 @@ function RowEditor({
       {save.isError && (
         <Notice kind="error">
           {t(
-            save.error.message === "attendanceInvalidTime"
-              ? "attendanceInvalidTime"
-              : "attendanceSaveFailed",
+            stale
+              ? "attendanceChanged"
+              : save.error.message === "attendanceInvalidTime"
+                ? "attendanceInvalidTime"
+                : "attendanceSaveFailed",
           )}
         </Notice>
+      )}
+      {stale && (
+        <Button
+          variant="secondary"
+          onClick={() =>
+            void client.invalidateQueries({
+              queryKey: attendanceRegisterKey(actor, course.id, session),
+            })
+          }
+        >
+          {t("refresh")}
+        </Button>
       )}
     </li>
   );
@@ -160,9 +177,11 @@ function RowEditor({
 export function AttendancePanel({
   course,
   actor,
+  academy,
 }: {
   course: CourseWorkspace;
   actor: string;
+  academy?: "active" | "grace";
 }) {
   const { t, i18n } = useTranslation("learning");
   const online = useOnline();
@@ -175,7 +194,8 @@ export function AttendancePanel({
     (course.access.manager || course.access.teacher || course.access.client);
   const query = useQuery({
     ...attendanceRegisterQuery(actor, course.id, session),
-    enabled: allowed && Boolean(session),
+    enabled: allowed && Boolean(session) && (!academy || online),
+    ...(academy && { refetchInterval: 10_000, refetchOnMount: "always" }),
   });
   const upload = useMutation({
     mutationFn: async () => {
@@ -205,6 +225,11 @@ export function AttendancePanel({
     },
   });
   if (!allowed || !course.sessions.length) return null;
+  const canEdit =
+    !academy ||
+    (academy === "active" &&
+      query.isSuccess &&
+      Date.parse(query.data.starts_at) <= query.dataUpdatedAt);
   return (
     <section className="panel learning-panel" aria-label={t("sessionRegister")}>
       <h2>{t("sessionRegister")}</h2>
@@ -234,17 +259,54 @@ export function AttendancePanel({
           <p>{t("attendanceZone", { zone: course.time_zone })}</p>
           {!query.data.rows.length && <p>{t("attendanceNoParticipants")}</p>}
           <ul className="learning-resources">
-            {query.data.rows.map((row) => (
-              <RowEditor
-                key={`${row.user_id}:${row.version}`}
-                course={course}
-                actor={actor}
-                session={session}
-                row={row}
-              />
-            ))}
+            {query.data.rows.map((row) =>
+              canEdit ? (
+                <RowEditor
+                  key={`${row.user_id}:${row.version}`}
+                  course={course}
+                  actor={actor}
+                  session={session}
+                  row={row}
+                />
+              ) : (
+                <li key={row.user_id} className="panel learning-panel">
+                  <h4>{row.name}</h4>
+                  <p>
+                    {t("attendanceCurrent")}:{" "}
+                    {row.status
+                      ? t(`attendance${row.status}`)
+                      : t("unreported")}
+                  </p>
+                  {row.arrival_at && (
+                    <p>
+                      {t("arrivalTime")}:{" "}
+                      {dateTime(
+                        row.arrival_at,
+                        i18n.language,
+                        course.time_zone,
+                      )}
+                    </p>
+                  )}
+                  {row.departure_at && (
+                    <p>
+                      {t("departureTime")}:{" "}
+                      {dateTime(
+                        row.departure_at,
+                        i18n.language,
+                        course.time_zone,
+                      )}
+                    </p>
+                  )}
+                  {row.note && (
+                    <p className="preserve-text">
+                      {t("attendanceNote")}: {row.note}
+                    </p>
+                  )}
+                </li>
+              ),
+            )}
           </ul>
-          {query.data.rows.length > 0 && (
+          {!academy && query.data.rows.length > 0 && (
             <AttendanceImportPanel
               key={session}
               run={course.id}
@@ -257,53 +319,63 @@ export function AttendancePanel({
               }
             />
           )}
-          <h3>{t("attendanceEvidence")}</h3>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              upload.mutate();
-            }}
-          >
-            <Field id="attendance-pdf" label={t("attendancePdfLabel")}>
-              <input
-                id="attendance-pdf"
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-            </Field>
-            <Button disabled={!online || upload.isPending || !file}>
-              {t("attendanceAttachPdf")}
-            </Button>
-          </form>
-          {upload.isError && (
-            <Notice kind="error">{t("attendancePdfFailed")}</Notice>
-          )}
-          <ul>
-            {query.data.evidence.map((item) => (
-              <li key={item.id}>
-                {item.name} ·{" "}
-                {dateTime(item.attached_at, i18n.language, course.time_zone)}{" "}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!online}
-                  onClick={() => {
-                    setDownloadError(false);
-                    void downloadCourseDocument(
-                      "resource",
-                      item.resource_id,
-                      item.name,
-                    ).catch(() => setDownloadError(true));
-                  }}
-                >
-                  {t("download")}
+          {!academy && (
+            <>
+              <h3>{t("attendanceEvidence")}</h3>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  upload.mutate();
+                }}
+              >
+                <Field id="attendance-pdf" label={t("attendancePdfLabel")}>
+                  <input
+                    id="attendance-pdf"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(event) =>
+                      setFile(event.target.files?.[0] ?? null)
+                    }
+                  />
+                </Field>
+                <Button disabled={!online || upload.isPending || !file}>
+                  {t("attendanceAttachPdf")}
                 </Button>
-              </li>
-            ))}
-          </ul>
-          {downloadError && (
-            <Notice kind="error">{t("attendancePdfFailed")}</Notice>
+              </form>
+              {upload.isError && (
+                <Notice kind="error">{t("attendancePdfFailed")}</Notice>
+              )}
+              <ul>
+                {query.data.evidence.map((item) => (
+                  <li key={item.id}>
+                    {item.name} ·{" "}
+                    {dateTime(
+                      item.attached_at,
+                      i18n.language,
+                      course.time_zone,
+                    )}{" "}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={!online}
+                      onClick={() => {
+                        setDownloadError(false);
+                        void downloadCourseDocument(
+                          "resource",
+                          item.resource_id,
+                          item.name,
+                        ).catch(() => setDownloadError(true));
+                      }}
+                    >
+                      {t("download")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              {downloadError && (
+                <Notice kind="error">{t("attendancePdfFailed")}</Notice>
+              )}
+            </>
           )}
           <h3>{t("attendanceCorrections")}</h3>
           <ul>

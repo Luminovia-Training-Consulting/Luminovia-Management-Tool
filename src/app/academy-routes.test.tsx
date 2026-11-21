@@ -24,6 +24,8 @@ const fake = vi.hoisted(() => ({
   actor: "fictional-admin" as string | null,
   returnedInstallation: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
   foreignCourse: false,
+  registerAvailable: false,
+  attendanceVersion: 0,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -59,6 +61,20 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 const id = "52b7ddee-2166-485a-bcee-04d0eea958d1";
+const sessionId = "455d72a6-0bd7-4a8e-b708-1c3128322c8e";
+const learnerId = "62886692-0412-46e9-8401-ab3bc955b18d";
+const start = new Date(Date.now() - 7_200_000).toISOString();
+const end = new Date(Date.now() - 3_600_000).toISOString();
+const session = {
+  id: sessionId,
+  starts_at: start,
+  ends_at: end,
+  attendance: null,
+  minutes: null,
+  version: 0,
+  can_check_in: false,
+  can_verify: true,
+};
 const workspace: CourseWorkspace = {
   id,
   title: "Fictional course room",
@@ -144,6 +160,8 @@ beforeEach(async () => {
   fake.actor = "fictional-admin";
   fake.returnedInstallation = fake.installation;
   fake.foreignCourse = false;
+  fake.registerAvailable = false;
+  fake.attendanceVersion = 0;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -168,7 +186,38 @@ beforeEach(async () => {
         break;
       case "course_workspace":
         if (fake.foreignCourse) error = { code: "42501" };
-        data = fake.foreignCourse ? null : workspace;
+        data = fake.foreignCourse
+          ? null
+          : { ...workspace, sessions: fake.registerAvailable ? [session] : [] };
+        break;
+      case "course_session_register":
+        data = {
+          session_id: sessionId,
+          starts_at: start,
+          ends_at: end,
+          time_zone: workspace.time_zone,
+          evidence: [],
+          history: [],
+          rows: [
+            {
+              user_id: learnerId,
+              name: "Fictional register entry",
+              status: fake.attendanceVersion ? "present" : null,
+              arrival_at: null,
+              departure_at: null,
+              note: "",
+              version: fake.attendanceVersion,
+            },
+          ],
+        };
+        break;
+      case "save_course_session_attendance":
+        fake.attendanceVersion++;
+        data = {
+          status: "present",
+          version: fake.attendanceVersion,
+          minutes: 60,
+        };
         break;
       case "course_welcome_content":
         data = {
@@ -200,6 +249,30 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+it("opens the branded register deep link and reloads the exact server-confirmed row", async () => {
+  fake.registerAvailable = true;
+  open(`/courses/${id}/workspace#course-register`);
+  expect(await screen.findByText("Fictional register entry")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Attendance" })).toHaveAttribute(
+    "aria-current",
+    "location",
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Present" }),
+  );
+  expect(await screen.findByText("Current status: Present")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "save_course_session_attendance",
+    expect.objectContaining({
+      p_run_id: id,
+      p_session_id: sessionId,
+      p_user_id: learnerId,
+      p_expected_version: 0,
+    }),
+  );
+  expect(document.querySelector('input[type="file"]')).toBeNull();
 });
 
 it("opens the course hub without activating the full edition and reuses scoped active workspaces", async () => {

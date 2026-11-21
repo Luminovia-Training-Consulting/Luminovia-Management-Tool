@@ -11,6 +11,7 @@ const readPaths = [
   "/rest/v1/rpc/course_welcome_content",
   "/rest/v1/rpc/course_chat_rooms",
   "/rest/v1/rpc/course_chat_messages",
+  "/rest/v1/rpc/course_session_register",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -18,6 +19,7 @@ const writePaths = [
   "/rest/v1/rpc/academy_ensure_course_chat",
   "/rest/v1/rpc/send_course_chat_message",
   "/rest/v1/rpc/academy_course_material_action",
+  "/rest/v1/rpc/save_course_session_attendance",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -80,6 +82,30 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("describes read-only grace, version conflicts and empty attendance attachments", () => {
+      const read = spec.paths[readPaths[5]].post;
+      expect(read["x-portal-licence"]).toBe("active-or-grace");
+      expect(
+        read.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        properties: { evidence: { maxItems: 0 } },
+      });
+      const save = spec.paths[writePaths[5]].post;
+      expect(save["x-portal-licence"]).toBe("active");
+      expect(save.responses).toHaveProperty("409");
+      expect(save.requestBody.content["application/json"].schema).toMatchObject(
+        {
+          required: expect.arrayContaining(["p_expected_version"]),
+        },
+      );
+      expect(spec.paths).not.toHaveProperty(
+        "/rest/v1/rpc/import_course_session_attendance",
+      );
+      expect(spec.paths).not.toHaveProperty(
+        "/rest/v1/rpc/attach_course_session_evidence",
+      );
     });
 
     it("describes the scoped multipart upload and exact publication without scanner APIs", () => {

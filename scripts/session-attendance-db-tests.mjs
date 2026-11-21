@@ -77,7 +77,7 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     });
     assert.equal(firstHistory.new_state.staff_note,"Arrived on time");
     assert.equal(firstHistory.actor_id,teacher);
-    await assert.rejects(save(company,"absent",0,{reason:"Corrected"}),/40001/);
+    await assert.rejects(save(company,"absent",0,{reason:"Corrected"}),/PT409/);
     await assert.rejects(save(company,"excused",1,{reason:""}),/22023/);
     const corrected = await save(company,"excused",1,{reason:"Medical excuse"});
     assert.equal(corrected.version,2);
@@ -147,7 +147,7 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     assert.deepEqual((await register(company)).rows[0],beforeImport);
     assert.deepEqual(await importRows(company,[importRow]),{saved:1});
     assert.equal((await register(company)).rows[0].note,"Fictional CSV correction");
-    await assert.rejects(importRows(company,[importRow]),/40001/);
+    await assert.rejects(importRows(company,[importRow]),/PT409/);
     const toggle = actor(admin, `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});select pg_sleep(0.7)`);
     let holdsPremiumLock = false;
     for (let index = 0; index < 30 && !holdsPremiumLock; index++) {

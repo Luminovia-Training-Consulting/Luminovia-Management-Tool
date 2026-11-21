@@ -738,7 +738,7 @@ function CourseWorkspaceLayout({
     (course.exams.required || course.exams.can_edit),
   );
   const hasActivities = !academy && (learner || editor);
-  const hasRegister = !academy && editor && course.sessions.length > 0;
+  const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
   const sections = [
@@ -923,7 +923,11 @@ function CourseWorkspaceLayout({
           )}
           {hasRegister && (
             <div className="course-room-section" id="course-register">
-              <AttendancePanel course={course} actor={actor} />
+              <AttendancePanel
+                course={course}
+                actor={actor}
+                academy={academy}
+              />
             </div>
           )}
           <CourseChat

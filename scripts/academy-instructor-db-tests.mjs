@@ -33,13 +33,15 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     edition,
   });
   const responseSchemas = new Map(
-    // The material suite validates its two own protected transport results.
+    // The material and attendance suites validate their own transport results.
     Object.entries(paths)
       .filter(
         ([path]) =>
           ![
             "/functions/v1/files",
             "/rest/v1/rpc/academy_course_material_action",
+            "/rest/v1/rpc/course_session_register",
+            "/rest/v1/rpc/save_course_session_attendance",
           ].includes(path),
       )
       .map(([path, operations]) => {

@@ -1,4 +1,6 @@
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
+import { z } from "zod";
+import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import {
   meetingLinkResult,
   meetingUrl,
@@ -218,6 +220,11 @@ const materialUpload = {
 };
 const expectedVersion = { type: "integer", minimum: 0 };
 const welcomeText = { ...string, maxLength: 4000 };
+const attendanceVersion = { type: "integer", minimum: 0 };
+const attendanceStatus = { enum: ["present", "absent", "excused"] };
+const academyRegister = z.toJSONSchema(
+  attendanceRegisterSchema.extend({ evidence: z.array(z.unknown()).length(0) }),
+);
 const welcome = {
   version: expectedVersion,
   description: welcomeText,
@@ -334,6 +341,37 @@ const coursePaths = {
     materialAction,
     record({ id: uuid }),
   ),
+  "/rest/v1/rpc/course_session_register": courseOperation(
+    "readAcademyCourseAttendanceRegister",
+    "Read the attendance register for an exact course session",
+    "Current course managers, assigned instructors and authorised contacts of the exact company can read enrolled or completed participants and correction history. A learner can see their own attendance in the course workspace. PDF evidence is unavailable through this register.",
+    "active-or-grace",
+    record({ ...run, p_session_id: uuid }),
+    academyRegister,
+  ),
+  "/rest/v1/rpc/save_course_session_attendance": courseOperation(
+    "saveAcademyCourseSessionAttendance",
+    "Mark or correct one participant’s session attendance",
+    "The course session must have started and the participant must be currently enrolled or completed. Submit the last-read version. A correction requires a reason of 3–500 characters. Arrival and departure timestamps are optional for present status and must be null for other statuses. The server calculates verified minutes and records the change.",
+    "active",
+    record({
+      ...run,
+      p_session_id: uuid,
+      p_user_id: uuid,
+      p_status: attendanceStatus,
+      p_arrival_at: nullable(dateTime),
+      p_departure_at: nullable(dateTime),
+      p_note: { ...string, maxLength: 1000 },
+      p_reason: { ...string, maxLength: 500 },
+      p_expected_version: attendanceVersion,
+    }),
+    record({
+      status: attendanceStatus,
+      version: attendanceVersion,
+      minutes: attendanceVersion,
+    }),
+    true,
+  ),
   "/rest/v1/rpc/academy_ensure_course_chat": courseOperation(
     "ensureAcademyCourseChat",
     "Open the course participant text room",
@@ -382,7 +420,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.3.0",
+      version: "1.4.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

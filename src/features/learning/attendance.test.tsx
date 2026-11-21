@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AttendancePanel } from "./attendance";
+import type { AttendanceStatus } from "./attendance-api";
 import type { CourseWorkspace } from "./api";
 
 const fake = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ const fake = vi.hoisted(() => ({
       {
         user_id: "learner",
         name: "Fictional Learner",
-        status: null,
+        status: null as AttendanceStatus | null,
         arrival_at: null,
         departure_at: null,
         note: "",
@@ -78,18 +79,21 @@ const course = {
     },
   ],
 } as CourseWorkspace;
-const view = (value = course) =>
+const view = (value = course, academy?: "active" | "grace") =>
   render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AttendancePanel course={value} actor="teacher" />
+      <AttendancePanel course={value} actor="teacher" academy={academy} />
     </QueryClientProvider>,
   );
 
 beforeEach(() => {
+  fake.register.starts_at = new Date(Date.now() - 3_600_000).toISOString();
+  fake.register.rows[0].status = null;
+  fake.register.rows[0].note = "";
   fake.register.rows[0].version = 0;
   fake.save
     .mockReset()
@@ -132,6 +136,55 @@ it("requires a correction reason and interprets arrival in the course time zone"
   );
 });
 afterEach(cleanup);
+
+it("allows only confirmed manual academy edits and blocks repeat submissions after a version conflict", async () => {
+  fake.save.mockRejectedValue({ code: "PT409", message: "Attendance changed" });
+  view(course, "active");
+  expect(await screen.findByText("Fictional Learner")).toBeVisible();
+  expect(screen.queryByLabelText("attendancePdfLabel")).toBeNull();
+  expect(document.querySelector('input[type="file"]')).toBeNull();
+  await userEvent.click(
+    screen.getByRole("button", { name: "attendancepresent" }),
+  );
+  expect(await screen.findByText("attendanceChanged")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "attendancepresent" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "refresh" })).toBeVisible();
+  expect(fake.save).toHaveBeenCalledExactlyOnceWith(
+    "run",
+    "session",
+    expect.objectContaining({ user_id: "learner", version: 0 }),
+    "present",
+    null,
+    null,
+    "",
+    "",
+  );
+});
+
+it("renders the register and its notes without academy writes during grace", async () => {
+  fake.register.rows[0].status = "excused";
+  fake.register.rows[0].note = "Fictional retained note";
+  view(course, "grace");
+  expect(await screen.findByText("Fictional Learner")).toBeVisible();
+  expect(screen.getByText(/Fictional retained note/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "attendancepresent" }),
+  ).toBeNull();
+  expect(screen.queryByRole("textbox")).toBeNull();
+  expect(document.querySelector('input[type="file"]')).toBeNull();
+  expect(fake.save).not.toHaveBeenCalled();
+});
+
+it("does not offer dedicated register changes before the session starts", async () => {
+  fake.register.starts_at = new Date(Date.now() + 3_600_000).toISOString();
+  view(course, "active");
+  expect(await screen.findByText("Fictional Learner")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "attendancepresent" }),
+  ).toBeNull();
+});
 
 it("excludes participant-only viewers from the register", () => {
   view({

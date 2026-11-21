@@ -28,7 +28,7 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments))?$/i;
+  /^\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register))?$/i;
 
 function AcademyLogin() {
   const { session } = useAuth();
