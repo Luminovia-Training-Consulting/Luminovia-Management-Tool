@@ -1,3 +1,17 @@
+# 21 November 2026 — Desktop and mobile acceptance repairs
+
+The first completed integrated Chromium runs on `5e1c4158` passed 102 of 109 desktop journeys and 96 of 109 mobile journeys. The later `bcfcd6d3` mobile run passed 98 of 109. The follow-up corrects the reported cases and retains their role, persistence and byte comparisons.
+
+The current company page keeps exactly one Premium switch throughout company navigation. The retained-summary dialog discards its previous result when administrator access or connectivity ends. A new opening fetches a fresh audited response. OpenAPI and the browser share the reviewed Premium settings, confirmation and retained-summary schemas.
+
+Chromium at 1,440 px and the Pixel 7 viewport confirmed month and agenda colours, keyboard target selection through a tall board, Escape focus and exactly one request after keyboard confirmation. The same Chromium layouts returned focus to the tour resume control after a delayed settings route. These browser checks use fictional transport. Full role journeys and gateway payloads remain with the isolated native stack.
+
+Both dedicated editions publish and read versioned welcome content with the exact licensed course profile. PostgreSQL confirmed scope, one winning concurrent edit, read-only grace, expiry and retained revisions. Pinned GoTrue and PostgREST confirmed the real GET and POST requests, enrolled learner scope and a prompt HTTP 409 for obsolete edits. The same PostgREST retry issue in stale course review writes is addressed with a scoped forward migration. The building-block and profile API scripts passed on native Auth and PostgREST. [PostgREST conflict behavior](https://supabase.com/kb/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b)
+
+The `1e444a5c` GitHub runs passed the fast application gates and all three CodeQL categories. The system job passed strict schema lint, advisors and the canonical PostgreSQL groups before a locale-dependent file-discovery assertion. The self-host job retained existing data and passed the real avatar transport before it found stale removed-room inbox expectations. The revised API verifies the notice was readable before revocation and its stored row survives after it disappears from the inbox.
+
+Migration 08600 makes the choice of display spelling within a case-insensitive tag group deterministic. The licensed welcome migration uses 08800. The exact file-discovery test passed under both the local C locale and ICU en-US after reproducing the hosted result locally. The current migration replay reports zero database lint and advisory findings. The integrated local typecheck, lint, format, coverage across 1,069 tests and production build passed. Exact-head CI runs with publication disabled.
+
 # 21 November 2026 — Database advisories, reviewed attendance import and native fixtures
 
 The pinned Supabase CLI reported zero findings for both strict lint and database advisors on the isolated full-extension PostgreSQL replay through migration 08500. The public installation capability view now uses invoker rights and returns only the existing projected fields. The consolidated profile and role SELECT policies preserve the observed row sets of anonymous, participant, guest and operational callers. All seven API inventory and privilege checks passed.

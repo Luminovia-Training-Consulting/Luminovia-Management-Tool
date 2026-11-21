@@ -11,6 +11,9 @@
 - [x] Replay the invoker installation capability view and consolidated profile/role read predicates. The pinned CLI reports zero strict lint and advisory findings. The current catalogue and seven API privilege checks pass.
 - [x] Submit the exact confirmed XLSX rows even when the mutation observer still has the preceding render's options. The timing regression and all 1,063 frontend tests pass locally.
 - [x] Adapt the username recovery API fixture to the owned test ports and exercise the avatar fixture with the current Premium and participant-consent prerequisites.
+- [x] Publish and read versioned welcome content in either licensed dedicated edition. PostgreSQL covers course scope, concurrent revision conflicts, grace and expiry; native Auth/PostgREST confirms real requests and HTTP 409.
+- [x] Share typed Premium settings and retained-summary shapes between the browser and OpenAPI. Confirm one accessible switch across company changes and close and discard retained data on role or connection loss.
+- [x] Verify desktop and mobile calendar colours, tour focus and keyboard board navigation in Chromium with fictional transport. Follow up observed native browser failures with role-scoped and responsive assertions.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links
