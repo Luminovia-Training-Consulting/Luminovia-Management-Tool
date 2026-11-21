@@ -253,6 +253,8 @@ In **Willkommen im Kurs / Welcome to the course**, edit the heading, welcome mes
 
 In the internal Premium company's participant centre, open **Kurse und Teilnahme / Courses and attendance** for an active participant. The detail view lists that company's course enrolments and confirmed attendance counts. Save an optional participant reference unique within the company. Clearing the field removes the reference. An older membership version or a duplicate company reference must be resolved before saving again.
 
+Open **Einladungen und Verlauf / Invitations and history** to see requests, accepted links, removal of accepted links, reference changes and new enrolment changes for the selected company. A request entry confirms receipt. The participant's consent appears as a separate event. Entries show the time and activity, with the newest first.
+
 The course chat admits assigned lecturers and eligible enrolled learners through current room membership. Linked company contacts can read their own course group. Under **Administration → Companies → Retained data**, an administrator can provide a reason to inspect the tenant’s course chat. The system records each inspection, including when Premium is off. Personal chats and unrelated groups use their own access rules.
 
 Use **Attach file** in a course chat to scan a file before sending it, with or without a message. The file becomes visible with the confirmed message. Members and linked company readers can download the exact shared version while their course access remains active. Audited admin inspection can retrieve retained attachments with the same company and reason. The course materials list is managed independently.

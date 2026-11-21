@@ -44,3 +44,23 @@ export const companyParticipantOverviewSchema = z.object({
     .max(100),
   has_more: z.boolean(),
 });
+
+export const companyParticipantHistorySchema = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        kind: z.enum([
+          "email_invite_requested",
+          "user_id_link_requested",
+          "association_confirmed",
+          "association_removed",
+          "reference_changed",
+          "course_enrolment_changed",
+        ]),
+        occurred_at: instant,
+      }),
+    )
+    .max(100),
+  has_more: z.boolean(),
+});

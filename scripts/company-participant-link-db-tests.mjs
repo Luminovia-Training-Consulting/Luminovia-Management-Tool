@@ -41,15 +41,36 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
       who,
       `public.accept_company_participant_invitation(${q(org)},${version},${q(key)})`,
     );
+  const history = async (who, organisation = org, limit = 25, cursor) => {
+    const result = await call(
+      who,
+      `public.company_participant_history(${q(organisation)},${cursor ? q(cursor.occurred_at) : "null"},${cursor ? q(cursor.id) : "null"},${limit})`,
+    );
+    assertLmsResponse("company_participant_history", result);
+    return result;
+  };
   const key = randomUUID();
   const consentKey = randomUUID();
 
   await assert.rejects(request(company, learnerId, key), /42501/);
+  await assert.rejects(history(company), /42501/);
   await call(
     admin,
     `public.set_company_premium(${q(org)},true,0,${q(randomUUID())})`,
   );
   await assert.rejects(request(outsider, learnerId, key), /42501/);
+  await assert.rejects(history(outsider), /42501/);
+  await assert.rejects(history(learner), /42501/);
+  await assert.rejects(history(company, org, 101), /22023/);
+  await assert.rejects(
+    history(company, org, 2, { occurred_at: "infinity", id: randomUUID() }),
+    /22023/,
+  );
+  await assert.rejects(
+    call(company, `public.company_participant_history(${q(org)},now())`),
+    /22023/,
+  );
+  assert.deepEqual(await history(company), { items: [], has_more: false });
 
   const expected = { status: "request_submitted" };
   assert.deepEqual(await request(company, learnerId, key), expected);
@@ -65,6 +86,46 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
       `select count(*) from private.company_participant_memberships where organisation_id=${q(org)}`,
     ),
     "1",
+  );
+  const firstPage = await history(company, org, 2);
+  assert.equal(firstPage.has_more, true);
+  const oldestPage = await history(company, org, 2, firstPage.items.at(-1));
+  assert.equal(oldestPage.has_more, false);
+  const allRequests = [...firstPage.items, ...oldestPage.items];
+  assert.equal(new Set(allRequests.map(({ id }) => id)).size, 3);
+  assert.deepEqual(
+    allRequests.map(({ kind }) => kind),
+    Array(3).fill("user_id_link_requested"),
+  );
+
+  // A rejected or duplicate dispatch remains an opaque company request.
+  for (const email of [
+    learner + "@example.invalid",
+    "new-learner@example.invalid",
+  ]) {
+    await call(
+      company,
+      `public.reserve_company_participant_invitation(${q(org)},${q(email)},'Fictional recipient',${q(randomUUID())})`,
+    );
+  }
+  const emails = (await history(company)).items.filter(
+    ({ kind }) => kind === "email_invite_requested",
+  );
+  assert.equal(emails.length, 2);
+  assert.ok(!JSON.stringify(emails).includes("@example.invalid"));
+  assert.deepEqual(
+    await request(company, await luminoviaId(stranger), randomUUID()),
+    expected,
+  );
+  await call(
+    company,
+    `public.remove_company_participant(${q(org)},${q(stranger)},1,${q(randomUUID())})`,
+  );
+  assert.equal(
+    (await history(company)).items.some(
+      ({ kind }) => kind === "association_removed",
+    ),
+    false,
   );
   assert.equal(
     await sql(
@@ -104,6 +165,12 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     verifiedAcceptance,
   );
   assert.deepEqual(verifiedAcceptance, accepted);
+  assert.equal(
+    (await history(company)).items.filter(
+      ({ kind }) => kind === "association_confirmed",
+    ).length,
+    1,
+  );
   assert.deepEqual(
     await accept(learner, invitations[0].version, consentKey),
     accepted,
@@ -220,6 +287,18 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     user_id: learner,
     version: 3,
   });
+  const recordedActions = (await history(company)).items.map(
+    ({ kind }) => kind,
+  );
+  assert.equal(
+    recordedActions.filter((kind) => kind === "course_enrolment_changed")
+      .length,
+    2,
+  );
+  assert.equal(
+    recordedActions.filter((kind) => kind === "association_removed").length,
+    1,
+  );
   console.log(
     "PASS company link request, privacy, current authority, idempotent retry and participant consent",
   );
@@ -292,7 +371,32 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     (await call(learner, "public.account_me()")).roles.includes("lecturer"),
     true,
   );
+  const membership = (
+    await call(company, `public.company_participants(${q(org)})`)
+  ).find(({ user_id }) => user_id === learner);
+  await call(
+    company,
+    `public.set_company_participant_reference(${q(org)},${q(learner)},'Private fictional reference',${membership.version})`,
+  );
+  const beforeMove = await history(company);
+  assert.ok(beforeMove.items.some(({ kind }) => kind === "reference_changed"));
+  assert.ok(
+    !JSON.stringify(beforeMove).includes("Private fictional reference"),
+  );
+  await sql(
+    `update public.course_runs set organisation_id=${q(foreign)} where id=${q(run)}`,
+  );
+  assert.deepEqual(await history(company), beforeMove);
+  assert.deepEqual(await history(outsider, foreign), {
+    items: [],
+    has_more: false,
+  });
+  await call(
+    admin,
+    `public.set_company_premium(${q(org)},false,1,${q(randomUUID())})`,
+  );
+  await assert.rejects(history(company), /42501/);
   console.log(
-    "PASS one account combines explicit company, lecturer and learner duties with independent company consent, enrolment and revocation",
+    "PASS composable roles and bounded company history preserve opaque requests, prior consent and event-time organisation scope",
   );
 });

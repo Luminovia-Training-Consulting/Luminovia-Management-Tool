@@ -83,6 +83,7 @@ import {
   retainedCompanyLmsSchema,
 } from "../operations/company-premium-schema.ts";
 import {
+  companyParticipantHistorySchema,
   companyParticipantOverviewSchema,
   companyParticipantReferenceSchema,
   companyParticipantsSchema,
@@ -1530,6 +1531,20 @@ const nativePaths = {
     },
     z.toJSONSchema(companyParticipantOverviewSchema),
     ["p_limit", "p_offset"],
+  ),
+  "/rest/v1/rpc/company_participant_history": rpc(
+    "companyParticipantHistory",
+    "Premium LMS",
+    "Read the company's participant invitation and action history",
+    "Requires current participant management rights and active internal Premium for the exact company. Request receipts use the same event kind across all delivery and matching outcomes. The history records consent separately and exposes timestamps, event kinds and opaque entry IDs. For older entries, send both cursor fields from the last entry in the current page.",
+    {
+      ...organisation,
+      p_before_at: nullableDateTime,
+      p_before_id: nullableUuid,
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+    },
+    z.toJSONSchema(companyParticipantHistorySchema),
+    ["p_before_at", "p_before_id", "p_limit"],
   ),
   "/rest/v1/rpc/set_company_participant_reference": rpc(
     "setCompanyParticipantReference",

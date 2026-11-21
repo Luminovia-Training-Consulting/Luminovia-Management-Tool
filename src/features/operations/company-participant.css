@@ -34,3 +34,16 @@
 .company-participant-courses li {
   overflow-wrap: anywhere;
 }
+
+.company-participant-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.company-participant-history li {
+  overflow-wrap: anywhere;
+}
+
+.company-participant-history time {
+  display: block;
+}

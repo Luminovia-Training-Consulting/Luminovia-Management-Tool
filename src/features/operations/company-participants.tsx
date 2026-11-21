@@ -9,6 +9,7 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { CompanyParticipantDetails } from "./company-participant-detail";
+import { CompanyParticipantHistory } from "./company-participant-history";
 import {
   type CompanyParticipant,
   companyParticipantsSchema,
@@ -31,6 +32,7 @@ export function CompanyParticipantsPanel({
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(
     null,
   );
@@ -40,6 +42,10 @@ export function CompanyParticipantsPanel({
   const [notice, setNotice] = useState<
     "requested" | "invited" | "removed" | "failed" | null
   >(null);
+  const refreshHistory = () =>
+    cache.invalidateQueries({
+      queryKey: ["company-participant-history", actor, organisationId],
+    });
   const access = useQuery({
     queryKey: ["company-participant-access", actor, organisationId],
     queryFn: async () => {
@@ -76,6 +82,7 @@ export function CompanyParticipantsPanel({
     onSuccess: () => {
       setUserId("");
       setNotice("requested");
+      void refreshHistory();
     },
     onError: () => setNotice("failed"),
   });
@@ -97,6 +104,7 @@ export function CompanyParticipantsPanel({
       setEmail("");
       setDisplayName("");
       setNotice("invited");
+      void refreshHistory();
     },
     onError: () => setNotice("failed"),
   });
@@ -115,9 +123,12 @@ export function CompanyParticipantsPanel({
     onSuccess: async () => {
       setRemoveTarget(null);
       setNotice("removed");
-      await cache.invalidateQueries({
-        queryKey: ["company-participants", actor, organisationId],
-      });
+      await Promise.all([
+        cache.invalidateQueries({
+          queryKey: ["company-participants", actor, organisationId],
+        }),
+        refreshHistory(),
+      ]);
     },
     onError: () => setNotice("failed"),
   });
@@ -140,6 +151,13 @@ export function CompanyParticipantsPanel({
     >
       <h2 id={`participants-${organisationId}`}>{t("participants")}</h2>
       <p className="muted">{t("participantsHelp")}</p>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setHistoryOpen(true)}
+      >
+        {t("participantHistory")}
+      </Button>
       {notice && (
         <Notice kind={notice === "failed" ? "error" : "success"}>
           {t(
@@ -269,6 +287,14 @@ export function CompanyParticipantsPanel({
           organisationId={organisationId}
           participant={selected}
           onClose={() => setSelectedParticipant(null)}
+        />
+      )}
+      {historyOpen && (
+        <CompanyParticipantHistory
+          key={`${actor}:${organisationId}`}
+          actor={actor}
+          organisationId={organisationId}
+          onClose={() => setHistoryOpen(false)}
         />
       )}
       <Dialog

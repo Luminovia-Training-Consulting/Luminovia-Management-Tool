@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withApiFixture(async ({actor, sql, defer, checked}) => {
     const manager = await actor("decision-admin", "admin"),
@@ -89,6 +90,32 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
     assert.equal((await outsider.client.rpc("request_company_participant_link", link)).error?.code, "42501");
     assert.deepEqual(await checked(company.client.rpc("request_company_participant_link", link)), requested);
     assert.deepEqual(await checked(company.client.rpc("request_company_participant_link", link)), requested);
+    assert.deepEqual(await checked(company.client.rpc("request_company_participant_link", {
+        ...link,
+        p_luminovia_user_id: "UNKNOWN-FICTIONAL-ID",
+        p_request_id: randomUUID(),
+    })), requested);
+    const historyArgs = {p_organisation_id: org, p_limit: 1};
+    const history = await company.client.rpc("company_participant_history", historyArgs);
+    assert.equal(history.status, 200);
+    const first = await checked(Promise.resolve(history));
+    assertRpcResponse("company_participant_history", first);
+    assert.equal(first.has_more, true);
+    assert.equal(first.items[0].kind, "user_id_link_requested");
+    const after = await checked(company.client.rpc("company_participant_history", {
+        ...historyArgs,
+        p_before_at: first.items[0].occurred_at,
+        p_before_id: first.items[0].id,
+    }));
+    assertRpcResponse("company_participant_history", after);
+    assert.equal(after.has_more, false);
+    assert.equal(after.items[0].kind, first.items[0].kind);
+    assert.notEqual(after.items[0].id, first.items[0].id);
+    assert.equal((await outsider.client.rpc("company_participant_history", historyArgs)).status, 403);
+    assert.equal((await company.client.rpc("company_participant_history", {
+        ...historyArgs,
+        p_before_at: first.items[0].occurred_at,
+    })).status, 400);
     const pending = await checked(learner.client.rpc("my_company_participant_invitations"));
     assert.equal(pending.length, 1);
     assert.equal(pending[0].organisation_id, org);
@@ -98,6 +125,11 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         p_expected_version: pending[0].version,
         p_request_id: randomUUID(),
     }))).status, "accepted");
+    const confirmed = await checked(company.client.rpc("company_participant_history", {
+        p_organisation_id: org,
+    }));
+    assertRpcResponse("company_participant_history", confirmed);
+    assert.equal(confirmed.items.filter(({kind}) => kind === "association_confirmed").length, 1);
 
     // Exercise the live course enrolment form and participant withdrawal gate
     // over REST. Never seed these enrolments directly into PostgreSQL.
@@ -223,6 +255,6 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         "2",
     );
     console.log(
-        "PASS actual Auth/REST: organisation isolation, 72-hour projection, accept/reject, released assignment and amount preservation; own whole-course cancellation and deadline denial.",
+        "PASS actual REST: scoped and opaque company participant history, organisation isolation, 72-hour projection, accept/reject, released assignment and amount preservation, own course cancellation and deadline denial.",
     );
 });

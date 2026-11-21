@@ -289,6 +289,8 @@ Company users cannot assign/change elevated global roles. Assignment/enrolment/v
 **Company participant centre:** Company dashboard presents its scoped participants, public user IDs, company-specific reference IDs, invitation state, linked courses, upcoming courses, attendance summaries for its own courses and scoped action logs. Company may invite/create a participant, link an existing valid participant ID with acceptance, enrol or remove them, and assign one participant to multiple permitted courses. Show duplicate/incompatible-role/disabled-Premium errors without
 exposing other organisations' records.
 
+The internal participant centre now lists invitation requests, consent and scoped actions in **Invitations and history**. Company-entered identifiers and delivery or matching outcomes are private. Enrolment history starts with this update, which records the company when an enrolment changes. Consolidated multi-course assignment controls remain open.
+
 **Participant dashboard:** After login, show enabled company contexts, upcoming/current/completed enrolled courses, lecturer/contact information authorised for the course, dates/time zones, virtual classroom link, welcome text, shared learning materials, course group chat, allowed exam files, participant-relevant notifications and permitted learning activities. A participant cannot see the company-wide attendance roster, other participants' individual attendance notes, lecturer remuneration,
 customer contracts or company-private documents.
 

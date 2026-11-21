@@ -41,6 +41,40 @@ const pairs: Record<string, [string, string]> = {
     "{{present}} present · {{absent}} absent · {{excused}} excused · {{sessions}} sessions",
   ],
   participantMoreCourses: ["Weitere Kurse laden", "Load more courses"],
+  participantHistory: ["Einladungen und Verlauf", "Invitations and history"],
+  participantHistoryDescription: [
+    "Anfragen und Aktionen dieses Unternehmens. Die Annahme einer Verknüpfung erscheint als eigener Eintrag.",
+    "Requests and actions for this company. Acceptance of a company link appears as a separate event.",
+  ],
+  participantHistoryEmpty: [
+    "Für dieses Unternehmen sind noch keine Aktionen erfasst.",
+    "This company has no recorded actions yet.",
+  ],
+  participantHistoryOlder: ["Ältere Einträge laden", "Load older entries"],
+  "participantHistoryEntry.email_invite_requested": [
+    "E-Mail-Einladung angefragt",
+    "Email invitation requested",
+  ],
+  "participantHistoryEntry.user_id_link_requested": [
+    "Verknüpfung per User-ID angefragt",
+    "Link by user ID requested",
+  ],
+  "participantHistoryEntry.association_confirmed": [
+    "Verknüpfung angenommen",
+    "Company link accepted",
+  ],
+  "participantHistoryEntry.association_removed": [
+    "Verknüpfung entfernt",
+    "Company link removed",
+  ],
+  "participantHistoryEntry.reference_changed": [
+    "Unternehmensreferenz geändert",
+    "Company reference changed",
+  ],
+  "participantHistoryEntry.course_enrolment_changed": [
+    "Kurseinschreibung aktualisiert",
+    "Course enrolment updated",
+  ],
   inspectCourseChat: ["Kurschat prüfen", "Inspect course chat"],
   inspectCourseChatReason: [
     "Grund für den protokollierten Zugriff",

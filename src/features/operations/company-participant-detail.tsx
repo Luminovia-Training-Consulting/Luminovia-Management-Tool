@@ -97,6 +97,9 @@ export function CompanyParticipantDetails({
       );
       setDraft(null);
       void cache.invalidateQueries({ queryKey: membershipKey });
+      void cache.invalidateQueries({
+        queryKey: ["company-participant-history", actor, organisationId],
+      });
     },
     onError: () => void cache.invalidateQueries({ queryKey: membershipKey }),
   });
