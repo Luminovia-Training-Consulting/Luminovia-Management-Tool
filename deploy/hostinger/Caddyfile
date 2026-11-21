@@ -54,12 +54,12 @@
 				respond 404
 			}
 		}
-		# Expose only the two intended Auth templates, not arbitrary directory contents.
+		# Serve the public Auth templates from an explicit allowlist.
 		handle_path /mail-templates/* {
 			route {
 				root * /mail-templates
 				header Cache-Control no-store
-				@templates path /invite.html /recovery.html
+				@templates path /invite.html /recovery.html /authenticator-enrolled.html /authenticator-unenrolled.html
 				file_server @templates
 				respond 404
 			}

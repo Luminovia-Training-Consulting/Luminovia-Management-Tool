@@ -99,6 +99,8 @@ export function createConfiguration(options) {
         PORTAL_BACKEND_NETWORK: network,
         PORTAL_DATA_DIR: dataDirectory,
         PORTAL_INVITES_ENABLED: "true",
+        PORTAL_TOTP_ENABLED: "false",
+        PORTAL_TOTP_SECURITY_MAIL_ENABLED: "false",
         // Provision no intake credential implicitly; public Website activation is separate.
         PORTAL_WEBSITE_ENQUIRIES_ENABLED: "false",
         PORTAL_WEBSITE_ORIGIN: "",

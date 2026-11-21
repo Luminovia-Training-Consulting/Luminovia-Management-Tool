@@ -263,6 +263,57 @@ const pairs: Record<string, [string, string]> = {
   ],
   previewEmailOrUsername: ["E-Mail oder Benutzername", "Email or username"],
   password: ["Passwort", "Password"],
+  authenticatorSettings: ["Authenticator-App", "Authenticator app"],
+  authenticatorSetup: [
+    "Authenticator-App einrichten",
+    "Set up authenticator app",
+  ],
+  authenticatorVerifySignIn: ["Anmeldung bestätigen", "Verify sign-in"],
+  authenticatorVerifyHint: [
+    "Gib den aktuellen Code deiner Authenticator-App ein.",
+    "Enter the current code from your authenticator app.",
+  ],
+  authenticatorConnect: [
+    "Authenticator-App verbinden",
+    "Connect authenticator app",
+  ],
+  authenticatorSetupHint: [
+    "Verbinde eine Authenticator-App mit deinem Konto. Sie erzeugt nach der Passwortanmeldung den sechsstelligen Bestätigungscode.",
+    "Connect an authenticator app to your account. It generates the six-digit code you need after signing in with your password.",
+  ],
+  authenticatorScan: [
+    "Scanne den QR-Code mit deiner Authenticator-App und gib den angezeigten Code ein.",
+    "Scan the QR code with your authenticator app and enter the code it displays.",
+  ],
+  authenticatorQr: [
+    "QR-Code zum Verbinden der Authenticator-App",
+    "QR code for connecting the authenticator app",
+  ],
+  authenticatorManualKey: ["Schlüssel manuell eingeben", "Enter key manually"],
+  authenticatorDevice: ["Authenticator", "Authenticator"],
+  authenticatorDeviceName: ["Portal-Authenticator", "Portal authenticator"],
+  authenticatorDeviceNumber: [
+    "Authenticator {{count}}",
+    "Authenticator {{count}}",
+  ],
+  authenticatorCode: ["6-stelliger Code", "6-digit code"],
+  authenticatorConfirm: ["Bestätigen", "Verify"],
+  authenticatorConnected: [
+    "Deine Authenticator-App ist verbunden.",
+    "Your authenticator app is connected.",
+  ],
+  authenticatorOnline: [
+    "Verbinde dich mit dem Internet, um deine Anmeldung zu bestätigen.",
+    "Connect to the internet to verify your sign-in.",
+  ],
+  authenticatorSetupFailed: [
+    "Die Authenticator-App konnte nicht verbunden werden. Versuche es erneut oder wende dich an die Administration.",
+    "Could not connect the authenticator app. Try again or contact your administrator.",
+  ],
+  authenticatorCodeFailed: [
+    "Der Code konnte nicht bestätigt werden. Gib den aktuellen Code deiner Authenticator-App ein.",
+    "Could not verify the code. Enter the current code from your authenticator app.",
+  ],
   forgot: ["Passwort vergessen?", "Forgot password?"],
   recover: ["Link anfordern", "Request reset link"],
   recoverSent: [

@@ -71,6 +71,14 @@ function fixture(t) {
         "supabase/templates/recovery.html",
         "<html>{{ .ConfirmationURL }}</html>",
     );
+    put(
+        "supabase/templates/authenticator-enrolled.html",
+        "<html>Authenticator added</html>",
+    );
+    put(
+        "supabase/templates/authenticator-unenrolled.html",
+        "<html>Authenticator removed</html>",
+    );
     const services = {
         db: postgres,
         auth: image("supabase/gotrue:v2.197.0"),
@@ -244,6 +252,12 @@ test("real archive and manifest contain only runtime files with exact byte hashe
         ),
     );
     assert(names.includes("deploy/hostinger/mail-templates/invite.html"));
+    assert(
+        names.includes("deploy/hostinger/mail-templates/authenticator-enrolled.html"),
+    );
+    assert(
+        names.includes("deploy/hostinger/mail-templates/authenticator-unenrolled.html"),
+    );
     for (const name of newRuntimeFiles) assert(names.includes(name));
     assert(
         names.includes(

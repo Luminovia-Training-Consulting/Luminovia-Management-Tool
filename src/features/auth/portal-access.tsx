@@ -6,6 +6,8 @@ import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { useAuth } from "./auth-context";
 import { Password } from "./password";
+import { AuthenticatorGate, authenticatorRequired } from "./authenticator";
+import { sessionCacheBoundary } from "./session-cache-boundary";
 import { useOnline } from "../../lib/online";
 import { OfflineSchedule } from "../calendar/offline";
 import { portalInternalEdition } from "../../lib/installation-brand";
@@ -16,12 +18,15 @@ export function PortalAccess({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
   const online = useOnline();
   const actor = session!.user.id;
+  const boundary = sessionCacheBoundary(session?.access_token);
   const access = useQuery({
-    queryKey: ["portal-access", actor],
+    queryKey: ["portal-access", actor, ...(boundary ? [boundary] : [])],
     enabled: online,
     queryFn: async () => {
       const { data, error } = await db().rpc("portal_access");
       if (error?.code === "PT428") return "password-setup" as const;
+      if (error?.code === authenticatorRequired)
+        return "authenticator" as const;
       // The REST pre-request gate deliberately returns 42501 for retired roles.
       if (error?.code === "42501") return false;
       if (error) throw error;
@@ -42,6 +47,8 @@ export function PortalAccess({ children }: { children: ReactNode }) {
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
   if (access.data === "password-setup")
     return <Password onSetupComplete={access.refetch} />;
+  if (access.data === "authenticator")
+    return <AuthenticatorGate actor={actor} onVerified={access.refetch} />;
   if (!access.data) {
     const de = i18n.language.startsWith("de");
     return (

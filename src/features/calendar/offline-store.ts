@@ -18,6 +18,7 @@ const eventSchema = z
 export const offlineScheduleSchema = z
   .object({
     actor: z.string().uuid(),
+    session: z.string().max(45).optional(),
     saved_at: z.string().datetime({ offset: true }),
     expires_at: z.string().datetime({ offset: true }),
     items: z.array(eventSchema).max(500),
@@ -25,6 +26,7 @@ export const offlineScheduleSchema = z
   .strict();
 export type OfflineScheduleSnapshot = z.infer<typeof offlineScheduleSchema>;
 let identity: string | null | undefined;
+let sessionBoundary: string | undefined;
 let generation = 0;
 let serial: Promise<unknown> = Promise.resolve();
 let storeRevision = 0;
@@ -100,10 +102,15 @@ function stored(
 }
 
 /** Called synchronously BEFORE Auth exposes another identity or clears it. */
-export function synchronizeOfflineActor(actor: string | null) {
-  if (identity === actor) return;
+export function synchronizeOfflineActor(
+  actor: string | null,
+  session: string | null = null,
+) {
+  const nextSession = session ?? undefined;
+  if (identity === actor && sessionBoundary === nextSession) return;
   const initial = identity === undefined;
   identity = actor;
+  sessionBoundary = nextSession;
   generation++;
   for (const request of requests) request.abort();
   requests.clear();
@@ -123,13 +130,12 @@ export function synchronizeOfflineActor(actor: string | null) {
   }
   const stamp = generation;
   void enqueue(async () => {
-    const previous = await stored();
+    const previous = offlineScheduleSchema.safeParse(await stored());
     if (stamp !== generation) return;
     if (
-      !previous ||
-      typeof previous !== "object" ||
-      !("actor" in previous) ||
-      previous.actor !== actor
+      !previous.success ||
+      previous.data.actor !== actor ||
+      previous.data.session !== nextSession
     )
       await stored(null);
   }).catch(() => {});
@@ -148,6 +154,7 @@ export async function readOfflineSchedule(
   if (
     !parsed.success ||
     parsed.data.actor !== actor ||
+    parsed.data.session !== sessionBoundary ||
     Date.parse(parsed.data.expires_at) <= now ||
     Date.parse(parsed.data.saved_at) > now + 60000 ||
     Date.parse(parsed.data.expires_at) - Date.parse(parsed.data.saved_at) >
@@ -210,6 +217,7 @@ export async function refreshOfflineSchedule(actor: string) {
     const now = Date.now();
     const snapshot = offlineScheduleSchema.parse({
       actor,
+      ...(sessionBoundary ? { session: sessionBoundary } : {}),
       saved_at: new Date(now).toISOString(),
       expires_at: new Date(now + 7 * 86400000).toISOString(),
       items: events.map((event) => ({

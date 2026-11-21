@@ -17,6 +17,7 @@ import { notificationCategory, type NotificationCategory } from "./categories";
 import { isGuestOnly, isParticipantOnly } from "../auth/guest-navigation";
 import { PushSettings } from "./push-settings";
 import { useAuth } from "../auth/auth-context";
+import { AuthenticatorSettings } from "../auth/authenticator";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
@@ -342,6 +343,9 @@ export function SettingsPage() {
           {de ? "Profil bearbeiten" : "Edit profile"}
         </Link>
       </section>
+      {roles.data?.some((role) => role === "admin" || role === "owner") && (
+        <AuthenticatorSettings actor={actor} />
+      )}
       <details className="panel settings-section" open>
         <summary>{de ? "Benachrichtigungen" : "Notifications"}</summary>
         {preferences.isPending ? (

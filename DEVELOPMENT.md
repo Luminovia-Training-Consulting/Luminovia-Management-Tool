@@ -560,7 +560,7 @@ Feature flow: component → validated form/query/mutation → Supabase Auth/data
 
 ## ADR-003 — invitation-only Auth and granular capabilities
 
-Production public signup is disabled. Supabase manages credentials, sessions, password recovery and invitation consumption. Privileged operations require an active profile and a database-managed capability. MFA factors and assurance gates are disabled in the current source; editable user metadata never grants authority. Users may have several explicit roles, mapped to granular permissions. Senior lecturers inherit no commercial access. Deactivation is checked at the API/database boundary rather
+Production public signup is disabled. Supabase manages credentials, sessions, password recovery and invitation consumption. Privileged operations require an active profile and a database-managed capability. When the installation opts in, privileged authentication checks the signed assurance level and the live TOTP-bound Auth session. Editable user metadata never grants authority. Users may have several explicit roles, mapped to granular permissions. Senior lecturers inherit no commercial access. Deactivation is checked at the API/database boundary rather
 than relying solely on JWT expiry.
 
 User self-service edits must not change identity, verified qualification fields, role, capability, contract status or sensitive commercial data. Auth administration and invitation sending belong in tightly permissioned Edge Functions with server-only credentials, not browser administration APIs.

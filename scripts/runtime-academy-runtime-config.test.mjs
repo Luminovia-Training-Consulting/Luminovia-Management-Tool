@@ -46,7 +46,7 @@ function initialization(root, options = {}) {
   };
 }
 
-function compose(root, profiles, capture = false) {
+function compose(root, profiles, capture = false, runtimeVariables = {}) {
   const result = spawnSync(
     "docker",
     [
@@ -63,7 +63,11 @@ function compose(root, profiles, capture = false) {
       "--format",
       "json",
     ],
-    { cwd: repository, encoding: "utf8", env: composeEnv },
+    {
+      cwd: repository,
+      encoding: "utf8",
+      env: { ...composeEnv, ...runtimeVariables },
+    },
   );
   // Compose JSON contains runtime secrets. Assertion output must not include it.
   assert.equal(result.status, 0, "Compose rejected the dedicated runtime");
@@ -119,6 +123,8 @@ test("generates separate private runtime identities and paired public environmen
     assert.equal(runtime.API_EXTERNAL_URL, identity.api_base_url + "/auth/v1");
     assert.equal(runtime.MAILER_URLPATHS_INVITE, "/backend/auth/v1/verify");
     assert.equal(runtime.PORTAL_INVITES_ENABLED, "false");
+    assert.equal(runtime.PORTAL_TOTP_ENABLED, "false");
+    assert.equal(runtime.PORTAL_TOTP_SECURITY_MAIL_ENABLED, "false");
     assert.equal(runtime.PORTAL_WEBSITE_ENQUIRIES_ENABLED, "false");
     assert.equal(
       envAt(root, "runtime.env.notification.env")
@@ -356,5 +362,49 @@ test(
         assert.ok(volume.name.startsWith(identity.compose_project + "_"));
       }
     }
+  },
+);
+
+test(
+  "actual Compose keeps TOTP and factor mail as separate operator opt-ins",
+  { skip: hasCompose ? false : "Docker Compose not installed" },
+  (t) => {
+    const root = join(temporaryDirectory(t), "academy");
+    const identity = initializeAcademyRuntime(initialization(root));
+    const defaults = compose(root, []).services.auth.environment;
+    const totp = compose(root, [], false, { PORTAL_TOTP_ENABLED: "true" })
+      .services.auth.environment;
+    const opts = {
+      PORTAL_TOTP_ENABLED: "true",
+      PORTAL_TOTP_SECURITY_MAIL_ENABLED: "true",
+    };
+    const enabled = compose(root, [], false, opts).services.auth.environment;
+    const capture = compose(root, ["mail-capture"], true, opts).services.auth
+      .environment;
+
+    for (const suffix of ["ENROLL_ENABLED", "VERIFY_ENABLED"]) {
+      const totpFlag = `GOTRUE_MFA_TOTP_${suffix}`;
+      assert.equal(defaults[totpFlag], "false");
+      assert.equal(totp[totpFlag], "true");
+      assert.equal(enabled[totpFlag], "true");
+      for (const method of ["PHONE", "WEB_AUTHN"])
+        assert.equal(enabled[`GOTRUE_MFA_${method}_${suffix}`], "false");
+    }
+
+    for (const action of ["ENROLLED", "UNENROLLED"]) {
+      const notice = `GOTRUE_MAILER_NOTIFICATIONS_MFA_FACTOR_${action}_ENABLED`;
+      const template = `GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_${action}_NOTIFICATION`;
+      assert.equal(defaults[notice], "false");
+      assert.equal(totp[notice], "false");
+      assert.equal(enabled[notice], "true");
+      assert.equal(capture[notice], "true");
+      assert.equal(capture[template], "");
+      assert.equal(
+        enabled[template],
+        `${identity.portal_origin}/mail-templates/authenticator-${action.toLowerCase()}.html`,
+      );
+    }
+    assert.equal(enabled.GOTRUE_SMTP_HOST, "mail-relay");
+    assert.equal(capture.GOTRUE_SMTP_HOST, "mailpit");
   },
 );

@@ -300,6 +300,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Username or verified email with password sign-in resolves to the same Auth identity. Both editions passed native sign-in, alias edits and private account settings.
 - [x] Send the automatically assigned username with the one-time invitation. Require a personal password before opening protected resources and support verified-email or username sign-in after setup. Initial passwords supplied by administrators require a first sign-in change.
 - [x] Provision confirmed company contacts for one organisation. Allow them to request learner invitations from their own courses under the shared licensed seats and invitation budgets, with a scoped and opaque receipt.
+- [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
 - [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
 - [ ] Provide local integration identities, scoped keys, rotation/revocation, signed webhooks and replay/idempotency management.
 

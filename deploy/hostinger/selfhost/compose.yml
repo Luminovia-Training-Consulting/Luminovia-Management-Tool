@@ -110,7 +110,8 @@ services:
         max-file: "2"
     security_opt:
       - no-new-privileges:true
-  # Native invitation/password sign-in; signup and every MFA method are disabled.
+  # Native invitation/password sign-in with operator-enabled TOTP transport.
+  # The separate PostgreSQL policy decides which roles must verify a factor.
   auth:
     image: supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b
     restart: unless-stopped
@@ -163,8 +164,8 @@ services:
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE}
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_SMS_AUTOCONFIRM: "false"
-      GOTRUE_MFA_TOTP_ENROLL_ENABLED: "false"
-      GOTRUE_MFA_TOTP_VERIFY_ENABLED: "false"
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: ${PORTAL_TOTP_ENABLED:-false}
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: ${PORTAL_TOTP_ENABLED:-false}
       GOTRUE_MFA_PHONE_ENROLL_ENABLED: "false"
       GOTRUE_MFA_PHONE_VERIFY_ENABLED: "false"
       GOTRUE_MFA_WEB_AUTHN_ENROLL_ENABLED: "false"
@@ -182,6 +183,13 @@ services:
       GOTRUE_MAILER_TEMPLATES_RECOVERY: ${PORTAL_MAIL_TEMPLATE_ORIGIN:?Set PORTAL_MAIL_TEMPLATE_ORIGIN}/mail-templates/recovery.html
       GOTRUE_MAILER_SUBJECTS_INVITE: "Luminovia Portal: Deine Einladung / Your invitation"
       GOTRUE_MAILER_SUBJECTS_RECOVERY: "Luminovia Portal: Passwort zur\xFCcksetzen / Reset password"
+      # GoTrue sends account-change notices through the same SMTP credentials as recovery.
+      GOTRUE_MAILER_NOTIFICATIONS_MFA_FACTOR_ENROLLED_ENABLED: ${PORTAL_TOTP_SECURITY_MAIL_ENABLED:-false}
+      GOTRUE_MAILER_NOTIFICATIONS_MFA_FACTOR_UNENROLLED_ENABLED: ${PORTAL_TOTP_SECURITY_MAIL_ENABLED:-false}
+      GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_ENROLLED_NOTIFICATION: ${PORTAL_MAIL_TEMPLATE_ORIGIN:?Set PORTAL_MAIL_TEMPLATE_ORIGIN}/mail-templates/authenticator-enrolled.html
+      GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_UNENROLLED_NOTIFICATION: ${PORTAL_MAIL_TEMPLATE_ORIGIN:?Set PORTAL_MAIL_TEMPLATE_ORIGIN}/mail-templates/authenticator-unenrolled.html
+      GOTRUE_MAILER_SUBJECTS_MFA_FACTOR_ENROLLED_NOTIFICATION: "Authenticator hinzugefügt / Authenticator added"
+      GOTRUE_MAILER_SUBJECTS_MFA_FACTOR_UNENROLLED_NOTIFICATION: "Authenticator entfernt / Authenticator removed"
     networks:
       - backend
     mem_limit: 128m

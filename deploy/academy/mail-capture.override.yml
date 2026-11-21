@@ -1,5 +1,5 @@
-# Load only for an isolated invitation/recovery rehearsal. Mailpit has no
-# external listener. GoTrue sends into it without using a customer provider.
+# Load only for an isolated Auth mail rehearsal. Mailpit has no external
+# listener. Empty template URLs keep capture independent of public ingress.
 services:
   auth:
     environment:
@@ -9,6 +9,8 @@ services:
       GOTRUE_SMTP_PASS: ""
       GOTRUE_MAILER_TEMPLATES_INVITE: ""
       GOTRUE_MAILER_TEMPLATES_RECOVERY: ""
+      GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_ENROLLED_NOTIFICATION: ""
+      GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_UNENROLLED_NOTIFICATION: ""
     depends_on:
       mailpit:
         condition: service_healthy

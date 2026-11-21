@@ -60,7 +60,7 @@ These earlier managed-backend steps are reference only; do not apply them as set
 
 1. Select an approved separate managed Supabase staging project and inspect existing tables, auth/storage settings, logs and advisors before changes.
 2. Review migration diff and permissions; back up existing staging data if applicable. Apply versioned migrations using the reviewed CLI/connector workflow. Record migration versions and rollback plan.
-3. Disable public/anonymous signup. Set exact staging site and implemented invitation/recovery callback URLs. Disable all MFA methods and verify password-only sessions plus active-user/capability enforcement in actual Data API calls.
+3. Disable public/anonymous signup. Set exact staging site and implemented invitation/recovery callback URLs. Verify active-user and capability enforcement in actual Data API calls. If adopting privileged TOTP, stage the installation-wide policy before enforcing it.
 4. Configure approved transactional SMTP with server-only credentials and approved sender/domain. Review deliverability/rate limits, DE/EN templates and minimal notification contents. Send only authorised test messages.
 5. Seed fictional staging fixtures only. Bootstrap the first administrator through a controlled server-side process, then audit granted capabilities. No browser role self-assignment.
 
@@ -84,6 +84,14 @@ The Auth email redirect, exact allowlist and implemented app route must agree. O
 not publish hosted templates. The invitation template uses a token hash and explicit `/auth/callback` acceptance followed by `verifyOtp`/password setup so it works in a new browser with the PKCE-configured client. Recovery retains the standard `ConfirmationURL` to preserve its PKCE challenge/verifier. Do not revert to the default implicit invitation redirect without a new integration review. Use no-referrer behaviour and redact token-hash authentication query strings from hosting/access logs.
 Verify invitation acceptance, password creation, assigned lecturer capability and subsequent sign-in in the same reviewed environment. Local captured messages to `.invalid` test accounts are not production email deliverability.
 
+## Authenticator rollout for administrators and owners
+
+Every installation starts with the authenticator policy disabled. To enable it on a reviewed self-hosted portal or dedicated academy, apply the release migrations and set `PORTAL_TOTP_ENABLED=true` in that installation's private backend environment. Set `PORTAL_TOTP_SECURITY_MAIL_ENABLED=true` if the reviewed SMTP sender should deliver bilingual security notices when an authenticator is added or removed. Recreate the `auth` service from the installation's existing Compose model and exact environment. The Auth service uses the same reviewed SMTP transport as invitations and password resets.
+
+The PostgreSQL operator opens pairing with `select private.set_authenticator_policy('enrolment');`. In **Settings → Authenticator app**, each active administrator and owner scans the QR code or enters the key manually, then confirms a fresh six-digit code. A paired account requires its authenticator for new sessions from that point. Verify both a successful sign-in with the app and denial of protected requests before the app code. Password recovery still resets the password and yields a session that must separately satisfy the authenticator check.
+
+After all active administrators and owners have paired a verified authenticator, run `select private.set_authenticator_policy('required');`. The database refuses enforcement while any active privileged account is unpaired. The database also rejects unpaired privileged role grants in required mode. Use the enrolment stage for an approved new privileged account or to restore access after independently verifying the identity of an account with a lost authenticator. Revoke the lost Auth session and remove the lost factor with the private Auth administration process. Have the account pair again and confirm that required mode can be restored. These operations are scoped to the installation. Keep provider flags enabled while the database policy expects authenticator proof.
+
 <a id="section-deployment-runbook-static-frontend-hosting"></a>
 
 ## Static frontend hosting
@@ -102,7 +110,7 @@ All of the following require evidence before requesting final production approva
 - A specific reviewed commit/build artifact and visible staging demonstration, with implemented/remaining scope stated honestly.
 - Passing relevant tests, migration/RLS and fifty-way concurrency results, dependency/advisory review and resolved material findings.
 - Actual DE/EN, accessibility, supported mobile/browser/PWA and offline-sensitive-cache checks.
-- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator and privacy/legal/retention review. Configure password-only Auth with all MFA methods disabled.
+- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator and privacy/legal/retention review. Decide and verify the installation’s administrator and owner authenticator policy before launch.
 - A consistent backup of PostgreSQL **and actual Storage file objects**, successful isolated restore drill and tested rollback.
 
 Request approval for the concrete release and its migration/hosting changes. The initial development request does not authorise production publishing, real invitations, purchases or marketing-site changes.
@@ -236,7 +244,7 @@ On the server, `/opt/luminovia-portal/source` holds the initial source snapshot 
 Caddy mounts the stable `/opt/luminovia-portal/www` directory read-only at `/srv`. `/srv/current` is a symlink to a release below `www/releases`; it supplies the SPA shell and ordinary public files. Hashed assets are served from the shared `www/assets` directory and Workbox bundles from `www`, so a client with an older loaded shell can still fetch its immutable assets after the current release changes. Do not bind-mount a changing symlink target as the document root. `www/maintenance.enabled` is
 the explicit reversible API maintenance flag: while present, the public `/backend` route returns 503 with `Retry-After: 60`; it is absent in the accepted running state. Mail templates have a separate read-only mount. Private configuration, source, database files and backups never belong in `www`.
 
-The local ignored `.local/hostinger` directory contains restricted server/build configuration, bootstrap account credentials and deployment/backup evidence. Never copy it into Git or a document root. `ACCOUNTS.txt` is the private handoff for the three fictional development accounts. MFA is not supported; accounts use passwords and server-side active-account, role, resource-scope and RLS checks.
+The local ignored `.local/hostinger` directory contains restricted server/build configuration, bootstrap account credentials and deployment/backup evidence. Never copy it into Git or a document root. `ACCOUNTS.txt` is the private handoff for the three fictional development accounts. The default development accounts use passwords and server-side active-account, role, resource-scope and RLS checks. The operator can stage native TOTP for administrators and owners.
 
 The safe generator in `deploy/hostinger/selfhost/generate-env.mjs` creates new configuration once and refuses overwrite. **Do not rerun it to change domains**: preserve the existing keys/passwords and update only endpoint fields. The self-host README documents each server variable. The frontend receives only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; server/database/JWT keys never enter its build.
 

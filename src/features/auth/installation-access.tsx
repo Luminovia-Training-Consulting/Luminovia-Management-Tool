@@ -8,6 +8,9 @@ import { db } from "../../lib/supabase";
 import { installationBrand } from "../../lib/installation-brand";
 import { useOnline } from "../../lib/online";
 import { Password } from "./password";
+import { AuthenticatorGate, authenticatorRequired } from "./authenticator";
+import { sessionCacheBoundary } from "./session-cache-boundary";
+import { useAuth } from "./auth-context";
 
 export function CustomerInstallationAccess({
   actor,
@@ -113,12 +116,15 @@ function OnlineAcademyCourseAccess({
   children: (access: CourseAccess) => ReactNode;
 }) {
   const { i18n } = useTranslation();
+  const { session } = useAuth();
+  const boundary = sessionCacheBoundary(session?.access_token);
   const de = i18n.language.startsWith("de");
   const query = useQuery({
     queryKey: [
       "academy-course-access",
       installationBrand.installationId,
       actor,
+      ...(boundary ? [boundary] : []),
     ],
     staleTime: 0,
     gcTime: 0,
@@ -127,11 +133,12 @@ function OnlineAcademyCourseAccess({
     retry: false,
     queryFn: async ({
       signal,
-    }): Promise<CourseAccess | "password-setup" | null> => {
+    }): Promise<CourseAccess | "password-setup" | "authenticator" | null> => {
       const { data, error } = await db()
         .rpc("installation_capabilities")
         .abortSignal(signal);
       if (error?.code === "PT428") return "password-setup";
+      if (error?.code === authenticatorRequired) return "authenticator";
       if (error) throw error;
       if (
         !data ||
@@ -149,6 +156,7 @@ function OnlineAcademyCourseAccess({
       // course release before this RPC can return true.
       const access = await db().rpc("portal_access").abortSignal(signal);
       if (access.error?.code === "PT428") return "password-setup";
+      if (access.error?.code === authenticatorRequired) return "authenticator";
       if (access.error?.code === "42501") return null;
       if (access.error) throw access.error;
       return access.data === true ? data.licence_status : null;
@@ -159,6 +167,8 @@ function OnlineAcademyCourseAccess({
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
   if (query.data === "password-setup")
     return <Password onSetupComplete={query.refetch} />;
+  if (query.data === "authenticator")
+    return <AuthenticatorGate actor={actor} onVerified={query.refetch} />;
   if (!query.data)
     return (
       <main className="auth-page">

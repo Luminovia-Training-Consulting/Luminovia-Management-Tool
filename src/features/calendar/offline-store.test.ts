@@ -146,6 +146,15 @@ it("clears on logout, preserves same-identity use and never exposes a foreign sn
   expect(await readOfflineSchedule(owner)).toBeNull();
   expect(await raw()).toBeUndefined();
 });
+it("cannot load the schedule of a different assurance level or session for the same actor", async () => {
+  const native = "f03078ee-adbb-4d4f-a5a3-aaf83d6dc285";
+  synchronizeOfflineActor(owner, `${native}:aal2`);
+  await refreshOfflineSchedule(owner);
+  expect((await readOfflineSchedule(owner))?.items).toHaveLength(1);
+  synchronizeOfflineActor(owner, `${native}:aal1`);
+  expect(await readOfflineSchedule(owner)).toBeNull();
+  expect(await raw()).toBeUndefined();
+});
 it("expiry makes the snapshot unreadable and removes its stored data", async () => {
   await refreshOfflineSchedule(owner);
   expect(

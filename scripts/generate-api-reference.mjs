@@ -113,7 +113,7 @@ Send POST /functions/v1/human-login with JSON fields identifier and password. Th
 
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses \`http://127.0.0.1:54321\`; a selfhost gateway can expose the API beneath \`/backend\`. Read \`VITE_SUPABASE_URL\` from the approved environment rather than hard-coding a deployment hostname.
 
-Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA is disabled. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
+Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. An installation may stage and require native TOTP for administrators and owners. Protected requests by these accounts require an authenticated AAL2 token backed by its current Auth session and verified TOTP factor. A required authenticator step returns HTTP 412. Password recovery does not satisfy authenticator verification. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
 
 ## Account HTTP facade
 

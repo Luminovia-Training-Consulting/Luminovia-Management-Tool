@@ -67,8 +67,13 @@ Deno.serve(
             return !user.error && Boolean(user.data.user);
         },
         resolveAcademyActor: async (token) => {
-            const user = await caller(token).auth.getUser(token);
-            return user.error ? null : user.data.user?.id ?? null;
+            const client = caller(token);
+            const user = await client.auth.getUser(token);
+            if (user.error || !user.data.user) return null;
+            // The subsequent company invitation uses a service RPC, so verify
+            // the actual caller session through the current portal access gate.
+            const access = await client.rpc("portal_access");
+            return !access.error && access.data === true ? user.data.user.id : null;
         },
         authenticate: async (token) => {
             const client = caller(token);

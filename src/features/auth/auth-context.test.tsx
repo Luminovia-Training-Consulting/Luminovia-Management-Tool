@@ -90,6 +90,21 @@ describe("authoritative auth events and delayed initial sessions", () => {
     expect(screen.getByText("actor-b")).toBeInTheDocument();
     expect(state.client.getQueryData(["private", "actor-a"])).toBeUndefined();
   });
+  it("clears data from another assurance level while allowing refresh within the same native session", async () => {
+    const state = setup();
+    const sessionId = "4ccbc483-f8e3-5413-a691-4e5c4be553db";
+    const native = (aal: string, exp: number) => ({
+      ...session("privileged-actor"),
+      access_token: `fixture.${btoa(JSON.stringify({ session_id: sessionId, aal, exp }))}.fixture`,
+    });
+    const key = ["private", "privileged-actor"];
+    await act(async () => state.callback("SIGNED_IN", native("aal2", 1)));
+    state.client.setQueryData(key, "verified fixture record");
+    await act(async () => state.callback("TOKEN_REFRESHED", native("aal2", 2)));
+    expect(state.client.getQueryData(key)).toBe("verified fixture record");
+    await act(async () => state.callback("TOKEN_REFRESHED", native("aal1", 3)));
+    expect(state.client.getQueryData(key)).toBeUndefined();
+  });
   it("surfaces an initial session error when no newer auth event supplies state", async () => {
     const state = setup();
     await act(async () =>

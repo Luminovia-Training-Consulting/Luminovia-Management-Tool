@@ -77,6 +77,7 @@ This pass covers source implementation and local tests. CI, deployment, producti
 ## Participant and company onboarding
 
 - [x] Deliver a one-time invitation with the generated username and enforce a personal password before protected access. Validate invited sessions and explicitly provisional passwords with pinned GoTrue.
+- [x] Allow an installation's operator to stage and enforce native TOTP for administrators and owners. Check the current Auth session and its verified factor on protected requests. Support bilingual factor-change notices through the configured SMTP transport.
 - [x] Provide dedicated administrators with company-contact provisioning, and confirmed company contacts with a learner invitation from their course. Use the existing seat and invitation budgets and keep account, delivery and enrolment details out of the acknowledgement.
 - [x] Group course runs under a company class with stable course links and unchanged enrolments. Verify company/learner scope through native desktop and mobile browsers.
 - [x] Scope optional anti-spam policy to the installation and company. Verify text and attachments with exact retries and current roles.

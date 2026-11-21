@@ -90,6 +90,14 @@ try {
     }
     file("templates/invite.html", "<p>Fictional invitation template</p>");
     file("templates/recovery.html", "<p>Fictional recovery template</p>");
+    file(
+        "templates/authenticator-enrolled.html",
+        "<p>Fictional factor added template</p>",
+    );
+    file(
+        "templates/authenticator-unenrolled.html",
+        "<p>Fictional factor removed template</p>",
+    );
     file("templates/unapproved.html", "UNAPPROVED_TEMPLATE_MUST_NEVER_BE_SERVED");
     file(
         "api.mjs",
@@ -226,11 +234,13 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         },
     );
     await check(
-        "only invitation and recovery mail templates are public and never cached",
+        "approved Auth mail templates are public and never cached",
         async () => {
             for (const [name, text] of [
                 ["invite", "invitation"],
                 ["recovery", "recovery"],
+                ["authenticator-enrolled", "factor added"],
+                ["authenticator-unenrolled", "factor removed"],
             ]) {
                 const response = await request(`/mail-templates/${name}.html`);
                 assert.equal(response.status, 200, name);

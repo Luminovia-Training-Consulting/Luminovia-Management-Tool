@@ -645,7 +645,12 @@ export function createRelease(options) {
         safePath(file);
         collected.set(file, join(sourceRoot, file));
     }
-    for (const kind of ["invite", "recovery"]) {
+    for (const kind of [
+        "invite",
+        "recovery",
+        "authenticator-enrolled",
+        "authenticator-unenrolled",
+    ]) {
         const source = join(sourceRoot, "supabase/templates/" + kind + ".html");
         plainFile(source, sourceRoot);
         collected.set("deploy/hostinger/mail-templates/" + kind + ".html", source);

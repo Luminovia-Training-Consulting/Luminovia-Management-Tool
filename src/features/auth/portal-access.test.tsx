@@ -16,6 +16,10 @@ vi.mock("../calendar/offline", () => ({
   OfflineSchedule: ({ actor, minimal }: { actor: string; minimal: boolean }) =>
     minimal && <p>Only the opted-in schedule for {actor}</p>,
 }));
+vi.mock("./authenticator", () => ({
+  authenticatorRequired: "PT412",
+  AuthenticatorGate: () => <h1>Current authenticator confirmation</h1>,
+}));
 afterEach(() => {
   cleanup();
   localStorage.removeItem("luminovia.theme");
@@ -69,6 +73,17 @@ it("mounts private content after positive database membership confirmation", asy
   show();
   expect(await screen.findByText("Private workspace")).toBeInTheDocument();
   expect(state.rpc).toHaveBeenCalledWith("portal_access");
+});
+
+it("shows only the authenticator gate when the server refuses a password-only privileged session", async () => {
+  state.rpc.mockResolvedValue({ data: null, error: { code: "PT412" } });
+  show();
+  expect(
+    await screen.findByRole("heading", {
+      name: "Current authenticator confirmation",
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
 });
 
 it("renders only the actor-bound offline schedule on a cold offline launch", () => {

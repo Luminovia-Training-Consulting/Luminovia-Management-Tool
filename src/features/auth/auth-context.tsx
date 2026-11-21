@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { synchronizePushActor } from "../notifications/push-browser";
 import { synchronizeOfflineActor } from "../calendar/offline-store";
+import { sessionCacheBoundary } from "./session-cache-boundary";
 
 /** Session state with distinct initial-loading and initial-lookup failure flags. */
 interface AuthState {
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: false,
   });
   const client = useQueryClient();
-  const actor = useRef<string | null>(null);
+  const identity = useRef<string | null>(null);
   useEffect(() => {
     if (!supabase) {
       synchronizeOfflineActor(null);
@@ -51,11 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear the previous actor's query cache before publishing the new session.
     // Otherwise new components could briefly observe another actor's retained private data.
     const applySession = (session: Session | null, error = false) => {
-      synchronizeOfflineActor(session?.user.id ?? null);
+      const boundary = sessionCacheBoundary(session?.access_token);
+      const nextIdentity = session
+        ? `${session.user.id}:${boundary ?? ""}`
+        : null;
+      synchronizeOfflineActor(session?.user.id ?? null, boundary);
       void synchronizePushActor(session?.user.id ?? null);
-      if (actor.current !== (session?.user.id ?? null)) {
+      if (identity.current !== nextIdentity) {
         client.clear();
-        actor.current = session?.user.id ?? null;
+        identity.current = nextIdentity;
       }
       setState({ session, loading: false, error });
     };

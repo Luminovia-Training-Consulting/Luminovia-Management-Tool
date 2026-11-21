@@ -30,7 +30,7 @@ Use `npm ci` and the lockfile. Dependency updates must preserve compatible peer 
 
 ## Preserve application contracts
 
-- **Authorization:** current database roles, active-account status, RLS, exact grants and resource membership decide access. MFA factors and AAL gates are disabled. Test direct requests, other actors and revocation. Hidden UI and editable metadata confer no rights.
+- **Authorization:** current database roles, active-account status, RLS, exact grants and resource membership decide access. The opt-in privileged authenticator policy verifies current native TOTP sessions. Test direct requests, other actors and revocation. Hidden UI and editable metadata confer no rights.
 - **Claims and money:** confirm only after a successful online transaction reserves every session. Preserve accepted schedules, terms, contract versions and original-currency compensation. A payment record is not a bank transfer.
 - **Migrations:** released SQL bytes remain unchanged. Add new migrations through the pinned CLI and check retained data, permissions and concurrency. See [migration ownership](DEVELOPMENT.md#section-migration-guide).
 - **Private resources:** preserve distinct DM, calendar, evidence, contract and invoice boundaries. Exact file bytes require current authorization and completed scanning. Do not generically cache authenticated responses or private file bytes offline. The explicit opt-in [minimal own teaching schedule](GUIDE.md#section-calendar-connections) is the documented narrow exception.
