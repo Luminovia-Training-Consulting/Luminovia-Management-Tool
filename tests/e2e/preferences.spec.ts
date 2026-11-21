@@ -28,14 +28,14 @@ test("blocked preference storage still permits boot, language and theme controls
         page.getByRole("button", {name: "Anmelden", exact: true}),
     ).toBeVisible();
     await page
-        .getByLabel("E-Mail", {exact: true})
+        .getByLabel("Benutzername oder E-Mail", {exact: true})
         .fill("draft@example.invalid");
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(
         page.getByRole("button", {name: "Sign in", exact: true}),
     ).toBeVisible();
-    await expect(page.getByLabel("Email", {exact: true})).toHaveValue(
+    await expect(page.getByLabel("Username or email", {exact: true})).toHaveValue(
         "draft@example.invalid",
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");

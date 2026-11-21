@@ -306,7 +306,7 @@ export function Shell() {
     if (guestOnly && !guestRouteAllowed(location.pathname))
         return <Navigate to="/profile" replace/>;
     // Keep standalone learners out of operational page loaders, including on direct links.
-    if (participantOnly && !/^\/(?:learning|notifications|profile|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(location.pathname))
+    if (participantOnly && !/^\/(?:learning|notifications|profile|api\/docs|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(location.pathname))
         return <Navigate to="/learning" replace/>;
     return (
         <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>

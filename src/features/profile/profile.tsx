@@ -196,6 +196,9 @@ export function ProfilePage() {
                 </p>
                 {guestOnly && <ProfileForm profile={profile.data}/>}
                 <AccountSettings email={session!.user.email ?? ""}/>
+                {participantOnly && (
+                    <Link className="text-link" to="/api/docs">{t("apiDocumentation")}</Link>
+                )}
                 <datalist id="time-zones">
                     <option>Europe/Berlin</option>
                     <option>Australia/Brisbane</option>

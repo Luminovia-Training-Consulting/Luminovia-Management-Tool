@@ -467,6 +467,7 @@ const pairs: Record<string, [string, string]> = {
     publish: ["Sofort veröffentlichen", "Publish immediately"],
     amount: ["Honorar", "Fee"],
     status: ["Status", "Status"],
+    apiDocumentation: ["API-Dokumentation", "API documentation"],
     luminoviaUserId: ["Luminovia User ID", "Luminovia User ID"],
     noAccess: [
         "Für diesen Bereich fehlt dir die Berechtigung.",

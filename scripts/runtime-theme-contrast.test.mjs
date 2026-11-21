@@ -87,5 +87,5 @@ for (const [theme, tokens] of [
         );
 }
 
-assert(styles.includes('[data-theme="dark"] .button-primary {\n  color: #102345;'));
+assert.match(styles, /\[data-theme="dark"\]\s+\.button-primary\s*\{[^}]*\bcolor:\s*#102345\s*;/);
 assert(contrast("#102345", dark.brand) >= 4.5);

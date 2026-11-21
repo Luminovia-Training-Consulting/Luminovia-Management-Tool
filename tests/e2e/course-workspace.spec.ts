@@ -97,6 +97,11 @@ async function fixture() {
             .from("client_organisation_memberships")
             .insert({user_id: client.id, organisation_id: org}),
     );
+    const adminClient = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(adminClient.auth.signInWithPassword({email: manager.email, password: process.env.E2E_PASSWORD!}));
+    await checked(adminClient.rpc("set_company_premium", {
+        p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
+    }));
     return {
         service,
         manager,
@@ -320,7 +325,7 @@ test("company reviews are current-membership scoped and participant accounts can
         const participant = await participantContext.newPage();
         await participant.goto("/login");
         await participant
-            .getByLabel("E-Mail", {exact: true})
+            .getByLabel("Benutzername oder E-Mail", {exact: true})
             .fill(f.learner.email);
         await participant
             .getByLabel("Passwort", {exact: true})
@@ -328,13 +333,9 @@ test("company reviews are current-membership scoped and participant accounts can
         await participant
             .getByRole("button", {name: "Anmelden", exact: true})
             .click();
-        await expect(
-            participant.getByText(/Dein Konto hat keinen Portalzugriff/),
-        ).toBeVisible();
+        await expect(participant).toHaveURL(/\/learning$/);
         await participant.goto(`/courses/${f.run}/workspace`);
-        await expect(
-            participant.getByText(/Dein Konto hat keinen Portalzugriff/),
-        ).toBeVisible();
+        await expect(participant.getByRole("alert")).toBeVisible();
         await expect(
             participant.getByRole("heading", {name: f.title, exact: true}),
         ).toHaveCount(0);

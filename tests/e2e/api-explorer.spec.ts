@@ -49,3 +49,33 @@ test("the API explorer executes a documented read only after authorization", asy
     page.getByRole("button", { name: "Execute", exact: true }),
   ).toHaveCount(0);
 });
+
+test("an authenticated participant can run an own-account RPC through the API explorer", async ({
+  page,
+}) => {
+  const learner = await actor(
+    "Fictional API explorer participant",
+    "participant",
+  );
+  await login(page, learner.email, /\/learning$/);
+  await page.goto("/api/docs");
+  await expect(
+    page.getByRole("heading", { name: "API-Dokumentation" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Mit meinem Konto autorisieren" })
+    .click();
+  await page
+    .getByRole("button", { name: /POST.*\/rest\/v1\/rpc\/account_username/ })
+    .click();
+  await page.getByRole("button", { name: "Try it out", exact: true }).click();
+  const response = page.waitForResponse(
+    (item) =>
+      item.request().method() === "POST" &&
+      new URL(item.url()).pathname.endsWith("/rpc/account_username"),
+  );
+  await page.getByRole("button", { name: "Execute", exact: true }).click();
+  const result = await response;
+  expect(result.status()).toBe(200);
+  expect(await result.json()).toEqual({ username: null, version: 0 });
+});

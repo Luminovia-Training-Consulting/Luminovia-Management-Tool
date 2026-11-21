@@ -40,7 +40,7 @@ test("built PWA registers its shell, supports offline deep links and never cache
         )
         .toBe(true);
     await page
-        .getByLabel("E-Mail", {exact: true})
+        .getByLabel("Benutzername oder E-Mail", {exact: true})
         .fill(process.env.E2E_LECTURER_EMAIL!);
     await page
         .getByLabel("Passwort", {exact: true})

@@ -28,7 +28,7 @@ function api(key: string) {
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
 async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
     await page.goto("/login");
-    await page.getByLabel("E-Mail", {exact: true}).fill(email);
+    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page
         .getByLabel("Passwort", {exact: true})
         .fill(process.env.E2E_PASSWORD!);

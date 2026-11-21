@@ -156,8 +156,8 @@ test("wiki draft attachments become readable only after publication and are revo
                 body: JSON.stringify({kind: "wiki_resource", id: attachmentId}),
             });
         expect((await request()).status).toBe(200);
-        // Participant-only accounts fail the portal-auth gate before resource authorization.
-        expect((await request(learnerSession!.access_token)).status).toBe(401);
+        // A valid learner session never grants access to staff-only wiki file bytes.
+        expect((await request(learnerSession!.access_token)).status).toBe(403);
         expect((await request(auth!.access_token, draftId)).status).toBe(403);
         await checked(
             managerApi.rpc("save_wiki_page", {
