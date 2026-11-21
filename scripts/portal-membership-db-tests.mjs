@@ -1,4 +1,4 @@
-/** Retained participant JWT denial and current company lecturer-review authority. */
+/** Participant role fences and current scoped company and learner review authority. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
@@ -34,6 +34,8 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
         job = randomUUID(),
         claim = randomUUID();
     await sql(`insert into public.organisations(id,name) values('${org}','Fictional Academy');
+    insert into private.company_premium_settings(organisation_id,enabled,version) values('${org}',true,1)
+      on conflict(organisation_id) do update set enabled=true,version=1;
     insert into public.client_organisation_memberships(user_id,organisation_id) values('${company}','${org}');
     insert into public.course_templates(id,title) values('${template}','Completed course');
     insert into public.course_runs(id,template_id,organisation_id,published) values('${run}','${template}','${org}',false);
@@ -118,6 +120,42 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
     console.log(
         "PASS completed-course company lecturer reviews and revoked-membership denial",
     );
+    // Verify a participant-only author through the same scoped request paths.
+    // Seed an already accepted fictional association separately from onboarding.
+    const link = randomUUID();
+    await sql(`
+        update auth.users set email_confirmed_at=now() where id='${participant}';
+        insert into private.company_participant_link_requests(
+          id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at
+        ) select '${link}','${org}','${company}','${randomUUID()}',p.luminovia_user_id,p.id,'accepted',now()+interval '1 day'
+          from public.profiles p where p.id='${participant}';
+        insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at)
+          values('${org}','${participant}','active','${link}','${company}',now());
+        insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+          values('${run}','${participant}','completed','${company}');
+    `);
+    for (const endpoint of ["reviewable_courses","submit_course_review","delete_course_review"]) {
+        await actor(participant, `select set_config('request.path','/rpc/${endpoint}',true);select public.require_portal_access()`);
+    }
+    await assert.rejects(
+        actor(participant, "select set_config('request.path','/rpc/people_directory',true);select public.require_portal_access()"),
+        /42501/,
+    );
+    const reviewed = async () => JSON.parse(await actor(participant, "select public.reviewable_courses()"));
+    assert.equal((await reviewed())[0].review,null);
+    const learnerReview = await actor(participant,
+        `select public.submit_course_review('${run}','${lecturer}',4,'Helpful practice',0)`);
+    assert.equal((await reviewed())[0].review.id,learnerReview);
+    await assert.rejects(actor(participant, `select public.delete_course_review('${review}',1)`), /42501/);
+    await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',null)`), /40001/);
+    await sql(`update private.company_premium_settings set enabled=false,version=2 where organisation_id='${org}'`);
+    assert.deepEqual(await reviewed(), []);
+    await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',1)`), /42501/);
+    await sql(`update private.company_premium_settings set enabled=true,version=3 where organisation_id='${org}'`);
+    await actor(participant, `select public.delete_course_review('${learnerReview}',1)`);
+    assert.equal((await reviewed())[0].review.deleted,true);
+    console.log("PASS participant-only authorship, current Premium and own-only withdrawal");
+
     await sql(`delete from public.user_roles where user_id='${lecturer}'`);
     await assert.rejects(
         actor(lecturer, "select public.require_portal_access()"),

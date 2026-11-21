@@ -58,8 +58,9 @@ const de = {
     moderationHelp:
         "Die Änderung wird mit Begründung protokolliert. Der ursprüngliche Beitrag bleibt geschützt gespeichert.",
     reviewTasks: "Dozent:innen bewerten",
+    reviewOffline: "Verbinde dich mit dem Internet, um aktuelle Bewertungen zu öffnen.",
     reviewHelp:
-        "Als zuständiger Unternehmenskontakt kannst du Dozent:innen nach Abschluss eines Kurses deines Unternehmens bewerten. Der Name der bewertenden Person wird anderen Mitgliedern nicht angezeigt.",
+        "Nach einem abgeschlossenen Kurs können Teilnehmende und zuständige Unternehmenskontakte die Dozent:innen bewerten. Der Name der bewertenden Person wird anderen Mitgliedern nicht angezeigt.",
     noReviewTasks:
         "Aktuell sind keine abgeschlossenen Kurse zur Bewertung freigegeben.",
     comment: "Deine Rückmeldung",
@@ -141,8 +142,9 @@ const en: typeof de = {
     moderationHelp:
         "The change and its reason are audited. The original contribution remains protected.",
     reviewTasks: "Review lecturers",
+    reviewOffline: "Connect to the internet to open your current reviews.",
     reviewHelp:
-        "As an authorized company contact, you can review lecturers after a course for your company has ended. Other members do not see the reviewer's name.",
+        "Participants and authorised company contacts can review lecturers after a course has ended. Other members do not see the reviewer's name.",
     noReviewTasks: "No completed courses are currently available for review.",
     comment: "Your feedback",
     submit: "Save review",

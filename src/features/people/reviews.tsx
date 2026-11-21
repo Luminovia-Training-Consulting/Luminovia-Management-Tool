@@ -7,6 +7,8 @@ import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {Link} from "react-router-dom";
 import {useAuth} from "../auth/auth-context";
+import {isParticipantOnly} from "../auth/guest-navigation";
+import {userRolesQuery} from "../../lib/queries";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
@@ -17,7 +19,7 @@ import "./i18n";
 import "./people.css";
 
 /** Edit the server-authorized course/lecturer review through explicit save/withdrawal actions. */
-function ReviewForm({course}: { course: ReviewableCourse }) {
+function ReviewForm({course, canOpenProfile}: {course: ReviewableCourse; canOpenProfile: boolean}) {
     const {t, i18n} = useTranslation("people");
     const online = useOnline();
     const client = useQueryClient();
@@ -66,7 +68,7 @@ function ReviewForm({course}: { course: ReviewableCourse }) {
         <article className="panel">
             <h2>{course.title}</h2>
             <p>
-                <Link to={`/people/${course.lecturer_id}`}>{course.lecturer_name}</Link>{" "}
+                {canOpenProfile ? <Link to={`/people/${course.lecturer_id}`}>{course.lecturer_name}</Link> : course.lecturer_name}{" "}
                 · {dateTime(course.ends_at, i18n.language, "Europe/Berlin")}
             </p>
             {previous?.hidden && (
@@ -155,14 +157,20 @@ function ReviewForm({course}: { course: ReviewableCourse }) {
 export function MyCourseReviews() {
     const {t} = useTranslation("people");
     const {session} = useAuth();
+    const roles = useQuery(userRolesQuery(session!.user.id));
+    const online = useOnline();
     const query = useQuery({
         queryKey: ["reviewable-courses", session!.user.id],
         queryFn: () => peopleRpc<ReviewableCourse[]>("reviewable_courses"),
+        enabled: online,
+        refetchInterval: 5000,
     });
     return (
         <>
             <PageHeading title={t("reviewTasks")} description={t("reviewHelp")}/>
-            {query.isPending ? (
+            {!online ? (
+                <Notice>{t("reviewOffline")}</Notice>
+            ) : query.isPending ? (
                 <Loading/>
             ) : query.isError ? (
                 <ErrorState retry={() => void query.refetch()}/>
@@ -174,6 +182,7 @@ export function MyCourseReviews() {
                         <ReviewForm
                             key={`${course.course_run_id}:${course.lecturer_id}:${course.review?.version ?? 0}`}
                             course={course}
+                            canOpenProfile={roles.isSuccess && !isParticipantOnly(roles.data)}
                         />
                     ))}
                 </div>
