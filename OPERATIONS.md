@@ -63,6 +63,8 @@ These earlier managed-backend steps are reference only; do not apply them as set
 3. Disable public/anonymous signup. Set exact staging site and implemented invitation/recovery callback URLs. Disable all MFA methods and verify password-only sessions plus active-user/capability enforcement in actual Data API calls.
 4. Configure approved transactional SMTP with server-only credentials and approved sender/domain. Review deliverability/rate limits, DE/EN templates and minimal notification contents. Send only authorised test messages.
 5. Seed fictional staging fixtures only. Bootstrap the first administrator through a controlled server-side process, then audit granted capabilities. No browser role self-assignment.
+
+For a new dedicated White-Label academy, prepare the empty database with the verified licence using `node scripts/academy-installation.mjs LICENCE TRUSTED_PUBLIC_KEY INSTALLATION_UUID EDITION RELEASE_COMMIT`. Create the intended administrator using the dedicated instance's private Supabase Auth administration interface and confirm their email address. Run the same local operator command with `--first-admin AUTH_UUID` appended. The command uses the explicitly configured libpq connection and checks the exact installation and active release before recording the administrator. Its response confirms the assigned Auth UUID. Keep credentials in the private Auth and database environment.
 6. Build frontend with staging public values. Run source, DB/RLS/concurrency, actual browser and accessibility tests. Record stage-specific differences, not merely localhost results.
 7. Review all remaining product/security/privacy acceptance, document actual storage limits/scanning, monitoring, backups and recovery before presenting a production candidate.
 
