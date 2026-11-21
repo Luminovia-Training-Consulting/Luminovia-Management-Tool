@@ -4,7 +4,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ actor, checked, url }) => {
+await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
   const user = await actor("username-login", "lecturer");
   const alias = "course-" + randomUUID().slice(0, 8);
   await checked(
@@ -64,12 +64,12 @@ await withApiFixture(async ({ actor, checked, url }) => {
     assert.equal(response.status, 401);
     assert.deepEqual(await response.json(), { error: "invalid_credentials" });
   }
-  const origin = process.env.PORTAL_APP_ORIGIN ?? "http://127.0.0.1:5273";
+  const origin = process.env.PORTAL_APP_ORIGIN ?? recoveryEndpoints.appOrigin;
   const mailpit = new URL(
-    process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:55324",
+    process.env.E2E_MAILPIT_URL ?? recoveryEndpoints.mailpitOrigin,
   );
-  assert.match(mailpit.hostname, /^(127\.0\.0\.1|localhost)$/);
-  assert.equal(mailpit.port, "55324");
+  assert.equal(origin, recoveryEndpoints.appOrigin);
+  assert.equal(mailpit.href, new URL(recoveryEndpoints.mailpitOrigin).href);
   const verifier = randomBytes(42).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const submitted = await fetch(
@@ -112,8 +112,11 @@ await withApiFixture(async ({ actor, checked, url }) => {
     ?.replaceAll("&amp;", "&");
   assert.ok(href, "The captured message includes the recovery link");
   const confirmation = new URL(href);
-  assert.match(confirmation.hostname, /^(127\.0\.0\.1|localhost)$/);
-  assert.equal(confirmation.port, "55321");
+  const expected = new URL(recoveryEndpoints.confirmationUrl);
+  assert.equal(confirmation.origin, expected.origin);
+  assert.equal(confirmation.pathname, expected.pathname);
+  assert.equal(confirmation.username, "");
+  assert.equal(confirmation.password, "");
   const verified = await fetch(confirmation, { redirect: "manual" });
   const callback = new URL(verified.headers.get("location") ?? "", origin);
   assert.equal(callback.origin, origin);

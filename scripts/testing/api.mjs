@@ -44,6 +44,11 @@ export async function withApiFixture(run) {
         "55321",
         "Dedicated canonical API port required.",
     );
+    const recoveryEndpoints = {
+        appOrigin: "http://127.0.0.1:5273",
+        mailpitOrigin: "http://127.0.0.1:55324",
+        confirmationUrl: new URL("/auth/v1/verify", url).href,
+    };
     /** Creates a separate SDK client without persistent sessions or automatic session refresh. */
     const make = (key) =>
         createClient(url, key, {
@@ -137,6 +142,7 @@ export async function withApiFixture(run) {
             checked,
             suffix,
             url,
+            recoveryEndpoints,
         });
     } catch (error) {
         failure = error;

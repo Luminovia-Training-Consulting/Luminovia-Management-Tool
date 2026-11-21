@@ -1014,11 +1014,17 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
     const directory = mkdtempSync(join(tmpdir(), "candidate-api-fixture-"));
     t.after(() => rmSync(directory, {recursive: true, force: true}));
     const source = readFileSync(resolve("scripts/testing/api.mjs"), "utf8");
-    const adapted = adaptCandidateApiFixture(source, {project, apiPort: 44777});
+    const adapted = adaptCandidateApiFixture(source, {
+        project,
+        apiPort: 44777,
+        recoveryPorts: {mail: 44778, public: 44779},
+    });
     for (const options of [
         {project: "luminovia-portal", apiPort: 44777},
         {project, apiPort: 443},
         {project, apiPort: 65536},
+        {project, apiPort: 44777, recoveryPorts: {mail: 44777, public: 44779}},
+        {project, apiPort: 44777, recoveryPorts: {mail: 44778, public: 443}},
     ])
         assert.throws(() => adaptCandidateApiFixture(source, options));
     assert.throws(() =>
@@ -1059,9 +1065,9 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
             [
                 "--input-type=module",
                 "-e",
-                'import {withApiFixture} from "./api.mjs"; import {writeFileSync} from "node:fs"; await withApiFixture(()=>writeFileSync(' +
+                'import {withApiFixture} from "./api.mjs"; import {writeFileSync} from "node:fs"; await withApiFixture(({recoveryEndpoints})=>writeFileSync(' +
                 JSON.stringify(marker) +
-                ', "owned fixture"));',
+                ', JSON.stringify(recoveryEndpoints)));',
             ],
             {
                 cwd: directory,
@@ -1079,7 +1085,11 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
     };
     const accepted = execute(project, "https://127.0.0.1:44777");
     assert.equal(accepted.status, 0, accepted.stderr);
-    assert(existsSync(marker));
+    assert.deepEqual(JSON.parse(readFileSync(marker, "utf8")), {
+        appOrigin: "https://127.0.0.1:44779",
+        mailpitOrigin: "https://127.0.0.1:44778",
+        confirmationUrl: "https://127.0.0.1:44779/backend/auth/v1/verify",
+    });
     for (const [label, url] of [
         ["unrelated", "https://127.0.0.1:44777"],
         [project, "https://127.0.0.1:55321"],
@@ -1088,6 +1098,17 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
         assert.notEqual(execute(label, url).status, 0);
         assert(!existsSync(marker));
     }
+
+    writeFileSync(join(directory, "api.mjs"), source);
+    const local = execute(project, "http://127.0.0.1:55321");
+    assert.equal(local.status, 0, local.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(marker, "utf8")), {
+        appOrigin: "http://127.0.0.1:5273",
+        mailpitOrigin: "http://127.0.0.1:55324",
+        confirmationUrl: "http://127.0.0.1:55321/auth/v1/verify",
+    });
+    assert.notEqual(execute(project, "http://127.0.0.1:44777").status, 0);
+    assert(!existsSync(marker));
 });
 
 test("candidate API fixture adaptation recognizes historic formatting and rejects ambiguous guards", () => {

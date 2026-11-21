@@ -278,9 +278,28 @@ export function candidateApiSuites(sourceRoot) {
 }
 
 // Adapt only the fixture's explicit isolated project/port contract.
-export function adaptCandidateApiFixture(source, {project, apiPort}) {
+export function adaptCandidateApiFixture(source, {project, apiPort, recoveryPorts}) {
     assert.match(project, /^luminovia-portal-test-[a-f0-9]{24}$/);
     assert(Number.isInteger(apiPort) && apiPort > 1024 && apiPort <= 65535);
+    let bindRecoveryEndpoints = "";
+    if (recoveryPorts) {
+        assert.equal(
+            [...source.matchAll(/^[ \t]*const recoveryEndpoints = \{/gm)].length,
+            1,
+            "Unknown API fixture recovery endpoint boundary.",
+        );
+        const {mail, public: web} = recoveryPorts;
+        const ports = [apiPort, mail, web];
+        assert(ports.every((port) => Number.isInteger(port) && port > 1024 && port <= 65535));
+        assert.equal(new Set(ports).size, ports.length);
+        const appOrigin = "https://127.0.0.1:" + web;
+        const endpoints = {
+            appOrigin,
+            mailpitOrigin: "https://127.0.0.1:" + mail,
+            confirmationUrl: appOrigin + "/backend/auth/v1/verify",
+        };
+        bindRecoveryEndpoints = "  Object.assign(recoveryEndpoints, " + JSON.stringify(endpoints) + ");\n";
+    }
     // Baseline and candidate source may use different indentation. Require a
     // single exact assertion and client boundary independent of whitespace.
     const port = /^([ \t]*assert\.equal\(\s*new URL\(url\)\.port,\s*)"55321"(\s*,\s*"Dedicated canonical API port required\."\s*,?\s*\);)/gm;
@@ -295,7 +314,7 @@ export function adaptCandidateApiFixture(source, {project, apiPort}) {
   const { execFileSync } = await import("node:child_process");
   const labels = JSON.parse(execFileSync("docker", ["inspect", "--format", "{{json .Config.Labels}}", "supabase_db_" + project], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 }));
   assert.equal(labels[${JSON.stringify(ownershipLabel)}], project, "Candidate fixture database ownership mismatch.");
-`;
+${bindRecoveryEndpoints}`;
     return source
         .replace(port, (_, before, after) => before + JSON.stringify(String(apiPort)) + after)
         .replace(client, (boundary) => identity + boundary);
@@ -1062,7 +1081,11 @@ export async function checkCandidate({
         console.log(
             "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
         );
-        adaptStagedCandidateApiFixture(scratch, {project, apiPort: ports.api});
+        adaptStagedCandidateApiFixture(scratch, {
+            project,
+            apiPort: ports.api,
+            recoveryPorts: {mail: ports.mail, public: ports.public},
+        });
         const suites = candidateApiSuites(scratch);
         // The candidate shares one Supabase Auth service; concurrent fixture
         // deletion can fail inside GoTrue despite unique account IDs.
