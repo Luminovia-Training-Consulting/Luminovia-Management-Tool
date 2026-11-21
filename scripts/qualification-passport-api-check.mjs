@@ -50,18 +50,16 @@ await withApiFixture(
         assert.equal(own.data.qualifications.length, 1);
         assert.equal(own.data.qualifications[0].status, "unverified");
         await passwordOnly(admin.client);
-        for (const who of [peer, admin])
-            assert.deepEqual(
-                (
-                    await checked(
-                        who.client.rpc("own_qualification_passport", {
-                            p_locale: "en",
-                            p_as_of: stamp,
-                        }),
-                    )
-                ).data.qualifications,
-                [],
-            );
+        const passportArgs = {p_locale: "en", p_as_of: stamp};
+        const peerPassport = await checked(
+            peer.client.rpc("own_qualification_passport", passportArgs),
+        );
+        assert.deepEqual(peerPassport.data.qualifications, []);
+        for (const who of [admin, learner]) {
+            const denied = await who.client.rpc("own_qualification_passport", passportArgs);
+            assert.equal(denied.data, null);
+            assert.equal(denied.error?.code, "42501");
+        }
         const origin = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:5273")
             .origin;
 
@@ -105,15 +103,17 @@ await withApiFixture(
             ).status,
             400,
         );
-        assert.equal(
-            (
-                await document(learner, {
-                    kind: "qualification_passport",
-                    locale: "en",
-                })
-            ).status,
-            403,
-        );
+        for (const who of [admin, learner]) {
+            assert.equal(
+                (
+                    await document(who, {
+                        kind: "qualification_passport",
+                        locale: "en",
+                    })
+                ).status,
+                403,
+            );
+        }
         await checked(
             service.from("profiles").update({active: false}).eq("id", teacher.id),
         );
