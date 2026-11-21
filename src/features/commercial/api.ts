@@ -6,6 +6,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import {
+  financePendingInvoiceExceptionsSchema,
   invoiceExceptionOptionsSchema,
   myInvoiceExceptionsSchema,
 } from "./invoice-exception-schema";
@@ -112,6 +113,18 @@ export const myInvoiceExceptionsQuery = (actor: string) =>
       const { data, error } = await db().rpc("my_invoice_exceptions");
       if (error) throw error;
       return myInvoiceExceptionsSchema.parse(data);
+    },
+    retry: false,
+  });
+export const financePendingInvoiceExceptionsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "pending-finance-approvals"],
+    queryFn: async () => {
+      const { data, error } = await db().rpc(
+        "finance_pending_invoice_exceptions",
+      );
+      if (error) throw error;
+      return financePendingInvoiceExceptionsSchema.parse(data);
     },
     retry: false,
   });

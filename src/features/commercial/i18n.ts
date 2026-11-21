@@ -227,6 +227,7 @@ const pairs: Record<string, [string, string]> = {
     "Ausnahmeabrechnung vorbereiten",
     "Prepare an exceptional invoice",
   ],
+  manageInvoiceException: ["Freigabe verwalten", "Manage approval"],
   invoiceExceptionHelp: [
     "Wähle die ausgeführte Vertragsfassung und gib den geprüften Betrag und die vereinbarte Fälligkeit an. Die Freigabe erlaubt die Einreichung einer Schlussrechnung.",
     "Select the executed contract version and enter the reviewed amount and agreed due date. Approval allows the lecturer to submit a final invoice.",
@@ -273,6 +274,10 @@ const pairs: Record<string, [string, string]> = {
   invoiceExceptionConflict: [
     "Die Freigabe konnte wegen eines geänderten Auftrags oder einer vorhandenen Rechnung nicht angewendet werden. Prüfe den aktuellen Stand.",
     "The approval could not be applied because the assignment changed or an invoice exists. Check the current status.",
+  ],
+  financePendingInvoiceExceptions: [
+    "Ausnahmerechnungen zur Einreichung freigegeben",
+    "Exceptional invoices awaiting submission",
   ],
   approvedInvoiceExceptions: [
     "Freigegebene Ausnahmeabrechnungen",

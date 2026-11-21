@@ -591,3 +591,100 @@ test("settlement for a cancelled assignment shares only verified lecturer totals
     expect(invoices.error).toBeNull();
     expect(invoices.data).toEqual([]);
 });
+
+test("finance can revoke an exceptional approval after reloading the portal", async ({
+    page,
+    browser,
+}, testInfo) => {
+    test.setTimeout(120_000);
+    const lecturer = await account("lecturer", "exception-lecturer");
+    const administrator = await account("admin", "exception-finance");
+    const contract = randomUUID(), document = randomUUID(), version = randomUUID();
+    const clientId = randomUUID(), digest = "a".repeat(64);
+    const sharedPdfMetadata = {
+        original_name: "Fictional executed contract.pdf",
+        mime_type: "application/pdf",
+        size_bytes: 100,
+        status: "clean",
+        client_id: clientId,
+        uploaded_by: lecturer.id,
+    };
+    expect((await service().from("documents").insert({
+        ...sharedPdfMetadata,
+        id: document,
+        owner_id: lecturer.id,
+        scope: "personal",
+        kind: "contract",
+    })).error).toBeNull();
+    expect((await service().from("document_versions").insert({
+        ...sharedPdfMetadata,
+        id: version,
+        document_id: document,
+        version: 1,
+        object_path: `${lecturer.id}/${document}/${version}`,
+        sha256: digest,
+    })).error).toBeNull();
+    expect((await service().from("documents").update({current_version_id: version}).eq("id", document)).error).toBeNull();
+    expect((await service().from("contracts").insert({
+        id: contract,
+        user_id: lecturer.id,
+        status: "active",
+        version: 1,
+        effective_from: DateTime.utc().minus({days: 7}).toISO(),
+        document_version_id: version,
+        document_sha256: digest,
+    })).error).toBeNull();
+
+    const job = await acceptedJob(lecturer, "EUR", 200, 6, false);
+    const adminApi = await actor(administrator);
+    expect((await adminApi.rpc("cancel_job_assignment", {
+        p_claim_id: job.claimId,
+        p_reason: "Fictional course cancellation for final invoice review.",
+        p_request_id: randomUUID(),
+    })).error).toBeNull();
+
+    await login(page, lecturer);
+    await page.goto("/finance");
+    const lecturerCase = page.locator("article.invoice-review-row").filter({hasText: job.title});
+    await lecturerCase.getByRole("button", {name: "Prüfung anfordern", exact: true}).click();
+    await expect(lecturerCase.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
+
+    const financeContext = await browser.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        viewport: testInfo.project.use.viewport,
+        isMobile: testInfo.project.use.isMobile,
+        hasTouch: testInfo.project.use.hasTouch,
+        deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+    });
+    try {
+        const financePage = await financeContext.newPage();
+        await login(financePage, administrator);
+        await financePage.goto("/finance");
+        const review = financePage.locator("article.invoice-review-row").filter({hasText: job.title});
+        await review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"}).click();
+        await review.getByLabel("Prüfnotiz (mindestens 10 Zeichen)").fill("Fiktive Prüfung der ausgeführten Vertragsfassung und des Stornobetrags.");
+        await review.getByLabel("Geprüfter Betrag (EUR)").fill("90,25");
+        await review.getByLabel("Vereinbarte Fälligkeit").fill(DateTime.utc().plus({days: 7}).toISODate()!);
+        await review.getByRole("button", {name: "Schlussrechnung zur Einreichung freigeben"}).click();
+        await expect(review.getByRole("button", {name: "Freigabe verwalten"})).toBeVisible();
+
+        await page.reload();
+        const ready = page.locator("section.invoice-review-request-list").filter({
+            has: page.getByRole("heading", {name: "Freigegebene Ausnahmeabrechnungen"}),
+        });
+        await expect(ready.getByRole("button", {name: "Ausnahmerechnung einreichen"})).toBeVisible();
+
+        await financePage.reload();
+        await review.getByRole("button", {name: "Freigabe verwalten"}).click();
+        await expect(review.getByText(/90,25\s*€/)).toBeVisible();
+        await review.getByLabel("Widerrufsgrund (mindestens 10 Zeichen)").fill("Fiktive Korrektur vor der Rechnungseinreichung.");
+        await review.getByRole("button", {name: "Einreichungsfreigabe widerrufen"}).click();
+        await expect(review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"})).toBeVisible();
+
+        await page.reload();
+        await expect(lecturerCase.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
+        await expect(ready).toHaveCount(0);
+    } finally {
+        await financeContext.close();
+    }
+});

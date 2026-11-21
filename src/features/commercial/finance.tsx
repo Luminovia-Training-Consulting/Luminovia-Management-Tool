@@ -57,7 +57,10 @@ import {
 import type { EarningRecord, InvoicePayment, InvoiceRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import { InvoiceReviewQueue, MyInvoiceReviewRequests } from "./invoice-review";
-import { MyInvoiceExceptions } from "./invoice-exception";
+import {
+  FinancePendingInvoiceExceptions,
+  MyInvoiceExceptions,
+} from "./invoice-exception";
 import type { InvoiceException } from "./invoice-exception-schema";
 import { FinanceTrendChart } from "./finance-trend";
 import { InvoiceLabels } from "./invoice-labels";
@@ -1081,7 +1084,12 @@ export function FinancePage() {
           }}
         />
       )}
-      {manager && <InvoiceReviewQueue actor={actor} />}
+      {manager && (
+        <>
+          <InvoiceReviewQueue actor={actor} />
+          <FinancePendingInvoiceExceptions actor={actor} />
+        </>
+      )}
       {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
       {manager && (
         <label className="checkbox-label">

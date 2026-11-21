@@ -135,7 +135,10 @@ beforeEach(async () => {
       return Promise.resolve({ data: reviewCandidates, error: null });
     if (name === "my_invoice_exceptions")
       return Promise.resolve({ data: exceptionalApprovals, error: null });
-    if (name === "invoice_review_cases")
+    if (
+      name === "invoice_review_cases" ||
+      name === "finance_pending_invoice_exceptions"
+    )
       return Promise.resolve({ data: [], error: null });
     if (name === "invoice_records")
       return Promise.resolve({ data: invoices, error: null });

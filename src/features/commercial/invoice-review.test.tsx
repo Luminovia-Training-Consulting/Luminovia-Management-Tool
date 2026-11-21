@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
+import { FinancePendingInvoiceExceptions } from "./invoice-exception";
 import { InvoiceReviewQueue, MyInvoiceReviewRequests } from "./invoice-review";
 
 const fake = vi.hoisted(() => ({
@@ -153,11 +154,14 @@ it("requires a reasoned finance note and resolves only the review request", asyn
   );
 });
 
-it("lets finance bind the amount and date to the selected executed agreement", async () => {
+it("keeps a resolved approval discoverable and revocable from a new finance session", async () => {
   await i18n.changeLanguage("en");
   const rpc = fake.rpc.getMockImplementation()!;
   const contractId = "4e4c8417-172a-4d79-8137-860215cea7c3";
   const approvalId = "794f51ff-2969-4224-a719-3c760ef63340";
+  const reviewId = "d1df07a7-c9a2-497b-8c80-5287b8c6018e";
+  fake.cases[0].id = reviewId;
+  const review = fake.cases[0];
   let active = null as null | {
     id: string;
     contract_version: number;
@@ -183,7 +187,21 @@ it("lets finance bind the amount and date to the selected executed agreement", a
         },
         error: null,
       });
+    if (name === "finance_pending_invoice_exceptions")
+      return Promise.resolve({
+        data: active
+          ? [
+              {
+                request_id: reviewId,
+                title: review.title,
+                lecturer_name: review.lecturer_name,
+              },
+            ]
+          : [],
+        error: null,
+      });
     if (name === "approve_invoice_exception") {
+      fake.cases = [];
       active = {
         id: approvalId,
         contract_version: 3,
@@ -194,11 +212,12 @@ it("lets finance bind the amount and date to the selected executed agreement", a
     }
     if (name === "revoke_invoice_exception") {
       active = null;
+      fake.cases = [review];
       return Promise.resolve({ data: null, error: null });
     }
     return rpc(name, args);
   });
-  render(
+  const { unmount } = render(
     <QueryClientProvider client={client}>
       <InvoiceReviewQueue actor="fictional-manager" />
     </QueryClientProvider>,
@@ -224,15 +243,38 @@ it("lets finance bind the amount and date to the selected executed agreement", a
   );
   expect(submit).toBeEnabled();
   await userEvent.click(submit);
-  const revoke = await screen.findByRole("button", {
-    name: "Revoke submission approval",
-  });
   expect(fake.rpc).toHaveBeenCalledWith("approve_invoice_exception", {
-    p_request_id: "fictional-review",
+    p_request_id: reviewId,
     p_contract_id: contractId,
     p_amount: 90.25,
     p_due_on: "2026-11-30",
     p_note: note,
+  });
+  await waitFor(() =>
+    expect(
+      screen.queryByText("Fictional partial assignment"),
+    ).not.toBeInTheDocument(),
+  );
+  unmount();
+  client.clear();
+  render(
+    <QueryClientProvider client={client}>
+      <InvoiceReviewQueue actor="another-fictional-manager" />
+      <FinancePendingInvoiceExceptions actor="another-fictional-manager" />
+    </QueryClientProvider>,
+  );
+  await expect(
+    screen.findByRole("heading", {
+      name: "Exceptional invoices awaiting submission",
+    }),
+  ).resolves.toBeVisible();
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "Manage approval",
+    }),
+  );
+  const revoke = await screen.findByRole("button", {
+    name: "Revoke submission approval",
   });
   const reason = "Correct the fictional review before submission.";
   await userEvent.type(
@@ -246,6 +288,14 @@ it("lets finance bind the amount and date to the selected executed agreement", a
       p_note: reason,
     }),
   );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("heading", {
+        name: "Exceptional invoices awaiting submission",
+      }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(await screen.findByText("Fictional partial assignment")).toBeVisible();
   expect(fake.rpc).not.toHaveBeenCalledWith(
     "record_invoice_payment",
     expect.anything(),

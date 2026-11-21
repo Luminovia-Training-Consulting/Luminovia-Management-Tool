@@ -19,6 +19,7 @@ import {
   invoiceRecordsSchema,
 } from "./commercial-records-contract.ts";
 import {
+  financePendingInvoiceExceptionsSchema,
   invoiceExceptionOptionsSchema,
   myInvoiceExceptionsSchema,
 } from "../commercial/invoice-exception-schema.ts";
@@ -962,6 +963,14 @@ const nativePaths = {
     "An active lecturer can request review of their own cancelled, partial or inconsistent assignment block unless it already has an active invoice. The same request ID for the same claim returns the original review ID. An already pending review for this claim is also reused. This command records the request without creating an invoice.",
     { p_claim_id: uuid, ...idempotency },
     uuid,
+  ),
+  "/rest/v1/rpc/finance_pending_invoice_exceptions": rpc(
+    "financePendingInvoiceExceptions",
+    "Finance",
+    "List exceptional invoice approvals awaiting submission",
+    "Current internal finance staff can find the reviewed requests that still have an approval and no active invoice.",
+    {},
+    z.toJSONSchema(financePendingInvoiceExceptionsSchema),
   ),
   "/rest/v1/rpc/invoice_exception_options": rpc(
     "invoiceExceptionOptions",

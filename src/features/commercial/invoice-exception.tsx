@@ -11,6 +11,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
   commercialKeys,
+  financePendingInvoiceExceptionsQuery,
   invoiceExceptionOptionsQuery,
   myInvoiceExceptionsQuery,
 } from "./api";
@@ -31,15 +32,17 @@ function reviewedAmount(value: string) {
 export function InvoiceExceptionDecision({
   actor,
   requestId,
-  sharedNote,
-  validNote,
+  sharedNote = "",
+  validNote = false,
   worksheetCents,
+  approvedOnly = false,
 }: {
   actor: string;
   requestId: string;
-  sharedNote: string;
-  validNote: boolean;
+  sharedNote?: string;
+  validNote?: boolean;
   worksheetCents?: number;
+  approvedOnly?: boolean;
 }) {
   const { t, i18n } = useTranslation("commercial");
   const client = useQueryClient();
@@ -107,7 +110,13 @@ export function InvoiceExceptionDecision({
         aria-controls={id}
         onClick={() => setOpen((current) => !current)}
       >
-        {t(active ? "invoiceExceptionReady" : "openInvoiceException")}
+        {t(
+          approvedOnly
+            ? "manageInvoiceException"
+            : active
+              ? "invoiceExceptionReady"
+              : "openInvoiceException",
+        )}
       </Button>
       <div id={id} hidden={!open}>
         {open && (
@@ -161,7 +170,7 @@ export function InvoiceExceptionDecision({
             )}
             {options.isSuccess &&
               !active &&
-              (options.data.can_approve && contracts.length ? (
+              (!approvedOnly && options.data.can_approve && contracts.length ? (
                 <fieldset disabled={!online || action.isPending}>
                   <legend>{t("openInvoiceException")}</legend>
                   <p>{t("invoiceExceptionHelp")}</p>
@@ -251,7 +260,7 @@ export function InvoiceExceptionDecision({
               ) : (
                 <Notice>
                   {t(
-                    contracts.length
+                    approvedOnly || contracts.length
                       ? "invoiceExceptionNotReady"
                       : "invoiceExceptionMissingContract",
                   )}
@@ -268,6 +277,36 @@ export function InvoiceExceptionDecision({
         )}
       </div>
     </div>
+  );
+}
+
+export function FinancePendingInvoiceExceptions({ actor }: { actor: string }) {
+  const { t } = useTranslation("commercial");
+  const online = useOnline();
+  const query = useQuery({
+    ...financePendingInvoiceExceptionsQuery(actor),
+    enabled: online,
+  });
+  if (!online || query.isPending) return null;
+  if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+  if (!query.data?.length) return null;
+  return (
+    <section className="panel invoice-review-queue">
+      <h2>{t("financePendingInvoiceExceptions")}</h2>
+      {query.data.map((approval) => (
+        <article key={approval.request_id} className="invoice-review-row">
+          <div>
+            <strong>{approval.title}</strong>
+            <p>{approval.lecturer_name}</p>
+          </div>
+          <InvoiceExceptionDecision
+            actor={actor}
+            requestId={approval.request_id}
+            approvedOnly
+          />
+        </article>
+      ))}
+    </section>
   );
 }
 

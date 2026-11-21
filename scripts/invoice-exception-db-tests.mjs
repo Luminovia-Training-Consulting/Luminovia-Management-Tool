@@ -128,6 +128,16 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
   ]);
   assert.equal(approvals[0], approvals[1]);
   const [cancelApproval] = approvals;
+  await assert.rejects(
+    rpc(lecturer, "finance_pending_invoice_exceptions"),
+    /42501/,
+  );
+  const waiting = () => rpc(finance, "finance_pending_invoice_exceptions");
+  assert.deepEqual(
+    (await waiting()).map(({ request_id, title }) => ({ request_id, title })),
+    [{ request_id: cancellationReview, title: "Cancelled fixture" }],
+  );
+
   assert.equal(await sql("select count(*) from public.invoices"), "0");
   assert.equal(await sql("select count(*) from public.payment_records"), "0");
   const available = await rpc(lecturer, "my_invoice_exceptions");
@@ -211,6 +221,7 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     ]),
     /22023/,
   );
+  assert.deepEqual(await waiting(), []);
   await assert.rejects(
     rpc(finance, "revoke_invoice_exception", [
       cancelApproval,
@@ -284,6 +295,7 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     staleApproval,
     "Updated assignment evidence has to be reviewed.",
   ]);
+  assert.deepEqual(await waiting(), []);
   const partialApproval = await approve(partialReview, alternate, 160.5);
   const first = await rpc(lecturer, "submit_exception_invoice", [
     partialApproval,

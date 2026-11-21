@@ -159,7 +159,7 @@ export function RevenuePanel() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.job_id}>
+                <tr key={`${row.job_id}:${row.claim_id ?? "unclaimed"}`}>
                   <td>
                     <Link to={`/jobs/${row.job_id}`}>{row.title}</Link>
                     <small>{row.lecturer_name}</small>

@@ -1,3 +1,11 @@
+# 21 November 2026 — Outstanding exceptional approvals and browser acceptance
+
+Finance can find awaiting-submission approvals after the original review leaves its queue. A fresh desktop or mobile browser session can revoke an approval and reopen the original review. The lecturer sees the updated eligibility. Tests use fictional contract document metadata for this browser workflow. A complete exceptional PDF upload and scanner workflow remains pending in Chromium, with the scanned-version requirement checked in PostgreSQL.
+
+A manager and two distinct lecturers complete the entire shared amendment in native desktop and mobile Chromium. The English dark mobile scenario retains both original position rows in Finance. The schedule tests require all consents and verify the persisted date against the original course session ID. Each revenue row now uses its own claim as well as the job identifier.
+
+Native PostgreSQL and the retained-data rehearsal passed with all 244 migrations. The generated API reference lists 474 public functions. The new finance approval list is scoped to internal finance authority and only includes approvals awaiting submission.
+
 # 21 November 2026 — Coordinated schedule amendments and exceptional final invoices
 
 A course-backed offer can have up to 20 lecturer positions. One schedule amendment covers the remaining future sessions of a fully staffed linked course when the session count and learner withdrawal deadline can be preserved. Each assignment has its own versioned approval. Applying the group checks every consent and calendar again, retains the original offer and agreement and updates all sessions atomically. Active enrolled learners receive an inbox notification. The group is available in the internal portal, with German and English progress and error messages.

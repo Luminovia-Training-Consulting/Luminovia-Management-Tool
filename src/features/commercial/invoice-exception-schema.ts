@@ -41,3 +41,11 @@ export const invoiceExceptionSchema = z.strictObject({
 
 export const myInvoiceExceptionsSchema = z.array(invoiceExceptionSchema);
 export type InvoiceException = z.infer<typeof invoiceExceptionSchema>;
+
+export const financePendingInvoiceExceptionsSchema = z.array(
+  z.strictObject({
+    request_id: z.uuid(),
+    title: z.string(),
+    lecturer_name: z.string(),
+  }),
+);
