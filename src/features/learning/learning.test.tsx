@@ -67,6 +67,12 @@ beforeEach(async () => {
         const request = {
             abortSignal: () => request,
             then: (resolve: (v: unknown) => unknown) =>
+                name === "course_welcome_content"
+                    ? Promise.resolve({data: {
+                        version: 0, description: "", objectives: "",
+                        joining_instructions: "", published_at: null,
+                    }, error: null}).then(resolve)
+                    :
                 name === "course_workspace"
                     ? Promise.resolve({data: fake.workspace, error: fake.error}).then(
                         resolve,

@@ -18,6 +18,7 @@ import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";
 import {CompanyInvitations} from "./company-invitations";
+import {CourseWelcomeContent} from "./welcome-content";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 
@@ -628,6 +629,11 @@ export function CourseWorkspacePage() {
             </div>
             <div className="learning-workspace course-operations-workspace">
                 <CourseBasics course={course}/>
+                {course.lms_enabled && (
+                    <CourseWelcomeContent key={course.id} actor={actor} courseId={course.id}
+                                          zone={course.time_zone}
+                                          canEdit={course.access.staff || course.access.client}/>
+                )}
                 <CourseDestinations actor={actor} courseId={course.id}/>
                 <CourseContact course={course} actor={actor}/>
                 {(course.access.staff || course.access.client) && (
