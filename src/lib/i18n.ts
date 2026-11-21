@@ -39,6 +39,7 @@ const pairs: Record<string, [string, string]> = {
     companies: ["Kunden / Unternehmen", "Customers / Companies"],
     contracts: ["Verträge", "Contracts"],
     finance: ["Finanzen", "Finance"],
+    accountingExports: ["Buchhaltung und Exporte", "Accounting and exports"],
     submitInvoice: ["Rechnung einreichen", "Submit invoice"],
     portalSearch: ["Im Portal suchen", "Search the portal"],
     searchAction: ["Suchen", "Search"],

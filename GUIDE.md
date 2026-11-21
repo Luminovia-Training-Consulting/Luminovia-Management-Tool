@@ -359,6 +359,12 @@ Finance management with current finance permission can show all authorised lectu
 Use **Rechnungslabels bearbeiten / Edit invoice labels** to classify an authorised invoice with up to 10 comma-separated labels of 50 characters each. The owner or authorised finance manager can save these metadata labels without changing its accepted amounts, document or payment history. Profile labels and invoice labels are separate. Search invoices by number/person/note and combine status, currency and label filters. The invoice CSV exports the current authorised filtered result. Earnings and
 protected platform reports have their own exports. All exports preserve original currency and neutralize spreadsheet formula prefixes in authored text. Protected period statements and scenario projections are available through the time/finance workflow below; further report formats remain separate scope. Tax/payroll/banking integration is outside this invoice-tracking scope.
 
+## Accounting and exports
+
+Open **Buchhaltung und Exporte / Accounting and exports** to select up to 100 authorised invoices and download a confirmed CSV or versioned JSON snapshot. Lecturer exports use accepted compensation. Company exports use the recorded invoice total and payment history in the original currency. Finance managers can export authorised lecturer invoices, and company contacts can export their own company invoices. The export preserves rounding, reversals and outstanding totals. Tax fields remain empty when the source record does not provide a verified breakdown.
+
+With current gross-finance permission, choose **Record an external customer invoice** to register an already issued invoice. Select the accepted assignments for one organisation and currency, enter the number, dates and exact total, then upload a dedicated PDF and wait for the scan. Review the entries against that PDF before confirming. An invoice that differs from the accepted charge requires an explanation, and the accepted amount stays in the original record. Record incoming payments and correct entries through a reasoned reversal. The CSV and JSON are portal interchange formats. Generating or validating XRechnung, ZUGFeRD and vendor-specific import files remains separate work.
+
 <a id="section-user-guide-workbench-favourites-and-reusable-workflows"></a>
 
 ## Workbench, favourites and reusable workflows

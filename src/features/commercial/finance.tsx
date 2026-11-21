@@ -7,7 +7,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
 import {DateTime} from "luxon";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {type QueryClient, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {useSearchParams} from "react-router-dom";
 import {AlertCircle, BadgeCheck, Banknote, CheckCircle2, Clock3, Download, FileText, Plus, Receipt, Wallet,} from "lucide-react";
@@ -31,6 +31,14 @@ import {CompanyFinanceReviews} from "./company-finance-reviews";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
+
+/** Refresh live invoice projections after a confirmed financial mutation. */
+async function refreshInvoiceViews(client: QueryClient, actor: string) {
+    await Promise.all([
+        client.invalidateQueries({queryKey: commercialKeys.finance(actor)}),
+        client.invalidateQueries({queryKey: ["accounting", actor, "invoices"]}),
+    ]);
+}
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const invoiceSchema = z.object({
@@ -130,9 +138,7 @@ function SubmitInvoice({
             if (error || !data) throw error ?? new Error("unconfirmed");
         },
         onSuccess: async () => {
-            await client.invalidateQueries({
-                queryKey: commercialKeys.finance(actor),
-            });
+            await refreshInvoiceViews(client, actor);
             onDone();
         },
         onError: (error) => {
@@ -305,9 +311,7 @@ function VoidPayment({
             if (error) throw error;
         },
         onSuccess: async () => {
-            await client.invalidateQueries({
-                queryKey: commercialKeys.finance(actor),
-            });
+            await refreshInvoiceViews(client, actor);
             onDone();
         },
     });
@@ -486,9 +490,7 @@ function RecordPayment({
             if (error || !data) throw error ?? new Error("unconfirmed");
         },
         onSuccess: async () => {
-            await client.invalidateQueries({
-                queryKey: commercialKeys.finance(actor),
-            });
+            await refreshInvoiceViews(client, actor);
             onDone();
         },
     });
@@ -575,9 +577,7 @@ function ReviewInvoice({
             if (error) throw error;
         },
         onSuccess: async () => {
-            await client.invalidateQueries({
-                queryKey: commercialKeys.finance(actor),
-            });
+            await refreshInvoiceViews(client, actor);
             onDone();
         },
     });

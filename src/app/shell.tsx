@@ -209,6 +209,9 @@ export function Shell() {
                 ...(teaching || permissions.data?.includes("finance.manage")
                     ? [{to: "/finance", icon: Wallet, label: "finance"}]
                     : []),
+                ...(teaching || clientPortalAccess || permissions.data?.includes("finance.manage")
+                    ? [{to: "/accounting", icon: Wallet, label: "accountingExports"}]
+                    : []),
                 ...(clientPortalAccess
                     ? [{to: "/client", icon: Building2, label: "clientPortal"}]
                     : []),

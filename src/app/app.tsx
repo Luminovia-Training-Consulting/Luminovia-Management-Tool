@@ -123,6 +123,12 @@ const FinancePage = lazy(() =>
     })),
 );
 
+const AccountingPage = lazy(() =>
+    import("../features/accounting/accounting").then((module) => ({
+        default: module.AccountingPage,
+    })),
+);
+
 const ClientsPage = lazy(() =>
     import("../features/operations/clients").then((module) => ({
         default: module.ClientsPage,
@@ -306,6 +312,7 @@ export function App() {
                             />
                             <Route path="contracts" element={<ContractsPage/>}/>
                             <Route path="finance" element={<FinancePage/>}/>
+                            <Route path="accounting" element={<AccountingPage/>}/>
                             <Route path="wiki" element={<SectionHub kind="knowledge"/>}/>
                             <Route path="forum" element={<SectionHub kind="updates"/>}/>
                             <Route path="files" element={<FilesPage/>}/>
