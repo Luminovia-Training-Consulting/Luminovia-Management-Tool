@@ -1,7 +1,19 @@
 /** Tests issued scopes, retained-data boundaries and revocation on a fresh SQL replay. */
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { portalOpenApi } from "../src/features/developer-api/contract.ts";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
+
+const paths = portalOpenApi("https://portal.example.invalid").paths;
+
+function assertResponse(name, value) {
+  const schema = paths[`/rest/v1/rpc/${name}`].post.responses["200"].content[
+    "application/json"
+  ].schema;
+  const result = z.fromJSONSchema(schema).safeParse(value);
+  assert.ok(result.success, `${name} differs from its OpenAPI response schema`);
+}
 
 await withTestDatabase("company_integrations", async ({ sql, actor }) => {
   const [
@@ -53,7 +65,9 @@ await withTestDatabase("company_integrations", async ({ sql, actor }) => {
     actor(staff, `select public.company_integration_keys(${q(a)})`),
     /42501/,
   );
+  assertResponse("company_integration_keys", JSON.parse(await list()));
   const original = JSON.parse(await issue());
+  assertResponse("issue_company_integration_key", original);
   assert.match(original.credential, /^lvi_[0-9a-f-]{36}_[a-f0-9]{64}$/);
   await assert.rejects(actor(admin, lookup(original)), /42501/);
   await assert.rejects(
@@ -63,6 +77,7 @@ await withTestDatabase("company_integrations", async ({ sql, actor }) => {
     /42501/,
   );
   const keyList = JSON.parse(await list());
+  assertResponse("company_integration_keys", keyList);
   assert.equal(keyList.length, 1);
   assert.equal(keyList[0].label, "Fictional integration");
   assert.equal(Object.hasOwn(keyList[0], "secret_hash"), false);
@@ -93,8 +108,10 @@ await withTestDatabase("company_integrations", async ({ sql, actor }) => {
     { status: "denied" },
   );
 
-  await assert.rejects(issue(admin, b, original.id, 1), /40001/);
+  await assert.rejects(issue(admin, b, original.id, 1), /PT409/);
   const rotated = JSON.parse(await issue(admin, a, original.id, 1));
+  assertResponse("issue_company_integration_key", rotated);
+  await assert.rejects(issue(admin, a, original.id, 1), /PT409/);
   assert.equal(rotated.version, 2);
   assert.deepEqual(await read(original), { status: "denied" });
   assert.equal((await read(rotated)).status, "ok");
@@ -103,7 +120,7 @@ await withTestDatabase("company_integrations", async ({ sql, actor }) => {
       admin,
       `select public.revoke_company_integration_key(${q(original.id)},1)`,
     ),
-    /40001/,
+    /PT409/,
   );
 
   await sql(`update private.company_integration_keys set window_requests=60,window_started_at=clock_timestamp()
@@ -116,6 +133,11 @@ await withTestDatabase("company_integrations", async ({ sql, actor }) => {
     admin,
     `select public.revoke_company_integration_key(${q(rotated.id)},2)`,
   );
+  await assert.rejects(
+    actor(admin, `select public.revoke_company_integration_key(${q(rotated.id)},2)`),
+    /PT409/,
+  );
+  assertResponse("company_integration_keys", JSON.parse(await list()));
   assert.deepEqual(await read(rotated), { status: "denied" });
 
   const expiring = JSON.parse(await issue());

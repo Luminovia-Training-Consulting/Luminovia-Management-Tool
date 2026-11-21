@@ -1108,6 +1108,88 @@ const companyWebhookRevoke = {
   },
 };
 
+const integrationKeyVersion = { type: "integer", minimum: 1 };
+const keyVersionConflict = {
+  ...error,
+  description:
+    "The key changed or is no longer available. Read the list again before retrying.",
+};
+const companyIntegrationKeys = rpc(
+  "listCompanyIntegrationKeys",
+  "Server integrations",
+  "List a company's integration keys",
+  "Only an active administrator or owner can read the most recent 100 keys for the specified company. The list contains public key metadata and never returns key material.",
+  organisation,
+  {
+    type: "array",
+    maxItems: 100,
+    items: object({
+      id: uuid,
+      label: { ...text, minLength: 1, maxLength: 120 },
+      created_at: { ...text, format: "date-time" },
+      expires_at: { ...text, format: "date-time" },
+      revoked_at: nullableDateTime,
+      version: integrationKeyVersion,
+      last_used_at: nullableDateTime,
+    }),
+  },
+);
+const companyIntegrationKeyIssue = rpc(
+  "issueCompanyIntegrationKey",
+  "Server integrations",
+  "Issue or rotate a company integration key",
+  "Only an active administrator or owner can issue or rotate a key for a non-archived company. For a new key send null for the key ID and version. For rotation send the current key ID and its version. Expiry must be after the database's current time and within 180 days. The response contains the one-time credential for secure storage by the receiving backend.",
+  {
+    ...organisation,
+    p_label: { ...text, minLength: 1, maxLength: 120 },
+    p_expires_at: { ...text, format: "date-time" },
+    p_rotate_id: nullableUuid,
+    p_expected_version: { type: ["integer", "null"], minimum: 1 },
+  },
+  object({
+    id: uuid,
+    version: integrationKeyVersion,
+    credential: {
+      ...text,
+      format: "password",
+      pattern: "^lvi_[a-f0-9-]{36}_[a-f0-9]{64}$",
+    },
+  }),
+);
+const companyIntegrationKeyRevoke = voidRpc(
+  "revokeCompanyIntegrationKey",
+  "Server integrations",
+  "Revoke a company integration key",
+  "Only an active administrator or owner can revoke a key using its current version. Subsequent use of the key is denied.",
+  { p_id: uuid, p_expected_version: integrationKeyVersion },
+);
+const internalCapabilities = {
+  tags: ["Installation"],
+  summary: "Read internal installation capabilities",
+  description:
+    "Returns the public edition and capability flags. The public key can be used before sign-in.",
+  security: [{ publicApiKey: [] }],
+  responses: {
+    "200": {
+      description: "Current internal edition flags",
+      content: json(
+        object({
+          installation_id: uuid,
+          edition: { const: "internal" },
+          licence_status: { const: "not-required" },
+          customer_ready: { const: false },
+          lms_available: { const: true },
+          marketplace_available: { const: true },
+          company_premium_switch_available: { const: true },
+        }),
+      ),
+    },
+    "401": error,
+    "403": error,
+    "503": error,
+  },
+};
+
 const paths: Record<string, Record<string, unknown>> = {
   ...nativeExplorerPaths,
   ...Object.fromEntries(
@@ -1129,6 +1211,27 @@ const paths: Record<string, Record<string, unknown>> = {
   ),
   "/rest/v1/rpc/company_course_webhook_list": companyWebhookList,
   "/rest/v1/rpc/company_course_webhook_revoke": companyWebhookRevoke,
+  "/rest/v1/rpc/company_integration_keys": {
+    post: {
+      ...nativeExplorerPaths["/rest/v1/rpc/company_integration_keys"].post,
+      ...companyIntegrationKeys.post,
+    },
+  },
+  "/rest/v1/rpc/revoke_company_integration_key": {
+    post: {
+      ...nativeExplorerPaths["/rest/v1/rpc/revoke_company_integration_key"]
+        .post,
+      ...companyIntegrationKeyRevoke.post,
+      responses: {
+        ...companyIntegrationKeyRevoke.post.responses,
+        "409": keyVersionConflict,
+      },
+    },
+  },
+  "/rest/v1/rpc/installation_capabilities": {
+    get: { ...internalCapabilities, operationId: "readInternalCapabilities" },
+    post: { ...internalCapabilities, operationId: "postInternalCapabilities" },
+  },
 };
 
 const integrationPath = {
@@ -1332,6 +1435,17 @@ function internalOpenApi(
         ...nativeDownloadPaths,
         ...paths,
         ...credentialPaths,
+        "/rest/v1/rpc/issue_company_integration_key": {
+          post: {
+            ...nativeDownloadPaths["/rest/v1/rpc/issue_company_integration_key"]
+              .post,
+            ...companyIntegrationKeyIssue.post,
+            responses: {
+              ...companyIntegrationKeyIssue.post.responses,
+              "409": keyVersionConflict,
+            },
+          },
+        },
         "/rest/v1/rpc/company_course_webhook_subscribe": companyWebhookCreate,
         "/functions/v1/company-integration": integrationPath,
       }

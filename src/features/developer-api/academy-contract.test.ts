@@ -120,7 +120,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         properties: { repeat_request: { type: "null" } },
       });
       expect(isDocumentedRequest(backend + bootstrap, "GET", backend)).toBe(
-        false,
+        true,
       );
       expect(
         isDocumentedRequest(backend + writePaths[2], "POST", backend),

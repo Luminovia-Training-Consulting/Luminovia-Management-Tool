@@ -27,6 +27,83 @@ const requestSchema = (path: string) =>
 const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
+describe("installation and integration credential contracts", () => {
+  it("describes the public internal bootstrap without a bearer token", () => {
+    const bootstrap = portalOpenApi(backend, false).paths[
+      "/rest/v1/rpc/installation_capabilities"
+    ];
+    for (const method of ["get", "post"]) {
+      expect(bootstrap[method]).toMatchObject({
+        security: [{ publicApiKey: [] }],
+        responses: {
+          "200": {
+            content: {
+              "application/json": {
+                schema: {
+                  additionalProperties: false,
+                  properties: {
+                    edition: { const: "internal" },
+                    licence_status: { const: "not-required" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+  });
+
+  it("keeps one-time credentials in the download and exposes a closed list projection", () => {
+    const prefix = "/rest/v1/rpc/";
+    const issue = prefix + "issue_company_integration_key";
+    const list = prefix + "company_integration_keys";
+    const revoke = prefix + "revoke_company_integration_key";
+    const download = portalOpenApi(backend, true).paths;
+    expect(paths).not.toHaveProperty(issue);
+    expect(download[issue].post).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                required: ["id", "version", "credential"],
+                properties: { credential: { format: "password" } },
+              },
+            },
+          },
+        },
+        "409": { description: expect.stringContaining("Read the list again") },
+      },
+    });
+    expect(paths[list].post.responses["200"]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            maxItems: 100,
+            items: {
+              additionalProperties: false,
+              required: [
+                "id",
+                "label",
+                "created_at",
+                "expires_at",
+                "revoked_at",
+                "version",
+                "last_used_at",
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(paths[revoke].post.responses).toMatchObject({
+      "204": { description: expect.any(String) },
+      "409": { description: expect.stringContaining("Read the list again") },
+    });
+  });
+});
+
 describe("documented Premium course and spending operations", () => {
   it("documents course creation, bounded offset-aware sessions and the visibility response", () => {
     expect(requestSchema("/rest/v1/rpc/save_course_run")).toMatchObject({
