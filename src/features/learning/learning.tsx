@@ -52,6 +52,8 @@ import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
 
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
+
 type WorkProps = { course: CourseWorkspace; actor: string };
 type ActivityProps = WorkProps & { academy?: "active" | "grace" };
 
@@ -1029,7 +1031,7 @@ function CourseWorkspaceLayout({
           </Button>
         )}
       </header>
-      {!academy && !learner && (
+      {__PORTAL_INTERNAL_EDITION__ && !academy && !learner && (
         <div className="page-actions">
           {editor && (
             <Button asChild variant="secondary">
@@ -1083,7 +1085,7 @@ function CourseWorkspaceLayout({
               canProtect={course.access.manager || course.access.client}
               resources={course.resources}
             />
-            {!academy && (
+            {__PORTAL_INTERNAL_EDITION__ && !academy && (
               <CourseDestinations
                 actor={actor}
                 courseId={course.id}
@@ -1204,7 +1206,8 @@ function CourseWorkspaceLayout({
                   academy={academy}
                 />
               )}
-              {!academy &&
+              {__PORTAL_INTERNAL_EDITION__ &&
+                !academy &&
                 course.access.client &&
                 course.ended &&
                 course.repeat_request && (

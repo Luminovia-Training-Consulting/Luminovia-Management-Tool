@@ -136,6 +136,10 @@ const pairs: Record<string, [string, string]> = {
   ],
   workspaceExam: ["Klausur", "Exam"],
   academyInstructors: ["Lehrteam zuweisen", "Assign instructors"],
+  academyInstructorsHelp: [
+    "Weise alle Kurstermine einer aktiven Lehrkraft dieser Akademie zu.",
+    "Assign every course session to an active instructor in this academy.",
+  ],
   academyInstructorSearch: ["Lehrkraft suchen", "Find an instructor"],
   academySearch: ["Suchen", "Search"],
   academyPublication: ["Kursfreigabe", "Course publication"],

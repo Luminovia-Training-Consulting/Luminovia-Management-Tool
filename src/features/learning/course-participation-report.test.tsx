@@ -12,7 +12,7 @@ const fixture = vi.hoisted(() => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fixture.rpc }) }));
 vi.mock("../../lib/online", () => ({ useOnline: () => fixture.online }));
-vi.mock("../commercial/api", () => ({ downloadCsv: fixture.download }));
+vi.mock("../../lib/csv", () => ({ downloadCsv: fixture.download }));
 
 const courseId = "ef89205c-bc11-47bf-8aab-afdc2a0ee279";
 const firstRow = {

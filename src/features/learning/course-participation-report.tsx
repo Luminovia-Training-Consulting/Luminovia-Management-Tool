@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
-import { downloadCsv } from "../commercial/api";
+import { downloadCsv } from "../../lib/csv";
 import { courseParticipationReportSchema } from "./course-participation-report-schema";
 import "./i18n";
 

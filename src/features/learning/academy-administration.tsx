@@ -259,7 +259,9 @@ function AccountForm({
                 setRole(event.target.value as AcademyManagedAccount["role"])
               }
             >
-              <option value="lecturer">{word("Lehrende", "Instructor")}</option>
+              <option value="lecturer">
+                {word("Interne Lehrkraft", "Internal instructor")}
+              </option>
               <option value="participant">
                 {word("Teilnehmende", "Learner")}
               </option>
@@ -269,7 +271,7 @@ function AccountForm({
                     {word("Kursmanagement", "Course manager")}
                   </option>
                   <option value="client">
-                    {word("Unternehmenskontakt", "Company contact")}
+                    {word("Schulungskoordination", "Training coordinator")}
                   </option>
                 </>
               )}
@@ -280,7 +282,7 @@ function AccountForm({
               id="academy-account-organisation"
               label={
                 role === "client"
-                  ? word("Unternehmen", "Company")
+                  ? word("Organisationseinheit", "Organisational unit")
                   : word(
                       "Organisation für die Teilnahme",
                       "Learner organisation",
@@ -376,9 +378,9 @@ function MemberRow({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result>();
   const roleLabels = {
-    lecturer: word("Lehrende", "Instructor"),
+    lecturer: word("Interne Lehrkraft", "Internal instructor"),
     participant: word("Teilnehmende", "Learner"),
-    client: word("Unternehmenskontakt", "Company contact"),
+    client: word("Schulungskoordination", "Training coordinator"),
     management: word("Kursmanagement", "Course manager"),
   };
   const statusLabel = !account.active

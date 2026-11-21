@@ -47,7 +47,7 @@ const courseReturnRoute =
   /^(?:\/administration(?:\/mail)?|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
-  import("../features/developer-api/explorer").then((module) => ({
+  import("../features/developer-api/academy-explorer").then((module) => ({
     default: module.AcademyApiExplorer,
   })),
 );
@@ -217,7 +217,7 @@ function AcademyTimetableRoute() {
   return session && <AcademyTimetable actor={session.user.id} />;
 }
 
-export function AcademyRoutes() {
+export default function AcademyRoutes() {
   const signingIn = useMatch("/login");
   return (
     <AcademyBrandProvider>

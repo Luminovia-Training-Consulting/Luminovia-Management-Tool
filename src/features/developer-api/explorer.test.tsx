@@ -1,7 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { AcademyApiExplorer, ApiExplorer } from "./explorer";
+import { AcademyApiExplorer } from "./academy-explorer";
+import { ApiExplorer } from "./portal-explorer";
 import type { ExplorerRequest } from "./requests";
 
 const fake = vi.hoisted(() => ({
@@ -89,6 +90,20 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
     screen.getByRole("button", { name: "Disable requests" }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(latest().supportedSubmitMethods).toEqual(["get", "post"]);
+  for (const operation of [
+    "job_discovery",
+    "finance_earnings",
+    "invoice_payment_ledger",
+  ]) {
+    const url = `${backend}/rest/v1/rpc/${operation}`;
+    expect(latest().spec.paths).not.toHaveProperty(
+      new URL(url).pathname.replace("/backend", ""),
+    );
+    await expect(
+      latest().requestInterceptor({ url, method: "POST" }),
+    ).rejects.toThrow("api_request_destination_denied");
+  }
+  expect(fake.getSession).not.toHaveBeenCalled();
   await expect(latest().requestInterceptor(workspace)).resolves.toMatchObject({
     headers: { Authorization: "Bearer fixture" },
   });

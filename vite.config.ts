@@ -10,6 +10,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
 import { portalOpenApi } from "./src/features/developer-api/contract.ts";
+import { academyExplorerOpenApi } from "./src/features/developer-api/academy-contract.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
 
 export default defineConfig(({ mode }) => {
@@ -26,6 +27,8 @@ export default defineConfig(({ mode }) => {
     resolve("public"),
   );
   const internal = brand.edition === "internal";
+  const internalOnlyModule =
+    /\/(?:data\/native-rpc\.generated\.json|src\/(?:app\/portal-routes\.tsx|features\/(?:(?:accounting|commercial|jobs|replacements)\/|developer-api\/(?:accounting-contract|commercial-records-contract|contract|portal-explorer|native-contract)\.|help\/catalog\.ts|learning\/destinations\.tsx|workbench\/finance-)))/;
   const escapeHtml = (value: string) =>
     value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const openApiPath = "/api/openapi.json";
@@ -37,9 +40,25 @@ export default defineConfig(({ mode }) => {
     ) + "\n";
   return {
     publicDir: internal ? "public" : false,
+    resolve: {
+      alias: {
+        // Resolve the edition before tracing imports and precache assets.
+        "@edition-routes": resolve(
+          internal ? "src/app/portal-routes.tsx" : "src/app/academy-routes.tsx",
+        ),
+        "@edition-help": resolve(
+          internal
+            ? "src/features/help/catalog.ts"
+            : "src/features/help/academy-catalog.ts",
+        ),
+      },
+    },
     define: {
       __PORTAL_INSTALLATION_BRAND__: JSON.stringify(brand),
       __PORTAL_INTERNAL_EDITION__: JSON.stringify(internal),
+      __PORTAL_ACADEMY_EXPLORER__: JSON.stringify(
+        academyExplorerOpenApi(env.VITE_SUPABASE_URL ?? "", brand),
+      ),
     },
     ...(!internal && {
       server: {
@@ -99,7 +118,19 @@ export default defineConfig(({ mode }) => {
             res.end(req.method === "HEAD" ? undefined : bytes);
           });
         },
-        generateBundle() {
+        generateBundle(_options, output) {
+          if (!internal) {
+            for (const entry of Object.values(output)) {
+              if (entry.type !== "chunk") continue;
+              for (const [id, module] of Object.entries(entry.modules)) {
+                if (module.renderedLength > 0 && internalOnlyModule.test(id)) {
+                  this.error(
+                    `Academy browser output includes an internal module: ${id.split("/").at(-1)}`,
+                  );
+                }
+              }
+            }
+          }
           for (const [fileName, source] of assets) {
             this.emitFile({ type: "asset", fileName, source });
           }
@@ -175,7 +206,11 @@ export default defineConfig(({ mode }) => {
           // Precache built public files only. Authenticated API/Storage responses
           // deliberately have no runtime-caching rule.
           globPatterns: ["**/*.{js,css,html,woff2,png,webp,ico}"],
-          globIgnores: ["**/explorer-*.{js,css}"],
+          globIgnores: [
+            "**/explorer-*.{js,css}",
+            "**/portal-explorer-*.{js,css}",
+            "**/academy-explorer-*.{js,css}",
+          ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,
           runtimeCaching: [],

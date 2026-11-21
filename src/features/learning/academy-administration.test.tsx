@@ -223,7 +223,7 @@ it("lets an admin delegate to a current instructor and suspend the same retained
   ).toBeVisible();
 });
 
-it("adds an organisation-scoped company role to an existing lecturer and preserves the lecturer grant", async () => {
+it("adds an organisation-scoped training coordinator role to an existing lecturer and preserves the lecturer grant", async () => {
   read.mockResolvedValue({
     can_write: true,
     can_create_management: true,
@@ -255,7 +255,7 @@ it("adds an organisation-scoped company role to an existing lecturer and preserv
   await user.click(await screen.findByText("Manage roles"));
   expect(readRoles).toHaveBeenCalledWith("current-academy-actor", member.id);
   expect(
-    screen.queryByRole("button", { name: /Revoke · Instructor/ }),
+    screen.queryByRole("button", { name: /Revoke · Internal instructor/ }),
   ).not.toBeInTheDocument();
   await user.selectOptions(
     await screen.findByLabelText("Additional role"),
@@ -275,11 +275,11 @@ it("adds an organisation-scoped company role to an existing lecturer and preserv
   );
   expect(
     await screen.findByRole("button", {
-      name: `Revoke · Company contact · ${org.name}`,
+      name: `Revoke · Training coordinator · ${org.name}`,
     }),
   ).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "Revoke · Instructor" }),
+    screen.getByRole("button", { name: "Revoke · Internal instructor" }),
   ).toBeVisible();
 });
 

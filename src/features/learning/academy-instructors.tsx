@@ -98,6 +98,7 @@ export function AcademyInstructors({
       aria-labelledby={field + "-title"}
     >
       <h2 id={field + "-title"}>{t("academyInstructors")}</h2>
+      <p>{t("academyInstructorsHelp")}</p>
       {!online ? (
         <Notice>{t("workspaceOffline")}</Notice>
       ) : (

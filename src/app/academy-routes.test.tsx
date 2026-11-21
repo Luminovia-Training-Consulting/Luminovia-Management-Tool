@@ -17,8 +17,13 @@ import type { AcademyBrandLinks } from "../features/branding/academy-brand-links
 import type { CourseWorkspace } from "../features/learning/api";
 import { App } from "./app";
 
+vi.mock("@edition-routes", () => import("./academy-routes"));
+vi.mock("@edition-help", () => import("../features/help/academy-catalog"));
+
 const fake = vi.hoisted(() => ({
   installation: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
+  edition: "customer-self-hosted" as
+    "customer-self-hosted" | "customer-managed",
   rpc: vi.fn(),
   from: vi.fn(),
   signOut: vi.fn(),
@@ -50,7 +55,9 @@ vi.mock("../lib/installation-brand", async (load) => {
     installationBrand: {
       ...source.internalInstallationBrand,
       installationId: fake.installation,
-      edition: "customer-managed",
+      get edition() {
+        return fake.edition;
+      },
       name: "Fictional Academy",
       shortName: "Fictional",
     },
@@ -181,6 +188,7 @@ beforeEach(async () => {
     })),
   );
   fake.profile = true;
+  fake.edition = "customer-self-hosted";
   fake.licence = "active";
   fake.actor = "fictional-admin";
   fake.returnedInstallation = fake.installation;
@@ -217,7 +225,7 @@ beforeEach(async () => {
         case "installation_capabilities":
           data = {
             installation_id: fake.returnedInstallation,
-            edition: "customer-managed",
+            edition: fake.edition,
             licence_status: fake.licence,
             customer_ready: false,
             lms_available: false,
@@ -554,6 +562,14 @@ it("opens the course hub without activating the full edition and reuses scoped a
   expect(
     screen.getByRole("button", { name: "Edit meeting link" }),
   ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Assign instructors" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText(
+      "Assign every course session to an active instructor in this academy.",
+    ),
+  ).toBeVisible();
   expect(await screen.findByRole("textbox", { name: "Message" })).toBeVisible();
   expect(
     screen.getByRole("link", { name: "Fictional Academy" }),
@@ -579,6 +595,59 @@ it("opens the course hub without activating the full edition and reuses scoped a
       "academy_course_draft_options",
     ]),
   );
+});
+
+it.each([
+  "/jobs",
+  `/jobs/${id}`,
+  "/replacements",
+  "/contracts",
+  "/finance",
+  "/accounting",
+  "/timesheets",
+  "/client",
+  "/admin/accounts",
+])(
+  "keeps the old portal bookmark %s outside self-hosted Academy",
+  async (path) => {
+    open(path);
+    expect(
+      await screen.findByRole("heading", {
+        name: "This page could not be found.",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Go to overview" }),
+    ).toHaveAttribute("href", "/");
+    expect(
+      fake.rpc.mock.calls.every(([name]) =>
+        ["academy_public_branding", "academy_public_brand_links"].includes(
+          name,
+        ),
+      ),
+    ).toBe(true);
+    expect(fake.from).not.toHaveBeenCalled();
+  },
+);
+
+it("keeps German staff access for the managed Academy on a course deep link", async () => {
+  fake.edition = "customer-managed";
+  await i18n.changeLanguage("de");
+  open(`/courses/${id}/workspace`);
+  expect(
+    await screen.findByRole("heading", { name: "Lehrteam zuweisen" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText(
+      "Weise alle Kurstermine einer aktiven Lehrkraft dieser Akademie zu.",
+    ),
+  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Kursfreigabe" })).toBeVisible();
+  expect(
+    screen.queryByRole("link", {
+      name: /Honorar|Vertrag|Rechnung|Auftragsbörse/,
+    }),
+  ).toBeNull();
 });
 
 it("keeps keyboard focus in the course schedule when adding and removing draft sessions", async () => {

@@ -1,4 +1,3 @@
-import { useAcademyBrand } from "../branding/academy-branding";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SwaggerUI from "swagger-ui-react";
@@ -6,40 +5,39 @@ import "swagger-ui-react/swagger-ui.css";
 import "./explorer.css";
 import { Button } from "../../components/ui/button";
 import { PageHeading } from "../../components/common";
-import {
-  internalInstallationBrand,
-  type InstallationBrand,
-} from "../../lib/installation-brand";
+import type { InstallationBrand } from "../../lib/installation-brand";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
-import { portalOpenApi } from "./contract";
-import { authorizeExplorerRequest } from "./requests";
+import {
+  authorizeDocumentedRequest,
+  type ExplorerRequest,
+} from "./request-boundary";
 
-export function ApiExplorer() {
-  return <Explorer brand={internalInstallationBrand} />;
-}
+type ExplorerProperties = {
+  brand: InstallationBrand;
+  createDocument: (backend: string, brand: InstallationBrand) => object;
+  checkRequest: (
+    request: ExplorerRequest,
+    backend: string,
+    brand: InstallationBrand,
+  ) => boolean;
+};
 
-/** Installed academy API operations, with session credentials confined to local RPCs. */
-export function AcademyApiExplorer() {
-  const brand = useAcademyBrand();
-  return <Explorer brand={brand} />;
-}
-
-function Explorer({ brand }: { brand: InstallationBrand }) {
+/** The composition root supplies only the current edition's catalogue and request guard. */
+export function Explorer(props: ExplorerProperties) {
   const { session } = useAuth();
   const actor = session?.user.id;
   return (
-    <ExplorerSession brand={brand} actor={actor} key={actor ?? "signed-out"} />
+    <ExplorerSession {...props} actor={actor} key={actor ?? "signed-out"} />
   );
 }
 
 function ExplorerSession({
   brand,
+  createDocument,
+  checkRequest,
   actor,
-}: {
-  brand: InstallationBrand;
-  actor?: string;
-}) {
+}: ExplorerProperties & { actor?: string }) {
   const { i18n } = useTranslation();
   const de = i18n.language.startsWith("de");
   const academy = brand.edition !== "internal";
@@ -65,9 +63,9 @@ function ExplorerSession({
     [],
   );
   const spec = useMemo(() => {
-    const document = portalOpenApi(backend, false, brand);
+    const document = createDocument(backend, brand);
     return { ...document, security: [], components: {} };
-  }, [backend, brand]);
+  }, [backend, brand, createDocument]);
 
   return (
     <>
@@ -141,13 +139,13 @@ function ExplorerSession({
           requestInterceptor={async (request) => {
             if (!approval || !actor || permit.current !== approval)
               throw new Error("api_session_required");
-            const permitted = await authorizeExplorerRequest(
+            const permitted = await authorizeDocumentedRequest(
               request,
-              backend,
               import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               actor,
               async () => (await db().auth.getSession()).data.session,
-              brand,
+              checkRequest(request, backend, brand),
+              academy ? URL.parse(request.url, backend + "/")?.href : undefined,
             );
             if (permit.current !== approval)
               throw new Error("api_session_required");

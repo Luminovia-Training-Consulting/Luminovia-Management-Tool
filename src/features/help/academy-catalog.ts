@@ -1,4 +1,4 @@
-import type { GuideModule } from "./catalog";
+import type { GuideModule } from "./guide";
 
 export const academyGuides: GuideModule[] = [
   {
@@ -174,12 +174,12 @@ export const academyGuides: GuideModule[] = [
     },
     steps: {
       de: [
-        "Lege eine Organisation und Konten für Lehrende und Teilnehmende in der Akademieverwaltung an.",
+        "Lege Organisationseinheiten sowie Konten für interne Lehrkräfte und Teilnehmende in der Akademieverwaltung an. Die Schulungskoordination betreut Teilnehmende ihrer zugewiesenen Einheit.",
         "Erstelle einen Kursentwurf mit Vorlage, Zeitzone und Terminen. Weise eine Lehrperson zu und bestätige bei der Freigabe die Gruppengröße.",
         "Öffne den freigegebenen Kurs und melde die aktiven Teilnehmenden an. Hinterlege bei Bedarf einen Meetinglink und veröffentliche die Willkommensinformation.",
       ],
       en: [
-        "Create an organisation and instructor and learner accounts in academy administration.",
+        "Create organisational units and accounts for internal instructors and learners in academy administration. Training coordinators support learners in their assigned unit.",
         "Create a course draft with its template, time zone and sessions. Assign an instructor and confirm the group size when publishing.",
         "Open the published course and enrol active learners. Add a meeting link if needed and publish the welcome information.",
       ],
@@ -208,3 +208,12 @@ export const academyGuides: GuideModule[] = [
     ],
   },
 ];
+
+export default {
+  modules: academyGuides,
+  recovery: academyGuides.map(({ id, problem, resolution }) => ({
+    title: problem,
+    body: { de: resolution.de.join(" "), en: resolution.en.join(" ") },
+    topic: id,
+  })),
+};

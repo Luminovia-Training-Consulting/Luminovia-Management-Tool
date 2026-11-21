@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
-import { type GuideModule, guideModules, guideText } from "./catalog";
-import { academyGuides } from "./academy-catalog";
+import helpCatalogue from "@edition-help";
+import { type GuideModule, guideText } from "./guide";
 import "./help.css";
 
 const labels = {
@@ -64,63 +64,8 @@ const labels = {
     en: "Solve problems step by step",
   },
 };
-const recovery = [
-  {
-    title: { de: "Verbindung oder Laden", en: "Connection or loading" },
-    body: {
-      de: "Prüfe zuerst deine Internetverbindung. Lade den betroffenen Bereich erneut. Offline kannst du keine Aufträge übernehmen, Nachrichten senden oder Dateien hochladen. Eine lokale Anzeige bestätigt keine Speicherung.",
-      en: "Check your internet connection first. Reload the affected section. You cannot claim jobs, send messages or upload files offline. A local display does not confirm a saved change.",
-    },
-    topic: "jobs",
-  },
-  {
-    title: {
-      de: "Speichern oder Übernahme unklar",
-      en: "Unclear save or claim result",
-    },
-    body: {
-      de: "Prüfe den aktuellen Datensatz und zugehörige Bestätigungen, bevor du eine Aktion wiederholst. Bei einer Versionsmeldung lade den aktuellen Stand und gleiche deine Änderungen ab. Erfolgreiche Aufträge gelten für den gesamten Terminblock.",
-      en: "Check the current record and related confirmations before repeating an action. After a version conflict, reload the current state and reconcile your changes. A successful assignment covers the entire session block.",
-    },
-    topic: "jobs",
-  },
-  {
-    title: { de: "Zugriff verweigert", en: "Access denied" },
-    body: {
-      de: "Prüfe das angemeldete Konto und bitte die zuständige Verwaltung, deine Berechtigung zu prüfen. Private Termine, Direktnachrichten und Vertragsunterlagen werden nicht durch einen allgemeinen Admin-Zugang freigegeben.",
-      en: "Check the signed-in account and ask the responsible administrator to review your permission. Private events, direct messages and contract documents are not shared through blanket administrator access.",
-    },
-    topic: "security",
-  },
-  {
-    title: { de: "Datei noch nicht verfügbar", en: "File not yet available" },
-    body: {
-      de: "Prüfe Größenlimit, zulässigen Dateityp und Prüfstatus. Warte auf die Sicherheitsprüfung. Öffne einen abgelaufenen Download erneut aus dem Portal; umgehe keine Quarantäne oder Berechtigungsprüfung.",
-      en: "Check the size limit, allowed file type and scanning status. Wait for security scanning. Reopen an expired download from the portal; never bypass quarantine or permission checks.",
-    },
-    topic: "files",
-  },
-  {
-    title: {
-      de: "App-Aktualisierung oder Darstellung",
-      en: "App update or appearance",
-    },
-    body: {
-      de: "Sichere noch nicht gespeicherte Eingaben, bevor du die angebotene App-Aktualisierung ausführst oder neu lädst. Prüfe Sprache und Darstellung in der Kopfzeile. Die PWA-Installation hängt von Browser und Gerät ab; private Inhalte sind kein Offline-Archiv.",
-      en: "Preserve unsaved input before applying an offered app update or reloading. Check language and appearance in the header. PWA installation depends on your browser and device; private content is not an offline archive.",
-    },
-    topic: "settings",
-  },
-];
-
-const visibleHelpModules = portalInternalEdition ? guideModules : academyGuides;
-const visibleRecovery = portalInternalEdition
-  ? recovery
-  : academyGuides.map(({ id, problem, resolution }) => ({
-      title: problem,
-      body: { de: resolution.de.join(" "), en: resolution.en.join(" ") },
-      topic: id,
-    }));
+const { modules: visibleHelpModules, recovery: visibleRecovery } =
+  helpCatalogue;
 
 /** Search titles, steps and recovery text in both authored languages regardless of the selected UI language. */
 function searchText(module: GuideModule) {
