@@ -7,7 +7,6 @@ import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {z} from "zod";
 import {portalOpenApi} from "../src/features/developer-api/contract.ts";
-import {mkdirSync, writeFileSync} from "node:fs";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
 
 process.loadEnvFile(".env.test.local");
@@ -190,17 +189,12 @@ const message = await (
 const href = /href="([^"]+)"/.exec(message.HTML)?.[1]?.replaceAll("&amp;", "&");
 assert.ok(href, "Custom invitation email contains its acceptance link");
 const invitation = new URL(href);
+assert.equal(invitation.origin, new URL(headers.Origin).origin);
 assert.equal(invitation.pathname, "/auth/callback");
 assert.equal(invitation.searchParams.get("type"), "invite");
 assert.ok(
     invitation.searchParams.get("token_hash"),
     "Custom template provides the one-time token hash",
-);
-mkdirSync(".local", {recursive: true, mode: 0o700});
-writeFileSync(
-    ".local/last-invitation.json",
-    JSON.stringify({email, url: href}),
-    {mode: 0o600},
 );
 const denied = await fetch(inviteUrl, {
     method: "POST",

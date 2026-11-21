@@ -5,7 +5,6 @@
 import {expect, test} from "@playwright/test";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {readFileSync} from "node:fs";
 import {checked} from "./helpers/accounts-support";
 
 test.skip(
@@ -22,38 +21,25 @@ test("actual Auth invitation link opens password setup and the invited account c
     const service = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
         auth: {persistSession: false, autoRefreshToken: false},
     });
-    let email = `onboarding-${randomUUID()}@example.invalid`;
+    const email = `onboarding-${randomUUID()}@example.invalid`;
+    const origin = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173";
     // The Edge/Mailpit suite verifies sending. Generate a fresh real Auth invite URL here to
     // exercise browser token consumption repeatably, without consuming SMTP send limits.
-    let invitation: URL;
-    if (process.env.E2E_MAILPIT_INVITE === "1") {
-        const captured = JSON.parse(
-            readFileSync(".local/last-invitation.json", "utf8"),
-        );
-        email = captured.email;
-        invitation = new URL(captured.url);
-    } else {
-        const {data, error} = await service.auth.admin.generateLink({
-            type: "invite",
-            email,
-            options: {
-                redirectTo: `${process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173"}/auth/callback`,
-            },
-        });
-        expect(error).toBeNull();
-        if (!data.user || !data.properties)
-            throw new Error("Fictional Auth invitation failed");
-        const role = await service
-            .from("user_roles")
-            .insert({user_id: data.user.id, role: "lecturer"});
-        expect(role.error).toBeNull();
-        invitation = new URL(
-            "/auth/callback",
-            process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
-        );
-        invitation.searchParams.set("token_hash", data.properties.hashed_token);
-        invitation.searchParams.set("type", "invite");
-    }
+    const { data, error } = await service.auth.admin.generateLink({
+        type: "invite",
+        email,
+        options: { redirectTo: new URL("/auth/callback", origin).href },
+    });
+    expect(error).toBeNull();
+    if (!data.user || !data.properties)
+        throw new Error("Fictional Auth invitation failed");
+    const role = await service
+        .from("user_roles")
+        .insert({user_id: data.user.id, role: "lecturer"});
+    expect(role.error).toBeNull();
+    const invitation = new URL("/auth/callback", origin);
+    invitation.searchParams.set("token_hash", data.properties.hashed_token);
+    invitation.searchParams.set("type", "invite");
     await page.goto(invitation.toString());
     await expect
         .poll(() => page.evaluate(() => location.pathname))
