@@ -248,6 +248,7 @@ const reviewedHistoricCatalogueDigests = new Set([
   "3af7271f0bcc77ce87e56fdbaee4f706486f108097d77a7978de73c1e9c78b32", // 1.18.0 at 325f1736
   "7a684096aec80074d984d307cc6629d11e8a84feda7385878b032003b38c024c", // 1.18.0 at b86c6927
   "36db1a6eee90c837ab19872cc24297543be6bba398d5669c3a0c97f233120792", // 1.19.0 at bda967fa
+  "3c04917afcd2375d0505d771412f425d32a95232ad957601d927b0d34f468001", // 1.20.0 at e4763f06
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */

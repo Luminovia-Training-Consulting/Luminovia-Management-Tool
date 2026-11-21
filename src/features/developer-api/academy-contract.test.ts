@@ -15,6 +15,7 @@ const readPaths = [
   "/rest/v1/rpc/notification_inbox",
   "/rest/v1/rpc/academy_course_publication",
   "/rest/v1/rpc/academy_timetable",
+  "/rest/v1/rpc/academy_licence_receipt",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -150,6 +151,36 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
       expect(write.responses).toHaveProperty("204");
       expect(write.responses).not.toHaveProperty("200");
+    });
+
+    it("advertises the private receipt in the dedicated catalogue only", () => {
+      const path = "/rest/v1/rpc/academy_licence_receipt";
+      const read = spec.paths[path].post;
+      expect(read["x-portal-licence"]).toBe("active-or-grace");
+      expect(read.requestBody.required).toBe(false);
+      expect(read.requestBody.content["application/json"].schema).toMatchObject(
+        {
+          additionalProperties: false,
+          properties: {},
+        },
+      );
+      expect(
+        read.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        additionalProperties: false,
+        properties: {
+          seats: {
+            properties: {
+              limit: expect.any(Object),
+              occupied: expect.any(Object),
+              available: expect.any(Object),
+            },
+          },
+        },
+      });
+      expect(
+        portalOpenApi(backend, true, internalInstallationBrand).paths,
+      ).not.toHaveProperty(path);
     });
 
     it("documents active manager options and a closed single-template draft request", () => {

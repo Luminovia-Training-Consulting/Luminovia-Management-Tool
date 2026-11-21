@@ -390,6 +390,54 @@ test("accepts an exact nonempty historical catalogue only after signature authen
   }
 });
 
+test("still authenticates a signed 1.20.0 catalogue from before the licence receipt", async (t) => {
+  const files = releaseFixture(t);
+  const { output, signer, inputs, verifyRelease } = files;
+  // Exact catalogue projected from tracked e4763f06 before this read was added.
+  const historical = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          "./testing/fixtures/academy-openapi-1.20.0.json.gz",
+          import.meta.url,
+        ),
+      ),
+    ),
+  );
+  assert.equal(historical.info.version, "1.20.0");
+  historical.info.title = metadata.name + " API";
+  historical.servers[0].url = metadata.backend;
+  historical["x-portal-installation"].installation_id = metadata.installationId;
+  historical.paths["/rest/v1/rpc/installation_capabilities"].get.responses[
+    "200"
+  ].content["application/json"].schema.properties.installation_id.const =
+    metadata.installationId;
+
+  const manifest = await rewriteCatalogue(
+    files,
+    await files.write(),
+    historical,
+  );
+  const signature = sign(
+    null,
+    Buffer.from(
+      "Luminovia Academy Browser Release v1\n" +
+        sha256(readFileSync(join(output, "manifest.json"))) +
+        "\n" +
+        sha256(inputs.licence),
+    ),
+    signer.privateKey,
+  ).toString("base64url");
+  assert.deepEqual(await verifyRelease(signature), {
+    manifest,
+    licenceState: "active",
+  });
+  await assert.rejects(
+    verifyAcademyBrowserPackage(output),
+    /Customer API differs/,
+  );
+});
+
 test("rejects hidden, runtime, vendor and private build paths", async (t) => {
   const { dist, file, write } = fixture(t);
   for (const path of [

@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   ErrorState,
@@ -9,6 +9,8 @@ import {
   PageHeading,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { academyLicenceQuery } from "../accounts/academy-licence-api";
+import { AcademyLicencePanel } from "../accounts/academy-licence-panel";
 import {
   academyAdministrationQuery,
   createAcademyAccount,
@@ -426,6 +428,7 @@ export function AcademyAdministrationPage() {
   const { i18n } = useTranslation();
   const online = useOnline();
   const actor = session?.user.id ?? "";
+  const cache = useQueryClient();
   const word: Localize = (de, en) => (i18n.language.startsWith("de") ? de : en);
   const query = useQuery({
     ...academyAdministrationQuery(actor),
@@ -456,13 +459,20 @@ export function AcademyAdministrationPage() {
 
   const { accounts, organisations, can_write, can_create_management } =
     query.data;
-  const changed = () => query.refetch();
+  const changed = () =>
+    Promise.all([
+      query.refetch(),
+      cache.invalidateQueries({
+        queryKey: academyLicenceQuery(actor).queryKey,
+      }),
+    ]);
 
   return (
     <>
       <PageHeading
         title={word("Akademie verwalten", "Academy administration")}
       />
+      <AcademyLicencePanel actor={actor} />
       {can_write ? (
         <>
           <OrganisationForm word={word} changed={changed} />
