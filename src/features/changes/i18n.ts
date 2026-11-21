@@ -18,6 +18,9 @@ const de = {
   empty: "Keine Änderungsanträge vorhanden.",
   noAssignments: "Keine bestätigten Aufträge für eine Änderung verfügbar.",
   assignment: "Bestätigter Auftrag",
+  selectAssignment: "Auftrag auswählen",
+  assignmentUnavailable:
+    "Der ursprünglich ausgewählte Auftrag ist für Änderungen nicht verfügbar. Wähle einen verfügbaren Auftrag aus.",
   reason: "Begründung",
   location: "Ort oder Meeting-Link",
   scope: "Leistungsumfang",
@@ -109,6 +112,9 @@ const en = {
   empty: "No change requests yet.",
   noAssignments: "No confirmed assignments are available for changes.",
   assignment: "Confirmed assignment",
+  selectAssignment: "Select an assignment",
+  assignmentUnavailable:
+    "The originally selected assignment is unavailable for changes. Select an available assignment.",
   reason: "Reason",
   location: "Location or meeting link",
   scope: "Scope of work",

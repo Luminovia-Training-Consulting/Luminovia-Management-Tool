@@ -52,16 +52,44 @@ export function NotificationsMenu({
         ? `${attentionText("criticalCount", { count })}; ${attentionText("active")}; ${attentionText("totalCount", { count: query.data?.unread_count ?? 0 })}`
         : t("count", { count });
   const menu = useRef<HTMLDetailsElement>(null);
+  const trigger = useRef<HTMLElement>(null);
   const location = useLocation();
   useEffect(() => {
     if (menu.current) menu.current.open = false;
   }, [location.pathname, location.search]);
+  useEffect(() => {
+    // Desktop and mobile render separate bells. A pointer in one also closes
+    // the other without moving focus away from the newly selected control.
+    function dismissOutside(event: PointerEvent) {
+      const disclosure = menu.current;
+      if (
+        disclosure?.open &&
+        event.target instanceof Node &&
+        !disclosure.contains(event.target)
+      )
+        disclosure.open = false;
+    }
+    document.addEventListener("pointerdown", dismissOutside);
+    return () => document.removeEventListener("pointerdown", dismissOutside);
+  }, []);
   return (
     <details
       className={`notification-menu${academy ? " academy-notification-menu" : ""}`}
       ref={menu}
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Escape" ||
+          event.defaultPrevented ||
+          !event.currentTarget.open
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.open = false;
+        trigger.current?.focus();
+      }}
     >
-      <summary aria-label={`${t("title")}: ${countLabel}`}>
+      <summary ref={trigger} aria-label={`${t("title")}: ${countLabel}`}>
         <Bell aria-hidden="true" size={21} />
         {count > 0 && (
           <span className="notification-count" aria-hidden="true">

@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -550,15 +551,16 @@ try {
     );
     const invoiceDoc = await upload(a, invoiceBytes, "invoice");
     const invoiceVersion = invoiceDoc.current_version_id;
-    const issued = new Date().toISOString().slice(0, 10),
-        due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    const issueTime = Date.now(),
+        issued = new Date(issueTime).toISOString().slice(0, 10),
+        due = new Date(issueTime + 30 * 86400000).toISOString().slice(0, 10),
         invoiceKey = randomUUID();
     const invoiceArgs = {
         p_number: `QA-${suffix}`,
         p_claim_ids: [completedClaim],
         p_document_version_id: invoiceVersion,
         p_issued_on: issued,
-        p_due_on: due,
+        p_due_on: null,
         p_client_id: invoiceKey,
     };
     const beforeFinalSession = await a.client.rpc("submit_invoice", {
@@ -567,9 +569,11 @@ try {
         p_claim_ids: claims,
         p_client_id: randomUUID(),
     });
+    assert.equal(beforeFinalSession.status, 400);
     assert.equal(beforeFinalSession.error?.code, "22023");
     assert.match(beforeFinalSession.error?.message ?? "", /invoice_not_ready/);
     const beforeAcceptedBlockEnds = await a.client.rpc("submit_invoice", invoiceArgs);
+    assert.equal(beforeAcceptedBlockEnds.status, 400);
     assert.equal(beforeAcceptedBlockEnds.error?.code, "22023");
     assert.match(beforeAcceptedBlockEnds.error?.message ?? "", /invoice_not_ready/);
     // Move only the final fixture session to a distinct elapsed interval.
@@ -585,22 +589,30 @@ try {
         service.from("assignment_sessions").update(completedFinalSession).eq("id", finalAllocation),
         "Move only the matching immutable fixture allocation into the past",
     );
-    const invoice = await checked(
-        a.client.rpc("submit_invoice", invoiceArgs),
-        "Submit actual own compensation invoice",
-    );
+    const submission = await a.client.rpc("submit_invoice", invoiceArgs);
+    assert.equal(submission.status, 200);
+    assert.equal(submission.error, null);
+    const invoice = submission.data;
+    assertRpcResponse("submit_invoice", invoice);
     assert.equal(
         await checked(
-            a.client.rpc("submit_invoice", invoiceArgs),
+            a.client.rpc("submit_invoice", {...invoiceArgs, p_due_on: due}),
             "Retry invoice submission",
         ),
         invoice,
     );
+    const duplicate = await a.client.rpc("submit_invoice", {
+        ...invoiceArgs,
+        p_client_id: randomUUID(),
+    });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.error?.code, "23505");
     let record = (
         await checked(a.client.rpc("invoice_records"), "Read own invoice")
     )[0];
     assert.equal(Number(record.total_amount), 300);
     assert.equal(record.currency, "EUR");
+    assert.equal(record.due_on, due);
     assert.deepEqual(
         await checked(
             b.client.rpc("invoice_records"),

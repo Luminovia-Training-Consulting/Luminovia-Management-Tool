@@ -265,6 +265,177 @@ it("creates a draft with named-zone instants and preserves its authored draft th
     ),
   );
 });
+it.each([false, true])(
+  "uses the selected assignment's exact instants after switching (refresh: %s)",
+  async (refresh) => {
+    const secondClaim = "ed000000-0000-4000-8000-000000000013";
+    const sessions = [
+      {
+        starts_at: "2044-12-31T23:00:11.123Z",
+        ends_at: "2045-01-01T00:00:22.456Z",
+      },
+    ];
+    candidates.push({
+      ...candidates[0],
+      claim_id: secondClaim,
+      title: "Fictional Brisbane course",
+      time_zone: "Australia/Brisbane",
+      current: {
+        ...source(),
+        claim_id: secondClaim,
+        time_zone: "Australia/Brisbane",
+        sessions,
+      },
+    });
+    mount("/changes");
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Änderungsantrag erstellen" }),
+    );
+
+    // The selected course shows identical wall times but has different instants.
+    expect(screen.getByLabelText("Beginn 1")).toHaveValue("2045-01-01T09:00");
+    await user.selectOptions(
+      screen.getByLabelText("Bestätigter Auftrag"),
+      secondClaim,
+    );
+    expect(screen.getByLabelText("Beginn 1")).toHaveValue("2045-01-01T09:00");
+    await user.type(
+      screen.getByLabelText("Begründung"),
+      "Fictional scope change",
+    );
+
+    if (refresh) {
+      candidates[1].current = {
+        ...candidates[1].current,
+        ...source(),
+        claim_id: secondClaim,
+      };
+      await act(() =>
+        clients
+          .at(-1)!
+          .invalidateQueries({ queryKey: ["changeable-assignments"] }),
+      );
+      expect(screen.getByLabelText("Begründung")).toHaveValue(
+        "Fictional scope change",
+      );
+      fireEvent.change(screen.getByLabelText("Beginn 1"), {
+        target: { value: "2045-01-01T09:15" },
+      });
+    }
+
+    await user.click(
+      screen.getByRole("button", { name: "Entwurf online speichern" }),
+    );
+    await waitFor(() =>
+      expect(state.rpc).toHaveBeenCalledWith(
+        "save_assignment_change",
+        expect.objectContaining({
+          p_claim_id: secondClaim,
+          p_payload: expect.objectContaining({
+            changes: expect.objectContaining({
+              sessions: [
+                {
+                  ...sessions[0],
+                  starts_at: refresh
+                    ? "2044-12-31T23:15:00.000Z"
+                    : sessions[0].starts_at,
+                },
+              ],
+            }),
+          }),
+        }),
+      ),
+    );
+  },
+);
+it("retains precise times of the remaining row after removing an earlier session", async () => {
+  const remaining = {
+    starts_at: "2045-01-02T08:00:11.123Z",
+    ends_at: "2045-01-02T09:00:22.456Z",
+  };
+  candidates[0].current.sessions.push(remaining);
+  mount("/changes");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Änderungsantrag erstellen" }),
+  );
+  await user.click(
+    screen.getAllByRole("button", { name: "Termin entfernen" })[0],
+  );
+  expect(screen.getByLabelText("Beginn 1")).toHaveValue("2045-01-02T09:00");
+  await user.click(screen.getByRole("button", { name: "Termin hinzufügen" }));
+  fireEvent.change(screen.getByLabelText("Beginn 2"), {
+    target: { value: "2045-01-03T09:00" },
+  });
+  fireEvent.change(screen.getByLabelText("Ende 2"), {
+    target: { value: "2045-01-03T10:00" },
+  });
+  await user.type(
+    screen.getByLabelText("Begründung"),
+    "Fictional session replacement",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Entwurf online speichern" }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.objectContaining({
+        p_claim_id: claim,
+        p_payload: expect.objectContaining({
+          changes: expect.objectContaining({
+            sessions: [
+              remaining,
+              {
+                starts_at: "2045-01-03T08:00:00.000Z",
+                ends_at: "2045-01-03T09:00:00.000Z",
+              },
+            ],
+          }),
+        }),
+      }),
+    ),
+  );
+});
+it("requires an explicit available assignment after following an obsolete deep link", async () => {
+  mount("/changes?claim=ed000000-0000-4000-8000-000000000099");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Änderungsantrag erstellen" }),
+  );
+  expect(screen.getByLabelText("Bestätigter Auftrag")).toHaveValue("");
+  expect(
+    screen.getByRole("button", { name: "Entwurf online speichern" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByLabelText("Bestätigter Auftrag"),
+  ).toHaveAccessibleDescription(
+    /Der ursprünglich ausgewählte Auftrag ist für Änderungen nicht verfügbar/,
+  );
+  await act(() => i18n.changeLanguage("en"));
+  await user.selectOptions(
+    screen.getByLabelText("Confirmed assignment"),
+    claim,
+  );
+  expect(
+    screen.getByLabelText("Confirmed assignment"),
+  ).not.toHaveAccessibleDescription();
+  await user.type(
+    screen.getByLabelText("Reason"),
+    "Fictional valid assignment",
+  );
+  await user.click(screen.getByRole("button", { name: "Save draft online" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.objectContaining({ p_claim_id: claim }),
+    ),
+  );
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name === "save_assignment_change"),
+  ).toHaveLength(1);
+});
 it("retains the same request UUID when an unchanged draft submission has an uncertain response", async () => {
   mount("/changes");
   const user = userEvent.setup();

@@ -91,7 +91,11 @@ const formSchema = z.object({
   cancel: z.boolean(),
   sessions: z
     .array(
-      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
+      z.object({
+        starts_at: z.string().min(1),
+        ends_at: z.string().min(1),
+        sourceIndex: z.number().int().nonnegative().nullable(),
+      }),
     )
     .min(1)
     .max(60),
@@ -120,11 +124,21 @@ function ChangeForm({
     [invalidMoney, setInvalidMoney] = useState(false);
   const [invalidLocation, setInvalidLocation] = useState(false);
   const [selected, setSelected] = useState(
-    original?.claim_id ?? initialClaim ?? candidates[0]?.claim_id ?? "",
+    () =>
+      original?.claim_id ??
+      (initialClaim
+        ? (candidates.find((item) => item.claim_id === initialClaim)
+            ?.claim_id ?? "")
+        : (candidates[0]?.claim_id ?? "")),
   );
   const candidate = candidates.find((item) => item.claim_id === selected);
-  const source = original?.proposed ?? candidate?.current;
-  const [formSource] = useState(() => source);
+  const unavailable =
+    !original && !candidate && Boolean(initialClaim || selected);
+  // Bind the form defaults and precise instants to the same reviewed selection.
+  // Background refreshes may update eligibility without replacing draft values.
+  const [source, setSource] = useState(
+    () => original?.proposed ?? candidate?.current,
+  );
   const linkedCourse = Boolean(source?.course_run_id);
   const scheduleEditable =
     !linkedCourse ||
@@ -145,7 +159,8 @@ function ChangeForm({
     total_amount: String(s?.total_amount ?? ""),
     rate_unit: s?.rate_unit ?? ("per_day" as const),
     cancel: s?.cancel ?? false,
-    sessions: (s?.sessions ?? []).map((session) => ({
+    sessions: (s?.sessions ?? []).map((session, sourceIndex) => ({
+      sourceIndex,
       starts_at: DateTime.fromISO(session.starts_at)
         .setZone(s!.time_zone)
         .toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -162,7 +177,7 @@ function ChangeForm({
     formState: { errors },
   } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(customerView ? customerFormSchema : formSchema),
-    defaultValues: defaults(formSource),
+    defaultValues: defaults(source),
   });
   const { fields, append, remove } = useFieldArray({
     control,
@@ -193,15 +208,19 @@ function ChangeForm({
       // Unchanged inputs retain exact instants even if the local editor
       // displays whole minutes. The server rechecks linked-course eligibility.
       if (scheduleEditable && !values.cancel) {
-        const initial = defaults(formSource).sessions;
-        changes.sessions = values.sessions.map((item, index) => {
-          const existing = formSource?.sessions[index];
+        const initial = defaults(source).sessions;
+        changes.sessions = values.sessions.map((item) => {
+          // Fields retain their original row index even after another row is removed.
+          // Only the captured snapshot supplies the exact saved instants.
+          const index = item.sourceIndex;
+          const existing = index === null ? undefined : source?.sessions[index];
+          const originalInput = index === null ? undefined : initial[index];
           const start =
-            existing && item.starts_at === initial[index]?.starts_at
+            existing && item.starts_at === originalInput?.starts_at
               ? existing.starts_at
               : zonedInstant(item.starts_at, zone);
           const end =
-            existing && item.ends_at === initial[index]?.ends_at
+            existing && item.ends_at === originalInput?.ends_at
               ? existing.ends_at
               : zonedInstant(item.ends_at, zone);
           if (!start || !end || Date.parse(end) <= Date.parse(start)) {
@@ -257,14 +276,28 @@ function ChangeForm({
         <select
           id="change-assignment"
           {...register("claim")}
-          disabled={Boolean(original)}
+          aria-describedby={
+            unavailable ? "change-assignment-unavailable" : undefined
+          }
+          disabled={Boolean(original) || save.isPending}
           onChange={(event) => {
             const id = event.target.value;
             setSelected(id);
             const chosen = candidates.find((item) => item.claim_id === id);
-            reset({ ...defaults(chosen?.current), claim: id });
+            const nextSource = chosen?.current;
+            setSource(nextSource);
+            reset({ ...defaults(nextSource), claim: id });
+            setInvalidTime(false);
+            setInvalidMoney(false);
+            setInvalidLocation(false);
+            save.reset();
           }}
         >
+          {unavailable && (
+            <option value={selected} disabled>
+              {t("selectAssignment")}
+            </option>
+          )}
           {candidates.map((item) => (
             <option key={item.claim_id} value={item.claim_id}>
               {item.title} · {item.lecturer_name}
@@ -274,6 +307,11 @@ function ChangeForm({
             <option value={original.claim_id}>{original.original.title}</option>
           )}
         </select>
+        {unavailable && (
+          <p id="change-assignment-unavailable" className="muted">
+            {t("assignmentUnavailable")}
+          </p>
+        )}
       </Field>
       <Field
         id="change-reason"
@@ -402,7 +440,9 @@ function ChangeForm({
               type="button"
               variant="secondary"
               disabled={fields.length >= 60}
-              onClick={() => append({ starts_at: "", ends_at: "" })}
+              onClick={() =>
+                append({ starts_at: "", ends_at: "", sourceIndex: null })
+              }
             >
               {t("addSession")}
             </Button>
@@ -417,7 +457,11 @@ function ChangeForm({
       )}
       {!customerView && <p className="muted">{t("cancelHint")}</p>}
       <div className="changes-controls">
-        <Button disabled={!online || save.isPending || !source}>
+        <Button
+          disabled={
+            !online || save.isPending || !source || (!candidate && !original)
+          }
+        >
           {t("save")}
         </Button>
         <Button type="button" variant="ghost" onClick={() => onDone()}>

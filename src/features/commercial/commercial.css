@@ -335,6 +335,30 @@
   color: #35546d;
 }
 
+[data-theme="dark"] .commercial-status-expired,
+[data-theme="dark"] .commercial-status-cancelled,
+[data-theme="dark"] .commercial-status-rejected {
+  background: #403735;
+  color: #f3e5dc;
+}
+
+[data-theme="dark"] .commercial-status-approved,
+[data-theme="dark"] .commercial-status-completed {
+  background: #392d4d;
+  color: #e6ddff;
+}
+
+[data-theme="dark"] .commercial-status-expected,
+[data-theme="dark"] .commercial-status-submitted {
+  background: #453b20;
+  color: #fff0c5;
+}
+
+[data-theme="dark"] .commercial-status-invoiced {
+  background: #25384f;
+  color: #dceaff;
+}
+
 .commercial-currency-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 let checks = 0;
 
@@ -36,17 +37,20 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
         completedClaim = randomUUID(),
         partialClaim = randomUUID(),
         cancelledClaim = randomUUID(),
+        audClaim = randomUUID(),
         otherClaim = randomUUID();
     const futureJob = randomUUID(),
         completedJob = randomUUID(),
         partialJob = randomUUID(),
         cancelledJob = randomUUID(),
+        audJob = randomUUID(),
         otherJob = randomUUID();
     const futureSession = randomUUID(),
         completedSession = randomUUID(),
         partialSessionA = randomUUID(),
         partialSessionB = randomUUID(),
         cancelledSession = randomUUID(),
+        audSession = randomUUID(),
         otherSession = randomUUID();
     const dates = {
         futureStart: new Date(Date.now() + 86400000).toISOString(),
@@ -57,6 +61,8 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
         partialEndA: new Date(Date.now() - 3 * 86400000 + 3600000).toISOString(),
         partialStartB: new Date(Date.now() - 2 * 86400000).toISOString(),
         partialEndB: new Date(Date.now() - 2 * 86400000 + 3600000).toISOString(),
+        audStart: new Date(Date.now() - 5 * 86400000).toISOString(),
+        audEnd: new Date(Date.now() - 5 * 86400000 + 3600000).toISOString(),
     };
     await sql(
         `insert into public.jobs(id, title, customer_name, delivery_type, status, amount, total_amount, currency, rate_unit, terms, created_by)
@@ -64,6 +70,7 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
                 ('${completedJob}', 'Completed invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
                 ('${partialJob}', 'Partial invoice fixture', 'Fictional academy', 'online', 'filled', 400, 400, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
                 ('${cancelledJob}', 'Cancelled invoice fixture', 'Fictional academy', 'online', 'draft', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
+                ('${audJob}', 'AUD invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'AUD', 'fixed_total', 'Accepted terms', '${manager}'),
                 ('${otherJob}', 'Other invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}');
         insert into public.job_sessions(id, job_id, starts_at, ends_at)
         values ('${futureSession}', '${futureJob}', '${dates.futureStart}', '${dates.futureEnd}'),
@@ -71,26 +78,30 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
                ('${partialSessionA}', '${partialJob}', '${dates.partialStartA}', '${dates.partialEndA}'),
                ('${partialSessionB}', '${partialJob}', '${dates.partialStartB}', '${dates.partialEndB}'),
                ('${cancelledSession}', '${cancelledJob}', '${dates.pastStart}', '${dates.pastEnd}'),
+               ('${audSession}', '${audJob}', '${dates.audStart}', '${dates.audEnd}'),
                ('${otherSession}', '${otherJob}', '${dates.pastStart}', '${dates.pastEnd}');
         insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, status, amount, currency, rate_unit, total_amount, terms, terms_version)
         values ('${futureClaim}', '${futureJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
                ('${completedClaim}', '${completedJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
                ('${partialClaim}', '${partialJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 400, 'EUR', 'fixed_total', 400, 'Accepted terms', 1),
                ('${cancelledClaim}', '${cancelledJob}', '${lecturer}', '${randomUUID()}', 'cancelled', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
+               ('${audClaim}', '${audJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 200, 'AUD', 'fixed_total', 200, 'Accepted terms', 1),
                ('${otherClaim}', '${otherJob}', '${otherLecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1);
         insert into public.assignment_sessions(id, claim_id, lecturer_id, starts_at, ends_at, released_at)
         values ('${futureSession}', '${futureClaim}', '${lecturer}', '${dates.futureStart}', '${dates.futureEnd}', null),
                ('${completedSession}', '${completedClaim}', '${lecturer}', '${dates.pastStart}', '${dates.pastEnd}', null),
                ('${partialSessionA}', '${partialClaim}', '${lecturer}', '${dates.partialStartA}', '${dates.partialEndA}', null),
                ('${partialSessionB}', '${partialClaim}', '${lecturer}', '${dates.partialStartB}', '${dates.partialEndB}', now()),
+               ('${audSession}', '${audClaim}', '${lecturer}', '${dates.audStart}', '${dates.audEnd}', null),
                ('${otherSession}', '${otherClaim}', '${otherLecturer}', '${dates.pastStart}', '${dates.pastEnd}', null);`,
     );
     const document = randomUUID(), version = randomUUID(), client = randomUUID();
     await sql(
         `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${document}','${lecturer}','${lecturer}','personal','invoice','Fictional invoice.pdf','application/pdf',100,'clean','${client}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,sha256,status) values('${version}','${document}','${lecturer}','${client}',1,'${lecturer}/${document}/${version}','Fictional invoice.pdf','application/pdf',100,'${"a".repeat(64)}','clean');update public.documents set current_version_id='${version}' where id='${document}'`,
     );
-    const issued = new Date().toISOString().slice(0, 10),
-        defaultDue = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const issueTime = Date.now(),
+        issued = new Date(issueTime).toISOString().slice(0, 10),
+        defaultDue = new Date(issueTime + 30 * 86400000).toISOString().slice(0, 10);
 
     await check(
         "Invoice eligibility uses the final scheduled assignment session, not attendance or quizzes",
@@ -106,14 +117,40 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
                 ]),
                 /invoice_not_ready/,
             );
-            const invoice = await rpc(lecturer, "submit_invoice", [
+            await assert.rejects(
+                rpc(lecturer, "submit_invoice", [
+                    "MIXED-1", [completedClaim, audClaim], version, issued, null, randomUUID(),
+                ]),
+                /22023: Invoice must use one original currency/,
+            );
+            const submission = [
                 "COMPLETED-1",
                 [completedClaim],
                 version,
                 issued,
                 null,
                 randomUUID(),
-            ]);
+            ];
+            const invoice = await rpc(lecturer, "submit_invoice", submission);
+            assertRpcResponse("submit_invoice", invoice);
+            assert.equal(
+                await rpc(lecturer, "submit_invoice", [
+                    ...submission.slice(0, 4), defaultDue, submission[5],
+                ]),
+                invoice,
+            );
+            await assert.rejects(
+                rpc(lecturer, "submit_invoice", [
+                    "ALTERED-1", ...submission.slice(1),
+                ]),
+                /22023: Invoice idempotency conflict/,
+            );
+            await assert.rejects(
+                rpc(lecturer, "submit_invoice", [
+                    ...submission.slice(0, 5), randomUUID(),
+                ]),
+                /23505: A claim already has an active invoice/,
+            );
             const dates = await sql(
                 `select issued_on::text||'|'||due_on::text from public.invoices where id='${invoice}'`,
             );
@@ -121,6 +158,10 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
             assert.equal(
                 await sql(`select count(*) from public.invoice_items where claim_id='${completedClaim}'`),
                 "1",
+            );
+            assert.equal(
+                await sql(`select count(*) from public.invoice_items where claim_id='${audClaim}'`),
+                "0",
             );
         },
     );
@@ -178,6 +219,7 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
                     partialClaim,
                     requestId,
                 ]);
+            assertRpcResponse("request_invoice_review", reviewId);
             assert.equal(
                 await rpc(lecturer, "request_invoice_review", [partialClaim, requestId]),
                 reviewId,

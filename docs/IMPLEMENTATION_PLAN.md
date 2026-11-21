@@ -1,5 +1,21 @@
 # Persistent implementation plan
 
+## Core function review
+
+| Area | Implemented in the portal | Remaining work or evidence |
+| --- | --- | --- |
+| Course and assignment workflow | Course and offer creation, publication, transactional claims, withdrawal, reopening, directed handover and role views. Existing coverage includes `assignment-withdrawal-api-check.mjs`, `assignment-handover-api-check.mjs` and their browser scenarios. | Observe the combined role journeys on the actual application stack, including rejected and concurrent transitions. |
+| Compensation and invoicing | Individual rates, last-session eligibility, scoped invoice review, scanned PDFs, partial payment and audit of reversals. Invoice entry now calculates the default term from the entered issue date and handles unavailable assignments. | Exception review records a decision note. A payout path for partial or cancelled delivery requires defined settlement rules. |
+| Roles and contracts | Account changes, qualification verification, on-behalf upload and private contract versions. Existing account, profile and contract database suites cover scoped access. | Full live browser and file transport matrix for the role combinations. |
+| Finance and reporting | Due-first ordering, textual and coloured states, original currency views and period-specific forecast. Dark finance badges and typed forecast and Control Center responses are part of this change. | Reconcile full browser exports and period totals across all supported roles. |
+| Formal amendments | Versioned proposal, approval, application, retained commercial snapshots and exact schedule instants. The editor now preserves precise times after a selection or row change. | Shared schedules, changed counts on linked courses and schedules with retained evidence remain guarded. Define how a coordinated change affects each accepted assignment. |
+| Website enquiries | Trusted intake, bounded validation, versioned triage and explicit conversion. `enquiries-api-check.mjs` and `enquiries.spec.ts` cover the portal side. | The separate public Website sender and its delivery remain external to this implementation. |
+| UI and PWA | The public demo, DE/EN, themes, keyboard and mobile layouts have browser coverage. The inbox popover now supports Escape and outside dismissal. PWA install and offline controls exist. | Authenticated review of every role and page, wider browser and tablet matrix, and PWA installation on physical devices. |
+| Notifications | Inbox, read-state, categories, quiet hours and local push and mail adapters have existing fixtures. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
+| API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed responses for selected domains. | Review the rest of the catalogue and prove each supported request and response against the live API. |
+
+This pass covers source implementation and local tests. CI, deployment, production mail and hosting acceptance are tracked separately.
+
 ## Academy bootstrap, release packaging and restored CI verification
 
 - [x] Generate a private runtime for a dedicated academy with its own origin, key material and persistent namespaces. Resolve both runtime configurations through actual Compose and verify that only the explicit ingress profile publishes ports.

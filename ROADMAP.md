@@ -56,7 +56,7 @@ The following summary preserves the A–N structure of the original roadmap whil
 | Q — QA, deployment and release **NEW**           | GitHub required checks, isolated tests, migration controller, Hostinger dev updater and backups                                                            | **LMS-11, FC-55–58, API-T01–API-T20:** exhaustive automated and manual acceptance, preserved database, real SMTP/backup restore, full API contract verification, green exact-main CI and separate production approval        |
 | R — Complete platform API & Swagger **NEW**      | The account facade, interactive Swagger, downloadable contract and native catalogue are present. Complete API parity remains open. | **API-01–API-08:** username/email Auth, token access, all supported functionality, documented permission-safe endpoints, Swagger UI, integration keys, webhook/events, API versioning and integration regression tests       |
 
-The earlier unfinished **formal change-request/contract-amendment workflow** and public Website-to-Portal enquiry integration remain on the roadmap. Existing work on client requests, CSV and lifecycle actions does not independently complete them. Do not silently remove these requirements.
+The portal supports **formal assignment amendments** with versioned proposals, approval and audited application. Rescheduling is constrained by the accepted schedule and retained course evidence. Broader shared-schedule changes and the full role-based browser review remain open. The portal also implements trusted Website enquiry intake and administration triage. Connecting the public sender belongs to the separate Website project. See the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review).
 
 ## OneDrive change evidence — current working tree
 
@@ -91,7 +91,7 @@ The original `ROADMAP.md` tracks source coverage and remaining work in modules A
 - [x] Automatic **development CMS** release publication prepared with exact-main application/security CI gates and a manual exact-SHA alternative; existing VPS migration/backup/recovery guards retained.
 - [ ] Complete current-head local and CI acceptance, observe real browser login, and verify the actual five-minute Hostinger development updater and installed revision.
 
-The original roadmap also retains **formal assignment change requests/amendments and public Website-to-Portal enquiry connection** as unfinished work. Do not mark those complete merely because adjacent lifecycle, CSV or portal-side request features already exist. Maintain the original's privacy/processor review, off-site backup/recovery acceptance, supported browsers, calendar/Push tests and production approval boundaries.
+The original requirements for assignment amendments and Website enquiries are tracked in the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review). Privacy review, off-site backup and recovery, supported browsers, calendar and push tests, and production approval remain separate acceptance work.
 
 ## 3. Workstreams and dependencies
 

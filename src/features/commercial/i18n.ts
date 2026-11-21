@@ -227,6 +227,18 @@ const pairs: Record<string, [string, string]> = {
     "Der letzte geplante Unterrichtstermin hat noch nicht geendet.",
     "The last scheduled session has not ended yet.",
   ],
+  invoiceDueDefault: [
+    "Ohne Angabe ist die Rechnung am {{date}} fällig (30 Tage nach Rechnungsdatum).",
+    "Leave blank to use {{date}} as the due date (30 days after issue).",
+  ],
+  invoiceSelectionChanged: [
+    "Mindestens ein ausgewählter Auftrag kann nicht mehr abgerechnet werden.",
+    "At least one selected assignment can no longer be invoiced.",
+  ],
+  invoiceRemoveUnavailable: [
+    "Nicht verfügbare Aufträge abwählen",
+    "Deselect unavailable assignments",
+  ],
   invoiceReviewFailed: [
     "Die Prüfung konnte nicht bestätigt werden.",
     "The review request could not be confirmed.",

@@ -191,15 +191,22 @@ it("opens the invoice form from an accepted-course deep link and keeps future cl
 });
 
 /** Prepare an owned scanned-PDF fixture and one real claim selection. */
-async function invoiceForm() {
-  await userEvent.click(
-    await screen.findByRole("button", {
-      name: "Rechnung einreichen",
-    }),
-  );
-  const dialog = screen.getByRole("dialog", { name: "Rechnung einreichen" });
+async function invoiceForm({ open = true } = {}) {
+  if (open) {
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Rechnung einreichen",
+      }),
+    );
+  }
+  const dialog = await screen.findByRole("dialog", {
+    name: "Rechnung einreichen",
+  });
   const fields = within(dialog);
-  await userEvent.type(fields.getByLabelText("Rechnungsnummer"), "FICT-NEW");
+  await userEvent.type(
+    await fields.findByLabelText("Rechnungsnummer"),
+    "FICT-NEW",
+  );
   fireEvent.change(fields.getByLabelText("Rechnungsdatum"), {
     target: { value: "2030-05-06" },
   });
@@ -207,7 +214,7 @@ async function invoiceForm() {
     target: { value: "2030-06-06" },
   });
   await userEvent.click(
-    fields.getByRole("checkbox", { name: /Fictional course eur-a/ }),
+    await fields.findByRole("checkbox", { name: /Fictional course eur-a/ }),
   );
   await userEvent.upload(
     fields.getByLabelText("Rechnung als PDF"),
@@ -250,6 +257,76 @@ const calls = (name: string) =>
   state.rpc.mock.calls.filter(([endpoint]) => endpoint === name);
 
 describe("invoice confirmation and safe retry", () => {
+  it("submits an eligible assignment from a stale deep link and uses the changed issue date for the default term", async () => {
+    view(["/finance?claim=unavailable-assignment"]);
+    const { fields, submit } = await invoiceForm({ open: false });
+    fireEvent.change(fields.getByLabelText("Rechnungsdatum"), {
+      target: { value: "2024-01-30" },
+    });
+    fireEvent.change(fields.getByLabelText("Fällig am"), {
+      target: { value: "" },
+    });
+    expect(fields.getByLabelText("Fällig am")).toHaveAccessibleDescription(
+      /29.02.2024|29\. Feb\. 2024/,
+    );
+    await userEvent.click(submit);
+    await waitFor(() => expect(calls("submit_invoice")).toHaveLength(1));
+    expect(calls("submit_invoice")[0][1]).toMatchObject({
+      p_issued_on: "2024-01-30",
+      p_due_on: "2024-02-29",
+      p_claim_ids: ["eur-a"],
+    });
+  });
+
+  it("requires explicit removal when a manually selected assignment becomes unavailable during editing", async () => {
+    earnings.push(earning("eur-b"));
+    const client = view();
+    const { fields, submit } = await invoiceForm();
+    await userEvent.click(
+      fields.getByRole("checkbox", { name: /Fictional course eur-b/ }),
+    );
+    await act(async () => {
+      client.setQueryData(
+        [...commercialKeys.finance(actor), "earnings", false],
+        earnings.filter((row) => row.claim_id !== "eur-a"),
+      );
+    });
+    await waitFor(() => expect(submit).toBeDisabled());
+    expect(calls("submit_invoice")).toHaveLength(0);
+    await userEvent.click(
+      fields.getByRole("button", {
+        name: "Nicht verfügbare Aufträge abwählen",
+      }),
+    );
+    await userEvent.click(submit);
+    await waitFor(() => expect(calls("submit_invoice")).toHaveLength(1));
+    expect(calls("submit_invoice")[0][1].p_claim_ids).toEqual(["eur-b"]);
+  });
+
+  it.each([
+    [
+      "invoice_not_ready: final scheduled session has not ended",
+      /letzte geplante Unterrichtstermin/,
+    ],
+    [
+      "invoice_review_required: partial or inconsistent assignment block",
+      /muss vor einer Rechnung geprüft werden/,
+    ],
+  ])(
+    "shows the server's specific invoicing decision for %s",
+    async (message, expected) => {
+      state.mutate.mockResolvedValueOnce({
+        data: null,
+        error: { code: "22023", message },
+      });
+      view();
+      const { fields, submit } = await invoiceForm();
+      await userEvent.click(submit);
+      expect(await fields.findByRole("alert")).toHaveTextContent(expected);
+      expect(fields.getByText(/PDF geprüft und bereit/)).toBeVisible();
+    },
+  );
+
   it("retains the scanned version and inputs after an uncertain response, then retries the same operation identity", async () => {
     state.mutate.mockRejectedValueOnce(new TypeError("Network response lost"));
     const client = view();

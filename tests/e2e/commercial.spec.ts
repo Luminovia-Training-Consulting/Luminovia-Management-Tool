@@ -7,6 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {DateTime} from "luxon";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -377,6 +378,12 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     await page.getByRole("button", {name: "Rechnung einreichen", exact: true}).click();
     const number = `=QA-${randomUUID().slice(0, 8)}`;
     await dialog.getByLabel("Rechnungsnummer", {exact: true}).fill(number);
+    const issueField = dialog.getByLabel("Rechnungsdatum", {exact: true});
+    const issueDate = DateTime.fromISO(await issueField.inputValue(), {
+        zone: "utc",
+    }).minus({days: 1});
+    await issueField.fill(issueDate.toISODate()!);
+    await expect(dialog.getByLabel("Fällig am", {exact: true})).toHaveValue("");
     await dialog.getByRole("checkbox", {name: new RegExp(eur.title)}).check();
     await expect(
         dialog.getByRole("checkbox", {name: new RegExp(aud.title)}),
@@ -503,6 +510,8 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     expect(Number(record.paid_amount)).toBe(123.45);
     expect(record.currency).toBe("EUR");
     expect(record.claim_ids).toEqual([eur.claimId]);
+    expect(record.issued_on).toBe(issueDate.toISODate());
+    expect(record.due_on).toBe(issueDate.plus({days: 30}).toISODate());
     await a11y(adminPage);
     await adminContext.close();
 });

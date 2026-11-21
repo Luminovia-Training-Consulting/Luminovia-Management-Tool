@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
 
 const backend = "https://portal.example.invalid";
@@ -167,6 +168,209 @@ describe("private calendar contracts", () => {
       responses: { "409": { description: expect.any(String) } },
     });
   });
+});
+
+describe("finance and operations contracts", () => {
+  it.each([false, true])(
+    "describes invoice submission, exception review and exact retries with download enabled: %s",
+    (download) => {
+      const document = portalOpenApi(backend, download);
+      const submission = document.paths["/rest/v1/rpc/submit_invoice"].post;
+      const review = document.paths["/rest/v1/rpc/request_invoice_review"].post;
+      expect(submission).toMatchObject({
+        description: expect.stringContaining("final scheduled session"),
+        responses: {
+          "400": {
+            description: expect.stringContaining("invoice_review_required"),
+          },
+          "403": {
+            description: expect.stringContaining("exact clean invoice PDF"),
+          },
+          "409": { description: expect.stringContaining("active invoice") },
+        },
+      });
+      expect(review).toMatchObject({
+        description: expect.stringContaining("without creating an invoice"),
+      });
+
+      const request = (operation: unknown) => {
+        const { requestBody } = operation as {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: Parameters<typeof z.fromJSONSchema>[0];
+              };
+            };
+          };
+        };
+        return requestBody.content["application/json"].schema;
+      };
+      const id = "ca6a3930-ea90-4dc3-998b-52f767c37a55";
+      const args = {
+        p_number: "Fictional statement 01",
+        p_claim_ids: [id],
+        p_document_version_id: id,
+        p_issued_on: "2026-11-21",
+        p_client_id: id,
+      };
+      expect(request(submission)).toMatchObject({
+        properties: {
+          p_claim_ids: { minItems: 1, maxItems: 50, uniqueItems: true },
+          p_due_on: {
+            description: expect.stringContaining("30 calendar days"),
+          },
+        },
+      });
+      const parseInvoice = z.fromJSONSchema(request(submission));
+      expect(parseInvoice.safeParse(args).success).toBe(true);
+      expect(parseInvoice.safeParse({ ...args, p_due_on: null }).success).toBe(
+        true,
+      );
+      expect(
+        parseInvoice.safeParse({ ...args, p_due_on: "2026-12-21" }).success,
+      ).toBe(true);
+      expect(parseInvoice.safeParse({ ...args, p_claim_ids: [] }).success).toBe(
+        false,
+      );
+      expect(
+        parseInvoice.safeParse({ ...args, p_client_id: null }).success,
+      ).toBe(false);
+      expect(
+        parseInvoice.safeParse({ ...args, p_issued_on: "2026-02-30" }).success,
+      ).toBe(false);
+      const parseReview = z.fromJSONSchema(request(review));
+      expect(
+        parseReview.safeParse({ p_claim_id: id, p_request_id: id }).success,
+      ).toBe(true);
+      expect(parseReview.safeParse({ p_claim_id: id }).success).toBe(false);
+    },
+  );
+
+  it.each([false, true])(
+    "publishes scoped forecast and review queues with download enabled: %s",
+    (download) => {
+      const document = portalOpenApi(backend, download);
+      const forecast = document.paths["/rest/v1/rpc/finance_forecast"].post;
+      const center = document.paths["/rest/v1/rpc/control_center"].post;
+
+      for (const operation of [forecast, center]) {
+        expect(operation).toMatchObject({
+          description: expect.stringContaining("exclusive end date"),
+          "x-luminovia-rest-gate": {
+            postgresRole: "authenticated",
+            operationalSession: true,
+            participantSession: false,
+            guestSession: false,
+          },
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  required: ["p_from", "p_until"],
+                  additionalProperties: false,
+                  properties: {
+                    p_from: { type: "string", format: "date" },
+                    p_until: { type: "string", format: "date" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "400": expect.any(Object),
+            "403": expect.any(Object),
+          },
+        });
+      }
+
+      expect(forecast).toMatchObject({
+        description: expect.stringContaining("finance.gross.read"),
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                properties: {
+                  p_pipeline_probability: {
+                    type: "number",
+                    minimum: 0,
+                    maximum: 1,
+                    default: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            content: {
+              "application/json": {
+                schema: {
+                  additionalProperties: false,
+                  properties: {
+                    payment_basis: {
+                      const: "lecturer_invoice_payment_records",
+                    },
+                    months: {
+                      type: "array",
+                      items: {
+                        additionalProperties: false,
+                        properties: {
+                          currency: { enum: ["EUR", "AUD"] },
+                          accepted_gross_known: {
+                            type: ["number", "null"],
+                          },
+                          pipeline_cost_unknown_positions: {
+                            type: "integer",
+                            minimum: 0,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      expect(center).toMatchObject({
+        description: expect.stringContaining("jobs.manage"),
+        responses: {
+          "200": {
+            content: {
+              "application/json": {
+                schema: {
+                  additionalProperties: false,
+                  required: expect.arrayContaining([
+                    "overdue_tasks",
+                    "contracts_expiring",
+                    "qualifications_expiring",
+                    "preparation",
+                    "quality",
+                  ]),
+                  properties: {
+                    quality: {
+                      type: "array",
+                      items: {
+                        additionalProperties: false,
+                        properties: {
+                          average_rating: {
+                            type: ["number", "null"],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    },
+  );
 });
 
 describe("documented Premium course and spending operations", () => {

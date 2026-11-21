@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {applyPasswordOnlyPermissionPolicy, quoteSql as q, withTestDatabase,} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase(
     "timesheets_finance",
@@ -412,6 +413,7 @@ await withTestDatabase(
                     [...range, "0.5"],
                     "aal1",
                 );
+                assertRpcResponse("finance_forecast", adminForecast);
                 assert.equal(adminForecast.gross_authorized, true);
                 const limited = await rpc(
                     manager,
@@ -419,8 +421,15 @@ await withTestDatabase(
                     [...range, "0.5"],
                     "aal1",
                 );
+                assertRpcResponse("finance_forecast", limited);
                 assert.equal(limited.gross_authorized, false);
-                assert.ok(limited.months.every((m) => m.accepted_gross_known === null));
+                assert.ok(limited.months.length > 0);
+                assert.ok(limited.months.every((m) =>
+                    m.accepted_gross_known === null &&
+                    m.accepted_margin_known === null &&
+                    m.pipeline_gross_known === null &&
+                    m.unknown_gross_claims === null
+                ));
                 assert.equal(limited.payment_basis, "lecturer_invoice_payment_records");
                 const full = await rpc(
                     admin,
@@ -436,6 +445,12 @@ await withTestDatabase(
                         rpc(admin, "finance_forecast", [...range, probability], "aal1"),
                         /22023/,
                     );
+                const empty = await rpc(admin, "finance_forecast", [
+                    q("2000-01-01"), q("2000-01-02"),
+                ]);
+                assertRpcResponse("finance_forecast", empty);
+                assert.equal(empty.pipeline_probability, 0);
+                assert.deepEqual(empty.months, []);
             },
         );
         await check(
@@ -448,9 +463,11 @@ await withTestDatabase(
    (${q(shared)},${q(manager)},${q(manager)},'operations','Fictional shared overdue task','open','2020-01-15T10:00:00Z',${q(randomUUID())},'{}');`);
                 await assert.rejects(rpc(teacher, "control_center", range), /42501/);
                 const adminCenter = await rpc(admin, "control_center", range, "aal1");
+                assertRpcResponse("control_center", adminCenter);
                 assert.ok(Array.isArray(adminCenter.overdue_tasks));
                 assert.ok(!JSON.stringify(adminCenter).includes(privateTask));
                 const center = await rpc(manager, "control_center", range, "aal1");
+                assertRpcResponse("control_center", center);
                 assert.ok(center.overdue_tasks.some((t) => t.id === shared));
                 assert.ok(!JSON.stringify(center).includes(privateTask));
                 assert.ok(!JSON.stringify(center).includes("PRIVATE"));

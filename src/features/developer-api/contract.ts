@@ -41,6 +41,7 @@ import {
   readinessTaskInputSchema,
 } from "../readiness/schema.ts";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
+import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
   companyPremiumSettingsSchema,
@@ -51,6 +52,8 @@ const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
 const version = { type: "integer", minimum: 0 };
 const text = { type: "string" };
+const date = { type: "string", format: "date" };
+const operationsPeriod = { p_from: date, p_until: date };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
 const course = { p_run_id: uuid };
@@ -410,12 +413,108 @@ const saveCalendarSubscription = rpc(
   calendarSubscription,
 );
 
+const invoiceSubmission = rpc(
+  "submitLecturerInvoice",
+  "Finance",
+  "Submit an invoice for an eligible assignment",
+  "An active lecturer can submit their own clean invoice PDF for confirmed assignments in one original currency. Each final scheduled session must have ended. Cancelled, partially delivered or inconsistent blocks go through request_invoice_review. The server calculates the amount from accepted compensation. Retry with the same request ID, invoice details and set of claims to receive the existing invoice ID.",
+  {
+    p_number: {
+      ...text,
+      minLength: 1,
+      description:
+        "Invoice number. The server trims surrounding spaces and accepts 1–80 characters after trimming.",
+    },
+    p_claim_ids: {
+      type: "array",
+      items: uuid,
+      minItems: 1,
+      maxItems: 50,
+      uniqueItems: true,
+    },
+    p_document_version_id: {
+      ...uuid,
+      description: "Exact clean version of the lecturer's own invoice PDF.",
+    },
+    p_issued_on: date,
+    p_due_on: {
+      type: ["string", "null"],
+      format: "date",
+      description:
+        "Omit or send null for a due date 30 calendar days after issue. An explicit date cannot precede the issue date.",
+    },
+    p_client_id: {
+      ...uuid,
+      description:
+        "Caller-generated request ID. Reuse it for an identical retry.",
+    },
+  },
+  uuid,
+  ["p_due_on"],
+);
+
 const nativePaths = {
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,
+  "/rest/v1/rpc/submit_invoice": {
+    post: {
+      ...invoiceSubmission.post,
+      responses: {
+        ...invoiceSubmission.post.responses,
+        "400": {
+          ...error,
+          description:
+            "Invalid invoice data, multiple currencies, no positive compensation, request ID reused with different details, invoice_not_ready, or invoice_review_required. The workflow errors use PostgreSQL code 22023.",
+        },
+        "403": {
+          ...error,
+          description:
+            "Active lecturer authority, ownership of the accepted assignments or access to the exact clean invoice PDF is missing.",
+        },
+        "409": {
+          ...error,
+          description:
+            "An assignment already has an active invoice or the submission conflicts with a unique invoice record.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/request_invoice_review": rpc(
+    "requestLecturerInvoiceReview",
+    "Finance",
+    "Request a review of an invoicing exception",
+    "An active lecturer can request review of their own cancelled, partial or inconsistent assignment block unless it already has an active invoice. The same request ID for the same claim returns the original review ID. An already pending review for this claim is also reused. This command records the request without creating an invoice.",
+    { p_claim_id: uuid, ...idempotency },
+    uuid,
+  ),
+  "/rest/v1/rpc/finance_forecast": rpc(
+    "getFinanceForecast",
+    "Finance",
+    "Read the finance forecast by month and currency",
+    "Requires finance.manage. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Pipeline estimates use the supplied probability. Unpriced positions have an unknown lecturer cost. Gross and margin fields are null unless the caller has finance.gross.read. Payments are based on recorded lecturer invoice payments.",
+    {
+      ...operationsPeriod,
+      p_pipeline_probability: {
+        type: "number",
+        minimum: 0,
+        maximum: 1,
+        default: 0,
+      },
+    },
+    z.toJSONSchema(forecastSchema),
+    ["p_pipeline_probability"],
+  ),
+  "/rest/v1/rpc/control_center": rpc(
+    "getControlCenter",
+    "Operations",
+    "Read the operations review queues",
+    "Requires jobs.manage. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Each queue contains up to 200 rows. Private tasks require the caller's existing access. The contract, qualification and course queues require their respective permissions. Average ratings are suppressed below three responses.",
+    operationsPeriod,
+    z.toJSONSchema(controlSchema),
+  ),
   "/rest/v1/rpc/export_my_calendar": rpc(
     "exportMyCalendar",
     "Calendar",

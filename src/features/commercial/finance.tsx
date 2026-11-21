@@ -3,7 +3,7 @@
  * confirmed server rows; payment reversals require their own auditable action.
  */
 import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { DateTime } from "luxon";
@@ -60,6 +60,7 @@ import { FinanceTrendChart } from "./finance-trend";
 import { InvoiceLabels } from "./invoice-labels";
 import { RevenuePanel } from "./revenue";
 import { CompanyFinanceReviews } from "./company-finance-reviews";
+import { resolveInvoiceDueDate } from "./invoice-submission";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
@@ -76,7 +77,7 @@ async function refreshInvoiceViews(client: QueryClient, actor: string) {
 const invoiceSchema = z.object({
   number: z.string().trim().min(1).max(80),
   issued: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  due: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
 });
 
 /** Link a clean invoice PDF version to selected accepted assignments checked by the server. */
@@ -95,9 +96,7 @@ function SubmitInvoice({
   const online = useOnline();
   const client = useQueryClient();
   const earnings = useQuery(earningsQuery(actor, false));
-  const [selected, setSelected] = useState<string[]>(() =>
-    initialClaimId ? [initialClaimId] : [],
-  );
+  const [selection, setSelection] = useState<string[] | null>(null);
   const [document, setDocument] = useState<PortalDocument | null>(null);
   const [invalidDate, setInvalidDate] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -108,9 +107,11 @@ function SubmitInvoice({
     defaultValues: {
       number: "",
       issued: today,
-      due: DateTime.fromISO(today).plus({ days: 30 }).toISODate()!,
+      due: "",
     },
   });
+  const issued = useWatch({ control: form.control, name: "issued" });
+  const defaultDue = resolveInvoiceDueDate(issued, "");
   const ownCandidates =
     earnings.data?.filter(
       (row) => !row.invoice_id && row.lecturer_id === actor,
@@ -128,7 +129,14 @@ function SubmitInvoice({
   const notReady = ownCandidates.filter(
     (row) => !row.invoice_review_required && !eligible.includes(row),
   );
+  // A deep link is a suggestion. Only preselect it once it is an eligible option.
+  const selected =
+    selection ??
+    (initialClaimId && eligible.some((row) => row.claim_id === initialClaimId)
+      ? [initialClaimId]
+      : []);
   const rows = eligible.filter((row) => selected.includes(row.claim_id));
+  const selectionChanged = rows.length !== selected.length;
   const currency = rows[0]?.currency;
   const total =
     rows.reduce(
@@ -139,18 +147,15 @@ function SubmitInvoice({
     mutationFn: async (values: z.infer<typeof invoiceSchema>) => {
       requireOnline();
       setInvalidDate(false);
-      if (
-        !DateTime.fromISO(values.issued).isValid ||
-        !DateTime.fromISO(values.due).isValid ||
-        values.due < values.issued
-      ) {
+      const due = resolveInvoiceDueDate(values.issued, values.due);
+      if (!due) {
         setInvalidDate(true);
         throw new Error("invalid_date");
       }
       if (
         !document ||
         document.owner_id !== actor ||
-        rows.length !== selected.length ||
+        selectionChanged ||
         !rows.length ||
         rows.length > 50 ||
         rows.some((row) => row.currency !== currency)
@@ -161,7 +166,7 @@ function SubmitInvoice({
         p_claim_ids: selected,
         p_document_version_id: document.current_version_id,
         p_issued_on: values.issued,
-        p_due_on: values.due,
+        p_due_on: due,
       };
       const signature = JSON.stringify(payload);
       if (!retry.current || retry.current.signature !== signature)
@@ -177,7 +182,14 @@ function SubmitInvoice({
       onDone();
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : "";
+      // PostgREST returns plain error objects as well as transport exceptions.
+      const message =
+        error &&
+        typeof error === "object" &&
+        "message" in error &&
+        typeof error.message === "string"
+          ? error.message
+          : "";
       setSubmissionError(
         message.includes("invoice_review_required")
           ? "invoiceReviewRequired"
@@ -227,11 +239,21 @@ function SubmitInvoice({
           id="invoice-due"
           label={t("due")}
           error={Boolean(form.formState.errors.due)}
+          hint={
+            defaultDue
+              ? t("invoiceDueDefault", {
+                  date: DateTime.fromISO(defaultDue, { zone: "UTC" })
+                    .setLocale(i18n.language)
+                    .toLocaleString(DateTime.DATE_MED),
+                })
+              : undefined
+          }
         >
           <input
             id="invoice-due"
             type="date"
             {...form.register("due")}
+            min={issued}
             disabled={submit.isPending}
           />
         </Field>
@@ -241,6 +263,19 @@ function SubmitInvoice({
         <p className="muted commercial-small">
           {t("oneCurrency")} {t("maxClaims")}
         </p>
+        {selectionChanged && (
+          <Notice>
+            {t("invoiceSelectionChanged")}{" "}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={submit.isPending}
+              onClick={() => setSelection(rows.map((row) => row.claim_id))}
+            >
+              {t("invoiceRemoveUnavailable")}
+            </Button>
+          </Notice>
+        )}
         {reviewRequired.map((row) => (
           <p className="commercial-small muted" key={`review-${row.claim_id}`}>
             {row.title}: {t("invoiceReviewRequired")}
@@ -259,10 +294,10 @@ function SubmitInvoice({
                       selected.length >= 50))
                 }
                 onChange={(event) =>
-                  setSelected((current) =>
+                  setSelection(
                     event.target.checked
-                      ? [...current, row.claim_id]
-                      : current.filter((id) => id !== row.claim_id),
+                      ? [...selected, row.claim_id]
+                      : selected.filter((id) => id !== row.claim_id),
                   )
                 }
               />
@@ -308,7 +343,13 @@ function SubmitInvoice({
       />
       <div className="form-actions">
         <Button
-          disabled={!online || submit.isPending || !document || !rows.length}
+          disabled={
+            !online ||
+            submit.isPending ||
+            !document ||
+            !rows.length ||
+            selectionChanged
+          }
         >
           {t("invoiceSave")}
         </Button>

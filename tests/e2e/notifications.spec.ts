@@ -32,6 +32,25 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
         await expect(page.locator(".inbox-toolbar").getByRole("status")).toHaveText(
             "45 ungelesen",
         );
+        const bell = page.locator(".notification-menu > summary:visible").and(
+            page.getByLabel("Benachrichtigungen: 45 ungelesen", {exact: true}),
+        );
+        const popover = page.locator(".notification-menu[open]:visible");
+        await bell.click();
+        const inboxLink = popover.getByRole("link", {
+            name: "Alle Benachrichtigungen",
+        });
+        await inboxLink.focus();
+        await inboxLink.press("Escape");
+        await expect(popover).toHaveCount(0);
+        await expect(bell).toBeFocused();
+        await bell.click();
+        await expect(popover).toBeVisible();
+        // The fixed mobile panel can cover the page heading. The viewport's top
+        // edge is outside both desktop and mobile overlays.
+        if (testInfo.project.use.hasTouch) await page.touchscreen.tap(1, 1);
+        else await page.mouse.click(1, 1);
+        await expect(popover).toHaveCount(0);
         await expect(page.locator(".inbox-list>.notification-row")).toHaveCount(40);
         await page
             .getByRole("button", {name: "Weitere Meldungen laden", exact: true})

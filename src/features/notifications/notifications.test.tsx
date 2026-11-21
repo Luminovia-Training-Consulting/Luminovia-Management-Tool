@@ -376,6 +376,38 @@ it("opening the inbox closes the native notification popover", async () => {
   await waitFor(() => expect(menu).not.toHaveAttribute("open"));
 });
 
+it("lets keyboard users close the notification popover and returns focus to the bell", async () => {
+  view(<NotificationsMenu id="actor-a" zone="UTC" />);
+  const bell = await screen.findByLabelText("Benachrichtigungen: 45 ungelesen");
+  await userEvent.click(bell);
+  const inbox = await screen.findByRole("link", {
+    name: "Alle Benachrichtigungen",
+  });
+  inbox.focus();
+  await userEvent.keyboard("{Escape}");
+  expect(bell.closest("details")).not.toHaveAttribute("open");
+  expect(bell).toHaveFocus();
+});
+
+it("closes on a tap outside and leaves the tapped control usable", async () => {
+  await i18n.changeLanguage("en");
+  const selected = vi.fn();
+  view(
+    <>
+      <NotificationsMenu id="actor-a" zone="UTC" />
+      <button onClick={selected}>Other action</button>
+    </>,
+  );
+  const bell = await screen.findByLabelText("Notifications: 45 unread");
+  await userEvent.click(bell);
+  expect(bell.closest("details")).toHaveAttribute("open");
+  const outside = screen.getByRole("button", { name: "Other action" });
+  await userEvent.click(outside);
+  expect(bell.closest("details")).not.toHaveAttribute("open");
+  expect(outside).toHaveFocus();
+  expect(selected).toHaveBeenCalledOnce();
+});
+
 describe("effective quiet-hour settings", () => {
   it("retains an unsaved time/checkbox across language changes and saves its independent version", async () => {
     view(<SettingsPage />);
