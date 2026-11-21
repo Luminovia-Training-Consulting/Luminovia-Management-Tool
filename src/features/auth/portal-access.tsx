@@ -5,14 +5,19 @@ import { ErrorState, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { useAuth } from "./auth-context";
+import { useOnline } from "../../lib/online";
+import { OfflineSchedule } from "../calendar/offline";
 import { portalInternalEdition } from "../../lib/installation-brand";
 import type { ReactNode } from "react";
 
 export function PortalAccess({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const online = useOnline();
+  const actor = session!.user.id;
   const access = useQuery({
-    queryKey: ["portal-access", session!.user.id],
+    queryKey: ["portal-access", actor],
+    enabled: online,
     queryFn: async () => {
       const { data, error } = await db().rpc("portal_access");
       // The REST pre-request gate deliberately returns 42501 for retired roles.
@@ -22,6 +27,15 @@ export function PortalAccess({ children }: { children: ReactNode }) {
     },
     refetchInterval: 30000,
   });
+  // A cold offline launch cannot check the REST gate. Only the opted-in
+  // snapshot for this native session may render until live access is known.
+  if (portalInternalEdition && !online && access.data === undefined)
+    return (
+      <main className="main-content">
+        <Notice>{t("calendarSubscriptions:offlineProfileUnavailable")}</Notice>
+        <OfflineSchedule key={actor} actor={actor} zone="UTC" minimal />
+      </main>
+    );
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
   if (!access.data) {
