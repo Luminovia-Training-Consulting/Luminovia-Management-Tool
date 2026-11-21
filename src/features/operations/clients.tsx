@@ -358,9 +358,10 @@ function ClientWorkspace({
                 </span>
               ))}
             </div>
+            {/* Each panel resets for a new organisation with its own sibling key. */}
             {premiumSetting && (
               <CompanyPremiumControl
-                key={organisation.id}
+                key={`premium:${organisation.id}`}
                 actor={actor}
                 zone={organisation.time_zone}
                 setting={premiumSetting}
@@ -370,7 +371,7 @@ function ClientWorkspace({
             )}
             {canManageIntegrations && (
               <CompanyIntegrations
-                key={organisation.id}
+                key={`integrations:${organisation.id}`}
                 actor={actor}
                 organisation={organisation.id}
                 archived={Boolean(organisation.archived_at)}

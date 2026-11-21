@@ -101,4 +101,65 @@ describe("private client directory capability boundary", () => {
     expect(action).toHaveAttribute("data-id", "organisation-a");
     client.clear();
   });
+
+  it("replaces the Premium and integrations panels when an admin switches organisations", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    const first = "5a2edf79-bd91-4746-a887-dbcfe7ba1e62";
+    const second = "047d63fe-7870-4e7a-af65-f775298598e8";
+    const organisations = [
+      { id: first, name: "Fictional first organisation" },
+      { id: second, name: "Fictional second organisation" },
+    ].map((company) => ({
+      ...company,
+      country: null,
+      time_zone: "Europe/Berlin",
+      industry: "",
+      city: "",
+      tags: [],
+      archived_at: null,
+    }));
+    client.setQueryData(["permissions", "actor"], ["organisations.manage"]);
+    client.setQueryData(["user-roles", "actor"], ["admin"]);
+    client.setQueryData(
+      ["operations", "organisations", "actor"],
+      organisations,
+    );
+    client.setQueryData(["operations", "contacts", "actor"], []);
+    client.setQueryData(["operations", "notes", "actor"], []);
+    client.setQueryData(
+      ["operations", "company-premium", "actor"],
+      [
+        { organisation_id: first, enabled: true, version: 1, updated_at: null },
+        {
+          organisation_id: second,
+          enabled: false,
+          version: 0,
+          updated_at: null,
+        },
+      ],
+    );
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ClientsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    await user.click(
+      screen.getByRole("button", { name: organisations[1].name }),
+    );
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    expect(
+      screen.getAllByRole("button", { name: "Beibehaltene Kursdaten ansehen" }),
+    ).toHaveLength(1);
+    await user.click(
+      screen.getByRole("button", { name: organisations[0].name }),
+    );
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    client.clear();
+  });
 });
