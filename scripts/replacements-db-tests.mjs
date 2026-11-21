@@ -1,4 +1,5 @@
 /** Real transaction/permission/rollback tests; all data is fictional and disposable. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -63,8 +64,11 @@ await withTestDatabase("replacement_test", async ({sql, actor}) => {
             `select public.request_replacement('${c}', 'Fictional scheduling conflict',${q(mode)},array[${invited.map(q).join(",")}]::uuid[],false,'${key}')`,
             "aal1",
         );
+    const marketResponse = rpcResponse("replacement_marketplace");
+    const assignmentsResponse = rpcResponse("replacement_assignments");
+    const acceptResponse = rpcResponse("claim_replacement");
     const list = async (who = first, aal = "aal1") =>
-        JSON.parse(
+        marketResponse(
             await actor(who, "select public.replacement_marketplace()", aal),
         );
     const take = async (
@@ -74,7 +78,7 @@ await withTestDatabase("replacement_test", async ({sql, actor}) => {
         key = randomUUID(),
         version = 1,
     ) =>
-        JSON.parse(
+        acceptResponse(
             await actor(
                 who,
                 `select public.claim_replacement('${offer}',${version},${terms},'${key}')`,
@@ -85,10 +89,19 @@ await withTestDatabase("replacement_test", async ({sql, actor}) => {
         checks++;
         console.log(`PASS ${name}`);
     };
+    assert.deepEqual(
+        assignmentsResponse(await actor(first, "select public.replacement_assignments()")),
+        [],
+    );
     await check(
         "Only original or permission job management may open an offer; private tables, unauthenticated and suspended deny",
         async () => {
             const c = await create();
+            assert.deepEqual(
+                assignmentsResponse(await actor(original, "select public.replacement_assignments()"))
+                    .map(({claim_id, job_id}) => ({claim_id, job_id})),
+                [{claim_id: c.claim, job_id: c.job}],
+            );
             for (const who of [first, outsider, inactive])
                 await assert.rejects(request(c.claim, who), /42501/);
             assert.match(

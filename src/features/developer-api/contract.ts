@@ -624,6 +624,62 @@ const announcementDraftCommand = {
   ),
 };
 
+const timestampInterval = {
+  starts_at: sessionInstant,
+  ends_at: sessionInstant,
+};
+const withdrawalStatus = {
+  enum: ["pending", "approved", "rejected", "withdrawn", "superseded"],
+};
+const withdrawalReceipt = object({ id: uuid, status: withdrawalStatus });
+const replacementRefusal = {
+  enum: [
+    "unavailable",
+    "filled",
+    "already_assigned",
+    "not_eligible",
+    "conflict",
+    "idempotency_conflict",
+    "terms_changed",
+    "quote_unavailable",
+    "prerequisite_missing",
+  ],
+};
+const replacementQuote = object({
+  amount: { type: "number", minimum: 0 },
+  total_amount: { type: "number", minimum: 0 },
+  currency: { enum: ["EUR", "AUD"] },
+  rate_unit: rateUnit,
+  terms: text,
+  terms_version: version,
+});
+const lifecycleInput = {
+  p_job_id: uuid,
+  p_expected_version: { ...version, minimum: 1 },
+  ...idempotency,
+};
+const lifecycleCommand = rpc(
+  "native_manage_job_offer",
+  "Jobs",
+  "Edit, reopen or change a versioned job offer",
+  "Requires current job management authority and the last-read version. Editing or changing visibility must preserve accepted history. Reopening requires an available position, future sessions and a reason. Duplicating requires course and applicable pricing authority. Repeat the same request ID and values after an uncertain confirmation.",
+  {},
+  uuid,
+);
+const lifecycleReason = { ...text, maxLength: 1000 };
+const lifecycleDeadline = { anyOf: [nullableDateTime, { const: "" }] };
+
+function offerAction(actions: string[], payload: Record<string, unknown>) {
+  return {
+    ...object({
+      ...lifecycleInput,
+      p_action: { enum: actions },
+      p_payload: { ...object(payload), required: [], default: {} },
+    }),
+    required: [...Object.keys(lifecycleInput), "p_action"],
+  };
+}
+
 const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
 
@@ -1622,6 +1678,210 @@ const nativePaths = {
       ...idempotency,
     },
     uuid,
+  ),
+  "/rest/v1/rpc/job_lifecycle": rpc(
+    "native_job_lifecycle",
+    "Jobs",
+    "Read current job lifecycle and visible assignment history",
+    "Requires access to the job. Managers can see permitted assignment history. Lecturers receive only their own claims. Gross and role-based maximum budgets require the current finance capability. Historical claims may lack intervals or events.",
+    { p_job_id: uuid },
+    object({
+      version: { ...version, minimum: 1 },
+      capacity: { ...version, minimum: 1 },
+      capacity_basis: { enum: ["single_position", "per_position"] },
+      confirmed_count: version,
+      open_positions: version,
+      can_set_capacity: boolean,
+      gross_budget: { type: ["number", "null"] },
+      max_net_budget: { type: ["number", "null"] },
+      can_manage: boolean,
+      can_edit: boolean,
+      can_duplicate: boolean,
+      claims: {
+        type: "array",
+        items: object({
+          id: uuid,
+          lecturer_id: uuid,
+          lecturer_name: text,
+          status: { enum: ["confirmed", "cancelled"] },
+          created_at: sessionInstant,
+          can_cancel: { type: ["boolean", "null"] },
+          sessions: {
+            type: ["array", "null"],
+            items: object({
+              ...timestampInterval,
+              released_at: nullableDateTime,
+            }),
+          },
+          events: {
+            type: ["array", "null"],
+            items: object({
+              type: text,
+              created_at: sessionInstant,
+              reason: { type: ["string", "null"] },
+            }),
+          },
+        }),
+      },
+    }),
+  ),
+  "/rest/v1/rpc/manage_job_offer": {
+    post: {
+      ...lifecycleCommand.post,
+      requestBody: {
+        required: true,
+        content: json({
+          oneOf: [
+            offerAction(["draft", "published", "archived"], {
+              reason: lifecycleReason,
+            }),
+            offerAction(["duplicate"], {
+              reason: lifecycleReason,
+              title: { ...text, minLength: 1, maxLength: 200 },
+            }),
+            offerAction(["reopen"], {
+              reason: { ...lifecycleReason, minLength: 5 },
+              claim_deadline: lifecycleDeadline,
+            }),
+            offerAction(["edit"], {
+              reason: lifecycleReason,
+              title: { ...text, minLength: 1, maxLength: 200 },
+              description: { ...text, maxLength: 12000 },
+              location: { ...text, maxLength: 500 },
+              terms: { ...text, minLength: 1, maxLength: 12000 },
+              claim_deadline: lifecycleDeadline,
+            }),
+          ],
+        }),
+      },
+    },
+  },
+  "/rest/v1/rpc/assignment_withdrawals": rpc(
+    "native_assignment_withdrawals",
+    "Jobs",
+    "Read authorised teaching assignment withdrawal requests",
+    "Returns the current lecturer's own requests or the managing actor's authorised review queue. An optional job ID restricts the result. The server checks which claims can still be withdrawn and whether review is required.",
+    { p_job_id: { ...nullableUuid, default: null } },
+    object({
+      can_review: boolean,
+      claims: {
+        type: "array",
+        items: object({
+          claim_id: uuid,
+          starts_at: nullableDateTime,
+          can_withdraw: boolean,
+          requires_approval: boolean,
+        }),
+      },
+      items: {
+        type: "array",
+        maxItems: 200,
+        items: object({
+          id: uuid,
+          claim_id: uuid,
+          job_id: uuid,
+          job_title: text,
+          lecturer_id: uuid,
+          lecturer_name: text,
+          status: withdrawalStatus,
+          reason: lifecycleReason,
+          review_reason: { type: ["string", "null"], maxLength: 1000 },
+          created_at: sessionInstant,
+          resolved_at: nullableDateTime,
+          can_review: boolean,
+        }),
+      },
+    }),
+    ["p_job_id"],
+  ),
+  "/rest/v1/rpc/request_assignment_withdrawal": rpc(
+    "native_request_assignment_withdrawal",
+    "Jobs",
+    "Request withdrawal from an own confirmed teaching assignment",
+    "Requires the current lecturer and an eligible future assignment. Withdrawal at short notice requires a reason of at least five characters and a management decision. The receipt reports the exact current state.",
+    {
+      p_claim_id: uuid,
+      p_reason: { type: ["string", "null"], maxLength: 1000 },
+      ...idempotency,
+    },
+    withdrawalReceipt,
+  ),
+  "/rest/v1/rpc/review_assignment_withdrawal": rpc(
+    "native_review_assignment_withdrawal",
+    "Jobs",
+    "Approve or reject a pending teaching assignment withdrawal",
+    "Requires current job management authority and an application by another actor. The database rechecks the pending state, unstarted sessions and financial eligibility before release. Rejecting retains the assignment.",
+    {
+      p_withdrawal_id: uuid,
+      p_approve: boolean,
+      p_reason: { ...lifecycleReason, minLength: 5 },
+      ...idempotency,
+    },
+    withdrawalReceipt,
+  ),
+  "/rest/v1/rpc/replacement_marketplace": rpc(
+    "native_replacement_marketplace",
+    "Jobs",
+    "List visible offers to take over future teaching",
+    "Current roles, participation and eligibility determine which offers appear. Only the current managing actor or original lecturer receives the reason. The quote is scoped to the eligible recipient. Read it before accepting.",
+    {},
+    {
+      type: "array",
+      maxItems: 200,
+      items: object({
+        id: uuid,
+        job_id: uuid,
+        title: text,
+        time_zone: text,
+        status: { enum: ["open", "cancelled", "completed"] },
+        mode: { enum: ["open", "selected"] },
+        emergency: boolean,
+        version: { ...version, minimum: 1 },
+        created_at: sessionInstant,
+        can_cancel: boolean,
+        can_claim: boolean,
+        reason: { type: ["string", "null"], maxLength: 1000 },
+        quote: { anyOf: [replacementQuote, { type: "null" }] },
+        sessions: { type: ["array", "null"], items: object(timestampInterval) },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/replacement_assignments": rpc(
+    "native_replacement_assignments",
+    "Jobs",
+    "List assignments eligible for a replacement search",
+    "Current lecturers receive their own eligible assignments. Current job managers can see other eligible assignments. The list excludes started, invoiced and already offered work.",
+    {},
+    {
+      type: "array",
+      items: object({
+        claim_id: uuid,
+        job_id: uuid,
+        title: text,
+        lecturer: text,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/claim_replacement": rpc(
+    "native_claim_replacement",
+    "Jobs",
+    "Accept the reviewed quote for an entire replacement assignment",
+    "Requires a current eligible lecturer, the offer version and the reviewed quote terms version. Booking, release and relevant permissions are decided together. Only a confirmed receipt with a claim ID confirms the transfer.",
+    {
+      p_offer_id: uuid,
+      p_expected_version: { ...version, minimum: 1 },
+      p_terms_version: version,
+      ...idempotency,
+    },
+    {
+      anyOf: [
+        object({ status: replacementRefusal }),
+        object({
+          status: { enum: ["confirmed", "cancelled", "unavailable"] },
+          claim_id: uuid,
+        }),
+      ],
+    },
   ),
   "/rest/v1/rpc/claim_job": rpc(
     "claimJob",

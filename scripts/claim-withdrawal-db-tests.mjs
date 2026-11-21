@@ -1,5 +1,6 @@
 /** Real isolated PostgreSQL withdrawal decisions, privacy and complete-block release.
  * Auth helpers are emulated here; native Auth/HTTP acceptance remains separate. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {execFile} from "node:child_process";
@@ -20,10 +21,15 @@ await withTestDatabase(
             "select public.configure_compensation_policy(31,73,0)",
             "aal1",
         );
-        const rpc = async (who, name, args = [], aal = "aal1") =>
-            JSON.parse(
-                await actor(who, `select public.${name}(${args.join(",")})`, aal),
-            );
+        const responses = new Map([
+            "request_assignment_withdrawal",
+            "review_assignment_withdrawal",
+            "assignment_withdrawals",
+        ].map((name) => [name, rpcResponse(name)]));
+        const rpc = async (who, name, args = [], aal = "aal1") => {
+            const wire = await actor(who, `select public.${name}(${args.join(",")})`, aal);
+            return (responses.get(name) ?? JSON.parse)(wire);
+        };
         let sequence = 0;
         let checks = 0;
         const check = async (name, run) => {

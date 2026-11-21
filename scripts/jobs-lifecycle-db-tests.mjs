@@ -1,5 +1,6 @@
 /** Real PostgreSQL lifecycle/revenue/availability regression cases. Native
  * Auth, Storage and realtime are verified separately by the actual API suite. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
@@ -77,16 +78,18 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
             await actor(who, `select public.claim_job('${job}','${key}',${version})`),
         );
     };
+    const lifecycleResponse = rpcResponse("job_lifecycle");
+    const actionResponse = rpcResponse("manage_job_offer");
     /** Reads the actual versioned management state before the next comparison. */
     const state = async (job, who = admin, aal = "aal1") =>
-        JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
+        lifecycleResponse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
     /** Sends an explicit lifecycle action with the expected version and retry identity to the database contract. */
     const action = async (job, type, values = {}, key = randomUUID(), version) =>
-        actor(
+        actionResponse(JSON.stringify(await actor(
             admin,
             `select public.manage_job_offer('${job}',${quoteSql(type)},${version ?? (await state(job)).version},'${key}',${quoteSql(JSON.stringify(values))}::jsonb)`,
             "aal1",
-        );
+        )));
     /** Cancels a specific claim under the selected identity and requires the server's permission checks. */
     const cancel = async (
         id,
