@@ -4,9 +4,11 @@ Both dedicated editions now open a branded course area through the usual login. 
 
 The existing Deno login function now calls the dedicated service-only rate limiter, alias resolver and bounded active-account check. Native GoTrue and PostgREST verified real email and username sign-ins to the same Auth identity in both editions. Anonymous and ordinary user calls cannot invoke the privileged helpers, and the service role cannot read the general profile table through the dedicated REST gateway.
 
-The integrated source check passed TypeScript, ESLint, formatting, code quality, all 1,084 frontend tests with coverage and the production build. All 124 Edge tests passed. Both actual branded Chromium builds passed their course-entry and revocation scenarios at desktop and Pixel 7 sizes with fictional transport. Full customer administration, fresh course-material intake and the final hosted release are still open.
+The integrated source check passed TypeScript, ESLint, formatting, code quality, all 1,084 frontend tests with coverage and the production build. All 124 Edge tests passed. Both branded builds also passed real GoTrue, PostgREST and Deno login in Chromium on desktop and Pixel 7. The enrolled learner opens the scoped course, welcome content, exact meeting URL and text chat, then loses that access after the operator closes the course profile. Full customer administration, fresh course-material intake and the final hosted release are still open.
 
 The isolated internal Chromium run also completed the corrected calendar subscription, responsive layout, offline and assignment-link journeys on both desktop and mobile with real GoTrue, PostgREST 16.5 and the Deno login handler. The retained-data candidate exposed a bulk fixture write that lacked a leading session UUID. Real PostgREST reproduced that failure and verified the updated fixture, the same invoice request's early denial and the confirmed final-session transition.
+
+The latest built PWA cold-start run found that the live access gate left the explicit offline schedule behind a paused query. The gate now renders only the same actor's opt-in local schedule while the browser cannot ask the server, with known access denial still enforced. Both actual built-PWA journeys passed on desktop and mobile. The immutable local release package for `22fd7cd6` passed all 393 manifest file checks. Publication was disabled.
 
 # 21 November 2026 — Dedicated course messages, files and typed attendance history
 
