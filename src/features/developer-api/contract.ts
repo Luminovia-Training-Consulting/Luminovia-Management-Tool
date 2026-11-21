@@ -1109,6 +1109,11 @@ export function portalOpenApi(
     },
     paths: {} as typeof paths,
     webhooks: undefined,
+    "x-portal-installation": {
+      installation_id: brand.installationId,
+      edition: brand.edition,
+      customer_ready: false,
+    },
     servers: [{url: backend.replace(/\/+$/, "") || "/"}],
     components: {securitySchemes: {}},
   };
