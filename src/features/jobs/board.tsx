@@ -283,6 +283,15 @@ export function OfferBoard() {
                 },
               },
             ]}
+            onCollision={(event, manager) => {
+              // Scrolling to a keyboard destination can move the source beneath
+              // another column. Only the keyboard sensor changes that selection.
+              if (
+                manager.dragOperation.activatorEvent instanceof KeyboardEvent
+              ) {
+                event.preventDefault();
+              }
+            }}
             onDragEnd={(event) => {
               if (event.canceled || !event.operation.target) return;
               const offer = offers.data.find(

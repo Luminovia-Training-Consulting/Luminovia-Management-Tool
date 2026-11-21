@@ -1,11 +1,29 @@
 /** Board-specific extension of the real dnd-kit keyboard sensor; publication remains a versioned server request made by OfferBoard only after a completed drop. */
-import { KeyboardSensor } from "@dnd-kit/dom";
+import {
+  type Draggable,
+  KeyboardSensor,
+  type KeyboardSensorOptions,
+} from "@dnd-kit/dom";
 
 const columns = ["draft", "published", "archived"] as const;
 
 /** Keep dnd-kit's activation, cancellation and announcements, but navigate
  * actual publication destinations rather than moving ten pixels per key. */
 export class OfferBoardKeyboardSensor extends KeyboardSensor {
+  protected override handleStart(
+    event: KeyboardEvent,
+    source: Draggable,
+    options: KeyboardSensorOptions | undefined,
+  ) {
+    super.handleStart(event, source, options);
+    if (this.manager.dragOperation.status.idle) return;
+    const column = source.element?.closest<HTMLElement>("[data-board-column]");
+    const status = column?.dataset.boardColumn;
+    if (columns.some((candidate) => candidate === status)) {
+      void this.manager.actions.setDropTarget(status);
+    }
+  }
+
   /** Select the next valid column directly. Pointer gestures still use spatial collision detection. */
   protected override handleMove(
     direction: "up" | "down" | "left" | "right",
