@@ -259,9 +259,7 @@ it("opens the branded register deep link and reloads the exact server-confirmed 
     "aria-current",
     "location",
   );
-  await userEvent.click(
-    screen.getByRole("button", { name: "Present" }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: "Present" }));
   expect(await screen.findByText("Current status: Present")).toBeVisible();
   expect(fake.rpc).toHaveBeenCalledWith(
     "save_course_session_attendance",
