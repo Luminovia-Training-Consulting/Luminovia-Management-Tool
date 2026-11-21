@@ -33,6 +33,11 @@ const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
 const examDownload = "/functions/v1/course-documents";
 const attendanceImport = "/rest/v1/rpc/import_course_session_attendance";
+const administrationPaths = [
+  "/rest/v1/rpc/academy_administration",
+  "/rest/v1/rpc/academy_create_organisation",
+  "/functions/v1/accounts/v1/academy/users",
+] as const;
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
@@ -65,6 +70,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           bootstrap,
           upload,
           examDownload,
+          ...administrationPaths,
           attendanceImport,
           ...readPaths,
           ...writePaths,

@@ -33,6 +33,7 @@ const fake = vi.hoisted(() => ({
   notificationRead: false,
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
+  administration: false,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -175,6 +176,7 @@ beforeEach(async () => {
   fake.notificationRead = false;
   fake.publication = null;
   fake.publicationAttempts = 0;
+  fake.administration = false;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -303,6 +305,15 @@ beforeEach(async () => {
         break;
       case "academy_course_publication":
         data = fake.publication;
+        break;
+      case "academy_administration":
+        data = fake.administration
+          ? {
+              can_write: fake.licence === "active",
+              organisations: [],
+              accounts: [],
+            }
+          : null;
         break;
       case "academy_publish_course":
         fake.publicationAttempts++;
@@ -509,6 +520,35 @@ it("creates an academy draft from the selected company and preserves its request
     },
   });
   expect(writes[1]).toEqual(writes[0]);
+});
+
+it("opens local user administration only after the authority is confirmed", async () => {
+  fake.administration = true;
+  open("/learning");
+  const link = await screen.findByRole("link", {
+    name: "Academy administration",
+  });
+  await userEvent.click(link);
+  expect(
+    await screen.findByRole("heading", { name: "Academy administration" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Save organisation" }),
+  ).toBeVisible();
+});
+
+it("does not show administration or its navigation link to a learner", async () => {
+  fake.actor = "fictional-learner";
+  open("/administration");
+  expect(
+    await screen.findByText("Administration is unavailable to your account."),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Academy administration" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Save organisation" }),
+  ).not.toBeInTheDocument();
 });
 
 it("confirms course publication online and retries the reviewed capacity", async () => {

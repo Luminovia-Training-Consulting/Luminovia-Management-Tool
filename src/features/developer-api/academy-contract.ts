@@ -17,6 +17,7 @@ import {
   maxAttendanceImportRows,
 } from "../learning/attendance-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
+import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import {
   meetingLinkResult,
   meetingUrl,
@@ -441,6 +442,7 @@ const coursePaths = {
     z.toJSONSchema(academyPublishedCourse),
     true,
   ),
+  ...academyAdministrationPaths,
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
     "listAcademyCourseWorkspaces",
     "List my course workspaces",
@@ -684,7 +686,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.10.0",
+      version: "1.11.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

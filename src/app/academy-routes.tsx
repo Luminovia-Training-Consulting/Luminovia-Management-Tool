@@ -9,28 +9,32 @@ import {
   useOutletContext,
   useParams,
 } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { Button } from "../components/ui/button";
+import { academyAdministrationQuery } from "../features/accounts/academy-api";
 import { useAuth } from "../features/auth/auth-context";
 import { AuthCallback } from "../features/auth/callback";
 import { AcademyCourseAccess } from "../features/auth/installation-access";
 import { Login } from "../features/auth/login";
 import { Password } from "../features/auth/password";
 import { HelpCenter } from "../features/help/help";
+import { AcademyAdministrationPage } from "../features/learning/academy-administration";
 import { LearningHubPage } from "../features/learning/course-hub";
 import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
 import { installationBrand } from "../lib/installation-brand";
+import { useOnline } from "../lib/online";
 import { db, isConfigured } from "../lib/supabase";
 import "./academy-routes.css";
 
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration|\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 function AcademyLogin() {
   const { session } = useAuth();
@@ -89,6 +93,7 @@ function AcademyCourseProfile() {
               <span>{installationBrand.name}</span>
             </Link>
             <div className="academy-header-actions">
+              <AcademyAdministrationLink actor={session.user.id} />
               <NotificationsMenu
                 id={session.user.id}
                 zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
@@ -116,6 +121,22 @@ function AcademyCourseProfile() {
         </>
       )}
     </AcademyCourseAccess>
+  );
+}
+
+function AcademyAdministrationLink({ actor }: { actor: string }) {
+  const online = useOnline();
+  const { t } = useTranslation();
+  const query = useQuery({
+    ...academyAdministrationQuery(actor),
+    enabled: online,
+  });
+  if (!online || !query.isFetchedAfterMount || !query.isSuccess || !query.data)
+    return null;
+  return (
+    <Button variant="secondary" asChild>
+      <Link to="/administration">{t("academyAdministration")}</Link>
+    </Button>
   );
 }
 
@@ -166,6 +187,10 @@ export function AcademyRoutes() {
         <Route element={<AcademyCourseProfile />}>
           <Route index element={<Navigate to="/learning" replace />} />
           <Route path="/learning" element={<AcademyCourseHub />} />
+          <Route
+            path="/administration"
+            element={<AcademyAdministrationPage />}
+          />
           <Route path="/notifications" element={<AcademyInbox />} />
           <Route
             path="/courses"

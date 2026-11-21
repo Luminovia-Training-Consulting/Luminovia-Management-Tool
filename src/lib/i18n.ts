@@ -233,6 +233,7 @@ const pairs: Record<string, [string, string]> = {
   settings: ["Einstellungen", "Settings"],
   login: ["Anmelden", "Sign in"],
   logout: ["Abmelden", "Sign out"],
+  academyAdministration: ["Akademie verwalten", "Academy administration"],
   email: ["E-Mail", "Email"],
   usernameOrEmail: ["Benutzername oder E-Mail", "Username or email"],
   username: ["Benutzername", "Username"],
