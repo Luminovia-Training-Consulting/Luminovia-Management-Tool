@@ -2,19 +2,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { topicPreferencesSchema } from "./privacy-schema";
 import "./topic-visibility-i18n";
 
-const schema = z.object({
-  visible: z.boolean(),
-  version: z.number().int().nonnegative(),
-  can_share: z.boolean(),
-});
-type Preference = z.infer<typeof schema>;
+type Preference = ReturnType<typeof topicPreferencesSchema.parse>;
 
 function Form({
   actor,
@@ -40,7 +35,7 @@ function Form({
         p_expected_version: draft.version,
       });
       if (error) throw error;
-      return schema.parse(data);
+      return topicPreferencesSchema.parse(data);
     },
     onSuccess: async (data) => {
       client.setQueryData(["profile-topic-visibility", actor], data);
@@ -128,7 +123,7 @@ export function OwnTopicVisibility({ actor }: { actor: string }) {
         .rpc("profile_topic_preferences")
         .abortSignal(signal);
       if (error) throw error;
-      return schema.parse(data);
+      return topicPreferencesSchema.parse(data);
     },
     retry: false,
   });

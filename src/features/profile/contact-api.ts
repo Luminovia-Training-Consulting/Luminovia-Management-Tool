@@ -1,17 +1,14 @@
 import { queryOptions } from "@tanstack/react-query";
-import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import {
+  contactPreferencesSchema,
+  personContactSchema,
+} from "./privacy-schema";
 
-export const contactPreferencesSchema = z.object({
-  email_visible: z.boolean(),
-  phone_visible: z.boolean(),
-  version: z.number().int().nonnegative(),
-  can_share: z.boolean(),
-  email_address: z.string().nullable(),
-  phone_number: z.string().nullable(),
-});
-export type ContactPreferences = z.infer<typeof contactPreferencesSchema>;
+export type ContactPreferences = ReturnType<
+  typeof contactPreferencesSchema.parse
+>;
 export const contactVisibilityKey = (actor: string) =>
   ["contact-visibility", actor] as const;
 export const contactVisibilityQuery = (actor: string) =>
@@ -44,10 +41,6 @@ export async function saveContactVisibility(
   return contactPreferencesSchema.parse(data);
 }
 
-export const personContactSchema = z.object({
-  email: z.string().nullable(),
-  phone: z.string().nullable(),
-});
 export const personContactQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["person-contact", actor, target],

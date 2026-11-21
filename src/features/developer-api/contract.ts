@@ -36,6 +36,7 @@ import {
 } from "../commercial/invoice-exception-schema.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
+import { profileContracts } from "./profile-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   notificationCredentialPaths,
@@ -139,15 +140,6 @@ const boolean = { type: "boolean" };
 const version = { type: "integer", minimum: 0 };
 const text = { type: "string" };
 const date = { type: "string", format: "date" };
-const managedProfileFields = {
-  display_name: { ...text, maxLength: 120 },
-  locale: { enum: ["de", "en"] },
-  time_zone: {
-    ...text,
-    description:
-      "Time zone name recognized by the server, such as Europe/Berlin.",
-  },
-};
 const operationsPeriod = { p_from: date, p_until: date };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
@@ -920,6 +912,43 @@ const organisationPayload = {
 
 const auditCursor = object({ at: { ...text, format: "date-time" }, id: uuid });
 
+const profilePaths = Object.fromEntries(
+  Object.entries(profileContracts).map(([name, entry]) => {
+    const operationId = `native_${name}`;
+    const tag = "Profiles and people";
+    const request = entry.request ?? {};
+    const operation = entry.result
+      ? rpc(
+          operationId,
+          tag,
+          entry.summary,
+          entry.description,
+          request,
+          z.toJSONSchema(entry.result),
+          entry.optional,
+        )
+      : voidRpc(operationId, tag, entry.summary, entry.description, request);
+    const responses = entry.staleCode
+      ? {
+          ...operation.post.responses,
+          [entry.staleCode === "PT409" ? "409" : "500"]: {
+            description:
+              "The submitted state is stale. Reload the current profile or preferences before retrying.",
+            content: json(
+              object({
+                code: { const: entry.staleCode },
+                message: text,
+                details: { type: ["string", "null"] },
+                hint: { type: ["string", "null"] },
+              }),
+            ),
+          },
+        }
+      : operation.post.responses;
+    return [`/rest/v1/rpc/${name}`, { post: { ...operation.post, responses } }];
+  }),
+);
+
 const nativePaths = {
   "/rest/v1/rpc/save_organisation": rpc(
     "native_save_organisation",
@@ -983,29 +1012,6 @@ const nativePaths = {
       "p_limit",
     ],
   ),
-  "/rest/v1/rpc/managed_profile": rpc(
-    "native_managed_profile",
-    "Accounts",
-    "Read the editable fields of a subordinate account",
-    "Requires current account-management authority over the target, even if the target account is inactive. Private contact fields, authentication data and role changes are outside this operation.",
-    { p_user_id: uuid },
-    object(managedProfileFields),
-  ),
-  "/rest/v1/rpc/save_managed_profile": rpc(
-    "native_save_managed_profile",
-    "Accounts",
-    "Update the editable fields of a subordinate account",
-    "Send the three new fields and the three previously read values. The operation trims the new display name, validates the time zone, records a privacy-safe audit entry and rejects a stale snapshot with 40001.",
-    {
-      p_user_id: uuid,
-      p_payload: object({
-        ...managedProfileFields,
-        display_name: { ...managedProfileFields.display_name, minLength: 1 },
-      }),
-      p_expected: object(managedProfileFields),
-    },
-    object(managedProfileFields),
-  ),
   "/rest/v1/rpc/unified_search": rpc(
     "native_unified_search",
     "Search",
@@ -1024,6 +1030,7 @@ const nativePaths = {
   ),
   ...sessionPaths(false),
   ...internalMailRead,
+  ...profilePaths,
   "/rest/v1/rpc/course_class_options": rpc(
     "readCourseClass",
     "Courses",
