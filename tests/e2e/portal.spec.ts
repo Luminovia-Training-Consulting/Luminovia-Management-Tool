@@ -414,9 +414,13 @@ test("admin uses password-only access and publishes a five-session job through t
     await page
         .getByLabel("Anzeigename", {exact: true})
         .fill("Fiktive UI-QA-Lehrkraft");
-    await page
-        .getByRole("button", {name: "Einladung senden", exact: true})
-        .click();
+    const sendInvitation = page.getByRole("button", {name: "Einladung senden", exact: true});
+    const inviteRole = page.getByLabel("Kontorolle", {exact: true});
+    await expect(inviteRole).toBeEnabled();
+    await expect(inviteRole).toHaveValue("");
+    await expect(sendInvitation).toBeDisabled();
+    await inviteRole.selectOption("lecturer");
+    await sendInvitation.click();
     await expect(
         page
             .getByRole("status")

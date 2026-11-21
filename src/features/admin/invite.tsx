@@ -26,11 +26,14 @@ import "../accounts/i18n";
 const schema = z.object({
   email: z.string().trim().email().max(254),
   display_name: z.string().trim().max(120),
-  role: z.enum(accountRoles),
+  role: z
+    .union([z.literal(""), z.enum(accountRoles)])
+    .pipe(z.enum(accountRoles)),
   organisation_id: z.string(),
 });
 /** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
-type Values = z.infer<typeof schema>;
+type FormValues = z.input<typeof schema>;
+type Values = z.output<typeof schema>;
 /** Confirmed status values supported by the durable invitation/reservation protocol. */
 const serverStatuses = [
   "sent",
@@ -50,7 +53,7 @@ type ResultStatus =
 /** Bound the invitation result to known statuses instead of trusting arbitrary response data. */
 type Result = { status: ResultStatus };
 /** Normalized business input used to recognize the same invitation on retry. */
-const signature = (values: Partial<Values>) =>
+const signature = (values: Partial<FormValues>) =>
   JSON.stringify([
     values.email?.trim().toLowerCase() ?? "",
     values.display_name?.trim() ?? "",
@@ -127,12 +130,12 @@ export function InviteForm({
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<Values>({
+  } = useForm<FormValues, undefined, Values>({
     resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       display_name: "",
-      role: allRoles ? undefined : "lecturer",
+      role: allRoles ? "" : "lecturer",
       organisation_id: "",
     },
   });
@@ -233,6 +236,7 @@ export function InviteForm({
           <Field id="invite-role" label={accountText("role")}>
             <select
               id="invite-role"
+              required
               {...register("role")}
               disabled={
                 invitation.isPending || catalog.isPending || catalog.isError
