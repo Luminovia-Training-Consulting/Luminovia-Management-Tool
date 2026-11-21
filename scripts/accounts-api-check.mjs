@@ -585,10 +585,8 @@ try {
     assert.equal("senior_lecturer_percent" in privatePolicy, false);
     const catalog = await request(admin, "roles");
     assert.equal(catalog.status, 200);
-    assert.equal(
-        catalog.body.some((row) => ["owner", "participant"].includes(row.role)),
-        false,
-    );
+    assert.equal(catalog.body.some((row) => row.role === "owner"), false);
+    assert.ok(catalog.body.some((row) => row.role === "participant" && row.assignable));
     assert.ok(catalog.body.some((row) => row.role === "admin" && row.assignable));
     assert.ok(catalog.body.some((row) => row.role === "client"));
     const spec = await fetch(`${url}/functions/v1/accounts/openapi.json`, {
