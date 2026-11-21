@@ -2284,7 +2284,6 @@ legend {
   }
 
   .topbar-actions .preferences select {
-    max-width: 80px;
     font-size: 10px;
   }
 
@@ -2929,7 +2928,6 @@ legend {
   }
 
   .topbar-actions .preferences select {
-    max-width: 64px;
     min-height: 36px;
     padding-inline: 3px;
     font-size: 10px;

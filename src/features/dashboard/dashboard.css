@@ -37,8 +37,8 @@
 }
 
 .dashboard-metric > span {
-  grid-column: 1 / -1;
-  padding-right: 14px;
+  grid-area: 1 / 1;
+  overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 1.4;
   font-weight: 600;
@@ -56,9 +56,9 @@
 }
 
 .dashboard-metric-arrow {
-  position: absolute;
-  right: 10px;
-  top: 10px;
+  grid-area: 1 / 2;
+  align-self: start;
+  justify-self: end;
   opacity: 0.65;
 }
 

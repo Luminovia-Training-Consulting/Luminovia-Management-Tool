@@ -586,7 +586,10 @@ export function Shell() {
               <details className="account-menu" ref={accountMenu}>
                 <summary title={t("profile")}>
                   {limitedAccount ? (
-                    <span className="profile-avatar" aria-hidden="true">
+                    <span
+                      className="profile-avatar profile-avatar-small"
+                      aria-hidden="true"
+                    >
                       {profile.data?.display_name?.slice(0, 1) || "G"}
                     </span>
                   ) : (

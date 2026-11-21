@@ -134,6 +134,41 @@ for (const role of actors) {
             { message: `${role.name} dashboard at ${width}px` },
           )
           .toBeLessThanOrEqual(width);
+        if (width === 390 && role.primary === "participant") {
+          const preferences = page.locator(".topbar .preferences");
+          await expect(preferences.locator("select").last()).toBeVisible();
+          const fitsTheme = await preferences
+            .locator("select")
+            .last()
+            .evaluate((control) => {
+              const natural = control.cloneNode(true) as HTMLSelectElement;
+              natural.style.position = "absolute";
+              natural.style.maxWidth = "none";
+              control.after(natural);
+              const fits = control.offsetWidth >= natural.offsetWidth;
+              natural.remove();
+              return fits;
+            });
+          expect(fitsTheme).toBe(true);
+          const avatar = await page
+            .locator(".account-menu .profile-avatar")
+            .boundingBox();
+          expect(avatar?.width).toBeGreaterThanOrEqual(32);
+          expect(avatar?.width).toBe(avatar?.height);
+        }
+        if (width === 390 && "additional" in role) {
+          const metrics = page.locator(".dashboard-metric");
+          await expect(metrics.first()).toBeVisible();
+          for (const metric of await metrics.all()) {
+            const label = await metric.locator(":scope > span").boundingBox();
+            const arrow = await metric
+              .locator(".dashboard-metric-arrow")
+              .boundingBox();
+            expect(label).not.toBeNull();
+            expect(arrow).not.toBeNull();
+            expect(label!.x + label!.width).toBeLessThanOrEqual(arrow!.x);
+          }
+        }
         if ("additional" in role && width === 1440) {
           const search = page.getByRole("textbox", {
             name: /^(Search the portal|Im Portal suchen)$/,
