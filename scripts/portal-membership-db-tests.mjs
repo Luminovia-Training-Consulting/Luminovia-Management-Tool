@@ -6,15 +6,26 @@ import {withTestDatabase} from "./testing/database.mjs";
 await withTestDatabase("portal_membership", async ({sql, actor}) => {
     const participant = randomUUID(),
         lecturer = randomUUID(),
-        company = randomUUID();
+        company = randomUUID(),
+        guest = randomUUID(),
+        admin = randomUUID();
     await sql(
-        `insert into auth.users(id,email) values('${participant}','participant@example.invalid'),('${lecturer}','lecturer@example.invalid'),('${company}','company@example.invalid');insert into public.user_roles(user_id,role) values('${participant}','participant'),('${lecturer}','lecturer'),('${company}','client');`,
+        `insert into auth.users(id,email) values('${participant}','participant@example.invalid'),('${lecturer}','lecturer@example.invalid'),('${company}','company@example.invalid'),('${guest}','guest@example.invalid'),('${admin}','admin@example.invalid');
+         insert into public.user_roles(user_id,role) values('${participant}','participant'),('${lecturer}','lecturer'),('${company}','client'),('${guest}','guest'),('${admin}','admin');`,
     );
     assert.equal(await actor(participant, "select private.actor_active()"), "f");
-    assert.equal(
-        await actor(participant, "select count(*) from public.profiles"),
-        "0",
-    );
+    const visibleAccounts = async (who) =>
+        JSON.parse(await actor(who, `select jsonb_build_object(
+          'profiles',(select coalesce(jsonb_agg(id order by id),'[]') from public.profiles),
+          'roles',(select coalesce(jsonb_agg(role order by role),'[]') from public.user_roles)
+        )`));
+    assert.deepEqual(await visibleAccounts(participant), {profiles: [], roles: []});
+    assert.deepEqual(await visibleAccounts(guest), {profiles: [guest], roles: ["guest"]});
+    assert.deepEqual(await visibleAccounts(lecturer), {profiles: [lecturer], roles: ["lecturer"]});
+    assert.deepEqual(await visibleAccounts(admin), {
+        profiles: [admin,company,guest,lecturer,participant].sort(),
+        roles: ["admin"],
+    });
     await assert.rejects(
         actor(participant, "select public.require_portal_access()"),
         /42501/,
@@ -122,9 +133,20 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
     );
     // Verify a participant-only author through the same scoped request paths.
     // Seed an already accepted fictional association separately from onboarding.
+    await sql(`update auth.users set email_confirmed_at=now() where id='${participant}'`);
+    const ownParticipantAccount = {profiles: [participant], roles: ["participant"]};
+    assert.deepEqual(await visibleAccounts(participant), ownParticipantAccount);
+    for (const relation of ["profiles", "user_roles"]) {
+        await actor(participant,
+            `select set_config('request.path','/${relation}',true);select public.require_portal_access()`);
+    }
+    const changed = await actor(participant,
+        `update public.profiles set display_name='Fictional denied participant edit' where id='${participant}' returning id`);
+    assert.equal(changed, "");
+    console.log("PASS profile and role visibility for verified and unverified participants, guests, lecturers and administrators");
+
     const link = randomUUID();
     await sql(`
-        update auth.users set email_confirmed_at=now() where id='${participant}';
         insert into private.company_participant_link_requests(
           id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at
         ) select '${link}','${org}','${company}','${randomUUID()}',p.luminovia_user_id,p.id,'accepted',now()+interval '1 day'
@@ -149,6 +171,7 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
     await assert.rejects(actor(participant, `select public.delete_course_review('${review}',1)`), /42501/);
     await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',null)`), /40001/);
     await sql(`update private.company_premium_settings set enabled=false,version=2 where organisation_id='${org}'`);
+    assert.deepEqual(await visibleAccounts(participant), ownParticipantAccount);
     assert.deepEqual(await reviewed(), []);
     await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',1)`), /42501/);
     await sql(`update private.company_premium_settings set enabled=true,version=3 where organisation_id='${org}'`);
