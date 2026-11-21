@@ -763,8 +763,9 @@ describe("documented Premium course and spending operations", () => {
       "supabase/functions/course-documents/handler.ts",
     );
     expect(documentHandler).toContain(
-      '["resource", "exam", "completion", "attendance"]',
+      '["resource", "exam", "completion"].includes(kind)',
     );
+    expect(documentHandler).toContain('kind === "attendance" && uuid(body.id)');
     expect(source("supabase/functions/files/index.ts")).toContain(
       "request.headers.get('content-type')?.startsWith('multipart/form-data')",
     );

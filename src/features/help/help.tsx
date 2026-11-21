@@ -19,6 +19,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
 import { type GuideModule, guideModules, guideText } from "./catalog";
+import { academyGuides } from "./academy-catalog";
 import "./help.css";
 
 const labels = {
@@ -112,25 +113,14 @@ const recovery = [
   },
 ];
 
-/** Customer launch help is limited to installing/opening an account and viewing settings. */
-const visibleHelpModules = portalInternalEdition
-  ? guideModules
-  : [
-      ...guideModules.filter(({ id }) => id === "settings"),
-      {
-        ...guideModules.find(({ id }) => id === "security")!,
-        steps: {
-          de: [
-            "Melde dich mit deiner E-Mail-Adresse oder deinem Benutzernamen an.",
-            "Nutze die Passwort-Wiederherstellung auf der Anmeldeseite, wenn du deinen Zugang verloren hast.",
-          ],
-          en: [
-            "Sign in with your email address or username.",
-            "Use password recovery on the sign-in page if you lose access.",
-          ],
-        },
-      },
-    ];
+const visibleHelpModules = portalInternalEdition ? guideModules : academyGuides;
+const visibleRecovery = portalInternalEdition
+  ? recovery
+  : academyGuides.map(({ id, problem, resolution }) => ({
+      title: problem,
+      body: { de: resolution.de.join(" "), en: resolution.en.join(" ") },
+      topic: id,
+    }));
 
 /** Search titles, steps and recovery text in both authored languages regardless of the selected UI language. */
 function searchText(module: GuideModule) {
@@ -220,18 +210,24 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               portalInternalEdition
                 ? labels.subtitle
                 : {
-                    de: "Hilfe zu Anmeldung, Kontozugang und Darstellung deiner Akademie.",
-                    en: "Help with sign-in, account access and appearance for your academy.",
+                    de: "Anleitungen für Kurse, Stundenplan, Prüfungen und die Akademieverwaltung.",
+                    en: "Guides for courses, timetables, exams and academy administration.",
                   },
             )}
           </p>
           <div className="help-actions">
             <Button asChild variant="secondary">
-              <Link to="/api/docs">
-                {i18n.language.startsWith("de")
-                  ? "API-Dokumentation"
-                  : "API documentation"}
-              </Link>
+              {portalInternalEdition ? (
+                <Link to="/api/docs">
+                  {i18n.language.startsWith("de")
+                    ? "API-Dokumentation"
+                    : "API documentation"}
+                </Link>
+              ) : (
+                <a href="/api/openapi.json" download>
+                  OpenAPI JSON
+                </a>
+              )}
             </Button>
             {portalInternalEdition && (
               <Button asChild>
@@ -262,7 +258,14 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={text(labels.placeholder)}
+              placeholder={text(
+                portalInternalEdition
+                  ? labels.placeholder
+                  : {
+                      de: "Kurs, Prüfung, Stundenplan …",
+                      en: "Course, exam, timetable …",
+                    },
+              )}
             />
           </label>
           <Button variant="ghost" onClick={() => choose()}>
@@ -333,7 +336,7 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               {text(labels.troubleshooting)}
             </h2>
             <div className="help-recovery-grid">
-              {recovery
+              {visibleRecovery
                 .filter(({ topic }) =>
                   visibleHelpModules.some(({ id }) => id === topic),
                 )
@@ -343,8 +346,9 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                     <p>{text(item.body)}</p>
                     <Link to={`/help?topic=${item.topic}`}>
                       {text(
-                        guideModules.find((module) => module.id === item.topic)!
-                          .title,
+                        visibleHelpModules.find(
+                          (module) => module.id === item.topic,
+                        )!.title,
                       )}
                       <ArrowRight size={16} aria-hidden="true" />
                     </Link>

@@ -561,6 +561,26 @@ it("creates an academy draft from the selected company and preserves its request
   expect(writes[1]).toEqual(writes[0]);
 });
 
+it("publishes only academy guides and its own downloadable OpenAPI contract", async () => {
+  open("/help?topic=academy-assessments");
+  expect(
+    await screen.findByRole("heading", {
+      name: "Exams, attendance and completion",
+      level: 2,
+    }),
+  ).toBeVisible();
+  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
+    "href",
+    "/api/openapi.json",
+  );
+  expect(
+    screen.queryByRole("link", { name: /Demo|Job marketplace/i }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Open section in the portal" }),
+  ).toHaveAttribute("href", "/learning");
+});
+
 it("opens the dedicated timetable through its main navigation link", async () => {
   open("/learning");
   await userEvent.click(await screen.findByRole("link", { name: "Timetable" }));
