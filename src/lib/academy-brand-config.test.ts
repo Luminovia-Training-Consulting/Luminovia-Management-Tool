@@ -80,7 +80,7 @@ it("retains the internal brand by default", () => {
   expect(result.assets.size).toBe(0);
 });
 
-it("packages the exact approved customer assets and emits only its public API title", () => {
+it("packages the exact approved customer assets and its scoped licensed API", () => {
   const { brand, assets } = load();
   expect(brand).toMatchObject({
     name: settings.name,
@@ -101,8 +101,20 @@ it("packages the exact approved customer assets and emits only its public API ti
     true,
     brand,
   );
-  expect(document.info.title).toBe("Example & Practice Academy API");
-  expect(document.paths).toEqual({});
+  expect(document).toMatchObject({
+    info: { title: "Example & Practice Academy API" },
+    "x-portal-installation": {
+      installation_id: settings.installationId,
+      edition: settings.edition,
+      customer_ready: false,
+    },
+  });
+  const paths = Object.keys(document.paths);
+  expect(paths).toHaveLength(10);
+  expect(paths).toContain("/rest/v1/rpc/installation_capabilities");
+  expect(paths).toContain("/rest/v1/rpc/course_workspace");
+  expect(paths.every((path) => path.startsWith("/rest/v1/rpc/"))).toBe(true);
+  expect(paths).not.toContain("/rest/v1/rpc/job_discovery");
 });
 
 it("rejects extra data, traversal, HTML text and incorrectly sized or corrupted PNGs", () => {

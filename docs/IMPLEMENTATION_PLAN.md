@@ -14,7 +14,7 @@
 - [x] Publish and read versioned welcome content in either licensed dedicated edition. PostgreSQL covers course scope, concurrent revision conflicts, grace and expiry; native Auth/PostgREST confirms real requests and HTTP 409.
 - [x] Share typed Premium settings and retained-summary shapes between the browser and OpenAPI. Confirm one accessible switch across company changes and close and discard retained data on role or connection loss.
 - [x] Verify desktop and mobile calendar colours, tour focus and keyboard board navigation in Chromium with fictional transport. Follow up observed native browser failures with role-scoped and responsive assertions.
-- [x] Enable dedicated course text chat with current licensed membership and opaque activity markers. Real GoTrue and PostgREST cover password-token room creation, send, read and closure. The dedicated WebSocket remains pending.
+- [x] Enable dedicated course text chat with current licensed membership and opaque activity markers. Real GoTrue and PostgREST cover password-token room creation, send, read and closure. Native Realtime exercises marker delivery, denial on the same open socket and resumption after re-enabling the profile.
 - [x] Serve exact scanned versions to authorised dedicated course audiences. PostgreSQL and the document handler cover revocation, digest checking and retained data. Native Storage/provider and upload acceptance remain pending.
 - [x] Document current, retained and empty attendance correction receipt shapes in OpenAPI and validate their scope against real SQL.
 - [x] Allow an assigned academy lecturer to publish or withdraw the exact retained clean version of their own course material. Validate both dedicated editions in PostgreSQL and PostgREST.
