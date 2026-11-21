@@ -38,7 +38,7 @@ async function checked(request, label) {
 
 /** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
-    const email = `account-${name}-${suffix}@example.invalid`;
+    const email = `account-${suffix}-${name}@example.invalid`;
     const data = await checked(
         service.auth.admin.createUser({
             email,

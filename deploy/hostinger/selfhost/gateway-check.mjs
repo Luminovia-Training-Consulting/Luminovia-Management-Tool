@@ -3,15 +3,17 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {request as httpRequest} from "node:http";
 import {spawnSync} from "node:child_process";
 import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
 
-// Optional real Envoy routing check. Generated test-only keys, no backend,
-// network or host ports; only this labelled temporary container is removed.
+// Optional real Envoy routing check. Generated test-only keys, no backend or
+// external network; a random loopback-only host port reaches this isolated proxy.
 // Exercise real gateway requests against controlled upstreams and remove only owned resources.
-export function checkGatewayRouting({directory, here, image, server}) {
+export async function checkGatewayRouting({directory, here, image, server}) {
     const name = "portal-gateway-check-" + randomUUID();
+    const network = name + "-network";
     const label = "org.luminovia.gateway-check";
     const configuration = join(directory, "gateway");
     mkdirSync(configuration, {mode: 0o700});
@@ -50,7 +52,17 @@ export function checkGatewayRouting({directory, here, image, server}) {
         {mode: 0o600},
     );
     let created = false;
+    let createdNetwork = false;
     try {
+        docker([
+            "network",
+            "create",
+            "--internal",
+            "--label",
+            `${label}=${name}`,
+            network,
+        ]);
+        createdNetwork = true;
         docker([
             "create",
             "--name",
@@ -58,7 +70,9 @@ export function checkGatewayRouting({directory, here, image, server}) {
             "--label",
             `${label}=${name}`,
             "--network",
-            "none",
+            network,
+            "--publish",
+            "127.0.0.1::8000",
             "--log-driver",
             "none",
             "--memory",
@@ -81,18 +95,49 @@ export function checkGatewayRouting({directory, here, image, server}) {
         ]);
         created = true;
         docker(["start", name]);
+        const hostPort = docker([
+            "inspect",
+            "--format",
+            '{{(index (index .NetworkSettings.Ports "8000/tcp") 0).HostPort}}',
+            name,
+        ]);
+        assert.match(hostPort, /^[1-9][0-9]{0,4}$/);
+        const request = (path) =>
+            new Promise((resolve, reject) => {
+                const outgoing = httpRequest(
+                    {
+                        host: "127.0.0.1",
+                        port: Number(hostPort),
+                        path,
+                        method: "GET",
+                        headers: {host: "portal-check", connection: "close"},
+                        timeout: 5000,
+                    },
+                    (response) => {
+                        response.resume();
+                        response.once("end", () =>
+                            resolve({
+                                status: response.statusCode,
+                                headers: response.headers,
+                            }),
+                        );
+                    },
+                );
+                outgoing.once("timeout", () =>
+                    outgoing.destroy(new Error("Gateway request timed out.")),
+                );
+                outgoing.once("error", reject);
+                outgoing.end();
+            });
         let ready = false;
         for (let attempt = 0; attempt < 60; attempt++) {
-            const result = spawnSync(
-                "docker",
-                ["exec", name, "bash", "-c", "true </dev/tcp/127.0.0.1/8000"],
-                {encoding: "utf8", timeout: 10000},
-            );
-            if (result.status === 0) {
+            try {
+                await request("/");
                 ready = true;
                 break;
+            } catch {
+                Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
             }
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
         }
         assert(ready, "Owned isolated Envoy did not become ready.");
         const cases = [
@@ -140,22 +185,10 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/unreviewed", 404],
         ];
         for (const [path, status, route] of cases) {
-            const response = docker([
-                "exec",
-                name,
-                "bash",
-                "-c",
-                `exec 3<>/dev/tcp/127.0.0.1/8000; printf 'GET ${path} HTTP/1.1\\r\\nHost: portal-check\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3`,
-            ]);
-            assert.equal(
-                Number(/^HTTP\/1\.1 (\d+)/.exec(response)?.[1]),
-                status,
-                "Actual gateway route status differed.",
-            );
+            const response = await request(path);
+            assert.equal(response.status, status, "Actual gateway route status differed.");
             if (route)
-                assert(
-                    response.toLowerCase().includes("x-portal-test-route: " + route),
-                );
+                assert.equal(response.headers["x-portal-test-route"], route);
         }
         console.log(
             `PASS: ${cases.length} actual isolated Envoy function routes; accounts subpaths accepted, lookalikes/internal/unknown workers denied.`,
@@ -167,6 +200,13 @@ export function checkGatewayRouting({directory, here, image, server}) {
             );
             assert.equal(labels[label], name, "Refusing unrelated gateway cleanup.");
             docker(["rm", "--force", name]);
+        }
+        if (createdNetwork) {
+            const labels = JSON.parse(
+                docker(["network", "inspect", "--format", "{{json .Labels}}", network]),
+            );
+            assert.equal(labels[label], name, "Refusing unrelated gateway network cleanup.");
+            docker(["network", "rm", network]);
         }
     }
 }

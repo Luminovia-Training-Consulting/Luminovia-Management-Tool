@@ -1502,6 +1502,7 @@ The migration-order regression now accepts later independent migrations while pr
 ## Exact-main CI follow-up — 21 November 2026
 
 - [x] Diagnose the system and native self-host failures on `27fbcc2489769818487fb7f0385b1ce3de60c100`: the guarded candidate API fixture adapter had stale indentation anchors.
-- [x] Correct the exact port/client anchors and verify all 28 candidate-check tests, then rerun `./portal check` successfully.
-- [ ] Push the repair directly to `main` and require the complete system, desktop/mobile browser, native self-host, security and publication-gate results on that exact head before any Hostinger update.
+- [x] Correct the exact port/client anchors, verify all 28 candidate-check tests, rerun `./portal check`, and push directly to `main` as `d6556022`.
+- [x] Diagnose the next exact-head failures on `d6556022`: the account fixture's search token did not occur in its generated email, and the Envoy route check depended on an in-container Bash probe. Correct the fixture and run route checks over a loopback-only port on an internal Docker network; replace the production shell healthcheck with Envoy's native config validation command.
+- [ ] Require the complete system, desktop/mobile browser, native self-host, security and publication-gate results on the updated exact `main` head before any Hostinger update.
 - [ ] Repeat full native `./portal test` locally when Docker is available. This workstation run stopped before startup because the Docker daemon socket is unavailable; no database/API acceptance is inferred from it.

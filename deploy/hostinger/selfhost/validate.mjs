@@ -228,6 +228,14 @@ try {
                 );
         }
     }
+    assert.deepEqual(compose.services["api-gw"].healthcheck.test, [
+        "CMD",
+        "/usr/local/bin/envoy",
+        "--mode",
+        "validate",
+        "-c",
+        "/etc/envoy/envoy.yaml",
+    ]);
     const auth = compose.services.auth.environment;
     assert.equal(auth.GOTRUE_DISABLE_SIGNUP, "true");
     assert.equal(auth.GOTRUE_PASSWORD_MIN_LENGTH, "8");
@@ -312,7 +320,7 @@ try {
         "",
     );
     if (process.argv.includes("--gateway-routing"))
-        checkGatewayRouting({
+        await checkGatewayRouting({
             directory,
             here,
             image: compose.services["api-gw"].image,
