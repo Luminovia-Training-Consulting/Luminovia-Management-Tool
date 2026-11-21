@@ -27,6 +27,15 @@ const de = {
   invoice_approved: "Rechnung freigegeben",
   invoice_paid: "Rechnung bezahlt",
   invoice_fully_credited: "Schlussrechnung vollständig verrechnet",
+  invoice_correction_proposed:
+    "Überzahlungskorrektur zur Bestätigung vorgelegt",
+  invoice_correction_acknowledged: "Überzahlungskorrektur bestätigt",
+  invoice_correction_disputed: "Überzahlungskorrektur beanstandet",
+  invoice_correction_withdrawn: "Überzahlungskorrektur zurückgezogen",
+  invoice_correction_repayment_recorded:
+    "Rückzahlung einer Überzahlung erfasst",
+  invoice_correction_repayment_voided:
+    "Rückzahlungseintrag zu einer Überzahlung berichtigt",
   invoice_rejected: "Rechnung abgelehnt",
   invoice_cancelled: "Rechnung storniert",
   payment_received: "Zahlung eingegangen",
@@ -133,6 +142,12 @@ const en: Record<keyof typeof de, string> = {
   invoice_approved: "Invoice approved",
   invoice_paid: "Invoice paid",
   invoice_fully_credited: "Final invoice fully credited",
+  invoice_correction_proposed: "Overpayment correction ready for confirmation",
+  invoice_correction_acknowledged: "Overpayment correction acknowledged",
+  invoice_correction_disputed: "Overpayment correction disputed",
+  invoice_correction_withdrawn: "Overpayment correction withdrawn",
+  invoice_correction_repayment_recorded: "Repayment of an overpayment recorded",
+  invoice_correction_repayment_voided: "Overpayment repayment entry voided",
   invoice_rejected: "Invoice rejected",
   invoice_cancelled: "Invoice cancelled",
   payment_received: "Payment received",

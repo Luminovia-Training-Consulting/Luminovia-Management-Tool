@@ -1065,7 +1065,12 @@ export function FinancePage() {
   const profile = useQuery(profileQuery(actor));
   const manager = access.data?.can_manage_finance ?? false;
   const [all, setAll] = useState(false);
-  const effectiveAll = manager && all;
+  const linkedClaim = z.uuid().safeParse(searchParams.get("series"));
+  const linkedSeriesId =
+    access.isSuccess && manager && linkedClaim.success
+      ? linkedClaim.data
+      : null;
+  const effectiveAll = manager && (all || linkedSeriesId !== null);
   const earnings = useQuery({
     ...earningsQuery(actor, effectiveAll),
     enabled: !access.isPending,
@@ -1079,6 +1084,19 @@ export function FinancePage() {
     InvoiceException | InvoiceSeriesRecord | null
   >(null);
   const [manageSeries, setManageSeries] = useState<EarningRecord | null>(null);
+  const seriesDialog =
+    manager &&
+    (linkedSeriesId
+      ? earnings.data?.find((row) => row.claim_id === linkedSeriesId)
+      : manageSeries);
+  const closeSeries = () => {
+    setManageSeries(null);
+    if (searchParams.has("series")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("series");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const seriesRecords = useQuery({
     ...invoiceSeriesRecordsQuery(actor, effectiveAll),
     enabled: online && (effectiveAll || canSubmit),
@@ -1178,8 +1196,11 @@ export function FinancePage() {
         <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={all}
-            onChange={(event) => setAll(event.target.checked)}
+            checked={effectiveAll}
+            onChange={(event) => {
+              setAll(event.target.checked);
+              if (!event.target.checked && linkedSeriesId) closeSeries();
+            }}
           />
           {t("allPeople")}
         </label>
@@ -1419,13 +1440,14 @@ export function FinancePage() {
           </section>
         </>
       )}
-      {manageSeries && (
+      {seriesDialog && (
         <ManageInvoiceSeries
+          key={seriesDialog.claim_id}
           actor={actor}
-          claimId={manageSeries.claim_id}
-          title={manageSeries.title}
-          canManageCorrections={manageSeries.lecturer_id !== actor}
-          close={() => setManageSeries(null)}
+          claimId={seriesDialog.claim_id}
+          title={seriesDialog.title}
+          canManageCorrections={seriesDialog.lecturer_id !== actor}
+          close={closeSeries}
         />
       )}
       <Dialog

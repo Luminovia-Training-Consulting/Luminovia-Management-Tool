@@ -1054,11 +1054,21 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
             expect(proposalResponse.status(), await proposalResponse.text()).toBe(200);
             const correctionId = await proposalResponse.json();
 
-            await page.goto("/finance");
+            await page.goto("/notifications");
+            const proposalNotice = page.locator(".inbox-list > .notification-row").filter({
+                hasText: "Überzahlungskorrektur zur Bestätigung vorgelegt",
+            });
+            await expect(proposalNotice).toBeVisible();
+            await expect(proposalNotice).not.toContainText("35,00");
+            await expect(proposalNotice).not.toContainText("Fiktive Prüfung");
+            const proposalLink = proposalNotice.getByRole("link");
+            await expect(proposalLink).toHaveAttribute("href", `/finance#correction-${correctionId}`);
+            await proposalLink.click();
             const card = page.locator("section.invoice-review-request-list").filter({
                 has: page.getByRole("heading", {name: "Korrektur überzahlter Abschläge", exact: true}),
             }).locator("article").filter({hasText: job.title});
             await expect(card.getByText("Bestätigung ausstehend", {exact: true})).toBeVisible();
+            await expect(card).toBeFocused();
             await card.getByText("Verrechnete Zahlungsbelege", {exact: true}).click();
             await expect(card.getByText(new RegExp(firstNumber + ".*50,25"))).toBeVisible();
             await expect(card.getByText(new RegExp(secondNumber + ".*59,75"))).toBeVisible();
@@ -1082,7 +1092,16 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
                 expect(response.status(), await response.text()).toBe(200);
                 return await response.json();
             };
-            await openSeries();
+            await financePage.goto("/notifications");
+            const responseNotice = financePage.locator(".inbox-list > .notification-row").filter({
+                hasText: "Überzahlungskorrektur bestätigt",
+            });
+            await expect(responseNotice).toBeVisible();
+            await expect(responseNotice).not.toContainText("35,00");
+            const responseLink = responseNotice.getByRole("link");
+            await expect(responseLink).toHaveAttribute("href", `/finance?series=${job.claimId}`);
+            await responseLink.click();
+            await expect(managementDialog).toBeVisible();
             const firstReceipt = await registerReceipt("20", `R-${tag}-1`);
             await expect(managementDialog.getByText(/^15,00\s*€$/)).toBeVisible();
             const lastReceipt = await registerReceipt("15", `R-${tag}-2`);

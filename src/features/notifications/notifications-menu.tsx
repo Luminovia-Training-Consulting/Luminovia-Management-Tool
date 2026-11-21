@@ -56,7 +56,7 @@ export function NotificationsMenu({
   const location = useLocation();
   useEffect(() => {
     if (menu.current) menu.current.open = false;
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, location.hash]);
   useEffect(() => {
     // Desktop and mobile render separate bells. A pointer in one also closes
     // the other without moving focus away from the newly selected control.

@@ -935,7 +935,7 @@ function correction(): InvoiceSeriesCorrection {
   };
 }
 
-function managementCorrection() {
+function managementCorrection(path = "/finance") {
   earnings = [
     { ...earning(seriesClaim), lecturer_id: "fictional-other-lecturer" },
   ];
@@ -972,7 +972,7 @@ function managementCorrection() {
       error: null,
     }),
   );
-  view(["/finance"], ["management"]);
+  view([path], ["management"]);
 }
 
 it("requires the lecturer to confirm the displayed negative balance and reviewed terms", async () => {
@@ -1125,4 +1125,53 @@ it("caps the recorded repayment at the acknowledged outstanding amount", async (
     p_reference: "FIKT-REF",
     p_client_id: expect.any(String),
   });
+});
+
+it("opens the matching management dialogue from an authorized finance notice", async () => {
+  corrections = [
+    { ...correction(), state: "disputed", dispute_note: "Fiktiver Einwand." },
+  ];
+  managementCorrection("/finance?series=" + seriesClaim);
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "Rechnungsserie öffnen" }),
+  );
+  expect(await dialog.findByText("Beanstandet")).toBeVisible();
+  expect(calls("finance_earnings")).toContainEqual([
+    "finance_earnings",
+    { p_all: true },
+  ]);
+  expect(calls("invoice_series_corrections")).toContainEqual([
+    "invoice_series_corrections",
+    { p_claim_id: seriesClaim, p_all: true },
+  ]);
+  await userEvent.click(dialog.getByRole("button", { name: "Schließen" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(screen.getByLabelText("Alle Dozierenden anzeigen")).not.toBeChecked();
+});
+
+it("keeps a management link out of a lecturer's own finance scope", async () => {
+  access.can_manage_finance = false;
+  view(["/finance?series=" + seriesClaim]);
+  await screen.findByRole("heading", { name: "FICTIONAL-001" });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(calls("finance_earnings")).toEqual([
+    ["finance_earnings", { p_all: false }],
+  ]);
+  expect(calls("invoice_series_corrections")).toEqual([
+    ["invoice_series_corrections", { p_claim_id: null, p_all: false }],
+  ]);
+});
+
+it("focuses the requested own correction after the authorized list loads", async () => {
+  access.can_manage_finance = false;
+  corrections = [correction()];
+  view(["/finance#correction-" + correctionId]);
+  const item = await screen.findByText("Fictional reviewed overpayment");
+  expect(item.closest("article")).toHaveAttribute(
+    "id",
+    "correction-" + correctionId,
+  );
+  expect(item.closest("article")).toHaveFocus();
 });

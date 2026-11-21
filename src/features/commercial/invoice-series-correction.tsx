@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -668,17 +669,32 @@ export function ManageInvoiceSeriesCorrections({
 export function MyInvoiceSeriesCorrections({ actor }: { actor: string }) {
   const { t } = useTranslation("commercial");
   const online = useOnline();
+  const { hash } = useLocation();
   const result = useQuery({
     ...invoiceSeriesCorrectionsQuery(actor, null, false),
     enabled: online,
   });
+  const target = result.data?.entries.find(
+    (item) => hash === "#correction-" + item.id,
+  )?.id;
+  useEffect(() => {
+    if (!target) return;
+    const article = document.getElementById("correction-" + target);
+    article?.focus({ preventScroll: true });
+    article?.scrollIntoView?.({ block: "nearest" });
+  }, [target]);
   if (result.isError) return <ErrorState retry={() => void result.refetch()} />;
   if (!result.data?.entries.length) return null;
   return (
     <section className="panel invoice-review-request-list">
       <h2>{t("correctionHeading")}</h2>
       {result.data.entries.map((item) => (
-        <article key={item.id} className="invoice-review-row">
+        <article
+          key={item.id}
+          id={"correction-" + item.id}
+          tabIndex={-1}
+          className="invoice-review-row"
+        >
           <div>
             <strong>{item.title}</strong>
             <CorrectionFacts item={item} />

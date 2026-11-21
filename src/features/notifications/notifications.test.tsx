@@ -148,7 +148,7 @@ afterEach(() => {
 });
 
 /** Render the subject with the local providers required by this test. */
-function view(component: React.ReactNode) {
+function view(component: React.ReactNode, initialEntries = ["/"]) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -159,7 +159,7 @@ function view(component: React.ReactNode) {
   client.setQueryData(["user-roles", state.actor], state.roles);
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>{component}</MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>{component}</MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -694,4 +694,106 @@ it("shows a participant's course inbox without offering operational preferences 
   expect(state.rpc.mock.calls.map(([name]) => name)).toEqual([
     "notification_inbox",
   ]);
+});
+
+it.each([
+  [
+    "de",
+    [
+      "Überzahlungskorrektur zur Bestätigung vorgelegt",
+      "Überzahlungskorrektur bestätigt",
+      "Überzahlungskorrektur beanstandet",
+      "Überzahlungskorrektur zurückgezogen",
+      "Rückzahlung einer Überzahlung erfasst",
+      "Rückzahlungseintrag zu einer Überzahlung berichtigt",
+    ],
+  ],
+  [
+    "en",
+    [
+      "Overpayment correction ready for confirmation",
+      "Overpayment correction acknowledged",
+      "Overpayment correction disputed",
+      "Overpayment correction withdrawn",
+      "Repayment of an overpayment recorded",
+      "Overpayment repayment entry voided",
+    ],
+  ],
+])(
+  "displays all six %s correction notices and exact internal links without a resource title",
+  async (language, labels) => {
+    await i18n.changeLanguage(language);
+    const opaqueId = notice.id;
+    const cases = [
+      ["proposed", "/finance#correction-" + opaqueId],
+      ["acknowledged", "/finance?series=" + opaqueId],
+      ["disputed", "/finance?series=" + opaqueId],
+      ["withdrawn", "/finance#correction-" + opaqueId],
+      ["repayment_recorded", "/finance#correction-" + opaqueId],
+      ["repayment_voided", "/finance#correction-" + opaqueId],
+    ];
+    const items = cases.map(([action, href], index) => ({
+      ...notice,
+      id: opaqueId.slice(0, -1) + index,
+      kind: "invoice_correction_" + action,
+      title: "",
+      href,
+    }));
+    state.rpc.mockImplementation((name: string) => {
+      const request = Promise.resolve({
+        data:
+          name === "notification_inbox"
+            ? {
+                items,
+                unread_count: items.length,
+                as_of: "2026-11-15T11:00:00Z",
+              }
+            : null,
+        error: null,
+      });
+      return Object.assign(request, { abortSignal: () => request });
+    });
+    view(<NotificationsPage />);
+    for (const [index, label] of labels.entries()) {
+      const row = (await screen.findByText(label)).closest("li")!;
+      expect(within(row).getByRole("link")).toHaveAttribute(
+        "href",
+        cases[index][1],
+      );
+      expect(row.querySelector("p")).not.toBeInTheDocument();
+    }
+  },
+);
+
+it("dismisses the bell popover when opening an own correction on the current Finance page", async () => {
+  state.rpc.mockImplementation((name: string) => {
+    const request = Promise.resolve({
+      data:
+        name === "notification_inbox"
+          ? {
+              items: [
+                {
+                  ...notice,
+                  kind: "invoice_correction_proposed",
+                  href: "/finance#correction-" + notice.id,
+                  title: "",
+                },
+              ],
+              unread_count: 1,
+              as_of: "2026-11-15T11:00:00Z",
+            }
+          : null,
+      error: null,
+    });
+    return Object.assign(request, { abortSignal: () => request });
+  });
+  const { container } = view(<NotificationsMenu id="actor-a" zone="UTC" />, [
+    "/finance",
+  ]);
+  const disclosure =
+    container.querySelector<HTMLDetailsElement>(".notification-menu")!;
+  fireEvent.click(disclosure.querySelector("summary")!);
+  expect(disclosure.open).toBe(true);
+  await userEvent.click(await screen.findByRole("link", { name: "Öffnen" }));
+  expect(disclosure.open).toBe(false);
 });

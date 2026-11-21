@@ -18,6 +18,10 @@ Both older CI browser jobs reproduced a combined-role header overflow at 1440px.
 
 The automatic merge workflow previously attempted protected token setup when both App settings were absent. Automatic sweeps now report that configuration state before the token step. Explicit invocations with pending work, partial configurations and unexpected App identities continue to fail. The tested release gate and review checks use their existing permissions.
 
+An additional migration adds role-scoped inbox notices for the correction proposal, lecturer response, withdrawal and actual repayment entries. Stale proposals, corrected entries and revoked roles are rechecked before projection. Desktop and mobile Chromium followed the lecturer's focused correction link and the finance series dialog link without exposing balances or notes in the inbox. The separate PostgreSQL suite checks exact event routing, repeated writes and access removal.
+
+The broader isolated SQL run passed all 157 earlier database suites with the patched Teaching Day fixture and the real Vault and safeupdate libraries. The new correction-notice suite and the existing notification and invoice-series suites passed on the additional migration. The latest authored changes received focused tests in both languages.
+
 # 22 November 2026 — Customer credit-note evidence and reviewed export dates
 
 Gross-finance staff can register an already-issued credit note against its original customer invoice. The record retains the clean PDF version and digest, external reference, original currency and reviewed amount. Duplicate requests have one receipt and concurrent amounts are capped against the original invoice. Authorised staff can download the exact version after reopening the dialog. The source invoice's balances, accepted charges, payment records and existing accounting/1 export remain unchanged.
