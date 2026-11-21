@@ -239,6 +239,17 @@ beforeEach(async () => {
                   exams: { ...workspace.exams, required: fake.examRequired },
                 };
           break;
+        case "course_class_options":
+          if (fake.foreignCourse || fake.withdrawn) error = { code: "42501" };
+          data = {
+            version: 0,
+            can_edit:
+              fake.licence === "active" && fake.actor !== "fictional-learner",
+            current: null,
+            classes: [],
+            courses: [],
+          };
+          break;
         case "course_withdrawal_window":
           data = {
             deadline_at: fake.withdrawalAvailable

@@ -47,6 +47,7 @@ import { AcademyInstructors } from "./academy-instructors";
 import { AcademyCoursePublication } from "./academy-publication";
 import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
+import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
@@ -1065,6 +1066,12 @@ function CourseWorkspaceLayout({
         <div className="course-room-content">
           <div className="course-room-section" id="course-overview">
             <CourseBasics course={course} />
+            <CourseClasses
+              key={`${actor}:${course.id}`}
+              actor={actor}
+              courseId={course.id}
+              editor={course.access.manager || course.access.client}
+            />
             <CourseWelcomeContent
               key={course.id}
               actor={actor}
