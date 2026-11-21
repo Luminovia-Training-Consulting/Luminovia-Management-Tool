@@ -112,7 +112,7 @@ class RelaySmtpTests(unittest.TestCase):
     def setUp(self):
         self.relay = relay_module.MailRelay(CONFIG)
 
-    def run_smtp_client(self, deliver, username=None, password=None):
+    def run_smtp_client(self, deliver, username=None, password=None, message=None):
         self.relay.deliver = deliver
 
         async def server_flow():
@@ -133,9 +133,9 @@ class RelaySmtpTests(unittest.TestCase):
                         return connection.sendmail(
                             "untrusted-sender@example.invalid",
                             ["student@example.invalid"],
-                            "From: Wrong Sender <attacker@example.invalid>\r\n"
+                            message or ("From: Wrong Sender <attacker@example.invalid>\r\n"
                             "To: Student <student@example.invalid>\r\n"
-                            "Subject: Fictional relay test\r\n\r\nFictional message\r\n",
+                            "Subject: Fictional relay test\r\n\r\nFictional message\r\n"),
                         )
 
                 return await asyncio.to_thread(send)
@@ -158,6 +158,45 @@ class RelaySmtpTests(unittest.TestCase):
         with self.assertRaises(smtplib.SMTPAuthenticationError):
             self.run_smtp_client(deliver, password="wrong-fictional-password")
         deliver.assert_not_called()
+
+    def test_academy_listener_requires_current_single_use_ticket_before_provider_envelope(self):
+        self.relay = relay_module.MailRelay(replace(CONFIG, academy_notifications=True))
+        self.relay.current_transport = Mock(return_value={
+            "enabled": True, "host": "smtp.example.com", "port": 465, "version": 2,
+            "security": "implicit_tls", "username": "sender@example.com",
+            "password": "fictional-upstream-password", "sender_email": "sender@example.com",
+            "sender_name": "Fictional Academy",
+        })
+        ticket = "abcdef12-3456-7890-1234-567890abcdef"
+        raw = ("From: Private worker <relay@example.invalid>\r\n"
+               "To: student@example.invalid\r\n"
+               "Subject: New course alert\r\n"
+               f"X-Luminovia-Notification-Lease: {TEST_ID} {ticket}\r\n\r\n"
+               "Open your fictional academy inbox.\r\n")
+        self.relay.rpc = Mock(side_effect=[False, True])
+        upstream = Mock()
+        upstream.ehlo.return_value = (250, b"OK")
+        upstream.mail.return_value = (250, b"OK")
+        upstream.rcpt.return_value = (250, b"OK")
+        upstream.data.return_value = (250, b"OK")
+        with patch.object(relay_module, "PinnedSMTPSSL", return_value=upstream):
+            with self.assertRaises(smtplib.SMTPDataError) as no_lease:
+                self.run_smtp_client(self.relay.deliver)
+            self.assertEqual(no_lease.exception.smtp_code, 550)
+            with self.assertRaises(smtplib.SMTPDataError) as revoked:
+                self.run_smtp_client(self.relay.deliver, message=raw)
+            self.assertEqual(revoked.exception.smtp_code, 550)
+            upstream.mail.assert_not_called()
+            upstream.rcpt.assert_not_called()
+            upstream.data.assert_not_called()
+            self.assertEqual(self.run_smtp_client(self.relay.deliver, message=raw), {})
+        self.relay.rpc.assert_called_with("authorize_academy_notification_email", {
+            "p_id": TEST_ID, "p_lease_token": ticket, "p_recipient": "student@example.invalid",
+            "p_transport_version": 2,
+        })
+        upstream.mail.assert_called_once_with("sender@example.com")
+        self.assertNotIn(b"X-Luminovia-Notification-Lease", upstream.data.call_args.args[0])
+        self.assertNotIn(ticket.encode(), upstream.data.call_args.args[0])
 
     def test_delivery_rewrites_sender_before_provider_submission(self):
         settings = {

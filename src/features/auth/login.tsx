@@ -3,6 +3,7 @@
  * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
  */
 import { portalInternalEdition } from "../../lib/installation-brand";
+import { AcademyBrandImage } from "../branding/academy-logo-image";
 import { useAcademyBrand } from "../branding/academy-branding";
 import { type ReactNode, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -96,11 +97,19 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
   return (
     <div className="login-layout">
       <section className="login-story">
-        <img
-          className="brand-full"
-          src={brand.logo}
-          alt={portalInternalEdition ? "Luminovia Training & Consulting" : ""}
-        />
+        {portalInternalEdition ? (
+          <img
+            className="brand-full"
+            src={brand.logo}
+            alt="Luminovia Training & Consulting"
+          />
+        ) : (
+          <AcademyBrandImage
+            className="brand-full academy-logo-preview"
+            fallback={brand.logo}
+            alt=""
+          />
+        )}
         <div>
           {portalInternalEdition && (
             <span className="eyebrow">{brand.name}</span>

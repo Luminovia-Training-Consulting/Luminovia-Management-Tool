@@ -9,6 +9,7 @@ import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
+import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
 import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
@@ -64,6 +65,9 @@ async function bounded(request: Request, limit: number): Promise<Uint8Array> {
     return all;
 }
 
+const scanPortalFile = (bytes: Uint8Array) =>
+    scan(bytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
+
 // Each request owns its user client; never share Auth state or other sessions between requests.
 Deno.serve(async (request: Request) => {
     const origin = request.headers.get('origin') ?? '';
@@ -89,7 +93,36 @@ Deno.serve(async (request: Request) => {
             const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
             if (profile.error || !profile.data?.active) throw new Error('access_denied');
         };
-        const query = new URL(request.url).search;
+        const requestUrl = new URL(request.url);
+        if (requestUrl.searchParams.get('mode') === 'academy-logo') {
+            const version = academyLogoVersion(requestUrl.searchParams);
+            if (version === null) return json(400, {error: 'invalid_request'});
+            if (request.headers.get('content-type') !== 'image/png') return json(415, {error: 'unsupported_type'});
+            const check = () => user.rpc('check_academy_logo_write', {p_expected_version: version});
+            const authorization = (error: {code: string}) => error.code === 'PT409'
+                ? json(409, {error: 'logo_changed'})
+                : json(403, {error: 'access_denied'});
+            const before = await check();
+            if (before.error) return authorization(before.error);
+            const bytes = await bounded(request, logoMaxBytes);
+            const verdict = await verifyAcademyLogo(bytes, scanPortalFile);
+            if (typeof verdict === 'number') {
+                if (verdict === 503) return json(503, {error: 'scanner_unavailable'});
+                if (verdict === 422) return json(422, {error: 'scan_rejected'});
+                return json(415, {error: 'invalid_logo'});
+            }
+            const after = await check();
+            if (after.error) return authorization(after.error);
+            const published = await service.rpc('publish_academy_scanned_logo', {
+                p_actor: actor, p_expected_version: version,
+                p_png_hex: Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(''),
+                p_scanner: verdict.version,
+            });
+            if (published.error) return ['PT409', '42501'].includes(published.error.code)
+                ? authorization(published.error) : json(503, {error: 'upload_failed'});
+            return json(200, published.data);
+        }
+        const query = requestUrl.search;
         const examReservation = query === academyStudentExamQuery ? 'reserve_academy_student_exam_pdf'
             : query === academyAnswerKeyQuery ? 'reserve_academy_answer_key_pdf' : null;
         const academyChat = query === academyCourseChatQuery;
@@ -243,7 +276,7 @@ Deno.serve(async (request: Request) => {
                 // Scanner failure remains scan_error. Only an actual clean result reaches promotion.
                 let verdict: { clean: boolean; version: string };
                 try {
-                    verdict = await scan(storedBytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
+                    verdict = await scanPortalFile(storedBytes);
                 } catch {
                     if (protectedUpload) await academyScan('scan_error', lease, null, null);
                     else {

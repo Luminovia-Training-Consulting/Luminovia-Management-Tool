@@ -4,6 +4,7 @@
  * confirmed as the first administrator once the dedicated instance is prepared.
  */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { lstatSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
@@ -17,12 +18,71 @@ import {
 } from "./academy-migrations.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 
+import {
+  academyBrandColor,
+  academyBrandName,
+  academyBrandShortName,
+} from "../src/features/branding/academy-branding-schema.ts";
+
 const sqlText = (value) => "'" + String(value).replaceAll("'", "''") + "'";
 const authIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
+function requirePrivateAcademyRuntime(root) {
+  if (!isAbsolute(root ?? "") || realpathSync(root) !== root)
+    throw new Error("academy_database_runtime_path");
+  const info = lstatSync(root);
+  if (!info.isDirectory() || info.uid !== process.getuid() || info.mode & 0o077)
+    throw new Error("academy_database_runtime_path");
+}
+
+/** Read only the staged local manifest after matching the private release receipt. */
+export async function readStagedAcademyDocumentBrand(root, expected) {
+  requirePrivateAcademyRuntime(root);
+  const browser = join(root, "browser");
+  const staged = join(browser, "current");
+  if (realpathSync(staged) !== staged)
+    throw new Error("academy_database_staged_manifest_path");
+  const receiptPath = join(browser, "release.json");
+  const first = await readAcademyOperatorInput(receiptPath);
+  const { release, brand_manifest_sha256: hash } = JSON.parse(
+    first.toString("utf8"),
+  );
+  if (
+    release?.installation_id !== expected.installation_id ||
+    release.edition !== expected.edition ||
+    release.source_revision !== expected.release_commit
+  )
+    throw new Error("academy_database_runtime_release_mismatch");
+  const bytes = await readAcademyOperatorInput(
+    join(staged, "manifest.webmanifest"),
+  );
+  if (
+    !first.equals(await readAcademyOperatorInput(receiptPath)) ||
+    (hash !== undefined &&
+      createHash("sha256").update(bytes).digest("hex") !== hash)
+  )
+    throw new Error("academy_database_staged_manifest_changed");
+  const manifest = JSON.parse(bytes.toString("utf8"));
+  return {
+    name: academyBrandName.parse(manifest.name),
+    short_name: academyBrandShortName.parse(manifest.short_name),
+    theme_color: academyBrandColor.parse(manifest.theme_color).toLowerCase(),
+  };
+}
+
+function pinPdfBrand(terms, brand) {
+  if (!brand) return "";
+  const name = academyBrandName.parse(brand.name);
+  const shortName = academyBrandShortName.parse(brand.short_name);
+  const color = academyBrandColor.parse(brand.theme_color);
+  return `select private.pin_academy_pdf_release_brand(
+    ${sqlText(terms.installation_id)}::uuid, ${sqlText(terms.release_commit)},
+    ${sqlText(name)}, ${sqlText(shortName)}, ${sqlText(color)});`;
+}
+
 /** Forward only verified terms and confirm that the database accepted the same installation. */
 export async function prepareAcademyInstallation(
-  { envelope, publicKey, expected, now, firstAdministrator },
+  { envelope, publicKey, expected, now, firstAdministrator, releasePdfBrand },
   executeSql,
 ) {
   const { state, terms } = verifyAcademyLicence(
@@ -47,6 +107,7 @@ export async function prepareAcademyInstallation(
     begin;
     select private.provision_customer_installation(${sqlText(terms.installation_id)}::uuid,${sqlText(terms.edition)});
     select private.apply_verified_installation_licence(${sqlText(JSON.stringify(terms))}::jsonb);
+    ${pinPdfBrand(terms, releasePdfBrand)}
     select public.installation_capabilities()${receipt};
     commit;
   `);
@@ -62,11 +123,48 @@ export async function prepareAcademyInstallation(
   return current;
 }
 
+/** Return an operator's current release and licence inventory without taking write locks. */
+export async function readAcademyInstallationStatus(
+  { envelope, publicKey, expected, now },
+  executeSql,
+) {
+  const { terms } = verifyAcademyLicence(envelope, publicKey, expected, now);
+  const output = await executeSql(String.raw`
+    begin read only;
+    select to_regclass('supabase_migrations.schema_migrations') is not null
+      as academy_has_ledger \gset
+    \if :academy_has_ledger
+    select jsonb_build_object('count',count(*),'last_version',max(version))
+      as academy_ledger from supabase_migrations.schema_migrations \gset
+    \else
+    \set academy_ledger 'null'
+    \endif
+    select jsonb_build_object(
+      'installation_id', capability.installation_id,
+      'edition', capability.edition,
+      'release_commit', licence.terms->>'release_commit',
+      'licence_status', capability.licence_status,
+      'licence_expires_at', licence.expires_at,
+      'licence_grace_until', licence.grace_until,
+      'course_access_status', private.academy_course_access_status(),
+      'migration_ledger', :'academy_ledger'::jsonb
+    )
+    from public.installation_capability_state capability
+    join private.installation_verified_licence licence using (installation_id)
+    where capability.installation_id = ${sqlText(terms.installation_id)}::uuid
+      and capability.edition = ${sqlText(terms.edition)}
+      and licence.terms->>'release_commit' = ${sqlText(terms.release_commit)};
+    commit;
+  `);
+  if (!output.trim()) throw new Error("academy_status_target_mismatch");
+  return JSON.parse(output.trim());
+}
+
 /** Open or close only the course profile for a prepared, exact licensed release.
  * An expired signed licence remains sufficient to close its own profile.
  */
 export async function configureAcademyCourseAccess(
-  { envelope, publicKey, expected, now, enabled },
+  { envelope, publicKey, expected, now, enabled, releasePdfBrand },
   executeSql,
 ) {
   const { state, terms } = verifyAcademyLicence(
@@ -83,6 +181,7 @@ export async function configureAcademyCourseAccess(
   const release = sqlText(terms.release_commit);
   const result = await executeSql(`
     begin;
+    ${enabled ? pinPdfBrand(terms, releasePdfBrand) : ""}
     select private.configure_academy_course_access(${installation}::uuid, ${release}, ${enabled})
     from private.installation_identity
     where installation_id = ${installation}::uuid and edition = ${sqlText(terms.edition)};
@@ -110,11 +209,7 @@ export async function configureAcademyCourseAccess(
 
 /** Pin the private Compose target to this generated runtime and staged release. */
 export async function academyDatabaseComposeArguments(root, expected) {
-  if (!isAbsolute(root ?? "") || realpathSync(root) !== root)
-    throw new Error("academy_database_runtime_path");
-  const info = lstatSync(root);
-  if (!info.isDirectory() || info.uid !== process.getuid() || info.mode & 0o077)
-    throw new Error("academy_database_runtime_path");
+  requirePrivateAcademyRuntime(root);
   const browser = join(root, "browser");
   if (realpathSync(browser) !== browser)
     throw new Error("academy_database_runtime_path");
@@ -273,6 +368,7 @@ if (
     const [option, value] = extra;
     const courseAccess = option === "--course-access";
     const migrations = option === "--migrate" && extra.length === 1;
+    const status = option === "--status" && extra.length === 1;
     if (
       !licence ||
       !key ||
@@ -281,6 +377,7 @@ if (
       !release ||
       (extra.length > 0 &&
         !migrations &&
+        !status &&
         (extra.length !== 2 ||
           (courseAccess
             ? !["on", "off"].includes(value)
@@ -303,22 +400,34 @@ if (
     let result;
     if (migrations) {
       result = await migrateAcademyInstallation(input);
+    } else if (status) {
+      result = await readAcademyInstallationStatus(
+        input,
+        await operatorSql(input.expected),
+      );
     } else {
       const executeSql = await operatorSql(input.expected);
+      const root =
+        process.env.PORTAL_ACADEMY_RUNTIME_ROOT ??
+        process.env.PORTAL_ACADEMY_STAGED_BROWSER_ROOT;
+      const releasePdfBrand =
+        root && (!courseAccess || value === "on")
+          ? await readStagedAcademyDocumentBrand(root, input.expected)
+          : undefined;
       result = courseAccess
         ? await configureAcademyCourseAccess(
-            { ...input, enabled: value === "on" },
+            { ...input, enabled: value === "on", releasePdfBrand },
             executeSql,
           )
         : await prepareAcademyInstallation(
-            { ...input, firstAdministrator: value },
+            { ...input, firstAdministrator: value, releasePdfBrand },
             executeSql,
           );
     }
     console.log(JSON.stringify(result));
   } catch (error) {
     const reason =
-      /^(?:academy_migration_[a-z_]+|academy_install_ingress_must_be_stopped)$/.test(
+      /^(?:academy_migration_[a-z_]+|academy_install_ingress_must_be_stopped|academy_status_target_mismatch)$/.test(
         error?.message,
       )
         ? ` (${error.message})`

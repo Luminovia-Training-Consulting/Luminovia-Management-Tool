@@ -275,5 +275,220 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     console.log(
       `PASS ${edition}: committed course inbox, paging/mark, current scope and no external queues`,
     );
+
+    const deliver = (name, args = "", method = "POST") =>
+      sql(`begin;set local role service_role;
+        set local request.jwt.claims='{"role":"service_role"}';
+        set local request.path=${q("/rpc/" + name)};
+        set local request.method=${q(method)};
+        select public.require_portal_access();
+        select coalesce(to_jsonb(public.${name}(${args})),'null'::jsonb);commit;`).then(
+        JSON.parse,
+      );
+    const send = (text) =>
+      request(
+        teacher,
+        "send_course_chat_message",
+        `${q(room)},${q(text)},${q(randomUUID())}`,
+      );
+    const lease = async () =>
+      (await deliver("lease_notification_emails", "1"))[0];
+    const leaseArgs = (item) => `${q(item.id)},${q(item.lease_token)}`;
+    const prepare = (item) =>
+      deliver("prepare_notification_email", leaseArgs(item));
+    const authorize = (
+      item,
+      recipient = learner + "@example.invalid",
+      version = 1,
+    ) =>
+      deliver(
+        "authorize_academy_notification_email",
+        `${leaseArgs(item)},${q(recipient)},${version}`,
+      );
+    const finish = (item, outcome) =>
+      deliver("finish_notification_email", `${leaseArgs(item)},${q(outcome)}`);
+    const saveEmail = async (enabled, quiet = {}) => {
+      const preferences = JSON.parse(
+        await request(learner, "delivery_preferences"),
+      );
+      const payload = {
+        email_enabled: enabled,
+        quiet_start: null,
+        quiet_end: null,
+        time_zone: "UTC",
+        ...quiet,
+      };
+      const updated = JSON.parse(
+        await request(
+          learner,
+          "save_delivery_preferences",
+          `${q(JSON.stringify(payload))},${preferences.version}`,
+        ),
+      );
+      const schema =
+        api.paths["/rest/v1/rpc/save_delivery_preferences"].post.responses[
+          "200"
+        ].content["application/json"].schema;
+      assert.equal(z.fromJSONSchema(schema).safeParse(updated).success, true);
+      return updated;
+    };
+    await request(
+      manager,
+      "manage_course_enrolment",
+      `${q(course)},${q(learner)},'enrolled'`,
+    );
+    await request(
+      manager,
+      "save_mail_configuration",
+      `0,${q(
+        JSON.stringify({
+          enabled: true,
+          host: "smtp.example.com",
+          port: 465,
+          security: "implicit_tls",
+          username: "sender@example.invalid",
+          sender_email: "sender@example.invalid",
+          sender_name: "Fictional Academy",
+          password: "fictional-password-only",
+        }),
+      )},'{"enabled":false}'`,
+    );
+    assert.equal(
+      await sql("select count(*) from private.notification_email_outbox"),
+      "0",
+    );
+    await saveEmail(false);
+    await send("Fictional opted-out marker");
+    assert.equal(
+      await sql("select count(*) from private.notification_email_outbox"),
+      "0",
+    );
+    await saveEmail(true);
+    await send("Fictional private opt-in marker");
+    assert.equal(
+      await sql("select count(*) from private.notification_email_outbox"),
+      "1",
+    );
+    await assert.rejects(
+      request(learner, "lease_notification_emails", "1"),
+      /42501/,
+    );
+    await assert.rejects(
+      deliver("lease_notification_emails", "1", "GET"),
+      /42501/,
+    );
+    await assert.rejects(
+      deliver("refresh_notification_reminders", "1"),
+      /42501/,
+    );
+    const scoped = await lease();
+    const prepared = await prepare(scoped);
+    assert.equal(prepared.recipient, learner + "@example.invalid");
+    assert.equal(prepared.kind, "chat_message");
+    assert.ok(
+      !JSON.stringify(prepared).includes("Fictional private opt-in marker"),
+    );
+    assert.equal(
+      await authorize(scoped, "out-of-scope@example.invalid"),
+      false,
+    );
+    assert.equal(
+      await authorize(scoped, learner + "@example.invalid", 0),
+      false,
+    );
+    assert.equal(await finish(scoped, "accepted"), false);
+    assert.equal(await authorize(scoped), true);
+    assert.equal(await authorize(scoped), false);
+    assert.equal(await finish(scoped, "accepted"), true);
+    assert.equal(await finish(scoped, "accepted"), true);
+
+    await send("Fictional private preference revocation");
+    const revoked = await lease();
+    assert.ok(await prepare(revoked));
+    await saveEmail(false);
+    assert.equal(await authorize(revoked), false);
+    await finish(revoked, "failed");
+    await saveEmail(true);
+
+    const [start, end] = JSON.parse(
+      await sql(`select jsonb_build_array(
+      to_char(now() at time zone 'UTC', 'HH24:MI'),
+      to_char((now()+interval '4 minutes') at time zone 'UTC','HH24:MI')
+    )`),
+    );
+    await saveEmail(true, { quiet_start: start, quiet_end: end });
+    await send("Fictional private quiet-hours marker");
+    const sleeping = await lease();
+    assert.equal(await prepare(sleeping), null);
+    assert.equal(
+      await sql(
+        `select (state='pending' and attempts=0 and available_at>now()) from private.notification_email_outbox where id=${q(sleeping.id)}`,
+      ),
+      "t",
+    );
+    await saveEmail(true);
+
+    await send("Fictional private enrolment revocation");
+    const withdrawn = await lease();
+    await request(
+      manager,
+      "manage_course_enrolment",
+      `${q(course)},${q(learner)},'removed'`,
+    );
+    assert.equal(await prepare(withdrawn), null);
+    assert.equal(
+      await sql(
+        `select state from private.notification_email_outbox where id=${q(withdrawn.id)}`,
+      ),
+      "suppressed",
+    );
+    await request(
+      manager,
+      "manage_course_enrolment",
+      `${q(course)},${q(learner)},'enrolled'`,
+    );
+    await send("Fictional private licensed access revocation");
+    const closed = await lease();
+    assert.ok(await prepare(closed));
+    await configure(false);
+    await assert.rejects(deliver("lease_notification_emails", "1"), /42501/);
+    await assert.rejects(authorize(closed), /42501/);
+    assert.equal(await finish(closed, "failed"), true);
+
+    await configure(true);
+    await send("Fictional queued notice before changing release");
+    const superseded = await lease();
+    const nextTerms = {
+      ...terms,
+      release_commit: "ba".repeat(20),
+      issued_at: time(-1),
+      starts_at: time(-1),
+    };
+    await prepareAcademyInstallation(
+      {
+        envelope: signAcademyLicence(nextTerms, privateKey),
+        publicKey,
+        expected: nextTerms,
+        now: Date.now(),
+      },
+      sql,
+    );
+    await sql(
+      `select private.configure_academy_course_access(${q(installation)},${q(nextTerms.release_commit)},true)`,
+    );
+    assert.equal(await prepare(superseded), null);
+    assert.equal(
+      await sql(
+        `select state from private.notification_email_outbox where id=${q(superseded.id)}`,
+      ),
+      "suppressed",
+    );
+    assert.equal(
+      await sql("select count(*) from private.notification_push_outbox"),
+      "0",
+    );
+    console.log(
+      `PASS ${edition}: opt-in SMTP, no inbox replay, quiet hours, exact single-use outbox lease, course and licence revocation`,
+    );
   });
 }

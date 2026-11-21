@@ -38,11 +38,17 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         api_requests_per_minute: 60,
       },
     };
+    const releasePdfBrand = {
+      name: "Fictional Practice Academy",
+      short_name: "Practice Academy",
+      theme_color: "#21436a",
+    };
     await prepareAcademyInstallation(
       {
         envelope: signAcademyLicence(terms, keys.privateKey),
         publicKey: keys.publicKey,
         expected: terms,
+        releasePdfBrand,
       },
       sql,
     );
@@ -50,7 +56,6 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       sql(
         `select private.configure_academy_course_access(${q(installation)},${q(terms.release_commit)},${active})`,
       );
-    await configure(true);
     const accounts = [
       [manager, "admin"],
       [teacher, "lecturer"],
@@ -70,6 +75,19 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at)
         values(${q(org)},${q(candidate)},'active',${q(link)},${q(manager)},now());`);
     }
+    const legacyRecord = randomUUID();
+    await sql(`insert into private.course_completion_records(id,run_id,user_id,snapshot)
+      values (${q(legacyRecord)},${q(course)},${q(peer)},
+        '{"course":"Retained course","participant":"Fictional learner","verified_minutes":42}');`);
+    await configure(true);
+    await assert.rejects(
+      actor(
+        peer,
+        `select private.pin_academy_pdf_release_brand(
+        ${q(installation)},${q(terms.release_commit)},'Other academy','Other','#090909')`,
+      ),
+      /42501/,
+    );
     const rpc = (who, endpoint, args = "") =>
       actor(
         who,
@@ -250,9 +268,51 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       payload(learner, "quiz_attempt", { ...attempt, answers: [0] }, 2),
       /22023/,
     );
+    const attendance = (who) =>
+      rpc(who, "course_document_access", `'attendance',${q(session)}`).then(
+        JSON.parse,
+      );
+    const renameBrand = (who, version, branding) =>
+      rpc(
+        who,
+        "save_academy_public_branding",
+        [version, branding.name, branding.short_name, branding.theme_color]
+          .map(q)
+          .join(","),
+      ).then(JSON.parse);
+    assert.deepEqual(
+      (await attendance(manager)).academy_pdf_brand,
+      releasePdfBrand,
+    );
+    await assert.rejects(attendance(learner), /42501/);
+    const issueBrand = {
+      name: "Fiktive Fachakademie",
+      short_name: "Fachakademie",
+      theme_color: "#234b70",
+    };
+    await assert.rejects(renameBrand(learner, 0, issueBrand), /42501/);
+    assert.equal((await renameBrand(manager, 0, issueBrand)).version, 1);
+    const renewal = {
+      name: "Renamed Fictional Academy",
+      short_name: "Renamed Academy",
+      theme_color: "#197360",
+    };
     const record = await payload(learner, "completion_issue");
     assert.deepEqual(await payload(learner, "completion_issue"), record);
     const facts = await download(learner, record.id);
+    assert.deepEqual(facts.academy_pdf_brand, issueBrand);
+    assert.equal((await renameBrand(manager, 1, renewal)).version, 2);
+    assert.deepEqual((await attendance(teacher)).academy_pdf_brand, renewal);
+    const legacyPdfFacts = await download(peer, legacyRecord);
+    assert.equal(legacyPdfFacts.course, "Retained course");
+    assert.equal(legacyPdfFacts.verified_minutes, 42);
+    assert.deepEqual(legacyPdfFacts.academy_pdf_brand, renewal);
+    assert.equal(
+      await sql(`select (academy_pdf_brand is null)::int from private.course_completion_records
+        where id=${q(legacyRecord)}`),
+      "1",
+    );
+    assert.deepEqual(await download(learner, record.id), facts);
     assert.equal(facts.verified_minutes, 60);
     assert.equal(facts.quiz_passed, true);
     assert.equal(facts.course, "Fictional assessed workshop");
@@ -325,7 +385,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       "1",
     );
     console.log(
-      `PASS ${edition}: private quiz, exact retry, evidence-based completion, PDF scope, grace and revocation`,
+      `PASS ${edition}: private quiz, exact retry, evidence-based completion, PDF scope, issued brand snapshots, live attendance branding, grace and revocation`,
     );
   });
 }

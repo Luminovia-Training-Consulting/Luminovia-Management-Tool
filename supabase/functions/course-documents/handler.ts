@@ -1,6 +1,7 @@
 /** Protected document boundary: exact caller/origin, finite inputs and a second
  * current-authorization/facts read after rendering or private byte access. */
 import {renderAttendanceCsv} from "./attendance-csv.ts";
+import {academyPdfBrand} from "./brand.ts";
 
 interface Dependencies {
     origins: string[];
@@ -170,9 +171,10 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             } else return json(400, "invalid_request");
             const first = await dependencies.rpc(token, name, args);
             if (first.error || !first.data) return json(403, "document_unavailable");
+            const brandPrefix = academyPdfBrand(kind, first.data) ? "course" : "luminovia";
             let bytes: Uint8Array,
                 mime = "application/pdf",
-                filename = `luminovia-${kind}.pdf`;
+                filename = `${brandPrefix}-${kind}.pdf`;
             if (
                 kind === "resource" || kind === "attendance_evidence" ||
                 kind === "exam" ||
@@ -220,7 +222,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 if (first.data.report_scope !== "session") return json(403, "document_unavailable");
                 bytes = renderAttendanceCsv(first.data);
                 mime = "text/csv; charset=utf-8";
-                filename = `luminovia-attendance-${body.id}.csv`;
+                filename = `${brandPrefix}-attendance-${body.id}.csv`;
             } else bytes = await dependencies.render(kind, first.data);
             // Re-check actual Auth and current database membership after potentially
             // slow storage/font work. Facts changing during rendering fail closed.

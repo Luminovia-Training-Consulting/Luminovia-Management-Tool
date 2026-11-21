@@ -78,3 +78,23 @@ Deno.test("an exact session PDF formats actual local time offsets and distinguis
     assert(pdf.getPageCount() === 1);
     assert(pdf.getTitle()?.includes("Attendance report"));
 });
+
+Deno.test("dedicated PDF metadata uses the issued academy brand and leaves the internal defaults intact", async () => {
+    const internal = await PDFDocument.load(await renderFactPdf("completion", facts, font));
+    assert(internal.getAuthor() === "Luminovia Training & Consulting");
+    assert(internal.getCreator() === "Luminovia Portal");
+    const academy = "Fiktive Fachakademie Ä · Μαρία";
+    const issued = {
+        ...facts,
+        academy_pdf_brand: {name: academy, short_name: "Fachakademie", theme_color: "#2b8574"},
+    };
+    const bytes = await renderFactPdf("completion", issued, font);
+    const document = await PDFDocument.load(bytes, {updateMetadata: false});
+    assert(document.getAuthor() === academy);
+    assert(document.getCreator() === academy);
+    assert(document.getProducer() === academy);
+    assert(document.getCreationDate()?.toISOString() === facts.issued_at.replace("Z", ".000Z"));
+    assert(document.getTitle()?.includes("Completion record"));
+    const repeat = await renderFactPdf("completion", issued, font);
+    assert(repeat.length === bytes.length && repeat.every((byte, index) => byte === bytes[index]));
+});

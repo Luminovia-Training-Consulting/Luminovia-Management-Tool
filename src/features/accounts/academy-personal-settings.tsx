@@ -21,6 +21,7 @@ import {
 import type { UiPreferencesPatch } from "../../lib/ui-preferences-schema";
 import { useAuth } from "../auth/auth-context";
 import { AuthenticatorSettings } from "../auth/authenticator";
+import { DeliverySettings } from "../notifications/delivery-settings";
 import {
   academyPersonalSettingsQuery,
   saveAcademyAppearance,
@@ -278,6 +279,7 @@ export function AcademyPersonalSettingsPage() {
         )}
       </section>
       {writable && <AuthenticatorSettings actor={actor} />}
+      {writable && <DeliverySettings actor={actor} />}
       <section className="panel">
         <h2>{word("Sprache und Design", "Language and appearance")}</h2>
         {writable ? (

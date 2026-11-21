@@ -130,17 +130,10 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       rpc(admin, "lease_company_course_webhook", "array['unknown']"),
       /42501/,
     );
-    await assert.rejects(
-      rpc(admin, "company_integration_keys", q(company)),
-      /42501/,
-    );
-    await assert.rejects(
-      actor(
-        admin,
-        `select public.issue_company_integration_key(${q(company)},'General',now()+interval '5 days',null,null)`,
-      ),
-      /42501/,
-    );
+    const courseIndexKeys = (who) =>
+      rpc(who, "company_integration_keys", q(company)).then(JSON.parse);
+    await assert.rejects(courseIndexKeys(manager), /42501/);
+    assert.deepEqual(await courseIndexKeys(admin), []);
     await assert.rejects(
       subscribe(admin, company, "https://example.invalid"),
       /22023/,
@@ -151,6 +144,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     assert.match(signing.signing_secret, /^[0-9a-f]{64}$/);
     await assert.rejects(subscribe(admin, company, "timing"), /23505/);
     assert.equal((await list(admin, company)).length, 1);
+    assert.deepEqual(await courseIndexKeys(admin), []);
     assert.doesNotMatch(
       JSON.stringify(await list(admin, company)),
       /secret|credential/,
@@ -214,7 +208,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     await assert.rejects(
       sql(
         "begin; set local role service_role; " +
-          request("integration_course_index") +
+          request("integration_course_index", "GET") +
           "commit;",
       ),
       /42501/,

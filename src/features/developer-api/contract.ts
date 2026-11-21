@@ -1,3 +1,4 @@
+import { companyCourseIndexPath } from "./company-course-index-contract.ts";
 import {
   companyCourseWebhook,
   companyWebhookDestination,
@@ -52,6 +53,11 @@ import {
 } from "../calendar/publications-schema.ts";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
+import {
+  courseClassAssignment,
+  courseClassOptions,
+} from "../learning/course-classes-schema.ts";
+import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
   readinessListSchema,
   readinessReceiptSchema,
@@ -673,6 +679,52 @@ const jobViewMutation = (
 });
 
 const nativePaths = {
+  "/rest/v1/rpc/course_class_options": rpc(
+    "readCourseClass",
+    "Courses",
+    "Read the school class of a course",
+    "Requires access to this Premium course. Course managers and scoped company contacts can also see their permitted class options and grouped courses.",
+    { p_course_id: uuid },
+    z.toJSONSchema(courseClassOptions),
+  ),
+  "/rest/v1/rpc/set_course_class": {
+    post: {
+      ...rpc(
+        "setCourseClass",
+        "Courses",
+        "Assign a course to a school class",
+        "Requires current course management or an authorised company contact for this Premium course. Use the latest version. Supply an existing class ID or a new class name. Send null for both to clear the class. Enrolments and course access remain independent of the class assignment.",
+        {},
+        z.toJSONSchema(courseClassOptions),
+      ).post,
+      requestBody: {
+        required: true,
+        content: json(z.toJSONSchema(courseClassAssignment)),
+      },
+    },
+  },
+  "/rest/v1/rpc/course_chat_protection": rpc(
+    "readCourseChatProtection",
+    "Premium LMS",
+    "Read course-chat spam protection",
+    "Company contacts can read the company rule for a Premium course they manage and see whether the global rule is enforced. Only an active administrator can inspect the global setting or omit the course.",
+    { p_run_id: nullableUuid },
+    z.toJSONSchema(courseChatProtectionSchema),
+    ["p_run_id"],
+  ),
+  "/rest/v1/rpc/set_course_chat_protection": rpc(
+    "setCourseChatProtection",
+    "Premium LMS",
+    "Set versioned course-chat spam protection",
+    "Only an active administrator can change the global rule. For a company rule, supply a Premium course and the observed company version. Company contacts can change the rule only for their own company. A global rule remains enforced when the company switch is off. Reload the settings after a version conflict.",
+    {
+      p_run_id: nullableUuid,
+      p_global: boolean,
+      p_enabled: boolean,
+      p_expected_version: version,
+    },
+    z.toJSONSchema(courseChatProtectionSchema),
+  ),
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
@@ -1853,47 +1905,6 @@ const paths: Record<string, Record<string, unknown>> = {
   },
 };
 
-const integrationPath = {
-  get: {
-    operationId: "integrationCourseIndex",
-    tags: ["Server integrations"],
-    summary: "List published courses for the key's company",
-    description:
-      "Call this operation from your backend. Browser and portal-session requests are rejected.",
-    security: [{ integrationKey: [] }],
-    parameters: [
-      {
-        name: "limit",
-        in: "query",
-        schema: { type: "integer", minimum: 1, maximum: 50, default: 25 },
-      },
-      { name: "after", in: "query", schema: uuid },
-    ],
-    responses: {
-      "200": {
-        description: "Current published course index",
-        content: json(
-          object({
-            items: {
-              type: "array",
-              items: object({ id: uuid, title: text, time_zone: text }),
-            },
-            next_cursor: { type: ["null", "string"], format: "uuid" },
-          }),
-        ),
-      },
-      "400": { description: "Invalid page parameters" },
-      "401": { description: "Missing, invalid or inactive integration key" },
-      "403": { description: "Browser origin denied" },
-      "429": {
-        description: "Key rate limit reached",
-        headers: { "Retry-After": { schema: { type: "integer" } } },
-      },
-      "503": { description: "Integration temporarily unavailable" },
-    },
-  },
-};
-
 const credentialPaths = {
   "/rest/v1/rpc/save_calendar_subscription": {
     post: {
@@ -2053,7 +2064,7 @@ function internalOpenApi(
           },
         },
         "/rest/v1/rpc/company_course_webhook_subscribe": companyWebhookCreate,
-        "/functions/v1/company-integration": integrationPath,
+        "/functions/v1/company-integration": companyCourseIndexPath,
       }
     : paths;
   return {

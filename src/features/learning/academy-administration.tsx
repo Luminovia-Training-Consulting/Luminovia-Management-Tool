@@ -25,6 +25,7 @@ import type {
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
 import { AcademyBrandLinksEditor } from "../branding/academy-brand-links-panel";
+import { AcademyLogoEditor } from "../branding/academy-logo-editor";
 import { AcademyBrandEditor } from "../branding/academy-brand-editor";
 import { AcademyWebhookPanel } from "./academy-webhook-panel";
 import { AcademyRoleEditor } from "./academy-role-editor";
@@ -511,6 +512,7 @@ export function AcademyAdministrationPage() {
       {can_create_management && (
         <>
           <AcademyBrandEditor />
+          <AcademyLogoEditor />
           <AcademyBrandLinksEditor />
         </>
       )}

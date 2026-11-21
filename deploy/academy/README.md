@@ -2,6 +2,21 @@
 
 This is the isolated setup for a customer-operated academy and for a dedicated managed academy. Use the exact reviewed source revision for the backend and browser. The private runtime and the public browser package have separate inputs. The provisioning machine needs Node from `.node-version`, repository dependencies, and Docker Compose with support for the merge `!reset` tag.
 
+## Review a private customer academy draft
+
+Use the [fictional draft form](customer-draft.example.json) as a template in a private local directory outside the repository and outside configured runtimes. Use Linux `flock` and a filesystem with exclusive locks and atomic rename. Create the registry directory with mode 0700 and store the edited input with mode 0600. Generate a fresh version-4 UUID for `request_id` on each onboarding request.
+
+Use `purpose: customer` for an actual customer and `purpose: rehearsal` for fictional testing. Record the agreed academy brand and asset-review reference, initial administrator, domain status, edition, locale and time zone, SMTP mode, backup retention, data region, support agreement and licence selection. Use the same `host_reference` for every draft targeting the same host so an overlapping runtime path is caught. Domain verification is recorded from the operator's review.
+
+```sh
+node scripts/academy-customer-draft.mjs preview "$private_registry" "$private_draft"
+node scripts/academy-customer-draft.mjs approve "$private_registry" "$private_draft" "$exact_approval"
+```
+
+Compare the preview and original private draft before setting `exact_approval` to the complete `APPROVE …` text returned by the preview. Any change to the approved details requires a fresh review. Keep `approved-drafts.json` private. It records names, contact addresses and approval times. An exact retry returns the original installation ID and receipt.
+
+Carry the approved installation ID, dedicated edition, HTTPS origin and intended runtime directory forward to the runtime command below. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. The private receipt is an onboarding approval. Runtime creation, licence issuance and publication each require their own operator action.
+
 ## Prepare the runtime and signed browser
 
 Choose an installation UUID, an edition, a customer-controlled HTTPS domain, a bind address and a new directory outside the checkout. Use `127.0.0.1` for local staging. The included public ingress uses Caddy ACME and ports 80 and 443 on an explicitly chosen host address. A separate reverse proxy may terminate TLS using its own reviewed configuration.
@@ -16,6 +31,8 @@ The command creates a private directory with empty `data`, `backups` and `browse
 Build and sign the matching brand and edition using the [browser package commands](../../DEVELOPMENT.md#white-label-browser-build). Obtain the signed licence, detached browser signature and two trusted public keys through the agreed delivery channels. Keep both signing keys with their respective issuers. Store the exact source commit in the independently reviewed target JSON.
 
 After setup, a confirmed local administrator opens **Academy administration → Public links** to set the academy's support, privacy policy, legal notice and terms URLs. Use publicly intended HTTPS addresses. Blank fields hide the corresponding links. These settings appear before sign-in and in the academy footer. Editing requires an active licence.
+
+In **Academy administration → Academy logo**, a confirmed administrator can preview and publish an RGB or RGBA PNG up to 512 pixels per edge and 256 KiB. The application displays it only after a clean scan. **Use package logo** restores the original logo after confirmation. The current image is included in the database backup. The signed application icons remain part of the browser package.
 
 The target JSON copies `version`, `installation_id`, `edition`, `portal_origin`, `api_base_url`, `compose_project`, `backend_network`, `data_directory` and `backup_directory` from `installation.json`. Add the remaining site selections. The following example shows those additional fields for an isolated rehearsal.
 
@@ -72,6 +89,20 @@ academy_compose -f deploy/academy/mail-capture.override.yml \
 
 The mail relay, invitation routes and notification delivery each have separate activation controls. After the confirmed local administrator can sign in, open Administration → Email transport. Store the chosen provider and sender there and run a connection check. The check verifies TLS and credentials without sending a message. The relay uses the stored sender for both Auth invitation and recovery mail. Enable `PORTAL_INVITES_ENABLED=true` in the private runtime environment and recreate the `functions` service only when the operator has approved invitation delivery. Activating invitations and activating separate scheduled notifications are independent controls.
 
+### Optional course notification email
+
+The academy can email a generic alert for a new enrolment, course chat message, published material or the recipient's attendance update. The learner or staff member opts in under **My settings → Email notifications** and can set daily quiet hours. The notice links to the academy's own inbox. Course titles, messages, documents and attendance details remain in the academy.
+
+After configuring the provider in **Academy administration → Email transport**, set `ACADEMY_NOTIFICATION_MAIL_ENABLED=true` in the private `runtime.env` and start the dedicated profile.
+
+```sh
+academy_compose --profile notification-mail up -d notification-mail
+```
+
+This worker uses only the local gateway and authenticated private SMTP relay. It claims finite batches, checks the current recipient and course before sending, and confirms each notification's one-time lease again before the upstream SMTP envelope. The queue binds each notice to the exact current signed release. Delivery pauses while the licensed course profile is unavailable. A replaced release's old entries cannot be sent. An uncertain provider acknowledgement is retained for inspection and does not trigger an automatic resend.
+
+Set the option back to `false` and stop `notification-mail` to deactivate the worker. Include this profile when stopping the entire project for recovery.
+
 Wait for the Auth user table, Storage bucket and object tables, and Realtime publication. Apply the migrations from the clean Git checkout matching the licence and staged browser receipt.
 
 ```sh
@@ -100,6 +131,17 @@ The dedicated public API has one shared allowance per Envoy instance. The signed
 
 Verify the private first administrator, dedicated edition, licence limits, normal account sign-in, author/publish/enrol and learner journeys, protected objects, ClamAV, Realtime, current email routes and the encrypted backup/recovery target. When the customer's DNS and firewall are authorised and verified, the `ingress` profile starts Caddy on the generated address. Review certificate issuance and the browser edition, hostname and protected API against that particular environment. A fresh-install receipt is separate from approval of any data migration, upgrade, commercial handover or public deployment.
 
+## Read the installed release and licence state
+
+Use the signed licence and exact installed revision with the existing private operator connection.
+
+```sh
+node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit" --status
+```
+
+The read-only receipt reports the exact licensed release, licence dates and current course access. It includes the applied migration count and last version when the operator ledger is present. A disabled course profile or an absent ledger is shown as a null value. The command requires the matching dedicated database and works with a licence in grace or after expiry. It does not print configuration, accounts or licence secrets.
+
 ## Encrypted recovery for a dedicated installation
 
 The operator command uses Linux, Python 3.12 or later, the local rootful Docker socket and the distribution's `age` package. Create the recovery identity on a separate trusted machine with `age-keygen`. Keep the private key there and provide only its X25519 public recipient to the academy. Keep a separate record of the expected installation UUID, runtime path, signed release, deployment source and the backup SHA-256.
@@ -107,7 +149,7 @@ The operator command uses Linux, Python 3.12 or later, the local rootful Docker 
 Close ingress and allow in-flight requests to complete. Stop the entire dedicated Compose project. Include the mail-capture profile and override if they were used. Keep the stopped containers for the command's ownership and mount checks.
 
 ```sh
-academy_compose --profile ingress --profile mail-capture stop --timeout 90
+academy_compose --profile ingress --profile mail-capture --profile notification-mail stop --timeout 90
 sudo python3 deploy/academy/recovery.py backup \
   "$runtime_root" "$installation_id" "$release_commit" --recipient "$age_recipient"
 ```
@@ -155,3 +197,13 @@ node --env-file="$runtime_root/runtime.env.webhooks.env" scripts/company-course-
 ```
 
 Run the worker from the reviewed release checkout with its locked production dependencies under the installation supervisor. The same command without `--watch` processes one finite batch. The [receiver example](../../scripts/examples/verify-company-course-webhook.mjs) verifies the syntax, message timestamp, event ID and HMAC before interpreting the payload. Store each verified event ID atomically with its downstream change and acknowledge repeats. Delivery can arrive out of order. Queued events are bound to the exact active release and never transfer to a replacement release. A disabled or expired licensed profile pauses delivery and invalidates the worker's ability to prepare an event.
+
+## Connect a published course index
+
+In Academy administration, select the organisation under Course integrations and issue a named, expiring key. Store the one-time credential in the consuming service's secret store. Use the downloaded Academy OpenAPI contract for the `GET /functions/v1/company-integration` request and its pagination parameters. The response provides the published course IDs, titles and time zones belonging to the selected organisation. The administration panel shows the key metadata and supports revocation and rotation. Delivery requires an active licence and a current authorised issuer.
+
+## Academy issuer on generated course documents
+
+The preparation command reads the name, short name and accent colour from the staged signed web manifest and pins them to the exact licensed release. Use `PORTAL_ACADEMY_STAGED_BROWSER_ROOT` with the equivalent private runtime root if the operator connects through private libpq. Administrators can override the presentation under **Academy administration → Academy branding**.
+
+A new completion document records the issuer at issuance. Attendance PDFs use the current academy presentation. Retained completion records with no issuer snapshot keep their original facts and use the current academy brand when exported. File uploads are delivered as their exact approved bytes.

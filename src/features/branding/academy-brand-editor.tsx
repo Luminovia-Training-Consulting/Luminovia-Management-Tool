@@ -34,8 +34,8 @@ export function AcademyBrandEditor() {
       </h2>
       <p>
         {word(
-          "Name, Kurzname und Akzentfarbe sind nach dem Speichern sichtbar. Logo und App-Symbole gehören zum signierten Installationspaket.",
-          "The name, short name and accent colour appear after saving. The logo and app icons are part of the signed installation package.",
+          "Name, Kurzname und Akzentfarbe sind nach dem Speichern sichtbar. App-Symbole gehören zum signierten Installationspaket.",
+          "The name, short name and accent colour appear after saving. App icons come from the signed installation package.",
         )}
       </p>
       {branding.isPending ? (

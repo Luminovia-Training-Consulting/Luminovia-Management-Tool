@@ -25,7 +25,7 @@ from email.utils import formatdate
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 from uuid import UUID
 
 
@@ -97,6 +97,7 @@ class Config:
     smtp_port: int = 2526
     batch: int = 10
     timeout: int = 15
+    academy: bool = False
 
     @classmethod
     def from_env(cls, env: dict[str, str]) -> "Config":
@@ -116,16 +117,21 @@ class Config:
         port = integer(env, "PORTAL_NOTIFICATION_SMTP_PORT", 2526, 1, 65535)
         if port != 2526:
             raise ConfigurationError("smtp_relay_port_required")
+        mode = env.get("PORTAL_NOTIFICATION_EDITION", "internal")
+        api_url = env.get("PORTAL_NOTIFICATION_API_URL", "")
+        if mode not in {"academy", "internal"} or (mode == "academy" and api_url != "http://api-gw:8000"):
+            raise ConfigurationError("invalid_worker_route")
         return cls(
-            api_url=checked_url(env.get("PORTAL_NOTIFICATION_API_URL", ""), allow_backend_path=True),
+            api_url=api_url if mode == "academy" else checked_url(api_url, allow_backend_path=True),
             service_key=service_key,
             portal_url=checked_url(env.get("PORTAL_NOTIFICATION_APP_ORIGIN", "")),
             smtp_username=username,
             smtp_password=password,
-            smtp_host="127.0.0.1",
+            smtp_host="mail-relay" if mode == "academy" else "127.0.0.1",
             smtp_port=port,
             batch=integer(env, "PORTAL_NOTIFICATION_BATCH", 10, 1, 20),
             timeout=integer(env, "PORTAL_NOTIFICATION_TIMEOUT_SECONDS", 15, 1, 20),
+            academy=mode == "academy",
         )
 
 
@@ -138,7 +144,7 @@ class NoRedirect(HTTPRedirectHandler):
 class RpcClient:
     def __init__(self, config: Config):
         self.config = config
-        self.opener = build_opener(NoRedirect())
+        self.opener = build_opener(ProxyHandler({}), NoRedirect()) if config.academy else build_opener(NoRedirect())
 
     def call(self, name: str, payload: dict[str, Any]) -> Any:
         if name not in {
@@ -214,13 +220,19 @@ def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)
     message["Message-ID"] = delivery["message_id"]
+    if config.academy:
+        subject = "Neue Akademie-Benachrichtigung" if german else "New academy notification"
+        intro = "In deiner Akademie gibt es eine neue Meldung." if german else "There is a new update in your academy."
+        message.replace_header("Subject", subject)
+        message.replace_header("Message-ID", f"<academy-notification.{delivery['id']}@{urlsplit(config.portal_url).hostname}>")
+        message["X-Luminovia-Notification-Lease"] = f"{delivery['id']} {delivery['lease_token']}"
     message.set_content(f"{intro}\n\n{config.portal_url}/notifications\n\n{closing}\n", charset="utf-8")
     return message
 
 
 def smtp_delivery(config: Config, delivery: dict[str, Any]) -> tuple[str, str | None]:
     """Submit to the loopback-only relay and preserve uncertainty after the DATA boundary."""
-    if config.smtp_host != "127.0.0.1" or config.smtp_port != 2526:
+    if config.smtp_host != ("mail-relay" if config.academy else "127.0.0.1") or config.smtp_port != 2526:
         return "failed", "smtp_relay_config"
     connection = None
     data_started = False
@@ -260,9 +272,10 @@ def smtp_delivery(config: Config, delivery: dict[str, Any]) -> tuple[str, str | 
 
 
 def _run(config, rpc, sender, result, deadline):
-    refreshed = rpc.call("refresh_notification_reminders", {"p_limit": 100})
-    if type(refreshed) is not int or not 0 <= refreshed <= 100000:
-        raise RpcError("invalid_reminder_count")
+    if not config.academy:
+        refreshed = rpc.call("refresh_notification_reminders", {"p_limit": 100})
+        if type(refreshed) is not int or not 0 <= refreshed <= 100000:
+            raise RpcError("invalid_reminder_count")
     leases = rpc.call("lease_notification_emails", {"p_limit": config.batch})
     if not isinstance(leases, list) or len(leases) > config.batch or not all(map(lease_valid, leases)):
         raise RpcError("invalid_leases")
@@ -338,6 +351,7 @@ def main(argv=None, env=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help="Permit one finite delivery batch; also requires explicit environment opt-in")
     parser.add_argument("--check", action="store_true", help="Validate configuration without network calls or leases")
+    parser.add_argument("--watch-academy", action="store_true", help="Wait between finite batches inside the private academy worker")
     args = parser.parse_args(argv)
     env = dict(os.environ) if env is None else env
     if not args.run and not args.check:
@@ -348,12 +362,22 @@ def main(argv=None, env=None) -> int:
         return 0
     try:
         config = Config.from_env(env)
+        if args.watch_academy and (not args.run or not config.academy):
+            raise ConfigurationError("watch_requires_private_academy_worker")
         if args.check:
             print('{"status":"configuration_valid","network_calls":0}')
             return 0
-        counts = run(config)
-        print(json.dumps({"status": "batch_complete", **counts}, separators=(",", ":")))
-        return int(any(counts[key] for key in ("retry", "failed", "uncertain", "rpc_errors")))
+        while True:
+            try:
+                counts = run(config)
+                print(json.dumps({"status": "batch_complete", **counts}, separators=(",", ":")), flush=True)
+            except RpcError:
+                if not args.watch_academy:
+                    raise
+                print('{"status":"rpc_unavailable"}', file=sys.stderr, flush=True)
+            if not args.watch_academy:
+                return int(any(counts[key] for key in ("retry", "failed", "uncertain", "rpc_errors")))
+            time.sleep(60)
     except ConfigurationError:
         print('{"status":"configuration_invalid"}', file=sys.stderr)
         return 2

@@ -23,12 +23,14 @@ export function CompanyIntegrations({
   archived,
   zone,
   canSubscribePremium = false,
+  showWebhooks = true,
 }: {
   actor: string;
   organisation: string;
   archived: boolean;
   zone: string;
   canSubscribePremium?: boolean;
+  showWebhooks?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const cache = useQueryClient();
@@ -235,14 +237,16 @@ export function CompanyIntegrations({
             </div>
           )}
           {error && <Notice kind="error">{t("integrationError")}</Notice>}
-          <CompanyWebhooks
-            actor={actor}
-            organisation={organisation}
-            zone={zone}
-            keys={keys.data ?? []}
-            canSubscribePremium={canSubscribePremium}
-            archived={archived}
-          />
+          {showWebhooks && (
+            <CompanyWebhooks
+              actor={actor}
+              organisation={organisation}
+              zone={zone}
+              keys={keys.data ?? []}
+              canSubscribePremium={canSubscribePremium}
+              archived={archived}
+            />
+          )}
         </>
       )}
     </details>

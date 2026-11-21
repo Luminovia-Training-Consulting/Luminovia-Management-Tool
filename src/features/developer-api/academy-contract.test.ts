@@ -14,6 +14,7 @@ const readPaths = [
   "/rest/v1/rpc/course_session_register",
   "/rest/v1/rpc/academy_course_participation_report",
   "/rest/v1/rpc/notification_inbox",
+  "/rest/v1/rpc/delivery_preferences",
   "/rest/v1/rpc/academy_course_publication",
   "/rest/v1/rpc/academy_timetable",
   "/rest/v1/rpc/academy_licence_receipt",
@@ -31,6 +32,7 @@ const writePaths = [
   "/rest/v1/rpc/academy_student_exam_pdf_options",
   "/rest/v1/rpc/share_course_exam_pdf",
   "/rest/v1/rpc/mark_notifications",
+  "/rest/v1/rpc/save_delivery_preferences",
   "/rest/v1/rpc/academy_publish_course",
   "/rest/v1/rpc/academy_set_course_capacity",
   "/rest/v1/rpc/academy_learning_action",
@@ -98,11 +100,17 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         [
           bootstrap,
           "/rest/v1/rpc/company_course_webhook_list",
+          "/rest/v1/rpc/company_integration_keys",
+          "/rest/v1/rpc/issue_company_integration_key",
+          "/rest/v1/rpc/revoke_company_integration_key",
+          "/functions/v1/company-integration",
           "/rest/v1/rpc/academy_subscribe_course_webhook",
           "/rest/v1/rpc/academy_revoke_course_webhook",
           "/rest/v1/rpc/academy_public_branding",
           "/rest/v1/rpc/save_academy_public_branding",
           "/rest/v1/rpc/academy_public_brand_links",
+          "/rest/v1/rpc/academy_public_logo",
+          "/rest/v1/rpc/clear_academy_public_logo",
           "/rest/v1/rpc/save_academy_public_brand_links",
           upload,
           examDownload,
@@ -123,6 +131,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(Object.keys(spec.components.securitySchemes).sort()).toEqual([
         "apiKey",
         "bearerAuth",
+        "integrationKey",
       ]);
       const capability = spec.paths[bootstrap].get;
       expect(capability.security).toEqual([{ apiKey: [] }]);
@@ -152,6 +161,24 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("keeps the scanner-bound logo contract public for read and admin-only for deletion", () => {
+      const read = spec.paths["/rest/v1/rpc/academy_public_logo"].get;
+      const clear = spec.paths["/rest/v1/rpc/clear_academy_public_logo"].post;
+      const intake = spec.paths[upload].post;
+      expect(read.security).toEqual([{ apiKey: [] }]);
+      expect(clear.security).toEqual([{ apiKey: [], bearerAuth: [] }]);
+      expect(clear.responses).toHaveProperty("409");
+      expect(intake.requestBody.content["image/png"].schema).toMatchObject({
+        format: "binary",
+      });
+      expect(
+        intake.responses["200"].content["application/json"].schema,
+      ).toHaveProperty(
+        "anyOf.1",
+        read.responses["200"].content["application/json"].schema,
+      );
     });
 
     it("documents the learner's scoped deadline read and active-only 204 withdrawal", () => {
@@ -413,6 +440,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-answer-key",
                 "academy-course-chat",
                 "academy-attendance",
+                "academy-logo",
               ],
             },
           },
@@ -434,18 +462,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           },
         },
       });
-      expect(
-        intake.responses["200"].content["application/json"].schema,
-      ).toMatchObject({
-        properties: {
-          document: {
-            properties: {
-              status: { const: "clean" },
-              current_version_id: { format: "uuid" },
-            },
-          },
-        },
-      });
+      const receipt =
+        intake.responses["200"].content["application/json"].schema;
+      expect(receipt).toHaveProperty(
+        "anyOf.0.properties.document.properties.status.const",
+        "clean",
+      );
+      expect(receipt).toHaveProperty(
+        "anyOf.0.properties.document.properties.current_version_id.format",
+        "uuid",
+      );
       expect(
         spec.paths[writePaths[4]].post.requestBody.content["application/json"]
           .schema,

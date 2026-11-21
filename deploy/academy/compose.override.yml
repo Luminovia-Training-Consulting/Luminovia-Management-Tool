@@ -4,6 +4,38 @@ name: ${COMPOSE_PROJECT_NAME:?Set the generated academy Compose name}
 services:
   mail-relay:
     ports: !reset []
+    environment:
+      PORTAL_MAIL_RELAY_ACADEMY_NOTIFICATIONS: "true"
+  notification-mail:
+    image: python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0
+    profiles: ["notification-mail"]
+    restart: on-failure
+    user: "10001:10001"
+    command: ["python", "-I", "/app/notification-mail-worker.py", "--run", "--watch-academy"]
+    environment:
+      PORTAL_NOTIFICATION_MAIL_ENABLED: ${ACADEMY_NOTIFICATION_MAIL_ENABLED:-false}
+      PORTAL_NOTIFICATION_EDITION: academy
+      PORTAL_NOTIFICATION_API_URL: http://api-gw:8000
+      PORTAL_NOTIFICATION_SERVICE_KEY: ${SERVICE_ROLE_KEY:?Set SERVICE_ROLE_KEY}
+      PORTAL_NOTIFICATION_APP_ORIGIN: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
+      PORTAL_NOTIFICATION_SMTP_USERNAME: ${MAIL_RELAY_USERNAME:?Set MAIL_RELAY_USERNAME}
+      PORTAL_NOTIFICATION_SMTP_PASSWORD: ${MAIL_RELAY_PASSWORD:?Set MAIL_RELAY_PASSWORD}
+    volumes:
+      - ../../../scripts/notification-mail-worker.py:/app/notification-mail-worker.py:ro
+    depends_on:
+      api-gw:
+        condition: service_healthy
+      mail-relay:
+        condition: service_healthy
+    networks: [backend]
+    read_only: true
+    cap_drop: ["ALL"]
+    mem_limit: 64m
+    pids_limit: 32
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
   mailpit:
     profiles: ["mail-capture"]
     ports: !reset []

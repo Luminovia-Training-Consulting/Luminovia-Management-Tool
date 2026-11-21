@@ -3,6 +3,7 @@
  * token and navigate only after confirmed completion.
  */
 import { portalInternalEdition } from "../../lib/installation-brand";
+import { AcademyBrandImage } from "../branding/academy-logo-image";
 import { useAcademyBrand } from "../branding/academy-branding";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -59,14 +60,15 @@ export function AuthCallback() {
   return (
     <main className="callback-layout">
       <section className="panel">
-        <img
-          src={brand.logo}
-          alt={
-            portalInternalEdition
-              ? "Luminovia Training & Consulting"
-              : brand.name
-          }
-        />
+        {portalInternalEdition ? (
+          <img src={brand.logo} alt="Luminovia Training & Consulting" />
+        ) : (
+          <AcademyBrandImage
+            className="academy-logo-preview"
+            fallback={brand.logo}
+            alt={brand.name}
+          />
+        )}
         <h1>{t("acceptInvite")}</h1>
         <p>
           {t("inviteWelcome", {

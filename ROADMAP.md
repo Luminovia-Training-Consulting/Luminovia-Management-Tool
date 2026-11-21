@@ -31,6 +31,15 @@ See the [current implementation matrix](docs/IMPLEMENTATION_PLAN.md#requested-ch
 
 [PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged into `main` as `0d89891d` on 21 November 2026. Follow-up implementation continues directly on `main`. This pass prioritises core code and local validation. The [work log](docs/WORKLOG.md) records native-service and rollout evidence.
 
+### Latest LMS implementation and verification
+
+- Course staff can publish versioned welcome content with protected joining instructions and selected scanned course materials. The legacy text-only endpoint preserves the richer fields. PostgreSQL and PostgREST tests cover stale versions, role changes and attachment removal.
+- The Premium company participant centre shows the learner's courses and attendance totals for the current company. It supports a private versioned company reference. PostgreSQL and native HTTP verify pagination, Premium OFF, cross-company isolation and conflicting updates.
+- Native Chromium has exercised the public demo, meeting links, protected documents, attendance import, course chat and PWA behaviour in the tested desktop and mobile profiles. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) identifies the narrower evidence for each feature and the pending combined acceptance matrix.
+- The current authenticated API inventory and browser RPC types are regenerated from the migrated database. Internal Premium now has closed schemas for school-class assignment and course-chat protection. Other operations still need closed request or response schemas, detailed per-role HTTP coverage and API parity checks. The [API reference](API_REFERENCE.md) records the exact inventory.
+
+The owner deferred Hostinger migration and provider acceptance for this source pass.
+
 ## 2. Source coverage and planned change areas
 
 The following summary preserves the A–N structure of the original roadmap while adding the new Premium LMS areas. **Existing source** means components were found/documented in the repository, not that the new requirements have passed complete acceptance.

@@ -238,6 +238,24 @@ test(
       const privateOnly = compose(root, []);
       const withProfiles = compose(root, ["ingress", "mail-capture"]);
       const withCapture = compose(root, ["mail-capture"], true);
+      const withWorker = compose(root, ["notification-mail"]);
+      assert.equal(privateOnly.services["notification-mail"], undefined);
+      assert.equal(withWorker.services["notification-mail"].ports, undefined);
+      assert.equal(
+        withWorker.services["notification-mail"].environment
+          .PORTAL_NOTIFICATION_MAIL_ENABLED,
+        "false",
+      );
+      assert.equal(
+        withWorker.services["notification-mail"].environment
+          .PORTAL_NOTIFICATION_API_URL,
+        "http://api-gw:8000",
+      );
+      assert.equal(
+        withWorker.services["mail-relay"].environment
+          .PORTAL_MAIL_RELAY_ACADEMY_NOTIFICATIONS,
+        "true",
+      );
       assert.equal(privateOnly.name, identity.compose_project);
       assert.equal(privateOnly.networks.backend.name, identity.backend_network);
       assert.equal(Boolean(privateOnly.networks.backend.external), false);

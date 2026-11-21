@@ -12,7 +12,7 @@
 | Website enquiries | Trusted intake, bounded validation, versioned triage and explicit conversion. `enquiries-api-check.mjs` and `enquiries.spec.ts` cover the portal side. | The separate public Website sender and its delivery remain external to this implementation. |
 | UI and PWA | The public demo, DE/EN, themes, keyboard and mobile layouts have browser coverage. The calendar has a view timezone selector and explicit UTC offsets for repeated times. On `c36709c5`, all eight authenticated roles ran in both isolated Docker Chromium projects, with 110 application and two PWA tests per project. | Complete per-page acceptance for all roles and review the wider browser and tablet matrix. Verify PWA installation on physical devices. |
 | Notifications | Inbox, read-state, categories, quiet hours and local push and mail adapters have existing fixtures. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
-| API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed contracts including internal accounting, role-aware job discovery, calendar assignment metadata and the company participant centre. | On `9ff73bda`, the internal OpenAPI inventory has 314 RPC operations. Nineteen requests and 80 successful responses contain generic JSON. Complete their business schemas and verify the full permission and error matrix. |
+| API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed contracts including internal accounting, role-aware job discovery, calendar assignment metadata and the company participant centre. | The internal OpenAPI inventory has 314 RPC operations. Nineteen requests and 74 successful responses still contain generic JSON. Complete their business schemas and verify the full permission and error matrix. |
 
 This pass covers source implementation and local tests. CI, deployment, production mail and hosting acceptance are tracked separately.
 
@@ -26,14 +26,20 @@ This pass covers source implementation and local tests. CI, deployment, producti
 
 ## Academy bootstrap, release packaging and restored CI verification
 
+- [x] Validate, preview and approve a private vendor-side customer academy draft. Exact retries return the same receipt and retain the derived installation identity. Automated tests cover concurrent approvals and duplicate target rejection. Live fulfilment uses its own authorisation.
+
 - [x] Generate a private runtime for a dedicated academy with its own origin, key material and persistent namespaces. Resolve both runtime configurations through actual Compose and verify that only the explicit ingress profile publishes ports.
 - [x] Verify and atomically stage an active signed browser release for that runtime. Verify exact bytes for both compiled editions through pinned Caddy over local TLS. Preserve authentic signed historical catalogues for later recovery.
 - [x] Enforce licensed seats with database serialization and report signed and measured limits only to local administrators. Verify the signed API allowance at the dedicated ingress and the retained storage accounting used by course attachments.
 - [x] Add an isolated mail-capture override. Verify actual Auth invitation and password recovery from the rendered settings with the pinned GoTrue and Mailpit binaries. Verify that the link belongs to the selected academy origin.
 - [x] Apply an exact signed academy upgrade with source-checked migration history and preserve the Auth identity, original password and enrolled course. Restore PostgreSQL and Storage into a separate native runtime and verify the uploaded bytes.
 - [x] Support versioned local administrator branding for both academies, with anonymous login presentation, a typed API and restoration of the signed defaults.
+- [x] Validate, scan, publish and remove the local academy header and sign-in logo. Native Chromium covered the dedicated administrator and learner roles, exact stored PNG bytes and restoration of the signed installation logo in both editions.
 - [x] Publish versioned local support, privacy, legal notice and terms links in the anonymous sign-in and authenticated academy footer. Verify both editions with native PostgreSQL, GoTrue, PostgREST and Chromium, including stale saves and missing authority.
 - [x] Deliver scoped course webhooks in both dedicated academies through the private shared worker. Local PostgreSQL, HTTP and Chromium witnessed revocation, retry and exact release fencing. External receiver onboarding remains operational.
+- [x] Publish the 69-path Academy API and organisation-scoped, rotating course-index credentials. Browser, Edge and real PostgreSQL tests cover current issuer, exact organisation, published rows, rotation and revocation.
+- [x] Provide opt-in course notice email via the private, initially disabled SMTP worker. Verify current recipient, course and licence, quiet hours, provider version and delivery lease.
+- [x] Read the exact installation, database licence and migration ledger over the private operator connection. The status receipt contains operational metadata and preserves read-only access.
 - [x] Produce DE/EN CSV participation reports with per-course attendance counts and completion states. The dedicated API rechecks learner cohort, course scope and licence on each page.
 - [x] Provide a cold, encrypted Academy backup and restore command with a separate age identity, installed-revision and archive checks, and restoration into a new empty target. Native PostgreSQL recovery and byte-level checks passed.
 - [ ] Boot each fresh dedicated target with all pinned services, apply migrations, pin its licence, confirm first-admin, and repeat course, SMTP, PWA and backup/restore acceptance on the explicit target.

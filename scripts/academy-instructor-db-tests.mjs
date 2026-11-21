@@ -47,11 +47,17 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_public_branding",
             "/rest/v1/rpc/academy_course_participation_report",
             "/rest/v1/rpc/company_course_webhook_list",
+            "/rest/v1/rpc/company_integration_keys",
+            "/rest/v1/rpc/issue_company_integration_key",
+            "/rest/v1/rpc/revoke_company_integration_key",
+            "/functions/v1/company-integration",
             "/rest/v1/rpc/academy_subscribe_course_webhook",
             "/rest/v1/rpc/academy_revoke_course_webhook",
             "/rest/v1/rpc/save_academy_public_branding",
-          "/rest/v1/rpc/academy_public_brand_links",
-          "/rest/v1/rpc/save_academy_public_brand_links",
+            "/rest/v1/rpc/academy_public_brand_links",
+            "/rest/v1/rpc/academy_public_logo",
+            "/rest/v1/rpc/clear_academy_public_logo",
+            "/rest/v1/rpc/save_academy_public_brand_links",
             "/rest/v1/rpc/academy_licence_receipt",
             "/rest/v1/rpc/course_class_options",
             "/rest/v1/rpc/set_course_class",
@@ -88,6 +94,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_timetable",
             "/rest/v1/rpc/notification_inbox",
             "/rest/v1/rpc/mark_notifications",
+            "/rest/v1/rpc/delivery_preferences",
+            "/rest/v1/rpc/save_delivery_preferences",
           ].includes(path),
       )
       .map(([path, operations]) => {
@@ -628,6 +636,12 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     description: "",
     objectives: "",
     joining_instructions: "",
+    heading: "",
+    welcome_message: "",
+    schedule_information: "",
+    contact_instructions: "",
+    protect_instructions: false,
+    attachment_ids: [],
     published_at: null,
   });
   await assert.rejects(welcome(foreign), /42501/);
@@ -684,11 +698,17 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   const welcomeV1 = await publishWelcome(teacher, 0);
   assert.deepEqual(await welcome(participant), welcomeV1);
   assert.deepEqual(Object.keys(welcomeV1).sort(), [
+    "attachment_ids",
+    "contact_instructions",
     "description",
+    "heading",
     "joining_instructions",
     "objectives",
+    "protect_instructions",
     "published_at",
+    "schedule_information",
     "version",
+    "welcome_message",
   ]);
   assert.equal(welcomeV1.version, 1);
   assert.equal(welcomeV1.joining_instructions, initialWelcome[2]);

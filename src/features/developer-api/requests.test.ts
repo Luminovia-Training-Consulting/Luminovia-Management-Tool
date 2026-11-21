@@ -43,6 +43,20 @@ describe("API explorer public document and session boundary", () => {
     ).not.toHaveProperty("integrationKey");
   });
 
+  it.each([true, false])(
+    "keeps dedicated branding mutations outside the internal API (download: %s)",
+    (download) => {
+      const { paths } = portalOpenApi(backend, download);
+      for (const name of [
+        "save_academy_public_branding",
+        "save_academy_public_brand_links",
+        "clear_academy_public_logo",
+      ]) {
+        expect(paths).not.toHaveProperty("/rest/v1/rpc/" + name);
+      }
+    },
+  );
+
   it("adds fresh session credentials only to the configured resource", async () => {
     const request = await authorizeExplorerRequest(
       {
@@ -151,11 +165,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         },
       });
       const rpcPaths = Object.fromEntries(
-        Object.entries(download.paths).filter(([path]) =>
-          path.startsWith("/rest/v1/rpc/"),
+        Object.entries(download.paths).filter(
+          ([path]) =>
+            path.startsWith("/rest/v1/rpc/") &&
+            path !== "/rest/v1/rpc/issue_company_integration_key",
         ),
       );
       expect(interactive.paths).toEqual(rpcPaths);
+      expect(download.paths).toHaveProperty(
+        "/rest/v1/rpc/issue_company_integration_key",
+      );
       expect(interactive.paths).toHaveProperty(workspace);
       expect(interactive.paths).not.toHaveProperty(
         "/rest/v1/rpc/job_discovery",

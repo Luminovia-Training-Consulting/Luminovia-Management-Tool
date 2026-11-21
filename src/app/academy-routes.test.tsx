@@ -225,6 +225,13 @@ beforeEach(async () => {
             company_premium_switch_available: false,
           };
           break;
+        case "academy_public_logo":
+          data = {
+            installation_id: fake.returnedInstallation,
+            version: 0,
+            png_base64: null,
+          };
+          break;
         case "academy_public_brand_links":
           data = {
             installation_id: fake.returnedInstallation,
@@ -974,7 +981,11 @@ it("waits for authentication before restoring the signed-out visitor's course li
   ).toBeVisible();
   // The login panel replaces the global footer during the redirect.
   expect(new Set(fake.rpc.mock.calls.map(([name]) => name))).toEqual(
-    new Set(["academy_public_branding", "academy_public_brand_links"]),
+    new Set([
+      "academy_public_branding",
+      "academy_public_brand_links",
+      "academy_public_logo",
+    ]),
   );
   expect(fake.rpc).toHaveBeenCalledWith(
     "academy_public_branding",
@@ -1019,7 +1030,12 @@ it("shows customer legal links before sign-in in German", async () => {
   expect(
     within(links).queryByRole("link", { name: "Nutzungsbedingungen" }),
   ).toBeNull();
-  expect(fake.rpc).toHaveBeenCalledTimes(2);
+  expect(fake.rpc).toHaveBeenCalledTimes(3);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_logo",
+    {},
+    { get: true },
+  );
   expect(fake.rpc).toHaveBeenCalledWith(
     "academy_public_branding",
     {},

@@ -4,6 +4,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   configureAcademyCourseAccess,
   prepareAcademyInstallation,
+  readAcademyInstallationStatus,
 } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -58,6 +59,10 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
 
     // The internal database and the as-yet unlicensed dedicated edition cannot grant a role.
     await assert.rejects(sql(selectAdmin(first)), /55000/);
+    await assert.rejects(
+      readAcademyInstallationStatus(options, sql),
+      /academy_status_target_mismatch/,
+    );
     await sql(
       `select private.provision_customer_installation(${q(installation)},${q(edition)})`,
     );
@@ -78,6 +83,26 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       ...expectedAccess,
       enabled: true,
     });
+    assert.equal(
+      (await readAcademyInstallationStatus(options, sql)).course_access_status,
+      "active",
+    );
+    await sql(`
+      create schema if not exists supabase_migrations;
+      create table if not exists supabase_migrations.schema_migrations (version text primary key);
+      insert into supabase_migrations.schema_migrations(version) values ('20700101000001');
+    `);
+    const inventory = await readAcademyInstallationStatus(options, sql);
+    assert.deepEqual(inventory, {
+      ...expectedAccess,
+      licence_status: "active",
+      licence_expires_at: inventory.licence_expires_at,
+      licence_grace_until: inventory.licence_grace_until,
+      course_access_status: "active",
+      migration_ledger: { count: 1, last_version: "20700101000001" },
+    });
+    assert.equal(Date.parse(inventory.licence_expires_at), Date.parse(options.expected.expires_at));
+    assert.equal(Date.parse(inventory.licence_grace_until), Date.parse(options.expected.grace_until));
     const alternateTerms = {
       ...options.expected,
       edition:
@@ -108,6 +133,10 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       ...expectedAccess,
       enabled: false,
     });
+    assert.equal(
+      (await readAcademyInstallationStatus(expired, sql)).course_access_status,
+      null,
+    );
     assert.deepEqual(await configure(false, expired), {
       ...expectedAccess,
       enabled: false,

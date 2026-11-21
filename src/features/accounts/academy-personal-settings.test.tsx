@@ -9,15 +9,21 @@ import {
   AcademyPersonalSettingsPage,
 } from "./academy-personal-settings";
 
-const { read, saveName, saveAppearance } = vi.hoisted(() => ({
-  read: vi.fn(),
-  saveName: vi.fn(),
-  saveAppearance: vi.fn(),
-}));
+const { read, saveName, saveAppearance, readDelivery, saveDelivery } =
+  vi.hoisted(() => ({
+    read: vi.fn(),
+    saveName: vi.fn(),
+    saveAppearance: vi.fn(),
+    readDelivery: vi.fn(),
+    saveDelivery: vi.fn(),
+  }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "learner" } } }),
 }));
-vi.mock("../../lib/online", () => ({ useOnline: () => true }));
+vi.mock("../../lib/online", () => ({
+  useOnline: () => true,
+  requireOnline: vi.fn(),
+}));
 vi.mock("./academy-personal-settings-api", () => ({
   academyPersonalSettingsQuery: (actor: string) => ({
     queryKey: ["academy-personal-settings", actor],
@@ -27,15 +33,34 @@ vi.mock("./academy-personal-settings-api", () => ({
   saveAcademyUsername: saveName,
   saveAcademyAppearance: saveAppearance,
 }));
+vi.mock("../notifications/delivery-api", async (load) => {
+  const original = await load<typeof import("../notifications/delivery-api")>();
+  return {
+    ...original,
+    deliveryPreferencesQuery: (actor: string) => ({
+      queryKey: original.deliveryKey(actor),
+      queryFn: readDelivery,
+    }),
+    saveDeliveryPreferences: saveDelivery,
+  };
+});
 
 const current = {
   username: { username: "saved.learner", version: 2 },
   appearance: { language: "en", theme: "system", version: 0 },
 };
+const delivery = {
+  email_enabled: false,
+  quiet_start: null,
+  quiet_end: null,
+  time_zone: "Europe/Berlin",
+  version: 1,
+};
 
 beforeEach(async () => {
   vi.resetAllMocks();
   read.mockResolvedValue(current);
+  readDelivery.mockResolvedValue(delivery);
   await i18n.changeLanguage("en");
   vi.stubGlobal(
     "matchMedia",
@@ -45,6 +70,28 @@ beforeEach(async () => {
       removeEventListener: vi.fn(),
     })),
   );
+});
+
+it("starts with email off and confirms only the learner's opt-in preferences", async () => {
+  saveDelivery.mockResolvedValue({
+    ...delivery,
+    email_enabled: true,
+    version: 2,
+  });
+  const user = setup();
+  const checkbox = await screen.findByRole("checkbox", {
+    name: "Receive additional alerts by email",
+  });
+  expect(checkbox).not.toBeChecked();
+  await user.click(checkbox);
+  await user.click(
+    screen.getByRole("button", { name: "Save email preferences" }),
+  );
+  expect(await screen.findByText("Email preferences saved.")).toBeVisible();
+  expect(saveDelivery).toHaveBeenCalledWith({
+    ...delivery,
+    email_enabled: true,
+  });
 });
 afterEach(async () => {
   cleanup();
@@ -142,6 +189,7 @@ it("applies the saved account appearance on entry and leaves grace read-only", a
     screen.queryByRole("combobox", { name: "Farbschema" }),
   ).not.toBeInTheDocument();
   expect(document.documentElement.dataset.theme).toBe("dark");
+  expect(readDelivery).not.toHaveBeenCalled();
 });
 
 it("does not replace a local selection when an older load completes", async () => {

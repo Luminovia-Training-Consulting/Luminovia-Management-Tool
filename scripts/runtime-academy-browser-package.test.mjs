@@ -33,7 +33,10 @@ import {
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { installAcademyBrowser } from "./academy-install-browser.mjs";
-import { academyDatabaseComposeArguments } from "./academy-installation.mjs";
+import {
+  academyDatabaseComposeArguments,
+  readStagedAcademyDocumentBrand,
+} from "./academy-installation.mjs";
 import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
 import { planAcademyStaging } from "./academy-staging-plan.mjs";
 
@@ -1239,6 +1242,21 @@ test("points database bootstrap only at the matching private staged Compose proj
     code: "ENOENT",
   });
   await installAcademyBrowser(inputs);
+  const brand = await readStagedAcademyDocumentBrand(root, expected);
+  assert.deepEqual(brand, {
+    name: metadata.name,
+    short_name: metadata.shortName,
+    theme_color: metadata.themeColor,
+  });
+  const manifestPath = join(root, "browser", "current", "manifest.webmanifest");
+  const original = readFileSync(manifestPath);
+  const modified = { ...JSON.parse(original), name: "Unexpected brand" };
+  writeFileSync(manifestPath, JSON.stringify(modified));
+  await assert.rejects(
+    readStagedAcademyDocumentBrand(root, expected),
+    /academy_database_staged_manifest_changed/,
+  );
+  writeFileSync(manifestPath, original);
   const args = await academyDatabaseComposeArguments(root, expected);
   assert.deepEqual(args.slice(0, 5), [
     "compose",

@@ -133,6 +133,26 @@ class CaptureRpcHandler(BaseHTTPRequestHandler):
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_ownership_bound_academy_routes(self):
+        env = {**ENV, "PORTAL_NOTIFICATION_EDITION": "academy",
+               "PORTAL_NOTIFICATION_API_URL": "http://api-gw:8000"}
+        config = worker.Config.from_env(env)
+        self.assertTrue(config.academy)
+        self.assertEqual(config.smtp_host, "mail-relay")
+        with self.assertRaises(worker.ConfigurationError):
+            worker.Config.from_env({**env, "PORTAL_NOTIFICATION_API_URL": "https://foreign.example.invalid"})
+        message = worker.make_message(config, {**DELIVERY, "kind": "chat_message"})
+        self.assertEqual(message["X-Luminovia-Notification-Lease"], f"{IDENTITY} {TOKEN}")
+        self.assertEqual(message["Message-ID"], f"<academy-notification.{IDENTITY}@portal.example.invalid>")
+        self.assertIn("https://portal.example.invalid/notifications", message.get_content())
+        self.assertNotIn("Luminovia", message["Subject"])
+        rpc = Mock()
+        rpc.call.side_effect = [[LEASE], DELIVERY, True]
+        self.assertEqual(worker.run(config, rpc, lambda *_: ("accepted", None))["accepted"], 1)
+        self.assertEqual([called.args[0] for called in rpc.call.call_args_list], [
+            "lease_notification_emails", "prepare_notification_email", "finish_notification_email",
+        ])
+
     def test_default_dry_run_performs_no_configuration_or_network_work(self):
         with patch.object(worker.Config, "from_env") as config, patch.object(worker, "run") as run:
             with contextlib.redirect_stdout(io.StringIO()) as output:

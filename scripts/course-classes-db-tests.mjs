@@ -1,16 +1,12 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { academyClassPaths } from "../src/features/developer-api/academy-class-contract.ts";
+import { portalOpenApi } from "../src/features/developer-api/contract.ts";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 const date = (days) => new Date(Date.now() + days * 86400000).toISOString();
-const schema = z.fromJSONSchema(
-  academyClassPaths["/rest/v1/rpc/course_class_options"].post.responses["200"]
-    .content["application/json"].schema,
-);
 
 for (const edition of [
   "internal",
@@ -34,6 +30,17 @@ for (const edition of [
       link,
       request,
     ] = Array.from({ length: 14 }, randomUUID);
+    const api = portalOpenApi("https://example.invalid", true, {
+      name: "Practice Academy",
+      edition,
+      installationId: installation,
+    });
+    const result = (endpoint) => z.fromJSONSchema(
+      api.paths["/rest/v1/rpc/" + endpoint].post.responses["200"]
+        .content["application/json"].schema,
+    );
+    const classOptions = result("course_class_options");
+    const classAssignment = result("set_course_class");
     const terms = {
       installation_id: installation,
       edition,
@@ -99,7 +106,7 @@ for (const edition of [
       );
     const read = (who, course) =>
       rpc(who, "course_class_options", q(course)).then((data) =>
-        schema.parse(JSON.parse(data)),
+        classOptions.parse(JSON.parse(data)),
       );
     const save = (who, course, selected, name, version) =>
       rpc(
@@ -111,7 +118,7 @@ for (const edition of [
           name ? q(name) : "null",
           version,
         ].join(","),
-      ).then((data) => schema.parse(JSON.parse(data)));
+      ).then((data) => classAssignment.parse(JSON.parse(data)));
 
     assert.equal((await read(client, runA)).can_edit, true);
     assert.equal((await read(admin, runA)).current, null);

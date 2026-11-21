@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { portalOpenApi } from "../src/features/developer-api/contract.ts";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 const release = "a".repeat(40);
@@ -29,6 +31,17 @@ for (const edition of [
       separateRoom,
       directRoom,
     ] = Array.from({ length: 15 }, randomUUID);
+    const api = portalOpenApi("https://example.invalid", true, {
+      name: "Practice Academy",
+      edition,
+      installationId: installation,
+    });
+    const result = (endpoint) => z.fromJSONSchema(
+      api.paths["/rest/v1/rpc/" + endpoint].post.responses["200"]
+        .content["application/json"].schema,
+    );
+    const protectionSettings = result("course_chat_protection");
+    const protectionUpdate = result("set_course_chat_protection");
     if (edition !== "internal") {
       const now = Date.now();
       const day = (offset) => new Date(now + offset * 86_400_000).toISOString();
@@ -83,13 +96,13 @@ for (const edition of [
         who,
         gate("course_chat_protection") +
           `select public.course_chat_protection(${target === null ? "null" : q(target)})`,
-      ).then(JSON.parse);
+      ).then((data) => protectionSettings.parse(JSON.parse(data)));
     const toggle = (who, global, enabled, revision, target = course) =>
       actor(
         who,
         gate("set_course_chat_protection") +
           `select public.set_course_chat_protection(${target === null ? "null" : q(target)},${global},${enabled},${revision})`,
-      ).then(JSON.parse);
+      ).then((data) => protectionUpdate.parse(JSON.parse(data)));
     const send = (
       target,
       request = randomUUID(),

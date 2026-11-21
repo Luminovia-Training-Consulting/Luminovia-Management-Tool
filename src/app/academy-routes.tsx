@@ -34,6 +34,7 @@ import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
 import { AcademyBrandLinksFooter } from "../features/branding/academy-brand-links-panel";
+import { AcademyBrandImage } from "../features/branding/academy-logo-image";
 import { AcademyBrandProvider } from "../features/branding/academy-brand-provider";
 import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
@@ -110,7 +111,7 @@ function AcademyCourseProfile() {
           </a>
           <header className="academy-header">
             <Link to="/learning" className="academy-brand">
-              <img src={brand.mark} alt="" />
+              <AcademyBrandImage fallback={brand.mark} alt="" />
               <span>{brand.name}</span>
             </Link>
             <div className="academy-header-actions">

@@ -312,7 +312,7 @@ await withTestDatabase("job_picker", async ({sql, actor}) => {
             );
             assert.equal(
                 await sql(
-                    "select count(*)from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','private')and has_function_privilege('anon',p.oid,'execute')and p.oid not in(to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'),to_regprocedure('public.installation_capabilities()'),to_regprocedure('private.installation_capability_projection()'),coalesce(to_regprocedure('public.academy_public_branding()')::oid,0),coalesce(to_regprocedure('private.academy_public_branding()')::oid,0),coalesce(to_regprocedure('public.academy_public_brand_links()')::oid,0),coalesce(to_regprocedure('private.academy_public_brand_links()')::oid,0))",
+                    "select count(*)from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','private')and has_function_privilege('anon',p.oid,'execute')and p.oid not in(to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'),to_regprocedure('public.installation_capabilities()'),to_regprocedure('private.installation_capability_projection()'),coalesce(to_regprocedure('public.academy_public_branding()')::oid,0),coalesce(to_regprocedure('private.academy_public_branding()')::oid,0),coalesce(to_regprocedure('public.academy_public_brand_links()')::oid,0),coalesce(to_regprocedure('private.academy_public_brand_links()')::oid,0),coalesce(to_regprocedure('public.academy_public_logo()')::oid,0),coalesce(to_regprocedure('private.academy_public_logo()')::oid,0))",
                 ),
                 "0",
             );

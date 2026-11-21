@@ -54,7 +54,7 @@ function buildNativePaths(explorer: boolean) {
   return Object.fromEntries(
     Object.entries(entries)
       // Dedicated academy business endpoints stay dormant on the server.
-      .filter(([name]) => !name.startsWith("academy_"))
+      .filter(([name]) => !/^(?:save_|clear_)?academy_/.test(name))
       .filter(([name]) => !explorer || !documentOnly.has(name))
       .map(([name, entry]) => {
         const returnsData = entry.overloads.filter((item) => !item.void);

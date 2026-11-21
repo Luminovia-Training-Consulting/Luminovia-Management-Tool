@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Field } from "../../components/common";
+import { CompanyIntegrations } from "../operations/company-integrations";
 import { CompanyWebhooks } from "../operations/company-webhooks";
 
 export function AcademyWebhookPanel({
@@ -17,7 +18,7 @@ export function AcademyWebhookPanel({
   return (
     <section className="panel" aria-labelledby="academy-webhook-heading">
       <h2 id="academy-webhook-heading">
-        {german ? "Signierte Kurs-Webhooks" : "Signed course webhooks"}
+        {german ? "Kursintegrationen" : "Course integrations"}
       </h2>
       <Field
         id="academy-webhook-organisation"
@@ -36,14 +37,23 @@ export function AcademyWebhookPanel({
         </select>
       </Field>
       {selected && (
-        <CompanyWebhooks
-          key={selected.id}
-          actor={actor}
-          organisation={selected.id}
-          zone={selected.time_zone}
-          archived={false}
-          academy
-        />
+        <div key={selected.id}>
+          <CompanyIntegrations
+            actor={actor}
+            organisation={selected.id}
+            zone={selected.time_zone}
+            archived={false}
+            showWebhooks={false}
+          />
+          <CompanyWebhooks
+            key={selected.id}
+            actor={actor}
+            organisation={selected.id}
+            zone={selected.time_zone}
+            archived={false}
+            academy
+          />
+        </div>
       )}
     </section>
   );

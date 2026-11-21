@@ -31,6 +31,12 @@ import {
   academyBrandLinkRequest,
   academyBrandLinkSettings,
 } from "../branding/academy-brand-links-schema.ts";
+import {
+  academyLogoVersion,
+  academyLogoVersionRequest,
+  academyPublicLogo,
+} from "../branding/academy-logo-schema.ts";
+import { companyCourseIndexPath } from "./company-course-index-contract.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import {
   courseParticipationReportRequest,
@@ -256,8 +262,8 @@ const materialUpload = {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
     summary:
-      "Upload and scan course files, assessments, attendance evidence or chat attachments",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version.`,
+      "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -273,8 +279,15 @@ const materialUpload = {
             "academy-answer-key",
             "academy-course-chat",
             "academy-attendance",
+            "academy-logo",
           ],
         },
+      },
+      {
+        name: "expected_version",
+        in: "query",
+        description: "Required in academy-logo mode only",
+        schema: z.toJSONSchema(academyLogoVersion),
       },
       {
         name: "Origin",
@@ -287,6 +300,13 @@ const materialUpload = {
     requestBody: {
       required: true,
       content: {
+        "image/png": {
+          schema: {
+            type: "string",
+            format: "binary",
+            description: "The exact canonical PNG for academy-logo mode",
+          },
+        },
         "multipart/form-data": {
           schema: {
             ...record(
@@ -326,7 +346,9 @@ const materialUpload = {
       },
     },
     responses: {
-      "200": ok(materialUploadResult),
+      "200": ok({
+        anyOf: [materialUploadResult, z.toJSONSchema(academyPublicLogo)],
+      }),
       "400": intakeError("Invalid request fields or multipart file", [
         "invalid_request",
       ]),
@@ -339,13 +361,14 @@ const materialUpload = {
       ),
       "409": intakeError(
         "The same request was used for a different file or mode, or the version changed",
-        ["idempotency_conflict", "version_superseded"],
+        ["idempotency_conflict", "version_superseded", "logo_changed"],
       ),
       "413": intakeError("The file was empty or exceeded the allowed size", [
         "file_size",
       ]),
       "415": intakeError("Unsupported or inconsistent file type", [
         "unsupported_type",
+        "invalid_logo",
       ]),
       "422": intakeError("The scanner rejected the file", ["scan_rejected"]),
       "503": intakeError(
@@ -547,6 +570,26 @@ const messagePage = {
 // Advertise a closed subset of the migrated academy gate. An advertised RPC
 // still runs the installation, licence, role and resource checks in Postgres.
 const coursePaths = {
+  "/rest/v1/rpc/delivery_preferences": {
+    post: {
+      ...notificationPaths["/rest/v1/rpc/delivery_preferences"].post,
+      operationId: "readAcademyDeliveryPreferences",
+      tags: ["Licensed course profile"],
+      description: `${readAccess} Returns this account's optional course-email delivery switch and daily quiet hours.`,
+      security: credentials,
+      "x-portal-licence": "active-or-grace",
+    },
+  },
+  "/rest/v1/rpc/save_delivery_preferences": {
+    post: {
+      ...notificationPaths["/rest/v1/rpc/save_delivery_preferences"].post,
+      operationId: "saveAcademyDeliveryPreferences",
+      tags: ["Licensed course profile"],
+      description: `${writeAccess} Changes this account's preference for new course alerts. The version, explicit opt-in and configured SMTP transport govern delivery. Existing inbox entries are preserved.`,
+      security: credentials,
+      "x-portal-licence": "active",
+    },
+  },
   "/rest/v1/rpc/notification_inbox": {
     post: {
       ...notificationPaths["/rest/v1/rpc/notification_inbox"].post,
@@ -970,7 +1013,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.26.0",
+      version: "1.27.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1047,6 +1090,76 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           },
         },
       },
+      "/rest/v1/rpc/company_integration_keys": courseOperation(
+        "listAcademyCourseIndexKeys",
+        "List one organisation’s course index keys",
+        "Requires a current local academy administrator. Lists key metadata without its secret.",
+        "active",
+        record({ p_organisation_id: uuid }),
+        {
+          type: "array",
+          maxItems: 100,
+          items: record({
+            id: uuid,
+            label: string,
+            created_at: dateTime,
+            expires_at: dateTime,
+            revoked_at: nullable(dateTime),
+            version: { type: "integer", minimum: 1 },
+            last_used_at: nullable(dateTime),
+          }),
+        },
+      ),
+      "/rest/v1/rpc/issue_company_integration_key": courseOperation(
+        "issueAcademyCourseIndexKey",
+        "Issue or rotate one scoped course index key",
+        "Requires a current local academy administrator. The secret is returned once. To rotate an existing key, send its ID and current version. Key expiry may be up to 180 days away.",
+        "active",
+        record({
+          p_organisation_id: uuid,
+          p_label: { ...string, minLength: 1, maxLength: 120 },
+          p_expires_at: dateTime,
+          p_rotate_id: nullable(uuid),
+          p_expected_version: nullable({ type: "integer", minimum: 1 }),
+        }),
+        record({
+          id: uuid,
+          version: { type: "integer", minimum: 1 },
+          credential: {
+            ...string,
+            format: "password",
+            pattern: "^lvi_[a-f0-9-]{36}_[a-f0-9]{64}$",
+          },
+        }),
+        true,
+      ),
+      "/rest/v1/rpc/revoke_company_integration_key": {
+        post: {
+          operationId: "revokeAcademyCourseIndexKey",
+          tags: ["Licensed course profile"],
+          summary: "Revoke a course index key",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(
+              record({
+                p_id: uuid,
+                p_expected_version: { type: "integer", minimum: 1 },
+              }),
+            ),
+          },
+          responses: {
+            "204": { description: "Revocation confirmed." },
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Key version changed"),
+          },
+        },
+      },
+      "/functions/v1/company-integration": companyCourseIndexPath,
       "/rest/v1/rpc/company_course_webhook_list": courseOperation(
         "listAcademyCourseWebhooks",
         "List company course webhooks",
@@ -1088,6 +1201,41 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
             "403": error(
               "Current local administrator and active licence required",
             ),
+          },
+        },
+      },
+      "/rest/v1/rpc/academy_public_logo": {
+        get: {
+          operationId: "readAcademyPublicLogo",
+          tags: ["Installation"],
+          summary: "Read the academy's current public logo",
+          description:
+            "Available before sign-in. Returns only the current scanned PNG and installation version. A null image selects the signed package logo.",
+          security: [{ apiKey: [] }],
+          responses: { "200": ok(z.toJSONSchema(academyPublicLogo)) },
+        },
+      },
+      "/rest/v1/rpc/clear_academy_public_logo": {
+        post: {
+          operationId: "clearAcademyPublicLogo",
+          tags: ["Installation"],
+          summary: "Restore the signed package logo",
+          description:
+            "Requires a confirmed local installation administrator, an active licence, and the last read logo version.",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(z.toJSONSchema(academyLogoVersionRequest)),
+          },
+          responses: {
+            "200": ok(z.toJSONSchema(academyPublicLogo)),
+            "400": error("Invalid logo version"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Public logo changed since the last read"),
           },
         },
       },
@@ -1137,6 +1285,12 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           name: "apikey",
           description: "Public Supabase client key.",
         },
+        integrationKey: {
+          type: "http",
+          scheme: "bearer",
+          description:
+            "Revocable course-index key for a single academy organisation.",
+        },
         bearerAuth: {
           type: "http",
           scheme: "bearer",
@@ -1163,9 +1317,18 @@ export function academyExplorerOpenApi(
   const { webhooks, ...document } = academyOpenApi(backend, brand);
   return {
     ...document,
+    components: {
+      ...document.components,
+      securitySchemes: {
+        apiKey: document.components.securitySchemes.apiKey,
+        bearerAuth: document.components.securitySchemes.bearerAuth,
+      },
+    },
     paths: Object.fromEntries(
-      Object.entries(document.paths).filter(([path]) =>
-        /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path),
+      Object.entries(document.paths).filter(
+        ([path]) =>
+          /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path) &&
+          path !== "/rest/v1/rpc/issue_company_integration_key",
       ),
     ),
   };

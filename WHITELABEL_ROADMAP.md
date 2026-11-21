@@ -292,11 +292,14 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-03 — Branding, domains & welcome (P0)
 
-- [x] Local administrators can publish the name, short name, accent and public legal/support links. Both editions verify the anonymous sign-in and responsive academy pages. The signed build supplies the logo, favicon, PWA icons and browser defaults.
-- [ ] Vendor-side academy provisioning wizard and customer-facing asset upload and preview.
+- [x] Local administrators can publish the name, short name and accent. Both editions verify the anonymous sign-in and responsive academy pages.
+- [x] Local administrators can preview and publish a scanned PNG for the Academy shell, sign-in and invitations. The signed package supplies the fallback logo, favicon and PWA icons.
+- [x] Provide a private offline vendor workflow to preview a dedicated academy draft and save an exact, explicitly approved receipt. The registry checks duplicate requests, domains and overlapping host paths.
+- [ ] Connect approved drafts to authorised commercial fulfilment and live provisioning.
 - [x] Allow each academy administrator to publish or remove local support, privacy, legal notice and terms links. Confirm safe public display before sign-in and edit denial for learners in both editions.
 - [ ] Customer domain/TLS/redirects, Auth callback URLs, verified sender and domain-safe PWA/cache.
 - [x] Provide private SMTP administration for confirmed local administrators with encrypted credentials and exact TLS/STARTTLS connection checks. Verify saved configuration, refusal after role loss and read-only grace in both editions.
+- [x] Render academy issuer, footer, metadata and accent colour on generated completion and attendance PDFs. Confirm exact issued-brand retention and separate current report branding in both dedicated editions.
 - [ ] Remove unnecessary Luminovia branding from all customer-facing surfaces; retain mandatory legal notices.
 
 ### WL-04 — Full API, username login and Swagger (P0)
@@ -307,14 +310,17 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
 - [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
 - [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
-- [ ] Complete dedicated inbound integration identities and scoped API credentials. Verify configured external receiver onboarding.
+- [x] Issue, rotate and revoke course-index credentials for one academy organisation. Native HTTP and Chromium verify the exact published-course scope and current revocation.
+- [x] Keep course-alert email opt-in and off at installation by default. The private relay rechecks current rights, licence release, quiet hours and provider configuration before sending.
+- [ ] Extend scoped credentials to approved reporting and enrolment integrations. Verify external receiver onboarding.
 
 ### WL-05 — Self-hosted installation & update lifecycle (P0)
 
 - [x] Customer-neutral runtime configuration and secret generation, independently scoped Compose and storage, explicit ingress and first-install staging of the exact signed licensed browser. Both built editions passed the isolated CLI, pinned Caddy/Envoy TLS and signed API allowance checks. [Installation runbook](deploy/academy/README.md)
 - [x] Signed browser replacement, exact-source database migration and independent encrypted backup and restore commands. Local verification includes retained sign-in, course enrolment, Storage bytes and a new isolated recovery target.
 - [ ] Independent full-stack startup and health confirmation on the final target, issuer-to-operator onboarding, DNS and ACME, real SMTP delivery and the full Docker upgrade and recovery rehearsal.
-- [ ] Version inventory, support diagnostics, security/maintenance policy, explicit rollbacks and recovery runbook.
+- [x] Read the dedicated installation, exact licensed revision, licence and course-profile state and latest migration ledger entry from the private operator command.
+- [ ] Complete target monitoring, support procedures and maintenance and incident acceptance.
 
 ### WL-06 — Licence sales & fulfilment operations (P1)
 

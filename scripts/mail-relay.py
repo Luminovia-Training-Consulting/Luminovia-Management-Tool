@@ -33,6 +33,8 @@ MAX_MESSAGE_BYTES = 4 * 1024 * 1024
 MAX_COMMAND_BYTES = 8192
 MAILBOX_PATTERN = re.compile(r"^[^\s<>@]+@[^\s<>@]+$")
 HOST_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$")
+LEASE_HEADER = "X-Luminovia-Notification-Lease"
+UUID_PATTERN = r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
 SAFE_TEST_ERRORS = {
     "connect_failed",
     "tls_failed",
@@ -56,6 +58,10 @@ class DeliveryUncertain(Exception):
     """Mark the post-DATA network boundary where the provider may have accepted bytes."""
 
 
+class AcademyScopeRejected(Exception):
+    """A worker lease or its current recipient did not authorize delivery."""
+
+
 @dataclass(frozen=True)
 class RelayConfig:
     """Internal network and relay authentication values loaded only from protected container env."""
@@ -71,6 +77,7 @@ class RelayConfig:
     connect_timeout: float = 8.0
     command_timeout: float = 90.0
     capture_auth_while_unconfigured: bool = False
+    academy_notifications: bool = False
 
     @classmethod
     def from_environment(cls) -> "RelayConfig":
@@ -90,7 +97,8 @@ class RelayConfig:
         if not MAILBOX_PATTERN.fullmatch(values["username"]):
             raise RuntimeError("Invalid internal SMTP username")
         return cls(api_url=api_url, **values,
-                   capture_auth_while_unconfigured=os.environ.get("PORTAL_MAIL_RELAY_CAPTURE_PENDING") == "true")
+                   capture_auth_while_unconfigured=os.environ.get("PORTAL_MAIL_RELAY_CAPTURE_PENDING") == "true",
+                   academy_notifications=os.environ.get("PORTAL_MAIL_RELAY_ACADEMY_NOTIFICATIONS") == "true")
 
 
 def valid_external_host(host: str) -> bool:
@@ -200,6 +208,7 @@ class MailRelay:
             "get_mail_delivery_transport",
             "claim_mail_connection_test",
             "complete_mail_connection_test",
+            "authorize_academy_notification_email",
         }:
             raise RelayFailure("configuration_unavailable")
         request = urllib.request.Request(
@@ -383,7 +392,8 @@ class MailRelay:
         except (OSError, smtplib.SMTPException):
             raise RelayFailure("connect_failed") from None
 
-    def deliver(self, raw_message: bytes, recipient: str, *, settings: dict | None = None) -> None:
+    def deliver(self, raw_message: bytes, recipient: str, *, settings: dict | None = None,
+                academy_notification: bool = False) -> None:
         """Replace the envelope/header sender and submit one recipient only to the current provider."""
         if len(raw_message) > MAX_MESSAGE_BYTES or not MAILBOX_PATTERN.fullmatch(recipient):
             raise RelayFailure("protocol_failed")
@@ -404,6 +414,13 @@ class MailRelay:
             message = BytesParser(policy=email.policy.SMTP).parsebytes(raw_message)
             if message.defects:
                 raise RelayFailure("protocol_failed")
+            ticket = None
+            if academy_notification:
+                values = message.get_all(LEASE_HEADER, [])
+                if len(values) != 1 or re.fullmatch(UUID_PATTERN + " " + UUID_PATTERN, str(values[0])) is None:
+                    raise AcademyScopeRejected()
+                ticket = str(values[0]).split(" ")
+                del message[LEASE_HEADER]
             if "From" in message:
                 del message["From"]
             message["From"] = email.utils.formataddr((sender_name, sender), charset="utf-8")
@@ -429,6 +446,11 @@ class MailRelay:
             if connection.ehlo()[0] != 250:
                 raise RelayFailure("protocol_failed")
             connection.login(settings["username"], settings["password"])
+            if ticket and self.rpc("authorize_academy_notification_email", {
+                "p_id": ticket[0], "p_lease_token": ticket[1], "p_recipient": recipient,
+                "p_transport_version": settings.get("version"),
+            }) is not True:
+                raise AcademyScopeRejected()
             if connection.mail(sender)[0] not in (250, 251):
                 raise RelayFailure("protocol_failed")
             if connection.rcpt(recipient)[0] not in (250, 251):
@@ -618,12 +640,20 @@ class MailRelay:
                         await reply("451 4.4.2 Message reception timed out")
                         return
                     try:
-                        await asyncio.wait_for(
-                            asyncio.to_thread(self.deliver_auth if auth_listener else self.deliver, bytes(data), recipient),
-                            timeout=self.config.command_timeout,
-                        )
+                        if auth_listener:
+                            delivery = asyncio.to_thread(self.deliver_auth, bytes(data), recipient)
+                        elif self.config.academy_notifications:
+                            delivery = asyncio.to_thread(self.deliver, bytes(data), recipient, academy_notification=True)
+                        else:
+                            delivery = asyncio.to_thread(self.deliver, bytes(data), recipient)
+                        await asyncio.wait_for(delivery, timeout=self.config.command_timeout)
                     except DeliveryUncertain:
                         return
+                    except AcademyScopeRejected:
+                        await reply("550 5.7.1 Notification no longer authorized")
+                        sender_accepted = False
+                        recipient = None
+                        continue
                     except RelayFailure as error:
                         LOG.warning("upstream mail delivery failed code=%s", error.code)
                         await reply("451 4.3.0 Mail transport temporarily unavailable")

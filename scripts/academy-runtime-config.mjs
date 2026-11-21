@@ -13,13 +13,12 @@ const editions = z.enum(["customer-self-hosted", "customer-managed"]);
 const domainLabels =
   /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-/** Pair the browser and gateway on a customer-owned HTTPS origin and reserve fresh private paths. */
-export function initializeAcademyRuntime({
+/** Derive the exact customer runtime identity without touching the filesystem. */
+export function describeAcademyRuntime({
   root,
   installationId,
   edition,
   portalOrigin,
-  bindAddress,
 }) {
   if (
     typeof root !== "string" ||
@@ -27,8 +26,6 @@ export function initializeAcademyRuntime({
     resolve(root) !== root
   )
     throw new Error("academy_runtime_path");
-  if (realpathSync(dirname(root)) !== dirname(root))
-    throw new Error("academy_runtime_parent");
   if (
     !z.uuid().safeParse(installationId).success ||
     installationId !== installationId.toLowerCase() ||
@@ -49,33 +46,46 @@ export function initializeAcademyRuntime({
     portal.hostname.length > 253
   )
     throw new Error("academy_runtime_origin");
+  const project = "academy-" + installationId.replaceAll("-", "");
+  return {
+    version: 1,
+    installation_id: installationId,
+    edition,
+    portal_origin: portal.origin,
+    api_base_url: portal.origin + "/backend",
+    compose_project: project,
+    backend_network: project + "-backend",
+    data_directory: join(root, "data"),
+    backup_directory: join(root, "backups"),
+    browser_directory: join(root, "browser"),
+  };
+}
+
+/** Reserve fresh private paths and generate the independent runtime settings. */
+export function initializeAcademyRuntime({ root, bindAddress, ...target }) {
+  const identity = describeAcademyRuntime({ root, ...target });
+  if (realpathSync(dirname(root)) !== dirname(root))
+    throw new Error("academy_runtime_parent");
   if (typeof bindAddress !== "string" || isIP(bindAddress) !== 4)
     throw new Error("academy_runtime_bind_address");
 
-  const project = "academy-" + installationId.replaceAll("-", "");
-  const api = portal.origin + "/backend";
-  const network = project + "-backend";
-  const layout = {
-    data: join(root, "data"),
-    backups: join(root, "backups"),
-    browser: join(root, "browser"),
-  };
   const configuration = createConfiguration({
-    portalOrigin: portal.origin,
-    apiOrigin: api,
-    dataDirectory: layout.data,
-    network,
+    portalOrigin: identity.portal_origin,
+    apiOrigin: identity.api_base_url,
+    dataDirectory: identity.data_directory,
+    network: identity.backend_network,
   });
   Object.assign(configuration.server, {
-    COMPOSE_PROJECT_NAME: project,
-    ACADEMY_INSTALLATION_ID: installationId,
-    ACADEMY_EDITION: edition,
+    COMPOSE_PROJECT_NAME: identity.compose_project,
+    ACADEMY_INSTALLATION_ID: identity.installation_id,
+    ACADEMY_EDITION: identity.edition,
     ACADEMY_BIND_ADDRESS: bindAddress,
-    PORTAL_DOMAIN: portal.hostname,
-    PORTAL_WWW_DIR: layout.browser,
+    PORTAL_DOMAIN: new URL(identity.portal_origin).hostname,
+    PORTAL_WWW_DIR: identity.browser_directory,
     PORTAL_INVITES_ENABLED: "false",
-    GLOBAL_S3_BUCKET: project + "-files",
-    STORAGE_TENANT_ID: project,
+    ACADEMY_NOTIFICATION_MAIL_ENABLED: "false",
+    GLOBAL_S3_BUCKET: identity.compose_project + "-files",
+    STORAGE_TENANT_ID: identity.compose_project,
     SMTP_SENDER_NAME: "Academy",
   });
 
@@ -83,20 +93,13 @@ export function initializeAcademyRuntime({
   // existing directories and symbolic links. All children are operator-owned.
   mkdirSync(root, { mode: 0o700 });
   try {
-    for (const path of Object.values(layout)) mkdirSync(path, { mode: 0o700 });
+    for (const path of [
+      identity.data_directory,
+      identity.backup_directory,
+      identity.browser_directory,
+    ])
+      mkdirSync(path, { mode: 0o700 });
     writeConfiguration(join(root, "runtime.env"), configuration);
-    const identity = {
-      version: 1,
-      installation_id: installationId,
-      edition,
-      portal_origin: portal.origin,
-      api_base_url: api,
-      compose_project: project,
-      backend_network: network,
-      data_directory: layout.data,
-      backup_directory: layout.backups,
-      browser_directory: layout.browser,
-    };
     writeFileSync(
       join(root, "installation.json"),
       JSON.stringify(identity, null, 2) + "\n",

@@ -608,3 +608,46 @@ Deno.test("course chat download checks the exact version, scan hash and post-sto
     const denied = await handler(request(attachment));
     assert(denied.status === 403 && !(await denied.text()).includes("Fictional course file"));
 });
+
+Deno.test("dedicated course PDFs use database branding and reject a changing issuer or request override", async () => {
+    const brand = {
+        name: "Fictional academy",
+        short_name: "Academy",
+        theme_color: "#1e5b61",
+    };
+    let calls = 0;
+    let renderCalls = 0;
+    let change = false;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => true,
+        rpc: async (_token, name, args) => {
+            assert(name === "course_document_access");
+            assert(Object.keys(args).sort().join(",") === "p_id,p_kind");
+            calls++;
+            return {
+                data: { id, academy_pdf_brand: change && calls % 2 === 0
+                    ? {...brand, name: "Changed issuer"} : brand },
+                error: null,
+            };
+        },
+        download: async () => { throw new Error("unexpected_download"); },
+        render: async (kind, facts) => {
+            renderCalls++;
+            assert(kind === "completion");
+            assert(facts.academy_pdf_brand === brand);
+            return new TextEncoder().encode("%PDF-Fictional");
+        },
+    });
+    const result = await handler(request({kind: "completion", id}));
+    assert(result.status === 200);
+    assert(result.headers.get("Content-Disposition") === 'attachment; filename="course-completion.pdf"');
+    assert(calls === 2);
+    change = true;
+    const stale = await handler(request({kind: "completion", id}));
+    assert(stale.status === 403);
+    assert(!(await stale.text()).includes("%PDF"));
+    const forged = await handler(request({kind: "completion", id, academy_pdf_brand: brand}));
+    assert(forged.status === 400);
+    assert(Number(calls) === 4 && renderCalls === 2);
+});

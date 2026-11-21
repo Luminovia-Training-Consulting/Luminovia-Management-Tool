@@ -1,5 +1,6 @@
 /** Materialize a freshly authorized browser release for the dedicated Caddy runtime. */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   lstatSync,
   mkdirSync,
@@ -196,6 +197,9 @@ export async function installAcademyBrowser(
       state: "browser-staged",
       customer_ready: false,
       release: plan.release,
+      brand_manifest_sha256: createHash("sha256")
+        .update(files.get("manifest.webmanifest"))
+        .digest("hex"),
     };
     // Envoy's local bucket uses uint32 values. A higher signed maximum must
     // never overflow into an unlimited or larger allowance.
@@ -225,7 +229,9 @@ export async function installAcademyBrowser(
         mkdirSync(lock, { mode: 0o700 });
       } catch (error) {
         if (error.code !== "EEXIST") throw error;
-        throw new Error("academy_install_upgrade_in_progress", { cause: error });
+        throw new Error("academy_install_upgrade_in_progress", {
+          cause: error,
+        });
       }
       try {
         const previous = JSON.parse(

@@ -198,3 +198,10 @@
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
+
+.academy-logo-preview {
+  max-inline-size: min(14rem, 100%);
+  max-block-size: 8rem;
+  object-fit: contain;
+  object-position: left center;
+}

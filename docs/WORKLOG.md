@@ -1,8 +1,38 @@
+# 21 November 2026 — Typed Premium class and chat controls
+
+The internal API publishes closed request and response shapes for class assignment and course-chat protection. Both catalogues use the same app validators. Real PostgreSQL compares the published contracts with current, updated and scoped responses in all three editions. The internal explorer and download omit dedicated-only branding writes.
+
+# 21 November 2026 — Academy API, private notice delivery and operator inventory
+
+The version 1.27 Academy catalogue has 69 paths. A current local academy administrator can issue, rotate and revoke a one-time course-index credential for an exact organisation. The scope includes its published course titles and time zones. Webhook credentials follow their separate purpose and cannot read that index. Native Chromium, GoTrue, PostgREST and the request handler exercised creation and revocation in both dedicated editions.
+
+An opt-in participant or staff member can receive generic course alerts linked to their local inbox. The worker is disabled at installation until explicitly enabled. Before an SMTP envelope the worker rechecks the current course, recipient, quiet hours, exact licensed revision and provider configuration. The pin, rollout and SMTP tests use disposable databases, the real local worker and loopback mail. External delivery remains pending.
+
+The operator can request a read-only status receipt bound to the staged release and licensed database. It reports licence dates and course profile state, plus the migration ledger count and last entry where present. Both dedicated editions test the installed, blocked and disabled profiles. Support sees only operational metadata in this receipt.
+
 # 21 November 2026 — Premium company participant centre
 
 The selected participant's company view now lists only enrolments from the current authorised company, with its scheduled courses and aggregate present, absent and excused counts. The company reference is optional, case-insensitively unique within its company and updated against the observed membership version. Only private membership state stores the reference. A successful write does not alter Auth, enrolment or attendance. The public API documents both operations.
 
 Focused PostgreSQL and native HTTP verified paging, legacy and current attendance states, exact retry, stale revisions, duplicate references, different company references, disabled Premium and current company scope. Full browser and system acceptance remain deferred.
+
+# 21 November 2026 — Customer academy logo
+
+Local administrators can preview and publish a canonical PNG logo for the academy header, sign-in and invitation landing page. The authenticated file gateway validates the exact bytes, scans them, checks the current authority again and publishes the image only after a clean ClamAV result. PostgreSQL holds one bounded current logo with a version and supports a confirmed return to the signed package logo. The public read projects only the current bytes. Existing Auth origins and signed app icons are independent of the logo.
+
+Both dedicated editions passed native PostgreSQL and the exact OpenAPI shape. Actual Chromium with GoTrue, PostgREST, the files Edge function and pinned ClamAV verified the German mobile and English desktop preview, publication, public login and fallback. Learner upload attempts returned 403. Fifty-two focused UI and contract cases and two Edge logo tests passed.
+
+# 21 November 2026 — Private customer academy draft approval
+
+The offline operator command validates customer and rehearsal drafts for both dedicated editions. The preview shows the planned installation, edition, domain, locale, release and agreed limits. A successful approval binds the canonical review digest, records a generated installation identity and writes an atomic private receipt. Exact retries return the original receipt. The registry rejects a reused request ID with changed fields, duplicate origins and overlapping runtime directories on the same host.
+
+Seven focused tests cover exact and stale approval, independent and duplicate concurrent approvals, rejected input, filesystem containment and compatibility with the existing licence signer using fictional credentials. The receipt contains planning data for the existing runtime and staging tools. Live fulfilment remains separate.
+
+# 21 November 2026 — Academy issuer on generated PDFs
+
+Dedicated completion and attendance PDFs use the local academy name, short name and accent colour. The operator pins verified staged manifest branding to the licensed release. Current administrator overrides apply to new certificates and current attendance exports. A new completion record captures its issuer separately from the stored participation facts. Earlier records without an issuer snapshot retain their underlying facts and use the current branding at export.
+
+Native GoTrue, PostgREST and the Deno document function generated actual PDFs in both dedicated editions. Poppler confirmed the visible heading, footer and author metadata. Renaming the academy after issuance kept the exact certificate bytes. The attendance export reflected the new name and stayed unavailable to a learner. Both edition database tests verified current scope and revocation, and 24 Edge document tests passed.
 
 # 21 November 2026 — Standalone Academy participation and encrypted recovery
 

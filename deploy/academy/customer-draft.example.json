@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "request_id": "815bbe46-c413-4aec-aa72-39cfb43155ff",
+  "purpose": "rehearsal",
+  "legal_customer_name": "Fictional Training Company",
+  "branding": {
+    "name": "Fictional Practice Academy",
+    "short_name": "Practice Academy",
+    "theme": "system",
+    "theme_color": "#172b4b",
+    "approved_assets_reference": "BRAND-FICTIONAL-42"
+  },
+  "initial_administrator": {
+    "email": "admin@academy.example.invalid",
+    "username": "practice-admin"
+  },
+  "target": {
+    "edition": "customer-self-hosted",
+    "portal_origin": "https://academy.example.invalid",
+    "domain_status": "temporary-pending",
+    "runtime_directory": "/opt/academies/practice",
+    "host_reference": "fictional-academy-server",
+    "data_region": "local",
+    "tls": "operator-terminated"
+  },
+  "preferences": {
+    "locale": "de",
+    "time_zone": "Europe/Berlin"
+  },
+  "smtp_mode": "capture",
+  "backup_retention_days": 30,
+  "support": {
+    "agreement_reference": "SUPPORT-FICTIONAL-42",
+    "contact_email": "support@example.invalid"
+  },
+  "licence": {
+    "release_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "limits": {
+      "seat_count": 25,
+      "storage_bytes": 5000000000,
+      "api_requests_per_minute": 120
+    }
+  }
+}

@@ -2,6 +2,7 @@
  * runtime. Unsupported characters fail visibly instead of changing names. */
 import {fontkit, PDFDocument, rgb} from "./vendor/pdf-runtime.js";
 import {passportLines} from "./passport.ts";
+import {academyPdfBrand} from "./brand.ts";
 
 type Facts = Record<string, unknown>;
 const titles: Record<string, string> = {
@@ -204,7 +205,9 @@ export async function renderFactPdf(
             : "Qualifikationspass")
         : titles[kind];
     if (!title) throw new Error("invalid_document_kind");
+    const brand = academyPdfBrand(kind, facts);
     const lines = factLines(kind, facts);
+    if (brand) lines.unshift('Herausgeber / Issuer: ' + brand.name);
     if (lines.length > 10000 || lines.some((line) => line.length > 20000)) {
         throw new Error("document_too_large");
     }
@@ -212,7 +215,7 @@ export async function renderFactPdf(
     document.registerFontkit(fontkit);
     const font = await document.embedFont(fontBytes, {subset: true});
     const supported = new Set(font.getCharacterSet());
-    for (const text of [title, ...lines]) {
+    for (const text of [title, ...(brand ? [brand.short_name] : []), ...lines]) {
         for (const char of text) {
             if (
                 char !== "\n" && char !== "\r" && char !== "\t" &&
@@ -228,13 +231,20 @@ export async function renderFactPdf(
     }
     document.setCreationDate(issued);
     document.setModificationDate(issued);
-    document.setAuthor("Luminovia Training & Consulting");
-    document.setCreator("Luminovia Portal");
-    document.setProducer("Luminovia Portal");
+    document.setAuthor(brand?.name ?? "Luminovia Training & Consulting");
+    document.setCreator(brand?.name ?? "Luminovia Portal");
+    document.setProducer(brand?.name ?? "Luminovia Portal");
     document.setTitle(title);
     const navy = rgb(0.075, 0.12, 0.24),
-        blue = rgb(0.09, 0.28, 0.71),
         cream = rgb(0.985, 0.977, 0.95);
+    const accentHex = brand ? parseInt(brand.theme_color.slice(1), 16) : undefined;
+    const accent = accentHex === undefined
+        ? rgb(0.09, 0.28, 0.71)
+        : rgb((accentHex >> 16) / 255, ((accentHex >> 8) & 255) / 255, (accentHex & 255) / 255);
+    const heading = brand
+        ? (font.widthOfTextAtSize(brand.name, 20) <= 506 ? brand.name : brand.short_name)
+        : "LUMINOVIA";
+    const footerName = brand?.short_name ?? "Luminovia Portal";
     let page = document.addPage([595.28, 841.89]);
     let y = 740;
     let pageNumber = 0;
@@ -242,16 +252,16 @@ export async function renderFactPdf(
     function header() {
         pageNumber++;
         page.drawRectangle({x: 0, y: 785, width: 596, height: 57, color: navy});
-        page.drawText("LUMINOVIA", {
+        page.drawText(heading, {
             x: 44,
             y: 806,
             size: 20,
             font,
             color: rgb(1, 1, 1),
         });
-        page.drawRectangle({x: 0, y: 780, width: 596, height: 5, color: blue});
+        page.drawRectangle({x: 0, y: 780, width: 596, height: 5, color: accent});
         page.drawRectangle({x: 32, y: 32, width: 531, height: 38, color: cream});
-        page.drawText(`Luminovia Portal  |  ${pageNumber}`, {
+        page.drawText(`${footerName}  |  ${pageNumber}`, {
             x: 44,
             y: 47,
             size: 8,
