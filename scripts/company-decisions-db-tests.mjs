@@ -289,52 +289,41 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
     await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${raceDocument}','${teacher4}','${teacher4}','personal','invoice','Fictional.pdf','application/pdf',100,'clean','${raceKey}');
    insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,sha256,status) values('${raceVersion}','${raceDocument}','${teacher4}','${raceKey}',1,'${teacher4}/${raceDocument}/${raceVersion}','Fictional.pdf','application/pdf',100,'${"2".repeat(64)}','clean');
    update public.documents set current_version_id='${raceVersion}' where id='${raceDocument}';
-   create function public.test_company_invoice_barrier() returns trigger language plpgsql as $$begin perform pg_sleep(2);return new;end$$;
-   create trigger test_company_invoice_barrier before insert on public.invoices for each row execute function public.test_company_invoice_barrier();`);
-    const submitting = actor(
-        teacher4,
-        `select public.submit_invoice('FICT-RACE',array['${raceClaim.claim_id}'::uuid],'${raceVersion}',current_date,current_date+7,'${randomUUID()}')`,
-    );
+   update public.job_sessions set starts_at=now()-interval '2 hours',ends_at=now()-interval '1 hour'
+     where job_id='${job}';
+   update public.assignment_sessions set starts_at=now()-interval '2 hours',ends_at=now()-interval '1 hour'
+     where claim_id='${raceClaim.claim_id}';`);
+    // Hold the same actor lock the company decision uses before its claim row lock.
+    // The invoice must wait there and cannot hold that row first.
+    const deciding = assert.rejects(actor(company, `
+        select pg_advisory_xact_lock(hashtextextended('${teacher4}',0));
+        select pg_sleep(0.7);
+        select public.decide_company_lecturer('${raceClaim.claim_id}','rejected');
+    `), /Started work cannot be released/);
     let paused = false;
-    for (let n = 0; n < 60; n++) {
-        if (
-            (await sql(
-                `select exists(select 1 from pg_stat_activity where datname=current_database() and pid<>pg_backend_pid() and wait_event='PgSleep')`,
-            )) === "t"
-        ) {
-            paused = true;
-            break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 50));
+    for (let n = 0; n < 30 && !paused; n++) {
+        paused = (await sql(
+            `select exists(select 1 from pg_stat_activity where datname=current_database()
+                and pid<>pg_backend_pid() and wait_event='PgSleep')`,
+        )) === "t";
+        if (!paused) await new Promise((resolve) => setTimeout(resolve, 20));
     }
     assert.equal(paused, true);
-    const deciding = actor(
-        company,
-        `select public.decide_company_lecturer('${raceClaim.claim_id}','rejected')`,
-    );
-    const results = await Promise.allSettled([submitting, deciding]);
-    assert.deepEqual(
-        results.map((x) => x.status),
-        ["fulfilled", "fulfilled"],
-    );
-    assert.equal(
-        await sql(
-            `select status from public.job_claims where id='${raceClaim.claim_id}'`,
-        ),
-        "confirmed",
-    );
-    assert.equal(
-        await sql(
-            `select decision from private.company_lecturer_decisions where claim_id='${raceClaim.claim_id}'`,
-        ),
-        "review_required",
-    );
-    await sql(
-        "drop trigger test_company_invoice_barrier on public.invoices;drop function public.test_company_invoice_barrier()",
-    );
-    console.log(
-        "Invoice submission and company rejection serialize; committed invoice causes review without cancellation.",
-    );
+    const submitted = actor(teacher4,
+        `select public.submit_invoice('FICT-RACE',array['${raceClaim.claim_id}'::uuid],
+          '${raceVersion}',current_date,current_date+7,'${randomUUID()}')`);
+    const [, raceInvoice] = await Promise.all([deciding, submitted]);
+    assert.match(raceInvoice, /^[0-9a-f-]{36}$/);
+    assert.equal(await sql(
+        `select status from public.job_claims where id='${raceClaim.claim_id}'`,
+    ), "confirmed");
+    assert.equal(await sql(
+        `select count(*) from private.company_lecturer_decisions where claim_id='${raceClaim.claim_id}'`,
+    ), "0");
+    assert.equal(await sql(
+        `select count(*) from public.invoice_items where claim_id='${raceClaim.claim_id}' and invoice_id='${raceInvoice}'`,
+    ), "1");
+    console.log("Concurrent company refusal cannot release an ended block while its eligible invoice commits.");
     // The company request can only be completed after explicit invoice review.
     await assert.rejects(
         actor(
@@ -382,6 +371,7 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
         ),
         /Review note required/,
     );
+    await sql(`update public.jobs set status='archived' where id='${job}'`);
     await actor(
         manager,
         `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Correction verified with lecturer')`,
@@ -433,30 +423,7 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
     console.log(
         "Financial review resolves only after explicit invoice correction; history retained, retries idempotent and reactivation denied.",
     );
-    const raceInvoice = await sql(
-        `select invoice_id from public.invoice_items where claim_id='${raceClaim.claim_id}'`,
-    );
-    await actor(
-        manager,
-        `select public.review_invoice('${raceInvoice}','cancelled','Fictional invoice correction')`,
-        "aal1",
-    );
-    await sql(`update public.jobs set status='archived' where id='${job}'`);
-    await actor(
-        manager,
-        `select public.resolve_company_invoice_rejection('${raceClaim.claim_id}','Invoice cancelled after review')`,
-        "aal1",
-    );
-    assert.equal(
-        await sql(`select status from public.jobs where id='${job}'`),
-        "archived",
-    );
-    assert.equal(
-        await sql(
-            `select status from public.job_claims where id='${raceClaim.claim_id}'`,
-        ),
-        "cancelled",
-    );
+    assert.equal(await sql(`select status from public.jobs where id='${job}'`), "archived");
     for (const status of ["draft", "archived"]) {
         const inactiveJob = randomUUID(),
             inactiveClaim = randomUUID();
