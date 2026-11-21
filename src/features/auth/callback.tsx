@@ -69,7 +69,11 @@ export function AuthCallback() {
           }
         />
         <h1>{t("acceptInvite")}</h1>
-        <p>{t("inviteWelcome")}</p>
+        <p>
+          {t("inviteWelcome", {
+            name: portalInternalEdition ? "Luminovia" : installationBrand.name,
+          })}
+        </p>
         {invite ? (
           <Button onClick={() => void accept()} disabled={busy || !online}>
             {t(busy ? "loading" : "acceptInvite")}

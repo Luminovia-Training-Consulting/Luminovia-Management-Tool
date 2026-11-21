@@ -12,7 +12,7 @@ Dedicated SMTP can be configured by the current local administrator. PostgreSQL 
 
 Local administrators can also create a company contact for exactly one organisation. A confirmed contact can request a learner invitation from its own course workspace. The route resolves the company from the course and uses the same licensed seat ledger, rate limits, retries, and current-authority checks as local account creation. It acknowledges receipt without exposing existing identities or creating a course enrolment. Both dedicated editions passed migrated database checks for the regular workflow, cross-company refusal, protected role grants, removal of authority during delivery and read-only grace. This extends the version 1.22.0 branded API to 53 paths.
 
-The fictional local demo passed all 16 Chromium journeys across desktop and mobile, including language, appearance and width checks. A read-only inspection of the existing public deployment found that the demo URL leads to the not-found page. The separate public website did not show a direct participant login on the inspected home page. External SMTP delivery, public release and those two live entry points remain open.
+The fictional local demo passed all 16 Chromium journeys across desktop and mobile, including language, appearance and width checks. The dedicated invitation landing page displays its own configured name in both languages. A read-only inspection of the existing public deployment found that the demo URL leads to the not-found page. The separate public website did not show a direct participant login on the inspected home page. External SMTP delivery, public release and those two live entry points remain open.
 
 # 21 November 2026 — Calendar zones and contractual exception review
 

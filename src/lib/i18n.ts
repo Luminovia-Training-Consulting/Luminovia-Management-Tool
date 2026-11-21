@@ -152,8 +152,8 @@ const pairs: Record<string, [string, string]> = {
   ],
   acceptInvite: ["Einladung annehmen", "Accept invitation"],
   inviteWelcome: [
-    "Willkommen bei Luminovia. Bestätige deine Einladung und lege anschließend dein Passwort fest.",
-    "Welcome to Luminovia. Accept your invitation, then set your password.",
+    "Willkommen bei {{name}}. Bestätige deine Einladung und lege anschließend dein Passwort fest.",
+    "Welcome to {{name}}. Accept your invitation, then set your password.",
   ],
   inviteInvalid: [
     "Dieser Link ist ungültig oder abgelaufen. Bitte kontaktiere die Verwaltung.",

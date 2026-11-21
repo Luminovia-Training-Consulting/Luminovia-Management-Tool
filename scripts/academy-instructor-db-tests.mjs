@@ -41,6 +41,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/functions/v1/files",
             "/functions/v1/course-documents",
             "/functions/v1/accounts/v1/academy/users",
+            "/functions/v1/accounts/v1/academy/company-invitations",
             "/functions/v1/mail-admin",
             "/rest/v1/rpc/academy_administration",
             "/rest/v1/rpc/academy_licence_receipt",
