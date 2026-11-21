@@ -1,5 +1,5 @@
 /**
- * Browser workflows for cancellation, explicit reopening and a new claim on the same mounted page.
+ * Browser workflows for cancellation, eligible automatic reopening and same-page reclaim.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import {expect, test} from "@playwright/test";
@@ -11,7 +11,7 @@ test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
     "Lifecycle writes require the canonical disposable project.",
 );
-test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy preserve the complete accepted block", async ({
+test("reasoned cancellation, automatic reopening, same-page reclaim and safe copy preserve the complete accepted block", async ({
                                                                                                                                    page,
                                                                                                                                    browser,
                                                                                                                                }, testInfo) => {
@@ -103,6 +103,7 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
             .select("terms_version,claim_deadline")
             .eq("id", job)
             .single(),
+        {requireData: true},
     );
     expect(edited.terms_version).toBe(2);
     expect(Date.parse(edited.claim_deadline)).toBe(
@@ -149,45 +150,28 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
             lecturerPage.getByText("Storniert", {exact: true}),
         ).toBeVisible();
         await expect(
-            lecturerPage.getByRole("button", {
-                name: "Auftrag übernehmen",
-                exact: true,
-            }),
-        ).toBeDisabled();
-        await expect(
             lecturerPage.getByText(
                 "Dein Auftrag ist bestätigt. Alle Termine sind reserviert.",
             ),
         ).not.toBeVisible();
-        await page.goto(`/jobs/${job}`);
-        await management
-            .getByRole("button", {name: "Auftrag wieder öffnen", exact: true})
-            .click();
-        const reopen = page.getByRole("dialog");
-        await reopen
-            .getByLabel("Begründung (5–1000 Zeichen)", {exact: true})
-            .fill("Fictional revised availability accepted");
-        await reopen
-            .getByRole("button", {name: "Auftrag wieder öffnen", exact: true})
-            .click();
-        await expect(reopen).not.toBeVisible();
-        // Observe the real stale-query focus contract without reloading/remounting the
-        // lecturer page: its retired claim key and confirmed-result state must stay safe.
-        await lecturerPage.clock.install();
-        await lecturerPage.clock.fastForward(15_001);
-        await lecturerPage.bringToFront();
-        const refreshedJobs = lecturerPage.waitForResponse(
-            (response) =>
-                new URL(response.url()).pathname.endsWith("/rest/v1/rpc/job_detail") &&
-                response.request().method() === "POST" &&
-                response.status() === 200,
+        // The same confirmed withdrawal releases every allocation and returns
+        // this eligible future block to the marketplace without another edit.
+        const reopened = await checked(
+            service.from("jobs").select("status,terms_version").eq("id", job).single(),
+            {requireData: true},
         );
-        // TanStack's browser focus manager listens on window. A non-bubbling
-        // document event does not reach it and would leave this page on the draft.
-        await lecturerPage.evaluate(() =>
-            window.dispatchEvent(new Event("visibilitychange")),
+        expect(reopened).toEqual({status: "published", terms_version: edited.terms_version});
+        const cancelled = await checked(
+            service.from("job_claims").select("id").eq("job_id", job)
+                .eq("status", "cancelled").single(),
+            {requireData: true},
         );
-        await refreshedJobs;
+        const released = await checked(
+            service.from("assignment_sessions").select("released_at").eq("claim_id", cancelled.id),
+            {requireData: true},
+        );
+        expect(released).toHaveLength(sessions.length);
+        expect(released.every(({released_at}) => released_at !== null)).toBe(true);
         await expect(lecturerPage.locator(".status-published")).toHaveText("Offen");
         await expect(
             lecturerPage.getByText("1 Platz zur Übernahme offen", {exact: true}),
@@ -224,6 +208,7 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
                 .from("job_claims")
                 .select("id,status,idempotency_key,total_amount,terms")
                 .eq("job_id", job),
+            {requireData: true},
         );
         expect(history).toHaveLength(2);
         expect(history.map((c) => c.status).sort()).toEqual([
@@ -263,6 +248,7 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
                 .select("status,course_run_id")
                 .eq("id", copyId)
                 .single(),
+            {requireData: true},
         );
         expect(copied.status).toBe("draft");
         expect(copied.course_run_id).not.toBe(run);
