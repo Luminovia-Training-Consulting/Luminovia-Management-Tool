@@ -14,6 +14,13 @@ This is the **Luminovia core platform roadmap**, NOT the commercial white-label 
 
 ## 1. Product direction and non-negotiable decisions
 
+### Current local acceptance
+
+- The public LMS demo and the optional signed Academy sandbox open at `/demo`. They use fictional courses, support role selection and keep business actions in the sandbox. See the [internal demo requirements](#a1-retained-luminovia-demo--mandatory-redesign-and-acceptance) and the [Academy packaging options](deploy/academy/README.md).
+- Real desktop and mobile Chromium exercised all eight internal roles and a combined-role account with responsive checks from 320 to 1920 px. Tests cover current access after a role change, email and username sign-in, explicit invitation roles and protected controls. The help and Wiki cover both German and English. Physical-device acceptance remains open.
+- The downloadable OpenAPI catalogues cover 363 internal paths and 82 for each dedicated Academy edition. The source and database contract checks cover the application RPC inventory. Live response and denial sampling across HTTP, Realtime and Storage remains tracked in [API acceptance](#109-api-08--ci-integration-and-definition-of-done).
+- The [local test record](docs/WORKLOG.md) covers current source, Docker and browser results. Public Website changes, Hostinger and real provider delivery are separate acceptance items.
+
 - One self-hosted, bilingual (German/English), responsive, accessible training-management platform for `admin`, `management`, `senior_lecturer`, `lecturer`, `client` and **re-enabled participant-only** accounts, with protected `owner`/`guest` semantics where applicable.
 - Preserve all existing contract, financial, course, chat, Auth, Storage and audit data; no reset, destructive reseed or `docker compose down -v` on populated instances. Released migrations are byte-immutable; new changes use additive forward migrations and reviewed data changes.
 - **Premium LMS is an organisation-scoped entitlement, default OFF. Only an actual `admin` account may turn it ON or OFF.** A red/green, text-labelled switch in company administration requires a confirmation on both operations and records an immutable audit event. `management`, lecturers and companies cannot change it. Existing data remain stored on OFF.
@@ -649,7 +656,7 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
 
-The published internal catalogue covers 349 paths, including the current account, Premium course, attendance, integration credential and invoice-series operations. The Academy catalogue covers 82 paths per dedicated edition. Published JSONB payloads use domain schemas and covered browser RPC references resolve to a published operation. Full API-T07 and API-T08 acceptance requires the remaining exact HTTP, role, error and compatibility checks.
+The published internal catalogue covers 363 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments and settlements. The Academy catalogue covers 82 paths per dedicated edition. Published JSONB payloads use domain schemas and the compiler-discovered browser RPC inventory is checked against the migrated APIs. The acceptance checks below also cover real responses, role denials, transport errors and compatibility.
 
 | Test    | Automated acceptance / observable behaviour                                                                                               |
 |---------|-------------------------------------------------------------------------------------------------------------------------------------------|

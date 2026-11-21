@@ -156,7 +156,7 @@ For self-hosted and dedicated hosted editions, normally **one primary customer b
 - Implement a signed or otherwise trustworthy per-installation licence: edition, customer/installation identifier, permitted modules and versions, validity/renewal, optional seats/storage/API quotas, support/update rights, and allowed hosting mode. Validate this **server-side**. Never treat an editable database flag or hiding a button as a licence.
 - Define trial-to-paid, expired licence, transient offline verification failures, grace/readonly policy, last-good validation and safe downgrade/renewal. An expiry cannot automatically delete exams, participants, contracts, course history or Storage objects. Customer should have a documented data-export/offboarding path.
 - Admin can see their own local entitlements/usage and request renewal; only Luminovia's trusted vendor authority can issue or change licence rights. Licence checks should not provide an undisclosed vendor access path into customer content.
-- Keep customer contract billing/subscriptions and vendor licence invoice data **outside** the customer's lecturer-cost module and accessible product API.
+- Keep customer contract billing, subscriptions and vendor licence invoices in the vendor control plane.
 - Review the repository's current proprietary source-available licence and [`docs/RELICENSING_STATUS.md`](docs/RELICENSING_STATUS.md) before distributing binaries/source: older GPLv3 grants remain for copies already received, and bundled assets/dependencies keep their own licences. Obtain appropriate legal review for redistribution, support warranty, subprocessors, export and customer data ownership. Never claim a new EULA overrides existing third-party or old licence rights.
 - Establish signed versioned customer build/release artifacts with immutable provenance and an SBOM/dependency licence manifest. Separate customer release channels from the automatic CMS _development_ publication workflow.
 
@@ -188,7 +188,7 @@ For self-hosted and dedicated hosted editions, normally **one primary customer b
 | Calendars             | Own/permitted events, sessions, timetable, subscriptions and timezone-correct information                                              |
 | Knowledge/support     | Authored wiki/forum and course support interactions, under applicable access policies                                                  |
 | Reports/analytics     | Only installed and permissioned course/activity/attendance reports, exports and job status                                             |
-| Optional modules      | Internal lecturer costs/payments, optional job staffing, licensing metadata appropriate to the actor; no vendor margin access          |
+| Local licensing       | Installation licence validity, signed limits and current usage for authorised local administrators                                    |
 
 ### 8.2 API contract, documentation and developer experience
 
@@ -216,13 +216,12 @@ The white-label customer must be able to execute this entire workflow **without*
 1. Installation admin signs in through customer-branded account and configures academy settings.
 2. Admin creates/invites local management, course lecturers and participant-only users; current identities and public IDs are preserved.
 3. Course manager creates a template and course sessions or copies approved reusable content.
-4. Authorised customer user assigns a lecturer directly (or uses an optional local staffing workflow), not the public Luminovia marketplace.
+4. An authorised customer user assigns an internal lecturer directly to the course.
 5. Participants are invited/associated with their academy and enrolled into the course; capacity, active account and course membership are checked transactionally.
 6. Lecturer/company publish versioned Welcome Content and safe learning files; course participant group chat is available under current membership.
 7. Lecturer/company configure `Exam required` per course and upload student-facing exam PDFs; clean scanned version becomes available to enrolled learners, private answer key never leaks.
 8. Staff record per-session participant attendance (present/absent/excused, arrival times and notes) and may attach scanned roster evidence; learners do not see class register.
 9. Participant sees own course, permitted files and notifications; authorised company staff access reports and completion records.
-10. Optional local instructor payment tracking can be used if purchased; the course works equally well with no payment module.
 
 A hosted Luminovia-managed academy uses the same business workflow but its actual infrastructure, system updates and support responsibilities follow the managed contract.
 
@@ -277,13 +276,12 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 - [x] Add trusted installation identity and customer edition/license capabilities. Internal per-company Premium switch remains internal; white-label LMS always included.
 - [ ] Introduce immutable resource/role/business edition gates across UI, RPC, Edge, Storage, search, Realtime and notifications; independent data/finance boundaries.
-- [ ] Convert existing internal marketplace/contract/commission dependencies into optional edition modules; preserve original internal behaviour.
+- [x] Staff dedicated courses through direct lecturer assignment. Keep internal marketplace, contract and commission workflows scoped to the internal edition.
 
 ### WL-02 — Customer admin and normal academy workflow (P0)
 
 - [x] Customer installation administrator and delegated manager, teacher and participant roles. The signed operator path binds a confirmed first administrator in the dedicated database.
 - [x] Course creation, scheduling, own lecturer assignment, participant enrolment and daily LMS operations run through the dedicated academy without a marketplace or intermediary contract.
-- [ ] Provide optional customer-owned instructor payment module that can be switched off without breaking courses.
 
 - [x] Group several course runs under a school class within the same organisation without creating implicit enrolments. Confirm the shared workspace in internal Premium and both dedicated editions on desktop and mobile.
 - [x] Verify that several lecturers can teach the same scheduled course and that releasing one assignment preserves the other lecturer and existing enrolments.
@@ -309,7 +307,8 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Send the automatically assigned username with the one-time invitation. Require a personal password before opening protected resources and support verified-email or username sign-in after setup. Initial passwords supplied by administrators require a first sign-in change.
 - [x] Provision confirmed company contacts for one organisation. Allow them to request learner invitations from their own courses under the shared licensed seats and invitation budgets, with a scoped and opaque receipt.
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
-- [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
+- [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. The Academy catalogue describes 82 paths, including human authentication, course operations, files and scoped integration administration. Include an optional fictional sandbox in the signed customer package.
+- [ ] Finish exact-release request, response and error coverage across HTTP, file transfers, Realtime and notifications. Expand runnable integration examples where the existing guides and the signed receiver do not cover a workflow.
 - [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
 - [x] Issue, rotate and revoke course-index credentials for one academy organisation. Native HTTP and Chromium verify the exact published-course scope and current revocation.
 - [x] Keep course-alert email opt-in and off at installation by default. The private relay rechecks current rights, licence release, quiet hours and provider configuration before sending.
@@ -357,7 +356,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 | WL-T03  | Disable broker features                         | Job marketplace, global company procurement and Luminovia commission APIs denied, not only hidden                                                                                                                                                                                              |
 | WL-T04  | Direct customer course creation                 | Customer admin can create/run a course without marketplace offer or Luminovia framework agreement                                                                                                                                                                                              |
 | WL-T05  | Direct local lecturer assignment                | Existing course/session membership and permission recalculated, no brokerage claim required                                                                                                                                                                                                    |
-| WL-T06  | Optional customer lecturer payments             | Own rates visible when enabled and hidden/denied when disabled; vendor margin always inaccessible                                                                                                                                                                                              |
+| WL-T06  | Dedicated LMS excludes lecturer finance         | Role navigation, direct routes and API deny rates, lecturer fees, invoices and payments in both Academy editions. Local teaching and enrolment remain available.                                                                 |
 | WL-T07  | Vendor billing and licence boundary             | Local customer admin cannot issue licence, alter signed edition, access vendor invoices or another instance                                                                                                                                                                                    |
 | WL-T08  | Unique customer identities/data                 | No copied Auth accounts, SQL records, Storage objects, server keys or Luminovia production secrets                                                                                                                                                                                             |
 | WL-T09  | Customer first admin invitation                 | Valid signed customer invitation and safe password setup; no permanent demo password                                                                                                                                                                                                           |
@@ -400,7 +399,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [ ] Internal edition passes all existing regression tests after edition extraction; no lost contracts, invoices, permissions or job claims.
 - [ ] Customer product creates/operates courses, exams, attendance, participants, group chat, materials and APIs without global Luminovia brokerage.
 - [ ] Customer administrator configures own name/logo/favicon/PWA/domain/themes/email and permitted local controls; Luminovia/vendor business settings hidden AND server-denied.
-- [ ] Luminovia Internal Edition retains the completely redesigned `/demo` from the main roadmap. Customer white-label editions do not expose Luminovia's public `/demo` via navigation, URLs, API, PWA cache or downloadable packages; local QA examples and customer-specific onboarding remain supported.
+- [x] The internal edition retains its branded `/demo`. Both dedicated editions support a separate customer-branded sandbox at `/demo` when the operator opts in for the signed build. Locally signed packages passed the desktop and mobile demo and Chromium installability checks. The default package omits the public demo.
 - [ ] Username OR email + password login and short-lived API tokens verified. OpenAPI + Swagger UI covers every supported edition action and matches reality.
 - [ ] Customer installations have independently protected data, keys, backup/recovery, software licensing, updates and offboarding.
 - [ ] `WL-T01–WL-T41` are passing on the actual exact release commit and targeted hosting scenario. CI cannot be bypassed; no test is claimed run without evidence.
