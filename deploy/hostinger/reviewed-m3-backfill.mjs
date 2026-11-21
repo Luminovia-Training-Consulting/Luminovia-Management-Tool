@@ -3,11 +3,11 @@
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {lstat, readdir, readFile, writeFile} from "node:fs/promises";
+import {readdir, readFile, writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {collectCommand, repository, summarySQL} from "./backup.mjs";
-import {candidateDatabaseImage, createIsolatedDatabase, inspectBackup, streamIntoContainer,} from "./restore-check.mjs";
+import {candidateDatabaseImage, createIsolatedDatabase, inspectBackup, readBoundedOperatorFile, streamIntoContainer,} from "./restore-check.mjs";
 
 // One reviewed exception for PR#3, which arrived after the development VPS's
 // capacity migration. The ordinary updater must still reject backdated SQL.
@@ -65,17 +65,13 @@ export async function loadReviewedSources(root = repository) {
     const sources = [];
     for (const item of reviewedMigrations) {
         const file = resolve(root, "supabase/migrations", item.file);
-        const state = await lstat(file);
-        assert(
-            state.isFile() && !state.isSymbolicLink(),
-            "Reviewed source must be a regular file.",
-        );
-        const source = await readFile(file, "utf8");
+        const bytes = await readBoundedOperatorFile(file, 128 * 1024);
         assert.equal(
-            hash(source),
+            hash(bytes),
             item.sha256,
             "Reviewed M3 source hash differs: " + item.version,
         );
+        const source = bytes.toString("utf8");
         assert.match(source, /^begin;\s*/i);
         assert.match(source, /\ncommit;\s*$/i);
         sources.push({...item, source});

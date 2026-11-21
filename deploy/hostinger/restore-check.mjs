@@ -3,8 +3,8 @@
  */
 import assert from "node:assert/strict";
 import {randomBytes, randomUUID} from "node:crypto";
-import {createReadStream, createWriteStream} from "node:fs";
-import {chmod, lstat, mkdir, readdir, readFile, realpath, rename, rm, statfs, writeFile,} from "node:fs/promises";
+import {constants, createReadStream, createWriteStream} from "node:fs";
+import {chmod, lstat, mkdir, open, readdir, readFile, realpath, rename, rm, statfs, writeFile,} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pipeline} from "node:stream/promises";
 import {setTimeout as delay} from "node:timers/promises";
@@ -342,6 +342,63 @@ except Exception:
  sys.stderr.write('Storage restore validation failed; private paths withheld.\\n');sys.exit(1)
 `;
 
+/** Read and validate the same file descriptor. Do not follow leaf symlinks or wait for FIFO writers. */
+export async function readBoundedOperatorFile(
+    path,
+    maxBytes,
+    {requirePrivate = false} = {},
+) {
+    if (
+        !Number.isInteger(constants.O_NOFOLLOW) ||
+        !Number.isInteger(constants.O_NONBLOCK)
+    )
+        throw new Error("Secure operator input descriptor flags are unavailable.");
+    const file = await open(
+        path,
+        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
+    try {
+        const before = await file.stat({bigint: true});
+        if (
+            !before.isFile() ||
+            before.size > BigInt(maxBytes) ||
+            (requirePrivate && (before.mode & 0o077n) !== 0n)
+        )
+            throw new Error("Unsafe operator input, expected a bounded regular file.");
+        const bytes = Buffer.alloc(Number(before.size));
+        let position = 0;
+        while (position < bytes.length) {
+            const {bytesRead} = await file.read(
+                bytes,
+                position,
+                bytes.length - position,
+                position,
+            );
+            if (!bytesRead) throw new Error("Operator input changed while reading.");
+            position += bytesRead;
+        }
+        const after = await file.stat({bigint: true});
+        if (
+            after.size !== before.size ||
+            after.mtimeNs !== before.mtimeNs ||
+            after.ctimeNs !== before.ctimeNs
+        )
+            throw new Error("Operator input changed while reading.");
+        return bytes;
+    } finally {
+        await file.close();
+    }
+}
+
+async function readBackupManifest(directory) {
+    const bytes = await readBoundedOperatorFile(
+        resolve(directory, "manifest.json"),
+        4 * 1024 * 1024,
+        {requirePrivate: true},
+    );
+    return JSON.parse(bytes.toString("utf8"));
+}
+
 // Verify manifest, artifact sizes and checksums before restoring.
 export async function inspectBackup(directory) {
     const actual = await realpath(directory);
@@ -353,16 +410,7 @@ export async function inspectBackup(directory) {
     const state = await lstat(actual);
     if (!state.isDirectory() || state.isSymbolicLink() || state.mode & 0o077)
         throw new Error("Backup directory permissions are unsafe.");
-    const manifestFile = resolve(actual, "manifest.json");
-    const manifestState = await lstat(manifestFile);
-    if (
-        !manifestState.isFile() ||
-        manifestState.isSymbolicLink() ||
-        manifestState.mode & 0o077 ||
-        manifestState.size > 4 * 1024 * 1024
-    )
-        throw new Error("Backup manifest is unsafe.");
-    const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+    const manifest = await readBackupManifest(actual);
     if (
         manifest.format !== "luminovia-development-backup-v1" ||
         manifest.status !== "complete" ||
@@ -805,9 +853,7 @@ async function latestDevelopmentBackup() {
         .reverse();
     for (const name of names) {
         try {
-            const manifest = JSON.parse(
-                await readFile(resolve(backupRoot, name, "manifest.json"), "utf8"),
-            );
+            const manifest = await readBackupManifest(resolve(backupRoot, name));
             if (
                 manifest.status === "complete" &&
                 manifest.source.remote === "root@72.61.20.240"

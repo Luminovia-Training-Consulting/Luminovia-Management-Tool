@@ -3,12 +3,14 @@
  */
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
-import {mkdir, mkdtemp, readdir, readFile, rm, writeFile,} from "node:fs/promises";
+import fs, {chmod, mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, truncate, writeFile,} from "node:fs/promises";
+import {syncBuiltinESMExports} from "node:module";
 import {tmpdir} from "node:os";
 import {resolve} from "node:path";
 import test from "node:test";
-import {repository} from "./backup.mjs";
+import {backupRoot, databaseImage, fileDigest, repository} from "./backup.mjs";
 import {applyReviewedBackfill, buildBackfillSQL, loadReviewedSources, reviewedMigrations,} from "./reviewed-m3-backfill.mjs";
+import {inspectBackup} from "./restore-check.mjs";
 
 // Build the exact historical state for the successful or deliberately corrupted plan case.
 async function history() {
@@ -79,6 +81,74 @@ test("changed file hash is refused before database access", async () => {
         await assert.rejects(loadReviewedSources(root), /source hash differs/);
     } finally {
         await rm(root, {recursive: true, force: true});
+    }
+});
+
+test("reviewed migration input refuses a link to an exact pinned source", async (t) => {
+    const root = await mkdtemp(resolve(tmpdir(), "luminovia-reviewed-m3-"));
+    t.after(() => rm(root, {recursive: true, force: true}));
+    const directory = resolve(root, "supabase/migrations");
+    await mkdir(directory, {recursive: true});
+    const {file} = reviewedMigrations[0];
+    await symlink(
+        resolve(repository, "supabase/migrations", file),
+        resolve(directory, file),
+    );
+    await assert.rejects(loadReviewedSources(root), {code: "ELOOP"});
+});
+
+test("historical restore inspects the opened private manifest if its path is replaced", async (t) => {
+    await mkdir(backupRoot, {recursive: true, mode: 0o700});
+    const directory = await mkdtemp(resolve(backupRoot, "restore-input-"));
+    t.after(() => rm(directory, {recursive: true, force: true}));
+    const manifest = {
+        format: "luminovia-development-backup-v1",
+        status: "complete",
+        source: {image: databaseImage},
+        objects: {files: 0, bytes: 0},
+        artifacts: {},
+    };
+    for (const name of ["database.dump", "roles.sql", "storage.tar", "objects.jsonl"]) {
+        const artifact = resolve(directory, name);
+        await writeFile(artifact, "", {mode: 0o600});
+        manifest.artifacts[name] = await fileDigest(artifact);
+    }
+    const path = resolve(directory, "manifest.json");
+    await writeFile(path, JSON.stringify(manifest), {mode: 0o600});
+    await chmod(path, 0o644);
+    const unsafe = /Backup manifest is unsafe|bounded regular file/;
+    await assert.rejects(inspectBackup(directory), unsafe);
+    await chmod(path, 0o600);
+    await truncate(path, 4 * 1024 * 1024 + 1);
+    await assert.rejects(inspectBackup(directory), unsafe);
+    await writeFile(path, JSON.stringify(manifest));
+
+    let replaced = false;
+    const replace = async (candidate) => {
+        if (candidate !== path || replaced) return;
+        replaced = true;
+        await rename(path, resolve(directory, "original-manifest.json"));
+        await writeFile(path, '{"status":"incomplete"}', {mode: 0o600});
+    };
+    const originalOpen = fs.open;
+    const originalStat = fs.lstat;
+    t.mock.method(fs, "open", async (candidate, ...args) => {
+        const handle = await originalOpen(candidate, ...args);
+        await replace(candidate);
+        return handle;
+    });
+    t.mock.method(fs, "lstat", async (candidate, ...args) => {
+        const value = await originalStat(candidate, ...args);
+        await replace(candidate);
+        return value;
+    });
+    syncBuiltinESMExports();
+    try {
+        assert.deepEqual((await inspectBackup(directory)).manifest, manifest);
+        assert.equal(replaced, true);
+    } finally {
+        t.mock.restoreAll();
+        syncBuiltinESMExports();
     }
 });
 
