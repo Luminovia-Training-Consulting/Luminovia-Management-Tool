@@ -6,30 +6,29 @@ import {expect, type Request, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
+import {actor, api, checked, login} from "./helpers/accounts-support";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
     "Run through ./portal test in its isolated database.",
 );
 
-/** Signs this test actor in through the visible form and waits for confirmed navigation. */
-async function login(page: import("@playwright/test").Page) {
-    await page.goto("/login");
-    await page
-        .getByLabel("Benutzername oder E-Mail", {exact: true})
-        .fill(process.env.E2E_LECTURER_EMAIL!);
-    await page
-        .getByLabel("Passwort", {exact: true})
-        .fill(process.env.E2E_PASSWORD!);
-    await page.getByRole("button", {name: "Anmelden", exact: true}).click();
-    await expect(page).toHaveURL(/\/$/);
-}
+test.beforeEach(async ({page}) => {
+    // Each workflow owns an account so a different test's saved locale or
+    // preferences cannot change the German selectors in this fixture.
+    const lecturer = await actor("Fictional documents lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    await checked(
+        service.from("profiles").update({locale: "de"}).eq("id", lecturer.id),
+    );
+    await login(page, lecturer.email);
+    await expect(page.locator("html")).toHaveAttribute("lang", "de");
+});
 
 test("real private upload exposes authorized scan and current-version details, downloads and archives", async ({
                                                                                                                    page,
                                                                                                                }, testInfo) => {
     test.setTimeout(65_000);
-    await login(page);
     await page.goto("/files");
     const name = `Material-${randomUUID().slice(0, 8)}.txt`;
     const text = "Fictional persistent teaching material.";
@@ -205,7 +204,6 @@ test("real private upload exposes authorized scan and current-version details, d
 test("a clean private image preview loads authenticated bytes without caching a public URL", async ({
                                                                                                         page,
                                                                                                     }) => {
-    await login(page);
     await page.goto("/files");
     const name = `Bild-${randomUUID().slice(0, 8)}.webp`;
     await page
@@ -242,7 +240,6 @@ test("a clean private image preview loads authenticated bytes without caching a 
 test("qualification evidence uses a real private scanned upload from the profile", async ({
                                                                                               page,
                                                                                           }) => {
-    await login(page);
     await page.goto("/profile");
     const section = page.locator("section").filter({
         has: page.getByRole("heading", {
