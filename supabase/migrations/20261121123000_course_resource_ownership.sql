@@ -72,6 +72,14 @@ begin
        private.course_document_is_dedicated(document_row.id) then
       raise exception 'Reviewed course material required' using errcode = '42501';
     end if;
+    -- A document lock may have waited while roles changed. Re-read authority
+    -- after that wait before publishing any new or revived link.
+    context := private.course_workspace_context(p_run_id);
+    if not coalesce((context->>'lms_enabled')::boolean, false) or
+       not ((context->>'manager')::boolean or (context->>'teacher')::boolean or
+            (context->>'client')::boolean) then
+      raise exception 'Course sharing permission required' using errcode = '42501';
+    end if;
     -- A lecturer/company member may publish only their own uploaded material.
     -- Staff retain the existing same-course job-material selection.
     if not ((document_row.scope = 'personal' and document_row.owner_id = actor_id) or
@@ -108,6 +116,7 @@ begin
     where id = (p_payload->>'id')::uuid and run_id = p_run_id and removed_at is null
     for update;
     if not found then raise exception 'Course resource unavailable' using errcode = '42501'; end if;
+    context := private.course_workspace_context(p_run_id);
     if not ((context->>'manager')::boolean or
             ((context->>'client')::boolean and resource_row.ownership_kind = 'company') or
             ((context->>'teacher')::boolean and resource_row.ownership_kind = 'lecturer' and
