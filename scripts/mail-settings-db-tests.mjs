@@ -21,7 +21,7 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
     const rpc = (who, name, args = []) =>
         actor(
             who,
-            `select public.${name}(${args
+            `select to_jsonb(public.${name}(${args
                 .map((value) =>
                     value === null
                         ? "null"
@@ -29,12 +29,12 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
                             ? String(value)
                             : q(typeof value === "object" ? JSON.stringify(value) : value),
                 )
-                .join(",")})`,
+                .join(",")}))`,
         ).then((value) => JSON.parse(value));
     /** Exercise the relay-only public wrapper with a fictional signed service-role claim. */
     const serviceRpc = (name, args = []) =>
         sql(
-            `begin;set local request.jwt.claims=${q(JSON.stringify({role: "service_role"}))};select public.${name}(${args
+            `begin;set local role service_role;set local request.jwt.claims=${q(JSON.stringify({role: "service_role"}))};select to_jsonb(public.${name}(${args
                 .map((value) =>
                     value === null
                         ? "null"
@@ -42,7 +42,7 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
                             ? String(value)
                             : q(typeof value === "object" ? JSON.stringify(value) : value),
                 )
-                .join(",")});commit;`,
+                .join(",")}));commit;`,
         ).then((value) => JSON.parse(value));
 
     await check(

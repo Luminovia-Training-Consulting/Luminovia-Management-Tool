@@ -13,7 +13,7 @@ await withTestDatabase(
     async ({sql, actor, container, database}) => {
         const [admin, manager, teacher, peer, participant, managerTeacher] =
             Array.from({length: 6}, randomUUID);
-        await sql(`insert into auth.users(id,email) values ${[admin, manager, teacher, peer, participant, managerTeacher].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
+        await sql(`insert into auth.users(id,email,email_confirmed_at) values ${[admin, manager, teacher, peer, participant, managerTeacher].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
     insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(manager)},'management'),(${q(teacher)},'lecturer'),(${q(peer)},'lecturer'),(${q(participant)},'participant'),(${q(managerTeacher)},'management'),(${q(managerTeacher)},'lecturer');`);
         await actor(
             admin,
@@ -296,7 +296,22 @@ await withTestDatabase(
             await sql(
                 `insert into public.chat_members(room_id,user_id) values(${q(room)},${q(fixture.who)});`,
             );
-            return {run, room};
+            return {run, room, organisation};
+        };
+        /** Only confirmed participant-company consent can authorise current enrolment changes. */
+        const linkParticipant = async (organisation) => {
+            const accountId = await sql(
+                `select luminovia_user_id from public.profiles where id=${q(participant)}`,
+            );
+            await actor(admin, `select public.request_company_participant_link(
+                ${q(organisation)},${q(accountId)},${q(randomUUID())})`);
+            const invitations = JSON.parse(
+                await actor(participant, "select public.my_company_participant_invitations()"),
+            );
+            const current = invitations.find((item) => item.organisation_id === organisation);
+            assert.ok(current);
+            await actor(participant, `select public.accept_company_participant_invitation(
+                ${q(organisation)},${current.version},${q(randomUUID())})`);
         };
         const isMember = (room, who = teacher) =>
             sql(
@@ -368,7 +383,7 @@ await withTestDatabase(
             },
         );
         await check(
-            "An independent course enrolment preserves access during an assignment withdrawal",
+            "Withdrawal preserves historical enrolment provenance without preserving the former lecturer's chat access",
             async () => {
                 const fixture = await create({days: 10});
                 const {room, run} = await participantRoom(fixture, "assignment");
@@ -380,15 +395,18 @@ await withTestDatabase(
                 await sql(
                     `insert into public.user_roles(user_id,role) values(${q(teacher)},'participant')`,
                 );
-                await actor(
-                    admin,
-                    `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`,
-                    "aal1",
+                await assert.rejects(
+                    actor(admin, `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`),
+                    /Active company participant required/,
                 );
                 await sql(
                     `delete from public.user_roles where user_id=${q(teacher)} and role='participant'`,
                 );
-                assert.equal(await isMember(room), "f");
+                assert.equal(await isMember(room), "t");
+                assert.equal(
+                    await actor(teacher, `select private.can_access_chat_room(${q(room)})`),
+                    "f",
+                );
             },
         );
 
@@ -422,37 +440,31 @@ await withTestDatabase(
         );
 
         await check(
-            "Legacy enrolment removal requires an explicit membership decision and never guesses access provenance",
+            "Removing a legacy learner enrolment revokes live access and preserves unresolved membership provenance",
             async () => {
                 const fixture = await create({days: 10});
-                const {room, run} = await participantRoom(fixture, "legacy");
+                const {room, run, organisation} = await participantRoom(fixture, "legacy");
+                await linkParticipant(organisation);
                 await sql(`insert into public.chat_members(room_id,user_id) values(${q(room)},${q(participant)});
        insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(run)},${q(participant)},'enrolled',${q(admin)});`);
-                await assert.rejects(
-                    actor(
-                        admin,
-                        `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
-                        "aal1",
-                    ),
-                    /PZ002/,
-                );
+                const canEnter = () => actor(participant, `select private.can_access_chat_room(${q(room)})`);
+                assert.equal(await canEnter(), "t");
+                await actor(admin, `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`);
                 assert.equal(
                     await sql(
                         `select status from public.course_enrolments where course_run_id=${q(run)} and user_id=${q(participant)}`,
                     ),
-                    "enrolled",
+                    "removed",
                 );
+                assert.equal(await isMember(room, participant), "t");
+                assert.equal(await canEnter(), "f");
                 await actor(
                     admin,
                     `select public.resolve_participant_chat_origin(${q(room)},${q(participant)},true)`,
                     "aal1",
                 );
-                await actor(
-                    admin,
-                    `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
-                    "aal1",
-                );
                 assert.equal(await isMember(room, participant), "t");
+                assert.equal(await canEnter(), "f");
             },
         );
 
@@ -697,10 +709,10 @@ await withTestDatabase(
             async () => {
                 for (const mode of ["enrolment", "manual"]) {
                     const fixture = await create({days: 10});
-                    const {room, run} = await participantRoom(fixture, "assignment");
+                    const {room, run, organisation} = await participantRoom(fixture, "assignment");
                     if (mode === "enrolment") {
-                        await sql(`insert into public.user_roles(user_id,role) values(${q(teacher)},'participant');
-           insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(run)},${q(teacher)},'enrolled',${q(admin)});`);
+                        await linkParticipant(organisation);
+                        await actor(admin, `select public.manage_course_enrolment(${q(run)},${q(participant)},'enrolled')`);
                     } else {
                         await actor(
                             admin,
@@ -709,22 +721,24 @@ await withTestDatabase(
                         );
                     }
                     assert.equal((await request(fixture, "")).status, "withdrawn");
+                    assert.equal(await isMember(room), mode === "enrolment" ? "f" : "t");
                     const nextJob = randomUUID();
                     await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
          values(${q(nextJob)},${q(run)},'Fictional simultaneous claim','Fictional academy','online','published',100,'EUR','per_day',100,'Fictional terms');
          insert into public.job_sessions(job_id,starts_at,ends_at) values(${q(nextJob)},now()+${mode === "enrolment" ? "interval '80 days'" : "interval '100 days'"},now()+${mode === "enrolment" ? "interval '80 days 1 hour'" : "interval '100 days 1 hour'"});`);
                     const claimTag = `origin_claim_${randomUUID().replaceAll("-", "")}`;
                     const removeTag = `origin_remove_${randomUUID().replaceAll("-", "")}`;
+                    const claimKey = randomUUID();
                     const claiming = actor(
                         teacher,
-                        `set local application_name=${q(claimTag)};select public.claim_job(${q(nextJob)},${q(randomUUID())},1);select pg_sleep(2)`,
+                        `set local application_name=${q(claimTag)};select public.claim_job(${q(nextJob)},${q(claimKey)},1);select pg_sleep(2)`,
                     );
                     let removing;
                     try {
                         await barrier(claimTag, "wait_event='PgSleep'");
                         const statement =
                             mode === "enrolment"
-                                ? `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`
+                                ? `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`
                                 : `select public.manage_chat_member(${q(room)},${q(teacher)},true)`;
                         removing = actor(
                             admin,
@@ -743,15 +757,34 @@ await withTestDatabase(
                         if (removed.status === "rejected")
                             assert.match(removed.reason.message, /22023/);
                         assert.equal(await isMember(room), "t");
+                        assert.equal(
+                            await actor(teacher, `select private.can_access_chat_room(${q(room)})`),
+                            "t",
+                        );
+                        assert.equal(
+                            await sql(`select assignment from private.participant_chat_origins where room_id=${q(room)} and user_id=${q(teacher)}`),
+                            "t",
+                        );
+                        const joined = () => sql(
+                            `select joined_at from public.chat_members where room_id=${q(room)} and user_id=${q(teacher)}`,
+                        );
+                        const firstJoin = await joined();
+                        const firstReceipt = JSON.parse(claimed.value.split("\n")[0]);
+                        assert.deepEqual(
+                            await rpc(teacher, "claim_job", [q(nextJob), q(claimKey), 1]),
+                            firstReceipt,
+                        );
+                        assert.equal(await joined(), firstJoin);
+                        if (mode === "enrolment")
+                            assert.equal(
+                                await actor(participant, `select private.can_access_chat_room(${q(room)})`),
+                                "f",
+                            );
                     } finally {
                         await Promise.allSettled([
                             claiming,
                             ...(removing ? [removing] : []),
                         ]);
-                        if (mode === "enrolment")
-                            await sql(
-                                `delete from public.user_roles where user_id=${q(teacher)} and role='participant'`,
-                            );
                     }
                 }
             },
@@ -866,10 +899,24 @@ await withTestDatabase(
                 await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values(${q(document)},${q(teacher)},${q(teacher)},'personal','invoice','Fictional withdrawal invoice.pdf','application/pdf',100,'clean',${q(key)});
       insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,sha256,status) values(${q(version)},${q(document)},${q(teacher)},${q(key)},1,${q(`${teacher}/${document}/${version}`)},'Fictional withdrawal invoice.pdf','application/pdf',100,${q("1".repeat(64))},'clean');
       update public.documents set current_version_id=${q(version)} where id=${q(document)}`);
-                await actor(
-                    teacher,
-                    `select public.submit_invoice('Fictional withdrawal invoice',array[${q(fixture.claim)}::uuid],${q(version)},current_date,current_date+7,${q(randomUUID())})`,
+                await assert.rejects(
+                    actor(teacher, `select public.submit_invoice('Fictional withdrawal invoice',
+                        array[${q(fixture.claim)}::uuid],${q(version)},current_date,current_date+7,${q(randomUUID())})`),
+                    /invoice_not_ready/,
                 );
+                // Emulate a retained invoice accepted before the session-end
+                // rule. Keep the assignment in the future to isolate its
+                // invoice as the only blocker to an otherwise valid release.
+                const historicalInvoice = randomUUID();
+                await sql(`
+                    insert into public.invoices(id,user_id,number,issued_on,due_on,currency,
+                      total_amount,document_version_id,client_id)
+                    select ${q(historicalInvoice)},lecturer_id,'Fictional retained invoice',
+                      current_date,current_date+7,currency,total_amount,${q(version)},${q(randomUUID())}
+                    from public.job_claims where id=${q(fixture.claim)};
+                    insert into public.invoice_items(invoice_id,claim_id)
+                    values(${q(historicalInvoice)},${q(fixture.claim)});
+                `);
                 const before = await snapshot(fixture);
                 await assert.rejects(review(pending.id, true), /22023/);
                 await assert.rejects(request(fixture), /22023/);
