@@ -17,6 +17,8 @@
 - [x] Enable dedicated course text chat with current licensed membership and opaque activity markers. Real GoTrue and PostgREST cover password-token room creation, send, read and closure. The dedicated WebSocket remains pending.
 - [x] Serve exact scanned versions to authorised dedicated course audiences. PostgreSQL and the document handler cover revocation, digest checking and retained data. Native Storage/provider and upload acceptance remain pending.
 - [x] Document current, retained and empty attendance correction receipt shapes in OpenAPI and validate their scope against real SQL.
+- [x] Allow an assigned academy lecturer to publish or withdraw the exact retained clean version of their own course material. Validate both dedicated editions in PostgreSQL and PostgREST.
+- [x] Document ten licensed course endpoints in each branded package. Verify successful PostgreSQL responses and the exact signed archive layouts for both editions.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links

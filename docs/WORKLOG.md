@@ -6,7 +6,13 @@ The same profile serves the exact scanned version currently shared with a permit
 
 The staff register and OpenAPI now share exact current and historical attendance snapshot schemas, including the empty PostgreSQL row shape. Database tests confirm that learner and company workspace projections cannot disclose staff correction history; the scoped company register remains available to authorised contacts.
 
-The `ed302557` GitHub run passed every fast gate and all three CodeQL categories. The native retained-data gate passed through the avatar and both chat API suites, then reached a commercial fixture that expected rejection for a block that had already ended. The new fixture checks the same accepted assignment both immediately before and after its exact final session. Final integrated native and browser checks remain pending.
+The `ed302557` GitHub run passed every fast gate and all three CodeQL categories. The native retained-data gate passed through the avatar and both chat API suites, then reached a commercial fixture that expected rejection for a block that had already ended. The new fixture checks the same accepted assignment both immediately before and after its exact final session. The system job exposed a historical taxonomy fixture whose exact year-old casing depended on the database locale. It now checks the historical contract's case-insensitive grouping, unique alias spelling and literal search.
+
+The `ed302557` browser run passed 105 of 109 desktop journeys and 106 of 109 mobile journeys. The remaining artifacts showed overlapping calendar seed data, the month-view time prefix and an ambiguous paid-status locator. The corrected fixtures retain the exact calendar target and persisted paid-state checks.
+
+Both dedicated editions can publish and withdraw an assigned lecturer's own, previously scanned materials. The SQL and native HTTP checks confirm the audience's exact-version read, immediate removal, retained files and write denial during licence grace. The general upload flow requires a separate course-scoped reservation and scan finalization because the existing uploader uses internal service-role REST operations. These operations remain scoped to the internal edition.
+
+The branded OpenAPI download now describes ten verified licensed course endpoints. Each edition's real responses satisfy the schema and its independently built archive passes offline verification. The packaged startup readiness flag remains closed. Current obsolete edits to five personal settings return HTTP 409 on both PostgREST 14.18 and 16.5. Exact-head Actions run with release publication disabled.
 
 # 21 November 2026 — Desktop and mobile acceptance repairs
 
