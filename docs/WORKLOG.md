@@ -1,3 +1,9 @@
+# 21 November 2026 — Job discovery query and typed portal contracts
+
+Multiple isolated Docker jobs hit PostgreSQL statement timeouts during the authenticated 1,057-offer discovery fixture. A forward migration skips candidate-level monetary quotes when the filter and sort do not need them. Each returned item still uses the existing actor-scoped quote, and monetary candidates still use current price visibility and bounds. On the same native PostgREST 16.5 executable and local PostgreSQL host, median time for eleven newest pages dropped from 1.991 s to 1.080 s. Full paging, stale cursors, title and amount sorting, manager nulls, private views and role revocation passed. The new migration follows the separately published academy branding migration.
+
+Shared portal and OpenAPI validators cover the discovery page, offer detail, dashboard, saved views and the lecturer's own assignment calendar metadata. The Auth/REST fixtures compare actual answers against the published responses, including bodyless removal and a concurrent stale-view failure. Review the remaining generic JSON shapes and complete the browser, notification and edition acceptance in the implementation plan.
+
 # 21 November 2026 — Installation release and recovery work
 
 The active Hostinger CMS had 18 applied migrations. All 18 matched the current migration source bytes. The deployment controller now accepts the exact mail-relay source path and reconciles the stateless relay on promotion and rollback. The complete-backup controller recognises the relay and restores it before Auth. A migrated CMS with private capture enabled sends Auth messages to Mailpit until an administrator enables a saved external SMTP configuration. The VPS verified the Hostinger SMTP peer certificate over TLS.

@@ -1,7 +1,9 @@
 /** Native Auth/REST calendar metadata has no manager-wide or retained-role bypass. */
 import assert from "node:assert/strict";
+import {z} from "zod";
 import {withApiFixture} from "./testing/api.mjs";
 import {cleanupCalendarMetadata, seedCalendarMetadata,} from "./testing/calendar-metadata-fixture.mjs";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 
 await withApiFixture(async ({actor, sql, checked, defer, service}) => {
     const teacher = await actor("calendar-metadata-teacher", "lecturer"),
@@ -14,6 +16,10 @@ await withApiFixture(async ({actor, sql, checked, defer, service}) => {
         teacher.client.rpc("assignment_calendar_metadata", args),
         "Read own calendar metadata",
     );
+    const published = portalOpenApi("https://fixture.example.invalid").paths[
+        "/rest/v1/rpc/assignment_calendar_metadata"
+    ].post.responses["200"].content["application/json"].schema;
+    z.fromJSONSchema(published).parse(rows);
     assert.deepEqual(
         new Set(rows.map((x) => x.id)),
         new Set([f.linked, f.manual]),

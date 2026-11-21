@@ -101,12 +101,44 @@ await withApiFixture(
         assert.ok(
             !Object.keys(restricted).some((k) => /gross|percent|policy/.test(k)),
         );
+        const titleFilters = {...filter, sort: "title"};
+        const byTitle = await checked(
+            regular.client.rpc("job_discovery", {p_filters: titleFilters}),
+            "Read selected page quotes after sorting by title",
+        );
+        assert.deepEqual(
+            byTitle.items.map(({id, amount, total_amount}) => [
+                id,
+                amount,
+                total_amount,
+            ]),
+            [
+                [a, 200, 200],
+                [b, 100, 100],
+            ],
+        );
+        const restrictedPage = await checked(
+            manager.client.rpc("job_discovery", {p_filters: titleFilters}),
+            "Read restricted selected page after sorting by title",
+        );
+        assert.deepEqual(
+            restrictedPage.items.map(({id, amount, total_amount}) => [
+                id,
+                amount,
+                total_amount,
+            ]),
+            [
+                [a, null, null],
+                [b, null, null],
+            ],
+        );
         const narrowed = await checked(
             regular.client.rpc("job_discovery", {
-                p_filters: {...filter, min_total: 150},
+                p_filters: {...titleFilters, min_total: 150},
                 p_cursor: null,
                 p_limit: 50,
             }),
+            "Filter actor-specific prices without sorting by money",
         );
         assert.deepEqual(
             narrowed.items.map((i) => i.id),

@@ -1,11 +1,27 @@
 /** Actual Auth/REST proof: the unchanged 1000-row API limit is not a catalogue. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 
 await withApiFixture(
     async ({actor, service, passwordOnly, checked, sql, defer, suffix}) => {
+        const contracts = portalOpenApi("https://fixture.example.invalid").paths;
+        const responseValidators = new Map();
+        /** Check genuine PostgREST projections against the published contract. */
+        function verifyResponse(name, data, status = 200) {
+            const key = `${name}:${status}`;
+            if (!responseValidators.has(key)) {
+                const post = contracts[`/rest/v1/rpc/${name}`].post;
+                responseValidators.set(key, z.fromJSONSchema(
+                    post.responses[status].content["application/json"].schema,
+                ));
+            }
+            responseValidators.get(key).parse(data);
+            return data;
+        }
         const admin = await actor("discovery-admin", "admin"),
             teacher = await actor("discovery-teacher", "lecturer"),
             peer = await actor("discovery-peer", "lecturer"),
@@ -96,6 +112,7 @@ await withApiFixture(
                 "Read real bounded page",
             );
             assert.ok(page.items.length <= 100);
+            verifyResponse("job_discovery", page);
             assert.ok(
                 page.items.every(
                     (item) => !("gross_amount" in item) && !("platform_percent" in item),
@@ -111,14 +128,15 @@ await withApiFixture(
             teacher.client.rpc("job_detail", {p_job_id: ids[0]}),
             "Read exact old page-omitted job",
         );
+        verifyResponse("job_detail", detail);
         assert.equal(detail.id, ids[0]);
         assert.equal(detail.job_sessions.length, 1);
         assert.ok(
             (
-                await checked(
+                verifyResponse("job_dashboard", await checked(
                     teacher.client.rpc("job_dashboard"),
                     "Read complete authorized scalar counts",
-                )
+                ))
             ).open_count >= 1057,
         );
         const combined = await checked(
@@ -173,6 +191,7 @@ await withApiFixture(
             "Save own private view",
         );
         assert.equal(own.version, 1);
+        verifyResponse("save_job_view", own);
         assert.equal(
             (
                 await checked(
@@ -213,7 +232,10 @@ await withApiFixture(
             ),
         );
         assert.equal(concurrent.filter((r) => !r.error).length, 1);
-        assert.equal(concurrent.find((r) => r.error).error.code, "40001");
+        const stale = concurrent.find((result) => result.error);
+        assert.equal(stale.error.code, "40001");
+        assert.equal(stale.status, 500);
+        verifyResponse("save_job_view", stale.error, stale.status);
         await teacher.client.auth.signOut();
         await checked(
             teacher.client.auth.signInWithPassword({
@@ -227,13 +249,18 @@ await withApiFixture(
             "Read durable saved view after new session",
         );
         assert.equal(persisted[0].version, 2);
+        verifyResponse("saved_job_views", persisted);
         assert.equal(persisted[0].filters.customer, customer);
-        await checked(
-            teacher.client.rpc("remove_job_view", {
-                p_id: view,
-                p_expected_version: 2,
-            }),
-            "Delete own observed version",
+        const removed = await teacher.client.rpc("remove_job_view", {
+            p_id: view,
+            p_expected_version: 2,
+        });
+        assert.equal(removed.error, null, "Delete own observed version");
+        assert.equal(removed.status, 204);
+        assert.equal(removed.data, null);
+        assert.equal(
+            contracts["/rest/v1/rpc/remove_job_view"].post.responses["204"].content,
+            undefined,
         );
         assert.deepEqual(
             await checked(teacher.client.rpc("saved_job_views"), "Own removed view"),

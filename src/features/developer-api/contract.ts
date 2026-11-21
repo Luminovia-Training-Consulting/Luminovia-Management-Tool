@@ -58,6 +58,16 @@ import {
   substitutionsSchema,
   waitlistSchema,
 } from "../jobs/handover-schema.ts";
+import {
+  assignmentCalendarMetadataSchema,
+  cursorSchema,
+  discoveryPageSchema,
+  jobDashboardSchema,
+  jobFilterFieldsSchema,
+  jobFiltersSchema,
+  jobSchema,
+  savedViewSchema,
+} from "../jobs/discovery-schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -630,6 +640,24 @@ const globalEventManagement = rpc(
   z.toJSONSchema(globalEventSchema),
 );
 
+const jobDiscoveryFilters = z.toJSONSchema(jobFiltersSchema, { io: "input" });
+const jobViewVersion = { p_id: uuid, p_expected_version: version };
+const jobViewMutation = (
+  operation: ReturnType<typeof rpc> | ReturnType<typeof voidRpc>,
+) => ({
+  post: {
+    ...operation.post,
+    responses: {
+      ...operation.post.responses,
+      "500": {
+        ...error,
+        description:
+          "An outdated view version returns SQLSTATE 40001. Refresh the list before retrying.",
+      },
+    },
+  },
+});
+
 const nativePaths = {
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
@@ -637,6 +665,87 @@ const nativePaths = {
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,
+  "/rest/v1/rpc/job_discovery": rpc(
+    "native_job_discovery",
+    "Jobs",
+    "Browse currently visible job offers",
+    "Requires an active lecturer or job-management permission. Open upcoming offers are the default. Use include_history for permitted past offers. Date filters use the supplied IANA time zone. Select one currency for price sorting/filtering and one fee unit for rate sorting/filtering. Return the entire next_cursor unchanged with the same filters. A changed quoting role or policy invalidates it.",
+    {
+      p_filters: jobDiscoveryFilters,
+      p_cursor: z.toJSONSchema(
+        cursorSchema.safeExtend({ text: z.string().max(200) }).nullable(),
+      ),
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+    },
+    z.toJSONSchema(discoveryPageSchema),
+    ["p_filters", "p_cursor", "p_limit"],
+  ),
+  "/rest/v1/rpc/job_detail": rpc(
+    "native_job_detail",
+    "Jobs",
+    "Read one currently visible job offer",
+    "Returns exact sessions and topic requirements for a job the account can read. Private lecturer amount and total are null when current role and offer policy withhold the quote.",
+    { p_job_id: uuid },
+    z.toJSONSchema(jobSchema),
+  ),
+  "/rest/v1/rpc/job_dashboard": rpc(
+    "native_job_dashboard",
+    "Jobs",
+    "Read the current job and assignment summary",
+    "Requires an active lecturer or job-management permission. Own upcoming assignments and currently visible offer suggestions use the same current scope as discovery. Only authorised management receives the management counters.",
+    {},
+    z.toJSONSchema(jobDashboardSchema),
+  ),
+  "/rest/v1/rpc/saved_job_views": rpc(
+    "native_saved_job_views",
+    "Jobs",
+    "List the current account's saved views",
+    "Requires an active lecturer or job-management permission. Up to 20 actor-owned views are ordered by name and ID. A historic view may omit the later include_history filter.",
+    {},
+    z.toJSONSchema(
+      z
+        .array(
+          z.object({
+            ...savedViewSchema.shape,
+            filters: jobFilterFieldsSchema.extend({
+              include_history: z.boolean().optional(),
+            }),
+          }),
+        )
+        .max(20),
+    ),
+  ),
+  "/rest/v1/rpc/save_job_view": jobViewMutation(
+    rpc(
+      "native_save_job_view",
+      "Jobs",
+      "Save or update a private job view",
+      "Requires an active lecturer or job-management permission. Use version zero and a new UUID to create. Repeating the same initial save recovers its receipt. Updates require the current row version. The server checks title uniqueness and normalises filters.",
+      {
+        ...jobViewVersion,
+        p_name: { type: "string", minLength: 1, maxLength: 80 },
+        p_filters: jobDiscoveryFilters,
+      },
+      z.toJSONSchema(savedViewSchema),
+    ),
+  ),
+  "/rest/v1/rpc/remove_job_view": jobViewMutation(
+    voidRpc(
+      "native_remove_job_view",
+      "Jobs",
+      "Remove a private saved job view",
+      "Requires an active lecturer or job-management permission, ownership of the view and its current version. Refresh the list after a stale version error.",
+      jobViewVersion,
+    ),
+  ),
+  "/rest/v1/rpc/assignment_calendar_metadata": rpc(
+    "native_assignment_calendar_metadata",
+    "Calendar",
+    "Read customer and topic labels for own assignments",
+    "Looks up titles, organisations and German/English topic labels for up to 1,000 requested jobs. Returns only the caller's own confirmed teaching assignments. The response has no compensation or other lecturers' information.",
+    { p_job_ids: { type: "array", maxItems: 1000, items: uuid } },
+    z.toJSONSchema(assignmentCalendarMetadataSchema),
+  ),
   "/rest/v1/rpc/contract_records": rpc(
     "listContractRecords",
     "Contracts",

@@ -506,9 +506,18 @@ describe("documented Premium course and spending operations", () => {
     expect(requestSchema("/rest/v1/rpc/job_discovery")).toMatchObject({
       required: [],
       properties: {
-        p_filters: { "x-postgresql-type": "jsonb" },
-        p_cursor: { "x-postgresql-type": "jsonb" },
-        p_limit: { type: ["integer", "null"] },
+        p_filters: {
+          type: "object",
+          additionalProperties: false,
+          properties: { include_history: { type: "boolean", default: false } },
+        },
+        p_cursor: {
+          anyOf: [
+            { required: ["id", "number", "text", "fingerprint"] },
+            { type: "null" },
+          ],
+        },
+        p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
       },
     });
     expect(requestSchema("/rest/v1/rpc/claim_job").required).toEqual([
