@@ -268,7 +268,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
         await otherContext.close();
     }
 });
-test("company reviews are current-membership scoped and participant accounts cannot enter the workspace", async ({
+test("company reviews are current-membership scoped and an unassociated participant cannot enter the course", async ({
                                                                                                                      page,
                                                                                                                      browser,
                                                                                                                  }) => {

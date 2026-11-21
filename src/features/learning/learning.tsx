@@ -8,6 +8,7 @@ import {DateTime} from "luxon";
 import {useAuth} from "../auth/auth-context";
 import {isParticipantOnly} from "../auth/guest-navigation";
 import {useOnline} from "../../lib/online";
+import {portalInternalEdition} from "../../lib/installation-brand";
 import {userRolesQuery} from "../../lib/queries";
 import {dateTime, zonedInstant} from "../../lib/dates";
 import {Button} from "../../components/ui/button";
@@ -21,6 +22,7 @@ import {CourseDestinations} from "./destinations";
 import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
+import {AcademyInstructors} from "./academy-instructors";
 import {CourseEnrolmentsPanel, CourseWithdrawal} from "./enrolments";
 import {CourseChat} from "./course-chat";
 import {DownloadButton, Resources} from "./resources";
@@ -771,7 +773,8 @@ function CourseWorkspaceLayout({
                         <CourseBasics course={course}/>
                         <CourseWelcomeContent key={course.id} actor={actor} courseId={course.id}
                             zone={course.time_zone} canEdit={editor}/>
-                        <CourseDestinations actor={actor} courseId={course.id} learner={learner}/>
+                        <CourseDestinations actor={actor} courseId={course.id} learner={learner || !portalInternalEdition}/>
+                        {!portalInternalEdition && course.access.manager && <AcademyInstructors courseId={course.id} actor={actor}/>}
                         <CourseContact course={course} actor={actor}/>
                         {editor && <Preparation course={course} actor={actor}/>}
                         {learner && <CourseWithdrawal course={course} actor={actor}/>}

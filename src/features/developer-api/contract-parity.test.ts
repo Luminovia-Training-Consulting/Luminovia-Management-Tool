@@ -89,6 +89,17 @@ describe("documented Premium course and spending operations", () => {
     ).toBe(true);
   });
 
+  it("keeps dormant customer instructor routes out of the internal API explorer and download", () => {
+    for (const path of [
+      "/rest/v1/rpc/academy_assign_course_instructor",
+      "/rest/v1/rpc/academy_release_course_instructor",
+      "/rest/v1/rpc/academy_course_instructor_candidates",
+    ]) {
+      expect(portalOpenApi(backend).paths).not.toHaveProperty(path);
+      expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
+    }
+  });
+
   it("describes secret-bearing RPCs only in the noninteractive download", () => {
     const download = portalOpenApi(backend);
     for (const name of [
