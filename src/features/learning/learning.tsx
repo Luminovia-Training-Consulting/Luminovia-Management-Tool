@@ -21,6 +21,7 @@ import {CompanyInvitations} from "./company-invitations";
 import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
+import {CourseChat} from "./course-chat";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 
@@ -131,11 +132,18 @@ export function LearningHubPage() {
                                 {course.venue} · {course.time_zone}
                             </p>
                             {course.lms_enabled ? (
-                                <Button asChild>
-                                    <Link to={`/courses/${course.id}/workspace`}>
-                                        {t("openWorkspace")}
-                                    </Link>
-                                </Button>
+                                <div className="page-actions">
+                                    <Button asChild>
+                                        <Link to={`/courses/${course.id}/workspace`}>
+                                            {t("openWorkspace")}
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="secondary">
+                                        <Link to={`/courses/${course.id}/workspace#course-chat`}>
+                                            {t("courseChat")}
+                                        </Link>
+                                    </Button>
+                                </div>
                             ) : (
                                 <span className="badge" role="status">
                   {t("premiumOffCourseBadge")}
@@ -982,6 +990,7 @@ export function CourseWorkspacePage() {
                 )}
                 {course.access.learner && <Completion course={course} actor={actor}/>}
                 <AttendancePanel course={course} actor={actor}/>
+                <CourseChat run={course.id} actor={actor}/>
                 {course.access.client && course.ended && course.repeat_request && (
                     <RepeatBooking course={course} actor={actor}/>
                 )}

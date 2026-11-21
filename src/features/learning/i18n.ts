@@ -34,6 +34,7 @@ const pairs: Record<string, [string, string]> = {
     ],
     unscheduled: ["Termine folgen", "Schedule to follow"],
     openWorkspace: ["Kurs öffnen", "Open course workspace"],
+    courseChat: ["Kurs-Chat", "Course chat"],
     workspaceHelp: [
         "Kursinformationen, Termine, Vorbereitung und freigegebene Dateien.",
         "Course information, dates, preparation and shared files.",

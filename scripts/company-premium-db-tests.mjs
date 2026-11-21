@@ -20,12 +20,14 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         template = randomUUID(), runA = randomUUID(), runB = randomUUID(),
         sessionA = randomUUID(), sessionB = randomUUID(),
         jobA = randomUUID(), claimA = randomUUID(),
-        roomA = randomUUID(), roomB = randomUUID(),
+        roomB = randomUUID(),
         membershipA = randomUUID(), membershipB = randomUUID();
+    let roomA;
     const examPaperDocument = randomUUID(), examKeyDocument = randomUUID(),
         examPaperVersion = randomUUID(), examKeyVersion = randomUUID();
     let examPaperId, examKeyId;
     const learnerResource = randomUUID(), learnerCompletion = randomUUID();
+    let courseChatMessageId, courseChatMessageB;
     await sql(
         `insert into auth.users(id, email)
          values ${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
@@ -61,11 +63,9 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         values (${q(runA)}, ${q(participant)}, 'enrolled', ${q(admin)}),
                (${q(runB)}, ${q(participant)}, 'enrolled', ${q(admin)});
         insert into public.chat_rooms(id, kind, title, owner_id, course_run_id)
-        values (${q(roomA)}, 'participant_course', 'Fictional company A room', ${q(admin)}, ${q(runA)}),
-               (${q(roomB)}, 'participant_course', 'Fictional company B room', ${q(admin)}, ${q(runB)});
+        values (${q(roomB)}, 'participant_course', 'Fictional company B room', ${q(admin)}, ${q(runB)});
         insert into public.chat_members(room_id, user_id)
-        values (${q(roomA)}, ${q(participant)}),
-               (${q(roomB)}, ${q(participant)});
+        values (${q(roomB)}, ${q(participant)});
         insert into private.company_participant_link_requests(id, organisation_id, requested_by, request_id, luminovia_user_id, target_user_id, status, expires_at)
         values ('${membershipA}', '${companyA}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${participant}'), '${participant}', 'accepted', now() + interval '14 days'),
                ('${membershipB}', '${companyB}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${participant}'), '${participant}', 'accepted', now() + interval '14 days');
@@ -132,6 +132,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 `select count(*) from private.company_premium_audit where organisation_id in ('${companyA}','${companyB}')`,
             );
             assert.equal(audit, "4");
+            roomA = await rpc(admin, "create_chat_group", [
+                "Fictional company A room", [admin], "participant_course", jobA,
+            ]);
+            assert.equal(await sql(`select count(*) from public.chat_members where room_id=${q(roomA)} and user_id in (${q(participant)},${q(lecturer)}) and removed_at is null`), "2");
         },
     );
 
@@ -258,6 +262,31 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
+        "Course chat auto-membership, text posting and closed private chat paths",
+        async () => {
+            await sql(`delete from public.chat_members where room_id=${q(roomA)} and user_id=${q(participant)}`);
+            await rpc(admin, "manage_course_enrolment", [runA, participant, "enrolled"]);
+            assert.equal(await sql(`select count(*) from public.chat_members where room_id=${q(roomA)} and user_id=${q(participant)} and removed_at is null`), "1");
+            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runA]), [{id: roomA, title: "Fictional company A room"}]);
+            await assert.rejects(rpc(lecturer, "course_chat_messages", [roomB, null, null, 50]), /42501/);
+            await assert.rejects(rpc(participant, "course_chat_messages", [randomUUID(), null, null, 50]), /42501/);
+            await assert.rejects(actor(participant,
+                "set local request.path='/rpc/send_message';select private.require_portal_access()"), /42501/);
+            assert.equal(await actor(participant,
+                "set local request.path='/rpc/send_course_chat_message';select private.require_portal_access();select 1"), "1");
+            const requestId = randomUUID();
+            courseChatMessageId = await rpc(participant, "send_course_chat_message", [roomA, "Fictional course question", requestId]);
+            assert.equal(await rpc(participant, "send_course_chat_message", [roomA, "Fictional course question", requestId]), courseChatMessageId);
+            const messages = await rpc(participant, "course_chat_messages", [roomA, null, null, 50]);
+            assert.deepEqual(messages.map((item) => [item.id, item.body]), [[courseChatMessageId, "Fictional course question"]]);
+            assert.equal("document_id" in messages[0], false);
+            courseChatMessageB = await rpc(participant, "send_course_chat_message", [
+                roomB, "Fictional company B safe message", randomUUID(),
+            ]);
+        },
+    );
+
+    await check(
         "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
@@ -267,6 +296,20 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             const off = await toggle(admin, companyA, false, statusA.version);
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
+            await assert.rejects(rpc(participant, "course_chat_rooms", [runA]), /42501/);
+            await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
+            await assert.rejects(rpc(participant, "send_course_chat_message", [roomA, "blocked", randomUUID()]), /42501/);
+            await assert.rejects(rpc(admin, "create_chat_group", [
+                "Blocked OFF course", [admin], "participant_course", jobA,
+            ]), /42501/);
+            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runB]), [{id: roomB, title: "Fictional company B room"}]);
+            assert.equal((await rpc(participant, "course_chat_messages", [roomB, null, null, 50])).length, 1);
+            const visibleChats = await rpc(participant, "unified_search", [
+                "Fictional company", "chats", null, null, null, 40,
+            ]);
+            assert.deepEqual(visibleChats.items.map((item) => item.id), [courseChatMessageB]);
+            assert.equal(await actor(participant,
+                `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);
@@ -343,6 +386,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 1,
                 randomUUID(),
             ]);
+            await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
             let current = (await rpc(admin, "company_premium_settings")).find(
                 (item) => item.organisation_id === companyA,
             ).version;
