@@ -2,7 +2,7 @@
 
 ## Requested changes from the 19 November roadmap
 
-Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). Hosting and the independent [white-label product](../WHITELABEL_ROADMAP.md) are sequenced after core acceptance.
+The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged as `0d89891d` on 21 November 2026. Subsequent roadmap work targets `main` directly. The current instruction excludes GitHub Actions evaluation and leaves Hostinger until after the core implementation and local acceptance. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). Hosting and the independent [white-label product](../WHITELABEL_ROADMAP.md) are sequenced after core acceptance.
 
 | Items | Source status and ownership | Remaining evidence or work |
 | --- | --- | --- |
@@ -22,15 +22,22 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 | FC-34–FC-37 | End-of-block invoice gate, direct route, review form, due dates and accessible status are present. Three isolated invoice groups pass. | Full native PDF upload, approval, payment and reversal journeys remain pending. |
 | FC-38–FC-40, FC-52–FC-53 | Entitlement, retained summaries, audited admin course chat, scoped search and notification suppression are implemented. Local tests cover A OFF/B ON, queued email recheck, and the browser closing the workspace offline before reconnecting. | Validate active WebSocket revocation, native Storage bytes and real Push subscriptions. |
 | FC-41–FC-44 | Participant invitations, company association, enrolment, scoped workspace, own username and course inbox are present. | Confirm the complete native onboarding and multi-company lifecycle. |
-| FC-45–FC-46 | Text posts use current course chat membership. Current company contacts can read their own groups, and admin inspection is audited. Scanned file shares retain ownership and exact versions. | Course chat attachment sharing for participants and native revocation/file acceptance are open. |
+| FC-45–FC-46 | Text and scanned attachments use current course chat membership and exact-version access. Current company contacts can read their own groups, and retained admin inspection is audited. | Native scan, Storage byte and WebSocket revocation journeys remain open. |
 | FC-47 | The welcome section checks Premium and stores append-only revisions. The workspace also provides schedules, contacts and shared files. | Verify live publication in native staff/company and learner browsers. |
 | FC-48–FC-49 | Optional exam, scanned PDF visibility and separate staff answer keys are present. | Verify native exam upload, scanner and Storage acceptance. |
-| FC-50–FC-51 | Session register, PDF evidence and atomic, reviewed CSV import are implemented. PostgreSQL tests cover concurrent pause and invalid row rollback. | XLSX import and native role/file acceptance remain open. |
+| FC-50–FC-51 | Session register, PDF evidence and atomic, reviewed CSV/XLSX imports are implemented. XLSX parsing stays local and uses the same reviewed write. PostgreSQL tests cover concurrent pause and invalid row rollback. | Native role/file acceptance remains open. |
 | FC-54 | Existing quizzes, feedback and completion are connected to the gated Premium workspace. | Verify learner browser, issuance, byte delivery and retained data with native services. |
 | FC-55–FC-58 | Local verification and release tooling are present. Core suites and the public demo have evidence. | The complete local suite, native Auth/Storage/Realtime, retained-data restore and Hostinger readiness remain open. |
 | G7.1–G7.2 | Same-identity email/username sign-in, own alias management and native PKCE recovery adapter are implemented. Server integrations obtain a separate, expiring, rotated key for `courses.read`. | Run native Auth/Mailpit and native integration HTTP journeys. |
-| G7.3–G7.6 | Swagger lists reviewed account and business operations. The download also documents credential exchange and the company integration. A generated catalogue tracks the migrated public RPC inventory. | Complete typed parity across all product actions, published client acceptance, signed webhooks and delivery management. |
+| G7.3–G7.6 | Swagger uses migrated browser RPC signatures and the actual REST role gates. Reviewed schemas cover selected domain payloads. The download also documents credential exchange and signed company course webhooks. Admins can inspect delivery status. | Remaining domain-specific JSON schemas, integration client acceptance, financial event scopes and configured webhook receiver acceptance. |
 | G8, WL-T01–WL-T15 | Dedicated customer installations are explicitly sequenced after core acceptance. | Edition policy, branding, installation, licences, customer-local operations and end-to-end proof remain open. |
+
+## Adjacent core work continued on 21 November
+
+- Mutually approved assignment amendments preserve the original accepted fees, terms and session evidence. A completed application affects current earnings and invoice snapshots without lifting the end-of-block invoice gate. Company contacts can make scoped operational proposals. Course schedule replacement remains restricted where it would alter shared or retained course records.
+- Accounting exposes scoped original-currency CSV/JSON exports, scanned external customer invoice registration, payment records and reversals. The forward path preserves existing reference IDs and access rules. XRechnung and ZUGFeRD generation and validation remain open.
+- The trusted Website enquiry endpoint and administration inbox already exist. Connecting and testing an actual public marketing-site sender still belongs to the separate Website delivery, which this repository treats as read-only.
+- Coursework, financial releases and data retention remain subject to the full [core launch checklist](../ROADMAP.md). The local full acceptance command currently stops at the unavailable Docker service. Disposable PostgreSQL, direct PostgREST, isolated Edge and public browser results are recorded independently in [WORKLOG](WORKLOG.md).
 
 ## Premium LMS participant read boundary — 21 November 2026
 
@@ -40,7 +47,8 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 - [x] Run the focused Premium database suite against a disposable Supabase PostgreSQL 17.12 instance. All six groups passed.
 - [x] Publish versioned course welcome content for permitted staff and company contacts, with read access for currently eligible learners and an entitlement check on each request. Two component and one SQL integration groups passed.
 - [x] Connect scoped text chat, participant course notifications, attendance/PDF/CSV, course resources and optional exams using current role and Premium checks.
-- [ ] Complete participant chat attachments, live Realtime revocation, native PDF delivery, role browser journeys and final retained-data acceptance.
+- [x] Connect exact scanned-version course chat attachments to current course access and audited admin inspection.
+- [ ] Complete native Realtime revocation, PDF and chat byte delivery, role browser journeys and final retained-data acceptance.
 
 ## Current-main browser CI repair — 18 November 2026
 

@@ -28,6 +28,8 @@ This is the **Luminovia core platform roadmap**, NOT the commercial white-label 
 
 See the [current implementation matrix](docs/IMPLEMENTATION_PLAN.md#requested-changes-from-the-19-november-roadmap) for the audited state of each block and its outstanding checks.
 
+[PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged into `main` as `0d89891d` on 21 November 2026. Follow-up implementation continues directly on `main`. This pass prioritises core code and local validation. The [work log](docs/WORKLOG.md) records native-service and rollout evidence.
+
 ## 2. Source coverage and planned change areas
 
 The following summary preserves the A–N structure of the original roadmap while adding the new Premium LMS areas. **Existing source** means components were found/documented in the repository, not that the new requirements have passed complete acceptance.
