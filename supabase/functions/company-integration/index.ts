@@ -7,8 +7,23 @@ const service = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
-Deno.serve(createCompanyIntegrationHandler(async (input) => {
-  const { data, error } = await service.rpc("integration_course_index", input);
-  if (error) throw new Error("integration_unavailable");
-  return data;
-}));
+Deno.serve(
+  createCompanyIntegrationHandler(
+    async (input) => {
+      const { data, error } = await service.rpc(
+        "integration_course_index",
+        input,
+      );
+      if (error) throw new Error("integration_unavailable");
+      return data;
+    },
+    async (input) => {
+      const { data, error } = await service.rpc(
+        "integration_course_operation",
+        input,
+      );
+      if (error) throw new Error("integration_unavailable");
+      return data;
+    },
+  ),
+);

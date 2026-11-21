@@ -36,7 +36,11 @@ import {
   academyLogoVersionRequest,
   academyPublicLogo,
 } from "../branding/academy-logo-schema.ts";
-import { companyCourseIndexPath } from "./company-course-index-contract.ts";
+import {
+  companyCourseIndexPath,
+  companyCourseOperationPaths,
+} from "./company-course-index-contract.ts";
+import { companyIntegrationScopes } from "../operations/company-integration-scopes.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import {
   courseParticipationReportRequest,
@@ -1138,7 +1142,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.28.0",
+      version: "1.29.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1217,7 +1221,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
       },
       "/rest/v1/rpc/company_integration_keys": courseOperation(
         "listAcademyCourseIndexKeys",
-        "List one organisation’s course index keys",
+        "List one organisation’s integration keys",
         "Requires a current local academy administrator. Lists key metadata without its secret.",
         "active",
         record({ p_organisation_id: uuid }),
@@ -1232,6 +1236,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
             revoked_at: nullable(dateTime),
             version: { type: "integer", minimum: 1 },
             last_used_at: nullable(dateTime),
+            scope: { type: "string", enum: companyIntegrationScopes },
           }),
         },
       ),
@@ -1258,11 +1263,35 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
         }),
         true,
       ),
+      "/rest/v1/rpc/issue_scoped_company_integration_key": courseOperation(
+        "issueAcademyScopedIntegrationKey",
+        "Issue or rotate one key with an explicit scope",
+        "Requires a current local Academy administrator. Rotation keeps the original scope. The secret is returned once.",
+        "active",
+        record({
+          p_organisation_id: uuid,
+          p_label: { ...string, minLength: 1, maxLength: 120 },
+          p_expires_at: dateTime,
+          p_rotate_id: nullable(uuid),
+          p_expected_version: nullable({ type: "integer", minimum: 1 }),
+          p_scope: { type: "string", enum: companyIntegrationScopes },
+        }),
+        record({
+          id: uuid,
+          version: { type: "integer", minimum: 1 },
+          credential: {
+            ...string,
+            format: "password",
+            pattern: "^lvi_[a-f0-9-]{36}_[a-f0-9]{64}$",
+          },
+        }),
+        true,
+      ),
       "/rest/v1/rpc/revoke_company_integration_key": {
         post: {
           operationId: "revokeAcademyCourseIndexKey",
           tags: ["Licensed course profile"],
-          summary: "Revoke a course index key",
+          summary: "Revoke an integration key",
           security: credentials,
           "x-portal-licence": "active",
           requestBody: {
@@ -1285,6 +1314,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
         },
       },
       "/functions/v1/company-integration": companyCourseIndexPath,
+      ...companyCourseOperationPaths,
       "/rest/v1/rpc/company_course_webhook_list": courseOperation(
         "listAcademyCourseWebhooks",
         "List company course webhooks",
@@ -1455,6 +1485,7 @@ export function academyExplorerOpenApi(
         ([path, methods]) =>
           /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path) &&
           path !== "/rest/v1/rpc/issue_company_integration_key" &&
+          path !== "/rest/v1/rpc/issue_scoped_company_integration_key" &&
           path !== "/rest/v1/rpc/academy_subscribe_course_webhook" &&
           Object.values(methods).every(
             (operation) =>

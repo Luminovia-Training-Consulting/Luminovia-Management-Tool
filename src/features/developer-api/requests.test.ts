@@ -190,6 +190,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
     const interactive = portalOpenApi(backend, false, brand);
     const privateActions = [
       "issue_company_integration_key",
+      "issue_scoped_company_integration_key",
       "academy_subscribe_course_webhook",
       "save_mail_configuration",
       "queue_mail_connection_test",

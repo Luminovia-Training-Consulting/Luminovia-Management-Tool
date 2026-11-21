@@ -32,6 +32,16 @@ static_resources:
                           route: { cluster: academy-api-gateway, timeout: 150s }
                         - match: { path: "/functions/v1/company-integration" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match:
+                            {
+                              path: "/functions/v1/company-integration/enrolments",
+                            }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match:
+                            {
+                              path: "/functions/v1/company-integration/participation",
+                            }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
                         - match: { path: "/functions/v1/course-documents" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
                         - match:

@@ -1,6 +1,83 @@
 import { assertEquals } from "jsr:@std/assert@1.0.15";
 import { createCompanyIntegrationHandler } from "./handler.ts";
 
+Deno.test(
+  "scoped operations validate inputs before dispatch and keep explicit receipts",
+  async () => {
+    const id = "9c0c48a1-8bde-41d4-835a-f66a4cfbe378";
+    const participant = "LV-1111-2222-3333-4444-5555";
+    const base =
+      "https://academy.example.invalid/functions/v1/company-integration";
+    const headers = {
+      Authorization: "Bearer lvi_" + id + "_" + "a".repeat(64),
+      "Content-Type": "application/json",
+    };
+    let calls = 0;
+    const handle = createCompanyIntegrationHandler(
+      () => Promise.reject(new Error("Index should not run")),
+      async (input) => {
+        calls++;
+        assertEquals(input.p_id, id);
+        assertEquals(input.p_course_id, id);
+        if (input.p_action === "report") {
+          assertEquals(input.p_participant_id, null);
+          return {
+            status: "ok",
+            course_id: id,
+            session_count: 3,
+            enrolled_count: 5,
+            completed_count: 2,
+          };
+        }
+        assertEquals(input.p_participant_id, participant);
+        return { status: "ok", course_id: id, participant_id: participant };
+      },
+    );
+    const duplicated = await handle(
+      new Request(
+        base + "/participation?course_id=" + id + "&course_id=" + id,
+        { headers },
+      ),
+    );
+    assertEquals(duplicated.status, 400);
+    const extra = await handle(
+      new Request(base + "/enrolments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          course_id: id,
+          participant_id: participant,
+          status: "completed",
+        }),
+      }),
+    );
+    assertEquals(extra.status, 400);
+    assertEquals(calls, 0);
+    const report = await handle(
+      new Request(base + "/participation?course_id=" + id, { headers }),
+    );
+    assertEquals(await report.json(), {
+      course_id: id,
+      session_count: 3,
+      enrolled_count: 5,
+      completed_count: 2,
+    });
+    const enrol = await handle(
+      new Request(base + "/enrolments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ course_id: id, participant_id: participant }),
+      }),
+    );
+    assertEquals(await enrol.json(), {
+      course_id: id,
+      participant_id: participant,
+      status: "enrolled",
+    });
+    assertEquals(enrol.headers.get("cache-control"), "no-store");
+  },
+);
+
 const secret = "f".repeat(64);
 const id = "00000000-0000-4000-8000-000000000001";
 const base = "http://localhost/functions/v1/company-integration";

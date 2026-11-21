@@ -56,6 +56,10 @@ it("reveals the one-time key from an explicit create and keeps it out of the que
     await screen.findByRole("textbox", { name: /Bezeichnung|Label/ }),
     "Training catalog",
   );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /API-Berechtigung|API permission/ }),
+    "reports.read",
+  );
   await user.click(
     await screen.findByRole("button", {
       name: /Schlüssel erstellen|Create key/,
@@ -66,6 +70,10 @@ it("reveals the one-time key from an explicit create and keeps it out of the que
       await screen.findByRole("textbox", { name: /Neuer Schlüssel|New key/ })
     ).getAttribute("value"),
   ).toBe(fictionalSecret);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "issue_scoped_company_integration_key",
+    expect.objectContaining({ p_scope: "reports.read" }),
+  );
   expect(
     client.getQueryData([
       "company-integration-keys",

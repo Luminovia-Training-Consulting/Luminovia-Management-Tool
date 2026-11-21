@@ -169,8 +169,18 @@ const pairs: Record<string, [string, string]> = {
   ],
   integrationTitle: ["API-Integrationen", "API integrations"],
   integrationScope: [
-    "Schlüssel geben einem Server lesenden Zugriff auf veröffentlichte Kursnamen und Zeitzonen dieses Unternehmens. Pro Schlüssel sind 60 Abrufe pro Minute möglich.",
-    "Keys let a server read published course names and time zones for this company. Each key allows 60 requests per minute.",
+    "Jeder Schlüssel gilt für dieses Unternehmen und genau eine Berechtigung. Pro Schlüssel sind 60 Anfragen pro Minute möglich.",
+    "Each key grants one permission for this company. A key allows 60 requests per minute.",
+  ],
+  integrationScopeChoice: ["API-Berechtigung", "API permission"],
+  integrationCourseIndex: ["Kurskatalog lesen", "Read course index"],
+  integrationEnrolments: [
+    "Bestätigte Teilnehmende einschreiben",
+    "Enrol confirmed participants",
+  ],
+  integrationReports: [
+    "Zusammengefasste Kurszahlen lesen",
+    "Read aggregate course counts",
   ],
   integrationRevoked: ["Widerrufen", "Revoked"],
   integrationExpiry: ["Läuft ab am {{date}}", "Expires {{date}}"],

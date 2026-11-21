@@ -368,7 +368,8 @@ Deno.serve({onError}, async (req: Request) => {
         pathname === "/calendar-feed" &&
         req.method === "GET";
     const companyIntegration =
-        service_name === "company-integration" && pathname === "/company-integration" && req.method === "GET";
+        (req.method === "GET" && ["/company-integration", "/company-integration/participation"].includes(pathname)) ||
+        (req.method === "POST" && pathname === "/company-integration/enrolments");
     if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegration) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {

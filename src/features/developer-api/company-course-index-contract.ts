@@ -9,6 +9,37 @@ const object = (properties: Record<string, unknown>) => ({
 const json = (schema: Record<string, unknown>) => ({
   "application/json": { schema },
 });
+const error = (description: string, code: string) => ({
+  description,
+  content: json(object({ error: { ...text, const: code } })),
+});
+const rateLimited = {
+  ...error("Key rate limit reached", "rate_limited"),
+  headers: { "Retry-After": { schema: { type: "integer" } } },
+};
+const scopedOperation = {
+  tags: ["Server integrations"],
+  security: [{ integrationKey: [] }],
+};
+const scopedErrors = {
+  "400": error("Invalid request fields", "invalid_request"),
+  "401": error(
+    "Missing, inactive or differently scoped key",
+    "invalid_credential",
+  ),
+  "403": error("Browser origin denied", "browser_origin_denied"),
+  "404": error(
+    "No authorised published course or confirmed participant matches",
+    "not_found",
+  ),
+  "429": rateLimited,
+  "503": error(
+    "Integration temporarily unavailable",
+    "integration_unavailable",
+  ),
+};
+const participant = { ...text, pattern: "^LV(-[0-9A-F]{4}){5}$" };
+const count = { type: "integer", minimum: 0 };
 
 export const companyCourseIndexPath = {
   get: {
@@ -47,6 +78,65 @@ export const companyCourseIndexPath = {
         headers: { "Retry-After": { schema: { type: "integer" } } },
       },
       "503": { description: "Integration temporarily unavailable" },
+    },
+  },
+};
+
+export const companyCourseOperationPaths = {
+  "/functions/v1/company-integration/enrolments": {
+    post: {
+      ...scopedOperation,
+      operationId: "integrationEnrolParticipant",
+      summary: "Enrol a confirmed company participant",
+      description:
+        "Requires enrolments.write. Both the published course and the confirmed participant must belong to the key's company. Repeating a current enrolment returns the same receipt. A removed or completed enrolment cannot be restored by this operation.",
+      requestBody: {
+        required: true,
+        content: json(object({ course_id: uuid, participant_id: participant })),
+      },
+      responses: {
+        "200": {
+          description: "Current enrolment receipt",
+          content: json(
+            object({
+              course_id: uuid,
+              participant_id: participant,
+              status: { ...text, const: "enrolled" },
+            }),
+          ),
+        },
+        ...scopedErrors,
+        "409": error(
+          "Capacity or the current enrolment state prevents this action",
+          "enrolment_unavailable",
+        ),
+      },
+    },
+  },
+  "/functions/v1/company-integration/participation": {
+    get: {
+      ...scopedOperation,
+      operationId: "integrationCourseParticipation",
+      summary: "Read aggregate participation for a published course",
+      description:
+        "Requires reports.read. Returns counts for the key's company without learner-level records.",
+      parameters: [
+        { name: "course_id", in: "query", required: true, schema: uuid },
+      ],
+      responses: {
+        "200": {
+          description: "Current aggregate participation",
+          content: json(
+            object({
+              course_id: uuid,
+              session_count: count,
+              enrolled_count: count,
+              completed_count: count,
+            }),
+          ),
+        },
+        ...scopedErrors,
+      },
     },
   },
 };

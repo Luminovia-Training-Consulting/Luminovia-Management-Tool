@@ -7,6 +7,16 @@ import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { CompanyWebhooks } from "./company-webhooks";
+import {
+  companyIntegrationScopes,
+  type CompanyIntegrationScope,
+} from "./company-integration-scopes";
+
+const scopeLabel = {
+  "courses.read": "integrationCourseIndex",
+  "enrolments.write": "integrationEnrolments",
+  "reports.read": "integrationReports",
+} as const;
 
 type Integration = {
   id: string;
@@ -15,6 +25,7 @@ type Integration = {
   revoked_at: string | null;
   last_used_at: string | null;
   version: number;
+  scope: CompanyIntegrationScope;
 };
 
 export function CompanyIntegrations({
@@ -72,7 +83,7 @@ export function CompanyIntegrations({
         });
         if (result.error) throw result.error;
       } else {
-        const result = await db().rpc("issue_company_integration_key", {
+        const result = await db().rpc("issue_scoped_company_integration_key", {
           p_organisation_id: organisation,
           p_label:
             action?.key.label ?? String(payload.get("label") ?? "").trim(),
@@ -81,6 +92,8 @@ export function CompanyIntegrations({
           ).toISOString(),
           p_rotate_id: action?.key.id ?? null,
           p_expected_version: action?.key.version ?? null,
+          p_scope:
+            action?.key.scope ?? String(payload.get("scope") ?? "courses.read"),
         });
         if (result.error || typeof result.data?.credential !== "string")
           throw new Error("key_issue_failed");
@@ -120,7 +133,8 @@ export function CompanyIntegrations({
           <ul>
             {(keys.data ?? []).map((key) => (
               <li key={key.id}>
-                <strong>{key.label}</strong>{" "}
+                <strong>{key.label}</strong> ·{" "}
+                {t(scopeLabel[key.scope ?? "courses.read"])} ·{" "}
                 {key.revoked_at
                   ? t("integrationRevoked")
                   : t("integrationExpiry", {
@@ -176,14 +190,32 @@ export function CompanyIntegrations({
                   )}
                 </p>
               ) : (
-                <Field id="integration-label" label={t("integrationLabel")}>
-                  <input
-                    id="integration-label"
-                    name="label"
-                    required
-                    maxLength={120}
-                  />
-                </Field>
+                <>
+                  <Field id="integration-label" label={t("integrationLabel")}>
+                    <input
+                      id="integration-label"
+                      name="label"
+                      required
+                      maxLength={120}
+                    />
+                  </Field>
+                  <Field
+                    id="integration-scope"
+                    label={t("integrationScopeChoice")}
+                  >
+                    <select
+                      id="integration-scope"
+                      name="scope"
+                      defaultValue="courses.read"
+                    >
+                      {companyIntegrationScopes.map((scope) => (
+                        <option key={scope} value={scope}>
+                          {t(scopeLabel[scope])}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </>
               )}
               {action?.type !== "revoke" && (
                 <Field id="integration-days" label={t("integrationDuration")}>
@@ -242,7 +274,9 @@ export function CompanyIntegrations({
               actor={actor}
               organisation={organisation}
               zone={zone}
-              keys={keys.data ?? []}
+              keys={(keys.data ?? []).filter(
+                (key) => (key.scope ?? "courses.read") === "courses.read",
+              )}
               canSubscribePremium={canSubscribePremium}
               archived={archived}
             />

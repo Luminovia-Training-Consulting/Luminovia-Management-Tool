@@ -476,7 +476,8 @@ resources:
                                       - any: true
                       - name: portal-function-company-integration
                         match:
-                          path: /functions/v1/company-integration
+                          safe_regex:
+                            regex: /functions/v1/company-integration(/enrolments|/participation)?
                         route:
                           cluster: functions
                           timeout: 15s

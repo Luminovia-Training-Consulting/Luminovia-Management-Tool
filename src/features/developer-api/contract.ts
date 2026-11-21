@@ -9,7 +9,11 @@ import {
 import { knowledgeDocument, knowledgeSchemas } from "./knowledge-contract.ts";
 import { sessionPaths } from "./session-contract.ts";
 import { humanAuthPaths } from "./human-auth-contract.ts";
-import { companyCourseIndexPath } from "./company-course-index-contract.ts";
+import {
+  companyCourseIndexPath,
+  companyCourseOperationPaths,
+} from "./company-course-index-contract.ts";
+import { companyIntegrationScopes } from "../operations/company-integration-scopes.ts";
 import {
   companyCourseWebhook,
   companyWebhookDestination,
@@ -3691,30 +3695,44 @@ const companyIntegrationKeys = rpc(
       revoked_at: nullableDateTime,
       version: integrationKeyVersion,
       last_used_at: nullableDateTime,
+      scope: { type: "string", enum: companyIntegrationScopes },
     }),
   },
 );
+const companyIntegrationKeyParameters = {
+  ...organisation,
+  p_label: { ...text, minLength: 1, maxLength: 120 },
+  p_expires_at: { ...text, format: "date-time" },
+  p_rotate_id: nullableUuid,
+  p_expected_version: { type: ["integer", "null"], minimum: 1 },
+};
+const companyIntegrationKeyReceipt = object({
+  id: uuid,
+  version: integrationKeyVersion,
+  credential: {
+    ...text,
+    format: "password",
+    pattern: "^lvi_[a-f0-9-]{36}_[a-f0-9]{64}$",
+  },
+});
 const companyIntegrationKeyIssue = rpc(
   "issueCompanyIntegrationKey",
   "Server integrations",
   "Issue or rotate a company integration key",
   "Only an active administrator or owner can issue or rotate a key for a non-archived company. For a new key send null for the key ID and version. For rotation send the current key ID and its version. Expiry must be after the database's current time and within 180 days. The response contains the one-time credential for secure storage by the receiving backend.",
+  companyIntegrationKeyParameters,
+  companyIntegrationKeyReceipt,
+);
+const scopedCompanyIntegrationKeyIssue = rpc(
+  "issueScopedCompanyIntegrationKey",
+  "Server integrations",
+  "Issue or rotate a key with one explicit scope",
+  "Requires an active administrator or owner. The selected scope is immutable on rotation. The response contains the one-time credential.",
   {
-    ...organisation,
-    p_label: { ...text, minLength: 1, maxLength: 120 },
-    p_expires_at: { ...text, format: "date-time" },
-    p_rotate_id: nullableUuid,
-    p_expected_version: { type: ["integer", "null"], minimum: 1 },
+    ...companyIntegrationKeyParameters,
+    p_scope: { type: "string", enum: companyIntegrationScopes },
   },
-  object({
-    id: uuid,
-    version: integrationKeyVersion,
-    credential: {
-      ...text,
-      format: "password",
-      pattern: "^lvi_[a-f0-9-]{36}_[a-f0-9]{64}$",
-    },
-  }),
+  companyIntegrationKeyReceipt,
 );
 const companyIntegrationKeyRevoke = voidRpc(
   "revokeCompanyIntegrationKey",
@@ -3963,8 +3981,6 @@ function internalOpenApi(
         ...credentialPaths,
         "/rest/v1/rpc/issue_company_integration_key": {
           post: {
-            ...nativeDownloadPaths["/rest/v1/rpc/issue_company_integration_key"]
-              .post,
             ...companyIntegrationKeyIssue.post,
             responses: {
               ...companyIntegrationKeyIssue.post.responses,
@@ -3972,15 +3988,25 @@ function internalOpenApi(
             },
           },
         },
+        "/rest/v1/rpc/issue_scoped_company_integration_key": {
+          post: {
+            ...scopedCompanyIntegrationKeyIssue.post,
+            responses: {
+              ...scopedCompanyIntegrationKeyIssue.post.responses,
+              "409": keyVersionConflict,
+            },
+          },
+        },
         "/rest/v1/rpc/company_course_webhook_subscribe": companyWebhookCreate,
         "/functions/v1/company-integration": companyCourseIndexPath,
+        ...companyCourseOperationPaths,
       }
     : paths;
   return {
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.2.0",
+      version: "1.3.0",
       description:
         "Account and business contracts with native RPC schemas derived from the migrated database. Current permissions, company scope and entitlements still apply. The repository API reference describes feature-specific JSON payloads and integration flows.",
     },

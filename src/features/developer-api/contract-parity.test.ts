@@ -403,6 +403,7 @@ describe("installation and integration credential contracts", () => {
                 "revoked_at",
                 "version",
                 "last_used_at",
+                "scope",
               ],
             },
           },

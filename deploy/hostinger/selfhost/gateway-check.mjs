@@ -141,6 +141,8 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/human-recovery", 503, "portal-function-human-recovery"],
             ["/functions/v1/human-recovery/extra", 404],
             ["/functions/v1/company-integration", 503, "portal-function-company-integration"],
+            ["/functions/v1/company-integration/enrolments", 503, "portal-function-company-integration"],
+            ["/functions/v1/company-integration/participation", 503, "portal-function-company-integration"],
             ["/functions/v1/company-integration/extra", 404],
             ["/functions/v1/mail-admin", 503, "portal-function-mail-admin"],
             ["/functions/v1/mail-admin/extra", 404],
