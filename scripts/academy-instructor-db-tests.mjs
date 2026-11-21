@@ -1,6 +1,7 @@
 /** Exercises dedicated academy licence, course access and assignments on disposable databases. */
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
@@ -332,6 +333,11 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "set_company_premium",
     "company_premium_settings",
     "commission_report",
+    "manual_assign_job",
+    "cancel_job_assignment",
+    "finance_earnings",
+    "contract_records",
+    "submit_invoice",
     "search_portal",
     "course_workspace_action",
     "repeat_client_request",
@@ -382,6 +388,33 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   }
   await assert.rejects(assign(teacher, run, teacher), /42501/);
   assert.equal((await assign(admin, run, participant)).status, "not_eligible");
+  const [privateEvent, unavailable] = Array.from({ length: 2 }, randomUUID);
+  await sql(`insert into public.personal_events(id,user_id,title,starts_at,ends_at)
+    select ${q(privateEvent)},${q(teacher)},'Confidential fixture appointment',starts_at,ends_at
+    from public.course_sessions where course_run_id=${q(run)} order by starts_at limit 1`);
+  assert.deepEqual(await assign(admin, run, teacher, randomUUID()), {
+    status: "conflict",
+  });
+  await sql(`delete from public.personal_events where id=${q(privateEvent)};
+    insert into public.lecturer_availability(id,user_id,kind,starts_at,ends_at)
+    select ${q(unavailable)},${q(teacher)},'unavailable',starts_at,ends_at
+    from public.course_sessions where course_run_id=${q(run)} order by starts_at limit 1`);
+  assert.deepEqual(await assign(admin, run, teacher, randomUUID()), {
+    status: "conflict",
+  });
+  assert.equal(await sql("select count(*) from public.jobs"), "0");
+  await sql(`delete from public.lecturer_availability where id=${q(unavailable)};
+    insert into public.personal_events(id,user_id,title,starts_at,ends_at)
+    select ${q(privateEvent)},${q(teacher)},'Adjacent fictional appointment',ends_at,ends_at+interval '10 minutes'
+    from public.course_sessions where course_run_id=${q(run)} order by ends_at desc limit 1;
+    create or replace function private.lecturer_job_quote(p_user_id uuid,p_job_id uuid)
+    returns jsonb language plpgsql stable security definer set search_path='' as $$
+    begin raise exception 'Academy instructor assignment reached commercial pricing'; end;
+    $$;
+    create or replace function private.current_contract_for_interval(p_user_id uuid,p_starts_at timestamptz,p_ends_at timestamptz)
+    returns uuid language plpgsql stable security definer set search_path='' as $$
+    begin raise exception 'Academy instructor assignment reached commercial contracts'; end;
+    $$;`);
 
   const candidates = await call(
     admin,
@@ -777,17 +810,30 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "0",
   );
   assert.equal(
+    await sql("select count(*) from private.job_commission_offers"),
+    "0",
+  );
+  assert.equal(
+    await sql("select count(*) from public.chat_rooms where kind='lecturer_course'"),
+    "0",
+  );
+  assert.equal(
     await sql(
       `select count(*) from public.job_claims where id=${q(result.claim_id)} and contract_id is null and amount=0 and total_amount=0`,
     ),
     "1",
   );
   const releaseKey = randomUUID();
-  const release = (who, course, request = releaseKey) =>
+  const release = (
+    who,
+    course,
+    request = releaseKey,
+    reason = "Fictional scheduling change",
+  ) =>
     call(who, "academy_release_course_instructor", [
       course,
       result.claim_id,
-      "Fictional scheduling change",
+      reason,
       request,
     ]).then(JSON.parse);
   await assert.rejects(release(teacher, run), /42501/);
@@ -796,6 +842,39 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     status: "cancelled",
     claim_id: result.claim_id,
   });
+  await assert.rejects(
+    release(admin, run, releaseKey, "Changed fictional reason"),
+    /22023/,
+  );
+  assert.equal(
+    await sql(`select count(*) from private.academy_instructor_release_requests
+      where claim_id=${q(result.claim_id)} and request_id=${q(releaseKey)}`),
+    "1",
+  );
+  assert.equal(
+    await sql(`select count(*) from private.job_lifecycle_requests where result=${q(result.claim_id)}`),
+    "0",
+  );
+  assert.equal(
+    await sql(`select count(*) from public.claim_events where claim_id=${q(result.claim_id)}`),
+    "0",
+  );
+  assert.equal(
+    await sql(`select count(*) from public.notifications where
+      (resource_id=${q(result.claim_id)} or resource_id=(select job_id from public.job_claims where id=${q(result.claim_id)}))
+      and kind in ('claim_confirmed','claim_cancelled','job_matching','job_reopened')`),
+    "0",
+  );
+  assert.deepEqual(
+    JSON.parse(await sql(`select jsonb_agg(action order by action) from public.audit_events
+      where resource_id=${q(result.claim_id)}`)),
+    ["academy.instructor.assigned", "academy.instructor.released"],
+  );
+  assert.equal(
+    await sql(`select count(*) from public.chat_members
+      where room_id=${q(room)} and user_id=${q(teacher)} and removed_at is not null`),
+    "1",
+  );
   assert.deepEqual(await release(admin, run), {
     status: "cancelled",
     claim_id: result.claim_id,
@@ -973,7 +1052,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.equal((await workspace(teacher, run)).access.teacher, true);
   assert.equal((await workspace(participant, run)).access.learner, true);
   console.log(
-    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text and exact attachment chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
+    `PASS ${edition} scheduling without commerce, retained assignments, enrolments, welcome, meeting, chat, grace, expiry and restricted routes`,
   );
 };
 
@@ -982,3 +1061,91 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     checkCourseAccess(db, edition),
   );
 }
+
+await withTestDatabase(
+  "academy_instructor_upgrade",
+  async ({ sql, actor }) => {
+    const [installation, organisation, template, course, admin, teacher] =
+      Array.from({ length: 6 }, randomUUID);
+    const date = (days) => new Date(Date.now() + days * 86_400_000).toISOString();
+    const terms = {
+      installation_id: installation,
+      edition: "customer-self-hosted",
+      release_commit: "cd".repeat(20),
+      issued_at: date(-2),
+      starts_at: date(-1),
+      expires_at: date(10),
+      grace_until: date(11),
+      modules: ["lms"],
+      limits: {
+        seat_count: 20,
+        storage_bytes: 2_000_000,
+        api_requests_per_minute: 60,
+      },
+    };
+    const keys = generateKeyPairSync("ed25519");
+    await prepareAcademyInstallation(
+      {
+        envelope: signAcademyLicence(terms, keys.privateKey),
+        publicKey: keys.publicKey,
+        expected: terms,
+      },
+      sql,
+    );
+    await sql(`select private.configure_academy_course_access(${q(installation)},${q(terms.release_commit)},true);
+      insert into auth.users(id,email,email_confirmed_at) values
+        (${q(admin)},'upgrade-admin@example.invalid',now()),(${q(teacher)},'upgrade-teacher@example.invalid',now());
+      insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(teacher)},'lecturer');
+      insert into public.organisations(id,name) values(${q(organisation)},'Fictional academy');
+      insert into public.course_templates(id,title) values(${q(template)},'Fictional retained course');
+      insert into public.course_runs(id,template_id,organisation_id) values(${q(course)},${q(template)},${q(organisation)});
+      insert into public.course_sessions(course_run_id,starts_at,ends_at)
+      values(${q(course)},now()+interval '2 days',now()+interval '49 hours');`);
+    const assignmentKey = randomUUID();
+    const releaseKey = randomUUID();
+    const assign = () =>
+      actor(
+        admin,
+        `select public.academy_assign_course_instructor(${q(course)},${q(teacher)},${q(assignmentKey)})`,
+      ).then(JSON.parse);
+    const previous = await assign();
+    assert.equal(previous.status, "confirmed");
+    const release = () =>
+      actor(
+        admin,
+        `select public.academy_release_course_instructor(${q(course)},${q(previous.claim_id)},'Fictional legacy release',${q(releaseKey)})`,
+      ).then(JSON.parse);
+    const released = await release();
+    assert.deepEqual(released, {
+      status: "cancelled",
+      claim_id: previous.claim_id,
+    });
+    assert.equal(
+      await sql(`select count(*) from private.job_lifecycle_requests where request_id=${q(releaseKey)}`),
+      "1",
+    );
+    const retained = () =>
+      sql(`select jsonb_build_object('assignment',to_jsonb(allocation),'claim',to_jsonb(claim),
+        'sessions',(select jsonb_agg(to_jsonb(session) order by session.id)
+          from public.assignment_sessions session where session.claim_id=claim.id))
+        from private.academy_course_instructors allocation join public.job_claims claim on claim.id=allocation.claim_id
+        where claim.id=${q(previous.claim_id)}`).then(JSON.parse);
+    const before = await retained();
+    await sql(
+      await readFile(
+        new URL(
+          "../supabase/migrations/20261122016050_academy_instructor_scheduling_without_commerce.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(await release(), released);
+    assert.deepEqual(await assign(), released);
+    assert.deepEqual(await retained(), before);
+    console.log(
+      "PASS existing Academy release request replays after upgrade with original assignment and sessions preserved",
+    );
+  },
+  { migrationsThrough: "20261122016040" },
+);
