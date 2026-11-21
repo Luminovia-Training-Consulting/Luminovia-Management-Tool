@@ -2,7 +2,13 @@
  * Explicit navigation guidance inside the live portal, without performing business mutations.
  * The shell keys this component by actor; current capabilities and readiness shape every render.
  */
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CircleHelp, Compass } from "lucide-react";
@@ -111,11 +117,15 @@ export function PortalTour({
     update({ status: "active", step: next.id });
     navigate(next.path);
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (active) {
       heading.current?.focus();
-    } else if (ready && retryRequested.current && launcher.current) {
-      launcher.current.focus();
+      return;
+    }
+    const button = launcher.current;
+    if (!ready || !retryRequested.current || !button || button.disabled) return;
+    button.focus();
+    if (button.ownerDocument.activeElement === button) {
       retryRequested.current = false;
     }
   }, [active, ready, state.step, location.pathname]);

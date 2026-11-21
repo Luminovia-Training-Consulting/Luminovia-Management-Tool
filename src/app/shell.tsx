@@ -2,7 +2,7 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Navigate,
@@ -660,7 +660,9 @@ export function Shell() {
                 }}
               ></PortalTour>
               <PermanentDeletionProvider>
-                <Outlet />
+                <Suspense fallback={<Loading />}>
+                  <Outlet />
+                </Suspense>
               </PermanentDeletionProvider>
             </>
           )}
