@@ -100,5 +100,9 @@ export async function changeAssignmentAction(
 /** A committed amendment affects calendar, current quote, finance and readiness.
  * Invalidate their established cache prefixes only after server confirmation. */
 export async function refreshAssignmentChanges(client: QueryClient) {
-  await refreshJobState(client);
+  await Promise.all([
+    refreshJobState(client),
+    client.invalidateQueries({ queryKey: ["course-workspace"] }),
+    client.invalidateQueries({ queryKey: ["course-workspaces"] }),
+  ]);
 }

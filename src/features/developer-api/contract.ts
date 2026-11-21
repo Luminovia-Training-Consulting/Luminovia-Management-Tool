@@ -45,6 +45,11 @@ import {
   invoiceExceptionOptionsSchema,
   myInvoiceExceptionsSchema,
 } from "../commercial/invoice-exception-schema.ts";
+import {
+  invoiceSeriesKindSchema,
+  invoiceSeriesOptionsSchema,
+  invoiceSeriesRecordsSchema,
+} from "../commercial/invoice-series-schema.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { profileContracts } from "./profile-contract.ts";
@@ -229,6 +234,27 @@ const rpc = (
     },
   },
 });
+
+const scheduleChangeResponses = {
+  "200": { description: "Confirmed request ID", content: json(uuid) },
+  "400": error,
+  "401": error,
+  "403": error,
+  "404": error,
+  "409": error,
+  "422": {
+    ...error,
+    description:
+      "A count change would alter the agreed day or time-based billed units.",
+  },
+  "423": {
+    ...error,
+    description:
+      "The first proposed session would precede the live claim deadline.",
+  },
+  "429": error,
+  "503": error,
+};
 
 /** PostgreSQL void RPCs return HTTP 204 without a JSON response. */
 function voidRpc(
@@ -1514,6 +1540,67 @@ const nativePaths = {
     {},
     z.toJSONSchema(financePendingInvoiceExceptionsSchema),
   ),
+  "/rest/v1/rpc/invoice_series_options": rpc(
+    "invoiceSeriesOptions",
+    "Finance",
+    "Read the reviewed instalment options for one assignment",
+    "Current internal finance staff can read the applicable executed contract versions, accepted ceiling, recorded credits and previous approvals. The server rechecks eligibility when a decision is saved.",
+    { p_claim_id: uuid },
+    z.toJSONSchema(invoiceSeriesOptionsSchema),
+  ),
+  "/rest/v1/rpc/approve_invoice_series_entry": rpc(
+    "approveInvoiceSeriesEntry",
+    "Finance",
+    "Approve an instalment or a final settlement",
+    "Requires current internal finance authority. Supply the exact executed contract version, reviewed amount, agreed due date and note. For a final settlement the amount is the reviewed total before crediting actual, unvoided interim payments. The net can be zero. Approval does not create an invoice or payment. The same decision and client ID can be retried.",
+    {
+      p_claim_id: uuid,
+      p_contract_id: uuid,
+      p_kind: z.toJSONSchema(invoiceSeriesKindSchema),
+      p_amount: {
+        type: "number",
+        exclusiveMinimum: 0,
+        maximum: 9999999999.99,
+        multipleOf: 0.01,
+      },
+      p_due_on: date,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/revoke_invoice_series_entry": voidRpc(
+    "revokeInvoiceSeriesEntry",
+    "Finance",
+    "Revoke a decision awaiting invoice submission",
+    "Requires current internal finance authority and a review reason. An active invoice prevents revocation. The original decision and the reason stay in the audit history.",
+    {
+      p_approval_id: uuid,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+  ),
+  "/rest/v1/rpc/invoice_series_records": rpc(
+    "invoiceSeriesRecords",
+    "Finance",
+    "List current and historical instalment decisions",
+    "Pass false for the current lecturer's own series and true for internal finance management. Includes each exact prior payment credited to a final settlement. Commercial actions are unavailable in the Academy editions.",
+    { p_all: boolean },
+    z.toJSONSchema(invoiceSeriesRecordsSchema),
+  ),
+  "/rest/v1/rpc/submit_invoice_series_entry": rpc(
+    "submitInvoiceSeriesEntry",
+    "Finance",
+    "Submit the exact PDF for an approved instalment or final invoice",
+    "Requires the current lecturer's own clean scanned PDF and the exact current approval. The server retains the approved amount, currency, due date, and applicable credits. A stale approval returns HTTP 409. Retry uncertainty with the same client ID and identical metadata.",
+    {
+      p_approval_id: uuid,
+      p_number: { ...text, minLength: 1, maxLength: 80 },
+      p_document_version_id: uuid,
+      p_issued_on: date,
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
   "/rest/v1/rpc/invoice_exception_options": rpc(
     "invoiceExceptionOptions",
     "Finance",
@@ -1770,58 +1857,70 @@ const nativePaths = {
     {},
     changeCandidatesResult,
   ),
-  "/rest/v1/rpc/save_assignment_change": rpc(
-    "saveAssignmentChange",
-    "Assignments",
-    "Save a versioned change proposal",
-    "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared schedule changes dates only and retains the number of sessions.",
-    {
-      p_id: nullableUuid,
-      p_claim_id: uuid,
-      p_expected_version: version,
-      ...idempotency,
-      p_payload: object({
-        reason: { ...text, minLength: 5, maxLength: 2000 },
-        changes: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            sessions: {
-              type: "array",
-              minItems: 1,
-              maxItems: 60,
-              items: object({
-                starts_at: { type: "string", format: "date-time" },
-                ends_at: { type: "string", format: "date-time" },
-              }),
+  "/rest/v1/rpc/save_assignment_change": {
+    post: {
+      ...rpc(
+        "saveAssignmentChange",
+        "Assignments",
+        "Save a versioned change proposal",
+        "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared proposal changes only the schedule. Eligible additions or removals retain the exact surviving session references, agreed fees and the billed units. A proposed first date must respect any current claim deadline and learner withdrawal rights.",
+        {
+          p_id: nullableUuid,
+          p_claim_id: uuid,
+          p_expected_version: version,
+          ...idempotency,
+          p_payload: object({
+            reason: { ...text, minLength: 5, maxLength: 2000 },
+            changes: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                sessions: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 60,
+                  items: object({
+                    starts_at: { type: "string", format: "date-time" },
+                    ends_at: { type: "string", format: "date-time" },
+                  }),
+                },
+                location: { ...text, maxLength: 500 },
+                scope: { ...text, maxLength: 12000 },
+                amount: proposedAmount,
+                total_amount: proposedAmount,
+                rate_unit: rateUnit,
+                terms: { ...text, minLength: 1, maxLength: 8000 },
+                cancel: boolean,
+              },
             },
-            location: { ...text, maxLength: 500 },
-            scope: { ...text, maxLength: 12000 },
-            amount: proposedAmount,
-            total_amount: proposedAmount,
-            rate_unit: rateUnit,
-            terms: { ...text, minLength: 1, maxLength: 8000 },
-            cancel: boolean,
-          },
+          }),
         },
-      }),
+        uuid,
+      ).post,
+      responses: scheduleChangeResponses,
     },
-    uuid,
-  ),
-  "/rest/v1/rpc/assignment_change_action": rpc(
-    "assignmentChangeAction",
-    "Assignments",
-    "Submit, respond to or apply a change proposal",
-    "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Management submission of an eligible shared schedule creates a proposal for each affected assignment. Applying a shared schedule requires all recorded consents for the same dates and updates the whole group in one transaction.",
-    {
-      p_id: uuid,
-      p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },
-      p_expected_version: { ...version, minimum: 1 },
-      p_note: { ...text, maxLength: 2000 },
-      ...idempotency,
+  },
+  "/rest/v1/rpc/assignment_change_action": {
+    post: {
+      ...rpc(
+        "assignmentChangeAction",
+        "Assignments",
+        "Submit, respond to or apply a change proposal",
+        "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Management submission of an eligible shared schedule creates a proposal for each affected assignment. Applying a shared schedule requires all recorded consents for the same dates and updates the whole group in one transaction. Each current confirmed position needs approval. A new position claim, changed offer, or intervening protected evidence prevents apply.",
+        {
+          p_id: uuid,
+          p_action: {
+            enum: ["submit", "accept", "reject", "withdraw", "apply"],
+          },
+          p_expected_version: { ...version, minimum: 1 },
+          p_note: { ...text, maxLength: 2000 },
+          ...idempotency,
+        },
+        uuid,
+      ).post,
+      responses: scheduleChangeResponses,
     },
-    uuid,
-  ),
+  },
   "/rest/v1/rpc/job_board": rpc(
     "native_job_board",
     "Jobs",

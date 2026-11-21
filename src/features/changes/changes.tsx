@@ -52,6 +52,14 @@ function useRequest() {
     return key.current!.id;
   };
 }
+const mutationErrorMessage = new Map([
+  ["40001", "stale"],
+  ["23P01", "conflict"],
+  ["PT422", "sharedQuantity"],
+  ["PT423", "sharedClaimDeadline"],
+  ["PT409", "sharedConflict"],
+  ["22023", "unsupported"],
+]);
 /** Map server denial/conflict codes to bilingual recoverable UI messages,
  * without publishing SQL details or implying that a rejected write succeeded. */
 function MutationError({ error }: { error: unknown }) {
@@ -61,19 +69,7 @@ function MutationError({ error }: { error: unknown }) {
       ? String(error.code)
       : "";
   return (
-    <Notice kind="error">
-      {t(
-        code === "40001"
-          ? "stale"
-          : code === "23P01"
-            ? "conflict"
-            : code === "PT409"
-              ? "sharedConflict"
-              : code === "22023"
-                ? "unsupported"
-                : "error",
-      )}
-    </Notice>
+    <Notice kind="error">{t(mutationErrorMessage.get(code) ?? "error")}</Notice>
   );
 }
 const formSchema = z.object({
@@ -150,6 +146,7 @@ function ChangeForm({
     original?.customer_view ?? candidate?.customer_view ?? false;
   const sharedSchedule =
     original?.shared_schedule_only ?? candidate?.shared_schedule_only ?? false;
+  const sessionCountEditable = !linkedCourse || sharedSchedule;
   const canPrice =
     !sharedSchedule && (original?.can_price ?? candidate?.can_price ?? false);
   const commissioned =
@@ -408,12 +405,18 @@ function ChangeForm({
         </fieldset>
       )}
       {!scheduleEditable ? (
-        <p className="muted">{t("linkedSessions")}</p>
+        <p className="muted">
+          {t(sharedSchedule ? "sharedUnavailable" : "linkedSessions")}
+        </p>
       ) : (
         <fieldset className="changes-sessions">
           <legend>{t("sessions")}</legend>
           <p className="muted">{t("dateHint", { zone })}</p>
-          {linkedCourse && <p className="muted">{t("linkedSessionCount")}</p>}
+          {linkedCourse && (
+            <p className="muted">
+              {t(sharedSchedule ? "sharedSessionCount" : "linkedSessionCount")}
+            </p>
+          )}
           {fields.map((item, index) => (
             <div key={item.id} className="changes-session">
               <Field
@@ -440,7 +443,7 @@ function ChangeForm({
                   {...register(`sessions.${index}.ends_at`)}
                 />
               </Field>
-              {!linkedCourse && (
+              {sessionCountEditable && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -452,7 +455,7 @@ function ChangeForm({
               )}
             </div>
           ))}
-          {!linkedCourse && (
+          {sessionCountEditable && (
             <Button
               type="button"
               variant="secondary"

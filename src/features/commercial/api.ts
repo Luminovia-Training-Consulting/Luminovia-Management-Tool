@@ -10,6 +10,10 @@ import {
   invoiceExceptionOptionsSchema,
   myInvoiceExceptionsSchema,
 } from "./invoice-exception-schema";
+import {
+  invoiceSeriesOptionsSchema,
+  invoiceSeriesRecordsSchema,
+} from "./invoice-series-schema";
 import type {
   CommercialAccess,
   CommercialPerson,
@@ -383,3 +387,33 @@ export function parseInvoiceLabels(value: string) {
     throw new Error("labels_invalid");
   return labels;
 }
+
+export const invoiceSeriesRecordsQuery = (actor: string, all: boolean) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "invoice-series", all],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_series_records", {
+        p_all: all,
+      });
+      if (error) throw error;
+      return invoiceSeriesRecordsSchema.parse(data);
+    },
+    retry: false,
+  });
+
+export const invoiceSeriesOptionsQuery = (actor: string, claimId: string) =>
+  queryOptions({
+    queryKey: [
+      ...commercialKeys.finance(actor),
+      "invoice-series-options",
+      claimId,
+    ],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_series_options", {
+        p_claim_id: claimId,
+      });
+      if (error) throw error;
+      return invoiceSeriesOptionsSchema.parse(data);
+    },
+    retry: false,
+  });

@@ -175,8 +175,11 @@ for (const role of actors) {
         await expect(dialog).toHaveCount(0);
       }
 
-      if (!restricted) {
-        await page.goto("/files");
+      await page.goto("/files");
+      if (restricted) {
+        await expect(page).toHaveURL(destination);
+        await expect(sidebarLink("/files")).toHaveCount(0);
+      } else {
         await page
           .getByRole("button", { name: /^(Datei hochladen|Upload file)$/i })
           .click();
@@ -186,6 +189,12 @@ for (const role of actors) {
         await expect(
           page.getByRole("option", { name: /^(Rechnung|Invoice)$/i }),
         ).toHaveCount(teaching ? 1 : 0);
+      }
+
+      if (role.primary === "guest") {
+        await page.goto("/notifications");
+        await expect(page).toHaveURL(destination);
+        await expect(sidebarLink("/notifications")).toHaveCount(0);
       }
 
       if ("additional" in role) {

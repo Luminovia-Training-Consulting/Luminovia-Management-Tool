@@ -9,7 +9,7 @@ test.skip(
   "Shared schedule writes require the disposable portal test project.",
 );
 
-test("staff and both lecturers approve a shared schedule in the internal portal", async ({
+test("staff and both lecturers approve adding a shared session in the internal portal", async ({
   page,
   browser,
 }, testInfo) => {
@@ -139,10 +139,13 @@ test("staff and both lecturers approve a shared schedule in the internal portal"
       "Fictional schedule update agreed after participant availability review.",
     );
   await form
-    .getByLabel(/^(Beginn|Start) 1$/)
+    .getByRole("button", { name: /^(Termin hinzufügen|Add session)$/ })
+    .click();
+  await form
+    .getByLabel(/^(Beginn|Start) 2$/)
     .fill(newStart.toFormat("yyyy-MM-dd'T'HH:mm"));
   await form
-    .getByLabel(/^(Ende|Finish) 1$/)
+    .getByLabel(/^(Ende|Finish) 2$/)
     .fill(newStart.plus({ hours: 1 }).toFormat("yyyy-MM-dd'T'HH:mm"));
   await form
     .getByRole("button", {
@@ -231,15 +234,18 @@ test("staff and both lecturers approve a shared schedule in the internal portal"
         hasText: /wurden gemeinsam angewendet|were applied together/,
       }),
     ).toBeVisible();
-    const moved = await checked(
+    const updated = await checked(
       service
         .from("course_sessions")
-        .select("starts_at")
-        .eq("id", session)
-        .single(),
+        .select("id,starts_at")
+        .eq("course_run_id", course)
+        .order("starts_at"),
       { requireData: true },
     );
-    expect(Date.parse(moved.starts_at)).toBe(newStart.toMillis());
+    expect(updated).toHaveLength(2);
+    expect(updated[0].id).toBe(session);
+    expect(Date.parse(updated[0].starts_at)).toBe(firstStart.toMillis());
+    expect(Date.parse(updated[1].starts_at)).toBe(newStart.toMillis());
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(

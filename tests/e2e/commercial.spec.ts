@@ -5,7 +5,7 @@
 import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {DateTime} from "luxon";
 
@@ -137,6 +137,7 @@ async function acceptedJob(
     total: number,
     day: number,
     requiresContract = true,
+    otherDays: number[] = [],
 ) {
     const id = randomUUID();
     const title = `QA ${currency} ${id.slice(0, 8)}`;
@@ -164,11 +165,11 @@ async function acceptedJob(
         (
             await service()
                 .from("job_sessions")
-                .insert({
+                .insert([day, ...otherDays].map(sessionDay => ({
                     job_id: id,
-                    starts_at: `2035-05-${String(day).padStart(2, "0")}T08:00:00Z`,
-                    ends_at: `2035-05-${String(day).padStart(2, "0")}T10:00:00Z`,
-                })
+                    starts_at: `2035-05-${String(sessionDay).padStart(2, "0")}T08:00:00Z`,
+                    ends_at: `2035-05-${String(sessionDay).padStart(2, "0")}T10:00:00Z`,
+                })))
         ).error,
     ).toBeNull();
     const api = await actor(user);
@@ -182,18 +183,26 @@ async function acceptedJob(
     return {title, id, claimId: result.data.claim_id};
 }
 
-/** Move the exact one-session fictional offer and its accepted allocation into the past. */
-async function finishAcceptedJob(job: Awaited<ReturnType<typeof acceptedJob>>, daysAgo: number) {
+/** Move an exact fictional offer session and its accepted allocation into the past. */
+async function finishAcceptedJob(
+    job: Awaited<ReturnType<typeof acceptedJob>>,
+    daysAgo: number,
+    originalStart?: string,
+) {
     const starts = Date.now() - daysAgo * 86_400_000;
     const interval = {
         starts_at: new Date(starts).toISOString(),
         ends_at: new Date(starts + 7_200_000).toISOString(),
     };
-    const scheduled = await service().from("job_sessions").update(interval)
-        .eq("job_id", job.id).select("id").single();
+    const schedule = service().from("job_sessions").update(interval).eq("job_id", job.id);
+    const allocation = service().from("assignment_sessions").update(interval).eq("claim_id", job.claimId);
+    if (originalStart) {
+        schedule.eq("starts_at", originalStart);
+        allocation.eq("starts_at", originalStart);
+    }
+    const scheduled = await schedule.select("id").single();
     expect(scheduled.error).toBeNull();
-    const assigned = await service().from("assignment_sessions").update(interval)
-        .eq("claim_id", job.claimId).select("id").single();
+    const assigned = await allocation.select("id").single();
     expect(assigned.error).toBeNull();
 }
 
@@ -659,7 +668,13 @@ test("finance can revoke an exceptional approval after reloading the portal", as
     try {
         const financePage = await financeContext.newPage();
         await login(financePage, administrator);
-        await financePage.goto("/finance");
+        await financePage.goto("/notifications");
+        const reviewNotice = financePage.locator(".inbox-list > .notification-row").filter({
+            hasText: "Prüfung einer Rechnung angefragt",
+        }).first();
+        await expect(reviewNotice).toBeVisible();
+        await reviewNotice.getByRole("link", {name: "Öffnen", exact: true}).click();
+        await expect(financePage).toHaveURL(/\/finance$/);
         const review = financePage.locator("article.invoice-review-row").filter({hasText: job.title});
         await review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"}).click();
         await review.getByLabel("Prüfnotiz (mindestens 10 Zeichen)").fill("Fiktive Prüfung der ausgeführten Vertragsfassung und des Stornobetrags.");
@@ -668,7 +683,13 @@ test("finance can revoke an exceptional approval after reloading the portal", as
         await review.getByRole("button", {name: "Schlussrechnung zur Einreichung freigeben"}).click();
         await expect(review.getByRole("button", {name: "Freigabe verwalten"})).toBeVisible();
 
-        await page.reload();
+        await page.goto("/notifications");
+        const approvalNotice = page.locator(".inbox-list > .notification-row").filter({
+            hasText: "Ausnahmerechnung zur Einreichung freigegeben",
+        });
+        await expect(approvalNotice).toHaveCount(1);
+        await expect(approvalNotice).not.toContainText(job.title);
+        await approvalNotice.getByRole("link", {name: "Öffnen", exact: true}).click();
         const ready = page.locator("section.invoice-review-request-list").filter({
             has: page.getByRole("heading", {name: "Freigegebene Ausnahmeabrechnungen"}),
         });
@@ -681,9 +702,355 @@ test("finance can revoke an exceptional approval after reloading the portal", as
         await review.getByRole("button", {name: "Einreichungsfreigabe widerrufen"}).click();
         await expect(review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"})).toBeVisible();
 
-        await page.reload();
+        await page.goto("/notifications");
+        const revokeNotice = page.locator(".inbox-list > .notification-row").filter({
+            hasText: "Freigabe für Ausnahmerechnung widerrufen",
+        });
+        await expect(revokeNotice).toHaveCount(1);
+        await expect(approvalNotice).toHaveCount(0);
+        await revokeNotice.getByRole("link", {name: "Öffnen", exact: true}).click();
         await expect(lecturerCase.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
         await expect(ready).toHaveCount(0);
+    } finally {
+        await financeContext.close();
+    }
+});
+
+test("a scanned exceptional invoice can be submitted and downloaded through the portal", async ({
+    page,
+    browser,
+}, testInfo) => {
+    test.setTimeout(120_000);
+    const lecturer = await account("lecturer", "scanned-exception-lecturer");
+    const administrator = await account("admin", "scanned-exception-finance");
+    const pdf = fictionalPdf();
+    const tag = randomUUID().slice(0, 8);
+    const contractFile = `fictional-exception-contract-${tag}.pdf`;
+    const invoiceFile = `fictional-exception-invoice-${tag}.pdf`;
+    const number = `EX-QA-${tag}`;
+    const dueOn = DateTime.utc().plus({days: 7}).toISODate()!;
+    const financeContext = await browser.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        viewport: testInfo.project.use.viewport,
+        isMobile: testInfo.project.use.isMobile,
+        hasTouch: testInfo.project.use.hasTouch,
+        deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+    });
+    try {
+        await login(page, lecturer);
+        await page.goto("/contracts");
+        await page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
+            name: contractFile,
+            mimeType: "application/pdf",
+            buffer: pdf,
+        });
+        await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({
+            timeout: 45_000,
+        });
+        const financePage = await financeContext.newPage();
+        await login(financePage, administrator);
+        await financePage.goto("/contracts");
+        await financePage.getByRole("button", {name: "Ausgeführten Vertrag hinterlegen"}).click();
+        const contract = financePage.getByRole("dialog");
+        await contract.getByLabel("Dozent:in", {exact: true}).selectOption(lecturer.id);
+        await contract.getByLabel("Titel", {exact: true}).fill(`Fiktiver Rahmenvertrag ${tag}`);
+        await contract.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
+        const contractFileField = contract.getByLabel("Hochgeladene Vertragsdatei");
+        await expect(contractFileField.locator("option", {hasText: contractFile})).toHaveCount(1);
+        await contractFileField.selectOption({label: contractFile});
+        await contract.getByRole("button", {name: "Vertrag speichern"}).click();
+        await expect(contract).not.toBeVisible();
+
+        const job = await acceptedJob(lecturer, "EUR", 200, 7, false);
+        const adminApi = await actor(administrator);
+        expect((await adminApi.rpc("cancel_job_assignment", {
+            p_claim_id: job.claimId,
+            p_reason: "Fictional cancellation for verified PDF invoice submission.",
+            p_request_id: randomUUID(),
+        })).error).toBeNull();
+        await page.goto("/finance");
+        const lecturerReview = page.locator("article.invoice-review-row").filter({hasText: job.title});
+        await lecturerReview.getByRole("button", {name: "Prüfung anfordern", exact: true}).click();
+        await expect(lecturerReview.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
+
+        await financePage.goto("/finance");
+        const review = financePage.locator("article.invoice-review-row").filter({hasText: job.title});
+        await review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"}).click();
+        await review.getByLabel("Prüfnotiz (mindestens 10 Zeichen)").fill("Fiktive Vertragsprüfung und Freigabe des Stornobetrags.");
+        await review.getByLabel("Geprüfter Betrag (EUR)").fill("90,25");
+        await review.getByLabel("Vereinbarte Fälligkeit").fill(dueOn);
+        const approval = financePage.waitForResponse((response) =>
+            new URL(response.url()).pathname === "/rest/v1/rpc/approve_invoice_exception" &&
+            response.request().method() === "POST");
+        await review.getByRole("button", {name: "Schlussrechnung zur Einreichung freigeben"}).click();
+        const approvalResponse = await approval;
+        expect(approvalResponse.status()).toBe(200);
+        const approvalId = await approvalResponse.json();
+        await expect(review.getByRole("button", {name: "Freigabe verwalten"})).toBeVisible();
+
+        await page.reload();
+        const ready = page.locator("section.invoice-review-request-list").filter({
+            has: page.getByRole("heading", {name: "Freigegebene Ausnahmeabrechnungen"}),
+        });
+        await ready.getByRole("button", {name: "Ausnahmerechnung einreichen"}).click();
+        const dialog = page.getByRole("dialog");
+        await dialog.getByLabel("Rechnungsnummer", {exact: true}).fill(number);
+        await expect(dialog.getByLabel("Fällig am", {exact: true})).toHaveValue(dueOn);
+        await expect(dialog.getByLabel("Fällig am", {exact: true})).not.toBeEditable();
+        await expect(dialog.getByText(/90,25\s*€/)).toBeVisible();
+        const submit = dialog.getByRole("button", {name: "Rechnung einreichen", exact: true});
+        await expect(submit).toBeDisabled();
+        const upload = page.waitForResponse((response) =>
+            new URL(response.url()).pathname === "/functions/v1/files" &&
+            response.request().method() === "POST", {timeout: 45_000});
+        await dialog.getByLabel("Rechnung als PDF", {exact: true}).setInputFiles({
+            name: invoiceFile,
+            mimeType: "application/pdf",
+            buffer: pdf,
+        });
+        const uploadResponse = await upload;
+        expect(uploadResponse.status(), await uploadResponse.text()).toBe(200);
+        const {document} = await uploadResponse.json();
+        expect(document).toMatchObject({owner_id: lecturer.id, kind: "invoice", status: "clean"});
+        await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible();
+        const version = await service().from("document_versions")
+            .select("document_id,sha256,status,scanner_version")
+            .eq("id", document.current_version_id).single();
+        expect(version.error).toBeNull();
+        expect(version.data).toMatchObject({
+            document_id: document.id,
+            sha256: createHash("sha256").update(pdf).digest("hex"),
+            status: "clean",
+            scanner_version: expect.stringMatching(/^ClamAV\s/),
+        });
+
+        const submission = page.waitForResponse((response) =>
+            new URL(response.url()).pathname === "/rest/v1/rpc/submit_exception_invoice" &&
+            response.request().method() === "POST");
+        await submit.click();
+        const submissionResponse = await submission;
+        expect(submissionResponse.status()).toBe(200);
+        const invoiceId = await submissionResponse.json();
+        await expect(dialog).not.toBeVisible();
+        await expect(ready.getByRole("button", {name: "Ausnahmerechnung einreichen"})).toHaveCount(0);
+        const submitted = page.locator("article").filter({
+            has: page.getByRole("heading", {name: number, exact: true}),
+        });
+        await expect(submitted.getByText("Eingereicht", {exact: true})).toBeVisible();
+        const invoice = await service().from("invoices")
+            .select("user_id,number,due_on,currency,total_amount,status,document_version_id,exception_approval_id")
+            .eq("id", invoiceId).single();
+        expect(invoice.error).toBeNull();
+        expect(invoice.data).toMatchObject({
+            user_id: lecturer.id,
+            number,
+            due_on: dueOn,
+            currency: "EUR",
+            total_amount: 90.25,
+            status: "submitted",
+            document_version_id: document.current_version_id,
+            exception_approval_id: approvalId,
+        });
+        const items = await service().from("invoice_items")
+            .select("claim_id,active").eq("invoice_id", invoiceId);
+        expect(items.error).toBeNull();
+        expect(items.data).toEqual([{claim_id: job.claimId, active: true}]);
+
+        await financePage.reload();
+        await financePage.getByLabel("Alle Dozierenden anzeigen", {exact: true}).check();
+        const financeInvoice = financePage.locator("article").filter({
+            has: financePage.getByRole("heading", {name: number, exact: true}),
+        });
+        await expect(financeInvoice.getByText("Eingereicht", {exact: true})).toBeVisible();
+        const download = financePage.waitForEvent("download");
+        await financeInvoice.getByRole("button", {name: "Dokument herunterladen", exact: true}).click();
+        const saved = await download;
+        expect(await saved.failure()).toBeNull();
+        expect(await readFile((await saved.path())!)).toEqual(pdf);
+
+        const unrelatedLecturer = await account("lecturer", "unrelated-invoice-reader");
+        const unrelatedApi = await actor(unrelatedLecturer);
+        const unrelatedSession = await unrelatedApi.auth.getSession();
+        expect(unrelatedSession.error).toBeNull();
+        const denied = await page.request.post(`${process.env.SUPABASE_URL}/functions/v1/files`, {
+            headers: {
+                origin: new URL(page.url()).origin,
+                authorization: `Bearer ${unrelatedSession.data.session!.access_token}`,
+                apikey: process.env.SUPABASE_ANON_KEY!,
+            },
+            data: {action: "download", id: document.id, version_id: document.current_version_id},
+        });
+        expect(denied.status()).toBe(403);
+        expect(await denied.json()).toEqual({error: "access_denied"});
+    } finally {
+        await financeContext.close();
+    }
+});
+
+test("a closing invoice credits two paid interim invoices in the same series", async ({
+    page,
+    browser,
+}, testInfo) => {
+    test.setTimeout(180_000);
+    const lecturer = await account("lecturer", "series-lecturer");
+    const administrator = await account("admin", "series-finance");
+    const tag = randomUUID().slice(0, 8);
+    const pdf = fictionalPdf();
+    const contractFile = `fictional-series-contract-${tag}.pdf`;
+    const dueOn = DateTime.utc().plus({days: 10}).toISODate()!;
+    const financeContext = await browser.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        viewport: testInfo.project.use.viewport,
+        isMobile: testInfo.project.use.isMobile,
+        hasTouch: testInfo.project.use.hasTouch,
+        deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+    });
+    try {
+        const financePage = await financeContext.newPage();
+        await login(page, lecturer);
+        await page.goto("/contracts");
+        await page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
+            name: contractFile,
+            mimeType: "application/pdf",
+            buffer: pdf,
+        });
+        await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({timeout: 45_000});
+        await login(financePage, administrator);
+        await financePage.goto("/contracts");
+        await financePage.getByRole("button", {name: "Ausgeführten Vertrag hinterlegen"}).click();
+        const managementDialog = financePage.getByRole("dialog");
+        await managementDialog.getByLabel("Dozent:in", {exact: true}).selectOption(lecturer.id);
+        await managementDialog.getByLabel("Titel", {exact: true}).fill(`Fiktiver Vertrag für Abschläge ${tag}`);
+        await managementDialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
+        const contractFileField = managementDialog.getByLabel("Hochgeladene Vertragsdatei");
+        await expect(contractFileField.locator("option", {hasText: contractFile})).toHaveCount(1);
+        await contractFileField.selectOption({label: contractFile});
+        await managementDialog.getByRole("button", {name: "Vertrag speichern", exact: true}).click();
+        await expect(managementDialog).not.toBeVisible();
+        const job = await acceptedJob(lecturer, "EUR", 300, 16, false, [17]);
+        await finishAcceptedJob(job, 7, "2035-05-16T08:00:00Z");
+
+        const finance = async () => {
+            await financePage.goto("/finance");
+            await financePage.getByLabel("Alle Dozierenden anzeigen", {exact: true}).check();
+        };
+        async function openSeries() {
+            await finance();
+            await financePage.getByRole("row").filter({hasText: job.title})
+                .getByRole("button", {name: "Rechnungsserie öffnen", exact: true}).click();
+        }
+        async function approve(kind: "interim" | "final", amount: string) {
+            await openSeries();
+            await managementDialog.getByLabel(kind === "interim"
+                ? "Geprüfter Betrag (EUR)"
+                : "Geprüfter Gesamtanspruch (EUR)", {exact: true}).fill(amount);
+            await expect(managementDialog.getByLabel("Vertragsfassung", {exact: true})).not.toHaveValue("");
+            await managementDialog.getByLabel("Vereinbarte Fälligkeit", {exact: true}).fill(dueOn);
+            await managementDialog.getByLabel("Prüfnotiz (mindestens 10 Zeichen)", {exact: true})
+                .fill("Fiktive Überprüfung der Vertragsfassung, der Leistung und der erfassten Zahlungen.");
+            if (kind === "final") {
+                await expect(managementDialog.getByText(/Erfasste Abschlagszahlungen: 110,00\s*€/)).toBeVisible();
+                await expect(managementDialog.getByText(/Rechnungsbetrag: 120,00\s*€/)).toBeVisible();
+            }
+            const approval = financePage.waitForResponse((response) =>
+                new URL(response.url()).pathname === "/rest/v1/rpc/approve_invoice_series_entry" &&
+                response.request().method() === "POST");
+            await managementDialog.getByRole("button", {name: "Einreichung freigeben", exact: true}).click();
+            const response = await approval;
+            expect(response.status(), await response.text()).toBe(200);
+            await managementDialog.getByRole("button", {name: "Schließen", exact: true}).click();
+            return await response.json();
+        }
+        async function submit(kind: "interim" | "final", number: string, amount: RegExp) {
+            await page.goto("/finance");
+            const entry = page.locator("section.invoice-review-request-list")
+                .filter({has: page.getByRole("heading", {name: "Rechnungsserien zur Einreichung", exact: true})})
+                .locator("article").filter({hasText: job.title});
+            await expect(entry.getByText(amount)).toBeVisible();
+            if (kind === "final") {
+                await entry.getByText(/Verrechnete Abschlagszahlungen: 110,00\s*€/).click();
+                await expect(entry.getByText(new RegExp(`EX-${tag}-1.*50,25`))).toBeVisible();
+                await expect(entry.getByText(new RegExp(`EX-${tag}-2.*59,75`))).toBeVisible();
+            }
+            await entry.getByRole("button", {
+                name: kind === "interim"
+                    ? "Abschlagsrechnung einreichen"
+                    : "Schlussrechnung mit Verrechnung einreichen",
+                exact: true,
+            }).click();
+            const dialog = page.getByRole("dialog");
+            await dialog.getByLabel("Rechnungsnummer", {exact: true}).fill(number);
+            await expect(dialog.getByLabel("Fällig am", {exact: true})).toHaveValue(dueOn);
+            await expect(dialog.getByLabel("Fällig am", {exact: true})).not.toBeEditable();
+            const send = dialog.getByRole("button", {name: "Rechnung einreichen", exact: true});
+            await expect(send).toBeDisabled();
+            await dialog.getByLabel("Rechnung als PDF", {exact: true}).setInputFiles({
+                name: `${number}.pdf`,
+                mimeType: "application/pdf",
+                buffer: pdf,
+            });
+            await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible({timeout: 45_000});
+            const submission = page.waitForResponse((response) =>
+                new URL(response.url()).pathname === "/rest/v1/rpc/submit_invoice_series_entry" &&
+                response.request().method() === "POST");
+            await send.click();
+            const response = await submission;
+            expect(response.status(), await response.text()).toBe(200);
+            await expect(dialog).not.toBeVisible();
+            return await response.json();
+        }
+        async function pay(number: string, amount: string) {
+            await finance();
+            const card = financePage.locator("article").filter({
+                has: financePage.getByRole("heading", {name: number, exact: true}),
+            });
+            await card.getByRole("button", {name: "Rechnung prüfen", exact: true}).click();
+            await managementDialog.getByLabel("Notiz zur Prüfung", {exact: true}).fill("Fiktive Rechnungsprüfung.");
+            await managementDialog.getByRole("button", {name: "Rechnung freigeben", exact: true}).click();
+            await expect(managementDialog).not.toBeVisible();
+            await card.getByRole("button", {name: "Zahlung eintragen", exact: true}).click();
+            await expect(managementDialog.getByLabel("Zahlungsbetrag (EUR)", {exact: true})).toHaveValue(amount);
+            await managementDialog.getByRole("button", {name: "Zahlung speichern", exact: true}).click();
+            await expect(managementDialog).not.toBeVisible();
+            await expect(card.locator(".commercial-status-paid", {hasText: /^Bezahlt$/})).toBeVisible();
+        }
+
+        const firstNumber = `EX-${tag}-1`;
+        const secondNumber = `EX-${tag}-2`;
+        const closingNumber = `EX-${tag}-FINAL`;
+        await approve("interim", "50,25");
+        const firstInvoice = await submit("interim", firstNumber, /Rechnungsbetrag: 50,25\s*€/);
+        await openSeries();
+        await expect(managementDialog.getByText(/Zurzeit kann keine weitere Rechnung freigegeben werden/)).toBeVisible();
+        await managementDialog.getByRole("button", {name: "Schließen", exact: true}).click();
+        await pay(firstNumber, "50.25");
+        await approve("interim", "59,75");
+        const secondInvoice = await submit("interim", secondNumber, /Rechnungsbetrag: 59,75\s*€/);
+        await pay(secondNumber, "59.75");
+
+        await finishAcceptedJob(job, 2, "2035-05-17T08:00:00Z");
+        const closingApproval = await approve("final", "230");
+        const closingInvoice = await submit("final", closingNumber, /Rechnungsbetrag: 120,00\s*€/);
+        const lecturerApi = await actor(lecturer);
+        const records = await lecturerApi.rpc("invoice_series_records", {p_all: false});
+        expect(records.error).toBeNull();
+        const closing = records.data.find((record: {id: string}) => record.id === closingApproval);
+        expect(closing).toMatchObject({
+            claim_id: job.claimId,
+            kind: "final",
+            invoice_id: closingInvoice,
+            gross_amount: 230,
+            credit_amount: 110,
+            amount: 120,
+            due_on: dueOn,
+            currency: "EUR",
+        });
+        expect(closing.credits).toEqual(expect.arrayContaining([
+            expect.objectContaining({invoice_id: firstInvoice, invoice_number: firstNumber, amount: 50.25}),
+            expect.objectContaining({invoice_id: secondInvoice, invoice_number: secondNumber, amount: 59.75}),
+        ]));
+        expect(closing.credits).toHaveLength(2);
+        await pay(closingNumber, "120.00");
     } finally {
         await financeContext.close();
     }

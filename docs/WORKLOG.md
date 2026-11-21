@@ -1,6 +1,6 @@
 # 22 November 2026 — API parity, edition role checks and local Docker recovery
 
-The internal OpenAPI download covers 344 published paths. Each Academy download covers 82. The operation inventory found a published path for each browser RPC in the applicable edition. The catalogues use domain contracts in place of generic PostgreSQL JSONB transport shapes. Internal account and deletion responses describe their actual success payloads. Existing internal operation IDs remain stable. Academy's interactive Swagger excludes SMTP writes and secret-issuing actions. Those remain documented in the download.
+The combined internal OpenAPI download covers 349 published paths, including the new invoice-series operations. Each Academy download covers 82. The operation inventory found a published path for each browser RPC in the applicable edition. The catalogues use domain contracts in place of generic PostgreSQL JSONB transport shapes. Internal account and deletion responses describe their actual success payloads. Existing internal operation IDs remain stable. Academy's interactive Swagger excludes SMTP writes and secret-issuing actions. Those remain documented in the download.
 
 The signed course webhook example accepts original request bytes over loopback and stores an event in SQLite before acknowledging it. Local PostgreSQL and actual HTTP exercised the worker and receiver across internal, managed and self-hosted editions. The tests cover lost acknowledgements, repeat after restart, durable deduplication, downstream scope and revocation. See the [bilingual setup guide](../scripts/examples/README.md#signed-course-webhook-receiver).
 
@@ -17,6 +17,14 @@ The bilingual help in the internal portal and the dedicated Academy groups guide
 The guides cover account sign-in and password recovery, course access, teaching, enrolment, internal Premium activation, dedicated LMS entitlement and branding, scoped API credentials and signed course-webhook setup. Demo practice opens the matching fictional role where the installation publishes a demo.
 
 Both production builds and 73 focused Vitest cases passed. Playwright checked both public-help journeys on desktop and mobile Chromium. The separately built self-hosted Academy help passed keyboard, German and English, layout and axe checks on desktop, mobile and a 320px dark viewport, using fictional public branding responses. The help requested only public branding data. These checks cover the guide flows. Cross-role acceptance of live course operations remains in the implementation plan.
+
+# 22 November 2026 — Invoice series, shared session counts and native browser acceptance
+
+The internal finance workflow supports sequential contract-backed instalment invoices and a final settlement. The final approval binds the exact earlier payment references and credits. A zero balance closes as fully credited after invoice review. Finance review requests, invoice approvals and revocations appear in the authorised in-app inbox. The receipt carries no amount or note and approval notices disappear when the permission or current settlement changes.
+
+Shared future amendments can add or retire slots and handle remaining vacancies. Everyone currently assigned consents independently. A newly confirmed position or altered offer invalidates the group. Unchanged attendance-backed sessions retain their exact records and retired sessions remain represented in history. The accepted fee, applicable billing units and learner and offer deadlines continue to govern the transaction.
+
+Both Chromium projects passed the four existing and exceptional commercial journeys against native Auth, PostgreSQL, PostgREST, Storage and ClamAV, including byte-identical download and a denied foreign lecturer. Both projects also passed two interim PDFs, recorded payments, final credit reconciliation and final submission. Native browser tests passed the shared amendment and all eight individual roles plus a combined account. PostgreSQL covered the four series groups, 16 shared and historical amendment groups, seven API surface checks and an upgrade retaining data across 247 migrations. The built internal, self-hosted and managed editions keep their separate API catalogues.
 
 # 21 November 2026 — Outstanding exceptional approvals and browser acceptance
 
