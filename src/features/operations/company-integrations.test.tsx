@@ -17,7 +17,7 @@ afterEach(() => {
   fake.rpc.mockReset();
 });
 
-function view() {
+function view(canSubscribePremium = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -27,6 +27,7 @@ function view() {
         actor="fictional-admin"
         organisation="fictional-company"
         archived={false}
+        canSubscribePremium={canSubscribePremium}
         zone="Europe/Berlin"
       />
     </QueryClientProvider>,
@@ -109,4 +110,66 @@ it("asks for confirmation before sending a versioned revocation", async () => {
     p_id: "key-id",
     p_expected_version: 7,
   });
+});
+
+it("opts a company webhook into Premium explicitly and discards its one-time signing key", async () => {
+  const signingKey = "b".repeat(64);
+  fake.rpc.mockImplementation(async (name) => ({
+    data:
+      name === "company_integration_keys"
+        ? [
+            {
+              id: "fictional-key",
+              label: "Training sync",
+              expires_at: "2100-01-01T00:00:00Z",
+              revoked_at: null,
+              version: 1,
+            },
+          ]
+        : name === "company_course_webhook_subscribe"
+          ? { signing_secret: signingKey }
+          : [],
+    error: null,
+  }));
+  const { toggle, client, user } = view(true);
+  toggle(true);
+  await user.click(screen.getByText(/Kurs-Webhooks|Course webhooks/));
+  const key = await screen.findByRole("combobox", {
+    name: /^Integrationsschlüssel$|^Integration key$/,
+  });
+  await user.selectOptions(key, "fictional-key");
+  await user.type(
+    screen.getByRole("textbox", { name: /Empfänger-Alias|Receiver alias/ }),
+    "course-sync",
+  );
+  const premium = screen.getByRole("checkbox", {
+    name: /Premium-Kursereignisse|Include Premium/,
+  });
+  expect(premium).not.toBeChecked();
+  await user.click(premium);
+  await user.click(
+    screen.getByRole("button", {
+      name: /Webhook abonnieren|Subscribe to webhooks/,
+    }),
+  );
+  expect(fake.rpc).toHaveBeenCalledWith("company_course_webhook_subscribe", {
+    p_organisation: "fictional-company",
+    p_integration: "fictional-key",
+    p_destination: "course-sync",
+    p_premium_events: true,
+  });
+  expect(
+    await screen.findByRole("textbox", {
+      name: /Signaturschlüssel|Signing key/,
+    }),
+  ).toHaveValue(signingKey);
+  expect(
+    client.getQueryData([
+      "company-course-webhooks",
+      "fictional-admin",
+      "fictional-company",
+    ]),
+  ).toEqual([]);
+  toggle(false);
+  expect(screen.queryByDisplayValue(signingKey)).toBeNull();
 });

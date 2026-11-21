@@ -6,6 +6,7 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { CompanyWebhooks } from "./company-webhooks";
 
 type Integration = {
   id: string;
@@ -21,11 +22,13 @@ export function CompanyIntegrations({
   organisation,
   archived,
   zone,
+  canSubscribePremium = false,
 }: {
   actor: string;
   organisation: string;
   archived: boolean;
   zone: string;
+  canSubscribePremium?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const cache = useQueryClient();
@@ -86,7 +89,12 @@ export function CompanyIntegrations({
     } catch {
       setError(true);
     } finally {
-      await cache.invalidateQueries({ queryKey });
+      await Promise.all([
+        cache.invalidateQueries({ queryKey }),
+        cache.invalidateQueries({
+          queryKey: ["company-course-webhooks", actor, organisation],
+        }),
+      ]);
       setPending(false);
     }
   }
@@ -227,6 +235,14 @@ export function CompanyIntegrations({
             </div>
           )}
           {error && <Notice kind="error">{t("integrationError")}</Notice>}
+          <CompanyWebhooks
+            actor={actor}
+            organisation={organisation}
+            zone={zone}
+            keys={keys.data ?? []}
+            canSubscribePremium={canSubscribePremium}
+            archived={archived}
+          />
         </>
       )}
     </details>
