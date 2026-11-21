@@ -1515,3 +1515,6 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] On exact main `1e444a5c`, rerun `./portal check`; all fast checks, 1,063 coverage tests and the production build pass locally. Actions fast gates and Security also pass.
 - [x] Correct the native self-host chat-mention assertion to match the existing live inbox visibility rule while verifying that the retained source notification is not deleted.
 - [ ] Push this exact-main fix and finish system, self-host, desktop/mobile browser, Security and trusted publication gates on its resulting commit. Deploy only after all required exact-head gates pass.
+
+- [x] Fix the SQL regression's locale-sensitive duplicate-tag tie-break with a forward-only `C`-collation update to `private.profile_labels`; preserve the exact `Linux` expectation as a deterministic regression.
+- [ ] Push this SQL correction directly to `main` and rerun every full CI gate on the latest exact head; the current system run failed before this new migration was present.

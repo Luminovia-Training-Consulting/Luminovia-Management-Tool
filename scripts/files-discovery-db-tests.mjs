@@ -143,6 +143,8 @@ await withTestDatabase("files_discovery", async ({sql, actor}) => {
             const before = await sql(
                 `select to_jsonb(d) from public.documents d where id=${q(oldest)}`,
             );
+            // Case-insensitive duplicates keep a stable display spelling
+            // across database locales.
             assert.deepEqual(
                 await save(
                     teacher,
