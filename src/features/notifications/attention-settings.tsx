@@ -41,9 +41,12 @@ function QuietHoursForm({
       return saveAttentionPreferences(value);
     },
     onSuccess: async (data) => {
+      const inbox = { queryKey: notificationKeys.all(actor) };
+      // An initial inbox request can still be waiting on the old preference.
+      await client.cancelQueries(inbox);
       client.setQueryData(attentionKey(actor), data);
       reset(data);
-      await client.invalidateQueries({ queryKey: notificationKeys.all(actor) });
+      await client.invalidateQueries(inbox);
     },
   });
   const conflict = Boolean(

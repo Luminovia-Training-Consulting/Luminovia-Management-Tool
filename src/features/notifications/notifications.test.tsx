@@ -409,6 +409,62 @@ it("closes on a tap outside and leaves the tapped control usable", async () => {
 });
 
 describe("effective quiet-hour settings", () => {
+  it("replaces a pending first bell request after saving quiet hours", async () => {
+    await i18n.changeLanguage("en");
+    state.attention.enabled = true;
+    type InboxReply = { data: Record<string, unknown>; error: null };
+    let resolveStale!: (reply: InboxReply) => void;
+    const stale = new Promise<InboxReply>((resolve) => {
+      resolveStale = resolve;
+    });
+    const originalRpc = state.rpc.getMockImplementation()!;
+    const inbox = {
+      items: [notice],
+      unread_count: 20,
+      as_of: "2026-11-15T11:00:00Z",
+    };
+    let requests = 0;
+    state.rpc.mockImplementation((name, payload) => {
+      if (name !== "notification_inbox") return originalRpc(name, payload);
+      requests += 1;
+      return {
+        abortSignal: () =>
+          requests === 1
+            ? stale
+            : Promise.resolve({
+                data: { ...inbox, quiet_active: false },
+                error: null,
+              }),
+      };
+    });
+    view(
+      <>
+        <NotificationsMenu id="actor-a" zone="UTC" />
+        <SettingsPage />
+      </>,
+    );
+    await userEvent.click(screen.getByText("Quiet hours & delivery"));
+    const enabled = await screen.findByRole("checkbox", {
+      name: "Enable daily quiet hours",
+    });
+    expect(enabled).toBeChecked();
+    expect(requests).toBe(1);
+    await userEvent.click(enabled);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save quiet hours" }),
+    );
+    await expect(
+      screen.findByLabelText("Notifications: 20 unread"),
+    ).resolves.toBeVisible();
+    await act(async () => {
+      resolveStale({
+        data: { ...inbox, quiet_active: true, attention_count: 3 },
+        error: null,
+      });
+    });
+    expect(screen.getByLabelText("Notifications: 20 unread")).toBeVisible();
+    expect(requests).toBe(2);
+  });
   it("retains an unsaved time/checkbox across language changes and saves its independent version", async () => {
     view(<SettingsPage />);
     await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
