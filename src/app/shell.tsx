@@ -9,12 +9,12 @@ import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {PermanentDeletionProvider} from "../features/deletions/deletions";
 import {AnnouncementBanners} from "../features/announcements/announcement-banners";
-import {BookOpen, BriefcaseBusiness, Building2, CalendarDays, ChevronLeft, FileCheck2, FolderOpen, GraduationCap, Home, LogOut, Menu, MessageCircle, MessagesSquare, PanelLeftClose, PanelLeftOpen, Search, Settings2, UserRound, Users, Wallet,} from "lucide-react";
+import {Bell, BookOpen, BriefcaseBusiness, Building2, CalendarDays, ChevronLeft, FileCheck2, FolderOpen, GraduationCap, Home, LogOut, Menu, MessageCircle, MessagesSquare, PanelLeftClose, PanelLeftOpen, Search, Settings2, UserRound, Users, Wallet,} from "lucide-react";
 import {Avatar} from "../features/profile/avatar";
 import {type PreviewRole, RolePreview} from "./role-preview";
 import {PortalNavigation} from "../components/portal-navigation";
 import {NotificationsMenu} from "../features/notifications/notifications-menu";
-import {guestRouteAllowed, isGuestOnly,} from "../features/auth/guest-navigation";
+import {guestRouteAllowed, isGuestOnly, isParticipantOnly,} from "../features/auth/guest-navigation";
 import {useAuth} from "../features/auth/auth-context";
 import {useAuthorizationRefresh} from "../features/auth/authorization-refresh";
 import {db} from "../lib/supabase";
@@ -114,7 +114,7 @@ export function Shell() {
     const profile = useQuery(profileQuery(session!.user.id));
     const roles = useQuery(userRolesQuery(session!.user.id));
     const guestOnly = isGuestOnly(roles.data);
-    const participantOnly = roles.data?.length === 1 && roles.data[0] === "participant";
+    const participantOnly = isParticipantOnly(roles.data);
     const limitedAccount = guestOnly || participantOnly;
     const permissions = useQuery({
         ...permissionsQuery(session!.user.id),
@@ -172,7 +172,10 @@ export function Shell() {
         false;
     const previewMode = previewAllowed && online && !guestOnly ? chosenPreview : null;
     const navigation = participantOnly
-        ? [{to: "/learning", icon: GraduationCap, label: "myCourses"}]
+        ? [
+            {to: "/learning", icon: GraduationCap, label: "myCourses"},
+            {to: "/notifications", icon: Bell, label: "notifications"},
+        ]
         : guestOnly
             ? [
                 {to: "/profile", icon: UserRound, label: "profile"},
@@ -303,7 +306,7 @@ export function Shell() {
     if (guestOnly && !guestRouteAllowed(location.pathname))
         return <Navigate to="/profile" replace/>;
     // Keep standalone learners out of operational page loaders, including on direct links.
-    if (participantOnly && !/^\/(?:learning|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(location.pathname))
+    if (participantOnly && !/^\/(?:learning|notifications|profile|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(location.pathname))
         return <Navigate to="/learning" replace/>;
     return (
         <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
@@ -447,7 +450,7 @@ export function Shell() {
                                 </select>
                             </label>
                         )}
-                        {profile.data?.active && !minimalOffline && !limitedAccount && !previewMode && (
+                        {profile.data?.active && online && !guestOnly && !previewMode && (
                             <NotificationsMenu id={actor} zone={profile.data.time_zone}/>
                         )}
                         <Preferences onSave={participantOnly ? undefined : saveUiPreferences}/>
@@ -471,12 +474,8 @@ export function Shell() {
                                 <span aria-hidden="true">⌄</span>
                             </summary>
                             <div className="account-menu-panel">
-                                {!participantOnly && (
-                                    <>
-                                        <NavLink to="/profile">{t("profile")}</NavLink>
-                                        <NavLink to="/settings">{t("settings")}</NavLink>
-                                    </>
-                                )}
+                                <NavLink to="/profile">{t("profile")}</NavLink>
+                                {!participantOnly && <NavLink to="/settings">{t("settings")}</NavLink>}
                                 <button
                                     type="button"
                                     disabled={signoutPending}
@@ -526,7 +525,7 @@ export function Shell() {
                                         />
                                     </form>
                                 )}
-                                {profile.data?.active && !minimalOffline && !limitedAccount && !previewMode && (
+                                {profile.data?.active && online && !guestOnly && !previewMode && (
                                     <NotificationsMenu
                                         id={session!.user.id}
                                         zone={profile.data.time_zone}

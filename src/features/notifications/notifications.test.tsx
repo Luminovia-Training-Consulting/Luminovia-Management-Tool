@@ -561,3 +561,27 @@ it("filters only loaded preview categories and retains invoice and message rows 
     expect(screen.getByText(notice.title)).toBeVisible();
     expect(screen.getByText(invoice.title)).toBeVisible();
 });
+it("shows a participant's course inbox without offering operational preferences or reminder refresh", async () => {
+    state.roles = ["participant"];
+    const courseNotice = {
+        ...notice,
+        kind: "course_resource_shared",
+        title: "Fictional learning material",
+        href: "/courses/course-a/workspace",
+    };
+    state.rpc.mockImplementation((name: string) => {
+        if (name !== "notification_inbox") throw new Error("unexpected participant RPC");
+        const request = Promise.resolve({
+            data: {items: [courseNotice], unread_count: 1, as_of: "2026-11-15T11:00:00Z"},
+            error: null,
+        });
+        return Object.assign(request, {abortSignal: () => request});
+    });
+    view(<NotificationsPage/>);
+    expect(await screen.findByText("Fictional learning material")).toBeVisible();
+    expect(screen.getByRole("link", {name: "Öffnen"})).toHaveAttribute(
+        "href", "/courses/course-a/workspace",
+    );
+    expect(screen.queryByRole("link", {name: /Einstellungen|Preferences/})).toBeNull();
+    expect(state.rpc.mock.calls.map(([name]) => name)).toEqual(["notification_inbox"]);
+});

@@ -9,3 +9,8 @@ export function guestRouteAllowed(pathname: string): boolean {
         pathname.replace(/\/$/, "") || "/",
     );
 }
+
+/** Participant-only identities use the protected learning, profile and inbox routes. */
+export function isParticipantOnly(roles: readonly string[] | undefined): boolean {
+    return roles?.length === 1 && roles[0] === "participant";
+}

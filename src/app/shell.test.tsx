@@ -370,3 +370,12 @@ describe("Royal workspace sidebar preference", () => {
         ).toBeVisible();
     });
 });
+it("lets participant-only accounts open their own profile without opening operational navigation", async () => {
+    access.roles = ["participant"];
+    setup("/profile", false);
+    const sidebar = screen.getByRole("complementary", {name: "Menü"});
+    expect(within(sidebar).getByRole("link", {name: "Meine Kurse"})).toHaveAttribute("href", "/learning");
+    expect(within(sidebar).getByRole("link", {name: "Benachrichtigungen"})).toHaveAttribute("href", "/notifications");
+    expect(screen.getByLabelText("Fixture location")).toHaveTextContent("/profile");
+    expect(within(sidebar).queryByRole("link", {name: "Aufträge"})).toBeNull();
+});
