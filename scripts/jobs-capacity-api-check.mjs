@@ -258,6 +258,18 @@ await withApiFixture(
             "real password-only authentication/role enforcement, bounded/idempotent creation and versioned capacity edits",
         );
 
+        const publishedPolicy = await checked(
+            admin.client.rpc("commission_offer_policy", {p_job_id: job}),
+            "Read the captured lecturer policy for this exact published offer",
+        );
+        const lecturerPercent = publishedPolicy.regular_lecturer_percent;
+        assert.ok(Number.isFinite(lecturerPercent) && lecturerPercent >= 0 && lecturerPercent < 100);
+        const lecturerBasisPoints = Math.round(lecturerPercent * 100);
+        const grossCents = Math.round(offerPayload.gross_total_amount * 100);
+        const netCents = Math.round(grossCents * lecturerBasisPoints / 10000);
+        const expectedNet = netCents / 100;
+        const expectedPlatform = (grossCents - netCents) / 100;
+        const expectedPlatformPercent = (10000 - lecturerBasisPoints) / 100;
         const offer = await checked(
             teachers[0].client
                 .rpc("job_offers")
@@ -267,8 +279,8 @@ await withApiFixture(
                 })),
             "Read actual lecturer-visible net offer",
         );
-        assert.equal(Number(offer.amount), 50.01);
-        assert.equal(Number(offer.total_amount), 50.01);
+        assert.equal(Number(offer.amount), expectedNet);
+        assert.equal(Number(offer.total_amount), expectedNet);
         assert.equal(offer.capacity, 3);
         assert.ok(
             !Object.keys(offer).some((key) => /gross|platform|commission/.test(key)),
@@ -326,7 +338,7 @@ await withApiFixture(
             );
             assert.equal(own.length, 1);
             assert.equal(own[0].id, winner.result.claim_id);
-            assert.equal(Number(own[0].total_amount), 50.01);
+            assert.equal(Number(own[0].total_amount), expectedNet);
             assert.equal(own[0].terms, offer.terms);
             assert.equal(
                 own[0].terms_version,
@@ -460,10 +472,10 @@ await withApiFixture(
                     assert.equal(row.capacity, 3);
                     assert.equal(row.pricing_model, "commission");
                     assert.equal(Number(row.gross_total_amount), 100.01);
-                    assert.equal(Number(row.platform_percent), 50);
+                    assert.equal(Number(row.platform_percent), expectedPlatformPercent);
                     // The personal default applies; the residual remains exact in cents.
-                    assert.equal(Number(row.platform_total_amount), 50);
-                    assert.equal(Number(row.lecturer_net_total_amount), 50.01);
+                    assert.equal(Number(row.platform_total_amount), expectedPlatform);
+                    assert.equal(Number(row.lecturer_net_total_amount), expectedNet);
                 }
                 return rows;
             };
@@ -492,7 +504,7 @@ await withApiFixture(
             "22023",
         );
         pass(
-            "capacity-three gross budget stays300.03, each accepted personal-default net stays50.01 and the client counts one course",
+            "capacity-three gross budget stays EUR 300.03, every accepted net follows the captured policy and the client counts one course",
         );
 
         const cancelled = winners[0],
@@ -555,8 +567,8 @@ await withApiFixture(
         assert.equal(state.confirmed_count, 2);
         assert.equal(
             state.open_positions,
-            0,
-            "Cancellation alone does not publish a replacement",
+            1,
+            "One released future position reopens for eligible lecturers",
         );
         const history = state.claims.find((claim) => claim.id === accepted.id);
         assert.equal(
@@ -582,27 +594,15 @@ await withApiFixture(
             (
                 await checked(
                     admin.client.from("jobs").select("status").eq("id", job).single(),
-                    "Cancellation closes the offer pending audited reopening",
+                    "Read the automatically republished offer",
                 )
             ).status,
-            "draft",
-        );
-        assert.deepEqual(
-            await checked(
-                substitute.client.rpc("claim_job", substituteArgs),
-                "Unpublished replacement cannot be claimed",
-            ),
-            {status: "unavailable"},
-        );
-        assert.deepEqual(
-            await metadata(job),
-            state,
-            "Denied replacement preserves every existing claim, interval and revision",
+            "published",
         );
         assert.deepEqual(
             await checked(
                 substitute.client.from("job_claims").select("id").eq("job_id", job),
-                "Denied replacement creates no claim for the substitute",
+                "Reopening creates no automatic claim for the substitute",
             ),
             [],
         );
@@ -612,36 +612,23 @@ await withApiFixture(
                     .from("assignment_sessions")
                     .select("id")
                     .eq("lecturer_id", substitute.id),
-                "Denied replacement reserves no partial interval",
+                "Reopening reserves no automatic or partial interval",
             ),
             [],
-        );
-        const reopen = {
-            p_job_id: job,
-            p_action: "reopen",
-            p_expected_version: state.version,
-            p_request_id: randomUUID(),
-            p_payload: {reason: "Fictional audited replacement for one position"},
-        };
-        await checked(
-            admin.client.rpc("manage_job_offer", reopen),
-            "Explicitly reopen one released position",
-        );
-        await checked(
-            admin.client.rpc("manage_job_offer", reopen),
-            "Retry audited reopening safely",
         );
         const reopeningAudit = await checked(
             admin.client
                 .from("audit_events")
-                .select("details")
+                .select("actor_id,details")
                 .eq("resource_id", job)
-                .eq("action", "job.lifecycle.reopen"),
-            "One committed, reasoned reopening audit despite retries",
+                .eq("action", "job.reopened_after_assignment_release"),
+            "One committed automatic reopening audit despite cancellation retries",
         );
-        assert.equal(reopeningAudit.length, 1);
-        assert.equal(reopeningAudit[0].details.reason, reopen.p_payload.reason);
-        assert.equal((await metadata(job)).open_positions, 1);
+        assert.deepEqual(reopeningAudit, [{
+            actor_id: cancelled.who.id,
+            details: {claim_id: accepted.id, available_positions: 1},
+        }]);
+        assert.deepEqual(await metadata(job), state);
         const replacement = await checked(
             substitute.client.rpc("claim_job", substituteArgs),
             "Replacement lecturer claims the full released position",
@@ -691,7 +678,7 @@ await withApiFixture(
             6,
         );
         pass(
-            "reasoned cancellation and audited replacement preserve snapshots/history and never double client spending",
+            "reasoned cancellation and automatic reopening preserve snapshots, avoid duplicate spending and require a new claim",
         );
 
         // Existing client and course building-block source totals describe one offer, not a fee for an
