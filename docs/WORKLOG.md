@@ -16,6 +16,8 @@ The next dedicated academy increment exposes draft course creation with a local 
 
 Validated 26 isolated HTTP routing decisions with the pinned Envoy binary. Fixed the account-directory fixture to find five exact fictional IDs, with the separate lecturer denial preserved. Manual Portal and Security runs are isolated by source commit so pushes cannot cancel their browser evidence. The current code and fixture work does not publish a hosted release.
 
+On Actions run `44875305882`, the actual gateway route matrix, Caddy boundaries, password Auth/profile/private object persistence and all 25 canonical SQL groups passed. The job then stopped on three unused PL/pgSQL variables. A forward migration removes them and preserves the queries' predicates and locks. Native `plpgsql_check` reports zero diagnostics across all 522 public and private non-trigger PL/pgSQL routines in the disposable replay. Self-host retained-data verification passed before the shared fixture's notification audience assertion. The corrected fixtures exercise exact qualified recipients, real visible chat messages and denial for unrelated notices.
+
 # 21 November 2026 — Lecturer materials, meeting links and licensed academy course access
 
 Assigned lecturers can retry publishing a scanned personal file to the same course audience and reuse its exact reviewed version. The upload reservation also keeps the same identifier when the selected file needs another upload request. Assigned lecturers and course managers can publish, replace or clear an HTTPS meeting link for an active online course. Enrolled participants receive the scoped link. Conflicting edits return HTTP 409. The audit event records the version and action without the URL.
