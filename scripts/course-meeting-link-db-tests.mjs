@@ -139,7 +139,7 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
       firstUrl,
     ),
   );
-  await assert.rejects(save(manager, secondUrl, 0), /meeting link changed/i);
+  await assert.rejects(save(manager, secondUrl, 0), /PT409: Course meeting link changed/i);
   assert.equal((await save(manager, firstUrl, 1)).version, 1);
   assert.equal((await save(manager, secondUrl, 1)).version, 2);
   assert.equal((await workspace(learner)).meeting_link.url, secondUrl);

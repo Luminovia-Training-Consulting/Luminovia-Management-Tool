@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => ({
     upload: vi.fn(),
     workspace: {} as CourseWorkspace,
     error: null as unknown,
+    meetingError: null as unknown,
     pending: undefined as Promise<unknown> | undefined,
     shareError: null as Error | null,
 }));
@@ -70,6 +71,7 @@ beforeEach(async () => {
     await i18n.changeLanguage("de");
     fake.workspace = fixture();
     fake.error = null;
+    fake.meetingError = null;
     fake.pending = undefined;
     fake.shareError = null;
     fake.rpc.mockReset().mockImplementation((name: string, args?: {p_action?: string}) => {
@@ -88,10 +90,10 @@ beforeEach(async () => {
                     )
                     : name === "set_course_meeting_link"
                         ? Promise.resolve(fake.pending).then((data) => {
-                            if (!fake.error && data) {
+                            if (!fake.meetingError && data) {
                                 fake.workspace = {...fake.workspace, meeting_link: data as CourseWorkspace["meeting_link"]};
                             }
-                            return resolve({data, error: fake.error});
+                            return resolve({data, error: fake.meetingError});
                         })
                     : ["course_chat_rooms", "course_enrolments", "course_enrolment_candidates"].includes(name)
                         ? Promise.resolve({data: [], error: null}).then(resolve)
@@ -164,6 +166,29 @@ describe("connected course workspace", () => {
         }));
         await waitFor(() => expect(screen.getByRole("link", {name: "Unterrichtslink öffnen"}))
             .toHaveAttribute("href", fake.workspace.venue));
+    });
+
+    it("retains the draft on a meeting conflict and reopens with the current server version", async () => {
+        const url = "https://training.example.invalid/meeting";
+        const changed = "https://training.example.invalid/current";
+        fake.workspace.ended = false;
+        fake.workspace.meeting_link = {url, version: 1, can_edit: true};
+        const user = userEvent.setup();
+        setup();
+        await user.click(await screen.findByRole("button", {name: "Meetinglink bearbeiten"}));
+        const input = screen.getByRole("textbox", {name: "Meetinglink (HTTPS)"});
+        const publish = screen.getByRole("button", {name: "Meetinglink veröffentlichen"});
+        fireEvent.change(input, {target: {value: url + "-draft"}});
+        fake.workspace = {...fake.workspace, meeting_link: {url: changed, version: 2, can_edit: true}};
+        fake.meetingError = {code: "PT409"};
+        await user.click(publish);
+        expect(await screen.findByText("Der Meetinglink wurde zwischenzeitlich geändert. Schließe den Entwurf und öffne ihn erneut.")).toBeVisible();
+        expect(input).toHaveValue(url + "-draft");
+        expect(publish).toBeDisabled();
+        await waitFor(() => expect(screen.getByRole("link", {name: "Unterrichtslink öffnen"})).toHaveAttribute("href", changed));
+        await user.click(screen.getByRole("button", {name: "Bearbeitung abbrechen"}));
+        await user.click(screen.getByRole("button", {name: "Meetinglink bearbeiten"}));
+        expect(screen.getByRole("textbox", {name: "Meetinglink (HTTPS)"})).toHaveValue(changed);
     });
 
     it("opens and copies the same current invitation for a learner with no edit controls", async () => {

@@ -51,7 +51,7 @@ export function CourseMeetingLinkEditor({
   const stale = draft !== null && draft.version !== current.version;
   const conflicting =
     stale ||
-    (save.isError && (save.error as { code?: string }).code === "40001");
+    (save.isError && (save.error as { code?: string }).code === "PT409");
   const invalid = !!draft?.url.trim() && !isMeetingUrl(draft.url.trim());
   return (
     <div className="course-meeting-link">

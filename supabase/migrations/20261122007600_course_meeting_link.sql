@@ -90,7 +90,7 @@ begin
   select * into link from private.course_meeting_links where course_run_id = p_run_id;
   current_version := coalesce(link.version, 0);
   if current_version <> p_expected_version then
-    raise exception 'Course meeting link changed' using errcode = '40001';
+    raise exception 'Course meeting link changed' using errcode = 'PT409';
   end if;
   if link.url is distinct from p_url then
     current_version := current_version + 1;
