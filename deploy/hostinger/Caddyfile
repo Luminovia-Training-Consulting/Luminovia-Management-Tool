@@ -44,7 +44,7 @@
 				header @maintenance Retry-After "60"
 				respond @maintenance "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly." 503
 				@publicApi path /auth/v1/* /rest/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
-				reverse_proxy @publicApi api:8000 {
+				reverse_proxy @publicApi {$PORTAL_API_UPSTREAM:api:8000} {
 					header_up -Referer
 					transport http {
 						dial_timeout 5s

@@ -992,6 +992,10 @@ test("publishes exactly the verified bytes using the dedicated Caddy layout and 
   assert.equal(receipt.state, "browser-staged");
   assert.equal(receipt.customer_ready, false);
   assert.equal(receipt.release.archive_sha256, archive.archive.sha256);
+  const ingress = readFileSync(join(browser, "api-ingress.yml"), "utf8");
+  assert.match(ingress, /max_tokens: 60\b/);
+  assert.match(ingress, /tokens_per_fill: 60\b/);
+  assert.doesNotMatch(ingress, /ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE/);
   assert.deepEqual(
     JSON.parse(readFileSync(join(browser, "release.json"), "utf8")),
     receipt,

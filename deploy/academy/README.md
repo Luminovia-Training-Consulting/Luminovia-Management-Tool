@@ -44,7 +44,7 @@ node scripts/academy-install-browser.mjs "$runtime_root" "$target_json" \
   "$licence_public_key" "$release_public_key"
 ```
 
-The second command checks the active licence, the archive, both trust roots, the exact backend address and the gateway key. It publishes the verified files into the empty browser directory in one operation. It refuses a populated directory and leaves any prior installation in place. Run it before starting ingress, so the bind mount sees the published directory. The receipt's `customer_ready` remains false until the operational acceptance steps are complete.
+The second command checks the active licence, the archive, both trust roots, the exact backend address and the gateway key. It publishes the verified files and the signed API allowance into the empty browser directory in one operation. It refuses a populated directory and leaves any prior installation in place. Run it before starting ingress, so the bind mount sees the published directory. The receipt's `customer_ready` remains false until the operational acceptance steps are complete.
 
 ## Prepare the private backend
 
@@ -72,9 +72,11 @@ The two Compose profiles and the first-install command are covered by the dedica
 ```sh
 node --test scripts/runtime-academy-{browser-package,licence,runtime-config}.test.mjs
 node scripts/testing/academy-ingress-check.mjs "$caddy_binary" \
-  "$runtime_root/browser" "$package_directory/manifest.json" "$portal_origin" 45682
+  "$runtime_root/browser" "$package_directory/manifest.json" "$portal_origin" 45682 "$envoy_binary"
 ```
 
-Use a Caddy binary from the image pinned in `compose.override.yml`. The second command checks every signed browser file through a private local TLS certificate, confirms deep links and PWA caching, and verifies the maintenance fence and blocked administrative routes. Run this only against staging. Repeat the browser and transport checks against the actual independently provisioned backend before public activation.
+Use the Caddy and Envoy binaries from the images pinned in `compose.override.yml`. The second command checks every signed browser file through a private local TLS certificate, confirms deep links and PWA caching, and verifies the maintenance fence and blocked administrative routes. It also spends the entire test licence's API allowance and expects HTTP 429 with `Retry-After` on the next request. Use a staging licence with at most 1,000 requests per minute and reserve the chosen local port plus the port 10 higher. Repeat the browser and transport checks against the actual independently provisioned backend before public activation.
+
+The dedicated public API has one shared allowance per Envoy instance. The signed amount is the burst size and the bucket refills each minute. Requests for static files and private service-to-service calls stay outside this allowance. Review occupancy, storage and mail limits alongside ingress when renewing a licence or planning an upgrade.
 
 Verify the private first administrator, dedicated edition, licence limits, normal account sign-in, author/publish/enrol and learner journeys, protected objects, ClamAV, Realtime, current email routes and the encrypted backup/recovery target. When the customer's DNS and firewall are authorised and verified, the `ingress` profile starts Caddy on the generated address. Review certificate issuance and the browser edition, hostname and protected API against that particular environment. A fresh-install receipt is separate from approval of any data migration, upgrade, commercial handover or public deployment.

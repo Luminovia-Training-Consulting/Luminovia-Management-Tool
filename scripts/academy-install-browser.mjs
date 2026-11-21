@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -18,6 +19,10 @@ import {
 } from "./academy-staging-plan.mjs";
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
+const rateTemplate = new URL(
+  "../deploy/academy/api-ingress.template.yml",
+  import.meta.url,
+);
 
 function requirePrivateDirectory(path) {
   const state = lstatSync(path);
@@ -121,6 +126,20 @@ export async function installAcademyBrowser({ root, config, ...release }) {
       customer_ready: false,
       release: plan.release,
     };
+    // Envoy's local bucket uses uint32 values. A higher signed maximum must
+    // never overflow into an unlimited or larger allowance.
+    const throughput = Math.min(
+      plan.licensed_limits.api_requests_per_minute,
+      0xffff_ffff,
+    );
+    const ingress = readFileSync(rateTemplate, "utf8").replaceAll(
+      "ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE",
+      String(throughput),
+    );
+    writeFileSync(join(staged, "api-ingress.yml"), ingress, {
+      flag: "wx",
+      mode: 0o644,
+    });
     writeFileSync(
       join(staged, "release.json"),
       JSON.stringify(receipt, null, 2) + "\n",

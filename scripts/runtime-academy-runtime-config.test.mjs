@@ -245,6 +245,7 @@ test(
         web,
         mailpit,
         "api-gw": gateway,
+        "api-ingress": ingress,
       } = withProfiles.services;
       assert.equal(auth.environment.GOTRUE_SITE_URL, identity.portal_origin);
       assert.ok(
@@ -281,6 +282,17 @@ test(
       assert.equal(
         web.environment.PORTAL_DOMAIN,
         new URL(identity.portal_origin).hostname,
+      );
+      assert.equal(web.environment.PORTAL_API_UPSTREAM, "api-ingress:8001");
+      assert.equal(ingress.image, gateway.image);
+      assert.ok(
+        ingress.volumes.some(
+          (volume) =>
+            volume.source ===
+              join(identity.browser_directory, "api-ingress.yml") &&
+            volume.read_only === true &&
+            volume.bind.create_host_path === false,
+        ),
       );
       assert.ok(
         web.volumes.some(

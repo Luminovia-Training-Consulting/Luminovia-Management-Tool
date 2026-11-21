@@ -24,6 +24,10 @@ services:
       - ${ACADEMY_BIND_ADDRESS:?Set the academy IPv4 bind address}:443:443
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the academy domain}
+      PORTAL_API_UPSTREAM: api-ingress:8001
+    depends_on:
+      api-ingress:
+        condition: service_started
     volumes:
       - ../Caddyfile:/etc/caddy/Caddyfile:ro
       - ${PORTAL_WWW_DIR:?Set the academy browser directory}:/srv:ro
@@ -31,6 +35,27 @@ services:
       - caddy_config:/config
     networks: [backend]
     mem_limit: 128m
+    pids_limit: 100
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+  api-ingress:
+    image: envoyproxy/envoy:v1.40.2@sha256:8de97e654644827d62afdbf7e1d3dc9fee01a8690d410dd1c63a30dc6b6cecbb
+    profiles: ["ingress"]
+    restart: unless-stopped
+    command: ["-c", "/etc/envoy/academy-ingress.yml"]
+    volumes:
+      - type: bind
+        source: ${PORTAL_WWW_DIR:?Set the academy browser directory}/api-ingress.yml
+        target: /etc/envoy/academy-ingress.yml
+        read_only: true
+        bind: { create_host_path: false }
+    depends_on:
+      api-gw:
+        condition: service_healthy
+    networks: [backend]
+    mem_limit: 96m
     pids_limit: 100
     security_opt: ["no-new-privileges:true"]
     logging:

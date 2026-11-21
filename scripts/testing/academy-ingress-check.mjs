@@ -1,4 +1,4 @@
-/** Exercise one staged browser through a real Caddy binary and a private local TLS root. */
+/** Exercise staged files and the signed API allowance behind private local TLS. */
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -11,17 +11,17 @@ import { setTimeout } from "node:timers/promises";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
-const [binary, browser, manifestFile, origin, localPort] =
+const [binary, browser, manifestFile, origin, localPort, envoyBinary] =
   process.argv.slice(2);
 assert.equal(
   process.argv.length,
-  7,
-  "Expected CADDY BROWSER_DIR MANIFEST ORIGIN LOCAL_TLS_PORT",
+  8,
+  "Expected CADDY BROWSER_DIR MANIFEST ORIGIN LOCAL_TLS_PORT ENVOY",
 );
 const hostname = new URL(origin).hostname;
 assert.match(hostname, /^[a-z0-9.-]+$/);
 assert.match(localPort, /^[1-9][0-9]{3,4}$/);
-assert.ok(Number(localPort) > 1024 && Number(localPort) <= 65535);
+assert.ok(Number(localPort) > 1024 && Number(localPort) <= 65525);
 const root = await mkdtemp(join(tmpdir(), "academy-ingress-test-"));
 const template = await readFile(
   new URL("../../deploy/hostinger/Caddyfile", import.meta.url),
@@ -42,10 +42,41 @@ await listening;
 
 let caddy;
 let exited;
+let envoy;
+let envoyExited;
 try {
+  const envoyPort = Number(localPort) + 10;
+  const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
+  const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
+  assert.ok(
+    allowance > 0 && allowance <= 1000,
+    "Use a staging licence with at most 1,000 requests per minute",
+  );
+  const envoyConfig = join(root, "envoy.yml");
+  await writeFile(
+    envoyConfig,
+    policy
+      .replace(
+        "address: 0.0.0.0, port_value: 8001",
+        "address: 127.0.0.1, port_value: " + envoyPort,
+      )
+      .replace(
+        "address: api-gw, port_value: 8000",
+        "address: 127.0.0.1, port_value: " + upstream.address().port,
+      ),
+    { mode: 0o600 },
+  );
+  await exec(resolve(envoyBinary), ["--mode", "validate", "-c", envoyConfig]);
+  envoy = spawn(
+    resolve(envoyBinary),
+    ["-c", envoyConfig, "--concurrency", "1"],
+    { stdio: "ignore" },
+  );
+  envoyExited = once(envoy, "close");
+
   const path = join(root, "Caddyfile");
   const config = template
-    .replaceAll("{\$PORTAL_DOMAIN}", hostname)
+    .replaceAll("{$PORTAL_DOMAIN}", hostname)
     .replace(
       "admin off",
       "admin off\n\tskip_install_trust\n\tauto_https disable_redirects",
@@ -55,7 +86,7 @@ try {
       `https://${hostname}:${localPort} {\n\ttls internal\n\tbind 127.0.0.1`,
     )
     .replaceAll("/srv", resolve(browser))
-    .replaceAll("api:8000", "127.0.0.1:" + upstream.address().port);
+    .replaceAll("{$PORTAL_API_UPSTREAM:api:8000}", "127.0.0.1:" + envoyPort);
   await writeFile(path, config, { mode: 0o600 });
   const env = {
     PATH: process.env.PATH,
@@ -151,6 +182,14 @@ try {
   });
   assert.match(headers, /cache-control: no-store, private/);
 
+  for (let consumed = 1; consumed < allowance; consumed++)
+    await request("/backend/rest/v1/", 200);
+  assert.match(
+    (await request("/backend/rest/v1/", 429)).headers,
+    /retry-after: 60/,
+  );
+  assert.deepEqual((await request("/", 200)).bytes, shell);
+
   const marker = join(browser, "maintenance.enabled");
   await writeFile(marker, "integration test", { flag: "wx", mode: 0o600 });
   try {
@@ -163,11 +202,13 @@ try {
     await rm(marker);
   }
   console.log(
-    `Verified ${files.length} staged files and dedicated ingress through local TLS.`,
+    `Verified ${files.length} staged files and the ${allowance}-request burst allowance through local TLS.`,
   );
 } finally {
   caddy?.kill();
+  envoy?.kill();
   await exited;
+  await envoyExited;
   upstream.close();
   await rm(root, { recursive: true, force: true });
 }
