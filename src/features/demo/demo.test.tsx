@@ -238,10 +238,13 @@ describe("connected fictional workflows", () => {
     fireEvent.change(screen.getByLabelText("Demo-Rolle"), {
       target: { value: "participant" },
     });
-    expect(
-      within(shortcuts).queryByRole("link", { name: "Aufträge übernehmen" }),
-    ).not.toBeInTheDocument();
-    section("/courses");
+    const learnerNavigation = within(document.querySelector(".demo-sidebar")!).getByRole(
+      "navigation", {name: "Demo-Bereiche"},
+    );
+    expect(within(learnerNavigation).getAllByRole("link").map((item) => item.getAttribute("href"))).toEqual([
+      "/demo/learning", "/demo/my-reviews", "/demo/notifications",
+    ]);
+    expect(screen.getByRole("heading", {name: "Meine Kurse"})).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Linux Grundlagen · Demo-Akademie" }),
     ).toBeVisible();
@@ -256,13 +259,60 @@ describe("connected fictional workflows", () => {
         name: "Netzwerkeinstieg · Demo-Akademie",
       }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Übungsstand: Ausprobiert")).toBeVisible();
     await act(() => i18n.changeLanguage("en"));
     expect(
       screen.getByRole("heading", { name: "Linux basics · Demo Academy" }),
     ).toBeVisible();
     expect(network).not.toHaveBeenCalled();
   });
+  it("opens course-scoped sections and keeps practice chat, material and quiz actions isolated", () => {
+    open("/demo/courses/linux-basics/workspace");
+    expect(screen.getByLabelText("Demo-Rolle")).toHaveValue("participant");
+    expect(screen.getByRole("heading", {name: "Linux Grundlagen · Demo-Akademie"})).toBeVisible();
+    const navigation = screen.getByRole("navigation", {name: "Kursbereiche"});
+    fireEvent.click(within(navigation).getByRole("link", {name: "Klausur"}));
+    expect(screen.getByRole("heading", {name: "Klausur"}).closest("section")).toHaveFocus();
+    expect(screen.queryByText(/Lösungsschlüssel|Anwesenheitsliste/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Fiktive Kursnachricht"), {target: {value: "Fiktive Frage"}});
+    fireEvent.click(screen.getByRole("button", {name: "Nachricht in Demo hinzufügen"}));
+    expect(screen.getByText("Fiktive Frage")).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", {name: "cd"}));
+    fireEvent.click(screen.getByRole("button", {name: "Antwort prüfen"}));
+    expect(screen.getByText(/versuche es erneut/)).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", {name: "pwd"}));
+    fireEvent.click(screen.getByRole("button", {name: "Antwort prüfen"}));
+    expect(screen.getByText("Richtig.")).toBeVisible();
+    expect(screen.queryByRole("button", {name: "Beispielnachweis anzeigen"})).not.toBeInTheDocument();
+    section("/learning");
+    fireEvent.click(screen.getByRole("link", {name: /Kurs öffnen: Netzwerkeinstieg/}));
+    expect(screen.queryByRole("heading", {name: "Klausur"})).not.toBeInTheDocument();
+    expect(screen.queryByText("Fiktive Frage")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", {name: "4"}));
+    fireEvent.click(screen.getByRole("button", {name: "Antwort prüfen"}));
+    fireEvent.click(screen.getByRole("button", {name: "Beispielnachweis anzeigen"}));
+    expect(screen.getByText("Fiktiver Teilnahmenachweis · Netzwerkeinstieg")).toBeVisible();
+    expect(network).not.toHaveBeenCalled();
+  });
+
+  it("keeps reviews and course notifications local and follows the material link", () => {
+    open("/demo/learning");
+    section("/my-reviews");
+    fireEvent.change(screen.getByLabelText("Bewertung (1 bis 5)"), {target: {value: "4"}});
+    fireEvent.change(screen.getByLabelText("Fiktiver Kommentar"), {target: {value: "Fiktiver Kommentar zu IP-Adressen"}});
+    fireEvent.click(screen.getByRole("button", {name: "Bewertung in Demo speichern"}));
+    expect(screen.getByText("Bewertung in dieser Demo gespeichert. 4/5")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", {name: "Demo-Bewertung zurückziehen"}));
+    expect(screen.queryByText(/gespeichert. 4\/5/)).not.toBeInTheDocument();
+    section("/notifications");
+    fireEvent.click(screen.getByRole("button", {name: "Als gelesen markieren"}));
+    expect(screen.getByText("Gelesen")).toBeVisible();
+    fireEvent.click(screen.getByRole("link", {name: "Beispielmaterial ansehen"}));
+    expect(screen.getByRole("heading", {name: "Materialien"}).closest("section")).toHaveFocus();
+    section("/notifications");
+    expect(screen.getByText("Gelesen")).toBeVisible();
+    expect(network).not.toHaveBeenCalled();
+  });
+
     it("keeps an accepted example fixed instead of silently marking a later publication as already claimed", () => {
         open("/demo/jobs");
         fireEvent.click(

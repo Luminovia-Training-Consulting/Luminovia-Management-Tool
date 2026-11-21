@@ -545,3 +545,45 @@ test("public help searches practical recovery instructions and keeps the selecte
         (url) => url.searchParams.get("topic") === "files",
     );
 });
+test("Premium learner demo mirrors scoped course navigation and keeps practice local in both themes", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/demo");
+  await page.getByRole("combobox", {name: "Demo-Rolle", exact: true}).selectOption("participant");
+  await expect(page).toHaveURL(/\/demo\/learning$/);
+  await expect(page.getByRole("heading", {name: "Meine Kurse"})).toBeVisible();
+  const nav = page.locator(".demo-sidebar nav, .demo-mobile-primary-nav");
+  await expect(nav.locator('a[href="/demo/learning"]')).toHaveCount(2);
+  await expect(nav.locator('a[href="/demo/chats"], a[href="/demo/files"]')).toHaveCount(0);
+  await page.getByRole("link", {name: /Kurs öffnen: Linux Grundlagen/}).click();
+  await expect(page.getByRole("heading", {name: /Linux Grundlagen/})).toBeVisible();
+  const sections = page.getByRole("navigation", {name: "Kursbereiche"});
+  await sections.getByRole("link", {name: "Kurschat"}).click();
+  await expect(page.locator("#course-chat")).toBeFocused();
+  await page.getByLabel("Fiktive Kursnachricht").fill("Fiktive Frage zum Shell-Kurs");
+  await page.getByRole("button", {name: "Nachricht in Demo hinzufügen"}).click();
+  await expect(page.getByText("Fiktive Frage zum Shell-Kurs")).toBeVisible();
+  await accessibleWithoutOverflow(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({path: testInfo.outputPath("learner-workspace-light-de.png"), fullPage: true});
+
+  await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+  await page.getByLabel("Theme", {exact: true}).selectOption("dark");
+  await expect(page.getByRole("navigation", {name: "Course sections"})).toBeVisible();
+  await expect(page.getByText("Fiktive Frage zum Shell-Kurs")).toBeVisible();
+  await page.getByRole("link", {name: "Back to my courses"}).click();
+  await page.getByRole("link", {name: /Open course: Network basics/}).click();
+  await expect(page.getByRole("navigation", {name: "Course sections"}).getByRole("link", {name: "Exam"})).toHaveCount(0);
+  await page.getByRole("radio", {name: "4", exact: true}).check();
+  await page.getByRole("button", {name: "Check answer"}).click();
+  await page.getByRole("button", {name: "Show sample record"}).click();
+  await expect(page.getByText("Fictional completion record · Network basics")).toBeVisible();
+  await accessibleWithoutOverflow(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({path: testInfo.outputPath("learner-workspace-dark-en.png"), fullPage: true});
+
+  await page.reload();
+  await expect(page.getByRole("heading", {name: /Network basics/})).toBeVisible();
+  await expect(page.getByText("Fictional completion record · Network basics")).toHaveCount(0);
+  await expect(page.getByRole("radio", {name: "4", exact: true})).not.toBeChecked();
+});

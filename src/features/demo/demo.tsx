@@ -38,6 +38,8 @@ import {
   type PortalNavigationItem,
 } from "../../components/portal-navigation";
 import {guideModules, guideText} from "../help/catalog";
+import {LearnerDemo} from "./learner-demo";
+import {findFictionalCourse, learnerDemoModules} from "./learner-demo-data";
 import "./i18n";
 import "./demo.css";
 
@@ -67,31 +69,15 @@ const demoIcons: Record<string, LucideIcon> = {
     "/settings": Settings2,
     "/profile": UserRound,
     "/courses": GraduationCap,
+    "/learning": GraduationCap,
 };
 
 /** Select only fictional guide modules suitable for the chosen demo perspective. */
 function demoModulesForRole(role: DemoRole) {
+    if (role === "participant") return learnerDemoModules;
     return guideModules.filter((module) => {
         if (role === "management" || role === "admin") return true;
         if (module.permission || module.path.startsWith("/admin")) return false;
-        if (role === "participant") {
-            return (
-                module.roles?.includes("participant") ||
-        [
-          "/",
-          "/calendar",
-          "/courses",
-          "/chats",
-          "/files",
-          "/notifications",
-          "/settings",
-          "/profile",
-          "/help",
-          "/wiki",
-          "/forum",
-        ].includes(module.path)
-            );
-        }
         if (module.roles?.length) {
             return role === "client"
                 ? module.roles.includes("client")
@@ -115,7 +101,7 @@ function demoNavigationItems(
         to: demoPath(module.path),
         label: guideText(module.title, locale),
         icon: demoIcons[module.path] ?? BookOpen,
-        end: module.path === "/",
+        end: module.path === "/" || module.path === "/learning",
     }));
 }
 
@@ -145,12 +131,6 @@ function demoDashboardStats(
             {label: "statParticipants", value: 12},
             {label: "statOpenInvoices", value: 1},
         ];
-    if (role === "participant")
-        return [
-            {label: "statEnabledCourses", value: 2},
-            {label: "statUpcomingSessions", value: 3},
-            {label: "statLearningMaterials", value: 4},
-        ];
     return [
         {label: "reserved", value: claimed ? 1 : 0},
         {label: "calendar", value: (claimed ? 2 : 0) + (event ? 1 : 0)},
@@ -161,19 +141,21 @@ function demoDashboardStats(
 /** Render local practice state; only the shared visual-preference control uses persistent storage. */
 export function DemoPage() {
     const {t, i18n} = useTranslation("demo");
+    const {t: learner} = useTranslation("learnerDemo");
     const location = useLocation();
     const navigate = useNavigate();
     const heading = useRef<HTMLHeadingElement>(null);
     const launcher = useRef<HTMLButtonElement>(null);
     const mobileNavigation = useRef<HTMLDetailsElement>(null);
     const restoreLauncherFocus = useRef(false);
-  const [role, setRole] = useState<DemoRole>(() =>
-    location.pathname.startsWith("/demo/admin")
-      ? "management"
-      : location.pathname.startsWith("/demo/client")
-        ? "client"
-        : "lecturer",
-  );
+    const [role, setRole] = useState<DemoRole>(() => {
+        const initialPath = location.pathname.replace(/^\/demo|\/$/g, "");
+        if (initialPath === "/learning" || initialPath === "/my-reviews" || findFictionalCourse(initialPath))
+            return "participant";
+        if (location.pathname.startsWith("/demo/admin")) return "management";
+        if (location.pathname.startsWith("/demo/client")) return "client";
+        return "lecturer";
+    });
     const visibleModules = useMemo(() => demoModulesForRole(role), [role]);
     const navigationItems = useMemo(
         () => demoNavigationItems(role, i18n.language),
@@ -185,16 +167,17 @@ export function DemoPage() {
                 ? ["/", "/jobs", "/calendar", "/courses"]
                 : role === "client"
                     ? ["/", "/calendar", "/courses", "/client"]
-                    : ["/", "/calendar", "/courses", "/chats"];
+                    : ["/learning", "/my-reviews", "/notifications"];
         return navigationItems.filter((item) =>
             paths.map(demoPath).includes(item.to),
         );
     }, [navigationItems, role]);
     // Resolve URLs only against authored catalog entries; unknown destinations use the first section.
     const queryModule = new URLSearchParams(location.search).get("module");
-    const requestedPath = location.pathname.replace(/^\/demo/, "") || "/";
-    const selected = visibleModules.find((module) =>
-        queryModule ? module.id === queryModule : module.path === requestedPath,
+    const requestedPath = location.pathname.replace(/^\/demo|\/$/g, "") || "/";
+    const learnerCourse = role === "participant" ? findFictionalCourse(requestedPath) : undefined;
+    const selected = visibleModules.find((item) =>
+        queryModule ? item.id === queryModule : item.path === (learnerCourse ? "/learning" : requestedPath),
     );
     const module = selected ?? visibleModules[0] ?? guideModules[0];
     const index = visibleModules.indexOf(module);
@@ -235,14 +218,13 @@ export function DemoPage() {
     /** Change only the local perspective; each real account permission remains untouched. */
     function changeRole(nextRole: DemoRole) {
         setRole(nextRole);
+        if (nextRole === "participant") navigate("/demo/learning");
         setTour(false);
         setComplete(false);
         report("");
     }
 
-    const selectionIsVisible = visibleModules.some((item) =>
-        queryModule ? item.id === queryModule : item.path === requestedPath,
-    );
+    const selectionIsVisible = Boolean(selected);
   useEffect(() => {
     if (queryModule && selected) {
       navigate(demoPath(selected.path), { replace: true });
@@ -253,8 +235,8 @@ export function DemoPage() {
             navigate(demoPath(visibleModules[0]?.path ?? "/"), {replace: true});
     }, [navigate, selectionIsVisible, visibleModules]);
     useEffect(() => {
-        heading.current?.focus();
-    }, [location.pathname, queryModule, role]);
+        if (!learnerCourse || !location.hash) heading.current?.focus();
+    }, [learnerCourse, location.hash, location.pathname, queryModule, role]);
     useEffect(() => {
         // Pause/finish remove their triggering button. Restore keyboard focus to
         // the surviving launcher after its new label/ref have been committed.
@@ -310,6 +292,7 @@ export function DemoPage() {
             {dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin"},
         ).format(new Date(iso));
     const description = guideText(module.summary, i18n.language);
+    const customLearnerView = role === "participant" && path !== "/profile";
     // One exercise represents one complete block. Once claimed, its title and
     // accepted sessions stay fixed until an explicit reset starts a new round.
     const offerTitle = publishedJob || t("course");
@@ -338,7 +321,7 @@ export function DemoPage() {
                                             ? Boolean(contentPosts[path]?.length)
                                             : checked.includes(path);
     return (
-        <div className="app-shell demo-app">
+        <div className="app-shell demo-app" data-demo-role={role}>
             <a className="skip-link" href="#demo-main">
                 {i18n.language.startsWith("en")
                     ? "Skip to demo content"
@@ -354,11 +337,16 @@ export function DemoPage() {
                 <div className="rainbow"/>
                 <p className="sidebar-kicker">{t("badge")}</p>
                 <PortalNavigation
-                    items={navigationItems}
+                    items={role === "participant"
+                        ? navigationItems.filter((item) => item.to !== "/demo/profile")
+                        : navigationItems}
                     ariaLabel={t("navigation")}
                     onItemClick={() => report("")}
                 />
                 <div className="sidebar-bottom">
+                    {role === "participant" && <Button asChild variant="secondary">
+                        <Link to="/demo/profile">{guideText(learnerDemoModules[3].title, i18n.language)}</Link>
+                    </Button>}
                     <p className="sidebar-note">{t("isolation")}</p>
                 </div>
             </aside>
@@ -439,9 +427,10 @@ export function DemoPage() {
                     <PageHeading
                         eyebrow={t("badge")}
             title={
-              path === "/" ? t("title") : guideText(module.title, i18n.language)
+              learnerCourse ? t(learnerCourse.title)
+                : path === "/" ? t("title") : guideText(module.title, i18n.language)
             }
-                        description={path === "/" ? t("intro") : description}
+                        description={learnerCourse ? learner("workspaceIntro") : path === "/" ? t("intro") : description}
                         headingRef={heading}
                         headingTabIndex={-1}
                         action={
@@ -543,7 +532,8 @@ export function DemoPage() {
                 ))}
             </nav>
           )}
-                    <div className="demo-content-grid">
+                    {role === "participant" && <LearnerDemo path={path} course={learnerCourse}/>}
+                    {!customLearnerView && <div className="demo-content-grid">
                         <section
                             className="panel demo-practice"
                             aria-labelledby="demo-practice-heading"
@@ -950,7 +940,7 @@ export function DemoPage() {
                                 </Link>
                             </Button>
                         </section>
-                    </div>
+                    </div>}
                 </main>
             </div>
             <div className="mobile-nav demo-mobile-nav">
@@ -970,7 +960,7 @@ export function DemoPage() {
                     }}
                 >
                     <Menu size={20} aria-hidden="true"/>
-                    <span>{t("navigationMore")}</span>
+                    <span>{t(role === "participant" ? "learnerMore" : "navigationMore")}</span>
                 </button>
             </div>
         </div>

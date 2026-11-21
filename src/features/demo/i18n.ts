@@ -93,6 +93,7 @@ const pairs = {
     ],
     navigation: ["Demo-Bereiche", "Demo sections"],
     navigationMore: ["Weitere Demo-Bereiche", "More demo sections"],
+    learnerMore: ["Weitere", "More"],
     navigationScroll: [
         "Alle Bereiche ansehen: Auf kleinen Bildschirmen in der Liste nach unten scrollen.",
         "Browse all sections: on smaller screens, scroll down within the list.",
