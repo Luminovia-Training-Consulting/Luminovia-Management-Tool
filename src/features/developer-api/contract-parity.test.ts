@@ -90,12 +90,29 @@ describe("documented Premium course and spending operations", () => {
       "save_calendar_subscription",
       "save_mail_configuration",
       "issue_company_integration_key",
+      "company_course_webhook_subscribe",
     ]) {
       const path = "/rest/v1/rpc/" + name;
       expect(download.paths[path].post).toBeDefined();
       expect(paths).not.toHaveProperty(path);
       expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
     }
+  });
+
+  it("documents the signed receiver event only in the downloadable contract", () => {
+    expect(portalOpenApi(backend, false)).not.toHaveProperty("webhooks");
+    expect(portalOpenApi(backend)).toHaveProperty(
+      "webhooks.companyCourseEvent.post",
+      expect.objectContaining({
+        parameters: expect.arrayContaining([
+          expect.objectContaining({
+            name: "X-Luminovia-Signature",
+            required: true,
+          }),
+        ]),
+        responses: expect.objectContaining({ "2XX": expect.any(Object) }),
+      }),
+    );
   });
 
   it.each([
