@@ -34,7 +34,7 @@ Deno.serve(createHumanLoginHandler({
     };
   },
   active: async (userId) => {
-    const result = await service.from("profiles").select("active").eq("id", userId).single();
-    return !result.error && result.data?.active === true;
+    const result = await service.rpc("human_login_profile_active", { p_user_id: userId });
+    return !result.error && result.data === true;
   },
 }, allowedOrigins));

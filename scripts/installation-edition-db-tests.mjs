@@ -36,6 +36,11 @@ await withTestDatabase("internal_edition", async ({ sql, actor }) => {
   await sql(`insert into auth.users(id,email) values (${q(admin)},'admin@example.invalid');
     insert into public.user_roles(user_id,role) values (${q(admin)},'admin');`);
   assert.equal(
+    await sql(`set role service_role;
+    select public.human_login_profile_active(${q(admin)})`),
+    "t",
+  );
+  assert.equal(
     await actor(
       admin,
       `${request("/rpc/portal_access", "POST")} select public.portal_access();`,
@@ -60,6 +65,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
   await withTestDatabase("customer_edition", async ({ sql, actor }) => {
     const id = randomUUID();
     const admin = randomUUID();
+    const serviceRequest = (
+      operation,
+      statement = "",
+      method = "POST",
+      headers = {},
+    ) =>
+      sql(`begin;set local role service_role;
+        set local request.headers=${q(JSON.stringify(headers))};
+        ${request(`/rpc/${operation}`, method)} ${statement};commit;`);
+    const loginOperations = [
+      "reserve_login_attempt",
+      "login_email_for_alias",
+      "human_login_profile_active",
+    ];
+    const assertLoginGate = async (enabled) => {
+      for (const operation of loginOperations) {
+        const attempt = serviceRequest(operation, "select 1");
+        if (enabled) assert.equal(await attempt, "1");
+        else await assert.rejects(attempt, /42501/);
+      }
+    };
     const assertCapabilities = async (licence_status) => {
       const expected = {
         installation_id: id,
@@ -79,8 +105,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         expected,
       );
       for (const role of ["authenticated", "service_role"]) {
-        assert.deepEqual(JSON.parse(await sql(`set role ${role}; ${capability}`)), expected);
-        await assert.rejects(sql(`set role ${role}; select * from private.installation_verified_licence`), /42501/);
+        assert.deepEqual(
+          JSON.parse(await sql(`set role ${role}; ${capability}`)),
+          expected,
+        );
+        await assert.rejects(
+          sql(
+            `set role ${role}; select * from private.installation_verified_licence`,
+          ),
+          /42501/,
+        );
       }
       assert.equal(
         await sql("select private.customer_installation_has_active_licence()"),
@@ -100,6 +134,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       /55000/,
     );
     await assertCapabilities("unlicensed");
+    await assertLoginGate(false);
 
     const now = Date.now();
     const day = 86400000;
@@ -148,6 +183,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await sql(install(scheduled));
     await sql(install(scheduled));
     await assertCapabilities("scheduled");
+    await assertLoginGate(false);
 
     const active = terms(-13, -2, 2, 4);
     await sql(install(active));
@@ -158,13 +194,25 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     await sql(install(active));
     await assertCapabilities("active");
+    await assertLoginGate(false);
+    const configure = (release, enabled = true) =>
+      sql(
+        `select private.configure_academy_course_access(${q(id)},${q(release)},${enabled})`,
+      );
+    await configure(active.release_commit);
+    await assertLoginGate(true);
+    const grace = terms(-12, -7, -2, 2);
 
-    await sql(install(terms(-12, -7, -2, 2)));
+    await sql(install(grace));
     await assertCapabilities("grace");
+    await assertLoginGate(true);
     await sql(install(terms(-11, -6, -4, -1)));
     await assertCapabilities("expired");
-    await sql(install(terms(-6, -1, 3, 6)));
+    await assertLoginGate(false);
+    const renewed = { ...terms(-6, -1, 3, 6), release_commit: "f".repeat(40) };
+    await sql(install(renewed));
     await assertCapabilities("active");
+    await assertLoginGate(false);
 
     // An actor in the local administrator role cannot open any customer
     // business transport merely because the identity and licence are valid.
@@ -218,8 +266,78 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       );
     }
     assert.equal(await sql("select count(*) from auth.users"), "1");
+
+    await configure(renewed.release_commit);
+    const confirmed = randomUUID();
+    const suspended = randomUUID();
+    await sql(`insert into auth.users(id,email,email_confirmed_at) values
+      (${q(confirmed)},'confirmed@example.invalid',now()),
+      (${q(suspended)},'suspended@example.invalid',now());
+      update public.profiles set active=false where id=${q(suspended)};
+      insert into private.user_login_aliases(user_id,username) values(${q(confirmed)},'training.lead');`);
+    const lookup = (identity) =>
+      `select public.human_login_profile_active(${q(identity)})`;
+    assert.equal(
+      await serviceRequest("human_login_profile_active", lookup(confirmed)),
+      "t",
+    );
+    for (const identity of [admin, suspended, randomUUID()]) {
+      assert.equal(
+        await serviceRequest("human_login_profile_active", lookup(identity)),
+        "f",
+      );
+    }
+    const statements = [
+      "select public.reserve_login_attempt(repeat('f',64))",
+      "select public.login_email_for_alias('training.lead')",
+      lookup(confirmed),
+    ];
+    assert.equal(await serviceRequest(loginOperations[0], statements[0]), "t");
+    assert.equal(
+      await serviceRequest(loginOperations[1], statements[1]),
+      "confirmed@example.invalid",
+    );
+    for (const [index, operation] of loginOperations.entries()) {
+      for (const method of ["GET", "HEAD", "PATCH"]) {
+        await assert.rejects(
+          serviceRequest(operation, "select 1", method),
+          /42501/,
+        );
+      }
+      for (const name of ["accept-profile", "content-profile"]) {
+        await assert.rejects(
+          serviceRequest(operation, "select 1", "POST", { [name]: "private" }),
+          /42501/,
+        );
+      }
+      await assert.rejects(
+        actor(admin, request(`/rpc/${operation}`, "POST")),
+        /42501/,
+      );
+      for (const role of ["anon", "authenticated"]) {
+        await assert.rejects(
+          sql(`set role ${role}; ${statements[index]}`),
+          /42501/,
+        );
+      }
+    }
+    await assert.rejects(
+      serviceRequest("human_login_profile_active/", "select 1"),
+      /42501/,
+    );
+    await assert.rejects(
+      serviceRequest("course_workspace", "select 1"),
+      /42501/,
+    );
+    await assert.rejects(
+      sql(`begin;set local role service_role;
+      ${request("/profiles", "GET")} select 1;commit;`),
+      /42501/,
+    );
+    await configure(renewed.release_commit, false);
+    await assertLoginGate(false);
     console.log(
-      `PASS ${edition} pins its identity, accepts only newer bound verified terms and keeps the dormant API closed`,
+      `PASS ${edition} pins its identity, checks bound licence transitions and permits only the scoped service login transport`,
     );
   });
 }
