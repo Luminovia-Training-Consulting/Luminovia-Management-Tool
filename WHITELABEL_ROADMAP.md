@@ -48,6 +48,8 @@ The product must be **customer branded end to end**, use an authentic course/par
 
 The customer build consumes operator-provided, validated brand assets and verifies installation capability claims before rendering protected routes. The dedicated identity and signed licence are bound to the same installation and exact release. The offline operator command prepares only an empty dedicated database or retries the same installation. Local instructor allocation and release reuse the scheduling and course-access records. The browser archive carries a verified static inventory. The customer runtime remains gated pending the complete release workflow and transport acceptance. [Current results](docs/WORKLOG.md)
 
+The dedicated editions have a release-bound course-access profile for acceptance. A database operator can enable it for the exact installation and active licence. It covers scoped course reads, direct instructor assignment and participant enrolment, with read-only grace and access denial after expiry. Both editions keep the customer browser, meeting-link editing, file and chat transports behind their release gates. The remaining commercial workflows are listed in Sections 4–10 and 13–15.
+
 ## 1. Product editions and packaging
 
 | Capability                                                | Luminovia Internal Edition                                                 | Customer Self-Hosted LMS                                            | Luminovia-Managed Branded Academy                                                       |

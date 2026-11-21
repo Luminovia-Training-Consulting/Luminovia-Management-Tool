@@ -1,3 +1,13 @@
+# 21 November 2026 — Lecturer materials, meeting links and licensed academy course access
+
+Assigned lecturers can retry publishing a scanned personal file to the same course audience and reuse its exact reviewed version. The upload reservation also keeps the same identifier when the selected file needs another upload request. Assigned lecturers and course managers can publish, replace or clear an HTTPS meeting link for an active online course. Enrolled participants receive the scoped link. Conflicting edits return HTTP 409. The audit event records the version and action without the URL.
+
+The operator-controlled course-access profile for both dedicated White-Label editions is bound to the installed licence's release. It permits scoped course reads, instructor assignment and participant enrolment. Tests cover write denial during read-only licence grace, retained records and access denial after expiry. The customer browser remains gated. Customer course-file, meeting-write and chat transports, first-admin setup and commercial release are still open.
+
+Isolated PostgreSQL and native PostgREST verified the internal Premium and licensed academy access changes. The API catalogue binds 307 operations and passes all seven database checks. The build, ESLint, 1,060 frontend tests and 123 Edge tests passed. Chromium with fictional transport exercised the actual material retry and meeting editor at 390 px German and 1,440 px English. The dedicated desktop/mobile Playwright scenarios for actual Auth, scanner, Storage-byte sharing and meeting links pass discovery and strict TypeScript checking. The canonical isolated runner stops at Docker startup because the local daemon is unavailable. The native end-to-end Auth, scanner, Storage and Realtime journeys remain pending.
+
+Read-only Hostinger development verification returned HTTP 200, an active backup timer and a complete set within the 26-hour freshness window. The served revision was `5f89986cbd7d47592563b609e869021468fe6d1a`. The freshness check did not decrypt the backup. The isolated retained-data recovery and new release checks are pending. This work did not publish a hosted release or change the deployment.
+
 # 21 November 2026 — Premium LMS, design and White-Label continuation
 
 The owner removed structured electronic-invoice formats from the roadmap and added the dedicated White-Label editions to current source work. Existing completed accounting exports and historical records remain available. Local implementation and verification continue directly on `main`. Commercial activation, native retained-data verification and Hostinger remain release steps.

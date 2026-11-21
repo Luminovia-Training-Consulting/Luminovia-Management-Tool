@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Lecturer materials and classroom links
+
+- [x] Preserve the reviewed version and selected audience when a lecturer retries sharing after a successful scan. Local component and desktop/mobile Chromium checks cover the retry.
+- [x] Publish, replace and clear the current HTTPS meeting link through the versioned Premium course workspace. The role permission, exact URL, conflicting edit and Premium revocation checks have isolated PostgreSQL and HTTP evidence.
+- [ ] Run the desktop and mobile Auth, scanner, Storage and role browser journeys. The isolated runner stops at the unavailable local Docker daemon.
+- [ ] Complete the isolated recovery and retained-data rehearsal for the new release. The Hostinger development endpoint and the daily backup freshness check responded successfully.
+
 ## Requested changes from the 19 November roadmap
 
 The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged as `0d89891d` on 21 November 2026. Subsequent roadmap work targets `main` directly. The current instruction excludes GitHub Actions evaluation and leaves Hostinger until after the core implementation and local acceptance. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). White-label source development is now explicitly in scope with the [commercial edition roadmap](../WHITELABEL_ROADMAP.md). Hosting and customer release remain after local and retained-data acceptance.
@@ -30,7 +37,7 @@ The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovi
 | FC-55–FC-58 | Local verification and release tooling are present. Core suites and the public demo have evidence. | The complete local suite, native Auth/Storage/Realtime, retained-data restore and Hostinger readiness remain open. |
 | G7.1–G7.2 | Same-identity email/username sign-in, own alias management and native PKCE recovery adapter are implemented. Server integrations obtain a separate, expiring, rotated key for `courses.read`. | Run native Auth/Mailpit and native integration HTTP journeys. |
 | G7.3–G7.6 | Swagger uses migrated browser RPC signatures and the actual REST role gates. Reviewed schemas cover selected domain payloads. The download also documents credential exchange and signed company course webhooks. Admins can inspect delivery status. | Remaining domain-specific JSON schemas, integration client acceptance and configured hosted receiver acceptance. Private worker and signed receiver proof passed locally. |
-| G8, WL-T01–WL-T15 | Dedicated identity, signed licence preparation, dormant transport gates, branded browser/PWA packages and atomic local instructor allocation/release are implemented in source and locally tested. | Full permitted academy runtime, first account setup, domain/SMTP operations, retained-data recovery and commercial acceptance remain open. |
+| G8, WL-T01–WL-T15 | Dedicated identity, signed licence preparation and branded browser/PWA packages are implemented. Both editions have a gated exact-release course profile with licence-backed access, direct instructor allocation/release and scoped enrolment. PostgreSQL tests cover active, read-only grace, expiry and retained records. | Complete customer browser and API, first account setup, meeting/file/chat transport, domain/SMTP operations, retained-data recovery and commercial acceptance. |
 
 ## Adjacent core work continued on 21 November
 
