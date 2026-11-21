@@ -4,10 +4,10 @@ import {cleanup, render, screen, waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
-import {AdminMailPage} from "./mail";
+import {AdminMailPage, type MailConfiguration} from "./mail";
 
 const fake = vi.hoisted(() => ({
-    configuration: {} as Record<string, any>,
+    configuration: {} as MailConfiguration,
     invoke: vi.fn(),
     rpc: vi.fn(),
 }));
@@ -55,17 +55,17 @@ beforeEach(async () => {
         },
     };
     fake.rpc.mockImplementation(
-        async (name: string, args?: Record<string, any>) => {
+        async (name: string, args?: {p_smtp: {password: string; enabled: boolean; sender_email: string; sender_name: string}}) => {
             if (name === "get_mail_configuration")
                 return {data: structuredClone(fake.configuration), error: null};
-            if (name === "save_mail_configuration") {
-                expect(args?.p_smtp.password).toBeTruthy();
+            if (name === "save_mail_configuration" && args) {
+                expect(args.p_smtp.password).toBeTruthy();
                 fake.configuration.version++;
                 fake.configuration.smtp = {
                     ...fake.configuration.smtp,
-                    enabled: args?.p_smtp.enabled,
-                    sender_email: args?.p_smtp.sender_email,
-                    sender_name: args?.p_smtp.sender_name,
+                    enabled: args.p_smtp.enabled,
+                    sender_email: args.p_smtp.sender_email,
+                    sender_name: args.p_smtp.sender_name,
                     credentials_configured: true,
                 };
                 return {data: structuredClone(fake.configuration), error: null};
@@ -74,7 +74,7 @@ beforeEach(async () => {
         },
     );
     fake.invoke.mockImplementation(
-        async (_name: string, args: { body: { protocol: string } }) => {
+        async (_name: string, args: { body: { protocol: "smtp" | "imap" } }) => {
             const protocol = args.body.protocol;
             fake.configuration.version++;
             fake.configuration[protocol].last_test = {

@@ -39,7 +39,7 @@ export function CreateAccountForm({
         /[A-Z]/.test(password) &&
         /[a-z]/.test(password) &&
         /[0-9]/.test(password) &&
-        /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/.test(password);
+        /[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/.test(password);
     const [role, setRole] = useState("lecturer");
     const [organisation, setOrganisation] = useState("");
     const request = useRef({signature: "", id: ""});

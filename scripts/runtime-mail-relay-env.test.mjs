@@ -69,7 +69,7 @@ test("dry-run writes nothing, and apply preserves old SMTP credentials in a priv
 });
 
 test("incomplete relay values, mismatched worker secrets and symlinks fail before server mutation", () => {
-    withPrivateEnvironment(({directory, envFile, original}) => {
+    withPrivateEnvironment(({envFile, original}) => {
         writeFileSync(envFile, original + "MAIL_RELAY_USERNAME='relay-incomplete@internal.invalid'\n");
         chmodSync(envFile, 0o600);
         assert.throws(

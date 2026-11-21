@@ -77,7 +77,7 @@ export function Shell() {
             return true;
         }
     });
-    const [previewMode, setPreviewMode] = useState<PreviewRole | null>(null);
+    const [chosenPreview, setPreviewMode] = useState<PreviewRole | null>(null);
     const [uiSaveFailed, setUiSaveFailed] = useState(false);
     useEffect(() => {
         let alive = true;
@@ -170,9 +170,7 @@ export function Shell() {
     const previewAllowed =
         roles.data?.some((role) => ["owner", "admin", "management"].includes(role)) ??
         false;
-    useEffect(() => {
-        if (!previewAllowed || !online || guestOnly) setPreviewMode(null);
-    }, [actor, guestOnly, online, previewAllowed]);
+    const previewMode = previewAllowed && online && !guestOnly ? chosenPreview : null;
     const navigation = participantOnly
         ? [{to: "/learning", icon: GraduationCap, label: "myCourses"}]
         : guestOnly
