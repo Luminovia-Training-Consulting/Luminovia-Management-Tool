@@ -8,7 +8,9 @@ test.skip(
 
 /** Filter before selecting so Swagger renders the requested virtualized row. */
 async function operation(page: Page, method: "get" | "post", path: string) {
-  await page.getByPlaceholder("Filter by tag or path").fill(path);
+  const search = page.getByRole("searchbox", { name: "Schnittstellen suchen" });
+  await search.fill(`${method} ${path}`);
+  await search.press("Enter");
   return page.locator(`.opblock-${method} .opblock-summary-control`).filter({
     has: page.locator(`[data-path="${path}"]`),
   });
@@ -93,7 +95,9 @@ test("an authenticated participant can run an own-account RPC through the API ex
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
-  await (await operation(page, "post", "/rest/v1/rpc/account_username")).click();
+  await (
+    await operation(page, "post", "/rest/v1/rpc/account_username")
+  ).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const response = page.waitForResponse(
     (item) =>

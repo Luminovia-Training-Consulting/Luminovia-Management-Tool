@@ -7,6 +7,7 @@ import type { ExplorerRequest } from "./requests";
 
 const fake = vi.hoisted(() => ({
   actor: "academy-user" as string | null,
+  language: "en",
   getSession: vi.fn(),
   swagger: vi.fn(),
 }));
@@ -35,7 +36,7 @@ vi.mock("swagger-ui-react", () => ({
   },
 }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ i18n: { language: "en" } }),
+  useTranslation: () => ({ i18n: { language: fake.language } }),
 }));
 
 const backend = "https://academy.example.invalid/backend";
@@ -55,6 +56,7 @@ const latest = () =>
 
 beforeEach(() => {
   fake.actor = "academy-user";
+  fake.language = "en";
   fake.swagger.mockClear();
   fake.getSession.mockReset().mockResolvedValue(session);
   vi.stubEnv("VITE_SUPABASE_URL", backend);
@@ -155,4 +157,40 @@ it("preserves the internal explorer catalogue and interactive methods", async ()
     "put",
     "delete",
   ]);
+});
+
+it("filters operations by method and path without changing the downloaded catalogue", async () => {
+  const user = userEvent.setup();
+  render(<ApiExplorer />);
+  const search = screen.getByRole("searchbox", { name: "Search operations" });
+  await user.type(search, "GET /functions/v1/accounts/v1/me{Enter}");
+  expect(Object.keys(latest().spec.paths)).toEqual([
+    "/functions/v1/accounts/v1/me",
+  ]);
+  expect(
+    Object.keys(latest().spec.paths["/functions/v1/accounts/v1/me"] as object),
+  ).toEqual(["get"]);
+  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
+    "href",
+    "/api/openapi.json",
+  );
+  expect(latest().supportedSubmitMethods).toEqual([]);
+});
+
+it("provides a German empty state and restores the search focus when clearing it", async () => {
+  fake.language = "de";
+  const user = userEvent.setup();
+  render(<AcademyApiExplorer />);
+  const search = screen.getByRole("searchbox", {
+    name: "Schnittstellen suchen",
+  });
+  await user.type(search, "no-such-academy-endpoint{Enter}");
+  expect(
+    screen.getByText("Keine passende Schnittstelle gefunden."),
+  ).toBeVisible();
+  expect(screen.queryByLabelText("Swagger")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Suche zurücksetzen" }));
+  expect(search).toHaveFocus();
+  expect(search).toHaveValue("");
+  expect(screen.getByLabelText("Swagger")).toBeVisible();
 });

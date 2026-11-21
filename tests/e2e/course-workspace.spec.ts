@@ -140,6 +140,159 @@ async function a11y(page: Page) {
     ).toBe(true);
 }
 
+/** Seed published, multi-session course options plus an invisible foreign course. */
+async function enrolmentOptions(service: ReturnType<typeof api>, organisation: string) {
+    const foreignOrganisation = randomUUID();
+    await checked(service.from("organisations").insert({
+        id: foreignOrganisation,
+        name: "Fictional separate training company",
+    }));
+
+    const course = async (title: string, company = organisation) => {
+        const template = randomUUID();
+        const id = randomUUID();
+        const sessions = [randomUUID(), randomUUID()];
+        await checked(service.from("course_templates").insert({id: template, title}));
+        await checked(service.from("course_runs").insert({
+            id, template_id: template, organisation_id: company,
+            time_zone: "Australia/Brisbane", published: true,
+        }));
+        const first = Date.now() + 4 * 86400000;
+        await checked(service.from("course_sessions").insert(
+            sessions.map((session, index) => ({
+                id: session, course_run_id: id,
+                starts_at: new Date(first + index * 86400000).toISOString(),
+                ends_at: new Date(first + index * 86400000 + 3600000).toISOString(),
+            })),
+        ));
+        return {id, title, sessions};
+    };
+
+    return {
+        first: await course("Fictional batch networking"),
+        second: await course("Fictional batch system administration"),
+        third: await course("Fictional batch documentation"),
+        stale: await course("Fictional batch retired option"),
+        foreign: await course("Fictional foreign-only course", foreignOrganisation),
+    };
+}
+
+test("Premium company multi-course enrolment is confirmed atomically across real browser roles", async ({page, browser}) => {
+    test.setTimeout(120000);
+    const f = await fixture({upcoming: true});
+    const {first, second, third, stale, foreign} = await enrolmentOptions(f.service, f.org);
+    const learner = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(learner.auth.signInWithPassword({email: f.learner.email, password: process.env.E2E_PASSWORD!}));
+    const profile = await checked(
+        f.service.from("profiles").select("luminovia_user_id").eq("id", f.learner.id).single(),
+        {requireData: true},
+    );
+    await checked(f.adminClient.rpc("request_company_participant_link", {
+        p_organisation_id: f.org, p_luminovia_user_id: profile.luminovia_user_id, p_request_id: randomUUID(),
+    }));
+    const invites: CompanyInvitation[] = await checked(learner.rpc("my_company_participant_invitations"), {requireData: true});
+    const invite = invites.find(({organisation_id}) => organisation_id === f.org);
+    if (!invite) throw new Error("Fictional batch participant invitation was not confirmed");
+    await checked(learner.rpc("accept_company_participant_invitation", {
+        p_organisation_id: f.org, p_expected_version: invite.version, p_request_id: randomUUID(),
+    }));
+
+    const roster = page.getByRole("region", {name: "Teilnehmende", exact: true});
+    const details = roster.getByRole("article", {name: f.learner.name, exact: true})
+        .getByRole("button", {name: "Kurse und Teilnahme", exact: true});
+    const dialog = page.getByRole("dialog");
+    const openCourses = async () => {
+        await details.click();
+        await dialog.getByRole("button", {name: "Kurse zuweisen", exact: true}).click();
+        await expect(dialog.getByRole("searchbox", {name: "Kurse nach Titel suchen", exact: true})).toBeFocused();
+    };
+    const choice = ({title}: {title: string}) => dialog.getByRole("checkbox", {name: new RegExp(title)});
+    const submit = async (button: string, status: number) => {
+        const receipt = page.waitForResponse((response) =>
+            response.url().endsWith("/rpc/assign_company_participant_courses") &&
+            response.request().method() === "POST" && response.status() === status,
+        );
+        await dialog.getByRole("button", {name: button, exact: true}).click();
+        return (await receipt).json();
+    };
+
+    // Search while retaining previous selections, with no foreign or draft option.
+    await login(page, f.client.email);
+    await page.goto("/client");
+    await openCourses();
+    await expect(choice(first)).toBeVisible();
+    await expect(choice(foreign)).toHaveCount(0);
+    await expect(choice(f)).toHaveCount(0);
+    await choice(first).check();
+    const search = dialog.getByRole("searchbox", {name: "Kurse nach Titel suchen", exact: true});
+    await search.fill(second.title);
+    await dialog.getByRole("button", {name: "Suchen", exact: true}).click();
+    await expect(choice(first)).toHaveCount(0);
+    await choice(second).check();
+    await dialog.getByRole("button", {name: "Suche löschen", exact: true}).click();
+    await expect(choice(first)).toBeChecked();
+    await choice(stale).check();
+
+    // The candidate changes after selection. The server must perform no partial enrolment.
+    await checked(f.service.from("course_runs").update({published: false}).eq("id", stale.id));
+    expect(await submit("In 3 Kurse einschreiben", 409)).toMatchObject({code: "PT409"});
+    await expect(dialog.getByText(/Es wurde keine neue Einschreibung vorgenommen/)).toBeVisible();
+    const enrolments = () => checked(
+        f.service.from("course_enrolments").select("course_run_id,status").eq("user_id", f.learner.id)
+            .order("course_run_id"),
+        {requireData: true},
+    );
+    expect(await enrolments()).toEqual([]);
+    await dialog.getByText("Ausgewählte Kurse (3)", {exact: true}).click();
+    await dialog.getByRole("button", {name: `${stale.title} aus Auswahl entfernen`, exact: true}).click();
+    const enrolled = [first.id, second.id].sort();
+    expect(await submit("In 2 Kurse einschreiben", 200)).toEqual({enrolled, unchanged: []});
+    await expect(dialog.getByRole("status").filter({hasText: "2 neue Kurse zugewiesen."})).toBeVisible();
+    await expect(dialog.getByRole("button", {name: "Kurse zuweisen", exact: true})).toBeFocused();
+    expect(await enrolments()).toEqual(enrolled.map((course_run_id) => ({course_run_id, status: "enrolled"})));
+
+    // A fresh administrator has the same scoped picker and cannot re-add existing enrolments.
+    const adminContext = await browser.newContext();
+    const learnerContext = await browser.newContext();
+    try {
+        const admin = await adminContext.newPage();
+        await adminLogin(admin, f.manager);
+        await admin.goto("/clients");
+        await admin.getByRole("button", {name: `Fictional workspace academy ${f.token}`, exact: true}).click();
+        const adminRoster = admin.getByRole("region", {name: "Teilnehmende", exact: true});
+        await adminRoster.getByRole("article", {name: f.learner.name, exact: true})
+            .getByRole("button", {name: "Kurse und Teilnahme", exact: true}).click();
+        const adminDialog = admin.getByRole("dialog");
+        await adminDialog.getByRole("button", {name: "Kurse zuweisen", exact: true}).click();
+        await expect(adminDialog.getByRole("checkbox", {name: new RegExp(third.title)})).toBeVisible();
+        await expect(adminDialog.getByRole("checkbox", {name: new RegExp(first.title)})).toHaveCount(0);
+        const repeated = await checked(f.adminClient.rpc("assign_company_participant_courses", {
+            p_organisation_id: f.org, p_user_id: f.learner.id, p_run_ids: [first.id, second.id],
+        }), {requireData: true});
+        expect(repeated).toEqual({enrolled: [], unchanged: enrolled});
+
+        // The learner sees every scheduled session of both whole courses after real sign-in.
+        const student = await learnerContext.newPage();
+        const courseRenderErrors: string[] = [];
+        student.on("console", (message) => {
+            if (message.type() === "error" && message.text().includes("Encountered two children with the same key"))
+                courseRenderErrors.push(message.text());
+        });
+        await login(student, f.learner.email, /\/learning$/);
+        for (const course of [first, second]) {
+            await expect(student.getByRole("heading", {name: course.title, exact: true})).toBeVisible();
+            await student.goto(`/courses/${course.id}/workspace`);
+            await expect(student.locator(".course-workspace-sessions > li")).toHaveCount(course.sessions.length);
+            await student.goto("/learning");
+        }
+        await expect(student.getByRole("heading", {name: foreign.title, exact: true})).toHaveCount(0);
+        expect(courseRenderErrors).toEqual([]);
+    } finally {
+        await learnerContext.close();
+        await adminContext.close();
+    }
+});
+
 test("real shared preparation, explicitly agreed contact and scanned file version reach only the linked customer", async ({
                                                                                                                               page,
                                                                                                                               browser,

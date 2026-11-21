@@ -1,3 +1,9 @@
+# 21 November 2026 — Browser acceptance for enrolments and API exploration
+
+The native browser regression signs in a company manager, an administrator and a learner. It confirms an atomic stale-selection rejection, then enrols the learner in two complete courses, repeats the same selection without changes and sees both courses as the learner. Distinct keys keep course classes and welcome-content state independent.
+
+The shared API explorer follows the portal theme and supports an accessible German or English search by path, method, operation name, summary or tag. The exact native accounts and course-access calls still require explicit authorisation. Chromium passed the enrolment case and both API explorer cases in desktop and mobile projects using pinned GoTrue, Deno, PostgREST and PostgreSQL. The 390px dark German and 1280px light English search views fit the viewport. The sampled GET badges reached contrast ratios of 8.12:1 and 9.24:1. The Swagger dependency still emits its RequestBodyEditor Strict Mode lifecycle notice.
+
 # 21 November 2026 — Company enrolment and integration examples
 
 The Premium company participant centre now puts the roster ahead of the two invitation forms and gives course assignment priority in the details dialog. Company staff can search published courses, select up to 50 whole courses across searches and enrol one participant in a single transaction. A stale selection rolls back new enrolments while preserving the user's choices for correction. Existing and completed enrolments remain intact. The detail view shows the course time zone and returns keyboard focus to the action after leaving the selection.

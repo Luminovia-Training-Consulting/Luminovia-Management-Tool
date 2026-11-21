@@ -1071,13 +1071,13 @@ function CourseWorkspaceLayout({
           <div className="course-room-section" id="course-overview">
             <CourseBasics course={course} />
             <CourseClasses
-              key={`${actor}:${course.id}`}
+              key={`classes:${actor}:${course.id}`}
               actor={actor}
               courseId={course.id}
               editor={course.access.manager || course.access.client}
             />
             <CourseWelcomeContent
-              key={`${actor}:${course.id}`}
+              key={`welcome:${actor}:${course.id}`}
               actor={actor}
               courseId={course.id}
               zone={course.time_zone}

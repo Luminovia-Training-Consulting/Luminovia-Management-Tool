@@ -1,33 +1,168 @@
-.academy-api-explorer {
+.api-explorer {
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-wrap: anywhere;
 }
 
-.academy-api-explorer .swagger-ui :is(.btn.execute, .btn.btn-clear) {
+.api-explorer-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+  max-inline-size: 48rem;
+}
+
+.api-explorer-search .field {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.api-explorer .swagger-ui {
+  color: var(--ink);
+}
+
+.api-explorer .swagger-ui .info {
+  margin-block: 1.5rem 1rem;
+}
+
+.api-explorer .swagger-ui .info .title {
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+}
+
+.api-explorer .swagger-ui .info .title small {
+  background: var(--status-filled-surface);
+}
+
+.api-explorer .swagger-ui .info .title small.version-stamp {
+  background: var(--status-success-surface);
+}
+
+.api-explorer .swagger-ui .info .title small pre {
+  color: var(--ink);
+}
+
+.api-explorer
+  .swagger-ui
+  :is(
+    .info :is(h1, h2, h3, h4, h5, li, p, table, .base-url, .title),
+    .opblock-tag,
+    .opblock-tag small,
+    .opblock-summary-path,
+    .opblock-summary-description,
+    .opblock-summary-operation-id,
+    .opblock-section-header :is(h4, label),
+    .opblock-description-wrapper :is(p, h4),
+    .opblock-title_normal :is(p, h4),
+    .response-col_status,
+    .response-col_links,
+    .parameter__name,
+    .parameter__type,
+    .tab li,
+    .model,
+    .responses-inner :is(h4, h5),
+    label,
+    th,
+    td,
+    section h3
+  ) {
+  color: var(--ink);
+}
+
+.api-explorer
+  .swagger-ui
+  :is(
+    .scheme-container,
+    .opblock,
+    .opblock-section-header,
+    section.models,
+    .model-box
+  ) {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+.api-explorer
+  .swagger-ui
+  :is(textarea, select, input:not([type="checkbox"], [type="radio"])) {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--input-border);
+}
+
+.api-explorer
+  .swagger-ui
+  :is(input, select, textarea, button, a):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.api-explorer
+  .swagger-ui
+  :is(.opblock-control-arrow, .expand-methods, .expand-operation, .btn) {
+  color: var(--ink);
+}
+
+.api-explorer .swagger-ui .opblock-summary-control svg,
+.api-explorer
+  .swagger-ui
+  :is(.opblock-control-arrow, .expand-methods, .expand-operation)
+  svg {
+  fill: var(--ink);
+}
+
+.api-explorer .swagger-ui .opblock .opblock-summary-method {
+  color: var(--status-filled-ink);
+  background: var(--status-filled-surface);
+}
+
+.api-explorer .swagger-ui .opblock.opblock-post .opblock-summary-method {
+  color: var(--status-success-ink);
+  background: var(--status-success-surface);
+}
+
+.api-explorer .swagger-ui .opblock.opblock-delete .opblock-summary-method {
+  color: var(--status-danger-ink);
+  background: var(--status-danger-surface);
+}
+
+.api-explorer .swagger-ui :is(.btn.execute, .btn.btn-clear) {
   min-width: max-content;
   padding-inline: 12px;
   white-space: nowrap;
 }
 
+.api-explorer .swagger-ui .btn.execute {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--surface);
+}
+
+.api-explorer .swagger-ui pre {
+  max-inline-size: 100%;
+  overflow: auto;
+}
+
 @media (max-width: 480px) {
-  .academy-api-explorer .swagger-ui .wrapper {
+  .api-explorer .swagger-ui .wrapper {
     padding-inline: 0;
   }
 
-  .academy-api-explorer .swagger-ui .opblock-summary-control {
+  .api-explorer .swagger-ui .opblock-summary-control {
     min-width: 0;
     flex-wrap: wrap;
   }
 
-  .academy-api-explorer .swagger-ui .opblock-summary-path {
+  .api-explorer .swagger-ui .opblock-summary-path {
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  .academy-api-explorer
-    .swagger-ui
-    :is(.execute-wrapper, .opblock-body .btn-group) {
+  .api-explorer .swagger-ui :is(.execute-wrapper, .opblock-body .btn-group) {
     padding: 12px;
+  }
+
+  .api-explorer .swagger-ui .responses-wrapper {
+    overflow-x: auto;
   }
 }
