@@ -30,6 +30,13 @@ describe("API explorer public document and session boundary", () => {
       security: [{ integrationKey: [] }],
     });
     expect(portalOpenApi(backend, false).paths).not.toHaveProperty(path);
+    for (const credentials of ["human-login", "human-recovery"]) {
+      const route = "/functions/v1/" + credentials;
+      expect(portalOpenApi(backend).paths[route].post).toMatchObject({
+        security: [],
+      });
+      expect(portalOpenApi(backend, false).paths).not.toHaveProperty(route);
+    }
     expect(
       portalOpenApi(backend, false).components.securitySchemes,
     ).not.toHaveProperty("integrationKey");

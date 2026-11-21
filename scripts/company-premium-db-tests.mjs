@@ -267,7 +267,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await sql(`delete from public.chat_members where room_id=${q(roomA)} and user_id=${q(participant)}`);
             await rpc(admin, "manage_course_enrolment", [runA, participant, "enrolled"]);
             assert.equal(await sql(`select count(*) from public.chat_members where room_id=${q(roomA)} and user_id=${q(participant)} and removed_at is null`), "1");
-            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runA]), [{id: roomA, title: "Fictional company A room"}]);
+            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runA]), [{id: roomA, title: "Fictional company A room", can_post: true}]);
             await assert.rejects(rpc(lecturer, "course_chat_messages", [roomB, null, null, 50]), /42501/);
             await assert.rejects(rpc(participant, "course_chat_messages", [randomUUID(), null, null, 50]), /42501/);
             await assert.rejects(actor(participant,
@@ -280,6 +280,11 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             const messages = await rpc(participant, "course_chat_messages", [roomA, null, null, 50]);
             assert.deepEqual(messages.map((item) => [item.id, item.body]), [[courseChatMessageId, "Fictional course question"]]);
             assert.equal("document_id" in messages[0], false);
+            assert.deepEqual(await rpc(client, "course_chat_rooms", [runA]), [{id: roomA, title: "Fictional company A room", can_post: false}]);
+            assert.deepEqual(await rpc(client, "course_chat_messages", [roomA, null, null, 50]), messages);
+            await assert.rejects(rpc(client, "course_chat_messages", [roomB, null, null, 50]), /42501/);
+            await assert.rejects(rpc(client, "send_course_chat_message", [roomA, "Rejected company post", randomUUID()]), /42501/);
+            assert.equal(await actor(client, `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
             const learnerSearch = await rpc(participant, "unified_search", [
                 "Fictional course question", "chats", null, null, null, 40,
             ]);
@@ -303,6 +308,8 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(statusA.enabled, true);
             const off = await toggle(admin, companyA, false, statusA.version);
             assert.equal(off.enabled, false);
+            await assert.rejects(rpc(client, "course_chat_rooms", [runA]), /42501/);
+            await assert.rejects(rpc(client, "course_chat_messages", [roomA, null, null, 50]), /42501/);
             await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
             await assert.rejects(rpc(participant, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
@@ -310,7 +317,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await assert.rejects(rpc(admin, "create_chat_group", [
                 "Blocked OFF course", [admin], "participant_course", jobA,
             ]), /42501/);
-            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runB]), [{id: roomB, title: "Fictional company B room"}]);
+            assert.deepEqual(await rpc(participant, "course_chat_rooms", [runB]), [{id: roomB, title: "Fictional company B room", can_post: true}]);
             assert.equal((await rpc(participant, "course_chat_messages", [roomB, null, null, 50])).length, 1);
             const visibleChats = await rpc(participant, "unified_search", [
                 "Fictional company", "chats", null, null, null, 40,

@@ -8,6 +8,10 @@ const pairs: Record<string, [string, string]> = {
   ],
   emptyMessages: ["Noch keine Nachrichten.", "No messages yet."],
   latest: ["Die neuesten 50 Nachrichten", "Latest 50 messages"],
+  readOnly: [
+    "Du kannst die Nachrichten dieses Kurses lesen.",
+    "You can read messages for this course.",
+  ],
   message: ["Nachricht", "Message"],
   send: ["Nachricht senden", "Send message"],
   unavailable: [

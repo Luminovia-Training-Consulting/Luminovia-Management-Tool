@@ -293,6 +293,38 @@ const nativePaths = {
     { ...course, p_exam_id: uuid },
     { type: "null" },
   ),
+  "/rest/v1/rpc/inspect_company_course_chat": rpc(
+    "inspectCompanyCourseChat",
+    "Administration",
+    "Inspect one company's course chat with an audit reason",
+    "Requires the active admin role and an exact company/course match. Each request records a reason and can inspect retained participant course text while Premium is off.",
+    {
+      ...organisation,
+      ...course,
+      p_reason: { ...text, minLength: 8, maxLength: 300 },
+      p_before_at: nullableDateTime,
+      p_before_id: nullableUuid,
+    },
+    object({
+      items: {
+        type: "array",
+        maxItems: 50,
+        items: object({
+          id: uuid,
+          created_at: { type: "string", format: "date-time" },
+          sender_name: text,
+          room_title: { type: ["string", "null"] },
+          body: text,
+        }),
+      },
+      next_cursor: {
+        anyOf: [
+          { type: "null" },
+          object({ at: { type: "string", format: "date-time" }, id: uuid }),
+        ],
+      },
+    }),
+  ),
   "/rest/v1/rpc/course_chat_rooms": rpc(
     "courseChatRooms",
     "Premium LMS",
@@ -301,14 +333,18 @@ const nativePaths = {
     course,
     {
       type: "array",
-      items: object({ id: uuid, title: { type: ["string", "null"] } }),
+      items: object({
+        id: uuid,
+        title: { type: ["string", "null"] },
+        can_post: boolean,
+      }),
     },
   ),
   "/rest/v1/rpc/course_chat_messages": rpc(
     "courseChatMessages",
     "Premium LMS",
     "Read text history from a course participant room",
-    "Requires current room access. Deleted bodies are null; attachment metadata is omitted.",
+    "Requires current room access or read authority for a linked company contact on that Premium course. Deleted bodies are null; attachment metadata is omitted.",
     {
       p_room_id: uuid,
       p_before_at: nullableDateTime,
@@ -561,13 +597,91 @@ const integrationPath = {
   },
 };
 
+const credentialPaths = {
+  "/functions/v1/human-login": {
+    post: {
+      operationId: "humanLogin",
+      tags: ["Authentication"],
+      summary: "Establish a native Supabase session with a username or email",
+      description:
+        "Pass credentials in the TLS request body. Existing users keep their current Supabase identity and permissions.",
+      security: [],
+      requestBody: {
+        required: true,
+        content: json(
+          object({
+            identifier: { ...text, maxLength: 254 },
+            password: {
+              ...text,
+              minLength: 1,
+              maxLength: 128,
+              format: "password",
+              writeOnly: true,
+            },
+          }),
+        ),
+      },
+      responses: {
+        "200": {
+          description: "Native short-lived access token and refresh token",
+          content: json(
+            object({
+              access_token: text,
+              refresh_token: text,
+              expires_in: { type: "integer" },
+              token_type: { const: "bearer" },
+            }),
+          ),
+        },
+        "400": { description: "Invalid request" },
+        "401": { description: "Invalid credentials or unavailable account" },
+        "403": { description: "Browser origin denied" },
+        "429": { description: "Credential attempt limit reached" },
+        "503": { description: "Authentication temporarily unavailable" },
+      },
+    },
+  },
+  "/functions/v1/human-recovery": {
+    post: {
+      operationId: "humanRecovery",
+      tags: ["Authentication"],
+      summary: "Request username recovery using native PKCE",
+      description:
+        "A browser must supply an allowed Origin and that origin's exact /auth/callback URL. The client keeps the PKCE verifier.",
+      security: [],
+      requestBody: {
+        required: true,
+        content: json(
+          object({
+            username: { ...text, pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$" },
+            code_challenge: { ...text, pattern: "^[A-Za-z0-9_-]{43}$" },
+            code_challenge_method: { const: "s256" },
+            redirect_to: { ...text, format: "uri" },
+          }),
+        ),
+      },
+      responses: {
+        "202": {
+          description:
+            "Request accepted without revealing the account or delivery status",
+          content: json(object({})),
+        },
+        "400": { description: "Invalid alias, challenge or callback" },
+        "403": { description: "Browser origin denied" },
+        "415": { description: "JSON body required" },
+      },
+    },
+  },
+};
+
 /** Publish only supported, explicitly described product operations. */
-export function portalOpenApi(
-  backend: string,
-  includeServerIntegrations = true,
-) {
-  const documentedPaths: typeof paths = includeServerIntegrations
-    ? { ...paths, "/functions/v1/company-integration": integrationPath }
+export function portalOpenApi(backend: string, includeNonInteractive = true) {
+  const documentedPaths: typeof paths = includeNonInteractive
+    ? {
+        ...paths,
+        ...credentialPaths,
+        "/functions/v1/company-integration": integrationPath,
+      }
     : paths;
   return {
     ...accountOpenApi,
@@ -582,7 +696,7 @@ export function portalOpenApi(
       ...accountOpenApi.components,
       securitySchemes: {
         ...accountOpenApi.components.securitySchemes,
-        ...(includeServerIntegrations
+        ...(includeNonInteractive
           ? {
               integrationKey: {
                 type: "http",

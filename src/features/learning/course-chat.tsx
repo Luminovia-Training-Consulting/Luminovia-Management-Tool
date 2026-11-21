@@ -8,7 +8,7 @@ import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import "./course-chat-i18n";
 
-type Room = { id: string; title: string | null };
+type Room = { id: string; title: string | null; can_post: boolean };
 type Message = {
   id: string;
   sender_id: string;
@@ -61,7 +61,7 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
   const send = useMutation({
     mutationFn: async () => {
       requireOnline();
-      if (!room) throw new Error("room_unavailable");
+      if (!room?.can_post) throw new Error("room_unavailable");
       const text = body.trim();
       if (!text || text.length > 8000) throw new Error("invalid_message");
       const signature = JSON.stringify([room.id, text]);
@@ -136,29 +136,33 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
               ))}
             </ol>
           )}
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              send.mutate();
-            }}
-          >
-            <Field id="course-chat-message" label={t("message")}>
-              <textarea
-                id="course-chat-message"
-                value={body}
-                maxLength={8000}
-                onChange={(event) => setBody(event.target.value)}
-                disabled={!online || send.isPending || messages.isError}
-              />
-            </Field>
-            <Button
-              disabled={
-                !online || send.isPending || messages.isError || !body.trim()
-              }
+          {room.can_post ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                send.mutate();
+              }}
             >
-              {t("send")}
-            </Button>
-          </form>
+              <Field id="course-chat-message" label={t("message")}>
+                <textarea
+                  id="course-chat-message"
+                  value={body}
+                  maxLength={8000}
+                  onChange={(event) => setBody(event.target.value)}
+                  disabled={!online || send.isPending || messages.isError}
+                />
+              </Field>
+              <Button
+                disabled={
+                  !online || send.isPending || messages.isError || !body.trim()
+                }
+              >
+                {t("send")}
+              </Button>
+            </form>
+          ) : (
+            <p className="muted">{t("readOnly")}</p>
+          )}
           {send.isError && <Notice kind="error">{t("failed")}</Notice>}
         </>
       )}

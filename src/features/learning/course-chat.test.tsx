@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CourseChat } from "./course-chat";
 import i18n from "../../lib/i18n";
 
-const fake = vi.hoisted(() => ({ rpc: vi.fn(), revoked: false }));
+const fake = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  revoked: false,
+  canPost: true,
+}));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 vi.mock("../../lib/online", () => ({
   useOnline: () => true,
@@ -16,13 +20,20 @@ let client: QueryClient;
 beforeEach(async () => {
   await i18n.changeLanguage("en");
   fake.revoked = false;
+  fake.canPost = true;
   fake.rpc.mockReset().mockImplementation((name: string) => {
     if (name === "course_chat_rooms")
       return Promise.resolve(
         fake.revoked
           ? { data: null, error: { code: "42501" } }
           : {
-              data: [{ id: "room-a", title: "Fictional course room" }],
+              data: [
+                {
+                  id: "room-a",
+                  title: "Fictional course room",
+                  can_post: fake.canPost,
+                },
+              ],
               error: null,
             },
       );
@@ -91,4 +102,18 @@ it("hides retained messages when a fresh course-room check revokes access", asyn
   expect(await screen.findByText(/course chat is unavailable/i)).toBeTruthy();
   expect(screen.queryByText("Fictional course question")).toBeNull();
   expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+});
+
+it("shows a scoped read-only room without offering to send", async () => {
+  fake.canPost = false;
+  render(
+    <QueryClientProvider client={client}>
+      <CourseChat run="run" actor="company" />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Fictional course question")).toBeVisible();
+  expect(
+    screen.getByText("You can read messages for this course."),
+  ).toBeVisible();
+  expect(screen.queryByRole("textbox")).toBeNull();
 });
