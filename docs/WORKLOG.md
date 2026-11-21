@@ -1,5 +1,7 @@
 # 22 November 2026 — Scoped LMS integrations and full verification
 
+The local scanner now reads the owned configuration through open file handles and atomically replaces its private configuration. Restore manifests and reviewed historical sources are validated and read through the same bounded handle. The migration hash pins are unchanged. A deterministic restore fixture confirmed that a directory-entry change does not redirect the read. The scanner change passed 402 runtime and integration tests. The restore and migration change passed 19 offline checks.
+
 The portal and both Academy editions issue separate organisation keys for the published course index, confirmed learner enrolment and aggregate participation reports. Rotation preserves scope. Enrolment reuses the normal course transaction, audit and participant chat synchronization. A repeated request returns the existing enrolment and cannot undo a removal or completion. Internal Premium OFF denies the new operations. Dedicated requests require the active course profile and licence.
 
 Real Docker Edge and REST passed enrolment and reporting, tenant denial, Premium OFF, concurrent replay, manual removal and key rotation/revocation with fixture cleanup. Both Academy databases passed the matching service-dispatch and issuer-role checks. The signed release verifier accepts the exact archived 1.28 catalogue and validates the new output. Current catalogues contain 366 internal and 85 Academy paths per dedicated edition.
