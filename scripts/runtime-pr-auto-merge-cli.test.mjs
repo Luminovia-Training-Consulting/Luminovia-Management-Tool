@@ -193,6 +193,32 @@ function mainRoutes({ci = [], security = []} = {}) {
     ];
 }
 
+test("the controller preflight uses only read access and detects genuine work", () => {
+    const covered = mainRoutes({
+        ci: [mainRun("ci.yml")],
+        security: [mainRun("security.yml")],
+    });
+    const checks = [
+        {routes: covered, expected: "false"},
+        {routes: covered.map((entry) => entry.path === listPath
+            ? {...entry, data: [draft(31)]}
+            : entry), expected: "false"},
+        {routes: covered.map((entry) => entry.path === listPath
+            ? {...entry, data: [{...draft(31), draft: false}]}
+            : entry), expected: "true"},
+        {routes: mainRoutes({ci: [mainRun("ci.yml")]}), expected: "true"},
+    ];
+    for (const {routes, expected} of checks) {
+        const result = runCli(routes, {args: ["--has-work"], forbidPromotionEnv: true});
+        assert.equal(result.status, 0);
+        assert.equal(result.stdout.trim(), expected);
+        assert.ok(result.calls.every(({method, credential}) => method === "GET" && credential === "read"));
+    }
+    const mixed = runCli(covered, {args: ["--has-work", "--apply"], forbidPromotionEnv: true});
+    assert.equal(mixed.status, 1);
+    assert.deepEqual(mixed.calls, []);
+});
+
 /** Complete fictional native-merge journey for the actual CLI process. The
  * response table is input data; the trusted preload observes state changes. */
 function readyRoutes() {

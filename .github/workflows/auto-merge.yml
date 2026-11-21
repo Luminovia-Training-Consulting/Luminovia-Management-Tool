@@ -20,7 +20,31 @@ concurrency:
   group: verified-automatic-merge
   cancel-in-progress: false
 jobs:
+  preflight:
+    name: Find pending main or pull request work
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      has_work: ${{ steps.work.outputs.has_work }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".node-version"
+      - name: Check exact main and open pull requests with the read token
+        id: work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          has_work="$(node scripts/pr-auto-merge.mjs --has-work)"
+          case "$has_work" in true|false) ;; *) exit 1 ;; esac
+          printf 'has_work=%s\n' "$has_work" >> "$GITHUB_OUTPUT"
   merge:
+    needs: preflight
+    if: needs.preflight.outputs.has_work == 'true'
     environment:
       name: maintenance-signing
       # Reuse protected credentials without creating automatic deployments.

@@ -758,10 +758,10 @@ export async function processPullRequest(
     };
 }
 
-/** Reconcile independently of open PRs. A lost promotion response or a failed
- * dispatch is recoverable on the next sweep without merging/publishing again. */
-export async function ensureMainVerification(request) {
+/** Read the exact current main revision and find missing validation runs. */
+async function pendingMainVerification(request) {
     const head = await currentBase(request);
+    const workflows = [];
     for (const workflow of ["ci.yml", "security.yml"]) {
         const runs = await pages(
             request,
@@ -779,6 +779,16 @@ export async function ensureMainVerification(request) {
             )
         )
             continue;
+        workflows.push(workflow);
+    }
+    return {head, workflows};
+}
+
+/** Reconcile independently of open PRs. A lost promotion response or a failed
+ * dispatch is recoverable on the next sweep without merging/publishing again. */
+export async function ensureMainVerification(request) {
+    const {head, workflows} = await pendingMainVerification(request);
+    for (const workflow of workflows) {
         await request(`${prefix}/actions/workflows/${workflow}/dispatches`, {
             method: "POST",
             body: {
@@ -788,6 +798,17 @@ export async function ensureMainVerification(request) {
         });
     }
     return head;
+}
+
+/** Idle sweeps need no App token. Apply will repeat every live permission and
+ * evidence check independently if there is reconciliation or PR work. */
+async function hasMergeControllerWork(request) {
+    if ((await pendingMainVerification(request)).workflows.length) return true;
+    const pulls = await pages(
+        request,
+        `${prefix}/pulls?state=open&base=main&sort=created&direction=asc`,
+    );
+    return pulls.some((pull) => pull.draft !== true);
 }
 
 /** Evidence uses only the read token, including the one fixed GraphQL query.
@@ -829,6 +850,12 @@ async function main() {
         assert(args.length === 2 && args[0] === "--probe-source");
         const reader = routeRequests(githubClient(process.env.GH_TOKEN));
         console.log(JSON.stringify(await probeSource(reader, args[1])));
+        return;
+    }
+    if (args.includes("--has-work")) {
+        assert(args.length === 1);
+        const reader = routeRequests(githubClient(process.env.GH_TOKEN));
+        console.log(await hasMergeControllerWork(reader));
         return;
     }
     assert(args.length === 0 || (args.length === 1 && args[0] === "--apply"));
