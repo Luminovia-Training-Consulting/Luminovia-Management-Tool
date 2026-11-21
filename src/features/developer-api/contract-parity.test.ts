@@ -553,6 +553,49 @@ describe("finance and operations contracts", () => {
   );
 });
 
+describe("offer allocation contracts", () => {
+  it("distinguishes capacity offer price models and permits legacy zero net amounts", () => {
+    const create = z.fromJSONSchema(
+      requestSchema(
+        "/rest/v1/rpc/create_capacity_job",
+      ) as z.core.JSONSchema.JSONSchema,
+    );
+    const base = {
+      title: "Fictional teaching offer",
+      customer_name: "Fictional academy",
+      delivery_type: "online",
+      sessions: [
+        { starts_at: "2040-02-01T10:00:00Z", ends_at: "2040-02-01T11:00:00Z" },
+      ],
+      terms: "Fictional reviewed terms",
+      currency: "EUR",
+      rate_unit: "fixed_total",
+    };
+    const args = {
+      p_request_id: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
+      p_capacity: 2,
+    };
+    expect(
+      create.safeParse({
+        ...args,
+        p_payload: { ...base, amount: 0, total_amount: 0 },
+      }).success,
+    ).toBe(true);
+    expect(
+      create.safeParse({
+        ...args,
+        p_payload: { ...base, gross_amount: 10, gross_total_amount: 10 },
+      }).success,
+    ).toBe(true);
+    expect(
+      create.safeParse({
+        ...args,
+        p_payload: { ...base, gross_amount: 10, total_amount: 10 },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("documented Premium course and spending operations", () => {
   it("documents course creation, bounded offset-aware sessions and the visibility response", () => {
     expect(requestSchema("/rest/v1/rpc/save_course_run")).toMatchObject({

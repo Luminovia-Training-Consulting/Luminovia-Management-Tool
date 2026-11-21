@@ -1,4 +1,5 @@
 /** Actual personal-price allocation with immutable accepted snapshots. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
@@ -77,11 +78,17 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
     const daily = (await offers(teacher)).find((x) => x.id === second);
     assert.equal(daily.amount, 200);
     assert.equal(daily.total_amount, 400);
-    const candidates = JSON.parse(
+    const candidateResponse = rpcResponse("manual_assignment_candidates");
+    const assignmentResponse = rpcResponse("manual_assign_job");
+    const candidates = candidateResponse(
         await actor(
             admin,
             `select public.manual_assignment_candidates('${second}')`,
         ),
+    );
+    assert.ok(
+        candidateResponse(await actor(manager, `select public.manual_assignment_candidates('${second}')`))
+            .every(({quote}) => quote === null),
     );
     const target = candidates.find((x) => x.id === teacher);
     assert.equal(target.eligibility, "eligible");
@@ -98,14 +105,14 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
         ),
         /Job management required/,
     );
-    const assigned = JSON.parse(
+    const assigned = assignmentResponse(
         await actor(
             admin,
             `select public.manual_assign_job('${second}','${teacher}',${target.terms_version},${lifecycle.version},'${key}')`,
         ),
     );
     assert.equal(assigned.status, "confirmed");
-    const repeated = JSON.parse(
+    const repeated = assignmentResponse(
         await actor(
             admin,
             `select public.manual_assign_job('${second}','${teacher}',${target.terms_version},${lifecycle.version},'${key}')`,

@@ -1,4 +1,5 @@
 /** Actual UUID-database checks; no external services or default database writes. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -51,6 +52,7 @@ await withTestDatabase("job_picker", async ({sql, actor}) => {
     await sql(
         "insert into public.course_sessions(course_run_id,starts_at,ends_at)values('e8000000-0000-4000-8000-000000000001','2060-01-02T08:00:00Z','2060-01-02T10:00:00Z'),('e8000000-0000-4000-8000-000000000001','2060-01-01T08:00:00Z','2060-01-01T10:00:00Z');insert into public.job_sessions(job_id,starts_at,ends_at)values('d8000000-0000-4000-8000-000000000001','2060-01-01T08:00:00Z','2060-01-01T10:00:00Z')",
     );
+    const pickerResponse = rpcResponse("job_picker");
     const picker = async (
         who,
         purpose,
@@ -62,7 +64,7 @@ await withTestDatabase("job_picker", async ({sql, actor}) => {
             aal = "aal1",
         } = {},
     ) =>
-        JSON.parse(
+        pickerResponse(
             await actor(
                 who,
                 `select public.job_picker(${q(purpose)},${q(search)},${cursor ? q(JSON.stringify(cursor)) + "::jsonb" : "null"},${limit},${selected ? q(selected) + "::uuid" : "null"})`,

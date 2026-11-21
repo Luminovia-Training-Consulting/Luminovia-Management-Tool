@@ -645,11 +645,14 @@ const replacementRefusal = {
     "prerequisite_missing",
   ],
 };
-const replacementQuote = object({
+const lecturerQuote = {
   amount: { type: "number", minimum: 0 },
   total_amount: { type: "number", minimum: 0 },
   currency: { enum: ["EUR", "AUD"] },
   rate_unit: rateUnit,
+};
+const replacementQuote = object({
+  ...lecturerQuote,
   terms: text,
   terms_version: version,
 });
@@ -679,6 +682,55 @@ function offerAction(actions: string[], payload: Record<string, unknown>) {
     required: [...Object.keys(lifecycleInput), "p_action"],
   };
 }
+
+const pickerCursor = object({
+  at: sessionInstant,
+  id: uuid,
+  fingerprint: { ...text, pattern: "^[0-9a-f]{32}$" },
+});
+const pickerJob = object({
+  id: uuid,
+  title: text,
+  customer_name: text,
+  course_run_id: nullableUuid,
+  starts_at: nullableDateTime,
+  time_zone: text,
+});
+const capacityOfferFields = {
+  ...clientRequestFields,
+  customer_name: { ...text, minLength: 1, maxLength: 200 },
+  status: { enum: ["draft", "published"] },
+  terms: { ...text, minLength: 1, maxLength: 12000 },
+  requires_contract: boolean,
+  claim_deadline: nullableDateTime,
+};
+const capacityInputRequired = [
+  "title",
+  "delivery_type",
+  "sessions",
+  "currency",
+  "rate_unit",
+];
+const { gross_amount, gross_total_amount, ...capacityNetFields } =
+  capacityOfferFields;
+const capacityGrossOffer = {
+  ...object({ ...capacityNetFields, gross_amount, gross_total_amount }),
+  required: [...capacityInputRequired, "gross_amount", "gross_total_amount"],
+};
+const capacityNetOffer = {
+  ...object({
+    ...capacityNetFields,
+    amount: { ...proposedAmount, minimum: 0 },
+    total_amount: { ...proposedAmount, minimum: 0 },
+  }),
+  required: [
+    ...capacityInputRequired,
+    "customer_name",
+    "amount",
+    "total_amount",
+    "terms",
+  ],
+};
 
 const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
@@ -1678,6 +1730,116 @@ const nativePaths = {
       ...idempotency,
     },
     uuid,
+  ),
+  "/rest/v1/rpc/job_board": rpc(
+    "native_job_board",
+    "Jobs",
+    "List versioned offers for the authorised job board",
+    "Requires current job management authority. Includes capacity and confirmed positions. Transition availability reflects accepted history. Each change rechecks current permissions and the offer version.",
+    {},
+    {
+      type: "array",
+      maxItems: 500,
+      items: object({
+        id: uuid,
+        title: text,
+        status: { enum: ["draft", "published", "filled", "archived"] },
+        version: { ...version, minimum: 1 },
+        capacity: { ...version, minimum: 1, maximum: 20 },
+        confirmed_count: version,
+        can_transition: boolean,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/job_picker": rpc(
+    "native_job_picker",
+    "Jobs",
+    "Find jobs for an administrative attachment or participant course",
+    "The selected purpose determines current job or course authority and the fields in scope. Continue with the returned cursor and unchanged purpose and search. A currently authorised selected ID can be resolved outside the current results page.",
+    {
+      p_purpose: { enum: ["job_attachment", "participant_course"] },
+      p_search: { ...text, maxLength: 160, default: "" },
+      p_cursor: { anyOf: [pickerCursor, { type: "null" }], default: null },
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 40 },
+      p_selected_id: { ...nullableUuid, default: null },
+    },
+    object({
+      items: { type: "array", maxItems: 100, items: pickerJob },
+      has_more: boolean,
+      next_cursor: { anyOf: [pickerCursor, { type: "null" }] },
+      selected: { anyOf: [pickerJob, { type: "null" }] },
+    }),
+    ["p_search", "p_cursor", "p_limit", "p_selected_id"],
+  ),
+  "/rest/v1/rpc/manual_assignment_candidates": rpc(
+    "native_manual_assignment_candidates",
+    "Jobs",
+    "Read current instructor candidates for a job",
+    "Requires current job management authority. Eligibility follows the complete block, scheduling conflicts and lecturer requirements. Only finance-authorised callers receive the candidate's quote. The current terms version identifies the terms to review.",
+    { p_job_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
+    {
+      type: "array",
+      maxItems: 50,
+      items: object({
+        id: uuid,
+        name: text,
+        eligibility: {
+          enum: [
+            "eligible",
+            "unavailable",
+            "not_eligible",
+            "conflict",
+            "prerequisite_missing",
+            "quote_unavailable",
+          ],
+        },
+        terms_version: { ...version, minimum: 1 },
+        quote: { anyOf: [object(lecturerQuote), { type: "null" }] },
+      }),
+    },
+    ["p_search"],
+  ),
+  "/rest/v1/rpc/manual_assign_job": rpc(
+    "native_manual_assign_job",
+    "Jobs",
+    "Allocate the complete job to the selected instructor",
+    "Requires current job management authority, an eligible lecturer, the reviewed offer and terms versions, and an available position. Use the same request ID for an exact retry. Only a confirmed receipt with a claim ID confirms the allocation.",
+    {
+      p_job_id: uuid,
+      p_lecturer_id: uuid,
+      p_terms_version: { ...version, minimum: 1 },
+      p_expected_job_version: { ...version, minimum: 1 },
+      ...idempotency,
+    },
+    {
+      anyOf: [
+        object({ status: replacementRefusal }),
+        object({
+          status: { enum: ["confirmed", "cancelled"] },
+          claim_id: uuid,
+        }),
+      ],
+    },
+  ),
+  "/rest/v1/rpc/create_capacity_job": rpc(
+    "native_create_capacity_job",
+    "Jobs",
+    "Create a job with one to twenty priced teaching positions",
+    "Requires current job management authority. Use net fields for a direct offer or gross fields with current finance authority. An existing organisation is allowed only on the gross path. Supply one to sixty future session intervals and a request ID for exact retries.",
+    {
+      p_payload: { oneOf: [capacityNetOffer, capacityGrossOffer] },
+      p_capacity: { type: "integer", minimum: 1, maximum: 20 },
+      ...idempotency,
+      p_organisation_id: { ...nullableUuid, default: null },
+      p_platform_percent: {
+        type: ["number", "null"],
+        default: null,
+        description:
+          "Leave null for gross offers. The legacy net path does not use this value.",
+      },
+    },
+    uuid,
+    ["p_organisation_id", "p_platform_percent"],
   ),
   "/rest/v1/rpc/job_lifecycle": rpc(
     "native_job_lifecycle",

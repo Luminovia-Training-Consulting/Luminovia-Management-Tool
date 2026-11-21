@@ -1,4 +1,5 @@
 /** Real PostgreSQL slot/currency/budget/concurrency checks. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
@@ -45,6 +46,8 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
             })),
         };
     };
+    const jobResponse = rpcResponse("create_capacity_job");
+    const boardResponse = rpcResponse("job_board");
     /** Creates the complete multi-position offer through create_capacity_job with controlled capacity, pricing and retry identity. */
     const create = async (
         capacity = 3,
@@ -52,11 +55,11 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
         key = randomUUID(),
         payload = body(gross),
     ) =>
-        actor(
+        jobResponse(JSON.stringify(await actor(
             manager,
             `select public.create_capacity_job(${quoteSql(JSON.stringify(payload))}::jsonb,${capacity},'${key}')`,
             "aal1",
-        );
+        )));
     /** Reads the current versioned management projection at the specified permission level. */
     const meta = async (job, who = manager, aal = "aal1") =>
         JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
@@ -483,7 +486,7 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
                 actor(teachers[0], "select public.job_board()"),
                 /42501/,
             );
-            const board = JSON.parse(
+            const board = boardResponse(
                 await actor(manager, "select public.job_board()", "aal1"),
             );
             assert.ok(board.some((row) => row.can_transition === false));
