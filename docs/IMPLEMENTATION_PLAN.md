@@ -74,6 +74,13 @@ This pass covers source implementation and local tests. CI, deployment, producti
 - [ ] Exercise full isolated Compose boot, provider TLS/domain, customer mail and a complete upgrade with retained data on the dedicated target.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
+## Participant and company onboarding
+
+- [x] Deliver a one-time invitation with the generated username and enforce a personal password before protected access. Validate invited sessions and explicitly provisional passwords with pinned GoTrue.
+- [x] Group course runs under a company class with stable course links and unchanged enrolments. Verify company/learner scope through native desktop and mobile browsers.
+- [x] Scope optional anti-spam policy to the installation and company. Verify text and attachments with exact retries and current roles.
+- [ ] Rehearse provider SMTP against a customer's authorised mailbox and verify a production-ready sender domain, public demo route and website login entry on the separately owned Website.
+
 ## Lecturer materials and classroom links
 
 - [x] Preserve the reviewed version and selected audience when a lecturer retries sharing after a successful scan. Local component and desktop/mobile Chromium checks cover the retry.

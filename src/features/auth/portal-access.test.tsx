@@ -18,6 +18,9 @@ vi.mock("../calendar/offline", () => ({
 }));
 afterEach(() => {
   cleanup();
+  localStorage.removeItem("luminovia.theme");
+  document.documentElement.removeAttribute("data-theme");
+  vi.unstubAllGlobals();
   state.online = true;
   state.rpc.mockReset();
 });
@@ -48,10 +51,17 @@ it("does not mount private content when a retained token receives REST permissio
   expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
 });
 it("opens only the personal password form for a provisional session", async () => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  localStorage.setItem("luminovia.theme", "dark");
   state.rpc.mockResolvedValue({ data: null, error: { code: "PT428" } });
   show();
   expect(await screen.findByLabelText("Neues Passwort")).toBeVisible();
   expect(screen.getByText(/Lege ein eigenes Passwort fest/)).toBeVisible();
+  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
 });
 it("mounts private content after positive database membership confirmation", async () => {

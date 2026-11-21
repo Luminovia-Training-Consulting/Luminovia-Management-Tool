@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
+import { Preferences } from "../../components/preferences";
 import { Field, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
 
@@ -41,7 +42,7 @@ export function Password({
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
-  return (
+  const form = (
     <div className="narrow">
       <PageHeading
         title={t("setPassword")}
@@ -81,9 +82,17 @@ export function Password({
             minLength={8}
             maxLength={128}
             autoComplete="new-password"
+            aria-describedby={
+              errors.password ? "password-validation" : undefined
+            }
             {...register("password")}
           />
         </Field>
+        {errors.password && (
+          <p id="password-validation" role="alert">
+            {t("passwordHint")}
+          </p>
+        )}
         <Button disabled={!online || isSubmitting}>{t("setPassword")}</Button>
         {message && (
           <Notice kind={failed ? "error" : "success"}>{t(message)}</Notice>
@@ -95,5 +104,17 @@ export function Password({
         )}
       </form>
     </div>
+  );
+  if (!onSetupComplete) return form;
+  return (
+    <main className="password-setup">
+      <div className="password-setup-actions">
+        <Preferences />
+        <Button variant="secondary" onClick={() => void db().auth.signOut()}>
+          {t("logout")}
+        </Button>
+      </div>
+      {form}
+    </main>
   );
 }

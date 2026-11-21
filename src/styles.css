@@ -564,6 +564,21 @@ legend {
   margin: 0 auto;
 }
 
+.password-setup {
+  max-width: 700px;
+  margin-inline: auto;
+  padding: clamp(0.75rem, 4vw, 1.5rem);
+}
+
+.password-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-end: 1rem;
+}
+
 /* Shared page heading with a flexible feature action. */
 .page-heading {
   display: flex;

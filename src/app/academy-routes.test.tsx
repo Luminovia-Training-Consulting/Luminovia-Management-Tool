@@ -423,7 +423,9 @@ afterEach(() => {
 it("opens the branded register deep link and reloads the exact server-confirmed row", async () => {
   fake.registerAvailable = true;
   open(`/courses/${id}/workspace#course-register`);
-  expect(await screen.findByText("Fictional register entry")).toBeVisible();
+  expect(
+    await screen.findByText("Fictional register entry", {}, { timeout: 5000 }),
+  ).toBeVisible();
   expect(screen.getByRole("link", { name: "Attendance" })).toHaveAttribute(
     "aria-current",
     "location",

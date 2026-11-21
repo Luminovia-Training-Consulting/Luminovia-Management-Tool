@@ -284,6 +284,10 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Course creation, scheduling, own lecturer assignment, participant enrolment and daily LMS operations run through the dedicated academy without a marketplace or intermediary contract.
 - [ ] Provide optional customer-owned instructor payment module that can be switched off without breaking courses.
 
+- [x] Group several course runs under a school class within the same organisation without creating implicit enrolments. Confirm the shared workspace in internal Premium and both dedicated editions on desktop and mobile.
+- [x] Verify that several lecturers can teach the same scheduled course and that releasing one assignment preserves the other lecturer and existing enrolments.
+- [x] Provide a current-role company switch and an administrator-wide switch for participant-chat spam protection. Verify concurrent text and scanned attachments, exact retries, and company isolation.
+
 ### WL-03 — Branding, domains & welcome (P0)
 
 - [ ] Vendor-side academy provision wizard; customer-side brand settings with company name, logo, favicon, PWA, themes, documents/emails/Swagger title.
@@ -293,6 +297,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 ### WL-04 — Full API, username login and Swagger (P0)
 
 - [x] Username or verified email with password sign-in resolves to the same Auth identity. Both editions passed native sign-in, alias edits and private account settings.
+- [x] Send the automatically assigned username with the one-time invitation. Require a personal password before opening protected resources and support verified-email or username sign-in after setup. Initial passwords supplied by administrators require a first sign-in change.
 - [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
 - [ ] Provide local integration identities, scoped keys, rotation/revocation, signed webhooks and replay/idempotency management.
 
