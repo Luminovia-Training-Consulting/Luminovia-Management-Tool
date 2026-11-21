@@ -110,7 +110,7 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
     },
   });
   const paths = Object.keys(document.paths);
-  expect(paths).toHaveLength(48);
+  expect(paths).toHaveLength(52);
   expect(paths).toContain("/rest/v1/rpc/academy_licence_receipt");
   expect(paths).toContain("/rest/v1/rpc/installation_capabilities");
   expect(paths).toContain("/rest/v1/rpc/course_workspace");
@@ -120,6 +120,7 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
     "/functions/v1/accounts/v1/academy/users",
     "/functions/v1/course-documents",
     "/functions/v1/files",
+    "/functions/v1/mail-admin",
   ]);
   expect(paths).toContain("/rest/v1/rpc/academy_course_material_action");
   expect(paths).toContain("/rest/v1/rpc/remove_course_exam_pdf");

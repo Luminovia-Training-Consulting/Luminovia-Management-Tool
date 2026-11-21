@@ -79,12 +79,14 @@ This pass covers source implementation and local tests. CI, deployment, producti
 - [x] Deliver a one-time invitation with the generated username and enforce a personal password before protected access. Validate invited sessions and explicitly provisional passwords with pinned GoTrue.
 - [x] Group course runs under a company class with stable course links and unchanged enrolments. Verify company/learner scope through native desktop and mobile browsers.
 - [x] Scope optional anti-spam policy to the installation and company. Verify text and attachments with exact retries and current roles.
+- [x] Save and test dedicated outbound SMTP through the local administrator's role. Confirm encrypted storage, implicit TLS and STARTTLS without a test message, read-only grace and revocation.
 - [ ] Rehearse provider SMTP against a customer's authorised mailbox and verify a production-ready sender domain, public demo route and website login entry on the separately owned Website.
 
 ## Lecturer materials and classroom links
 
 - [x] Preserve the reviewed version and selected audience when a lecturer retries sharing after a successful scan. Local component and desktop/mobile Chromium checks cover the retry.
 - [x] Publish, replace and clear the current HTTPS meeting link through the versioned Premium course workspace. The role permission, exact URL, conflicting edit and Premium revocation checks have isolated PostgreSQL and HTTP evidence.
+- [x] Verify both dedicated editions with two lecturers on one course. Releasing one lecturer retains the other lecturer's workspace, the shared meeting link and existing learners.
 - [ ] Run the desktop and mobile Auth, scanner, Storage and role browser journeys. The isolated runner stops at the unavailable local Docker daemon.
 - [ ] Complete the isolated recovery and retained-data rehearsal for the new release. The Hostinger development endpoint and the daily backup freshness check responded successfully.
 

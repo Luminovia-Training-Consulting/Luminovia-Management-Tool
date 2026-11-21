@@ -4,6 +4,14 @@ New email invitations use the verified academy or portal origin, a one-time toke
 
 Both customer origin variants passed pinned GoTrue and private Mailpit with the rendered bilingual template, exact username lookup, invitation redemption, personal password update, subsequent sign-in and the recovery link location. The ACL, metadata tampering and original password retention checks passed in PostgreSQL. Dedicated manual invitation limits apply per actor, per recipient and across the installation before SMTP is called.
 
+Both editions also passed native PKCE recovery from the captured message through the verification callback, a new password and a subsequent login. The first-password screen retains language and appearance. Chromium passed the enforced setup on an English desktop and on the German dark mobile profile.
+
+Scoped staff can link several course runs to one company class. Internal Premium and both academies passed the English desktop and German dark mobile workflows with unchanged enrolments. Database tests in both academies covered two lecturers sharing a course and its meeting link, followed by release of one lecturer with the remaining assignment and existing learners retained. Chat limits cover text and scanned attachments. The administrator or the permitted company actor controls the tighter setting, and the native browser confirmed rate-limit feedback and draft retention.
+
+Dedicated SMTP can be configured by the current local administrator. PostgreSQL and PostgREST verified encrypted credentials, stale revision rejection, read-only grace and immediate role revocation. A real private TLS server verified host identity and SMTP authentication for implicit TLS and STARTTLS without a message. The managed desktop browser passed a saved configuration and reload. The branded API is now version 1.22.0 with 52 paths and retained verification of the previously signed catalogues. The native browser API inventory has 331 entries.
+
+The fictional local demo passed all 16 Chromium journeys across desktop and mobile, including language, appearance and width checks. A read-only inspection of the existing public deployment found that the demo URL leads to the not-found page. The separate public website did not show a direct participant login on the inspected home page. External SMTP delivery, public release and those two live entry points remain open.
+
 # 21 November 2026 — Calendar zones and contractual exception review
 
 The calendar offers a view timezone selector and a return to the profile zone. It keeps the displayed day across zone changes, preserves the source instant and authoring zone, and labels repeated local times with the source UTC offsets. Global event details show both zones when they differ. An unchanged private appointment can retain both precise times while its wall clock moves backwards across the DST transition.

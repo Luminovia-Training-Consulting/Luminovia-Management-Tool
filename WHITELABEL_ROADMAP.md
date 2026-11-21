@@ -292,6 +292,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 - [ ] Vendor-side academy provision wizard; customer-side brand settings with company name, logo, favicon, PWA, themes, documents/emails/Swagger title.
 - [ ] Customer domain/TLS/redirects, Auth callback URLs, verified sender and domain-safe PWA/cache.
+- [x] Provide private SMTP administration for confirmed local administrators with encrypted credentials and exact TLS/STARTTLS connection checks. Verify saved configuration, refusal after role loss and read-only grace in both editions.
 - [ ] Remove unnecessary Luminovia branding from all customer-facing surfaces; retain mandatory legal notices.
 
 ### WL-04 — Full API, username login and Swagger (P0)

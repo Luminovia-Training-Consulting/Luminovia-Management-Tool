@@ -11,6 +11,8 @@ const readPaths = [
   "/rest/v1/rpc/course_welcome_content",
   "/rest/v1/rpc/course_chat_rooms",
   "/rest/v1/rpc/course_chat_messages",
+  "/rest/v1/rpc/course_chat_protection",
+  "/rest/v1/rpc/course_class_options",
   "/rest/v1/rpc/course_session_register",
   "/rest/v1/rpc/notification_inbox",
   "/rest/v1/rpc/academy_course_publication",
@@ -34,10 +36,18 @@ const writePaths = [
   "/rest/v1/rpc/remove_course_exam_pdf",
   "/rest/v1/rpc/send_course_chat_attachment",
   "/rest/v1/rpc/attach_course_session_evidence",
+  "/rest/v1/rpc/set_course_chat_protection",
+  "/rest/v1/rpc/set_course_class",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
 const examDownload = "/functions/v1/course-documents";
+const mailPaths = [
+  "/functions/v1/mail-admin",
+  "/rest/v1/rpc/get_mail_configuration",
+  "/rest/v1/rpc/save_mail_configuration",
+  "/rest/v1/rpc/queue_mail_connection_test",
+] as const;
 const attendanceImport = "/rest/v1/rpc/import_course_session_attendance";
 const withdrawalWindow = "/rest/v1/rpc/course_withdrawal_window";
 const withdraw = "/rest/v1/rpc/cancel_own_course_enrolment";
@@ -87,6 +97,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           bootstrap,
           upload,
           examDownload,
+          ...mailPaths,
           ...administrationPaths,
           ...personalPaths,
           attendanceImport,

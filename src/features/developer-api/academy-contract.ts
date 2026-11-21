@@ -24,6 +24,7 @@ import { academyAdministrationPaths } from "./academy-administration-contract.ts
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { academyClassPaths } from "./academy-class-contract.ts";
 import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
+import { academyMailPaths } from "./academy-mail-contract.ts";
 import { academyPersonalSettingsPaths } from "./academy-personal-settings-contract.ts";
 import {
   academyTimetableRequestSchema,
@@ -637,6 +638,7 @@ const coursePaths = {
   ...academyLicencePaths,
   ...academyClassPaths,
   ...academyChatProtectionPaths,
+  ...academyMailPaths,
   ...academyPersonalSettingsPaths,
   "/rest/v1/rpc/academy_timetable": courseOperation(
     "readAcademyTimetable",
