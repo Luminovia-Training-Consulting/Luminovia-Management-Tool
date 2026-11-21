@@ -1,6 +1,6 @@
 /** Staff/company session register and protected PDF evidence on the existing file path. */
 import { AttendanceImportPanel } from "./attendance-import-panel";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -36,16 +36,47 @@ function instant(value: string, zone: string) {
   return time.toUTC().toISO();
 }
 
-function RowEditor({
-  course,
-  actor,
-  session,
-  row,
-}: {
+type RowEditorProps = {
   course: CourseWorkspace;
   actor: string;
   session: string;
   row: AttendanceRow;
+};
+
+function RowEditor(props: RowEditorProps) {
+  const { t } = useTranslation("learning");
+  const { row } = props;
+  const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  return (
+    <li className="panel learning-panel attendance-entry">
+      <h4 id={headingId} ref={heading} tabIndex={-1}>
+        {row.name.trim() || t("attendanceUnnamedParticipant")}
+      </h4>
+      <p role="status">
+        {t("attendanceCurrent")}:{" "}
+        {row.status ? t(`attendance${row.status}`) : t("unreported")}
+      </p>
+      <AttendanceFields
+        key={row.version}
+        {...props}
+        headingId={headingId}
+        restoreFocus={() => heading.current?.focus()}
+      />
+    </li>
+  );
+}
+
+function AttendanceFields({
+  course,
+  actor,
+  session,
+  row,
+  headingId,
+  restoreFocus,
+}: RowEditorProps & {
+  headingId: string;
+  restoreFocus: () => void;
 }) {
   const { t } = useTranslation("learning");
   const client = useQueryClient();
@@ -58,6 +89,7 @@ function RowEditor({
   );
   const [note, setNote] = useState(row.note);
   const [reason, setReason] = useState("");
+  const focusedSaveButton = useRef<HTMLButtonElement>(null);
   const save = useMutation({
     mutationFn: (status: AttendanceStatus) =>
       saveAttendance(
@@ -75,18 +107,20 @@ function RowEditor({
       await client.invalidateQueries({
         queryKey: attendanceRegisterKey(actor, course.id, session),
       });
+      // The confirmed version replaces the editor fields. Keep keyboard focus on this row.
+      if (
+        focusedSaveButton.current &&
+        (document.activeElement === focusedSaveButton.current ||
+          document.activeElement === document.body)
+      )
+        restoreFocus();
     },
   });
   const stale =
     save.isError && "code" in save.error && save.error.code === "PT409";
   return (
-    <li className="panel learning-panel">
-      <h4>{row.name}</h4>
-      <p>
-        {t("attendanceCurrent")}:{" "}
-        {row.status ? t(`attendance${row.status}`) : t("unreported")}
-      </p>
-      <div className="form-grid">
+    <>
+      <div className="attendance-fields">
         <Field id={`arrival-${row.user_id}`} label={t("arrivalTime")}>
           <input
             id={`arrival-${row.user_id}`}
@@ -128,7 +162,11 @@ function RowEditor({
           </Field>
         )}
       </div>
-      <div className="form-actions">
+      <div
+        className="form-actions attendance-actions"
+        role="group"
+        aria-labelledby={headingId}
+      >
         {(["present", "absent", "excused"] as const).map((status) => (
           <Button
             key={status}
@@ -140,7 +178,13 @@ function RowEditor({
               stale ||
               (row.version > 0 && reason.trim().length < 3)
             }
-            onClick={() => save.mutate(status)}
+            onClick={(event) => {
+              focusedSaveButton.current =
+                document.activeElement === event.currentTarget
+                  ? event.currentTarget
+                  : null;
+              save.mutate(status);
+            }}
           >
             {t(`attendance${status}`)}
           </Button>
@@ -169,7 +213,7 @@ function RowEditor({
           {t("refresh")}
         </Button>
       )}
-    </li>
+    </>
   );
 }
 
@@ -231,7 +275,10 @@ export function AttendancePanel({
       query.isSuccess &&
       Date.parse(query.data.starts_at) <= query.dataUpdatedAt);
   return (
-    <section className="panel learning-panel" aria-label={t("sessionRegister")}>
+    <section
+      className={`panel learning-panel${academy ? " academy-attendance-register" : ""}`}
+      aria-label={t("sessionRegister")}
+    >
       <h2>{t("sessionRegister")}</h2>
       <p>{t("sessionRegisterHelp")}</p>
       <Field id="attendance-session" label={t("attendanceSession")}>
@@ -258,19 +305,24 @@ export function AttendancePanel({
         <>
           <p>{t("attendanceZone", { zone: course.time_zone })}</p>
           {!query.data.rows.length && <p>{t("attendanceNoParticipants")}</p>}
-          <ul className="learning-resources">
+          <ul className="learning-resources attendance-entries">
             {query.data.rows.map((row) =>
               canEdit ? (
                 <RowEditor
-                  key={`${row.user_id}:${row.version}`}
+                  key={`${session}:${row.user_id}`}
                   course={course}
                   actor={actor}
                   session={session}
                   row={row}
                 />
               ) : (
-                <li key={row.user_id} className="panel learning-panel">
-                  <h4>{row.name}</h4>
+                <li
+                  key={row.user_id}
+                  className="panel learning-panel attendance-entry"
+                >
+                  <h4>
+                    {row.name.trim() || t("attendanceUnnamedParticipant")}
+                  </h4>
                   <p>
                     {t("attendanceCurrent")}:{" "}
                     {row.status
@@ -381,8 +433,9 @@ export function AttendancePanel({
           <ul>
             {query.data.history.map((item) => (
               <li key={item.id}>
-                {query.data?.rows.find((row) => row.user_id === item.user_id)
-                  ?.name ?? t("participant")}{" "}
+                {query.data?.rows
+                  .find((row) => row.user_id === item.user_id)
+                  ?.name.trim() || t("attendanceUnnamedParticipant")}{" "}
                 · {dateTime(item.created_at, i18n.language, course.time_zone)} ·{" "}
                 {item.reason}
               </li>

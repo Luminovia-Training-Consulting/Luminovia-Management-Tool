@@ -369,6 +369,30 @@ it("opens the course hub without activating the full edition and reuses scoped a
   );
 });
 
+it("keeps keyboard focus in the course schedule when adding and removing draft sessions", async () => {
+  fake.canCreateDraft = true;
+  open("/learning");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Create course draft", { exact: true }),
+  );
+  const first = within(screen.getByRole("group", { name: "Session 1" }));
+  const firstStart = first.getByLabelText("Start", { exact: true });
+  fireEvent.change(firstStart, { target: { value: "2039-01-02T09:00" } });
+
+  const add = screen.getByRole("button", { name: "Add session" });
+  add.focus();
+  await user.keyboard("{Enter}");
+  const second = within(screen.getByRole("group", { name: "Session 2" }));
+  expect(second.getByLabelText("Start", { exact: true })).toHaveFocus();
+
+  second.getByRole("button", { name: "Remove session 2" }).focus();
+  await user.keyboard("{Enter}");
+  expect(screen.queryByRole("group", { name: "Session 2" })).toBeNull();
+  expect(firstStart).toHaveFocus();
+  expect(firstStart).toHaveValue("2039-01-02T09:00");
+});
+
 it("creates an academy draft from the selected company and preserves its request on a failed reply", async () => {
   fake.canCreateDraft = true;
   open("/learning");

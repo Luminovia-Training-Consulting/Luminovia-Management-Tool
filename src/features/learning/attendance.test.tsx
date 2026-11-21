@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -92,6 +93,7 @@ const view = (value = course, academy?: "active" | "grace") =>
 
 beforeEach(() => {
   fake.register.starts_at = new Date(Date.now() - 3_600_000).toISOString();
+  fake.register.rows[0].name = "Fictional Learner";
   fake.register.rows[0].status = null;
   fake.register.rows[0].note = "";
   fake.register.rows[0].version = 0;
@@ -136,6 +138,44 @@ it("requires a correction reason and interprets arrival in the course time zone"
   );
 });
 afterEach(cleanup);
+
+it("announces the confirmed status and keeps keyboard focus on the participant's register row", async () => {
+  fake.save.mockImplementation(async () => {
+    fake.register = {
+      ...fake.register,
+      rows: [{ ...fake.register.rows[0], status: "present", version: 1 }],
+    };
+    return { status: "present", version: 1, minutes: 60 };
+  });
+  view(course, "active");
+  const heading = await screen.findByRole("heading", {
+    name: "Fictional Learner",
+  });
+  const actions = within(
+    screen.getByRole("group", { name: "Fictional Learner" }),
+  );
+  actions.getByRole("button", { name: "attendancepresent" }).focus();
+  await userEvent.keyboard("{Enter}");
+
+  await waitFor(() => expect(heading).toHaveFocus());
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "attendanceCurrent: attendancepresent",
+  );
+  expect(screen.getByLabelText("attendanceCorrectionReason")).toHaveValue("");
+});
+
+it("labels an enrolled participant whose displayed name is unavailable", async () => {
+  fake.register.rows[0].name = " ";
+  view(course, "active");
+  expect(
+    await screen.findByRole("heading", {
+      name: "attendanceUnnamedParticipant",
+    }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("group", { name: "attendanceUnnamedParticipant" }),
+  ).toBeVisible();
+});
 
 it("allows only confirmed manual academy edits and blocks repeat submissions after a version conflict", async () => {
   fake.save.mockRejectedValue({ code: "PT409", message: "Attendance changed" });

@@ -266,6 +266,7 @@ const pairs: Record<string, [string, string]> = {
     "Only authorised teaching staff, course management and company contacts can see this register. Every change is versioned and recorded.",
   ],
   attendanceSession: ["Kurstermin", "Course session"],
+  attendanceUnnamedParticipant: ["Teilnehmende Person", "Participant"],
   attendanceCurrent: ["Aktueller Status", "Current status"],
   attendancepresent: ["Anwesend", "Present"],
   attendanceabsent: ["Abwesend", "Absent"],

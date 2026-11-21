@@ -1,3 +1,4 @@
+/** Online draft form for the licensed academy's local courses. */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +27,7 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
   const [sessions, setSessions] = useState(() => [crypto.randomUUID()]);
   const [invalid, setInvalid] = useState(false);
   const lastRequest = useRef<{ content: string; id: string }>(undefined);
+  const sessionToFocus = useRef<string>(undefined);
   const options = useQuery<ReturnType<typeof academyDraftOptions.parse>>({
     queryKey: [
       "academy-draft-options",
@@ -114,7 +116,7 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
   if (!options.data) return <Loading />;
   const disabled = save.isPending || options.isFetching;
   return (
-    <details className="panel">
+    <details className="panel academy-draft">
       <summary>{t("academyCreateDraft")}</summary>
       <form onSubmit={submit}>
         <Field
@@ -148,7 +150,7 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
         {!options.data.organisations.length && (
           <Notice>{t("academyNoOrganisation")}</Notice>
         )}
-        <label className="toggle-line">
+        <label className="checkbox-label">
           <input
             type="checkbox"
             checked={newTemplate}
@@ -219,7 +221,7 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
           <input id="academy-draft-venue" name="venue" maxLength={500} />
         </Field>
         {sessions.map((id, index) => (
-          <fieldset key={id}>
+          <fieldset key={id} className="academy-draft-session">
             <legend>{t("sessionNumber", { number: index + 1 })}</legend>
             <Field id={`start-${id}`} label={t("academySessionStart")}>
               <input
@@ -227,6 +229,12 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
                 name={`start-${id}`}
                 type="datetime-local"
                 required
+                ref={(input) => {
+                  if (input && sessionToFocus.current === id) {
+                    sessionToFocus.current = undefined;
+                    input.focus();
+                  }
+                }}
               />
             </Field>
             <Field id={`end-${id}`} label={t("academySessionEnd")}>
@@ -241,9 +249,12 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() =>
-                  setSessions((items) => items.filter((item) => item !== id))
-                }
+                onClick={() => {
+                  // Keep focus in the schedule after its focused row unmounts.
+                  sessionToFocus.current =
+                    sessions[index + 1] ?? sessions[index - 1];
+                  setSessions((items) => items.filter((item) => item !== id));
+                }}
               >
                 {t("academyRemoveSession", { number: index + 1 })}
               </Button>
@@ -256,14 +267,16 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
         {save.isError && (
           <Notice kind="error">{t("academyDraftFailed")}</Notice>
         )}
-        <div className="form-actions">
+        <div className="form-actions academy-draft-actions">
           <Button
             type="button"
             variant="secondary"
             disabled={sessions.length >= 60 || save.isPending}
-            onClick={() =>
-              setSessions((items) => [...items, crypto.randomUUID()])
-            }
+            onClick={() => {
+              const id = crypto.randomUUID();
+              sessionToFocus.current = id;
+              setSessions((items) => [...items, id]);
+            }}
           >
             {t("academyAddSession")}
           </Button>
