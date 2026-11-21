@@ -10,7 +10,6 @@ import { JobBriefing } from "./briefing";
 import { JobRelatedNavigation } from "./related-navigation";
 import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
-import { JobDiscovery } from "./discovery";
 import { jobDetailQuery } from "./discovery-api";
 import { ResourceComments } from "../comments/comments";
 import { AssignmentAmendments } from "../changes/changes";
@@ -25,10 +24,10 @@ import {
   userRolesQuery,
 } from "../../lib/queries";
 import { useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, NavLink, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, CheckCircle2, MapPin } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronLeft, MapPin } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
@@ -41,13 +40,18 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
-import { BackLink } from "../../app/shell";
 
-export { JobCard } from "./card";
-
-/** Delegate URL filters, private saved views and bounded server paging to JobDiscovery. */
-export function Jobs() {
-  return <JobDiscovery />;
+/** Return from a job detail view to the job list. */
+function BackLink() {
+  const { t } = useTranslation();
+  return (
+    <Button variant="ghost" asChild>
+      <NavLink to="/jobs">
+        <ChevronLeft size={18} />
+        {t("back")}
+      </NavLink>
+    </Button>
+  );
 }
 
 /** Display own accepted terms and request new allocation only through the atomic claim RPC. */

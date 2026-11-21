@@ -21,7 +21,6 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
-  ChevronLeft,
   FileCheck2,
   FolderOpen,
   GraduationCap,
@@ -83,8 +82,6 @@ import {
   saveUiPreferences,
 } from "../lib/ui-preferences-api";
 import { uiLocalChangeEvent } from "../lib/preferences";
-
-export { Preferences } from "../components/preferences";
 
 /**
  * Render private navigation and the actor-scoped tour; confirm sign-out before clearing private
@@ -760,18 +757,5 @@ export function Shell() {
           document.body,
         )}
     </div>
-  );
-}
-
-/** Return from a job detail view to the job list. */
-export function BackLink() {
-  const { t } = useTranslation();
-  return (
-    <Button variant="ghost" asChild>
-      <NavLink to="/jobs">
-        <ChevronLeft size={18} />
-        {t("back")}
-      </NavLink>
-    </Button>
   );
 }

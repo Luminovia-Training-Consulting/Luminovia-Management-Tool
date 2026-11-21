@@ -24,7 +24,7 @@ import {
   profileQuery,
   userRolesQuery,
 } from "../../lib/queries";
-import { JobCard } from "../jobs/jobs";
+import { JobCard } from "../jobs/card";
 import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { dateTime, validZone } from "../../lib/dates";
@@ -62,9 +62,8 @@ export function Dashboard() {
       />
     );
   // Counts are authoritative aggregates, not the length of a truncated preview.
-  const availableJobs = jobs.data?.suggestions ?? [];
+  const suggested = jobs.data?.suggestions ?? [];
   const matching = teaching && jobs.data?.matching;
-  const suggested = availableJobs;
   const next = jobs.data?.next_assignments ?? [];
   const zone =
     profile.data?.time_zone && validZone(profile.data.time_zone)

@@ -8,7 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "../../lib/i18n";
-import { JobDetail, Jobs } from "./jobs";
+import { JobDetail } from "./jobs";
+import { JobDiscovery } from "./discovery";
 import {
   filtersFromParams,
   jobDetailQuery,
@@ -129,7 +130,7 @@ function setup(
         <Routes>
           <Route
             path={list ? "/jobs" : "/jobs/:id"}
-            element={list ? <Jobs /> : <JobDetail />}
+            element={list ? <JobDiscovery /> : <JobDetail />}
           />
         </Routes>
       </MemoryRouter>

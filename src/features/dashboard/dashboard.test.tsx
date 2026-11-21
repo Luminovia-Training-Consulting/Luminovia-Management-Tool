@@ -37,11 +37,6 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
 vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
-// Exercise the real lightweight card and its restricted-price contract without
-// importing unrelated marketplace detail mutations into dashboard tests.
-vi.mock("../jobs/jobs", async () => ({
-  JobCard: (await import("../jobs/card")).JobCard,
-}));
 
 const clients: QueryClient[] = [];
 

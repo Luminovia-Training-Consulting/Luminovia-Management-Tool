@@ -10,7 +10,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { Preferences } from "./shell";
+import { Preferences } from "../components/preferences";
 import "../lib/i18n";
 
 afterEach(() => {

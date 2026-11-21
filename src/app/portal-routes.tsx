@@ -12,14 +12,16 @@ import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
 import { AdminNavigation } from "../features/admin/navigation";
-import { Preferences, Shell } from "./shell";
+import { Shell } from "./shell";
+import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
 import { isConfigured } from "../lib/supabase";
 import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { ChangeRequestsPage } from "../features/changes/changes";
-import { JobDetail, Jobs } from "../features/jobs/jobs";
+import { JobDetail } from "../features/jobs/jobs";
+import { JobDiscovery } from "../features/jobs/discovery";
 import { ProfilePage } from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
@@ -238,7 +240,7 @@ export default function PortalRoutes() {
         <Route element={<Shell />}>
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<WelcomeGuidePage />} />
-          <Route path="jobs" element={<Jobs />} />
+          <Route path="jobs" element={<JobDiscovery />} />
           <Route path="jobs/:id" element={<JobDetailRoute />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="chats" element={<ChatPage />} />
