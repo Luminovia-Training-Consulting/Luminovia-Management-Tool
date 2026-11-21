@@ -404,7 +404,7 @@ await withTestDatabase("replacement_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Replacing one position cannot reopen another position paused by an independent cancellation",
+        "Replacing one position retains the independently reopened position after cancellation",
         async () => {
             const c = await create(2),
                 other = JSON.parse(
@@ -416,17 +416,17 @@ await withTestDatabase("replacement_test", async ({sql, actor}) => {
             assert.equal(other.status, "confirmed");
             await actor(
                 second,
-                `select public.cancel_job_assignment('${other.claim_id}','Fictional paused second position','${randomUUID()}')`,
+                `select public.cancel_job_assignment('${other.claim_id}','Fictional cancellation of second position','${randomUUID()}')`,
             );
             assert.equal(
                 await sql(`select status from public.jobs where id='${c.job}'`),
-                "draft",
+                "published",
             );
             const offer = await request(c.claim);
             assert.equal((await take(offer, c.terms)).status, "confirmed");
             assert.equal(
                 await sql(`select status from public.jobs where id='${c.job}'`),
-                "draft",
+                "published",
             );
             assert.equal(
                 await sql(

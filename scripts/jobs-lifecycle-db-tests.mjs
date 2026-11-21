@@ -125,7 +125,7 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
         },
     );
     await check(
-        "Cancellation preserves accepted money/terms and interval rows, releases calendar and revokes course chat",
+        "Eligible cancellation reopens the job, preserves accepted evidence, releases calendar and revokes course chat",
         async () => {
             const job = await create(),
                 c = await claim(job);
@@ -158,7 +158,7 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
             );
             assert.equal(
                 await sql(`select status from public.jobs where id='${job}'`),
-                "draft",
+                "published",
             );
             assert.equal(
                 await sql(
@@ -627,6 +627,10 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
             await sql(
                 `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${document}','${teacher}','${teacher}','personal','invoice','Fictional.pdf','application/pdf',100,'clean','${key}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,sha256,status) values('${version}','${document}','${teacher}','${key}',1,'${teacher}/${document}/${version}','Fictional.pdf','application/pdf',100,'${"1".repeat(64)}','clean');update public.documents set current_version_id='${version}' where id='${document}'`,
             );
+            // Current invoice rules require the entire fixture block to have ended.
+            await sql(`update public.assignment_sessions
+                set starts_at=starts_at-interval '25 years',ends_at=ends_at-interval '25 years'
+                where claim_id='${c2.claim_id}'`);
             await actor(
                 teacher,
                 `select public.submit_invoice('Fictional lifecycle invoice',array['${c2.claim_id}'::uuid],'${version}',current_date,current_date+7,'${randomUUID()}')`,
@@ -655,6 +659,9 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
             const job = await create(),
                 c = await claim(job),
                 submit = await prepareInvoice(c.claim_id);
+            await sql(`update public.assignment_sessions
+                set starts_at=starts_at-interval '30 years',ends_at=ends_at-interval '30 years'
+                where claim_id='${c.claim_id}'`);
             // A disposable-database-only barrier pauses AFTER submit_invoice checked
             // confirmed work. A correct shared actor lock keeps cancellation waiting.
             await sql(
@@ -708,7 +715,7 @@ await withTestDatabase("job_lifecycle", async ({sql, actor}) => {
                 other = await claim(otherJob),
                 laterSubmit = await prepareInvoice(other.claim_id);
             await cancel(other.claim_id);
-            await assert.rejects(laterSubmit(), /confirmed|accepted|eligible/i);
+            await assert.rejects(laterSubmit(), /invoice_review_required: cancelled assignment block/);
             assert.equal(
                 await sql(
                     `select count(*) from public.invoice_items where claim_id='${other.claim_id}'`,

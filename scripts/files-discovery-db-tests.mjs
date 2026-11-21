@@ -151,12 +151,12 @@ await withTestDatabase("files_discovery", async ({sql, actor}) => {
                     [" Linux ", "linux", "%_"],
                     " Preparation ",
                 ),
-                {tags: ["%_", "linux"], folder: "Preparation", version: 1},
+                {tags: ["%_", "Linux"], folder: "Preparation", version: 1},
             );
             const row = (await read(teacher, "'','linux','preparation'")).items[0];
             assert.equal(row.id, oldest);
             assert.equal(row.personal_version, 1);
-            assert.deepEqual(row.personal_tags, ["%_", "linux"]);
+            assert.deepEqual(row.personal_tags, ["%_", "Linux"]);
             assert.equal(row.personal_folder, "Preparation");
             assert.equal((await read(teacher, "'','%_'")).items[0].id, oldest);
             assert.equal(

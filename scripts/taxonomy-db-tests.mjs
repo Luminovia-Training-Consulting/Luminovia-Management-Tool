@@ -111,7 +111,7 @@ await withTestDatabase(
                 const topic = rows.find((row) => row.id === child);
                 assert.equal(topic.label_en, "EN Fictional child");
                 assert.equal(topic.parent_id, parent);
-                assert.deepEqual(topic.aliases, ["alternative", "Second"]);
+                assert.deepEqual(topic.aliases, ["Alternative", "Second"]);
                 assert.deepEqual(
                     await rpc(lecturer, "taxonomy_catalogue", ["%", "", false], "aal1"),
                     [],

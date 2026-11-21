@@ -356,6 +356,12 @@ try {
     await check(
         "Invoice submission rejects mixed currencies, someone else’s claims and unscanned/wrong-owner PDFs",
         async () => {
+            // Keep the earlier future/complete earnings witness intact, then
+            // finish the remaining fictional blocks before invoice checks.
+            await sql(`update public.assignment_sessions set starts_at=now()-interval '4 days',
+                ends_at=now()-interval '3 days' where claim_id='${claimAud}';
+                update public.assignment_sessions set starts_at=now()-interval '6 days',
+                ends_at=now()-interval '5 days' where claim_id='${claim2}';`);
             invoiceFile = await file(a, "invoice");
             const today = "2026-11-15",
                 due = "2026-12-15";
@@ -612,7 +618,7 @@ try {
             assert.equal(
                 (await rows(a, "finance_earnings")).find((r) => r.claim_id === claimAud)
                     .stage,
-                "expected",
+                "completed",
             );
             const another = await value(a, "submit_invoice", [
                 "AUD-002",

@@ -309,7 +309,7 @@ try {
         },
     );
     await check(
-        "Publication derives default50 private personal net and residual-conserving rounding without readable public rates",
+        "Publication applies the fixture’s private 31 percent rate and residual-conserving rounding without readable public rates",
         async () => {
             job = await value(
                 admin,
@@ -336,7 +336,7 @@ try {
             assert.equal(Number(publicJob.total_amount), 0);
             assert.equal(
                 Number((await quoteOffer(lecturer, job)).total_amount),
-                50.01,
+                31,
             );
             assert.ok(
                 !Object.keys(publicJob).some((k) =>
@@ -383,7 +383,7 @@ try {
                 await sql(
                     `select total_amount from public.job_claims where id='${accepted}'`,
                 ),
-                "60.00",
+                "37.20",
             );
             await assert.rejects(
                 value(admin, "set_job_commission", [job, 500, 500, null], "aal1"),
@@ -426,12 +426,12 @@ try {
             assert.equal(before.claims.length, 1);
             assert.equal(before.claims[0].id, confirmed.claim_id);
             assert.equal(before.claims[0].lecturer_id, first);
-            assert.equal(Number(before.claims[0].total_amount), 150);
+            assert.equal(Number(before.claims[0].total_amount), 93);
             assert.equal(before.claims[0].terms, "Immutable net compensation");
             assert.equal(before.revenue.length, 1);
             assert.equal(Number(before.revenue[0].gross_total_amount), 300);
-            assert.equal(Number(before.revenue[0].lecturer_net_total_amount), 150);
-            assert.equal(Number(before.revenue[0].platform_total_amount), 150);
+            assert.equal(Number(before.revenue[0].lecturer_net_total_amount), 93);
+            assert.equal(Number(before.revenue[0].platform_total_amount), 207);
             assert.equal(before.revenue[0].currency, "EUR");
             assert.equal(before.allocations.length, sessions.length);
             assert.equal(
@@ -594,7 +594,7 @@ try {
                 assert.equal(result.status, "confirmed");
                 assert.ok(
                     (await rows(who, "finance_earnings")).some(
-                        (x) => x.job_id === id && Number(x.total_amount) === 200,
+                        (x) => x.job_id === id && Number(x.total_amount) === 124,
                     ),
                 );
                 const doc = randomUUID(),
@@ -603,6 +603,8 @@ try {
                 await sql(
                     `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${doc}','${who}','${who}','personal','invoice','Invoice.pdf','application/pdf',100,'clean','${key}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256) values('${version}','${doc}','${who}','${key}',1,'${who}/${version}','Invoice.pdf','application/pdf',100,'clean','${"1".repeat(64)}');update public.documents set current_version_id='${version}' where id='${doc}'`,
                 );
+                await sql(`update public.assignment_sessions set starts_at=now()-interval '2 days',
+                    ends_at=now()-interval '1 day' where claim_id='${result.claim_id}'`);
                 const invoice = await value(who, "submit_invoice", [
                     `OWN-NET-${index}`,
                     `{${result.claim_id}}`,
@@ -616,7 +618,7 @@ try {
                         (await rows(who, "invoice_records")).find((x) => x.id === invoice)
                             .total_amount,
                     ),
-                    200,
+                    124,
                 );
             }
             assert.equal(
@@ -664,7 +666,7 @@ try {
             );
             assert.equal(
                 Number((await rows(owner, "invoice_records"))[0].total_amount),
-                200,
+                124,
             );
             await assert.rejects(
                 actor(
@@ -709,7 +711,7 @@ try {
                     "Executed owner agreement",
                     version,
                     new Date(Date.now() - 86400000).toISOString(),
-                    new Date(Date.now() + 365 * 86400000).toISOString(),
+                    null,
                     "master",
                     null,
                     randomUUID(),

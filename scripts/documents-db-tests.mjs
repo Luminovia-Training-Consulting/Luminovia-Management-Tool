@@ -454,7 +454,7 @@ try {
             await sql(`update public.profiles set active=false where id='${owner}'`);
             await assert.rejects(
                 reserve(owner, {key: createKey}),
-                /Active login required/,
+                /insufficient_privilege/,
             );
         },
     );
