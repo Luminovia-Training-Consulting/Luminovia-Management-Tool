@@ -4,10 +4,12 @@
  */
 import {test} from "node:test";
 import assert from "node:assert/strict";
+import {once} from "node:events";
 import {mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync,} from "node:fs";
+import {createServer} from "node:http";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {cleanEnvironment, localUrl, migrationDigest, privateWrite, processIsOurs, readEnvFile, redact,} from "./runtime-lib.mjs";
+import {cleanEnvironment, localUrl, migrationDigest, privateWrite, processIsOurs, readEnvFile, redact, waitForHttp,} from "./runtime-lib.mjs";
 import {assertContainerBindings, assertNetworkDefinition, networkName,} from "./runtime-network.mjs";
 
 test("local Docker networking rejects public host bindings, extra networks and unowned resources", () => {
@@ -125,6 +127,36 @@ test("supervisor never treats an unrelated reused PID as its process", () => {
     );
     assert.equal(processIsOurs({pid: 1, session: "x"}), false);
 });
+
+test("local readiness checks require their own direct HTTP response", async (t) => {
+    const requests = [];
+    const server = createServer((request, response) => {
+        requests.push(request.url);
+        if (request.url === "/redirect")
+            response.writeHead(302, {Location: "/healthy"});
+        response.end();
+    });
+    const listening = once(server, "listening");
+    server.listen(0, "127.0.0.1");
+    await listening;
+    t.after(() => new Promise((resolve) => {
+        server.close(resolve);
+        server.closeAllConnections();
+    }));
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    await assert.rejects(
+        waitForHttp("https://remote.example.invalid/check", {timeoutMs: 0}),
+        /credential-free loopback HTTP URL/,
+    );
+    await assert.rejects(
+        waitForHttp(origin + "/redirect", {timeoutMs: 100}),
+        /Local service did not become ready/,
+    );
+    assert.deepEqual(requests, ["/redirect"]);
+    await waitForHttp(origin + "/healthy");
+    assert.deepEqual(requests, ["/redirect", "/healthy"]);
+});
+
 test("private environment writes preserve values and restrict filesystem permissions", () => {
     const path = mkdtempSync(join(tmpdir(), "portal-runtime-safety-"));
     try {

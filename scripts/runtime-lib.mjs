@@ -259,10 +259,14 @@ export async function waitForHttp(
     url,
     {timeoutMs = 45000, status = 200} = {},
 ) {
+    const target = localUrl(url, "Readiness URL");
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
         try {
-            const response = await fetch(url, {signal: AbortSignal.timeout(2000)});
+            const response = await fetch(target, {
+                redirect: "manual",
+                signal: AbortSignal.timeout(2000),
+            });
             if (response.status === status) return;
         } catch {
             /* not ready */
@@ -270,7 +274,7 @@ export async function waitForHttp(
         await delay(500);
     }
     throw new Error(
-        `Local service did not become ready at ${new URL(url).origin}.`,
+        `Local service did not become ready at ${target.origin}.`,
     );
 }
 
