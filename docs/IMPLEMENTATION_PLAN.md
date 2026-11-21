@@ -6,31 +6,31 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 
 | Items | Source status and ownership | Remaining evidence or work |
 | --- | --- | --- |
-| FC-01 | Separate Website repository | Translation and browser check belong to the Website workstream. |
-| FC-02, FC-03, FC-20 | Demo adds role-specific navigation and fictional course filtering. The dark palette and mobile navigation are updated. | Complete side-by-side comparison against authenticated portal role views. |
-| FC-04, FC-05 | Playwright suites exist for the operational journeys. | Run complete role journeys and inspect layout at 390, 768, 1280 and 1920 px. |
-| FC-06, FC-07, FC-12 | Calendar tools disclosure, subscription, export and offline schedule are present. | Confirm responsive boundaries and independent actions in the browser. |
-| FC-08, FC-09, FC-10 | Shared forum route, permission-gated Contracts link and account action layout are present. | Run navigation, keyboard and confirmation checks. |
-| FC-11, FC-13, FC-32 | Courses, company workspace and staff preview are present. | Check all role routes, deep links and preview versus actual permissions. |
-| FC-14, FC-15, FC-18, FC-19 | Individual compensation and role fallback, self-declared expertise and qualification gates are present. | Verify effective quotes, immutable snapshots and verification-required claims. |
-| FC-16, FC-17, FC-24 | Native password minimum, role authority and random profile User IDs are present. | Confirm native Auth 7/8 boundary, API role checks and retained upgrades. |
-| FC-21, FC-22 | Contract picker and staff PDF registration are present. | Verify actual scanner, exact file version, manager scope and UI. |
-| FC-23 | Admin mail transport and connection diagnostics are present. | Verify authorised provider delivery and monitor workers in the final operational phase. |
-| FC-25, FC-26, FC-27, FC-28, FC-29, FC-30 | Job subject filters, reopen flow, next-start sorting, claim locking, assigned projections and history filter are present. | Run SQL concurrency, notification and role browser cases. |
-| FC-31 | Private calendar colour preferences and event-source styles are present. | Validate persistence, actor privacy and contrast. |
-| FC-33 | Finance trends exist. | Verify each role projection and reconcile exact original-currency totals. |
-| FC-34, FC-35, FC-36, FC-37 | End-of-block invoice gate, direct link, review, due dates, priority and labelled states are present. | Run full invoice upload, eligibility, receipt, payment and reversal journeys. |
-| FC-38, FC-39, FC-40, FC-52, FC-53 | Company entitlement, retained summaries and scoped LMS guards exist. The participant search and roster changes pass targeted SQL. | Complete per-service off/on test matrix, active connection revocation, queued delivery and stale browser tests. |
-| FC-41, FC-42, FC-43, FC-44 | Participant account invitations, verified association, course membership and scoped workspace are present. | Complete native Auth, multi-company lifecycle, roster, learner route and online change tests. |
-| FC-45, FC-46 | Course groups and scanned version gateway exist. | Complete participant chat/posts, scoped audit view and live removal/revocation checks. |
-| FC-47 | The new course workspace welcome section stores append-only revisions and checks Premium on read and write. | Verify live publication across editors and enrolled participants in the browser. |
-| FC-48, FC-49 | Optional exam flag with versioning and exact clean PDFs for learners. Staff keys retain separate access. | Verify browser upload and full scanner/Storage acceptance. |
-| FC-50, FC-51 | Earlier attendance verification is present. Staff daily register and evidence work is in progress. | Complete role/browser and retained-data checks. |
-| FC-54 | Existing quiz, feedback and completion flows are connected to the Premium workspace. | Verify native learner browser, issuance and cross-company/retained-data cases. |
-| FC-55, FC-56, FC-57, FC-58 | Local verification and release runners exist. | Run final combined checks, retained-data restore and operational acceptance before proceeding with a real-user release. |
-| G7.1, G7.2 | Human username/email session exchange and own username management implemented. | Run native Auth and browser verification. Username-based recovery and integration credential management remain open. |
-| G7.3–G7.6 | Swagger route and OpenAPI download implemented for the account facade and selected Premium RPCs. | Complete typed contracts, compatibility, scoped keys, webhooks and the full API acceptance matrix. |
-| G8, WL-T01–WL-T15 | Dedicated customer installations are a follow-on product. | Edition policy, branding, installation, licences, customer-local operations and end-to-end proof remain open. |
+| FC-01 | The public Website's current `main` has the Jobs route and distinct company/founder LinkedIn targets. Footer LinkedIn labels are German in both locales. | Translate and browser-check in the separate Website workstream. This portal leaves the Website read-only. |
+| FC-02, FC-03, FC-20 | Demo uses role-specific navigation, fictional course filtering, updated dark palette and mobile navigation. The public desktop/mobile suite passed 14/14. | Complete side-by-side comparison against authenticated portal views. |
+| FC-04, FC-05 | Operational Playwright journeys and viewport fixtures exist. | Full authenticated role journeys still require a working local Supabase stack. |
+| FC-06, FC-07, FC-12 | Calendar tools disclosure, subscription, export and offline schedule are present. | Verify live responsive boundaries and independent actions in the browser. |
+| FC-08, FC-09, FC-10 | Shared forum route, permission-gated Contracts link and account action layout are present. | Verify live navigation, keyboard and confirmation cases. |
+| FC-11, FC-13, FC-32 | Courses, company workspace and staff preview are present. | Check authenticated role routes, deep links and preview versus actual permissions. |
+| FC-14, FC-15, FC-18, FC-19 | Individual compensation and role fallback, self-declared topics and qualification gates are present. | Complete the effective-quote, immutable snapshot and qualification-required claim acceptance. |
+| FC-16, FC-17, FC-24 | Eight-character new-password policy, role authority and random profile User IDs are present. | Confirm native Auth boundaries and retained upgrades. |
+| FC-21, FC-22 | Contract picker and staff PDF registration are present. | Verify actual scanner, exact file version and authorised browser paths. |
+| FC-23 | Admin mail transport and connection diagnostics are present. | Confirm provider delivery and monitored workers in final operational acceptance. |
+| FC-25–FC-30 | Job subject filters, reopen, next-start sort, claim locking, assigned projections and history are present. | Complete broader current SQL and native role-browser cases. |
+| FC-31 | Private calendar colour preferences and event-source styles are present. | Confirm live persistence, actor privacy and contrast. |
+| FC-33 | Company chart uses accepted immutable gross amounts grouped by original currency and company-local month. Its SQL tests pass. | Complete native role-browser reconciliation for company, lecturer and management. |
+| FC-34–FC-37 | End-of-block invoice gate, direct route, review form, due dates and accessible status are present. Three isolated invoice groups pass. | Full native PDF upload, approval, payment and reversal journeys remain pending. |
+| FC-38–FC-40, FC-52–FC-53 | Entitlement, retained summaries, audited admin course chat, scoped search and notification suppression are implemented. Local tests cover A OFF/B ON, queued email recheck, and the browser closing the workspace offline before reconnecting. | Validate active WebSocket revocation, native Storage bytes and real Push subscriptions. |
+| FC-41–FC-44 | Participant invitations, company association, enrolment, scoped workspace, own username and course inbox are present. | Confirm the complete native onboarding and multi-company lifecycle. |
+| FC-45–FC-46 | Text posts use current course chat membership. Current company contacts can read their own groups, and admin inspection is audited. Scanned file shares retain ownership and exact versions. | Course chat attachment sharing for participants and native revocation/file acceptance are open. |
+| FC-47 | The welcome section checks Premium and stores append-only revisions. The workspace also provides schedules, contacts and shared files. | Verify live publication in native staff/company and learner browsers. |
+| FC-48–FC-49 | Optional exam, scanned PDF visibility and separate staff answer keys are present. | Verify native exam upload, scanner and Storage acceptance. |
+| FC-50–FC-51 | Session register, PDF evidence and atomic, reviewed CSV import are implemented. PostgreSQL tests cover concurrent pause and invalid row rollback. | XLSX import and native role/file acceptance remain open. |
+| FC-54 | Existing quizzes, feedback and completion are connected to the gated Premium workspace. | Verify learner browser, issuance, byte delivery and retained data with native services. |
+| FC-55–FC-58 | Local verification and release tooling are present. Core suites and the public demo have evidence. | The complete local suite, native Auth/Storage/Realtime, retained-data restore and Hostinger readiness remain open. |
+| G7.1–G7.2 | Same-identity email/username sign-in, own alias management and native PKCE recovery adapter are implemented. Server integrations obtain a separate, expiring, rotated key for `courses.read`. | Run native Auth/Mailpit and native integration HTTP journeys. |
+| G7.3–G7.6 | Swagger lists reviewed account and business operations. The download also documents credential exchange and the company integration. A generated catalogue tracks the migrated public RPC inventory. | Complete typed parity across all product actions, published client acceptance, signed webhooks and delivery management. |
+| G8, WL-T01–WL-T15 | Dedicated customer installations are explicitly sequenced after core acceptance. | Edition policy, branding, installation, licences, customer-local operations and end-to-end proof remain open. |
 
 ## Premium LMS participant read boundary — 21 November 2026
 
@@ -39,7 +39,8 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 - [x] Correct the company enrolment roster read to check current Premium and caller scope in a stable snapshot; writes continue to lock and serialize with the company switch.
 - [x] Run the focused Premium database suite against a disposable Supabase PostgreSQL 17.12 instance. All six groups passed.
 - [x] Publish versioned course welcome content for permitted staff and company contacts, with read access for currently eligible learners and an entitlement check on each request. Two component and one SQL integration groups passed.
-- [ ] Finish the wider Premium LMS: participant course notifications, course chat posting and attachment delivery, direct API/realtime policy audit, complete learner browser journeys and current-head acceptance. Keep these paths closed until their resource checks and tests are complete.
+- [x] Connect scoped text chat, participant course notifications, attendance/PDF/CSV, course resources and optional exams using current role and Premium checks.
+- [ ] Complete participant chat attachments, live Realtime revocation, native PDF delivery, role browser journeys and final retained-data acceptance.
 
 ## Current-main browser CI repair — 18 November 2026
 
