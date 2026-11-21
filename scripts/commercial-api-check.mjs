@@ -37,6 +37,15 @@ async function checked(request, label) {
     return data;
 }
 
+/** Checks the gateway status and published schema for a reviewed commercial RPC. */
+async function checkedRpc(actor, name, label, args) {
+    const response = await actor.client.rpc(name, args);
+    const data = await checked(response, label);
+    assert.equal(response.status, 200, label);
+    assertRpcResponse(name, data);
+    return data;
+}
+
 /** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
     const email = `commercial-${name}-${suffix}@example.invalid`;
@@ -190,11 +199,12 @@ try {
         b = await fixture("other", "senior_lecturer"),
         admin = await fixture("manager", "admin");
     await assertPasswordOnly(admin.client);
-    const administratorContracts = await checked(
-        admin.client.rpc("contract_records", {p_all: true}),
+    await checkedRpc(
+        admin,
+        "contract_records",
         "Administrator reads contract records with current contracts.read permission",
+        {p_all: true},
     );
-    assert.ok(Array.isArray(administratorContracts));
     // Lecturers see themselves; management can use the bounded names-only picker with password-only Auth.
     for (const who of [a, b])
         assert.deepEqual(
@@ -347,10 +357,7 @@ try {
         ).error,
     );
     assert.deepEqual(
-        await checked(
-            b.client.rpc("contract_records"),
-            "Other senior personal contracts",
-        ),
+        await checkedRpc(b, "contract_records", "Other senior personal contracts"),
         [],
     );
     assert.equal((await download(b, contractDoc.id, version.id)).status, 403);
@@ -608,16 +615,13 @@ try {
     assert.equal(duplicate.status, 409);
     assert.equal(duplicate.error?.code, "23505");
     let record = (
-        await checked(a.client.rpc("invoice_records"), "Read own invoice")
+        await checkedRpc(a, "invoice_records", "Read own invoice")
     )[0];
     assert.equal(Number(record.total_amount), 300);
     assert.equal(record.currency, "EUR");
     assert.equal(record.due_on, due);
     assert.deepEqual(
-        await checked(
-            b.client.rpc("invoice_records"),
-            "Other senior private invoices",
-        ),
+        await checkedRpc(b, "invoice_records", "Other senior private invoices"),
         [],
     );
     assert.ok((await b.client.rpc("finance_earnings", {p_all: true})).error);
@@ -639,36 +643,40 @@ try {
         p_reference: "Fictional payment tracking reference",
         p_client_id: paymentKey,
     };
-    const firstPayment = await checked(
-        admin.client.rpc("record_invoice_payment", paymentArgs),
+    const firstPayment = await checkedRpc(
+        admin,
+        "record_invoice_payment",
         "Record partial tracking payment",
+        paymentArgs,
     );
     assert.equal(
-        await checked(
-            admin.client.rpc("record_invoice_payment", paymentArgs),
+        await checkedRpc(
+            admin,
+            "record_invoice_payment",
             "Retry tracking payment",
+            paymentArgs,
         ),
         firstPayment,
     );
-    assert.ok(
-        (
-            await admin.client.rpc("record_invoice_payment", {
-                ...paymentArgs,
-                p_amount: 201,
-                p_client_id: randomUUID(),
-            })
-        ).error,
-    );
-    await checked(
-        admin.client.rpc("record_invoice_payment", {
+    const overpaid = await admin.client.rpc("record_invoice_payment", {
+        ...paymentArgs,
+        p_amount: 201,
+        p_client_id: randomUUID(),
+    });
+    assert.equal(overpaid.status, 400);
+    assert.equal(overpaid.error?.code, "22023");
+    await checkedRpc(
+        admin,
+        "record_invoice_payment",
+        "Record final tracking payment",
+        {
             ...paymentArgs,
             p_amount: 200,
             p_client_id: randomUUID(),
-        }),
-        "Record final tracking payment",
+        },
     );
     record = (
-        await checked(a.client.rpc("invoice_records"), "Read paid invoice")
+        await checkedRpc(a, "invoice_records", "Read paid invoice")
     )[0];
     assert.equal(record.status, "paid");
     assert.equal(Number(record.paid_amount), 300);
@@ -685,27 +693,34 @@ try {
             .filter((row) => claims.includes(row.claim_id))
             .every((row) => row.stage === "expected"),
     );
-    await checked(
-        admin.client.rpc("void_invoice_payment", {
-            p_payment_id: firstPayment,
-            p_reason: "Corrected fictional tracking entry",
-        }),
-        "Audited correction retains original payment record",
-    );
+    const correction = await admin.client.rpc("void_invoice_payment", {
+        p_payment_id: firstPayment,
+        p_reason: "Corrected fictional tracking entry",
+    });
+    assert.equal(correction.status, 204);
+    assert.equal(correction.error, null);
+    assert.equal(correction.data, null);
     record = (
-        await checked(a.client.rpc("invoice_records"), "Read corrected invoice")
+        await checkedRpc(a, "invoice_records", "Read corrected invoice")
     )[0];
     assert.equal(record.status, "approved");
     assert.equal(Number(record.paid_amount), 200);
     assert.equal(
         (
-            await checked(
-                a.client.rpc("invoice_payments", {p_invoice_id: invoice}),
+            await checkedRpc(
+                a,
+                "invoice_payments",
                 "Audited payment history",
+                {p_invoice_id: invoice},
             )
         ).filter((p) => p.voided_at).length,
         1,
     );
+    const privatePayments = await b.client.rpc("invoice_payments", {
+        p_invoice_id: invoice,
+    });
+    assert.equal(privatePayments.status, 403);
+    assert.equal(privatePayments.error?.code, "42501");
     const replacement = pdf(
         "Future replacement must not modify accepted contract evidence.",
     );
@@ -715,10 +730,7 @@ try {
     assert.deepEqual(new Uint8Array(await oldDownload.arrayBuffer()), original);
     assert.equal(
         (
-            await checked(
-                a.client.rpc("contract_records"),
-                "Exact original contract version",
-            )
+            await checkedRpc(a, "contract_records", "Exact original contract version")
         )[0].document_version_id,
         version.id,
     );

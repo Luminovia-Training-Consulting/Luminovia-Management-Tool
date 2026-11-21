@@ -6,6 +6,7 @@ import {readdir, readFile} from "node:fs/promises";
 import {withMigrationReplayLock} from "./testing/database.mjs";
 import {randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 const container =
     process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal";
@@ -67,14 +68,22 @@ const value = (id, fn, args = [], aal) =>
         id,
         `select public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
         aal,
-    );
+    ).then((result) => {
+        if (fn === "record_invoice_payment") assertRpcResponse(fn, result);
+        return result;
+    });
 /** Aggregates public RPC rows into JSON under the checked caller identity. */
 const rows = (id, fn, args = [], aal) =>
     actor(
         id,
         `select coalesce(json_agg(x),'[]') from public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "number" || typeof x === "boolean" ? String(x) : quote(x))).join(",")}) x`,
         aal,
-    ).then(JSON.parse);
+    ).then((raw) => {
+        const result = JSON.parse(raw);
+        if (["contract_records", "invoice_records", "invoice_payments"].includes(fn))
+            assertRpcResponse(fn, result);
+        return result;
+    });
 const a = randomUUID(),
     b = randomUUID(),
     admin = randomUUID(),

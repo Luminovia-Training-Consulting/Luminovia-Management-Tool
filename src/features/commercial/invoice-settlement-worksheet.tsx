@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { money } from "../../lib/dates";
+import { FrameworkPaymentDatesFields } from "./framework-payment-dates-fields";
 import {
   calculateInvoiceSettlement,
   maximumSettlementUnits,
@@ -182,6 +183,7 @@ export function InvoiceSettlementWorksheet({
     <details className="invoice-settlement">
       <summary>{t("title")}</summary>
       <p>{t("scope")}</p>
+      <FrameworkPaymentDatesFields />
       <Field id={`${id}-zone`} label={t("zone")}>
         <input
           value={zone}

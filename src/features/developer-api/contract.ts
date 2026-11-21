@@ -6,6 +6,11 @@ import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts"
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
+import {
+  contractRecordsSchema,
+  invoicePaymentsSchema,
+  invoiceRecordsSchema,
+} from "./commercial-records-contract.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
@@ -631,6 +636,60 @@ const nativePaths = {
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,
+  "/rest/v1/rpc/contract_records": rpc(
+    "listContractRecords",
+    "Contracts",
+    "Read exact contract versions and receipt metadata",
+    "Active callers receive only their own records by default. Asking for all records requires contracts.manage or contracts.read. Historic drafts can have no file version or checksum. A receipt timestamp records acknowledgement of the file, while downloading its PDF remains separately authorised.",
+    { p_all: { type: ["boolean", "null"], default: false } },
+    z.toJSONSchema(contractRecordsSchema),
+    ["p_all"],
+  ),
+  "/rest/v1/rpc/invoice_records": rpc(
+    "listLecturerInvoiceRecords",
+    "Finance",
+    "Read invoice snapshots and their current tracked balance",
+    "Active callers receive their own invoices. Asking for all requires finance.manage. Original currency, PDF version, linked assignments and accepted totals come from the invoice. Paid amount sums only the non-voided ledger entries. Paid at is the latest recorded non-voided payment date, including partial payment.",
+    { p_all: { type: ["boolean", "null"], default: false } },
+    z.toJSONSchema(invoiceRecordsSchema),
+    ["p_all"],
+  ),
+  "/rest/v1/rpc/invoice_payments": rpc(
+    "listLecturerInvoicePayments",
+    "Finance",
+    "Read the payment history for one invoice",
+    "Requires invoice ownership or finance.manage. The list keeps voided entries, including the reversal time and reason. Only non-voided entries count toward the invoice balance.",
+    { p_invoice_id: uuid },
+    z.toJSONSchema(invoicePaymentsSchema),
+  ),
+  "/rest/v1/rpc/record_invoice_payment": rpc(
+    "recordLecturerInvoicePayment",
+    "Finance",
+    "Record an actual invoice payment",
+    "Requires finance.manage. Record an amount in the invoice currency, with no more than two decimal places, against an approved unpaid balance. The server rejects overpayment and dates more than five minutes in the future. Full balance marks the invoice paid. Repeat an unchanged payment with its client ID to receive the original payment identifier.",
+    {
+      p_invoice_id: uuid,
+      p_amount: { type: "number", exclusiveMinimum: 0 },
+      p_paid_at: { type: "string", format: "date-time" },
+      p_reference: { ...text, maxLength: 200 },
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/void_invoice_payment": voidRpc(
+    "voidLecturerInvoicePayment",
+    "Finance",
+    "Void a mistaken lecturer invoice payment record",
+    "Requires finance.manage. A reason is required. The history row remains visible and its amount no longer counts. The first successful reversal returns the invoice to approved. Repeating an already completed reversal preserves the first record.",
+    {
+      p_payment_id: uuid,
+      p_reason: {
+        ...text,
+        minLength: 1,
+        description: "Between 1 and 2000 characters after trimming.",
+      },
+    },
+  ),
   "/rest/v1/rpc/global_calendar_events": rpc(
     "listGlobalCalendarEvents",
     "Calendar",

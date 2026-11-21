@@ -3,6 +3,41 @@ import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
   title: ["Abrechnung berechnen", "Calculate settlement"],
+  paymentDates: ["Zahlungsfristen berechnen", "Calculate payment deadlines"],
+  paymentDatesScope: [
+    "Verwende diese Fristen, wenn der allgemeine Rahmenvertrag für den Auftrag gilt. Gib die Daten in der vereinbarten Auftragszeitzone ein. Berechne jeden Kundenzahlungseingang separat. Die Daten werden nicht gespeichert.",
+    "Use these deadlines when the standard framework governs the assignment. Enter calendar dates in the agreed assignment time zone. Calculate each customer receipt separately. These dates are not saved.",
+  ],
+  firstDelivered: [
+    "Erste tatsächlich erbrachte Einheit",
+    "First service unit actually delivered",
+  ],
+  lastAgreed: [
+    "Letzte vereinbarte Einheit laut Auftrag",
+    "Last agreed service unit in the assignment",
+  ],
+  customerReceipt: [
+    "Eingang der Stornozahlung des Kunden",
+    "Customer cancellation payment received",
+  ],
+  correctInvoice: [
+    "Eingang der korrekten Rechnung bei unberechtigter Kurzfristabsage",
+    "Correct invoice received for unauthorised short-notice cancellation",
+  ],
+  paymentDatesOrder: [
+    "Die letzte vereinbarte Einheit liegt vor der ersten erbrachten Einheit. Prüfe die Daten.",
+    "The last agreed unit precedes the first delivered unit. Check the dates.",
+  ],
+  deadline_final: ["Schlusszahlung bis", "Final payment by"],
+  deadline_interim: ["Abschlagszahlung bis", "Interim payment by"],
+  deadline_customer: [
+    "Kundenfinanzierte Stornozahlung bis",
+    "Customer-funded cancellation payment by",
+  ],
+  deadline_shortNotice: [
+    "Entschädigung für Kurzfristabsage bis",
+    "Short-notice cancellation payment by",
+  ],
   scope: [
     "Nutze den angenommenen Auftrag und die geprüften Belege. Erfasse einen Unterrichtstag nur einmal in der Zeitzone des Auftrags. Erfasse separat vereinbarte Prüfungsleistungen mit ihrer eigenen Referenz.",
     "Use the accepted assignment and verified evidence. Enter each teaching day once in the assignment time zone. Enter separately agreed assessment services with their own reference.",
