@@ -6,6 +6,7 @@ import {existsSync, readdirSync, readFileSync, statSync} from "node:fs";
 import {dirname, join, relative, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import ts from "typescript";
+import editionModules from "./edition-modules.json" with {type: "json"};
 
 const extensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json", ".css"];
 const script = /\.(?:tsx?|jsx?|mjs)$/;
@@ -79,6 +80,14 @@ export function auditFrontend(root) {
             `${relative(root, file)}:${ast.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
         /** Records relative source connections and reports unresolved references. */
         const registerImport = (node, specifier) => {
+            if (Object.hasOwn(editionModules, specifier)) {
+                for (const entry of Object.values(editionModules[specifier])) {
+                    const target = resolve(root, entry);
+                    if (existsSync(target)) imports.add(target);
+                    else unresolved.push({source: location(node), specifier: entry});
+                }
+                return;
+            }
             if (!specifier.startsWith(".")) return;
             const target = localTarget(file, specifier);
             if (!target) unresolved.push({source: location(node), specifier});
@@ -196,7 +205,7 @@ export function auditFrontend(root) {
 }
 
 /** Builds the compiler program and symbol resolution for actual source references. */
-function sourceProgram(root) {
+function sourceProgram(root, edition) {
     const files = filesUnder(join(root, "src")).filter(
         (file) =>
             script.test(file) && !excluded.test(relative(join(root, "src"), file)),
@@ -208,6 +217,14 @@ function sourceProgram(root) {
         jsx: ts.JsxEmit.ReactJSX,
         skipLibCheck: true,
         allowImportingTsExtensions: true,
+        ...(edition && {
+            paths: Object.fromEntries(
+                Object.entries(editionModules).map(([name, entries]) => [
+                    name,
+                    [resolve(root, entries[edition])],
+                ]),
+            ),
+        }),
     });
     const checker = program.getTypeChecker();
     const sources = program
@@ -220,7 +237,28 @@ function sourceProgram(root) {
  * inside its own module. Import/export declarations alone do not count as use. */
 
 export function scanRuntimeExports(root) {
-    const {checker, sources} = sourceProgram(root);
+    const exports = new Map();
+    // The same source import resolves to a different symbol in each build.
+    for (const edition of ["internal", "academy"]) {
+        for (const entry of scanEditionExports(root, edition)) {
+            const key = entry.file + ":" + entry.name;
+            const current = exports.get(key);
+            exports.set(key, current
+                ? {
+                    ...entry,
+                    local: Math.max(entry.local, current.local),
+                    external: Math.max(entry.external, current.external),
+                }
+                : entry);
+        }
+    }
+    return [...exports.values()].sort(
+        (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
+    );
+}
+
+function scanEditionExports(root, edition) {
+    const {checker, sources} = sourceProgram(root, edition);
     const tracked = new Map();
     /** Resolves aliases and shorthand references to the actual compiler symbol. */
     const symbol = (node) => {
@@ -298,16 +336,12 @@ export function scanRuntimeExports(root) {
 
         visit(source);
     }
-    return [...tracked.values()]
-        .map(({name, file, local, external}) => ({
-            name,
-            file: relative(root, file),
-            local,
-            external,
-        }))
-        .sort(
-            (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
-        );
+    return [...tracked.values()].map(({name, file, local, external}) => ({
+        name,
+        file: relative(root, file),
+        local,
+        external,
+    }));
 }
 
 /** Discover forwarding wrappers by symbols, so renamed imports/new domain helpers

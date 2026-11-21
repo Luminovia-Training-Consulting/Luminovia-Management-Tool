@@ -58,7 +58,9 @@ function matchingPaths(paths: Record<string, unknown>, terms: string[]) {
           .filter((part): part is string => typeof part === "string")
           .join(" ")
           .toLowerCase();
-        return terms.every((term) => searchable.includes(term));
+        return terms.every((term) =>
+          methods.has(term) ? term === method : searchable.includes(term),
+        );
       });
       if (!matches.length) return [];
       return [

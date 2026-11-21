@@ -232,6 +232,7 @@ function JobForm({
           requires_contract: values.requires_contract,
           claim_deadline: deadline,
           status: publish ? "published" : "draft",
+          ...(capacity > 1 ? { capacity } : {}),
           ...(gross
             ? { gross_amount: amount, gross_total_amount: total_amount }
             : { amount, total_amount }),
@@ -471,24 +472,21 @@ function JobForm({
           </fieldset>
         </>
       )}
-      {!courseRun && (
-        <Field
+      <Field
+        id="job-capacity"
+        label={lifeText("positions")}
+        hint={lifeText("perPositionHint")}
+        error={Boolean(errors.capacity)}
+      >
+        <input
           id="job-capacity"
-          label={lifeText("positions")}
-          hint={lifeText("perPositionHint")}
-          error={Boolean(errors.capacity)}
-        >
-          <input
-            id="job-capacity"
-            type="number"
-            min="1"
-            max="20"
-            step="1"
-            {...register("capacity", { valueAsNumber: true })}
-          />
-        </Field>
-      )}
-      <p className="muted">{lifeText("perPositionHint")}</p>
+          type="number"
+          min="1"
+          max="20"
+          step="1"
+          {...register("capacity", { valueAsNumber: true })}
+        />
+      </Field>
       <div className="form-row">
         <Field
           id="job-amount"

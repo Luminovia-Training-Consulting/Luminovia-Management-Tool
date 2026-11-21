@@ -183,6 +183,23 @@
   overflow-wrap: anywhere;
 }
 
+.invoice-exception fieldset {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0.75rem 0 0;
+  padding: clamp(0.75rem, 3vw, 1rem);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.invoice-exception fieldset > button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+
 .finance-trends {
   min-width: 0;
 }

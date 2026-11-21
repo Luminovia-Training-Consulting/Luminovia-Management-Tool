@@ -21,6 +21,7 @@ import i18n from "../../lib/i18n";
 import { FinancePage } from "./finance";
 import { commercialKeys } from "./api";
 import type { CommercialAccess, EarningRecord, InvoiceRecord } from "./types";
+import type { InvoiceException } from "./invoice-exception-schema";
 
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -40,6 +41,7 @@ const actor = "fictional-lecturer";
 const clients: QueryClient[] = [];
 let earnings: EarningRecord[];
 let reviewCandidates: Record<string, unknown>[];
+let exceptionalApprovals: InvoiceException[];
 let invoices: InvoiceRecord[];
 let access: CommercialAccess;
 
@@ -101,6 +103,7 @@ beforeEach(async () => {
   };
   earnings = [earning("eur-a"), earning("aud-a", "AUD")];
   reviewCandidates = [];
+  exceptionalApprovals = [];
   invoices = [invoice()];
   state.rpc.mockReset();
   state.mutate
@@ -130,6 +133,8 @@ beforeEach(async () => {
       return Promise.resolve({ data: earnings, error: null });
     if (name === "my_invoice_review_candidates")
       return Promise.resolve({ data: reviewCandidates, error: null });
+    if (name === "my_invoice_exceptions")
+      return Promise.resolve({ data: exceptionalApprovals, error: null });
     if (name === "invoice_review_cases")
       return Promise.resolve({ data: [], error: null });
     if (name === "invoice_records")
@@ -271,6 +276,59 @@ const calls = (name: string) =>
   state.rpc.mock.calls.filter(([endpoint]) => endpoint === name);
 
 describe("invoice confirmation and safe retry", () => {
+  it("submits an approved exception using its scanned PDF and fixed due date", async () => {
+    const exception = {
+      id: "3bc476a0-e8d7-4b16-9ed2-09068e1fd313",
+      claim_id: "18f8117f-e577-4a11-b5ef-4f21a5ff381c",
+      title: "Fictional reviewed assignment",
+      contract_version: 2,
+      amount: 85.2,
+      currency: "EUR",
+      due_on: "2030-03-02",
+      approved_at: "2030-03-01T15:00:00Z",
+    } as const;
+    exceptionalApprovals = [exception];
+    view();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Ausnahmerechnung einreichen",
+      }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", {
+        name: "Ausnahmerechnung einreichen",
+      }),
+    );
+    const due = dialog.getByLabelText("Fällig am");
+    expect(due).toHaveValue(exception.due_on);
+    expect(due).toHaveAttribute("readonly");
+    expect(dialog.getByText(/^85,20\s€$/)).toBeVisible();
+    expect(dialog.queryByRole("checkbox")).not.toBeInTheDocument();
+    await userEvent.type(dialog.getByLabelText("Rechnungsnummer"), "FIX-EX-1");
+    fireEvent.change(dialog.getByLabelText("Rechnungsdatum"), {
+      target: { value: "2030-03-10" },
+    });
+    const submit = dialog.getByRole("button", { name: "Rechnung einreichen" });
+    expect(submit).toBeDisabled();
+    await userEvent.upload(
+      dialog.getByLabelText("Rechnung als PDF"),
+      new File(["%PDF-1.7"], "reviewed.pdf", { type: "application/pdf" }),
+    );
+    await dialog.findByText(/PDF geprüft und bereit/);
+    await userEvent.click(submit);
+    await waitFor(() =>
+      expect(calls("submit_exception_invoice")).toHaveLength(1),
+    );
+    expect(calls("submit_invoice")).toHaveLength(0);
+    expect(calls("submit_exception_invoice").at(0)?.[1]).toEqual({
+      p_number: "FIX-EX-1",
+      p_document_version_id: "uploaded-immutable-version",
+      p_issued_on: "2030-03-10",
+      p_exception_id: exception.id,
+      p_client_id: expect.any(String),
+    });
+  });
+
   it("submits an eligible assignment from a stale deep link and uses the changed issue date for the default term", async () => {
     view(["/finance?claim=unavailable-assignment"]);
     const { fields, submit } = await invoiceForm({ open: false });

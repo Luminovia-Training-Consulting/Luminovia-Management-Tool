@@ -57,6 +57,8 @@ import {
 import type { EarningRecord, InvoicePayment, InvoiceRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import { InvoiceReviewQueue, MyInvoiceReviewRequests } from "./invoice-review";
+import { MyInvoiceExceptions } from "./invoice-exception";
+import type { InvoiceException } from "./invoice-exception-schema";
 import { FinanceTrendChart } from "./finance-trend";
 import { InvoiceLabels } from "./invoice-labels";
 import { RevenuePanel } from "./revenue";
@@ -86,17 +88,22 @@ function SubmitInvoice({
   actor,
   zone,
   initialClaimId,
+  exception,
   onDone,
 }: {
   actor: string;
   zone: string;
   initialClaimId?: string;
+  exception?: InvoiceException;
   onDone: () => void;
 }) {
   const { t, i18n } = useTranslation("commercial");
   const online = useOnline();
   const client = useQueryClient();
-  const earnings = useQuery(earningsQuery(actor, false));
+  const earnings = useQuery({
+    ...earningsQuery(actor, false),
+    enabled: !exception,
+  });
   const [selection, setSelection] = useState<string[] | null>(null);
   const [document, setDocument] = useState<PortalDocument | null>(null);
   const [invalidDate, setInvalidDate] = useState(false);
@@ -138,8 +145,9 @@ function SubmitInvoice({
       : []);
   const rows = eligible.filter((row) => selected.includes(row.claim_id));
   const selectionChanged = rows.length !== selected.length;
-  const currency = rows[0]?.currency;
+  const currency = exception?.currency ?? rows[0]?.currency;
   const total =
+    exception?.amount ??
     rows.reduce(
       (sum, row) => sum + Math.round(Number(row.total_amount) * 100),
       0,
@@ -148,7 +156,8 @@ function SubmitInvoice({
     mutationFn: async (values: z.infer<typeof invoiceSchema>) => {
       requireOnline();
       setInvalidDate(false);
-      const due = resolveInvoiceDueDate(values.issued, values.due);
+      const due =
+        exception?.due_on ?? resolveInvoiceDueDate(values.issued, values.due);
       if (!due) {
         setInvalidDate(true);
         throw new Error("invalid_date");
@@ -156,26 +165,28 @@ function SubmitInvoice({
       if (
         !document ||
         document.owner_id !== actor ||
-        selectionChanged ||
-        !rows.length ||
-        rows.length > 50 ||
-        rows.some((row) => row.currency !== currency)
+        (!exception &&
+          (selectionChanged ||
+            !rows.length ||
+            rows.length > 50 ||
+            rows.some((row) => row.currency !== currency)))
       )
         throw new Error("invalid_selection");
       const payload = {
         p_number: values.number,
-        p_claim_ids: selected,
         p_document_version_id: document.current_version_id,
         p_issued_on: values.issued,
-        p_due_on: due,
       };
-      const signature = JSON.stringify(payload);
+      const routing = exception
+        ? { p_exception_id: exception.id }
+        : { p_claim_ids: selected, p_due_on: due };
+      const signature = JSON.stringify({ ...payload, ...routing });
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("submit_invoice", {
-        ...payload,
-        p_client_id: retry.current.key,
-      });
+      const { data, error } = await db().rpc(
+        exception ? "submit_exception_invoice" : "submit_invoice",
+        { ...payload, ...routing, p_client_id: retry.current.key },
+      );
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
     onSuccess: async () => {
@@ -192,16 +203,18 @@ function SubmitInvoice({
           ? error.message
           : "";
       setSubmissionError(
-        message.includes("invoice_review_required")
-          ? "invoiceReviewRequired"
-          : message.includes("invoice_not_ready")
-            ? "invoiceNotReady"
-            : "failed",
+        exception && error && "code" in error && error.code === "PT409"
+          ? "invoiceExceptionConflict"
+          : message.includes("invoice_review_required")
+            ? "invoiceReviewRequired"
+            : message.includes("invoice_not_ready")
+              ? "invoiceNotReady"
+              : "failed",
       );
     },
   });
-  if (earnings.isPending) return <Loading />;
-  if (earnings.isError)
+  if (!exception && earnings.isPending) return <Loading />;
+  if (!exception && earnings.isError)
     return <ErrorState retry={() => void earnings.refetch()} />;
   return (
     <form
@@ -241,7 +254,7 @@ function SubmitInvoice({
           label={t("due")}
           error={Boolean(form.formState.errors.due)}
           hint={
-            defaultDue
+            !exception && defaultDue
               ? t("invoiceDueDefault", {
                   date: DateTime.fromISO(defaultDue, { zone: "UTC" })
                     .setLocale(i18n.language)
@@ -250,91 +263,116 @@ function SubmitInvoice({
               : undefined
           }
         >
-          <input
-            id="invoice-due"
-            type="date"
-            {...form.register("due")}
-            min={issued}
-            disabled={submit.isPending}
-          />
+          {exception ? (
+            <input
+              id="invoice-due"
+              type="date"
+              value={exception.due_on}
+              readOnly
+            />
+          ) : (
+            <input
+              id="invoice-due"
+              type="date"
+              {...form.register("due")}
+              min={issued}
+              disabled={submit.isPending}
+            />
+          )}
         </Field>
       </div>
-      <fieldset className="commercial-claim-picker">
-        <legend>{t("chooseClaims")}</legend>
-        <p className="muted commercial-small">
-          {t("oneCurrency")} {t("maxClaims")}
+      {exception ? (
+        <p>
+          <strong>{exception.title}</strong> ·{" "}
+          {t("invoiceExceptionContractVersion", {
+            version: exception.contract_version,
+          })}
         </p>
-        {selectionChanged && (
-          <Notice>
-            {t("invoiceSelectionChanged")}{" "}
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={submit.isPending}
-              onClick={() => setSelection(rows.map((row) => row.claim_id))}
+      ) : (
+        <fieldset className="commercial-claim-picker">
+          <legend>{t("chooseClaims")}</legend>
+          <p className="muted commercial-small">
+            {t("oneCurrency")} {t("maxClaims")}
+          </p>
+          {selectionChanged && (
+            <Notice>
+              {t("invoiceSelectionChanged")}{" "}
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={submit.isPending}
+                onClick={() => setSelection(rows.map((row) => row.claim_id))}
+              >
+                {t("invoiceRemoveUnavailable")}
+              </Button>
+            </Notice>
+          )}
+          {reviewRequired.map((row) => (
+            <p
+              className="commercial-small muted"
+              key={`review-${row.claim_id}`}
             >
-              {t("invoiceRemoveUnavailable")}
-            </Button>
-          </Notice>
-        )}
-        {reviewRequired.map((row) => (
-          <p className="commercial-small muted" key={`review-${row.claim_id}`}>
-            {row.title}: {t("invoiceReviewRequired")}
-          </p>
-        ))}
-        {eligible.length ? (
-          eligible.map((row) => (
-            <label className="commercial-claim" key={row.claim_id}>
-              <input
-                type="checkbox"
-                checked={selected.includes(row.claim_id)}
-                disabled={
-                  submit.isPending ||
-                  (!selected.includes(row.claim_id) &&
-                    ((Boolean(currency) && row.currency !== currency) ||
-                      selected.length >= 50))
-                }
-                onChange={(event) =>
-                  setSelection(
-                    event.target.checked
-                      ? [...selected, row.claim_id]
-                      : selected.filter((id) => id !== row.claim_id),
-                  )
-                }
-              />
-              <span>
-                {row.title}
-                <small>
-                  {row.customer_name} ·{" "}
-                  {dateTime(row.starts_at, i18n.language, zone)}
-                </small>
-              </span>
-              <strong>
-                {money(Number(row.total_amount), row.currency, i18n.language)}
-              </strong>
-            </label>
-          ))
-        ) : (
-          <p>{t("noEligibleClaims")}</p>
-        )}
-        {notReady.map((row) => (
-          <p
-            className="commercial-small muted"
-            key={`not-ready-${row.claim_id}`}
-          >
-            {row.title}: {t("invoiceNotReady")}{" "}
-            {row.invoice_eligible_at &&
-              dateTime(row.invoice_eligible_at, i18n.language, zone)}
-          </p>
-        ))}
-      </fieldset>
+              {row.title}: {t("invoiceReviewRequired")}
+            </p>
+          ))}
+          {eligible.length ? (
+            eligible.map((row) => (
+              <label className="commercial-claim" key={row.claim_id}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(row.claim_id)}
+                  disabled={
+                    submit.isPending ||
+                    (!selected.includes(row.claim_id) &&
+                      ((Boolean(currency) && row.currency !== currency) ||
+                        selected.length >= 50))
+                  }
+                  onChange={(event) =>
+                    setSelection(
+                      event.target.checked
+                        ? [...selected, row.claim_id]
+                        : selected.filter((id) => id !== row.claim_id),
+                    )
+                  }
+                />
+                <span>
+                  {row.title}
+                  <small>
+                    {row.customer_name} ·{" "}
+                    {dateTime(row.starts_at, i18n.language, zone)}
+                  </small>
+                </span>
+                <strong>
+                  {money(Number(row.total_amount), row.currency, i18n.language)}
+                </strong>
+              </label>
+            ))
+          ) : (
+            <p>{t("noEligibleClaims")}</p>
+          )}
+          {notReady.map((row) => (
+            <p
+              className="commercial-small muted"
+              key={`not-ready-${row.claim_id}`}
+            >
+              {row.title}: {t("invoiceNotReady")}{" "}
+              {row.invoice_eligible_at &&
+                dateTime(row.invoice_eligible_at, i18n.language, zone)}
+            </p>
+          ))}
+        </fieldset>
+      )}
       {currency && (
         <p className="commercial-selected-total">
-          {t("selectedTotal")}
+          {exception
+            ? t("invoiceExceptionAmount", { currency })
+            : t("selectedTotal")}
           <strong>{money(total, currency, i18n.language)}</strong>
         </p>
       )}
-      <p className="commercial-small muted">{t("invoiceBasis")}</p>
+      {!exception && (
+        <p className="commercial-small muted">{t("invoiceBasis")}</p>
+      )}
       <CommercialPdfUpload
         kind="invoice"
         ownerId={actor}
@@ -348,8 +386,7 @@ function SubmitInvoice({
             !online ||
             submit.isPending ||
             !document ||
-            !rows.length ||
-            selectionChanged
+            (!exception && (!rows.length || selectionChanged))
           }
         >
           {t("invoiceSave")}
@@ -980,6 +1017,8 @@ export function FinancePage() {
     enabled: !access.isPending,
   });
   const [openedInvoiceForm, setSubmitting] = useState(false);
+  const [selectedException, setSelectedException] =
+    useState<InvoiceException | null>(null);
   const submitting = Boolean(
     canSubmit && (openedInvoiceForm || requestedClaimId),
   );
@@ -1010,7 +1049,13 @@ export function FinancePage() {
         description={t("financeIntro")}
         action={
           canSubmit && (
-            <Button disabled={!online} onClick={() => setSubmitting(true)}>
+            <Button
+              disabled={!online}
+              onClick={() => {
+                setSelectedException(null);
+                setSubmitting(true);
+              }}
+            >
               <Plus size={17} />
               {t("createInvoice")}
             </Button>
@@ -1027,6 +1072,15 @@ export function FinancePage() {
         />
       )}
       {canSubmit && <MyInvoiceReviewRequests actor={actor} zone={zone} />}
+      {canSubmit && (
+        <MyInvoiceExceptions
+          actor={actor}
+          onSubmit={(approval) => {
+            setSelectedException(approval);
+            setSubmitting(true);
+          }}
+        />
+      )}
       {manager && <InvoiceReviewQueue actor={actor} />}
       {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
       {manager && (
@@ -1270,23 +1324,30 @@ export function FinancePage() {
         open={submitting}
         onOpenChange={(open) => {
           setSubmitting(open);
+          if (!open) setSelectedException(null);
           if (!open && searchParams.has("claim")) {
             const next = new URLSearchParams(searchParams);
             next.delete("claim");
             setSearchParams(next, { replace: true });
           }
         }}
-        title={t("createInvoice")}
-        description={t("invoiceHint")}
+        title={t(
+          selectedException ? "submitInvoiceException" : "createInvoice",
+        )}
+        description={t(
+          selectedException ? "invoiceExceptionPdfHelp" : "invoiceHint",
+        )}
       >
         {submitting && (
           <SubmitInvoice
-            key={requestedClaimId ?? "manual"}
+            key={selectedException?.id ?? requestedClaimId ?? "manual"}
             actor={actor}
             zone={zone}
             initialClaimId={requestedClaimId}
+            exception={selectedException ?? undefined}
             onDone={() => {
               setSubmitting(false);
+              setSelectedException(null);
               if (searchParams.has("claim")) {
                 const next = new URLSearchParams(searchParams);
                 next.delete("claim");

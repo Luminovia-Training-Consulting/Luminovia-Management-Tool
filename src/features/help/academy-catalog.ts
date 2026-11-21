@@ -1,6 +1,6 @@
 import type { GuideModule } from "./guide";
 
-export const academyGuides: GuideModule[] = [
+const academyGuides: GuideModule[] = [
   {
     id: "academy-sign-in",
     path: "/login",

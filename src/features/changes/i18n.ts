@@ -10,7 +10,19 @@ const de = {
   intro:
     "Bestätigte Aufträge gemeinsam ändern: Original und Änderung bleiben nachvollziehbar erhalten.",
   scopeHint:
-    "Dieser Ablauf unterstützt noch nicht begonnene, noch nie abgerechnete Aufträge mit einem Dozierendenplatz und einem eigenen Kursdurchlauf. Für geteilte Kurse, bereits geleisteten Unterricht und Kunden-Bruttopreise ist eine gesonderte Abstimmung erforderlich.",
+    "Änderbar sind Aufträge, die noch nicht begonnen haben und noch nie abgerechnet wurden. Bei gemeinsamen Terminen müssen alle Plätze besetzt sein und alle betroffenen Lehrkräfte zustimmen.",
+  sharedScheduleHelp:
+    "Beim Einreichen erhält jede betroffene Lehrkraft einen eigenen Antrag mit denselben Terminen.",
+  sharedLecturer: "Lehrkraft für diese Zustimmung: {{name}}",
+  sharedProgress:
+    "Gemeinsame Termine: {{accepted}} von {{required}} Aufträgen bestätigt.",
+  "sharedState.awaiting_consent": "Weitere Zustimmungen stehen aus.",
+  "sharedState.ready": "Das Management kann alle Termine gemeinsam anwenden.",
+  "sharedState.blocked":
+    "Die gemeinsame Änderung wurde abgelehnt oder zurückgezogen.",
+  "sharedState.applied": "Die Termine wurden gemeinsam angewendet.",
+  sharedConflict:
+    "Die gemeinsamen Termine wurden nicht geändert. Prüfe die Zustimmungen, die betroffenen Aufträge und eine mögliche verkürzte Abmeldefrist.",
   new: "Änderungsantrag erstellen",
   edit: "Entwurf bearbeiten",
   overview: "Alle Änderungsanträge",
@@ -77,7 +89,7 @@ const de = {
   stale:
     "Antrag oder Originalauftrag wurden geändert. Lade den aktuellen Stand; eine veraltete Zustimmung wird nicht angewendet.",
   unsupported:
-    "Dieser Antrag erfüllt die Voraussetzungen nicht. Prüfe Termine und Angaben sowie bei Vergütungsentscheidungen den unveränderten Kundenpreis und die ursprüngliche Einheit. Bereits geleistete, abgerechnete oder geteilte Aufträge benötigen eine gesonderte Abstimmung.",
+    "Dieser Antrag erfüllt die Voraussetzungen nicht. Prüfe Termine und Angaben sowie bei Vergütungsentscheidungen den Kundenpreis und die ursprüngliche Einheit. Bereits geleistete oder abgerechnete Aufträge benötigen eine gesonderte Prüfung.",
   offline: "Offline: Änderungen erfordern eine bestätigte Serverantwort.",
   notVisible: "Vertraulich",
   open: "Antrag öffnen",
@@ -104,7 +116,18 @@ const en = {
   intro:
     "Agree changes to confirmed assignments while retaining the original and its amendment history.",
   scopeHint:
-    "This workflow supports unstarted assignments with no invoice history, one lecturer position and a dedicated course run. Shared courses, delivered work and gross customer prices require separate review.",
+    "Assignments can be changed before work starts or any invoice exists. For shared dates, all positions must be filled and each affected lecturer must consent.",
+  sharedScheduleHelp:
+    "Submitting sends each affected lecturer a separate request with the same dates.",
+  sharedLecturer: "Lecturer for this approval: {{name}}",
+  sharedProgress:
+    "Shared dates: {{accepted}} of {{required}} assignments approved.",
+  "sharedState.awaiting_consent": "More approvals are pending.",
+  "sharedState.ready": "Management can apply all dates together.",
+  "sharedState.blocked": "The shared change was rejected or withdrawn.",
+  "sharedState.applied": "The dates were applied together.",
+  sharedConflict:
+    "The shared dates were not changed. Check approvals, affected assignments and whether the enrolment withdrawal deadline would be shortened.",
   new: "Create change request",
   edit: "Edit draft",
   overview: "All change requests",
@@ -170,7 +193,7 @@ const en = {
   stale:
     "The request or original assignment has changed. Load current records; stale consent cannot be applied.",
   unsupported:
-    "This request does not meet the prerequisites. Check dates and values and, for compensation decisions, the unchanged customer charge and original unit. Delivered, invoiced or shared assignments require separate review.",
+    "This request does not meet the prerequisites. Check dates and values and, for compensation decisions, the customer charge and original unit. Delivered or invoiced assignments require separate review.",
   offline: "Offline: changes require a confirmed server response.",
   notVisible: "Confidential",
   open: "Open request",

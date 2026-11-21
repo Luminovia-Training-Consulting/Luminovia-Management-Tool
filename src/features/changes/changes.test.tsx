@@ -265,6 +265,87 @@ it("creates a draft with named-zone instants and preserves its authored draft th
     ),
   );
 });
+it("submits only the shared dates and explains the independent consent in both languages", async () => {
+  const candidate = candidates[0];
+  candidate.current.course_run_id = "ed000000-0000-4000-8000-000000000013";
+  candidate.schedule_editable = true;
+  candidate.shared_schedule_only = true;
+  mount("/changes");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Änderungsantrag erstellen" }),
+  );
+  expect(screen.getByText(/jede betroffene Lehrkraft/)).toBeVisible();
+  expect(screen.queryByLabelText("Ort oder Meeting-Link")).toBeNull();
+  expect(screen.queryByLabelText("Leistungsumfang")).toBeNull();
+  expect(screen.queryByLabelText("Vergütung pro Einheit")).toBeNull();
+  expect(
+    screen.queryByLabelText("Vollständigen Auftrag stornieren"),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Termin hinzufügen" }),
+  ).toBeNull();
+  await user.type(
+    screen.getByLabelText("Begründung"),
+    "Fictional shared reason",
+  );
+  await act(() => i18n.changeLanguage("en"));
+  expect(
+    screen.getByText(/each affected lecturer a separate request/),
+  ).toBeVisible();
+  fireEvent.change(screen.getByLabelText("Start 1"), {
+    target: { value: "2045-01-01T09:15" },
+  });
+  await user.click(screen.getByRole("button", { name: "Save draft online" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.objectContaining({
+        p_payload: {
+          reason: "Fictional shared reason",
+          changes: {
+            sessions: [
+              {
+                starts_at: "2045-01-01T08:15:00.000Z",
+                ends_at: "2045-01-01T09:00:00Z",
+              },
+            ],
+          },
+        },
+      }),
+    ),
+  );
+});
+it("displays group progress and waits for every required approval before offering application", async () => {
+  data[0] = {
+    ...data[0],
+    status: "accepted",
+    can_edit: false,
+    can_submit: false,
+    shared_schedule_only: true,
+    shared_schedule: { required: 2, accepted: 1, state: "awaiting_consent" },
+  };
+  mount();
+  expect(await screen.findByText(/1 von 2 Aufträgen bestätigt/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Angenommene Änderung anwenden" }),
+  ).toBeNull();
+  data[0] = {
+    ...data[0],
+    can_apply: true,
+    shared_schedule: { required: 2, accepted: 2, state: "ready" },
+  };
+  await act(async () => {
+    await i18n.changeLanguage("en");
+    await clients
+      .at(-1)!
+      .invalidateQueries({ queryKey: ["assignment-changes"] });
+  });
+  expect(await screen.findByText(/2 of 2 assignments approved/)).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Apply accepted amendment" }),
+  ).toBeVisible();
+});
 it.each([false, true])(
   "uses the selected assignment's exact instants after switching (refresh: %s)",
   async (refresh) => {

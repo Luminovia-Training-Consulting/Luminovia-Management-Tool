@@ -1,3 +1,11 @@
+# 21 November 2026 — Coordinated schedule amendments and exceptional final invoices
+
+A course-backed offer can have up to 20 lecturer positions. One schedule amendment covers the remaining future sessions of a fully staffed linked course when the session count and learner withdrawal deadline can be preserved. Each assignment has its own versioned approval. Applying the group checks every consent and calendar again, retains the original offer and agreement and updates all sessions atomically. Active enrolled learners receive an inbox notification. The group is available in the internal portal, with German and English progress and error messages.
+
+Finance can approve one final exception invoice for a mature cancelled or partially delivered assignment. The approval binds the amount, currency and due date to the reviewed contractual version. The lecturer submits a clean PDF with the prescribed amount. Approval, correction and partial payment have separate audit trails. Multi-invoice interim credits and reconciliation remain open.
+
+Native PostgreSQL passed 42 focused groups covering the two new flows, previous amendments, course-backed offers, regular and exceptional invoices, API inventory and retained data after applying 243 migrations. The API catalogue was regenerated from the migrated database. All 1,389 Vitest cases, 16 runtime and documentation checks, TypeScript and ESLint passed. Desktop and mobile Chromium passed the six combined native enrolment and API-explorer cases. All three edition builds generate a service worker and the customer API downloads omit commercial actions. The source checks now use the same edition-entry aliases as the Vite builds, and dedicated access and API tests use the active route guards. The new amendment and invoicing forms have React tests. Their combined authenticated browser journeys still need acceptance. Physical-device PWA acceptance is excluded from this pass.
+
 # 21 November 2026 — Browser acceptance for enrolments and API exploration
 
 The native browser regression signs in a company manager, an administrator and a learner. It confirms an atomic stale-selection rejection, then enrols the learner in two complete courses, repeats the same selection without changes and sees both courses as the learner. Distinct keys keep course classes and welcome-content state independent.

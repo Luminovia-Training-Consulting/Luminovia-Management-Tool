@@ -67,9 +67,11 @@ function MutationError({ error }: { error: unknown }) {
           ? "stale"
           : code === "23P01"
             ? "conflict"
-            : code === "22023"
-              ? "unsupported"
-              : "error",
+            : code === "PT409"
+              ? "sharedConflict"
+              : code === "22023"
+                ? "unsupported"
+                : "error",
       )}
     </Notice>
   );
@@ -146,7 +148,10 @@ function ChangeForm({
   const zone = source?.time_zone ?? "Europe/Berlin";
   const customerView =
     original?.customer_view ?? candidate?.customer_view ?? false;
-  const canPrice = original?.can_price ?? candidate?.can_price ?? false;
+  const sharedSchedule =
+    original?.shared_schedule_only ?? candidate?.shared_schedule_only ?? false;
+  const canPrice =
+    !sharedSchedule && (original?.can_price ?? candidate?.can_price ?? false);
   const commissioned =
     original?.commissioned ?? candidate?.commissioned ?? false;
   const defaults = (s: AssignmentSnapshot | undefined) => ({
@@ -176,7 +181,9 @@ function ChangeForm({
     reset,
     formState: { errors },
   } = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(customerView ? customerFormSchema : formSchema),
+    resolver: zodResolver(
+      customerView || sharedSchedule ? customerFormSchema : formSchema,
+    ),
     defaultValues: defaults(source),
   });
   const { fields, append, remove } = useFieldArray({
@@ -189,6 +196,7 @@ function ChangeForm({
       setInvalidMoney(false);
       setInvalidLocation(false);
       if (
+        !sharedSchedule &&
         source?.delivery_type === "online" &&
         values.location !== source.location
       ) {
@@ -201,10 +209,9 @@ function ChangeForm({
           throw new Error("invalid_location");
         }
       }
-      const changes: ChangeInput["changes"] = {
-        location: values.location,
-        scope: values.scope,
-      };
+      const changes: ChangeInput["changes"] = sharedSchedule
+        ? {}
+        : { location: values.location, scope: values.scope };
       // Unchanged inputs retain exact instants even if the local editor
       // displays whole minutes. The server rechecks linked-course eligibility.
       if (scheduleEditable && !values.cancel) {
@@ -230,7 +237,7 @@ function ChangeForm({
           return { starts_at: start, ends_at: end };
         });
       }
-      if (!customerView) {
+      if (!customerView && !sharedSchedule) {
         changes.terms = values.terms;
         changes.cancel = values.cancel;
       }
@@ -320,17 +327,27 @@ function ChangeForm({
       >
         <textarea id="change-reason" rows={3} {...register("reason")} />
       </Field>
-      <Field
-        id="change-location"
-        label={t("location")}
-        error={Boolean(errors.location) || invalidLocation}
-      >
-        <input id="change-location" {...register("location")} />
-      </Field>
-      <Field id="change-scope" label={t("scope")} error={Boolean(errors.scope)}>
-        <textarea id="change-scope" rows={4} {...register("scope")} />
-      </Field>
-      {!customerView && (
+      {sharedSchedule ? (
+        <p className="muted">{t("sharedScheduleHelp")}</p>
+      ) : (
+        <>
+          <Field
+            id="change-location"
+            label={t("location")}
+            error={Boolean(errors.location) || invalidLocation}
+          >
+            <input id="change-location" {...register("location")} />
+          </Field>
+          <Field
+            id="change-scope"
+            label={t("scope")}
+            error={Boolean(errors.scope)}
+          >
+            <textarea id="change-scope" rows={4} {...register("scope")} />
+          </Field>
+        </>
+      )}
+      {!customerView && !sharedSchedule && (
         <Field
           id="change-terms"
           label={t("terms")}
@@ -340,7 +357,7 @@ function ChangeForm({
         </Field>
       )}
       {customerView && <p className="muted">{t("customerScope")}</p>}
-      {commissioned && !customerView && (
+      {commissioned && !customerView && !sharedSchedule && (
         <p className="muted">{t("commissioned")}</p>
       )}
       {canPrice && (
@@ -449,13 +466,15 @@ function ChangeForm({
           )}
         </fieldset>
       )}
-      {!customerView && (
+      {!customerView && !sharedSchedule && (
         <label className="checkbox-label">
           <input type="checkbox" {...register("cancel")} />
           {t("cancelCourse")}
         </label>
       )}
-      {!customerView && <p className="muted">{t("cancelHint")}</p>}
+      {!customerView && !sharedSchedule && (
+        <p className="muted">{t("cancelHint")}</p>
+      )}
       <div className="changes-controls">
         <Button
           disabled={
@@ -543,6 +562,12 @@ function DetailActions({ change }: { change: AssignmentChange }) {
   const disabled = !online || mutation.isPending;
   return (
     <section className="panel changes-decisions">
+      {change.shared_schedule && (
+        <p className="muted" role="status">
+          {t("sharedProgress", change.shared_schedule)}{" "}
+          {t(`sharedState.${change.shared_schedule.state}`)}
+        </p>
+      )}
       <p>
         {t("managerApproval")}:{" "}
         <strong>{t(change.manager_approved ? "yes" : "no")}</strong> ·{" "}
@@ -638,6 +663,13 @@ export function ChangeRequestsPage() {
   if (changes.isPending || candidates.isPending) return <Loading />;
   const selected = id ? changes.data[0] : undefined;
   if (id && !selected) return <ErrorState />;
+  const lecturerNames = new Map(
+    candidates.data.map((candidate) => [
+      candidate.claim_id,
+      candidate.lecturer_name,
+    ]),
+  );
+  const selectedLecturer = selected && lecturerNames.get(selected.claim_id);
   return (
     <>
       <PageHeading
@@ -680,6 +712,11 @@ export function ChangeRequestsPage() {
             <span className={`badge changes-status-${selected.status}`}>
               {t(selected.status)}
             </span>
+            {selected.shared_schedule_only && selectedLecturer && (
+              <p className="muted">
+                {t("sharedLecturer", { name: selectedLecturer })}
+              </p>
+            )}
             <p className="changes-authored">{selected.reason}</p>
             <TextLink to={`/jobs/${selected.original.job_id}`}>
               {t("source")}
@@ -718,10 +755,11 @@ export function ChangeRequestsPage() {
                       "cancel",
                     ] as const
                   )
-                    .filter(
-                      (field) =>
-                        !selected.customer_view ||
-                        ["sessions", "location", "scope"].includes(field),
+                    .filter((field) =>
+                      selected.shared_schedule_only
+                        ? field === "sessions"
+                        : !selected.customer_view ||
+                          ["sessions", "location", "scope"].includes(field),
                     )
                     .map((field) => (
                       <tr key={field}>
@@ -782,6 +820,19 @@ export function ChangeRequestsPage() {
                     {change.original.title}
                   </Link>
                 </h2>
+                {change.shared_schedule_only &&
+                  lecturerNames.get(change.claim_id) && (
+                    <p className="muted">
+                      {t("sharedLecturer", {
+                        name: lecturerNames.get(change.claim_id),
+                      })}
+                    </p>
+                  )}
+                {change.shared_schedule && (
+                  <p className="muted">
+                    {t("sharedProgress", change.shared_schedule)}
+                  </p>
+                )}
                 <p className="changes-authored">{change.reason}</p>
                 <TextLink to={`/changes/${change.id}`}>{t("open")}</TextLink>
               </article>

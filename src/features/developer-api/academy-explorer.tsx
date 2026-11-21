@@ -1,6 +1,6 @@
 import { useAcademyBrand } from "../branding/academy-branding";
 import { Explorer } from "./explorer";
-import type { ExplorerRequest } from "./request-boundary";
+import { isAcademyExplorerRequest } from "./request-boundary";
 import type { InstallationBrand } from "../../lib/installation-brand";
 
 declare const __PORTAL_ACADEMY_EXPLORER__: ReturnType<
@@ -14,7 +14,9 @@ export function AcademyApiExplorer() {
     <Explorer
       brand={useAcademyBrand()}
       createDocument={academyDocument}
-      checkRequest={isAcademyExplorerRequest}
+      checkRequest={(request, backend) =>
+        isAcademyExplorerRequest(request, backend, academyCatalogue.paths)
+      }
     />
   );
 }
@@ -30,28 +32,4 @@ function academyDocument(backend: string, brand: InstallationBrand) {
       edition: brand.edition,
     },
   };
-}
-
-function isAcademyExplorerRequest(request: ExplorerRequest, backend: string) {
-  const base = URL.parse(backend);
-  const target = URL.parse(request.url, backend + "/");
-  if (
-    !base ||
-    !target ||
-    target.origin !== base.origin ||
-    target.username ||
-    target.password ||
-    target.hash ||
-    target.search ||
-    !target.pathname.startsWith(base.pathname.replace(/\/$/, "") + "/")
-  ) {
-    return false;
-  }
-  const method = request.method.toLowerCase();
-  if (method !== "get" && method !== "post") return false;
-  const path = target.pathname.slice(base.pathname.replace(/\/$/, "").length);
-  const operations = academyCatalogue.paths;
-  return (
-    Object.hasOwn(operations, path) && Object.hasOwn(operations[path], method)
-  );
 }

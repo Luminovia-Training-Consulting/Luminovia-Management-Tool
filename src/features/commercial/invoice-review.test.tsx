@@ -153,6 +153,105 @@ it("requires a reasoned finance note and resolves only the review request", asyn
   );
 });
 
+it("lets finance bind the amount and date to the selected executed agreement", async () => {
+  await i18n.changeLanguage("en");
+  const rpc = fake.rpc.getMockImplementation()!;
+  const contractId = "4e4c8417-172a-4d79-8137-860215cea7c3";
+  const approvalId = "794f51ff-2969-4224-a719-3c760ef63340";
+  let active = null as null | {
+    id: string;
+    contract_version: number;
+    amount: number;
+    due_on: string;
+  };
+  fake.rpc.mockImplementation((name, args) => {
+    if (name === "invoice_exception_options")
+      return Promise.resolve({
+        data: {
+          contracts: [
+            {
+              id: contractId,
+              version: 3,
+              kind: "master",
+              effective_from: "2026-01-01T00:00:00Z",
+            },
+          ],
+          maximum_amount: 200,
+          currency: "EUR",
+          can_approve: !active,
+          active,
+        },
+        error: null,
+      });
+    if (name === "approve_invoice_exception") {
+      active = {
+        id: approvalId,
+        contract_version: 3,
+        amount: 90.25,
+        due_on: "2026-11-30",
+      };
+      return Promise.resolve({ data: approvalId, error: null });
+    }
+    if (name === "revoke_invoice_exception") {
+      active = null;
+      return Promise.resolve({ data: null, error: null });
+    }
+    return rpc(name, args);
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <InvoiceReviewQueue actor="fictional-manager" />
+    </QueryClientProvider>,
+  );
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "Prepare an exceptional invoice",
+    }),
+  );
+  const submit = await screen.findByRole("button", {
+    name: "Allow final invoice submission",
+  });
+  const amount = screen.getByLabelText("Reviewed amount (EUR)");
+  fireEvent.change(screen.getByLabelText("Agreed due date"), {
+    target: { value: "2026-11-30" },
+  });
+  await userEvent.type(amount, "90.25");
+  expect(submit).toBeDisabled();
+  const note = "Reviewed the fictional cancellation evidence and amount.";
+  await userEvent.type(
+    screen.getByLabelText("Review note (at least 10 characters)"),
+    note,
+  );
+  expect(submit).toBeEnabled();
+  await userEvent.click(submit);
+  const revoke = await screen.findByRole("button", {
+    name: "Revoke submission approval",
+  });
+  expect(fake.rpc).toHaveBeenCalledWith("approve_invoice_exception", {
+    p_request_id: "fictional-review",
+    p_contract_id: contractId,
+    p_amount: 90.25,
+    p_due_on: "2026-11-30",
+    p_note: note,
+  });
+  const reason = "Correct the fictional review before submission.";
+  await userEvent.type(
+    screen.getByLabelText("Reason for revocation (at least 10 characters)"),
+    reason,
+  );
+  await userEvent.click(revoke);
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("revoke_invoice_exception", {
+      p_exception_id: approvalId,
+      p_note: reason,
+    }),
+  );
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "record_invoice_payment",
+    expect.anything(),
+  );
+});
+
 it("only shares checked lecturer amounts and clears them when the evidence changes", async () => {
   await i18n.changeLanguage("en");
   render(

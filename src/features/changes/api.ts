@@ -17,8 +17,8 @@ export interface ChangeInput {
   reason: string;
   changes: {
     sessions?: { starts_at: string; ends_at: string }[];
-    location: string;
-    scope: string;
+    location?: string;
+    scope?: string;
     terms?: string;
     cancel?: boolean;
     amount?: number;

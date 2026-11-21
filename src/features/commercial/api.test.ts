@@ -130,6 +130,12 @@ describe("scoped commercial exports and totals", () => {
     expect(invoiceDueState(open, "2026-12-01")).toBe("due_soon");
     expect(invoiceDueState(open, "2026-12-02")).toBe("overdue");
     expect(
+      invoiceDueState(
+        invoice("reviewed-exception", { due_on: "2026-10-15" }),
+        "2026-11-01",
+      ),
+    ).toBe("overdue");
+    expect(
       invoiceDueState(invoice("partial", { paid_amount: 25 }), "2026-12-02"),
     ).toBe("overdue");
     expect(

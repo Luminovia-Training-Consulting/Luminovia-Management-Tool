@@ -52,3 +52,30 @@ export async function authorizeDocumentedRequest(
     redirect: "error",
   };
 }
+
+export function isAcademyExplorerRequest(
+  request: ExplorerRequest,
+  backend: string,
+  operations: Record<string, object>,
+) {
+  const base = URL.parse(backend);
+  const target = URL.parse(request.url, backend.replace(/\/+$/, "") + "/");
+  if (
+    !base ||
+    !target ||
+    target.origin !== base.origin ||
+    target.username ||
+    target.password ||
+    target.hash ||
+    target.search ||
+    !target.pathname.startsWith(base.pathname.replace(/\/$/, "") + "/")
+  ) {
+    return false;
+  }
+  const method = request.method.toLowerCase();
+  if (method !== "get" && method !== "post") return false;
+  const path = target.pathname.slice(base.pathname.replace(/\/$/, "").length);
+  return (
+    Object.hasOwn(operations, path) && Object.hasOwn(operations[path], method)
+  );
+}

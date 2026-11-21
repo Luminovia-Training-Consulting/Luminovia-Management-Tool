@@ -25,6 +25,11 @@ const snapshotSchema = z.object({
   cancel: z.boolean(),
   sessions: z.array(z.object({ starts_at: instant, ends_at: instant })),
 });
+export const sharedScheduleSchema = z.object({
+  required: z.number().int().min(2).max(20),
+  accepted: z.number().int().min(0).max(20),
+  state: z.enum(["awaiting_consent", "ready", "blocked", "applied"]),
+});
 export const assignmentChangeSchema = z.object({
   id: uuid,
   claim_id: uuid,
@@ -48,6 +53,8 @@ export const assignmentChangeSchema = z.object({
   requested_by_customer: z.boolean().optional(),
   commissioned: z.boolean().optional(),
   schedule_editable: z.boolean().optional(),
+  shared_schedule_only: z.boolean().optional(),
+  shared_schedule: sharedScheduleSchema.nullable().optional(),
   can_edit: z.boolean(),
   can_submit: z.boolean(),
   can_respond: z.boolean(),
@@ -76,6 +83,7 @@ export const candidateSchema = z.object({
   customer_view: z.boolean().optional(),
   commissioned: z.boolean(),
   schedule_editable: z.boolean().optional(),
+  shared_schedule_only: z.boolean().optional(),
   current: snapshotSchema,
 });
 export type AssignmentChange = z.infer<typeof assignmentChangeSchema>;

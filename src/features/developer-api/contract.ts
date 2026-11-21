@@ -18,6 +18,10 @@ import {
   invoicePaymentsSchema,
   invoiceRecordsSchema,
 } from "./commercial-records-contract.ts";
+import {
+  invoiceExceptionOptionsSchema,
+  myInvoiceExceptionsSchema,
+} from "../commercial/invoice-exception-schema.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
@@ -408,7 +412,7 @@ const listAssignmentChanges = rpc(
   "assignmentChanges",
   "Assignments",
   "Read your scoped change proposals",
-  "Send an optional request ID to read one request. Authorised views include the original and proposed version plus audit events. The server redacts commercial values based on current authority.",
+  "Send an optional request ID to read one request. Authorised views include the original and proposed version plus audit events. Shared proposals include the number of required and accepted assignment consents and the group status. The server redacts commercial values based on current authority.",
   { p_id: nullableUuid },
   assignmentChangeResult,
 );
@@ -959,6 +963,60 @@ const nativePaths = {
     { p_claim_id: uuid, ...idempotency },
     uuid,
   ),
+  "/rest/v1/rpc/invoice_exception_options": rpc(
+    "invoiceExceptionOptions",
+    "Finance",
+    "Read approval options for an exceptional invoice",
+    "Current internal finance staff can read the eligible contract versions, original currency, amount ceiling and an active approval for one review request.",
+    { p_request_id: uuid },
+    z.toJSONSchema(invoiceExceptionOptionsSchema),
+  ),
+  "/rest/v1/rpc/approve_invoice_exception": rpc(
+    "approveInvoiceException",
+    "Finance",
+    "Approve a reviewed final exception for one assignment",
+    "Requires current internal finance authority and a mature eligible assignment. Select the contract version and enter the reviewed amount, contractual due date and review note. Approval records eligibility to submit a final invoice. The lecturer submits the PDF separately.",
+    {
+      p_request_id: uuid,
+      p_contract_id: uuid,
+      p_amount: proposedAmount,
+      p_due_on: date,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/revoke_invoice_exception": voidRpc(
+    "revokeInvoiceException",
+    "Finance",
+    "Revoke an exceptional invoice approval",
+    "Current internal finance staff may revoke an approval before an active invoice exists. The original approval and reason remain in the audit history.",
+    {
+      p_exception_id: uuid,
+      p_note: { ...text, minLength: 10, maxLength: 1000 },
+    },
+  ),
+  "/rest/v1/rpc/my_invoice_exceptions": rpc(
+    "myInvoiceExceptions",
+    "Finance",
+    "List my approved exceptional invoices awaiting submission",
+    "An active internal lecturer sees only their own current approvals. The projection contains the contract version, exact due date and approved amount in original currency.",
+    {},
+    z.toJSONSchema(myInvoiceExceptionsSchema),
+  ),
+  "/rest/v1/rpc/submit_exception_invoice": rpc(
+    "submitExceptionInvoice",
+    "Finance",
+    "Submit a scanned PDF for an approved final exception",
+    "Requires the lecturer's current approval and an exact clean version of their own invoice PDF. The server takes the amount, currency and due date from that approval. An identical request retried with its client ID returns the original invoice ID.",
+    {
+      p_exception_id: uuid,
+      p_number: { ...text, minLength: 1, maxLength: 80 },
+      p_document_version_id: uuid,
+      p_issued_on: date,
+      p_client_id: uuid,
+    },
+    uuid,
+  ),
   "/rest/v1/rpc/finance_forecast": rpc(
     "getFinanceForecast",
     "Finance",
@@ -1157,7 +1215,7 @@ const nativePaths = {
     "changeableAssignments",
     "Assignments",
     "Find assignments that can be amended",
-    "Lists scoped future assignments with their current schedules and permission flags. Eligibility is checked again when a proposal is saved or applied.",
+    "Lists scoped future assignments with their current schedules and permission flags. The shared-schedule-only flag identifies candidates that allow a coordinated date change. Eligibility is checked again when a proposal is saved or applied.",
     {},
     changeCandidatesResult,
   ),
@@ -1165,7 +1223,7 @@ const nativePaths = {
     "saveAssignmentChange",
     "Assignments",
     "Save a versioned change proposal",
-    "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course.",
+    "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared schedule changes dates only and retains the number of sessions.",
     {
       p_id: nullableUuid,
       p_claim_id: uuid,
@@ -1203,7 +1261,7 @@ const nativePaths = {
     "assignmentChangeAction",
     "Assignments",
     "Submit, respond to or apply a change proposal",
-    "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Applying requires the recorded consents and current management authority. The server preserves the original accepted assignment.",
+    "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Management submission of an eligible shared schedule creates a proposal for each affected assignment. Applying a shared schedule requires all recorded consents for the same dates and updates the whole group in one transaction.",
     {
       p_id: uuid,
       p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },

@@ -86,6 +86,15 @@ export const courseOfferRateUnitSchema = z.enum([
 const amount = z.number().min(0.01).max(9999999999.99).multipleOf(0.01);
 const offerFields = {
   source_revision: sourceRevision,
+  capacity: z
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .meta({ default: 1 })
+    .describe(
+      "Number of lecturer positions. Each quoted amount covers one position for the complete shared schedule.",
+    ),
   currency: courseOfferCurrencySchema,
   rate_unit: courseOfferRateUnitSchema,
   terms: z.string().trim().min(1).max(10000).regex(/[^ ]/),

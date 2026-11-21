@@ -28,6 +28,89 @@ const requestSchema = (path: string) =>
 const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
+describe("shared amendments and internal exceptional invoices", () => {
+  it("documents the consent group on assignment changes and flags eligible candidates", () => {
+    for (const [rpc, expected] of [
+      [
+        "assignment_changes",
+        {
+          shared_schedule_only: { type: "boolean" },
+          shared_schedule: {
+            anyOf: expect.arrayContaining([
+              expect.objectContaining({
+                properties: {
+                  required: { type: "integer", minimum: 2, maximum: 20 },
+                  accepted: { type: "integer", minimum: 0, maximum: 20 },
+                  state: {
+                    type: "string",
+                    enum: ["awaiting_consent", "ready", "blocked", "applied"],
+                  },
+                },
+              }),
+            ]),
+          },
+        },
+      ],
+      ["changeable_assignments", { shared_schedule_only: { type: "boolean" } }],
+    ]) {
+      expect(paths["/rest/v1/rpc/" + rpc].post.responses["200"]).toMatchObject({
+        content: {
+          "application/json": { schema: { items: { properties: expected } } },
+        },
+      });
+    }
+  });
+
+  it("exposes an internal approval and a separate submission bound to a clean invoice file", () => {
+    const approval = "/rest/v1/rpc/approve_invoice_exception";
+    const submission = "/rest/v1/rpc/submit_exception_invoice";
+    expect(requestSchema(approval)).toMatchObject({
+      additionalProperties: false,
+      required: [
+        "p_request_id",
+        "p_contract_id",
+        "p_amount",
+        "p_due_on",
+        "p_note",
+      ],
+      properties: {
+        p_due_on: { format: "date" },
+        p_amount: { minimum: 0.01, multipleOf: 0.01 },
+      },
+    });
+    expect(requestSchema(submission)).toMatchObject({
+      additionalProperties: false,
+      required: [
+        "p_exception_id",
+        "p_number",
+        "p_document_version_id",
+        "p_issued_on",
+        "p_client_id",
+      ],
+    });
+    expect(
+      paths["/rest/v1/rpc/revoke_invoice_exception"].post.responses,
+    ).toHaveProperty("204");
+    expect(
+      paths["/rest/v1/rpc/my_invoice_exceptions"].post.responses["200"],
+    ).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                due_on: { format: "date" },
+                currency: { enum: ["EUR", "AUD"] },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+});
+
 describe("installation and integration credential contracts", () => {
   it("describes the public internal bootstrap without a bearer token", () => {
     const bootstrap = portalOpenApi(backend, false).paths[

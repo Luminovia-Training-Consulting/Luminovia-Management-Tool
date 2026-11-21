@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AcademyApiExplorer } from "./academy-explorer";
 import { ApiExplorer } from "./portal-explorer";
-import type { ExplorerRequest } from "./requests";
+import type { ExplorerRequest } from "./request-boundary";
 
 const fake = vi.hoisted(() => ({
   actor: "academy-user" as string | null,

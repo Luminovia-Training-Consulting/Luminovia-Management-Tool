@@ -5,6 +5,10 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import {
+  invoiceExceptionOptionsSchema,
+  myInvoiceExceptionsSchema,
+} from "./invoice-exception-schema";
 import type {
   CommercialAccess,
   CommercialPerson,
@@ -86,6 +90,30 @@ export const invoiceReviewCasesQuery = (actor: string) =>
       if (error) throw error;
       return (data ?? []) as InvoiceReviewCase[];
     },
+  });
+
+export const invoiceExceptionOptionsQuery = (actor: string, request: string) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "exception-options", request],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_exception_options", {
+        p_request_id: request,
+      });
+      if (error) throw error;
+      return invoiceExceptionOptionsSchema.parse(data);
+    },
+    retry: false,
+  });
+
+export const myInvoiceExceptionsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "my-exceptions"],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("my_invoice_exceptions");
+      if (error) throw error;
+      return myInvoiceExceptionsSchema.parse(data);
+    },
+    retry: false,
   });
 /** Read the invoice_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const invoicesQuery = (actor: string, all: boolean) =>
@@ -180,12 +208,7 @@ export function invoiceDueState(
   const issueOrdinal = dateOrdinal(invoice.issued_on),
     dueOrdinal = dateOrdinal(invoice.due_on),
     todayOrdinal = dateOrdinal(today);
-  if (
-    issueOrdinal === null ||
-    dueOrdinal === null ||
-    todayOrdinal === null ||
-    dueOrdinal < issueOrdinal
-  )
+  if (issueOrdinal === null || dueOrdinal === null || todayOrdinal === null)
     return "inactive";
   if (todayOrdinal > dueOrdinal) return "overdue";
   if (dueOrdinal - todayOrdinal <= 7) return "due_soon";

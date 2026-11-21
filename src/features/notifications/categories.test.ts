@@ -9,6 +9,7 @@ it.each([
   ["claim_confirmed", "courses"],
   ["session_reminder", "courses"],
   ["course_resource_shared", "courses"],
+  ["course_schedule_changed", "courses"],
   ["readiness_task", "tasks"],
   ["course_preparation_updated", "tasks"],
   ["invoice_submitted", "finance"],

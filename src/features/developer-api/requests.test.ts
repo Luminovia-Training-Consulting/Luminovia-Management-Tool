@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi";
-import { internalInstallationBrand } from "../../lib/installation-brand";
-import { portalOpenApi } from "./contract";
-import { authorizeExplorerRequest } from "./requests";
+import {
+  type InstallationBrand,
+  internalInstallationBrand,
+} from "../../lib/installation-brand";
+import { isDocumentedRequest, portalOpenApi } from "./contract";
+import {
+  authorizeDocumentedRequest,
+  isAcademyExplorerRequest,
+  type ExplorerRequest,
+} from "./request-boundary";
+
+function authorizeExplorerRequest(
+  request: ExplorerRequest,
+  base: string,
+  key: string,
+  actor: string,
+  session: Parameters<typeof authorizeDocumentedRequest>[3],
+  brand?: InstallationBrand,
+) {
+  const academy = brand && brand.edition !== "internal";
+  return authorizeDocumentedRequest(
+    request,
+    key,
+    actor,
+    session,
+    academy
+      ? isAcademyExplorerRequest(
+          request,
+          base,
+          portalOpenApi(base, false, brand).paths,
+        )
+      : isDocumentedRequest(request.url, request.method, base),
+    academy
+      ? URL.parse(request.url, base.replace(/\/+$/, "") + "/")?.href
+      : undefined,
+  );
+}
 
 const backend = "https://portal.example.invalid/backend";
 const who = { user: { id: "fictional" }, access_token: "test-token" };

@@ -12,6 +12,7 @@ import { resolve } from "node:path";
 import { portalOpenApi } from "./src/features/developer-api/contract.ts";
 import { academyExplorerOpenApi } from "./src/features/developer-api/academy-contract.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
+import editionModules from "./scripts/edition-modules.json" with { type: "json" };
 
 export default defineConfig(({ mode }) => {
   // VITE_ values enter the browser bundle. The shared validator rejects
@@ -41,22 +42,13 @@ export default defineConfig(({ mode }) => {
   return {
     publicDir: internal ? "public" : false,
     resolve: {
-      alias: {
-        // Resolve the edition before tracing imports and precache assets.
-        "@edition-routes": resolve(
-          internal ? "src/app/portal-routes.tsx" : "src/app/academy-routes.tsx",
-        ),
-        "@edition-help": resolve(
-          internal
-            ? "src/features/help/catalog.ts"
-            : "src/features/help/academy-catalog.ts",
-        ),
-        "@edition-demo-guides": resolve(
-          internal
-            ? "src/features/demo/internal-demo-guides.ts"
-            : "src/features/demo/academy-demo-guides.ts",
-        ),
-      },
+      // Resolve the edition before tracing imports and precache assets.
+      alias: Object.fromEntries(
+        Object.entries(editionModules).map(([name, modules]) => [
+          name,
+          resolve(internal ? modules.internal : modules.academy),
+        ]),
+      ),
     },
     define: {
       __PORTAL_INSTALLATION_BRAND__: JSON.stringify(brand),

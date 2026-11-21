@@ -169,7 +169,7 @@ export function InvoiceSettlementWorksheet({
 }: {
   currency: "AUD" | "EUR";
   attached: boolean;
-  onSummary: (text: string) => void;
+  onSummary: (text: string, openCents?: number) => void;
 }) {
   const { t, i18n } = useTranslation("invoiceSettlement");
   const id = useId();
@@ -312,6 +312,7 @@ export function InvoiceSettlementWorksheet({
                   totals
                     .map(([label, amount]) => `${label}: ${amount}`)
                     .join("\n"),
+                  result.openCents,
                 )
               }
             >

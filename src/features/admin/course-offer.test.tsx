@@ -115,12 +115,17 @@ function setup() {
   );
 }
 
-it("creates a referenced offer from trusted course defaults using only financial terms and one request identity", async () => {
+it("creates two per-position allocations sharing the trusted schedule and a single request identity", async () => {
   const user = userEvent.setup();
   setup();
   await screen.findByRole("heading", { name: "Auftrag aus diesem Kurs" });
   expect(screen.getByRole("heading", { name: source.title })).toBeVisible();
   expect(screen.queryByLabelText("Titel")).not.toBeInTheDocument();
+  const positions = screen.getByRole("spinbutton", {
+    name: "Dozierendenplätze",
+  });
+  await user.clear(positions);
+  await user.type(positions, "2");
   await user.type(
     screen.getByLabelText("Konditionen"),
     "Agreed course teaching terms",
@@ -147,6 +152,7 @@ it("creates a referenced offer from trusted course defaults using only financial
       source_revision: source.source_revision,
       gross_amount: 1000,
       gross_total_amount: 1000,
+      capacity: 2,
     },
   });
   expect(calls[0][1].p_payload).not.toHaveProperty("sessions");
@@ -216,4 +222,5 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   expect(args).not.toHaveProperty("p_platform_percent");
   expect(args.p_payload).toMatchObject({ amount: 750, total_amount: 750 });
   expect(args.p_payload).not.toHaveProperty("gross_amount");
+  expect(args.p_payload).not.toHaveProperty("capacity");
 });

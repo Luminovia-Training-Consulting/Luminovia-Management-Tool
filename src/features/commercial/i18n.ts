@@ -223,6 +223,69 @@ const pairs: Record<string, [string, string]> = {
     "Dies dokumentiert nur die Prüfung; Rechnung und Zahlungsstatus werden nicht geändert.",
     "This records the review only; it does not change the invoice or payment status.",
   ],
+  openInvoiceException: [
+    "Ausnahmeabrechnung vorbereiten",
+    "Prepare an exceptional invoice",
+  ],
+  invoiceExceptionHelp: [
+    "Wähle die ausgeführte Vertragsfassung und gib den geprüften Betrag und die vereinbarte Fälligkeit an. Die Freigabe erlaubt die Einreichung einer Schlussrechnung.",
+    "Select the executed contract version and enter the reviewed amount and agreed due date. Approval allows the lecturer to submit a final invoice.",
+  ],
+  invoiceExceptionContract: ["Vertragsfassung", "Contract version"],
+  invoiceExceptionContractVersion: [
+    "Vertragsfassung {{version}}",
+    "Contract version {{version}}",
+  ],
+  invoiceExceptionMissingContract: [
+    "Keine passende ausgeführte Vertragsfassung gefunden.",
+    "No matching executed contract version is available.",
+  ],
+  invoiceExceptionNotReady: [
+    "Das Portal kann den Auftrag derzeit nicht für eine Schlussrechnung freigeben. Prüfe den Auftragsstatus, die verbleibenden Termine und bereits eingereichte Rechnungen.",
+    "This assignment is currently unavailable for final invoice approval. Check its status, remaining sessions and any existing invoices.",
+  ],
+  invoiceExceptionMaximum: ["Höchstbetrag: {{amount}}", "Maximum: {{amount}}"],
+  invoiceExceptionUseWorksheet: [
+    "Geprüfte Summe aus Berechnung übernehmen",
+    "Use reviewed worksheet total",
+  ],
+  invoiceExceptionAmount: [
+    "Geprüfter Betrag ({{currency}})",
+    "Reviewed amount ({{currency}})",
+  ],
+  invoiceExceptionDue: ["Vereinbarte Fälligkeit", "Agreed due date"],
+  invoiceExceptionApprove: [
+    "Schlussrechnung zur Einreichung freigeben",
+    "Allow final invoice submission",
+  ],
+  invoiceExceptionReady: [
+    "Zur Einreichung freigegeben",
+    "Ready for submission",
+  ],
+  invoiceExceptionRevoke: [
+    "Einreichungsfreigabe widerrufen",
+    "Revoke submission approval",
+  ],
+  invoiceExceptionRevokeNote: [
+    "Widerrufsgrund (mindestens 10 Zeichen)",
+    "Reason for revocation (at least 10 characters)",
+  ],
+  invoiceExceptionConflict: [
+    "Die Freigabe konnte wegen eines geänderten Auftrags oder einer vorhandenen Rechnung nicht angewendet werden. Prüfe den aktuellen Stand.",
+    "The approval could not be applied because the assignment changed or an invoice exists. Check the current status.",
+  ],
+  approvedInvoiceExceptions: [
+    "Freigegebene Ausnahmeabrechnungen",
+    "Approved exceptional invoices",
+  ],
+  submitInvoiceException: [
+    "Ausnahmerechnung einreichen",
+    "Submit exceptional invoice",
+  ],
+  invoiceExceptionPdfHelp: [
+    "Lade die Schlussrechnung als PDF hoch. Betrag und Fälligkeit werden aus der Freigabe übernommen.",
+    "Upload the final invoice PDF. The amount and due date come from the approval.",
+  ],
   invoiceNotReady: [
     "Der letzte geplante Unterrichtstermin hat noch nicht geendet.",
     "The last scheduled session has not ended yet.",
