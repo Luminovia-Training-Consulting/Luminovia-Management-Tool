@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
+import { verifyWebhookDeliveryHttp } from "./testing/company-course-webhook-http.mjs";
 
 await withTestDatabase("company_course_webhooks", async ({ actor, sql }) => {
   const [
@@ -236,6 +237,36 @@ await withTestDatabase("company_course_webhooks", async ({ actor, sql }) => {
   await finish(attendance, "delivered");
   console.log(
     "PASS Premium opt-in, entitlement epochs, scanned-only publication and bulk change coalescing",
+  );
+
+  const [httpCourse, revokedCourse] = [randomUUID(), randomUUID()];
+  const httpKey = JSON.parse(await issue(company));
+  const httpSubscription = JSON.parse(
+    await actor(
+      admin,
+      `select public.company_course_webhook_subscribe(${q(company)},${q(httpKey.id)},'signed-http')`,
+    ),
+  );
+  const publish = (id) =>
+    sql(`
+    insert into public.course_runs(id,template_id,organisation_id,published)
+    values (${q(id)},${q(template)},${q(company)},true)
+  `);
+  await publish(httpCourse);
+  await verifyWebhookDeliveryHttp({
+    sql,
+    destination: company + "/signed-http",
+    subscription: httpSubscription,
+    course: httpCourse,
+    publishNext: () => publish(revokedCourse),
+    revoke: () =>
+      actor(
+        admin,
+        `select public.company_course_webhook_revoke(${q(company)},${q(httpSubscription.id)})`,
+      ),
+  });
+  console.log(
+    "PASS signed loopback HTTP delivery, database-backed retry, duplicate receipt and leased-event revocation",
   );
 
   console.log(

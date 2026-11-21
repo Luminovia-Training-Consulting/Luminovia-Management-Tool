@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import https from "node:https";
 import { isIP } from "node:net";
+import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { publicAddress } from "./notification-push-worker.mjs";
 
@@ -30,7 +31,14 @@ export function webhookConfiguration(env) {
     throw new Error("invalid_webhook_configuration");
   const encoded = env.PORTAL_WEBHOOK_DESTINATIONS ?? "{}";
   if (encoded.length > 65536) throw new Error("invalid_webhook_destinations");
-  const entries = Object.entries(JSON.parse(encoded));
+  const destinationMap = JSON.parse(encoded);
+  if (
+    !destinationMap ||
+    typeof destinationMap !== "object" ||
+    Array.isArray(destinationMap)
+  )
+    throw new Error("invalid_webhook_destinations");
+  const entries = Object.entries(destinationMap);
   if (entries.length > 100) throw new Error("invalid_webhook_destinations");
   const destinations = new Map(
     entries.map(([name, value]) => {
@@ -150,12 +158,18 @@ async function callBackend(config, action, arguments_) {
 /** Recheck the subscription after DNS resolution, as close to network I/O as possible. */
 export async function dispatchCompanyWebhooks(
   config,
-  { call = callBackend, resolve = resolveWebhook, send = sendWebhook } = {},
+  {
+    call = callBackend,
+    resolve = resolveWebhook,
+    send = sendWebhook,
+    signal,
+  } = {},
 ) {
   const names = Array.from(config.destinations.keys());
   if (!names.length) return 0;
   let processed = 0;
-  for (; processed < 10; processed++) {
+  // After shutdown, finish the already leased item and leave the rest queued.
+  for (; processed < 10 && !signal?.aborted; processed++) {
     const lease = await call(config, "lease_company_course_webhook", {
       p_destinations: names,
     });
@@ -198,17 +212,77 @@ export async function dispatchCompanyWebhooks(
   return processed;
 }
 
+/** Poll after each finished batch; a transient outage must not overlap new work. */
+export async function watchCompanyWebhooks(
+  config,
+  {
+    signal,
+    seconds = 60,
+    report,
+    dispatch = dispatchCompanyWebhooks,
+    wait = sleep,
+  },
+) {
+  if (!Number.isInteger(seconds) || seconds < 15 || seconds > 3600)
+    throw new Error("invalid_webhook_poll_interval");
+  if (!config.destinations.size)
+    throw new Error("webhook_destinations_required");
+  while (!signal.aborted) {
+    try {
+      const processed = await dispatch(config, { signal });
+      if (processed > 0) report({ status: "processed", processed });
+    } catch {
+      // Each invocation checks the same database lease and retry bound.
+      // Provider messages can contain credentials or payload, so report status only.
+      report({ status: "failed" });
+    }
+    if (signal.aborted) break;
+    try {
+      await wait(seconds * 1000, undefined, { signal });
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+  }
+}
+
+/** The private foreground runner is opt-in and stops cleanly under a supervisor. */
+async function runCommand(args, env) {
+  if (args.length > 1 || (args.length === 1 && args[0] !== "--watch"))
+    throw new Error("invalid_webhook_arguments");
+  const config = webhookConfiguration(env);
+  if (!args.length) {
+    const count = await dispatchCompanyWebhooks(config);
+    console.log("Course webhook deliveries processed:", count);
+    return;
+  }
+  const controller = new AbortController();
+  const stop = () => controller.abort();
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
+  try {
+    await watchCompanyWebhooks(config, {
+      signal: controller.signal,
+      seconds: Number(env.PORTAL_WEBHOOK_POLL_SECONDS ?? 60),
+      report: ({ status, processed }) => {
+        if (status === "failed")
+          console.error("Course webhook dispatch failed. Retrying.");
+        else console.log("Course webhook deliveries processed:", processed);
+      },
+    });
+  } finally {
+    process.off("SIGINT", stop);
+    process.off("SIGTERM", stop);
+  }
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    const count = await dispatchCompanyWebhooks(
-      webhookConfiguration(process.env),
-    );
-    console.log("Course webhook deliveries processed:", count);
+    await runCommand(process.argv.slice(2), process.env);
   } catch {
-    console.error("Course webhook dispatch failed.");
+    console.error("Course webhook worker failed.");
     process.exitCode = 1;
   }
 }
