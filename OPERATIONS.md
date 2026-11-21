@@ -65,6 +65,8 @@ These earlier managed-backend steps are reference only; do not apply them as set
 5. Seed fictional staging fixtures only. Bootstrap the first administrator through a controlled server-side process, then audit granted capabilities. No browser role self-assignment.
 
 For a new dedicated White-Label academy, prepare the empty database with the verified licence using `node scripts/academy-installation.mjs LICENCE TRUSTED_PUBLIC_KEY INSTALLATION_UUID EDITION RELEASE_COMMIT`. Create the intended administrator using the dedicated instance's private Supabase Auth administration interface and confirm their email address. Run the same local operator command with `--first-admin AUTH_UUID` appended. The command uses the explicitly configured libpq connection and checks the exact installation and active release before recording the administrator. Its response confirms the assigned Auth UUID. Keep credentials in the private Auth and database environment.
+
+After preparation, the operator can run the command with `--course-access on` to open the licence-bound course API profile on a dedicated test installation, or `--course-access off` to close that release. Activation requires an active licence and confirms the exact installation, edition and release. Deactivation also accepts that release's expired signed licence. The customer browser remains gated by separate release readiness checks.
 6. Build frontend with staging public values. Run source, DB/RLS/concurrency, actual browser and accessibility tests. Record stage-specific differences, not merely localhost results.
 7. Review all remaining product/security/privacy acceptance, document actual storage limits/scanning, monitoring, backups and recovery before presenting a production candidate.
 

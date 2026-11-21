@@ -53,6 +53,52 @@ export async function prepareAcademyInstallation(
   return current;
 }
 
+/** Open or close only the course profile for a prepared, exact licensed release.
+ * An expired signed licence remains sufficient to close its own profile.
+ */
+export async function configureAcademyCourseAccess(
+  { envelope, publicKey, expected, now, enabled },
+  executeSql,
+) {
+  const { state, terms } = verifyAcademyLicence(
+    envelope,
+    publicKey,
+    expected,
+    now,
+  );
+  if (typeof enabled !== "boolean")
+    throw new Error("academy_course_access_option_invalid");
+  if (enabled && state !== "active")
+    throw new Error("academy_licence_is_not_active");
+  const installation = sqlText(terms.installation_id);
+  const release = sqlText(terms.release_commit);
+  const result = await executeSql(`
+    begin;
+    select private.configure_academy_course_access(${installation}::uuid, ${release}, ${enabled})
+    from private.installation_identity
+    where installation_id = ${installation}::uuid and edition = ${sqlText(terms.edition)};
+    select jsonb_build_object(
+      'installation_id', identity.installation_id,
+      'edition', identity.edition,
+      'release_commit', ${release}::text,
+      'enabled', access.release_commit is not distinct from ${release}::text
+    )
+    from private.installation_identity identity
+    left join private.academy_course_access access using (installation_id)
+    where identity.singleton;
+    commit;
+  `);
+  const current = JSON.parse(result.trim());
+  if (
+    current.installation_id !== terms.installation_id ||
+    current.edition !== terms.edition ||
+    current.release_commit !== terms.release_commit ||
+    current.enabled !== enabled
+  )
+    throw new Error("academy_course_access_confirmation_failed");
+  return current;
+}
+
 /** Use an explicit libpq service or host/database so psql cannot default to an unrelated DB. */
 function operatorSql(sql) {
   if (!process.env.PGSERVICE && !(process.env.PGHOST && process.env.PGDATABASE))
@@ -79,7 +125,8 @@ if (
   try {
     const [licence, key, installationId, edition, release, ...extra] =
       process.argv.slice(2);
-    const [adminFlag, firstAdministrator] = extra;
+    const [option, value] = extra;
+    const courseAccess = option === "--course-access";
     if (
       !licence ||
       !key ||
@@ -88,27 +135,33 @@ if (
       !release ||
       (extra.length > 0 &&
         (extra.length !== 2 ||
-          adminFlag !== "--first-admin" ||
-          !firstAdministrator))
+          (courseAccess
+            ? !["on", "off"].includes(value)
+            : option !== "--first-admin" || !value)))
     )
       throw new Error("academy_installation_usage");
     const [envelope, publicKey] = await Promise.all([
       readFile(licence, "utf8"),
       readFile(key),
     ]);
-    const result = await prepareAcademyInstallation(
-      {
-        envelope: envelope.trim(),
-        publicKey,
-        expected: {
-          installation_id: installationId,
-          edition,
-          release_commit: release,
-        },
-        firstAdministrator,
+    const input = {
+      envelope: envelope.trim(),
+      publicKey,
+      expected: {
+        installation_id: installationId,
+        edition,
+        release_commit: release,
       },
-      operatorSql,
-    );
+    };
+    const result = courseAccess
+      ? await configureAcademyCourseAccess(
+          { ...input, enabled: value === "on" },
+          operatorSql,
+        )
+      : await prepareAcademyInstallation(
+          { ...input, firstAdministrator: value },
+          operatorSql,
+        );
     console.log(JSON.stringify(result));
   } catch {
     console.error(

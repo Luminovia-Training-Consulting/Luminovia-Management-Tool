@@ -1,7 +1,10 @@
 /** Exercises the offline signed first-admin flow and its durable one-time receipt. */
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
-import { prepareAcademyInstallation } from "./academy-installation.mjs";
+import {
+  configureAcademyCourseAccess,
+  prepareAcademyInstallation,
+} from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
@@ -61,6 +64,54 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     await assert.rejects(sql(selectAdmin(first)), /55000/);
     await prepareAcademyInstallation(options, sql);
     await assert.rejects(sql(selectAdmin(first)), /55000/);
+
+    // Exact signed profile switches are reversible, and a stale closure only
+    // affects its own release. A cross-edition signature cannot mutate it.
+    const configure = (enabled, claims = options) =>
+      configureAcademyCourseAccess({ ...claims, enabled }, sql);
+    const expectedAccess = {
+      installation_id: installation,
+      edition,
+      release_commit: release,
+    };
+    assert.deepEqual(await configure(true), {
+      ...expectedAccess,
+      enabled: true,
+    });
+    const alternateTerms = {
+      ...options.expected,
+      edition:
+        edition === "customer-managed"
+          ? "customer-self-hosted"
+          : "customer-managed",
+    };
+    const alternateKey = generateKeyPairSync("ed25519");
+    await assert.rejects(
+      configure(false, {
+        ...options,
+        expected: alternateTerms,
+        publicKey: alternateKey.publicKey,
+        envelope: signAcademyLicence(alternateTerms, alternateKey.privateKey),
+      }),
+      /confirmation_failed/,
+    );
+    assert.equal(
+      await sql("select release_commit from private.academy_course_access"),
+      release,
+    );
+    const expired = {
+      ...options,
+      now: Date.parse(options.expected.grace_until),
+    };
+    await assert.rejects(configure(true, expired), /licence_is_not_active/);
+    assert.deepEqual(await configure(false, expired), {
+      ...expectedAccess,
+      enabled: false,
+    });
+    assert.deepEqual(await configure(false, expired), {
+      ...expectedAccess,
+      enabled: false,
+    });
 
     await sql(`
       insert into auth.users(id,email,email_confirmed_at) values
