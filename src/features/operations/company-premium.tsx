@@ -7,39 +7,13 @@ import { Dialog } from "../../components/ui/dialog";
 import { Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
-import type { CompanyPremiumSetting } from "./data";
+import {
+  companyPremiumCommandSchema,
+  retainedCompanyLmsSchema,
+  type CompanyPremiumSetting,
+} from "./company-premium-schema";
 import { AuditedCourseChat } from "./audited-course-chat";
 import "./i18n";
-
-type PremiumCommandResult = {
-  status: "updated" | "unchanged" | "conflict";
-  enabled: boolean;
-  version: number;
-};
-type RetainedCourse = {
-  run_id: string;
-  title: string;
-  archived_at: string | null;
-  sessions: number;
-  enrolments: number;
-  resources: {
-    name: string;
-    version: number;
-    audience: string;
-    removed: boolean;
-  }[];
-  attendance_entries: number;
-  course_group_messages: number;
-  questions: number;
-  quiz_attempts: number;
-  completion_records: number;
-};
-type RetainedData = {
-  organisation_id: string;
-  premium_enabled: boolean;
-  course_count: number;
-  courses: RetainedCourse[];
-};
 
 /** Keep every role's status readable while only a current admin receives mutation controls. */
 export function CompanyPremiumControl({
@@ -77,7 +51,7 @@ export function CompanyPremiumControl({
         p_request_id: requestId.current,
       });
       if (error) throw error;
-      return data as PremiumCommandResult;
+      return companyPremiumCommandSchema.parse(data);
     },
     onSuccess: async (result) => {
       setNotice(result.status === "conflict" ? "conflict" : "saved");
@@ -102,7 +76,7 @@ export function CompanyPremiumControl({
         p_organisation_id: setting.organisation_id,
       });
       if (error) throw error;
-      return data as RetainedData;
+      return retainedCompanyLmsSchema.parse(data);
     },
   });
 

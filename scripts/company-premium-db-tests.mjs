@@ -91,13 +91,19 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 )
                 .join(",")}))`,
         ).then((value) => JSON.parse(value || "null"));
-    const toggle = (who, org, enabled, version, requestId = randomUUID()) =>
-        rpc(who, "set_company_premium", [org, enabled, version, requestId]);
+    const toggle = async (who, org, enabled, version, requestId = randomUUID()) => {
+        const result = await rpc(who, "set_company_premium", [org, enabled, version, requestId]);
+        assertLmsResponse("set_company_premium", result);
+        return result;
+    };
 
     await check(
         "Existing and new company entitlements default OFF; management may inspect but not change them",
         async () => {
             const settings = await rpc(admin, "company_premium_settings");
+            assertLmsResponse("company_premium_settings", settings);
+            assertLmsResponse("company_premium_settings", await rpc(manager, "company_premium_settings"));
+            await assert.rejects(rpc(lecturer, "company_premium_settings"), /42501/);
             assert.deepEqual(
                 settings.map((item) => [item.organisation_id, item.enabled, item.version]).sort(),
                 [
@@ -281,6 +287,17 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(await rpc(participant, "send_course_chat_message", [roomA, "Fictional course question", requestId]), courseChatMessageId);
             const messages = await rpc(participant, "course_chat_messages", [roomA, null, null, 50]);
             assert.deepEqual(messages.map((item) => [item.id, item.body]), [[courseChatMessageId, "Fictional course question"]]);
+            const defaultPage = await rpc(participant, "course_chat_messages", [roomA]);
+            assertLmsResponse("course_chat_messages", defaultPage);
+            assert.deepEqual(defaultPage, messages);
+            await assert.rejects(
+                rpc(participant, "course_chat_messages", [roomA, messages[0].created_at]),
+                /Invalid course chat page/,
+            );
+            await assert.rejects(
+                rpc(participant, "send_course_chat_message", [roomA, "x".repeat(8001), randomUUID()]),
+                /Invalid message/,
+            );
             assert.equal("document_id" in messages[0], false);
             assert.deepEqual(await rpc(client, "course_chat_rooms", [runA]), [{id: roomA, title: "Fictional company A room", can_post: false}]);
             assert.deepEqual(await rpc(client, "course_chat_messages", [roomA, null, null, 50]), messages);
@@ -574,6 +591,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 [runB],
             );
             const retained = await rpc(admin, "retained_company_lms", [companyA]);
+            assertLmsResponse("retained_company_lms", retained);
             assert.equal(retained.premium_enabled, true);
             assert.equal(retained.course_count, 1);
             assert.equal(retained.courses[0].title, "Fictional retained LMS course");

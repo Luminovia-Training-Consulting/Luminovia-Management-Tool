@@ -281,15 +281,17 @@ describe("documented Premium course and spending operations", () => {
   });
 
   it("matches the course chat DTO and keeps operational chat out of the explorer", () => {
-    expect(requestSchema("/rest/v1/rpc/course_chat_messages").required).toEqual(
-      ["p_room_id", "p_before_at", "p_before_id", "p_limit"],
-    );
+    expect(requestSchema("/rest/v1/rpc/course_chat_messages")).toMatchObject({
+      required: ["p_room_id"],
+      properties: { p_limit: { minimum: 1, maximum: 100, default: 50 } },
+    });
     expect(paths["/rest/v1/rpc/course_chat_messages"].post).toMatchObject({
       responses: {
         "200": {
           content: {
             "application/json": {
               schema: {
+                maxItems: 100,
                 items: { properties: { deleted_at: { format: "date-time" } } },
               },
             },
@@ -299,6 +301,64 @@ describe("documented Premium course and spending operations", () => {
     });
     expect(paths).not.toHaveProperty("/rest/v1/rpc/chat_messages");
     expect(paths).not.toHaveProperty("/rest/v1/rpc/send_message");
+    expect(
+      requestSchema("/rest/v1/rpc/send_course_chat_message"),
+    ).toMatchObject({
+      properties: { p_body: { minLength: 1, maxLength: 8000 } },
+    });
+    expect(
+      requestSchema("/rest/v1/rpc/send_course_chat_attachment"),
+    ).toMatchObject({
+      properties: { p_body: { maxLength: 8000 } },
+    });
+  });
+
+  it("types the bounded fields of company Premium settings and retained summaries", () => {
+    const schema = (name: string) =>
+      (
+        paths["/rest/v1/rpc/" + name].post.responses["200"] as {
+          content: Record<string, { schema: unknown }>;
+        }
+      ).content["application/json"].schema;
+    expect(schema("company_premium_settings")).toMatchObject({
+      type: "array",
+      items: {
+        required: ["organisation_id", "enabled", "version", "updated_at"],
+        additionalProperties: false,
+      },
+    });
+    expect(schema("set_company_premium")).toMatchObject({
+      properties: {
+        status: { enum: ["updated", "unchanged", "conflict"] },
+      },
+      additionalProperties: false,
+    });
+    expect(requestSchema("/rest/v1/rpc/retained_company_lms").required).toEqual(
+      ["p_organisation_id"],
+    );
+    expect(schema("retained_company_lms")).toMatchObject({
+      additionalProperties: false,
+      properties: {
+        courses: {
+          items: {
+            additionalProperties: false,
+            required: expect.arrayContaining([
+              "attendance_entries",
+              "course_group_messages",
+              "resources",
+            ]),
+            properties: {
+              resources: {
+                items: {
+                  required: ["name", "version", "audience", "removed"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   });
 
   it("documents resource, teaching and self-service learning action payloads", () => {

@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CompanyPremiumControl } from "./company-premium";
-import type { CompanyPremiumSetting } from "./data";
+import type { CompanyPremiumSetting } from "./company-premium-schema";
 
 const fake = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
@@ -14,7 +14,7 @@ vi.mock("../../lib/online", () => ({
 }));
 
 const initial: CompanyPremiumSetting = {
-  organisation_id: "fictional-company",
+  organisation_id: "c1c7235f-8f2d-49a3-898b-729ca578915e",
   enabled: false,
   version: 0,
   updated_at: null,
@@ -89,7 +89,7 @@ it("requires both confirmations before an admin command and sends no command on 
   expect(fake.rpc).toHaveBeenCalledWith(
     "set_company_premium",
     expect.objectContaining({
-      p_organisation_id: "fictional-company",
+      p_organisation_id: initial.organisation_id,
       p_enabled: true,
       p_expected_version: 0,
       p_request_id: expect.stringMatching(/^[0-9a-f-]{36}$/i),

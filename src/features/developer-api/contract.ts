@@ -17,6 +17,11 @@ import {
 } from "./learning-contract.ts";
 import { z } from "zod";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
+import {
+  companyPremiumCommandSchema,
+  companyPremiumSettingsSchema,
+  retainedCompanyLmsSchema,
+} from "../operations/company-premium-schema.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -74,6 +79,7 @@ const rpc = (
   description: string,
   input: Record<string, unknown>,
   result: unknown,
+  optional: readonly string[] = [],
 ) => ({
   post: {
     operationId,
@@ -81,8 +87,11 @@ const rpc = (
     summary,
     description,
     requestBody: {
-      required: Object.keys(input).length > 0,
-      content: json(object(input)),
+      required: Object.keys(input).some((name) => !optional.includes(name)),
+      content: json({
+        ...object(input),
+        required: Object.keys(input).filter((name) => !optional.includes(name)),
+      }),
     },
     responses: {
       "200": { description: "Current server result", content: json(result) },
@@ -582,15 +591,16 @@ const nativePaths = {
     "courseChatMessages",
     "Premium LMS",
     "Read messages from a course participant room",
-    "Requires current room access or read authority for a linked company contact on that Premium course. Deleted bodies are null. Use the message ID and returned attachment version at course-documents to request authorized bytes.",
+    "Requires current room access or read authority for a linked company contact on that Premium course. Supply the timestamp and ID of the oldest visible message together for an earlier page. The server selects the latest matching window and returns it oldest-first. Deleted bodies are null. Use the message ID and returned attachment version at course-documents to request authorized bytes.",
     {
       p_room_id: uuid,
       p_before_at: nullableDateTime,
       p_before_id: nullableUuid,
-      p_limit: { type: "integer", minimum: 1, maximum: 100 },
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
     },
     {
       type: "array",
+      maxItems: 100,
       items: object({
         id: uuid,
         sender_id: uuid,
@@ -601,6 +611,7 @@ const nativePaths = {
         attachment: courseChatAttachment,
       }),
     },
+    ["p_before_at", "p_before_id", "p_limit"],
   ),
   "/rest/v1/rpc/send_course_chat_message": rpc(
     "sendCourseChatMessage",
@@ -609,7 +620,7 @@ const nativePaths = {
     "Requires current course Premium, room access and active enrolment for participants. The client ID makes retries idempotent. Files and mentions are not supported by this operation.",
     {
       p_room_id: uuid,
-      p_body: { type: "string", minLength: 1 },
+      p_body: { type: "string", minLength: 1, maxLength: 8000 },
       p_client_id: uuid,
     },
     uuid,
@@ -621,7 +632,7 @@ const nativePaths = {
     "First upload the file using the course chat form fields at the files gateway. Pass the returned document ID and exact clean version. Current room, Premium and sender ownership are rechecked. Reuse the client ID and unchanged payload when retrying the post.",
     {
       p_room_id: uuid,
-      p_body: text,
+      p_body: { ...text, maxLength: 8000 },
       p_client_id: uuid,
       p_document_id: uuid,
       p_version_id: uuid,
@@ -918,22 +929,34 @@ const nativePaths = {
     },
     object({ status: { const: "request_submitted" } }),
   ),
+  "/rest/v1/rpc/company_premium_settings": rpc(
+    "companyPremiumSettings",
+    "Administration",
+    "Read the current company Premium settings",
+    "Requires active organisation management. A company without a stored setting has enabled=false, version=0 and updated_at=null. Use this version when requesting a toggle.",
+    {},
+    z.toJSONSchema(companyPremiumSettingsSchema),
+  ),
+  "/rest/v1/rpc/retained_company_lms": rpc(
+    "retainedCompanyLms",
+    "Administration",
+    "Inspect a company's retained Premium course summaries",
+    "Requires the active admin role and records an audit event. Includes counts and resource display metadata for current and archived courses, regardless of the Premium switch. The response contains aggregate activity, never learner identities, attendance notes, message bodies, answer keys or file bytes.",
+    organisation,
+    z.toJSONSchema(retainedCompanyLmsSchema),
+  ),
   "/rest/v1/rpc/set_company_premium": rpc(
     "setCompanyPremium",
     "Administration",
     "Change the company Premium entitlement",
-    "Requires the active admin role and a current version. Review the requested change before submitting. A 200 result with status conflict means nothing changed.",
+    "Requires the active admin role and a current version. Review the requested change before submitting. Reuse the request ID only with the same company, version and requested state. A 200 result with status conflict means the setting was unchanged and contains the current state and version.",
     {
       ...organisation,
       p_enabled: boolean,
       p_expected_version: version,
       ...idempotency,
     },
-    object({
-      status: { enum: ["updated", "unchanged", "conflict"] },
-      enabled: boolean,
-      version,
-    }),
+    z.toJSONSchema(companyPremiumCommandSchema),
   ),
   "/rest/v1/rpc/course_workspace_entitlement": rpc(
     "courseWorkspaceEntitlement",

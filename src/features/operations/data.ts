@@ -4,6 +4,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { companyPremiumSettingsSchema } from "./company-premium-schema";
 
 /** Shared organization metadata from the permitted directory. */
 export interface Organisation {
@@ -17,14 +18,6 @@ export interface Organisation {
   archived_at: string | null;
 }
 
-/** Per-organization Premium entitlement projection; absence is treated as OFF by the server. */
-export interface CompanyPremiumSetting {
-  organisation_id: string;
-  enabled: boolean;
-  version: number;
-  updated_at: string | null;
-}
-
 /** Read current company LMS flags for staff who may already manage the organization directory. */
 export const companyPremiumSettingsQuery = (actor: string) =>
   queryOptions({
@@ -32,7 +25,7 @@ export const companyPremiumSettingsQuery = (actor: string) =>
     queryFn: async () => {
       const { data, error } = await db().rpc("company_premium_settings");
       if (error) throw error;
-      return (data ?? []) as CompanyPremiumSetting[];
+      return companyPremiumSettingsSchema.parse(data);
     },
   });
 
