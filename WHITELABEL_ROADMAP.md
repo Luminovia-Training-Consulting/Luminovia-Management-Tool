@@ -48,7 +48,7 @@ Both dedicated editions use validated customer branding in the shell, PWA assets
 
 Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped attendance and participation reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
 
-The current dedicated OpenAPI 1.28 catalogue documents 82 paths with domain schemas. Both editions use the same published course-index scope and a separate subscription signing secret. The [signed webhook receiver](scripts/examples/README.md#signed-course-webhook-receiver) stores accepted events durably and handles retries. The [installation runbook](deploy/academy/README.md) distinguishes the locally tested setup from customer handoff.
+The dedicated OpenAPI 1.29 catalogue documents 85 paths with domain schemas. Both editions offer distinct keys for the published course index, enrolment and aggregate reports. The [signed webhook receiver](scripts/examples/README.md#signed-course-webhook-receiver) uses a separate signing secret, stores accepted events durably and handles retries. The [installation runbook](deploy/academy/README.md) distinguishes the locally tested setup from customer handoff.
 
 Release gates still cover the complete target installation, public domain/TLS, SMTP and dedicated delivery, migration and recovery of retained customer data, operational handoff and commercial fulfilment. The acceptance matrix below tracks those separately.
 
@@ -307,12 +307,13 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Send the automatically assigned username with the one-time invitation. Require a personal password before opening protected resources and support verified-email or username sign-in after setup. Initial passwords supplied by administrators require a first sign-in change.
 - [x] Provision confirmed company contacts for one organisation. Allow them to request learner invitations from their own courses under the shared licensed seats and invitation budgets, with a scoped and opaque receipt.
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
-- [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. The Academy catalogue describes 82 paths, including human authentication, course operations, files and scoped integration administration. Include an optional fictional sandbox in the signed customer package.
+- [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. The Academy catalogue describes 85 paths, including human authentication, course operations, files and scoped integration administration. Include an optional fictional sandbox in the signed customer package.
 - [ ] Finish exact-release request, response and error coverage across HTTP, file transfers, Realtime and notifications. Expand runnable integration examples where the existing guides and the signed receiver do not cover a workflow.
 - [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
 - [x] Issue, rotate and revoke course-index credentials for one academy organisation. Native HTTP and Chromium verify the exact published-course scope and current revocation.
 - [x] Keep course-alert email opt-in and off at installation by default. The private relay rechecks current rights, licence release, quiet hours and provider configuration before sending.
-- [ ] Extend scoped credentials to approved reporting and enrolment integrations. Verify external receiver onboarding.
+- [x] Issue a separate key for aggregate course reports or enrolment of existing confirmed organisation participants. Keep course-index keys and webhook signing secrets separate. Dedicated PostgreSQL tests cover both editions, cross-organisation denial, current issuer authority and exact retry.
+- [ ] Verify external receiver onboarding on an independent customer installation.
 
 ### WL-05 — Self-hosted installation & update lifecycle (P0)
 

@@ -213,13 +213,15 @@ const lmsHelpGuides: GuideModule[] = [
     steps: {
       de: [
         "Öffne mit einem Admin- oder Owner-Konto das Unternehmen unter Verwaltung → Kunden / Unternehmen. Erstelle unter API-Integrationen einen benannten Schlüssel mit Ablaufdatum.",
-        "Kopiere den einmal angezeigten Schlüssel in den Geheimnisspeicher des empfangenden Servers. Nutze die Basis-URL aus dem OpenAPI-Dokument für den lesenden Kursindex.",
+        "Wähle genau eine Berechtigung für den Kurskatalog, die Einschreibung bestätigter Teilnehmender oder zusammengefasste Kurszahlen. Einschreibung und Bericht setzen aktives Premium LMS für das Unternehmen voraus.",
+        "Kopiere den einmal angezeigten Schlüssel in den Geheimnisspeicher des empfangenden Servers. Entnimm dem OpenAPI-Dokument die Basis-URL und den zur Berechtigung passenden Aufruf.",
         "Richte mit dem Betreiber zuerst den HTTPS-Empfänger und seinen Alias ein. Wähle unter Kurs-Webhooks den aktiven Integrationsschlüssel, lege das Abonnement an und hinterlege den Signierschlüssel sicher beim Empfänger.",
         "Prüfe im Zustellverlauf einen bestätigten Test. Empfänger prüfen Signatur und Zeitstempel und verarbeiten bereits bekannte Ereignis-IDs nur einmal.",
       ],
       en: [
         "With an admin or owner account, open the company under Administration → Customers / Companies. Create a named, expiring key under API integrations.",
-        "Copy the one-time credential into the consuming server's secret store. Use the base URL from the OpenAPI document for the read-only course index.",
+        "Choose one permission for the course index, enrolment of confirmed participants or aggregate course counts. Enrolment and reporting require Premium LMS for the company.",
+        "Copy the one-time credential into the consuming server's secret store. Use the base URL and operation from the OpenAPI document for the selected permission.",
         "Have the operator configure the HTTPS receiver and its alias first. Select the active integration key under Course webhooks, add a subscription and store its signing secret securely on the receiver.",
         "Verify a confirmed test in delivery history. Receivers verify the signature and timestamp and process each event ID once.",
       ],

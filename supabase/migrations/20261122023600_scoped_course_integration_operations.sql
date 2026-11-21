@@ -44,12 +44,12 @@ begin
     or p_expires_at > now()+interval '180 days' or p_label is null
     or char_length(btrim(p_label)) not between 1 and 120
   then raise exception 'Invalid scope, label or key expiry' using errcode='22023'; end if;
+  if (select count(*) from private.company_integration_keys
+      where organisation_id=p_organisation_id and purpose<>'academy-webhook'
+        and revoked_at is null and expires_at>now() and id is distinct from p_rotate_id) >= 20 then
+    raise exception 'Too many active integration keys' using errcode='54000';
+  end if;
   if p_rotate_id is null then
-    if (select count(*) from private.company_integration_keys
-        where organisation_id=p_organisation_id and purpose<>'academy-webhook'
-          and revoked_at is null and expires_at>now()) >= 20 then
-      raise exception 'Too many active integration keys' using errcode='54000';
-    end if;
     insert into private.company_integration_keys(organisation_id,label,secret_hash,issued_by,expires_at,purpose)
     values(p_organisation_id,btrim(p_label),sha256(convert_to(secret,'UTF8')),auth.uid(),p_expires_at,key_purpose)
     returning * into key_row;

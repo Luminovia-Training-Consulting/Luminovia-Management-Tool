@@ -379,13 +379,15 @@ const academyGuides: GuideModule[] = [
     steps: {
       de: [
         "Öffne als lokaler Admin die Kursintegrationen in der Akademieverwaltung und wähle die Organisation. Erstelle einen benannten API-Schlüssel mit Ablaufdatum.",
-        "Speichere den einmal angezeigten Wert im Geheimnisspeicher des abfragenden Servers. Entnimm die Basis-URL und den Kursindex dem OpenAPI-Dokument.",
+        "Wähle eine Berechtigung für den Kurskatalog, die Einschreibung bereits bestätigter Teilnehmender oder zusammengefasste Kurszahlen.",
+        "Speichere den einmal angezeigten Wert im Geheimnisspeicher des abfragenden Servers. Entnimm dem OpenAPI-Dokument die Basis-URL und den passenden Aufruf.",
         "Lass den Betreiber einen HTTPS-Empfänger mit Alias einrichten. Registriere den Alias unter Signierte Kurs-Webhooks und speichere den Signierschlüssel beim Empfänger.",
         "Prüfe die erste Zustellung im Verlauf. Der Empfänger prüft Signatur und Zeitstempel und verarbeitet jede Ereignis-ID nur einmal.",
       ],
       en: [
         "As a local administrator, open Course integrations in Academy administration and choose the organisation. Create a named API key with an expiry.",
-        "Store the one-time credential in the consuming server's secret store. The OpenAPI document gives the base URL and course index operation.",
+        "Choose one permission for the course index, enrolment of confirmed participants or aggregate course counts.",
+        "Store the one-time credential in the consuming server's secret store. The OpenAPI document gives the base URL and the operation for the selected permission.",
         "Ask the operator to configure an HTTPS receiver with an alias. Register it under Signed course webhooks and store the signing key on the receiver.",
         "Check the first delivery in delivery history. The receiver verifies the signature and timestamp and processes each event ID once.",
       ],

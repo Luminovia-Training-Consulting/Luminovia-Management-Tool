@@ -36,6 +36,8 @@ const allowedApi = [
   "/functions/v1/accounts/v1/academy/users",
   "/functions/v1/accounts/v1/academy/company-invitations",
   "/functions/v1/company-integration?limit=2",
+  "/functions/v1/company-integration/enrolments",
+  "/functions/v1/company-integration/participation",
   "/functions/v1/course-documents",
   "/functions/v1/files?mode=academy-material",
   "/functions/v1/files?mode=academy-student-exam",
@@ -100,9 +102,10 @@ try {
   const envoyPort = Number(localPort) + 10;
   const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
   const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
+  const minimumAllowance = allowedApi.length + blockedApi.length + 1;
   assert.ok(
-    allowance >= allowedApi.length + blockedApi.length + 1 && allowance <= 1000,
-    "Use a staging licence with 29–1,000 requests per minute",
+    allowance >= minimumAllowance && allowance <= 1000,
+    `Use a staging licence with ${minimumAllowance}–1,000 requests per minute`,
   );
   const envoyConfig = join(root, "envoy.yml");
   await writeFile(

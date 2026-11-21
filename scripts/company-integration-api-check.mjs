@@ -14,6 +14,7 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
   );
   defer(() =>
     sql(`
+    delete from public.course_enrolments where course_run_id='${courseA}' and user_id='${learner.id}';
     delete from public.course_runs where id in ('${courseA}','${courseB}');
     delete from public.course_templates where id='${template}';
     delete from public.organisations where id in ('${companyA}','${companyB}');

@@ -242,9 +242,17 @@ The OpenAPI information version follows semantic versioning for the explicitly d
 
 ## Company integration keys
 
-In **Admin → Companies → API integrations**, active administrators or owners can issue a company key, replace it or revoke it. The screen displays the secret once. Store it in a backend secret manager. The key uses the fixed \`courses.read\` scope and expires. The list reports expiry, revocation and last successful use. Rotation invalidates the old key immediately, and issuer suspension or company archiving prevents use. The table stores only a hash of the secret.
+In **Admin → Companies → API integrations** or **Academy administration → Course integrations**, an authorised administrator issues an expiring key for one organisation and one scope. Store its one-time secret on the consuming server. Rotation keeps the scope and invalidates the previous secret. Revocation, expiry, issuer role loss, company archiving and an inactive Academy licence prevent use.
 
-Call \`GET /functions/v1/company-integration\` from a backend with \`Authorization: Bearer <integration-key>\` and no Origin header. This endpoint advertises its separate credential in the downloaded OpenAPI document. Portal sessions continue to use the account and native API. Query parameters are \`limit\` (1–50, default 25) and \`after\` (the previous page’s \`next_cursor\`). Results contain \`items\` with published course-run \`id\`, \`title\` and \`time_zone\`; a null \`next_cursor\` marks the final page. Company scope is fixed to the key. The endpoint returns HTTP 429 and \`Retry-After\` at 60 requests per minute per key.
+Call these server endpoints with \`Authorization: Bearer <integration-key>\` and without an Origin header. Requests share the key's allowance of 60 per minute. HTTP 429 includes \`Retry-After\`.
+
+| Key scope | Endpoint | Result |
+| --- | --- | --- |
+| \`courses.read\` | \`GET /functions/v1/company-integration\` | Published course IDs, titles and time zones. Page with \`limit\` (1–50) and \`after\` from the previous \`next_cursor\`. |
+| \`enrolments.write\` | \`POST /functions/v1/company-integration/enrolments\` | Enrol a confirmed company participant by \`course_id\` and their \`participant_id\` (Luminovia User ID). The same request returns the existing enrolment, while a removed or completed enrolment returns 409. |
+| \`reports.read\` | \`GET /functions/v1/company-integration/participation?course_id=<uuid>\` | Counts of sessions, currently enrolled learners and completed learners. The response contains aggregate counts without learner-level records. |
+
+Enrolment and reports require Premium LMS enabled for the internal company or an active dedicated Academy licence. The enrolment operation works with published courses and existing, confirmed memberships. Invitations and membership approval continue in the account workflows. Wrong scope returns 401. An unavailable course or participant returns 404 without distinguishing foreign resources. The [integration examples](scripts/examples/README.md) include runnable requests.
 
 ## Company course webhooks
 

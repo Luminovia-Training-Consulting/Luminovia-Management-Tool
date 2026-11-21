@@ -150,7 +150,7 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 - [ ] Complete API-01–API-08 from Section 10 using the existing Auth, RPC, Edge and file integrations. Fill the remaining permission, request, response and error contracts in the versioned operation catalogue.
 - [x] Add searchable Swagger UI and a downloadable OpenAPI 3.1 definition for the installed edition. Interactive requests use the current caller's session and remain subject to database permission checks. The Academy explorer covers its documented database requests; its download also covers supported file and account requests.
-- [x] Add named, scoped, revocable credentials for the published course index and signed course webhooks. Local fixtures cover credential rotation, revocation, delivery attempts and retry scope. The full API acceptance matrix remains below.
+- [x] Add named, scoped, revocable credentials for the published course index, enrolment of confirmed participants and aggregate course reporting. Local fixtures cover credential rotation, revocation, Premium OFF, foreign scope and enrolment retries. Signed course webhooks have their own signing secrets and delivery retry tests.
 - [ ] Implement API-T01–API-T20 in the canonical CI suite; validate API parity, authenticated files, Premium OFF denial, versioning, concurrent actions and backward compatibility.
 
 ### R3 — Premium LMS foundation (`P1`, blocking any Premium customer activation)
@@ -656,7 +656,7 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
 
-The published internal catalogue covers 363 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments and settlements. The Academy catalogue covers 82 paths per dedicated edition. Published JSONB payloads use domain schemas and the compiler-discovered browser RPC inventory is checked against the migrated APIs. The acceptance checks below also cover real responses, role denials, transport errors and compatibility.
+The published internal catalogue covers 366 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments and settlements. The Academy catalogue covers 85 paths per dedicated edition. Published JSONB payloads use domain schemas and the compiler-discovered browser RPC inventory is checked against the migrated APIs. The acceptance checks below also cover real responses, role denials, transport errors and compatibility.
 
 | Test    | Automated acceptance / observable behaviour                                                                                               |
 |---------|-------------------------------------------------------------------------------------------------------------------------------------------|

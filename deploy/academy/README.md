@@ -127,7 +127,7 @@ node scripts/testing/academy-ingress-check.mjs "$caddy_binary" \
   "$runtime_root/browser" "$package_directory/manifest.json" "$portal_origin" 45682 "$envoy_binary"
 ```
 
-Use the Caddy and Envoy binaries from the images pinned in `compose.override.yml`. The second command checks every signed browser file through a private local TLS certificate. It confirms deep links, PWA caching, the Realtime WebSocket handshake, the maintenance fence and the dedicated API surface. It also spends the entire test licence's API allowance and expects HTTP 429 with `Retry-After` on the next request. Use a staging licence with 29–1,000 requests per minute and reserve the chosen local port plus the port 10 higher. Repeat the browser and transport checks against the actual independently provisioned backend before public activation.
+Use the Caddy and Envoy binaries from the images pinned in `compose.override.yml`. The second command checks every signed browser file through a private local TLS certificate. It confirms deep links, PWA caching, the Realtime WebSocket handshake, the maintenance fence and the dedicated API surface. It also spends the entire test licence's API allowance and expects HTTP 429 with `Retry-After` on the next request. Use a staging licence with 31–1,000 requests per minute and reserve the chosen local port plus the port 10 higher. Repeat the browser and transport checks against the actual independently provisioned backend before public activation.
 
 The dedicated public API has one shared allowance per Envoy instance. The signed amount is the burst size and the bucket refills each minute. Requests for static files and private service-to-service calls stay outside this allowance. Review occupancy, storage and mail limits alongside ingress when renewing a licence or planning an upgrade.
 
@@ -204,7 +204,7 @@ Run the worker from the reviewed release checkout with its locked production dep
 
 ## Connect a published course index
 
-In Academy administration, select the organisation under Course integrations and issue a named, expiring key. Store the one-time credential in the consuming service's secret store. Use the downloaded Academy OpenAPI contract for the `GET /functions/v1/company-integration` request and its pagination parameters. The response provides the published course IDs, titles and time zones belonging to the selected organisation. The administration panel shows the key metadata and supports revocation and rotation. Delivery requires an active licence and a current authorised issuer.
+In Academy administration, select the organisation under Course integrations and issue a named, expiring key for the course index, enrolment of confirmed participants or aggregate participation reports. Store the one-time credential in the consuming service's secret store. The Academy OpenAPI download and [integration examples](../../scripts/examples/README.md) show the exact requests. Revocation is immediate and rotation preserves the original scope. Each request requires an active licence and a current authorised issuer.
 
 ## Academy issuer on generated course documents
 
