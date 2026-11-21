@@ -223,6 +223,61 @@ const materialUpload = {
     },
   },
 };
+
+const examFileError = (description: string, codes: string[]) => ({
+  description,
+  content: content(record({ error: { enum: codes } })),
+});
+const studentExamDownload = {
+  post: {
+    operationId: "downloadAcademyStudentExamPdf",
+    tags: ["Licensed course profile"],
+    summary: "Download the exact scanned student exam paper",
+    description: `${readAccess} Send an approved Origin and the student paper ID from the course workspace. The course must still require an exam and the caller must retain course access. The exact stored SHA-256 and current permissions are checked before any bytes are returned.`,
+    security: credentials,
+    "x-portal-licence": "active-or-grace",
+    parameters: [
+      {
+        name: "Origin",
+        in: "header",
+        required: true,
+        schema: { ...string, format: "uri" },
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: content(record({ kind: { const: "exam" }, id: uuid })),
+    },
+    responses: {
+      "200": {
+        description: "Private exact PDF",
+        headers: {
+          "Cache-Control": { schema: string },
+          "Content-Disposition": { schema: string },
+        },
+        content: {
+          "application/pdf": { schema: { ...string, format: "binary" } },
+        },
+      },
+      "400": examFileError("Invalid request", ["invalid_request"]),
+      "401": examFileError("Authentication required", [
+        "authentication_required",
+      ]),
+      "403": examFileError(
+        "Origin, current publication or course access denied",
+        [
+          "origin_not_allowed",
+          "document_unavailable",
+          "document_changed_or_revoked",
+        ],
+      ),
+      "503": examFileError("Exact PDF unavailable", [
+        "document_unavailable",
+        "document_integrity_failed",
+      ]),
+    },
+  },
+};
 const expectedVersion = { type: "integer", minimum: 0 };
 const welcomeText = { ...string, maxLength: 4000 };
 const attendanceVersion = { type: "integer", minimum: 0 };
@@ -336,7 +391,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_workspace": courseOperation(
     "readAcademyCourseWorkspace",
     "Read a course workspace and its online meeting link",
-    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. The exam projection contains the recorded requirement and omits its version for learners. The exam documents array is always empty. Grace sets meeting and exam editing flags to false. The repeat_request field is always null in these editions.",
+    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. The exam projection contains the recorded requirement and omits its version for learners. Published student papers appear only while an exam is required. Grace sets meeting and exam editing flags to false. The repeat_request field is always null in these editions.",
     "active-or-grace",
     record(run),
     record({
@@ -344,7 +399,15 @@ const coursePaths = {
       repeat_request: nil,
       exams: record({
         ...workspaceResult.properties.exams.properties,
-        documents: { ...list({}), maxItems: 0 },
+        documents: list(
+          record({
+            id: uuid,
+            name: string,
+            version_id: uuid,
+            version: expectedVersion,
+            audience: { const: "students" },
+          }),
+        ),
       }),
     }),
   ),
@@ -437,6 +500,33 @@ const coursePaths = {
     record({ required: boolean, version: { ...expectedVersion, minimum: 1 } }),
     true,
   ),
+  "/rest/v1/rpc/academy_student_exam_pdf_options": courseOperation(
+    "listAcademyStudentExamPdfOptions",
+    "List the course editor’s own scanned PDFs eligible for an exam",
+    "The course must already require an exam. Returns up to 50 exact eligible versions. A version cannot be published as an exam while its document has an active general course share.",
+    "active",
+    record(run),
+    {
+      ...list(
+        record({
+          id: uuid,
+          name: string,
+          version: expectedVersion,
+          created_at: dateTime,
+        }),
+      ),
+      maxItems: 50,
+    },
+  ),
+  "/rest/v1/rpc/share_course_exam_pdf": courseOperation(
+    "publishAcademyStudentExamPdf",
+    "Publish an exact previously scanned student exam paper",
+    "The currently assigned instructor, scoped company contact or course manager can publish an eligible version from their own personal files while the exam is required. Supply the ID returned by the exam PDF options operation. Repeating a publication of the same version returns the existing paper ID.",
+    "active",
+    record({ ...run, p_version_id: uuid, p_audience: { const: "students" } }),
+    uuid,
+  ),
+  "/functions/v1/course-documents": studentExamDownload,
   "/rest/v1/rpc/academy_ensure_course_chat": courseOperation(
     "ensureAcademyCourseChat",
     "Open the course participant text room",
@@ -485,7 +575,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.6.0",
+      version: "1.7.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

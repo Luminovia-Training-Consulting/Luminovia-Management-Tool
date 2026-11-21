@@ -21,9 +21,12 @@ const writePaths = [
   "/rest/v1/rpc/academy_course_material_action",
   "/rest/v1/rpc/save_course_session_attendance",
   "/rest/v1/rpc/set_course_exam_required",
+  "/rest/v1/rpc/academy_student_exam_pdf_options",
+  "/rest/v1/rpc/share_course_exam_pdf",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
+const examDownload = "/functions/v1/course-documents";
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
@@ -52,7 +55,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         customer_ready: false,
       });
       expect(Object.keys(spec.paths).sort()).toEqual(
-        [bootstrap, upload, ...readPaths, ...writePaths, ...draftPaths].sort(),
+        [
+          bootstrap,
+          upload,
+          examDownload,
+          ...readPaths,
+          ...writePaths,
+          ...draftPaths,
+        ].sort(),
       );
       expect(spec).not.toHaveProperty("webhooks");
       expect(Object.keys(spec.components.securitySchemes).sort()).toEqual([
@@ -117,7 +127,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(command.responses).toHaveProperty("409");
     });
 
-    it("documents the active-only exam decision without exam file operations", () => {
+    it("documents the active-only decision and student publication with a grace-readable exact PDF", () => {
       const write = spec.paths[writePaths[6]].post;
       expect(write["x-portal-licence"]).toBe("active");
       expect(write.responses).toHaveProperty("409");
@@ -131,11 +141,30 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "application/json"
         ].schema,
       ).toMatchObject({
-        properties: { exams: { properties: { documents: { maxItems: 0 } } } },
+        properties: {
+          exams: {
+            properties: {
+              documents: {
+                items: { properties: { audience: { const: "students" } } },
+              },
+            },
+          },
+        },
       });
-      expect(spec.paths).not.toHaveProperty(
-        "/rest/v1/rpc/share_course_exam_pdf",
+      expect(
+        spec.paths[writePaths[8]].post.requestBody.content["application/json"]
+          .schema,
+      ).toMatchObject({
+        properties: { p_audience: { const: "students" } },
+      });
+      expect(spec.paths[examDownload].post["x-portal-licence"]).toBe(
+        "active-or-grace",
       );
+      expect(
+        spec.paths[examDownload].post.responses["200"].content[
+          "application/pdf"
+        ].schema,
+      ).toMatchObject({ format: "binary" });
       expect(spec.paths).not.toHaveProperty(
         "/rest/v1/rpc/remove_course_exam_pdf",
       );

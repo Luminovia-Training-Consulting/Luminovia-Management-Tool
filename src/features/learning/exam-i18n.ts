@@ -11,6 +11,19 @@ const pairs: Record<string, [string, string]> = {
   saveSetting: ["Prüfungseinstellung speichern", "Save exam setting"],
   upload: ["PDF hochladen und freigeben", "Upload and share PDF"],
   file: ["Prüfungsdatei (PDF)", "Exam file (PDF)"],
+  retainedPdf: [
+    "Bereits geprüfte Prüfungsdatei",
+    "Previously scanned exam paper",
+  ],
+  selectRetainedPdf: [
+    "Geprüfte PDF-Fassung auswählen",
+    "Select a scanned PDF version",
+  ],
+  publishRetainedPdf: ["Prüfungsdatei freigeben", "Publish exam paper"],
+  noRetainedPdf: [
+    "Keine eigene geprüfte PDF-Fassung zur Freigabe verfügbar.",
+    "No scanned PDF version of your own is available to publish.",
+  ],
   audience: ["Dokumenttyp", "Document type"],
   students: ["Aufgaben für Teilnehmende", "Student exam paper"],
   exam_staff: ["Lösungsschlüssel für das Kursteam", "Course team answer key"],

@@ -146,13 +146,75 @@ it("submits only the exact academy setting and never offers PDF actions", async 
 });
 
 it("shows the last exam decision without controls or PDF metadata in grace", () => {
-  show(course(true, true), "grace");
+  const model = course(true, true);
+  model.exams.documents[0].audience = "exam_staff";
+  show(model, "grace");
   expect(screen.getByText("Exam required")).toBeVisible();
   expect(screen.queryByRole("combobox")).toBeNull();
   expect(
     screen.queryByRole("button", { name: "Save exam setting" }),
   ).toBeNull();
   expect(screen.queryByText("Fictional exam.pdf")).toBeNull();
+});
+
+it("publishes only the selected previously scanned student PDF, without an upload or answer-key control", async () => {
+  const user = userEvent.setup();
+  fake.rpc.mockImplementation((name) =>
+    name === "academy_student_exam_pdf_options"
+      ? {
+          abortSignal: async () => ({
+            data: [
+              {
+                id: "exact-approved-version",
+                name: "Retained paper.pdf",
+                version: 2,
+              },
+            ],
+            error: null,
+          }),
+        }
+      : Promise.resolve({ data: "published-paper", error: null }),
+  );
+  show(course(true, true, false), "active");
+  const choice = await screen.findByRole("option", {
+    name: "Retained paper.pdf · Version 2",
+  });
+  await user.selectOptions(
+    screen.getByLabelText("Previously scanned exam paper"),
+    choice,
+  );
+  await user.click(screen.getByRole("button", { name: "Publish exam paper" }));
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("share_course_exam_pdf", {
+    p_run_id: "fictional-course",
+    p_version_id: "exact-approved-version",
+    p_audience: "students",
+  });
+  expect(
+    screen.queryByRole("option", { name: "Course team answer key" }),
+  ).toBeNull();
+  expect(screen.queryByLabelText("Exam file (PDF)")).toBeNull();
+  expect(fake.upload).not.toHaveBeenCalled();
+});
+
+it("lets a grace-period learner download only a published student paper", async () => {
+  const user = userEvent.setup();
+  const model = course(true, false);
+  model.exams.documents.push({
+    ...model.exams.documents[0],
+    id: "answer-key",
+    name: "Staff-only key.pdf",
+    audience: "exam_staff",
+  });
+  show(model, "grace");
+  await user.click(screen.getByRole("button", { name: "Download PDF" }));
+  expect(fake.download).toHaveBeenCalledExactlyOnceWith(
+    "exam",
+    "paper-id",
+    "Fictional exam.pdf",
+  );
+  expect(screen.queryByText("Staff-only key.pdf")).toBeNull();
+  expect(fake.rpc).not.toHaveBeenCalled();
 });
 
 it("requires a fresh read after the academy exam version changes", async () => {

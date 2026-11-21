@@ -1,9 +1,9 @@
 /** Optional course exam PDFs, attached only after the existing scanner confirms clean bytes. */
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
-import { Field, Notice } from "../../components/common";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
 import { uploadDocument } from "../files/api";
@@ -31,7 +31,26 @@ export function CourseExams({
     "students",
   );
   const [file, setFile] = useState<File | null>(null);
+  const [version, setVersion] = useState("");
   const canEdit = course.exams.can_edit && academy !== "grace";
+  const canPublishRetained =
+    academy === "active" && canEdit && course.exams.required;
+  const options = useQuery({
+    queryKey: ["academy-student-exam-pdf-options", actor, course.id],
+    enabled: Boolean(canPublishRetained && online),
+    retry: false,
+    staleTime: 0,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("academy_student_exam_pdf_options", {
+          p_run_id: course.id,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("invalid_exam_options");
+      return data as { id: string; name: string; version: number }[];
+    },
+  });
   const refresh = () =>
     queries.invalidateQueries({
       queryKey: courseWorkspaceKey(actor, course.id),
@@ -74,6 +93,27 @@ export function CourseExams({
       void refresh();
     },
   });
+  const publish = useMutation({
+    mutationFn: async (selected: string) => {
+      if (
+        !online ||
+        !canPublishRetained ||
+        !options.data?.some((option) => option.id === selected)
+      )
+        throw new Error("exam_editor_required");
+      const { data, error } = await db().rpc("share_course_exam_pdf", {
+        p_run_id: course.id,
+        p_version_id: selected,
+        p_audience: "students",
+      });
+      if (error || typeof data !== "string")
+        throw error ?? new Error("unconfirmed");
+    },
+    onSuccess: async () => {
+      setVersion("");
+      await Promise.all([refresh(), options.refetch()]);
+    },
+  });
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await db().rpc("remove_course_exam_pdf", {
@@ -92,6 +132,11 @@ export function CourseExams({
     setting.isError &&
     "code" in setting.error &&
     setting.error.code === "PT409";
+  const documents = academy
+    ? course.exams.documents.filter(
+        (item) => item.audience === "students" && course.exams.required,
+      )
+    : course.exams.documents;
 
   // No exam area is rendered for a participant while this course's switch is OFF.
   if (
@@ -180,10 +225,51 @@ export function CourseExams({
           )}
         </>
       )}
-      {!academy && !course.exams.documents.length && <p>{t("empty")}</p>}
-      {!academy && course.exams.documents.length > 0 && (
+      {canPublishRetained && online && (
+        <>
+          {options.isPending && <Loading />}
+          {options.isError && (
+            <ErrorState retry={() => void options.refetch()} />
+          )}
+          {options.isSuccess && !options.data.length && (
+            <p>{t("noRetainedPdf")}</p>
+          )}
+          {options.isSuccess && options.data.length > 0 && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (version && !publish.isPending) publish.mutate(version);
+              }}
+            >
+              <Field id="academy-exam-pdf" label={t("retainedPdf")}>
+                <select
+                  id="academy-exam-pdf"
+                  value={version}
+                  onChange={(event) => setVersion(event.target.value)}
+                  disabled={publish.isPending}
+                >
+                  <option value="">{t("selectRetainedPdf")}</option>
+                  {options.data.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name} ·{" "}
+                      {t("version", { version: option.version })}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Button disabled={!version || publish.isPending}>
+                {t("publishRetainedPdf")}
+              </Button>
+            </form>
+          )}
+        </>
+      )}
+      {(!academy || course.exams.required) && !documents.length && (
+        <p>{t("empty")}</p>
+      )}
+      {documents.length > 0 && (
         <ul className="learning-resources">
-          {course.exams.documents.map((document) => (
+          {documents.map((document) => (
             <li key={document.id}>
               <strong>{document.name}</strong>
               <span>
@@ -200,7 +286,7 @@ export function CourseExams({
                 >
                   {t("download")}
                 </Button>
-                {canEdit && (
+                {!academy && canEdit && (
                   <Button
                     variant="ghost"
                     disabled={!online || remove.isPending}
@@ -214,11 +300,13 @@ export function CourseExams({
           ))}
         </ul>
       )}
-      {(setting.isSuccess || share.isSuccess || remove.isSuccess) && (
-        <Notice>{t("saved")}</Notice>
-      )}
+      {(setting.isSuccess ||
+        share.isSuccess ||
+        remove.isSuccess ||
+        publish.isSuccess) && <Notice>{t("saved")}</Notice>}
       {(setting.isError ||
         share.isError ||
+        publish.isError ||
         remove.isError ||
         download.isError) && (
         <Notice kind="error">{t(stale ? "conflict" : "error")}</Notice>

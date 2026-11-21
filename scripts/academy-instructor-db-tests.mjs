@@ -39,10 +39,13 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
         ([path]) =>
           ![
             "/functions/v1/files",
+            "/functions/v1/course-documents",
             "/rest/v1/rpc/academy_course_material_action",
             "/rest/v1/rpc/course_session_register",
             "/rest/v1/rpc/save_course_session_attendance",
             "/rest/v1/rpc/set_course_exam_required",
+            "/rest/v1/rpc/academy_student_exam_pdf_options",
+            "/rest/v1/rpc/share_course_exam_pdf",
             "/rest/v1/rpc/academy_course_draft_options",
             "/rest/v1/rpc/academy_create_course_draft",
           ].includes(path),

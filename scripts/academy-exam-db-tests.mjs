@@ -211,7 +211,6 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       }
     }
     for (const gated of [
-      "share_course_exam_pdf",
       "remove_course_exam_pdf",
       "course_workspace_action",
     ]) {
