@@ -211,8 +211,55 @@ const paths: Record<string, Record<string, unknown>> = {
   ...nativePaths,
 };
 
+const integrationPath = {
+  get: {
+    operationId: "integrationCourseIndex",
+    tags: ["Server integrations"],
+    summary: "List published courses for the key's company",
+    description:
+      "Call this operation from your backend. Browser and portal-session requests are rejected.",
+    security: [{ integrationKey: [] }],
+    parameters: [
+      {
+        name: "limit",
+        in: "query",
+        schema: { type: "integer", minimum: 1, maximum: 50, default: 25 },
+      },
+      { name: "after", in: "query", schema: uuid },
+    ],
+    responses: {
+      "200": {
+        description: "Current published course index",
+        content: json(
+          object({
+            items: {
+              type: "array",
+              items: object({ id: uuid, title: text, time_zone: text }),
+            },
+            next_cursor: { type: ["null", "string"], format: "uuid" },
+          }),
+        ),
+      },
+      "400": { description: "Invalid page parameters" },
+      "401": { description: "Missing, invalid or inactive integration key" },
+      "403": { description: "Browser origin denied" },
+      "429": {
+        description: "Key rate limit reached",
+        headers: { "Retry-After": { schema: { type: "integer" } } },
+      },
+      "503": { description: "Integration temporarily unavailable" },
+    },
+  },
+};
+
 /** Publish only supported, explicitly described product operations. */
-export function portalOpenApi(backend: string) {
+export function portalOpenApi(
+  backend: string,
+  includeServerIntegrations = true,
+) {
+  const documentedPaths: typeof paths = includeServerIntegrations
+    ? { ...paths, "/functions/v1/company-integration": integrationPath }
+    : paths;
   return {
     ...accountOpenApi,
     info: {
@@ -222,7 +269,23 @@ export function portalOpenApi(backend: string) {
         "Interactive contract for accounts and the listed business operations. Current database permissions, company scope and entitlements still apply. Consult the repository API reference for the wider native RPC inventory.",
     },
     servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
-    paths,
+    components: {
+      ...accountOpenApi.components,
+      securitySchemes: {
+        ...accountOpenApi.components.securitySchemes,
+        ...(includeServerIntegrations
+          ? {
+              integrationKey: {
+                type: "http",
+                scheme: "bearer",
+                description:
+                  "Dedicated company integration key for server use.",
+              },
+            }
+          : {}),
+      },
+    },
+    paths: documentedPaths,
   };
 }
 

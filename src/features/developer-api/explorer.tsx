@@ -23,7 +23,7 @@ export function ApiExplorer() {
     [],
   );
   const spec = useMemo(() => {
-    const document = portalOpenApi(backend);
+    const document = portalOpenApi(backend, false);
     return { ...document, security: [], components: {} };
   }, [backend]);
 

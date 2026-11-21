@@ -360,6 +360,7 @@ services:
       - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
       - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
       - ../../../supabase/functions/human-login:/home/deno/functions/human-login:ro
+      - ../../../supabase/functions/company-integration:/home/deno/functions/company-integration:ro
       - deno-cache:/root/.cache/deno
     depends_on:
       api-gw:

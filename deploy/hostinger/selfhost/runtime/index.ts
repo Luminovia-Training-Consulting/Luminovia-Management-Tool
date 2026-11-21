@@ -27,6 +27,7 @@ const PORTAL_FUNCTIONS = new Set([
     "website-enquiries",
     "mail-admin",
     "human-login",
+    "company-integration",
 ]);
 
 const JWT_SECRET = Deno.env.get("JWT_SECRET");
@@ -365,7 +366,9 @@ Deno.serve({onError}, async (req: Request) => {
         service_name === "calendar-feed" &&
         pathname === "/calendar-feed" &&
         req.method === "GET";
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange) {
+    const companyIntegration =
+        service_name === "company-integration" && pathname === "/company-integration" && req.method === "GET";
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegration) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);

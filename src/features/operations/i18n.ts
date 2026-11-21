@@ -5,6 +5,27 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+    integrationTitle: ["API-Integrationen", "API integrations"],
+    integrationScope: [
+        "Schlüssel geben einem Server lesenden Zugriff auf veröffentlichte Kursnamen und Zeitzonen dieses Unternehmens. Pro Schlüssel sind 60 Abrufe pro Minute möglich.",
+        "Keys let a server read published course names and time zones for this company. Each key allows 60 requests per minute."
+    ],
+    integrationRevoked: ["Widerrufen", "Revoked"],
+    integrationExpiry: ["Läuft ab am {{date}}", "Expires {{date}}"],
+    integrationLastUsed: ["Zuletzt verwendet {{date}}", "Last used {{date}}"],
+    integrationRotate: ["Schlüssel ersetzen", "Replace key"],
+    integrationRevoke: ["Schlüssel widerrufen", "Revoke key"],
+    integrationConfirmRotate: ["Den Schlüssel „{{label}}“ ersetzen? Der bisherige Schlüssel ist sofort ungültig.", "Replace the key “{{label}}”? The current key stops working immediately."],
+    integrationConfirmRevoke: ["Den Schlüssel „{{label}}“ dauerhaft widerrufen?", "Permanently revoke the key “{{label}}”?"],
+    integrationLabel: ["Bezeichnung", "Label"],
+    integrationDuration: ["Gültigkeit", "Validity"],
+    integrationDays: ["{{count}} Tage", "{{count}} days"],
+    integrationConfirm: ["Bestätigen", "Confirm"],
+    integrationCreate: ["Schlüssel erstellen", "Create key"],
+    integrationCopy: ["Kopiere den Schlüssel in den Geheimnisspeicher deines Servers. Er wird nur jetzt angezeigt.", "Copy the key to your server’s secret store. It is only shown now."],
+    integrationCredential: ["Neuer Schlüssel", "New key"],
+    integrationHide: ["Schlüssel ausblenden", "Hide key"],
+    integrationError: ["Die Änderung konnte nicht bestätigt werden. Prüfe den aktuellen Schlüsselstatus vor einem erneuten Versuch.", "The change could not be confirmed. Check the current key status before trying again."],
     buildingBlocks: ["Kursbausteine", "Course building blocks"],
     blockDetails: ["Bausteindetails", "Building-block details"],
     planRun: ["Durchführung planen", "Plan course run"],

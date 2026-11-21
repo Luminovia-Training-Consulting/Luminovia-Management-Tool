@@ -24,6 +24,17 @@ describe("API explorer public document and session boundary", () => {
     );
   });
 
+  it("documents the company key for servers without offering it in the session explorer", () => {
+    const path = "/functions/v1/company-integration";
+    expect(portalOpenApi(backend).paths[path].get).toMatchObject({
+      security: [{ integrationKey: [] }],
+    });
+    expect(portalOpenApi(backend, false).paths).not.toHaveProperty(path);
+    expect(
+      portalOpenApi(backend, false).components.securitySchemes,
+    ).not.toHaveProperty("integrationKey");
+  });
+
   it("adds fresh session credentials only to the configured resource", async () => {
     const request = await authorizeExplorerRequest(
       {
@@ -57,6 +68,7 @@ describe("API explorer public document and session boundary", () => {
       method: "POST",
     },
     { ...readMe, method: "DELETE" },
+    { ...readMe, url: backend + "/functions/v1/company-integration" },
     {
       ...readMe,
       url: backend + "/functions/v1/accounts/v1/users/not-a-uuid/status",

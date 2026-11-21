@@ -123,6 +123,8 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ],
             ["/functions/v1/website-enquiries/extra", 404],
             ["/functions/v1/human-login", 503, "portal-function-human-login"],
+            ["/functions/v1/company-integration", 503, "portal-function-company-integration"],
+            ["/functions/v1/company-integration/extra", 404],
             ["/functions/v1/human-login/extra", 404],
             ["/functions/v1/human-login-extra", 404],
             ["/functions/v1/website-enquiries-extra", 404],

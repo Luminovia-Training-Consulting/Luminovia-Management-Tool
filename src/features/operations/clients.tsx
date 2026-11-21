@@ -22,6 +22,7 @@ import {Dialog} from "../../components/ui/dialog";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {companyPremiumSettingsQuery, type Contact, contactsQuery, notesQuery, type Organisation, orgQuery,} from "./data";
 import {CompanyPremiumControl} from "./company-premium";
+import {CompanyIntegrations} from "./company-integrations";
 import {CompanyParticipantsPanel} from "./company-participants";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
@@ -208,9 +209,11 @@ function ContactForm({
 function ClientWorkspace({
                              actor,
                              isAdmin,
+                             canManageIntegrations,
                          }: {
     actor: string;
     isAdmin: boolean;
+    canManageIntegrations: boolean;
 }) {
     const {t} = useTranslation("operations");
     const orgs = useQuery(orgQuery(actor));
@@ -343,6 +346,15 @@ function ClientWorkspace({
                                 setting={premiumSetting}
                                 isAdmin={isAdmin}
                                 archived={Boolean(organisation.archived_at)}
+                            />
+                        )}
+                        {canManageIntegrations && (
+                            <CompanyIntegrations
+                                key={organisation.id}
+                                actor={actor}
+                                organisation={organisation.id}
+                                archived={Boolean(organisation.archived_at)}
+                                zone={organisation.time_zone}
                             />
                         )}
                         {premiumSetting?.enabled && (
@@ -492,6 +504,7 @@ export function ClientsPage() {
         <ClientWorkspace
             actor={session!.user.id}
             isAdmin={roles.data.includes("admin")}
+            canManageIntegrations={roles.data.includes("admin") || roles.data.includes("owner")}
         />
     );
 }

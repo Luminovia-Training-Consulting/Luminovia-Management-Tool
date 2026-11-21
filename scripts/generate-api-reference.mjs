@@ -234,6 +234,12 @@ The exact \`course-documents\` JSON request shapes are: \`{kind:"qualification_p
 
 The current lecturer invitation screen also calls the compatibility \`POST /functions/v1/invite-lecturer\` endpoint. It requires an approved browser Origin, bearer JWT, enabled invitation configuration and a JSON body with \`email\`, optional \`display_name\` and stable \`idempotency_key\` UUID (maximum 2,048 request bytes). Only \`status:"sent"\` confirms delivery; reservation conflicts, throttling, unavailable delivery and uncertain sends must be handled without an automatic second email. New account administration can instead use the account facade's invitation route, which has its own schema and permission checks.
 
+## Company integration keys
+
+In **Admin → Companies → API integrations**, active administrators or owners can issue a company key, replace it or revoke it. The screen displays the secret once. Store it in a backend secret manager. The key uses the fixed \`courses.read\` scope and expires. The list reports expiry, revocation and last successful use. Rotation invalidates the old key immediately, and issuer suspension or company archiving prevents use. The table stores only a hash of the secret.
+
+Call \`GET /functions/v1/company-integration\` from a backend with \`Authorization: Bearer <integration-key>\` and no Origin header. This endpoint advertises its separate credential in the downloaded OpenAPI document. Portal sessions continue to use the account and native API. Query parameters are \`limit\` (1–50, default 25) and \`after\` (the previous page’s \`next_cursor\`). Results contain \`items\` with published course-run \`id\`, \`title\` and \`time_zone\`; a null \`next_cursor\` marks the final page. Company scope is fixed to the key. The endpoint returns HTTP 429 and \`Retry-After\` at 60 requests per minute per key.
+
 ## Calendar feeds, source revisions and privacy
 
 \`GET /functions/v1/calendar-feed?token=<private-token>\` is a distinct token-authorised iCalendar subscription, not a bearer-authenticated account endpoint. The high-entropy secret grants the selected private feed; store/share it accordingly. SQL stores its hash and the gateway repeats revocation checks. [Calendar connections](GUIDE.md#section-calendar-connections) owns scope, expiry and revocation details.
