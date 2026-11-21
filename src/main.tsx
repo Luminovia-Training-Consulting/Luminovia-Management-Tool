@@ -8,7 +8,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./lib/i18n";
 import "./styles.css";
-import { installationBrand } from "./lib/installation-brand";
+import {
+  installationBrand,
+  portalInternalEdition,
+} from "./lib/installation-brand";
 import { App, ErrorBoundary } from "./app/app";
 import { AuthProvider } from "./features/auth/auth-context";
 if (installationBrand.edition !== "internal") {
@@ -22,7 +25,12 @@ if (installationBrand.edition !== "internal") {
 /** One memory-only QueryClient; mutations neither retry automatically nor become offline confirmations. */
 const client = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 15000, retry: 1, refetchOnWindowFocus: true },
+    queries: {
+      staleTime: 15000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+      ...(!portalInternalEdition && { gcTime: 0 }),
+    },
     mutations: { retry: 0, networkMode: "always" },
   },
 });

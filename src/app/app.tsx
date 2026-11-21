@@ -184,6 +184,14 @@ const CourseWorkspacePage = lazy(() =>
   })),
 );
 
+const AcademyRoutes = portalInternalEdition
+  ? null
+  : lazy(() =>
+      import("./academy-routes").then((module) => ({
+        default: module.AcademyRoutes,
+      })),
+    );
+
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
@@ -268,6 +276,15 @@ function AppNotices() {
 
 /** Compose public Auth/demo/help routes and protected feature pages under one Suspense boundary. */
 export function App() {
+  if (AcademyRoutes)
+    return (
+      <>
+        <AppNotices />
+        <Suspense fallback={<Loading />}>
+          <AcademyRoutes />
+        </Suspense>
+      </>
+    );
   return (
     <>
       <AppNotices />

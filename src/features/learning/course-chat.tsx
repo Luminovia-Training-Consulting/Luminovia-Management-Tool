@@ -32,10 +32,12 @@ export function CourseChat({
   run,
   actor,
   canCreate = false,
+  readOnly = false,
 }: {
   run: string;
   actor: string;
   canCreate?: boolean;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation("courseChat");
   const online = useOnline();
@@ -87,7 +89,7 @@ export function CourseChat({
       ) : !room ? (
         <>
           <p>{t("emptyRooms")}</p>
-          {canCreate && (
+          {canCreate && !readOnly && (
             <Button
               type="button"
               disabled={createRoom.isPending}
@@ -117,7 +119,13 @@ export function CourseChat({
               </select>
             </Field>
           )}
-          <CourseChatThread key={room.id} room={room} actor={actor} run={run} />
+          <CourseChatThread
+            key={room.id}
+            room={room}
+            actor={actor}
+            run={run}
+            readOnly={readOnly}
+          />
         </>
       )}
     </section>
@@ -130,10 +138,12 @@ function CourseChatThread({
   room,
   run,
   actor,
+  readOnly,
 }: {
   room: Room;
   run: string;
   actor: string;
+  readOnly: boolean;
 }) {
   const { t, i18n } = useTranslation("courseChat");
   const client = useQueryClient();
@@ -325,7 +335,7 @@ function CourseChatThread({
           ))}
         </ol>
       )}
-      {!room.can_post ? (
+      {readOnly || !room.can_post ? (
         <p className="muted">{t("readOnly")}</p>
       ) : (
         messages.isSuccess && (

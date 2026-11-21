@@ -1,0 +1,40 @@
+.academy-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem 1.5rem;
+  padding: 0.85rem max(1rem, calc((100% - 80rem) / 2));
+  background: var(--surface);
+  border-block-end: 1px solid var(--line);
+}
+
+.academy-brand,
+.academy-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.academy-brand {
+  color: var(--ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.academy-brand img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.academy-main {
+  width: min(80rem, 100% - 2rem);
+  margin-inline: auto;
+  padding-block: clamp(1rem, 3vw, 2rem);
+}
+
+.academy-main > .notice {
+  margin-block-end: 1rem;
+}

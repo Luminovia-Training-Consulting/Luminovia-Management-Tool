@@ -56,9 +56,11 @@ export function DownloadButton({
 export function Resources({
   course,
   actor,
+  readOnly = false,
 }: {
   course: CourseWorkspace;
   actor: string;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -119,11 +121,12 @@ export function Resources({
     },
   });
   const canUpload =
-    course.access.manager || course.access.teacher || course.access.client;
+    !readOnly &&
+    (course.access.manager || course.access.teacher || course.access.client);
   return (
     <section className="panel learning-panel" aria-label={t("resources")}>
       <h2>{t("resources")}</h2>
-      <p>{t("resourceHelp")}</p>
+      {!readOnly && <p>{t("resourceHelp")}</p>}
       {!course.resources.length && <p>{t("noResources")}</p>}
       <ul className="learning-resources">
         {course.resources.map((resource) => (
@@ -139,19 +142,21 @@ export function Resources({
                 id={resource.id}
                 name={resource.name}
               />
-              <Button
-                variant="ghost"
-                disabled={!online || save.isPending || resource.acknowledged}
-                onClick={() =>
-                  save.mutate({
-                    action: "resource_acknowledge",
-                    payload: { id: resource.id },
-                  })
-                }
-              >
-                {t(resource.acknowledged ? "acknowledged" : "acknowledge")}
-              </Button>
-              {resource.can_remove && (
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  disabled={!online || save.isPending || resource.acknowledged}
+                  onClick={() =>
+                    save.mutate({
+                      action: "resource_acknowledge",
+                      payload: { id: resource.id },
+                    })
+                  }
+                >
+                  {t(resource.acknowledged ? "acknowledged" : "acknowledge")}
+                </Button>
+              )}
+              {!readOnly && resource.can_remove && (
                 <Button
                   variant="ghost"
                   disabled={!online || save.isPending}
@@ -245,7 +250,7 @@ export function Resources({
           )}
         </form>
       )}
-      {course.access.manager && (
+      {!readOnly && course.access.manager && (
         <form
           onSubmit={(event) => {
             event.preventDefault();

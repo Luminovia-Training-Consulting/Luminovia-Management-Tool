@@ -88,11 +88,11 @@ function CourseCard({ course }: { course: CourseOverview }) {
 }
 
 /** Refresh the authorised list before displaying retained query data on a new visit. */
-export function LearningHubPage() {
+export function LearningHubPage({ academy = false }: { academy?: boolean }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const roles = useQuery(userRolesQuery(actor));
+  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const query = useQuery({
     ...courseHubQuery(actor),
     enabled: online,
@@ -109,7 +109,7 @@ export function LearningHubPage() {
         <Notice>{t("workspaceOffline")}</Notice>
       ) : (
         <>
-          {isParticipantOnly(roles.data) && (
+          {!academy && isParticipantOnly(roles.data) && (
             <CompanyInvitations actor={actor} />
           )}
           {query.isPending ||

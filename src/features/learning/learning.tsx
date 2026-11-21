@@ -15,7 +15,6 @@ import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
 import { isParticipantOnly } from "../auth/guest-navigation";
 import { useOnline } from "../../lib/online";
-import { portalInternalEdition } from "../../lib/installation-brand";
 import { userRolesQuery } from "../../lib/queries";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
@@ -161,7 +160,13 @@ function CourseContact({
   course,
   actor,
   url,
-}: WorkProps & { url: string | null }) {
+  canEditContact = course.access.manager,
+  canEditMeeting = course.meeting_link?.can_edit === true,
+}: WorkProps & {
+  url: string | null;
+  canEditContact?: boolean;
+  canEditMeeting?: boolean;
+}) {
   const { t } = useTranslation("learning");
   const online = useOnline();
   const save = useAction(course.id, actor);
@@ -214,7 +219,7 @@ function CourseContact({
       ) : (
         <p>{course.venue}</p>
       )}
-      {course.meeting_link?.can_edit && (
+      {canEditMeeting && course.meeting_link && (
         <CourseMeetingLinkEditor
           actor={actor}
           courseId={course.id}
@@ -236,7 +241,7 @@ function CourseContact({
       ) : (
         <p>{t("noContact")}</p>
       )}
-      {course.access.manager && (
+      {canEditContact && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -715,17 +720,27 @@ function CourseWorkspaceLayout({
   now,
   refreshing,
   refresh,
-}: WorkProps & { now: number; refreshing: boolean; refresh: () => void }) {
+  academy,
+}: WorkProps & {
+  now: number;
+  refreshing: boolean;
+  refresh: () => void;
+  academy?: "active" | "grace";
+}) {
   const { t, i18n } = useTranslation("learning");
   const location = useLocation();
   const learner = course.access.learner;
   const editor = course.access.staff || course.access.client;
+  const canEdit = academy !== "grace";
   const examVisible = Boolean(
-    course.exams && (course.exams.required || course.exams.can_edit),
+    !academy &&
+    course.exams &&
+    (course.exams.required || course.exams.can_edit),
   );
-  const hasActivities = learner || editor;
-  const hasRegister = editor && course.sessions.length > 0;
-  const canManageEnrolments = course.access.manager || course.access.client;
+  const hasActivities = !academy && (learner || editor);
+  const hasRegister = !academy && editor && course.sessions.length > 0;
+  const canManageEnrolments =
+    canEdit && (course.access.manager || course.access.client);
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
     { id: "course-materials", label: t("workspaceMaterials") },
@@ -748,7 +763,7 @@ function CourseWorkspaceLayout({
     (session) => Date.parse(session.ends_at) > now,
   );
   const classroom = courseClassroom(course);
-  const pageTarget = learner ? "/learning" : "/courses";
+  const pageTarget = academy || learner ? "/learning" : "/courses";
 
   // React Router may resolve a deep link before the scoped course data
   // loads. Apply that hash when its destination first becomes available.
@@ -814,7 +829,7 @@ function CourseWorkspaceLayout({
           </Button>
         )}
       </header>
-      {!learner && (
+      {!academy && !learner && (
         <div className="page-actions">
           {editor && (
             <Button asChild variant="secondary">
@@ -858,22 +873,38 @@ function CourseWorkspaceLayout({
               actor={actor}
               courseId={course.id}
               zone={course.time_zone}
-              canEdit={editor}
+              canEdit={canEdit && editor}
             />
-            <CourseDestinations
-              actor={actor}
-              courseId={course.id}
-              learner={learner || !portalInternalEdition}
-            />
-            {!portalInternalEdition && course.access.manager && (
+            {!academy && (
+              <CourseDestinations
+                actor={actor}
+                courseId={course.id}
+                learner={learner}
+              />
+            )}
+            {academy === "active" && course.access.manager && (
               <AcademyInstructors courseId={course.id} actor={actor} />
             )}
-            <CourseContact course={course} actor={actor} url={classroom} />
-            {editor && <Preparation course={course} actor={actor} />}
-            {learner && <CourseWithdrawal course={course} actor={actor} />}
+            <CourseContact
+              course={course}
+              actor={actor}
+              url={classroom}
+              canEditContact={!academy && course.access.manager}
+              canEditMeeting={canEdit && course.meeting_link?.can_edit === true}
+            />
+            {!academy && editor && (
+              <Preparation course={course} actor={actor} />
+            )}
+            {!academy && learner && (
+              <CourseWithdrawal course={course} actor={actor} />
+            )}
           </div>
           <div className="course-room-section" id="course-materials">
-            <Resources course={course} actor={actor} />
+            <Resources
+              course={course}
+              actor={actor}
+              readOnly={Boolean(academy)}
+            />
           </div>
           {examVisible && (
             <div className="course-room-section" id="course-exam">
@@ -897,7 +928,8 @@ function CourseWorkspaceLayout({
           <CourseChat
             run={course.id}
             actor={actor}
-            canCreate={!portalInternalEdition && course.access.manager}
+            canCreate={academy === "active" && course.access.manager}
+            readOnly={!canEdit}
           />
           {hasActivities && (
             <div className="course-room-section" id="course-learning">
@@ -924,12 +956,16 @@ function CourseWorkspaceLayout({
 }
 
 /** Revalidate the signed-in actor's course and entitlement before rendering any protected panels. */
-export function CourseWorkspacePage() {
+export function CourseWorkspacePage({
+  academy,
+}: {
+  academy?: "active" | "grace";
+}) {
   const { id = "" } = useParams();
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const roles = useQuery(userRolesQuery(actor));
+  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const query = useQuery({
     ...courseWorkspaceQuery(actor, id),
     enabled: online,
@@ -949,7 +985,13 @@ export function CourseWorkspacePage() {
         <PageHeading title={t("workspaceDisabledTitle")} />
         <Notice>{t("premiumOff")}</Notice>
         <Button asChild variant="secondary">
-          <Link to={isParticipantOnly(roles.data) ? "/learning" : "/courses"}>
+          <Link
+            to={
+              academy || isParticipantOnly(roles.data)
+                ? "/learning"
+                : "/courses"
+            }
+          >
             {t("back")}
           </Link>
         </Button>
@@ -965,6 +1007,7 @@ export function CourseWorkspacePage() {
       now={query.dataUpdatedAt}
       refreshing={query.isFetching}
       refresh={() => void query.refetch()}
+      academy={academy}
     />
   );
 }
