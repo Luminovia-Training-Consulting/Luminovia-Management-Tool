@@ -7,6 +7,9 @@ import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 const path = "/rpc/course_document_access";
 const commandPath = "/rpc/academy_course_material_action";
+const reservePath = "/rpc/reserve_academy_course_material";
+const statusPath = "/rpc/academy_course_material_status";
+const scanPath = "/rpc/academy_course_material_scan";
 const gate = (target = path, method = "POST") =>
   `set local request.path=${q(target)};set local request.method=${q(method)};select public.require_portal_access();`;
 const read = (share, kind = "resource") =>
@@ -92,7 +95,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       insert into public.course_runs(id,template_id,organisation_id)
         values (${q(run)},${q(template)},${q(org)}),(${q(otherRun)},${q(template)},${q(otherOrg)});
       insert into public.course_sessions(course_run_id,starts_at,ends_at)
-        values (${q(run)},now()+interval '1 day',now()+interval '25 hours');
+        values (${q(run)},now()+interval '1 day',now()+interval '25 hours'),
+          (${q(otherRun)},now()+interval '3 days',now()+interval '73 hours');
       insert into private.company_participant_link_requests
         (id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at)
         select ${q(consent)},${q(org)},${q(manager)},${q(randomUUID())},luminovia_user_id,id,'accepted',now()+interval '1 day'
@@ -182,6 +186,139 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_assign_course_instructor(${q(run)},${q(teacher)},${q(randomUUID())})`,
     ).then(JSON.parse);
     assert.equal(assignment.status, "confirmed");
+    const incoming = "Fictional newly scanned teaching material";
+    const digest = hash(incoming);
+    const uploadId = randomUUID();
+    const reserve = (who, id = uploadId, expected = digest, target = run) =>
+      actor(
+        who,
+        gate(reservePath) +
+          `select public.reserve_academy_course_material(${q(target)},'new.txt','text/plain',${incoming.length},${q(id)},${q(expected)})`,
+      ).then(JSON.parse);
+    const uploadStatus = (who, reservation, target = run) =>
+      actor(
+        who,
+        gate(statusPath) +
+          `select public.academy_course_material_status(${q(target)},${q(reservation.document_id)},${q(reservation.version_id)})`,
+      ).then((value) => (value ? JSON.parse(value) : null));
+    const scanCall = (reservation, action, lease, sha256, scanner) =>
+      `select public.academy_course_material_scan(${q(reservation.document_id)},${q(reservation.version_id)},${q(action)},${[lease, sha256, scanner].map((value) => (value ? q(value) : "null")).join(",")})`;
+    const worker = (reservation, action, lease, sha256, scanner) =>
+      sql(
+        "begin;set local role service_role;" +
+          gate(scanPath) +
+          scanCall(reservation, action, lease, sha256, scanner) +
+          ";commit;",
+      );
+    for (const who of [manager, learner, client, outside]) {
+      await assert.rejects(reserve(who), /42501/);
+    }
+    const staging = await reserve(teacher);
+    assert.equal(staging.status, "quarantined");
+    assert.deepEqual(await reserve(teacher), staging);
+    await assert.rejects(
+      reserve(teacher, uploadId, hash("different")),
+      /PT409/,
+    );
+    await assert.rejects(
+      reserve(teacher, undefined, undefined, otherRun),
+      /42501/,
+    );
+    assert.equal(await uploadStatus(outside, staging), null);
+    assert.equal(await uploadStatus(teacher, staging, otherRun), null);
+    assert.equal(
+      (await uploadStatus(teacher, staging)).document.status,
+      "quarantined",
+    );
+    await assert.rejects(
+      command(teacher, shareCall(staging.version_id)),
+      /42501/,
+    );
+    await assert.rejects(
+      actor(
+        teacher,
+        gate(scanPath) + scanCall(staging, "begin", null, digest, null),
+      ),
+      /42501/,
+    );
+    for (const endpoint of [
+      "/documents",
+      "/document_versions",
+      "/audit_events",
+      "/rpc/deletion_upload_begin",
+    ]) {
+      await assert.rejects(
+        sql("set role service_role;" + gate(endpoint)),
+        /42501/,
+      );
+    }
+    await assert.rejects(
+      worker(staging, "begin", null, hash("different")),
+      /42501/,
+    );
+    const fresh = "ClamAV fictional scanner receipt";
+    const lease = await worker(staging, "begin", null, digest);
+    assert.match(lease, /^[0-9a-f-]{36}$/);
+    await assert.rejects(worker(staging, "begin", null, digest), /55000/);
+    assert.equal(
+      (await uploadStatus(teacher, staging)).document.status,
+      "scanning",
+    );
+    await assert.rejects(
+      worker(staging, "clean", randomUUID(), digest, fresh),
+      /42501/,
+    );
+    await assert.rejects(
+      worker(staging, "clean", lease, hash("different"), fresh),
+      /42501/,
+    );
+    await assert.rejects(
+      worker(staging, "clean", lease, digest, "untrusted"),
+      /42501/,
+    );
+    await worker(staging, "scan_error", lease);
+    await worker(staging, "end", lease);
+    assert.equal(
+      (await uploadStatus(teacher, staging)).document.status,
+      "scan_error",
+    );
+    const resumed = await worker(staging, "begin", null, digest);
+    await worker(staging, "clean", resumed, digest, fresh);
+    await worker(staging, "end", resumed);
+    const confirmed = await uploadStatus(teacher, staging);
+    assert.equal(confirmed.document.status, "clean");
+    assert.equal(confirmed.sha256, digest);
+    const newlyShared = await command(teacher, shareCall(staging.version_id));
+    assert.equal((await access(learner, newlyShared.id)).sha256, digest);
+    assert.equal(
+      (await access(learner, newlyShared.id)).id,
+      staging.version_id,
+    );
+    const rejected = await reserve(teacher, randomUUID());
+    const rejectedLease = await worker(rejected, "begin", null, digest);
+    await worker(rejected, "rejected", rejectedLease, digest, fresh);
+    await worker(rejected, "end", rejectedLease);
+    assert.equal(
+      (await uploadStatus(teacher, rejected)).document.status,
+      "rejected",
+    );
+    await assert.rejects(
+      command(teacher, shareCall(rejected.version_id)),
+      /42501/,
+    );
+    const pending = await reserve(teacher, randomUUID());
+    const pendingLease = await worker(pending, "begin", null, digest);
+    await configure(false);
+    await assert.rejects(
+      worker(pending, "clean", pendingLease, digest, fresh),
+      /42501/,
+    );
+    await worker(pending, "end", pendingLease);
+    await configure(true);
+    assert.equal(
+      (await uploadStatus(teacher, pending)).document.status,
+      "scanning",
+    );
     for (const who of [manager, learner, outside, client]) {
       await assert.rejects(command(who), /42501/);
     }
@@ -215,6 +352,25 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const published = await command(teacher);
     assert.match(published.id, /^[0-9a-f-]{36}$/);
     assert.deepEqual(await command(teacher), published);
+    const otherAssignment = await actor(
+      manager,
+      gate("/rpc/academy_assign_course_instructor") +
+        `select public.academy_assign_course_instructor(${q(otherRun)},${q(teacher)},${q(randomUUID())})`,
+    ).then(JSON.parse);
+    assert.equal(otherAssignment.status, "confirmed");
+    await assert.rejects(reserve(teacher, uploadId, digest, otherRun), /PT409/);
+    await assert.rejects(
+      command(teacher, shareCall(staging.version_id, otherRun)),
+      /42501/,
+    );
+    await assert.rejects(
+      actor(
+        teacher,
+        gate(reservePath) +
+          `select public.reserve_academy_course_material(${q(run)},'oversized.txt','text/plain',2000001,${q(randomUUID())},${q(digest)})`,
+      ),
+      /54000/,
+    );
     const exact = {
       id: sharedVersion,
       document_id: document,
@@ -281,6 +437,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     ).then(JSON.parse);
     assert.equal(replacement.status, "confirmed");
     assert.deepEqual(await command(teacher), published);
+    const graceReservation = await reserve(teacher, randomUUID());
+    const graceLease = await worker(graceReservation, "begin", null, digest);
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
@@ -288,6 +446,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     assert.deepEqual(await access(learner), exact);
     await assert.rejects(command(teacher), /42501/);
+    await assert.rejects(reserve(teacher), /42501/);
+    await assert.rejects(uploadStatus(teacher, staging), /42501/);
+    await assert.rejects(
+      worker(graceReservation, "clean", graceLease, digest, fresh),
+      /42501/,
+    );
+    await worker(graceReservation, "end", graceLease);
     await assert.rejects(actor(teacher, removeCall(published.id)), /42501/);
     await renew({
       release_commit: nextRelease,
@@ -303,7 +468,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "1",
     );
     console.log(
-      `PASS ${edition} publish/remove own exact scanned course material, audience and retained files after expiry`,
+      `PASS ${edition} reserve, scan, publish/remove own exact course material, audience and retained files after expiry`,
     );
   });
 }

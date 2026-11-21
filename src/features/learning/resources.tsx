@@ -6,12 +6,17 @@ import { Download } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
-import { acceptedFiles, uploadDocument } from "../files/api";
+import {
+  acceptedFiles,
+  uploadAcademyCourseMaterial,
+  uploadDocument,
+} from "../files/api";
 import {
   courseAction,
   type CourseWorkspace,
   courseWorkspaceKey,
   downloadCourseDocument,
+  shareAcademyCourseMaterial,
 } from "./api";
 
 /** Preserve the exact authorised byte gateway for resources and certificates. */
@@ -57,10 +62,12 @@ export function Resources({
   course,
   actor,
   readOnly = false,
+  academyCanUpload = false,
 }: {
   course: CourseWorkspace;
   actor: string;
   readOnly?: boolean;
+  academyCanUpload?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -97,16 +104,30 @@ export function Resources({
         if (!file || file.bytes.size < 1 || file.bytes.size > 10 * 1024 * 1024)
           throw new Error("file_size");
         setProgress(0);
-        const document = await uploadDocument(
-          file.bytes,
-          { scope: "personal", kind: "material", clientId: file.uploadId },
-          setProgress,
-        );
+        const document = academyCanUpload
+          ? await uploadAcademyCourseMaterial(
+              file.bytes,
+              course.id,
+              file.uploadId,
+              setProgress,
+            )
+          : await uploadDocument(
+              file.bytes,
+              { scope: "personal", kind: "material", clientId: file.uploadId },
+              setProgress,
+            );
         if (document.status !== "clean" || !document.current_version_id)
           throw new Error("missing_clean_version");
         versionId = document.current_version_id;
         setCleanVersion(versionId);
       }
+      if (academyCanUpload)
+        return shareAcademyCourseMaterial(
+          course.id,
+          versionId,
+          audience,
+          category,
+        );
       return courseAction(course.id, "resource_share", {
         version_id: versionId,
         audience,
@@ -121,8 +142,9 @@ export function Resources({
     },
   });
   const canUpload =
-    !readOnly &&
-    (course.access.manager || course.access.teacher || course.access.client);
+    academyCanUpload ||
+    (!readOnly &&
+      (course.access.manager || course.access.teacher || course.access.client));
   return (
     <section className="panel learning-panel" aria-label={t("resources")}>
       <h2>{t("resources")}</h2>

@@ -17,7 +17,7 @@ export interface UploadWrites {
 /** Release only after all work, including cleanup, has settled on every path. */
 export async function withUploadLease<T>(
     deps: UploadLeaseDependencies,
-    write: (writes: UploadWrites) => Promise<T>,
+    write: (writes: UploadWrites, leaseId: string) => Promise<T>,
 ): Promise<T> {
     const lease = await deps.begin();
     let unacknowledged = 0;
@@ -34,7 +34,7 @@ export async function withUploadLease<T>(
         },
     };
     try {
-        const result = await write(writes);
+        const result = await write(writes, lease);
         if (unacknowledged > 0) throw new Error("deletion_unavailable");
         return result;
     } finally {

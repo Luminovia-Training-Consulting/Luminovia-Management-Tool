@@ -904,6 +904,7 @@ function CourseWorkspaceLayout({
               course={course}
               actor={actor}
               readOnly={Boolean(academy)}
+              academyCanUpload={academy === "active" && course.access.teacher}
             />
           </div>
           {examVisible && (

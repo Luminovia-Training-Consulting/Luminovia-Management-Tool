@@ -213,6 +213,25 @@ export async function courseAction(
   };
 }
 
+/** Publish the exact scan-confirmed version through the dedicated teaching permission. */
+export async function shareAcademyCourseMaterial(
+  run: string,
+  version: string,
+  audience: string,
+  category: string,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("academy_course_material_action", {
+    p_run_id: run,
+    p_action: "resource_share",
+    p_id: version,
+    p_audience: audience,
+    p_category: category,
+  });
+  if (error || !data?.id) throw error ?? new Error("unconfirmed");
+  return data as { id: string };
+}
+
 /** Requests a fresh future booking; it copies the authorized brief, never an allocation or learner record. */
 export async function repeatCourse(
   request: string,

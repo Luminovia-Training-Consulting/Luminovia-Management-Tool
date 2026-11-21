@@ -71,7 +71,6 @@ export async function uploadDocument(
 ): Promise<PortalDocument> {
   if (file.size < 1 || file.size > maximumFileSize)
     throw new Error("file_size");
-  const headers = await authHeaders();
   const form = new FormData();
   form.set("file", file);
   form.set("scope", context.scope);
@@ -86,9 +85,36 @@ export async function uploadDocument(
   if (context.jobId) form.set("job_id", context.jobId);
   if (context.replaceId) form.set("replace_id", context.replaceId);
   if (context.ownerId) form.set("owner_id", context.ownerId);
+  return transferUpload(form, endpoint(), onProgress);
+}
+
+/** Upload a single exact version through the assigned lecturer's course scope. */
+export function uploadAcademyCourseMaterial(
+  file: File,
+  courseId: string,
+  clientId: string,
+  onProgress?: (percent: number) => void,
+) {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("academy_course_id", courseId);
+  form.set("client_id", clientId);
+  return transferUpload(
+    form,
+    endpoint() + "?mode=academy-material",
+    onProgress,
+  );
+}
+
+async function transferUpload(
+  form: FormData,
+  path: string,
+  onProgress?: (percent: number) => void,
+): Promise<PortalDocument> {
+  const headers = await authHeaders();
   return await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", endpoint());
+    xhr.open("POST", path);
     xhr.timeout = 90000;
     for (const [key, value] of Object.entries(headers))
       xhr.setRequestHeader(key, value);

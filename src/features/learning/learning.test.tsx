@@ -17,6 +17,7 @@ import i18n from "../../lib/i18n";
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   upload: vi.fn(),
+  academyUpload: vi.fn(),
   workspace: {} as CourseWorkspace,
   error: null as unknown,
   meetingError: null as unknown,
@@ -46,6 +47,7 @@ vi.mock("../../lib/supabase", () => ({
 vi.mock("../files/api", () => ({
   acceptedFiles: ".pdf",
   uploadDocument: fake.upload,
+  uploadAcademyCourseMaterial: fake.academyUpload,
 }));
 vi.mock("./destinations", () => ({ CourseDestinations: () => null }));
 const clients: QueryClient[] = [];
@@ -149,13 +151,14 @@ beforeEach(async () => {
       return request;
     });
   fake.upload.mockReset();
+  fake.academyUpload.mockReset();
 });
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
 });
 
-function setup(hash = "") {
+function setup(hash = "", academy?: "active" | "grace") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -167,7 +170,7 @@ function setup(hash = "") {
           <Route path="/learning" element={<p>Course list</p>} />
           <Route
             path="/courses/:id/workspace"
-            element={<CourseWorkspacePage />}
+            element={<CourseWorkspacePage academy={academy} />}
           />
         </Routes>
       </MemoryRouter>
@@ -177,6 +180,66 @@ function setup(hash = "") {
 }
 
 describe("connected course workspace", () => {
+  it("uploads assigned academy material once and retries only the exact scoped share", async () => {
+    fake.academyUpload.mockResolvedValue({
+      status: "clean",
+      current_version_id: "academy-version",
+    });
+    fake.pending = Promise.resolve({ id: "published-resource" });
+    fake.shareError = new Error("share unavailable");
+    const user = userEvent.setup();
+    setup("#course-materials", "active");
+    const fileInput = (await screen.findByLabelText(
+      "Datei auswählen",
+    )) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["fictional"], "academy.pdf", { type: "application/pdf" }),
+    );
+    await user.selectOptions(
+      document.getElementById("upload-resource-audience") as HTMLSelectElement,
+      "participants",
+    );
+    fireEvent.submit(fileInput.form!);
+    expect(await screen.findByText(/Die Datei ist geprüft/)).toBeVisible();
+    fake.shareError = null;
+    fireEvent.submit(fileInput.form!);
+    expect(
+      await screen.findByText(
+        "Geprüfte Dateifassung für den Kurs freigegeben.",
+      ),
+    ).toBeVisible();
+    expect(fake.academyUpload).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ name: "academy.pdf" }),
+      "course-a",
+      expect.any(String),
+      expect.any(Function),
+    );
+    expect(fake.upload).not.toHaveBeenCalled();
+    const shares = fake.rpc.mock.calls.filter(
+      ([name]) => name === "academy_course_material_action",
+    );
+    expect(shares).toEqual(
+      Array.from({ length: 2 }, () => [
+        "academy_course_material_action",
+        {
+          p_run_id: "course-a",
+          p_action: "resource_share",
+          p_id: "academy-version",
+          p_audience: "participants",
+          p_category: "material",
+        },
+      ]),
+    );
+  });
+
+  it("does not offer the academy material picker to the assigned lecturer in grace", async () => {
+    setup("#course-materials", "grace");
+    expect(
+      await screen.findByRole("heading", { name: "Fictional course" }),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("Datei auswählen")).toBeNull();
+  });
   it("publishes and clears the instructor's complete meeting URL after server confirmation", async () => {
     fake.workspace.ended = false;
     fake.workspace.meeting_link = { url: null, version: 0, can_edit: true };

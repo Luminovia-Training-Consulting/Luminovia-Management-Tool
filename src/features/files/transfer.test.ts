@@ -8,6 +8,7 @@ import {
   maximumFileSize,
   saveDownload,
   saveQualificationEvidence,
+  uploadAcademyCourseMaterial,
   uploadDocument,
 } from "./api";
 
@@ -87,6 +88,33 @@ async function transfer(onProgress?: (percent: number) => void) {
 }
 
 describe("online, authenticated document transfers", () => {
+  it("sends academy material only through the scoped gateway with its stable retry key", async () => {
+    const promise = uploadAcademyCourseMaterial(
+      file(),
+      "course-id",
+      "upload-id",
+    );
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect(request.open).toHaveBeenCalledWith(
+      "POST",
+      "https://fictional.example.invalid/backend/functions/v1/files?mode=academy-material",
+    );
+    expect([...request.form!.keys()].sort()).toEqual([
+      "academy_course_id",
+      "client_id",
+      "file",
+    ]);
+    expect(request.form!.get("academy_course_id")).toBe("course-id");
+    expect(request.form!.get("client_id")).toBe("upload-id");
+    expect(request.headers.Authorization).toBe("Bearer fictional-access-token");
+    request.respond(200, {
+      document: { status: "clean", current_version_id: "reviewed-version" },
+    });
+    await expect(promise).resolves.toMatchObject({
+      current_version_id: "reviewed-version",
+    });
+  });
   it("keeps sent bytes below completion until the server confirms clean storage", async () => {
     const progress = vi.fn();
     const { promise, request } = await transfer(progress);

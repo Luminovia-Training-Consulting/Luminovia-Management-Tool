@@ -10,6 +10,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
+import {academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -84,8 +85,15 @@ Deno.serve(async (request: Request) => {
         const auth = await user.auth.getUser(token);
         if (auth.error || !auth.data.user) return json(401, {error: 'authentication_required'});
         const actor = auth.data.user.id;
-        const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
-        if (profile.error || !profile.data?.active) return json(403, {error: 'access_denied'});
+        const requireProfile = async () => {
+            const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
+            if (profile.error || !profile.data?.active) throw new Error('access_denied');
+        };
+        const academyIntake = new URL(request.url).search === academyMaterialQuery;
+        if (academyIntake) {
+            const access = await user.rpc('portal_access');
+            if (access.error || access.data !== true) throw new Error('access_denied');
+        } else await requireProfile();
         const visible = async (id: string) => {
             const r = await user.from('documents').select('*').eq('id', id).maybeSingle();
             if (r.error || !r.data) throw new Error('access_denied');
@@ -93,13 +101,15 @@ Deno.serve(async (request: Request) => {
         };
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (request.headers.get('content-type')?.startsWith('multipart/form-data')) {
-            const raw = await bounded(request, MAX_FILE_SIZE + 16384);
+            const raw = await bounded(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
+            const materialRun = academyMaterialCourse(form, academyIntake);
             const file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
             const bytes = new Uint8Array(await file.arrayBuffer());
+            if (materialRun && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
             const mime = await validateFile(bytes, name, file.type);
             const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
             const clientId = form.get('client_id');
@@ -117,24 +127,31 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = messageOnly === 'true'
+            const reserved = materialRun
+                ? await user.rpc('reserve_academy_course_material', {p_run_id: materialRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                : messageOnly === 'true'
                 ? await user.rpc(courseChat === 'true' ? 'reserve_course_chat_document' : 'reserve_message_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_room_id: roomId, p_client_id: clientId})
                 : await user.rpc('reserve_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_scope: scope, p_kind: kind, p_room_id: roomId, p_job_id: jobId, p_client_id: clientId, p_replace_id: replaceId, p_owner_id: ownerId});
-            if (reserved.error) return json(403, {error: 'upload_not_allowed'});
+            if (reserved.error) return reserved.error.code === 'PT409'
+                ? json(409, {error: 'idempotency_conflict'})
+                : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
+            if (materialRun && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+                return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
             const courseStatus = async () => {
-                const status = await user.rpc('course_chat_upload_status', {
-                    p_room_id: roomId,
+                const target = materialRun ? {p_run_id: materialRun} : {p_room_id: roomId};
+                const status = await user.rpc(materialRun ? 'academy_course_material_status' : 'course_chat_upload_status', {
+                    ...target,
                     p_document_id: reservation.document_id,
                     p_version_id: reservation.version_id,
                 });
                 if (status.error || !status.data?.document) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             };
-            const scoped = courseChat === 'true' ? await courseStatus() : null;
+            const scoped = materialRun || courseChat === 'true' ? await courseStatus() : null;
             const doc = scoped?.document ?? await visible(reservation.document_id);
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
             const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
@@ -149,20 +166,35 @@ Deno.serve(async (request: Request) => {
                 return json(200, {document: doc});
             }
             if (doc.status === 'rejected') return json(422, {error: 'scan_rejected', document_id: doc.id});
+            const academyScan = async (action: string, lease: string | null, sha256: string | null, scannerVersion: string | null) => {
+                const result = await service.rpc('academy_course_material_scan', {
+                    p_document_id: doc.id, p_version_id: reservation.version_id, p_action: action,
+                    p_lease_id: lease, p_sha256: sha256, p_scanner_version: scannerVersion,
+                });
+                if (result.error?.code === '42501') throw new Error('access_denied');
+                if (result.error || !uuid(result.data) || (lease && lease !== result.data))
+                    throw new Error('deletion_unavailable');
+                return result.data;
+            };
             // The lease starts before the first Storage write and remains held through
             // scanning, promotion and all cleanup. A concurrent deletion cannot complete
             // while this request could still recreate a clean/quarantine object.
             return await withUploadLease({
                 begin: async () => {
+                    if (materialRun) return await academyScan('begin', null, incomingDigest, null);
                     const r = await service.rpc('deletion_upload_begin', {p_document_id: doc.id, p_version_id: reservation.version_id});
                     if (r.error || typeof r.data !== 'string') throw new Error('access_denied');
                     return r.data;
                 },
                 end: async (lease) => {
+                    if (materialRun) {
+                        await academyScan('end', lease, null, null);
+                        return;
+                    }
                     const r = await service.rpc('deletion_upload_end', {p_lease_id: lease});
                     if (r.error) throw new Error('deletion_unavailable');
                 },
-            }, async (writes) => {
+            }, async (writes, lease) => {
                 // Quarantine is not a download area; upsert:false protects reserved object bytes.
                 const quarantineExisting = await service.storage.from('portal-quarantine').info(reservation.object_path);
                 if (quarantineExisting.error) {
@@ -183,21 +215,29 @@ Deno.serve(async (request: Request) => {
                 if (digest !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
                 await validateFile(storedBytes, name, mime);
                 if (kind === 'avatar') await validateAvatar(storedBytes);
-                await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
-                await service.from('documents').update({status: 'scanning'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                if (!materialRun) {
+                    await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
+                    await service.from('documents').update({status: 'scanning'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                }
                 // Scanner failure remains scan_error. Only an actual clean result reaches promotion.
                 let verdict: { clean: boolean; version: string };
                 try {
                     verdict = await scan(storedBytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
                 } catch {
-                    await service.from('document_versions').update({status: 'scan_error'}).eq('id', reservation.version_id);
-                    await service.from('documents').update({status: 'scan_error'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                    if (materialRun) await academyScan('scan_error', lease, null, null);
+                    else {
+                        await service.from('document_versions').update({status: 'scan_error'}).eq('id', reservation.version_id);
+                        await service.from('documents').update({status: 'scan_error'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                    }
                     return json(503, {error: 'scanner_unavailable', document_id: doc.id});
                 }
                 if (!verdict.clean) {
-                    await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
-                    await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
-                    await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_rejected', resource_id: doc.id});
+                    if (materialRun) await academyScan('rejected', lease, digest, verdict.version);
+                    else {
+                        await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
+                        await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                        await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_rejected', resource_id: doc.id});
+                    }
                     return json(422, {error: 'scan_rejected', document_id: doc.id});
                 }
                 await currentDocument(); // Membership can change while an upload is being scanned.
@@ -215,15 +255,19 @@ Deno.serve(async (request: Request) => {
                     const existingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await existingBytes.data.arrayBuffer()))).map(b => b.toString(16).padStart(2, '0')).join('');
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
-                const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
-                const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();
-                if (!update.data) return json(409, {error: 'version_superseded'});
-                if (version.error || update.error) return json(503, {error: 'upload_failed'});
-                await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_clean', resource_id: doc.id});
+                if (materialRun) await academyScan('clean', lease, digest, verdict.version);
+                else {
+                    const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
+                    const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();
+                    if (!update.data) return json(409, {error: 'version_superseded'});
+                    if (version.error || update.error) return json(503, {error: 'upload_failed'});
+                    await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_clean', resource_id: doc.id});
+                }
                 await service.storage.from('portal-quarantine').remove([reservation.object_path]);
                 return json(200, {document: await currentDocument()});
             });
         }
+        if (academyIntake) return json(400, {error: 'invalid_request'});
         const data = JSON.parse(new TextDecoder().decode(await bounded(request, 4096))) as { action?: string; id?: string; version_id?: string; user_id?: string; evidence_id?: string };
         // Avatar selection is a narrow projection, not a general grant to personal files.
         if (data.action === 'avatar') {
