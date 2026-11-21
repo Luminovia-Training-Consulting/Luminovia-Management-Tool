@@ -9,7 +9,7 @@ await withTestDatabase("smart_notifications", async ({sql, actor}) => {
         randomUUID,
     );
     await sql(
-        `insert into auth.users(id,email)values${[owner, peer, learner, client, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(learner)},'participant'),(${q(client)},'client'),(${q(admin)},'admin');insert into public.user_roles(user_id,role)values(${q(learner)},'client');`,
+        `insert into auth.users(id,email,email_confirmed_at)values${[owner, peer, learner, client, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};insert into public.user_roles(user_id,role)values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(learner)},'participant'),(${q(client)},'client'),(${q(admin)},'admin');`,
     );
     const [
         task,
@@ -122,6 +122,16 @@ await withTestDatabase("smart_notifications", async ({sql, actor}) => {
     await sql(
         `insert into public.organisations(id,name)values(${q(organisation)},'Fictional academy');insert into public.client_organisation_memberships(user_id,organisation_id)values(${q(client)},${q(organisation)});insert into public.course_templates(id,title)values(${q(template)},'Fictional notified course');insert into public.course_runs(id,template_id,organisation_id)values(${q(run)},${q(template)},${q(organisation)});insert into public.course_sessions(id,course_run_id,starts_at,ends_at)values(${q(session)},${q(run)},now(),now()+interval '1 hour');insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)values(${q(run)},${q(learner)},'enrolled',${q(admin)});insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)values(${q(job)},${q(run)},'Fictional job','Fictional academy','online','filled',100,'EUR','fixed_total',100,'Fictional');insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional',1);`,
     );
+    await actor(admin, `select public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`);
+    const membershipRequest = randomUUID();
+    await sql(`insert into private.company_participant_link_requests(
+      id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at
+    ) values (${q(membershipRequest)},${q(organisation)},${q(admin)},${q(randomUUID())},
+      (select luminovia_user_id from public.profiles where id=${q(learner)}),
+      ${q(learner)},'accepted',now()+interval '14 days');
+      insert into private.company_participant_memberships(
+        organisation_id,user_id,status,link_request_id,invited_by,joined_at
+      ) values (${q(organisation)},${q(learner)},'active',${q(membershipRequest)},${q(admin)},now());`);
     await assert.rejects(
         actor(
             learner,

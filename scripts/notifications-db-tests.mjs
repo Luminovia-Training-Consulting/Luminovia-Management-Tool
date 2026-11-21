@@ -215,7 +215,7 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Current chat authorization removes stale target links and titles",
+        "Current chat authorization hides a revoked notice while retaining its row",
         async () => {
             const room = await actor(teacher, `select public.create_dm(${q(peer)})`);
             await actor(
@@ -231,8 +231,11 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
             const revoked = (await rpc(peer, "notification_inbox")).items.find(
                 (item) => item.id === notice.id,
             );
-            assert.equal(revoked.href, null);
-            assert.equal(revoked.title, "");
+            assert.equal(revoked, undefined);
+            assert.equal(
+                await sql(`select count(*) from public.notifications where id=${q(notice.id)}`),
+                "1",
+            );
         },
     );
     await check(
@@ -398,7 +401,7 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
                 await sql(
                     `select count(*) from public.notifications where kind='job_matching' and resource_id=${q(job)}`,
                 ),
-                "1",
+                "3",
             );
         },
     );
