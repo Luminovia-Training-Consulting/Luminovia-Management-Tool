@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {enablePremiumAndLinkParticipant} from "./testing/company-participant.mjs";
 
 await withApiFixture(
     async ({actor, passwordOnly, service, checked, sql, defer, suffix}) => {
@@ -42,6 +43,9 @@ await withApiFixture(
                 from public.jobs
                 where created_by = '${admin.id}';
                 delete
+                from public.course_enrolments
+                where course_run_id = '${runs[0]}';
+                delete
                 from public.course_sessions
                 where course_run_id in (select id from public.course_runs where organisation_id = '${org}');
                 delete
@@ -50,6 +54,12 @@ await withApiFixture(
                 delete
                 from public.course_templates
                 where id in ('${template}', '${oldTemplate}');
+                delete
+                from private.company_premium_audit
+                where organisation_id = '${org}';
+                delete
+                from public.client_organisation_memberships
+                where organisation_id = '${org}' and user_id = '${client.id}';
                 delete
                 from public.organisations
                 where id = '${org}';`,
@@ -237,13 +247,28 @@ await withApiFixture(
             ).error?.code,
             "22023",
         );
+        const chatArgs = {
+            p_title: label,
+            p_kind: "participant_course",
+            p_member_ids: [learner.id],
+            p_job_id: course.items[0].id,
+        };
+        const withoutPremium = await admin.client.rpc("create_chat_group", chatArgs);
+        assert.equal(withoutPremium.error?.code, "42501");
+        assert.match(withoutPremium.error?.message ?? "", /Company Premium LMS is OFF/);
+        await checked(admin.client.rpc("manage_client_organisation", {
+            p_user_id: client.id,
+            p_organisation_id: org,
+            p_remove: false,
+        }), "Link the authorised company actor for this course");
+        await enablePremiumAndLinkParticipant({admin, company: client, learner, organisation: org, service, checked});
+        await checked(admin.client.rpc("manage_course_enrolment", {
+            p_course_run_id: runs[0],
+            p_user_id: learner.id,
+            p_status: "enrolled",
+        }), "Enrol the consenting participant in the exact selected course");
         const room = await checked(
-            admin.client.rpc("create_chat_group", {
-                p_title: label,
-                p_kind: "participant_course",
-                p_member_ids: [learner.id],
-                p_job_id: course.items[0].id,
-            }),
+            admin.client.rpc("create_chat_group", chatArgs),
             "Create participant channel from selected binding",
         );
         const channel = await checked(
@@ -256,6 +281,10 @@ await withApiFixture(
         );
         assert.equal(channel.course_run_id, runs[0]);
         assert.equal(channel.job_id, null);
+        assert.deepEqual(
+            await checked(learner.client.rpc("course_chat_rooms", {p_run_id: runs[0]})),
+            [{id: room, title: label, can_post: true}],
+        );
         assert.equal(
             (
                 await admin.client.rpc("create_chat_group", {
