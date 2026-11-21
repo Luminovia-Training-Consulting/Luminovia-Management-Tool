@@ -307,6 +307,11 @@ test("SQL shards partition every suite exactly once with distinct owned clusters
     );
     for (const args of names) {
         assert(args.at(-1).includes("-c jit=off"));
+        assert(args.at(-1).includes("umask 077"));
+        assert(args.at(-1).includes("/dev/urandom"));
+        assert(args.at(-1).includes("shared_preload_libraries=supabase_vault"));
+        assert(args.at(-1).includes("vault.getkey_script=/tmp/portal-pr-vault/getkey"));
+        assert(!args.includes("--volume") && !args.includes("--mount"));
         assert(!/fsync|synchronous_commit|max_connections/.test(args.at(-1)));
     }
     await assert.rejects(

@@ -191,7 +191,18 @@ export async function runPrCheck(
             "/bin/sh",
             image,
             "-ec",
-            "initdb -D /tmp/portal-pr-data -U postgres --auth=trust >/dev/null; exec postgres -D /tmp/portal-pr-data -c listen_addresses='' -c unix_socket_directories=/tmp -c jit=off",
+            [
+                // The direct initdb path bypasses the image's key setup.
+                // Keep a random Vault key inside this disposable container.
+                "umask 077",
+                "mkdir /tmp/portal-pr-vault",
+                "{ od -An -v -N32 -tx1 /dev/urandom | tr -d '[:space:]'; printf '\\n'; } > /tmp/portal-pr-vault/key",
+                'test "$(wc -c < /tmp/portal-pr-vault/key)" -eq 65',
+                "printf '%s\\n' '#!/bin/sh' 'exec cat /tmp/portal-pr-vault/key' > /tmp/portal-pr-vault/getkey",
+                "chmod 700 /tmp/portal-pr-vault/getkey",
+                "initdb -D /tmp/portal-pr-data -U postgres --auth=trust >/dev/null",
+                "exec postgres -D /tmp/portal-pr-data -c listen_addresses='' -c unix_socket_directories=/tmp -c jit=off -c shared_preload_libraries=supabase_vault -c vault.getkey_script=/tmp/portal-pr-vault/getkey",
+            ].join("\n"),
         ]);
         await step(
             "docker",
