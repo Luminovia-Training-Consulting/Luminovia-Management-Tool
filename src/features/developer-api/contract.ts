@@ -1,5 +1,14 @@
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
+import {
+  courseEnrolmentsResult,
+  enrolmentState,
+  myWorkspacesResult,
+  participantInvitesResult,
+  workspaceActionRequest,
+  workspaceActionResult,
+  workspaceResult,
+} from "./learning-contract.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -63,7 +72,10 @@ const rpc = (
     tags: [tag],
     summary,
     description,
-    requestBody: { required: true, content: json(object(input)) },
+    requestBody: {
+      required: Object.keys(input).length > 0,
+      content: json(object(input)),
+    },
     responses: {
       "200": { description: "Current server result", content: json(result) },
       "400": error,
@@ -77,68 +89,38 @@ const rpc = (
   },
 });
 
+/** PostgreSQL void RPCs return HTTP 204 without a JSON response. */
+function voidRpc(
+  operationId: string,
+  tag: string,
+  summary: string,
+  description: string,
+  input: Record<string, unknown>,
+) {
+  const { post } = rpc(operationId, tag, summary, description, input, {});
+  const { "200": success, ...errors } = post.responses;
+  return {
+    post: {
+      ...post,
+      responses: {
+        ...errors,
+        "204": { description: success.description + ". No response body." },
+      },
+    },
+  };
+}
+
 const workspaceAction = {
   post: {
     ...rpc(
       "courseWorkspaceAction",
       "Premium LMS",
-      "Update a course resource or attendance record",
-      "The action is limited here to the documented resource and attendance commands. Current Premium, course role, ownership and version checks are enforced by the database. Resource sharing requires a clean personal material version, except that authorized staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership; company contacts can remove company-owned links, and lecturers can remove only their own lecturer-owned links. Retained attendance evidence cannot be removed.",
+      "Apply a course workspace command",
+      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Retained attendance evidence cannot be removed. Quiz attempts are idempotent by request ID and return only the score and pass result. Completion issuance requires current completed enrolment, verified attendance and a pass on any published quiz.",
       {},
-      {
-        type: "object",
-        properties: { id: nullableUuid, saved: boolean },
-        required: ["id"],
-        additionalProperties: false,
-      },
+      workspaceActionResult,
     ).post,
-    requestBody: {
-      required: true,
-      content: json({
-        oneOf: [
-          object({
-            p_run_id: uuid,
-            p_action: { const: "resource_share" },
-            p_payload: object({
-              version_id: uuid,
-              audience: { enum: ["staff", "client", "participants", "all"] },
-              category: { enum: ["material", "report"] },
-            }),
-            p_expected_version: version,
-          }),
-          object({
-            p_run_id: uuid,
-            p_action: { const: "resource_remove" },
-            p_payload: object({ id: uuid }),
-            p_expected_version: version,
-          }),
-          object({
-            p_run_id: uuid,
-            p_action: { const: "resource_acknowledge" },
-            p_payload: object({ id: uuid }),
-            p_expected_version: version,
-          }),
-          object({
-            p_run_id: uuid,
-            p_action: { const: "attendance_report" },
-            p_payload: object({ session_id: uuid }),
-            p_expected_version: version,
-          }),
-          object({
-            p_run_id: uuid,
-            p_action: { const: "attendance_verify" },
-            p_payload: object({
-              session_id: uuid,
-              user_id: uuid,
-              state: { enum: ["attended", "absent"] },
-              minutes: { type: "integer", minimum: 0 },
-              reason: { type: "string", minLength: 3, maxLength: 500 },
-            }),
-            p_expected_version: version,
-          }),
-        ],
-      }),
-    },
+    requestBody: { required: true, content: json(workspaceActionRequest) },
   },
 };
 
@@ -393,13 +375,12 @@ const nativePaths = {
     },
     uuid,
   ),
-  "/rest/v1/rpc/remove_course_exam_pdf": rpc(
+  "/rest/v1/rpc/remove_course_exam_pdf": voidRpc(
     "removeCourseExamPdf",
     "Premium LMS",
     "Remove a course exam share",
     "Authorized course exam editors can remove the share; the underlying uploaded version is retained.",
     { ...course, p_exam_id: uuid },
-    { type: "null" },
   ),
   "/rest/v1/rpc/inspect_company_course_chat": rpc(
     "inspectCompanyCourseChat",
@@ -498,6 +479,44 @@ const nativePaths = {
       p_version_id: uuid,
     },
     uuid,
+  ),
+  "/rest/v1/rpc/my_course_workspaces": rpc(
+    "myCourseWorkspaces",
+    "Premium LMS",
+    "List my current course workspaces",
+    "Returns at most 200 nonarchived courses in scope. A verified participant-only account sees its enrolled or completed courses only while the owning company has Premium enabled. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
+    {},
+    myWorkspacesResult,
+  ),
+  "/rest/v1/rpc/course_workspace": rpc(
+    "readCourseWorkspace",
+    "Premium LMS",
+    "Read an authorised Premium course workspace",
+    "Requires current Premium and course access. Each response contains actor-scoped sessions, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
+    course,
+    workspaceResult,
+  ),
+  "/rest/v1/rpc/course_enrolments": rpc(
+    "courseEnrolments",
+    "Premium LMS",
+    "Read a course enrolment roster",
+    "Requires current Premium and course-management authority or a current contact of the exact company. The response retains removed entries. A participant cannot request these records.",
+    { p_course_run_id: uuid },
+    courseEnrolmentsResult,
+  ),
+  "/rest/v1/rpc/manage_course_enrolment": voidRpc(
+    "manageCourseEnrolment",
+    "Premium LMS",
+    "Set a participant's course enrolment status",
+    "Requires current Premium, course-management authority or a current company contact, and an active participant-only association with the same company. Status completed requires a course with ended sessions. The server updates scoped participant chat membership.",
+    { p_course_run_id: uuid, p_user_id: uuid, p_status: enrolmentState },
+  ),
+  "/rest/v1/rpc/cancel_own_course_enrolment": voidRpc(
+    "cancelOwnCourseEnrolment",
+    "Premium LMS",
+    "Cancel my own enrolment",
+    "A currently enrolled participant can withdraw at least seven days before the first scheduled session while the company has Premium enabled. The membership with the company and other course enrolments remain intact.",
+    { p_course_run_id: uuid },
   ),
   "/rest/v1/rpc/course_workspace_action": workspaceAction,
   "/rest/v1/rpc/import_course_session_attendance": rpc(
@@ -651,6 +670,48 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/my_company_participant_invitations": rpc(
+    "myCompanyParticipantInvitations",
+    "Premium LMS",
+    "List my pending company invitations",
+    "Requires a verified participant-only account. Expired invitations and companies with Premium disabled are excluded. Source distinguishes invitations requested through email from association requests made using Luminovia User ID.",
+    {},
+    participantInvitesResult,
+  ),
+  "/rest/v1/rpc/accept_company_participant_invitation": rpc(
+    "acceptCompanyParticipantInvitation",
+    "Premium LMS",
+    "Accept my invitation to one company",
+    "Requires a verified participant-only account and a current, unexpired invitation for the specified company while Premium is enabled. Send the invitation's version and retain the request ID for retries; acceptance does not create a course enrolment.",
+    {
+      ...organisation,
+      p_expected_version: { ...version, minimum: 1 },
+      ...idempotency,
+    },
+    object({
+      status: { const: "accepted" },
+      organisation_id: uuid,
+      version: { ...version, minimum: 1 },
+    }),
+  ),
+  "/rest/v1/rpc/remove_company_participant": rpc(
+    "removeCompanyParticipant",
+    "Premium LMS",
+    "Remove an association from one company",
+    "Requires current company participant management and Premium. Send the current membership version and retain the request ID for retries. Open enrolments for that company are withdrawn, with other companies' associations and retained evidence preserved.",
+    {
+      ...organisation,
+      p_user_id: uuid,
+      p_expected_version: { ...version, minimum: 1 },
+      ...idempotency,
+    },
+    object({
+      status: { const: "removed" },
+      organisation_id: uuid,
+      user_id: uuid,
+      version: { ...version, minimum: 1 },
+    }),
+  ),
   "/rest/v1/rpc/request_company_participant_link": rpc(
     "requestParticipantLink",
     "Premium LMS",
@@ -658,7 +719,7 @@ const nativePaths = {
     "Requires Premium and scoped company authority. An opaque acknowledgement does not confirm that an ID exists or membership was granted. The participant must accept.",
     {
       ...organisation,
-      p_luminovia_user_id: { ...text, maxLength: 64 },
+      p_luminovia_user_id: { ...text, minLength: 1, maxLength: 32 },
       ...idempotency,
     },
     object({ status: { const: "request_submitted" } }),
@@ -802,7 +863,12 @@ const paths: Record<string, Record<string, unknown>> = {
       ),
     ]),
   ),
-  ...nativePaths,
+  ...Object.fromEntries(
+    Object.entries(nativePaths).map(([path, operation]) => [
+      path,
+      { post: { ...nativeExplorerPaths[path]?.post, ...operation.post } },
+    ]),
+  ),
   "/rest/v1/rpc/company_course_webhook_list": companyWebhookList,
   "/rest/v1/rpc/company_course_webhook_revoke": companyWebhookRevoke,
 };

@@ -1,5 +1,6 @@
 /** Exercise actual company link request/consent RPCs against migrated PostgreSQL. */
 import assert from "node:assert/strict";
+import { assertLmsResponse } from "./testing/premium-lms-contract.mjs";
 import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
@@ -76,6 +77,7 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     learner,
     "public.my_company_participant_invitations()",
   );
+  assertLmsResponse("my_company_participant_invitations", invitations);
   assert.equal(invitations.length, 1);
   assert.equal(invitations[0].organisation_id, org);
   assert.equal(invitations[0].source, "luminovia_user_id");
@@ -92,10 +94,16 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     /40001/,
   );
   const accepted = { status: "accepted", organisation_id: org, version: 2 };
-  assert.deepEqual(
-    await accept(learner, invitations[0].version, consentKey),
-    accepted,
+  const verifiedAcceptance = await accept(
+    learner,
+    invitations[0].version,
+    consentKey,
   );
+  assertLmsResponse(
+    "accept_company_participant_invitation",
+    verifiedAcceptance,
+  );
+  assert.deepEqual(verifiedAcceptance, accepted);
   assert.deepEqual(
     await accept(learner, invitations[0].version, consentKey),
     accepted,
@@ -123,6 +131,17 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     ),
     "f",
   );
+  const removed = await call(
+    company,
+    `public.remove_company_participant(${q(org)},${q(learner)},2,${q(randomUUID())})`,
+  );
+  assertLmsResponse("remove_company_participant", removed);
+  assert.deepEqual(removed, {
+    status: "removed",
+    organisation_id: org,
+    user_id: learner,
+    version: 3,
+  });
   console.log(
     "PASS company link request, privacy, current authority, idempotent retry and participant consent",
   );

@@ -6,7 +6,12 @@ import { isDocumentedRequest, portalOpenApi } from "./contract";
 const backend = "https://portal.example.invalid";
 const paths = portalOpenApi(backend, false).paths as Record<
   string,
-  { post: { requestBody: { content: Record<string, { schema: unknown }> } } }
+  {
+    post: {
+      requestBody: { content: Record<string, { schema: unknown }> };
+      responses: Record<string, unknown>;
+    };
+  }
 >;
 const requestSchema = (path: string) =>
   paths[path].post.requestBody.content["application/json"].schema as {
@@ -193,7 +198,7 @@ describe("documented Premium course and spending operations", () => {
     expect(paths).not.toHaveProperty("/rest/v1/rpc/send_message");
   });
 
-  it("lists only the implemented resource and attendance action payloads", () => {
+  it("documents resource, teaching and self-service learning action payloads", () => {
     const actions = requestSchema("/rest/v1/rpc/course_workspace_action").oneOf;
     expect(
       actions.map(
@@ -206,6 +211,17 @@ describe("documented Premium course and spending operations", () => {
       "resource_acknowledge",
       "attendance_report",
       "attendance_verify",
+      "preparation_create",
+      "preparation_toggle",
+      "contact_select",
+      "notebook",
+      "question",
+      "answer",
+      "feedback",
+      "quiz_config",
+      "quiz_attempt",
+      "completion_issue",
+      "completion_revoke",
     ]);
     expect(actions[0].properties.p_payload.required).toEqual([
       "version_id",
@@ -232,6 +248,43 @@ describe("documented Premium course and spending operations", () => {
       "private.course_resource_command(p_run_id, p_action, p_payload)",
     );
     expect(paths).not.toHaveProperty("/rest/v1/rpc/course_resource_command");
+  });
+
+  it("keeps participant onboarding schema and REST gates aligned", () => {
+    const rpc = (name: string) => paths[`/rest/v1/rpc/${name}`].post;
+    expect(rpc("my_company_participant_invitations")).toMatchObject({
+      requestBody: { required: false },
+      "x-luminovia-rest-gate": { participantSession: true },
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                items: {
+                  required: [
+                    "organisation_id",
+                    "organisation_name",
+                    "version",
+                    "expires_at",
+                    "source",
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(rpc("accept_company_participant_invitation")).toMatchObject({
+      "x-luminovia-rest-gate": { participantSession: true },
+    });
+    expect(rpc("manage_course_enrolment")).toMatchObject({
+      responses: { "204": { description: expect.any(String) } },
+    });
+    expect(rpc("manage_course_enrolment").responses).not.toHaveProperty("200");
+    expect(rpc("cancel_own_course_enrolment")).toMatchObject({
+      responses: { "204": { description: expect.any(String) } },
+    });
   });
 
   it("types the session register, versioned correction and retained PDF evidence", () => {

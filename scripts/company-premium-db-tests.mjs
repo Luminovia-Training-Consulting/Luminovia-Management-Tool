@@ -1,5 +1,6 @@
 /** Isolated SQL/RLS/API checks for the admin-only company Premium flag and retained course data. */
 import assert from "node:assert/strict";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -397,6 +398,34 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await assert.rejects(rpc(participant, "course_chat_attachment_access", route), /42501/);
             assert.equal(await rpc(participant, "course_chat_upload_status", [roomA, draftId, version]), null);
             await sql(`update public.chat_members set removed_at=null where room_id=${q(roomA)} and user_id=${q(participant)}`);
+        },
+    );
+
+    await check(
+        "Published OpenAPI matches Premium workspaces, commands and the company roster",
+        async () => {
+            const config = {
+                questions: [{prompt: "Select option one", options: ["One", "Two"], correct: 0}],
+                pass_percent: 50,
+                max_attempts: 2,
+                published: true,
+            };
+            assertLmsResponse("course_workspace_action",
+                await rpc(lecturer, "course_workspace_action", [runA, "quiz_config", config, 0]));
+            assertLmsResponse("course_workspace_action",
+                await rpc(participant, "course_workspace_action", [runA, "notebook", {body: "Fictional note"}, 0]));
+            const learner = await rpc(participant, "course_workspace", [runA]);
+            const teacher = await rpc(lecturer, "course_workspace", [runA]);
+            const company = await rpc(client, "course_workspace", [runA]);
+            for (const dto of [learner, teacher, company]) assertLmsResponse("course_workspace", dto);
+            assert.deepEqual(learner.roster, []);
+            assert.deepEqual(learner.attendance_history, []);
+            assert.equal(learner.notebook.body, "Fictional note");
+            assert.ok(!("correct" in learner.quiz.questions[0]));
+            assert.equal(teacher.quiz.questions[0].correct, 0);
+            assert.ok(!("correct" in company.quiz.questions[0]));
+            assertLmsResponse("course_enrolments", await rpc(client, "course_enrolments", [runA]));
+            assertLmsResponse("my_course_workspaces", await rpc(participant, "my_course_workspaces"));
         },
     );
 
