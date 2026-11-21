@@ -88,6 +88,17 @@ function workflow(name) {
     );
 }
 
+test("manual native acceptance uses a revision-specific concurrency group", () => {
+    for (const name of ["ci", "security"]) {
+        const concurrency = workflow(name).concurrency;
+        assert.equal(concurrency["cancel-in-progress"], "true");
+        assert.ok(concurrency.group.includes("github.head_ref || github.ref_name"));
+        assert.ok(concurrency.group.includes(
+            "github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || ''",
+        ));
+    }
+});
+
 /** Exercise the maintained Actions condition, restricted to its primitive gate
  * variables and boolean operators rather than executing arbitrary source text.
  */

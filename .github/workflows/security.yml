@@ -12,7 +12,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  # Keep each explicit manual source audit independent of concurrent pushes.
+  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || '' }}
   cancel-in-progress: true
 jobs:
   codeql:

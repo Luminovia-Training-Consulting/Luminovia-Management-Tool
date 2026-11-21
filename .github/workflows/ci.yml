@@ -21,7 +21,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  # A manual acceptance run is evidence for a specific commit. A later push
+  # must not cancel it while the native browser reports are still being written.
+  group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || '' }}
   cancel-in-progress: true
 jobs:
   scope:
