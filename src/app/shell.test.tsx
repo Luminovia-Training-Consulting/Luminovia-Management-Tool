@@ -21,16 +21,23 @@ import {
 } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
 import { Shell } from "./shell";
-import "../lib/i18n";
+import i18n from "../lib/i18n";
 
-const { signOut, access, refetchPermissions, refetchRoles } = vi.hoisted(
-  () => ({
+const { signOut, access, refetchPermissions, refetchRoles, loadUi, saveUi } =
+  vi.hoisted(() => ({
     signOut: vi.fn(),
     access: { failed: false, roles: [] as string[] },
     refetchPermissions: vi.fn(),
     refetchRoles: vi.fn(),
-  }),
-);
+    loadUi: vi
+      .fn()
+      .mockRejectedValue(new Error("No saved preferences fixture")),
+    saveUi: vi.fn().mockResolvedValue(null),
+  }));
+vi.mock("../lib/ui-preferences-api", () => ({
+  loadUiPreferences: loadUi,
+  saveUiPreferences: saveUi,
+}));
 vi.mock("../features/auth/auth-context", () => ({
   useAuth: () => ({
     session: { user: { id: "actor", email: "fictional@example.invalid" } },
@@ -79,7 +86,43 @@ afterEach(() => {
   access.failed = false;
   access.roles = [];
   vi.clearAllMocks();
+  loadUi
+    .mockReset()
+    .mockRejectedValue(new Error("No saved preferences fixture"));
+  saveUi.mockReset().mockResolvedValue(null);
   vi.unstubAllGlobals();
+});
+
+it("keeps the selected language while the account preference is being saved", async () => {
+  await i18n.changeLanguage("de");
+  loadUi.mockResolvedValue({
+    language: "de",
+    theme: "system",
+    sidebar_collapsed: false,
+    version: 0,
+  });
+  let finishSave!: () => void;
+  saveUi.mockReturnValue(
+    new Promise<void>((resolve) => {
+      finishSave = resolve;
+    }),
+  );
+  try {
+    const { user } = setup();
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Sprache" }),
+      "en",
+    );
+    expect(saveUi).toHaveBeenCalledWith({ language: "en" });
+    expect(loadUi).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("combobox", { name: "Language" })).toHaveValue(
+      "en",
+    );
+  } finally {
+    finishSave();
+    cleanup();
+    await i18n.changeLanguage("de");
+  }
 });
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */

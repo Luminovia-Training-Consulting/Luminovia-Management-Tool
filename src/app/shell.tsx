@@ -50,6 +50,7 @@ import {
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
+import i18n from "../lib/i18n";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import {
   installationBrand,
@@ -81,7 +82,7 @@ export { Preferences } from "../components/preferences";
  * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
  */
 export function Shell() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { session } = useAuth();
   const actor = session!.user.id;
   const navigate = useNavigate();
@@ -118,6 +119,8 @@ export function Shell() {
   });
   const [chosenPreview, setPreviewMode] = useState<PreviewRole | null>(null);
   const [uiSaveFailed, setUiSaveFailed] = useState(false);
+  // Hydrate for the active account once, independent of the translated render.
+  // A new language must never trigger a read of the value still being saved.
   useEffect(() => {
     let alive = true;
     let changedLocally = false;
@@ -139,7 +142,7 @@ export function Shell() {
       alive = false;
       window.removeEventListener(uiLocalChangeEvent, changed);
     };
-  }, [actor, i18n]);
+  }, [actor]);
   const [search, setSearch] = useState("");
   const previousActor = useRef(actor);
   useEffect(() => {
