@@ -27,7 +27,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         examPaperVersion = randomUUID(), examKeyVersion = randomUUID();
     let examPaperId, examKeyId;
     const learnerResource = randomUUID(), learnerCompletion = randomUUID();
-    let courseChatMessageId, courseChatMessageB;
+    let courseChatMessageId, courseChatMessageB, attachedChatMessage, attachedVersion;
     await sql(
         `insert into auth.users(id, email)
          values ${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
@@ -300,6 +300,62 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
+        "Course chat drafts are owner scoped; only a clean exact version can be posted and read",
+        async () => {
+            const ownedDraft = await rpc(lecturer, "reserve_message_document", [
+                "Staff exercise.txt", "text/plain", 12, roomA, randomUUID(),
+            ]);
+            await assert.rejects(rpc(lecturer, "reserve_document", [
+                "Replacement.txt", "text/plain", 12, "room", "chat", roomA, null,
+                randomUUID(), ownedDraft.document_id, null,
+            ]), /22023/);
+            const key = randomUUID();
+            const reserve = ["Exercise.txt", "text/plain", 12, roomA, key];
+            await assert.rejects(rpc(client, "reserve_course_chat_document", reserve), /42501/);
+            await assert.rejects(rpc(lecturer, "reserve_course_chat_document", [...reserve.slice(0, 3), roomB, key]), /42501/);
+            await assert.rejects(rpc(participant, "reserve_document", ["Exercise.txt", "text/plain", 12, "room", "chat", roomA, null, key, null, null]), /42501/);
+            for (const path of ["/documents", "/document_versions", "/rpc/reserve_message_document"]) {
+                await assert.rejects(actor(participant, `set local request.path=${q(path)};select public.require_portal_access()`), /42501/);
+            }
+            await actor(participant, "set local request.path='/rpc/reserve_course_chat_document';select public.require_portal_access()");
+            const draft = await rpc(participant, "reserve_course_chat_document", reserve);
+            assert.deepEqual(await rpc(participant, "reserve_course_chat_document", reserve), draft);
+            const [draftId, version] = [draft.document_id, draft.version_id];
+            assert.equal(await actor(participant, `select count(*) from public.documents where id=${q(draftId)}`), "0");
+            attachedVersion = version;
+            assert.equal((await rpc(participant, "course_chat_upload_status", [roomA, draftId, version])).document.status, "quarantined");
+            assert.equal(await rpc(lecturer, "course_chat_upload_status", [roomA, draftId, version]), null);
+            const requestId = randomUUID();
+            const post = [roomA, "", requestId, draftId, version];
+            await assert.rejects(rpc(participant, "send_course_chat_attachment", post), /42501/);
+            const hash = "d".repeat(64);
+            await sql(`update public.documents set status='clean' where id=${q(draftId)};
+                      update public.document_versions set status='clean', sha256=${q(hash)} where id=${q(version)};`);
+            await assert.rejects(rpc(lecturer, "send_course_chat_attachment", post), /42501/);
+            await assert.rejects(rpc(participant, "send_course_chat_attachment", [...post.slice(0, 4), randomUUID()]), /42501/);
+            attachedChatMessage = await rpc(participant, "send_course_chat_attachment", post);
+            assert.equal(await rpc(participant, "send_course_chat_attachment", post), attachedChatMessage);
+            const history = await rpc(client, "course_chat_messages", [roomA, null, null, 50]);
+            assert.deepEqual(history.find((message) => message.id === attachedChatMessage)?.attachment, {
+                version_id: version, name: "Exercise.txt", size_bytes: 12,
+            });
+            const route = [attachedChatMessage, version, null, null];
+            for (const who of [client, lecturer, participant]) {
+                assert.equal((await rpc(who, "course_chat_attachment_access", route)).sha256, hash);
+            }
+            await assert.rejects(rpc(participant, "course_chat_attachment_access", [attachedChatMessage, randomUUID(), null, null]), /42501/);
+            await assert.rejects(rpc(manager, "course_chat_attachment_access", route), /42501/);
+            await sql(`insert into private.chat_hidden_messages(user_id,message_id) values(${q(lecturer)},${q(attachedChatMessage)})`);
+            await assert.rejects(rpc(lecturer, "course_chat_attachment_access", route), /42501/);
+            await sql(`update public.chat_members set removed_at=now() where room_id=${q(roomA)} and user_id=${q(participant)}`);
+            await assert.rejects(rpc(participant, "send_course_chat_attachment", post), /42501/);
+            await assert.rejects(rpc(participant, "course_chat_attachment_access", route), /42501/);
+            assert.equal(await rpc(participant, "course_chat_upload_status", [roomA, draftId, version]), null);
+            await sql(`update public.chat_members set removed_at=null where room_id=${q(roomA)} and user_id=${q(participant)}`);
+        },
+    );
+
+    await check(
         "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
@@ -332,11 +388,19 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await assert.rejects(rpc(secondAdmin, "inspect_company_course_chat", [companyA, runA, "short", null, null]), /22023/);
             assert.equal(await actor(secondAdmin, `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
             const auditChat = await rpc(secondAdmin, "inspect_company_course_chat", [companyA, runA, "Fictional audit", null, null]);
-            assert.deepEqual(auditChat.items.map((item) => item.id), [courseChatMessageId]);
-            assert.deepEqual(Object.keys(auditChat.items[0]).sort(), ["body", "created_at", "id", "room_title", "sender_name"]);
+            assert.deepEqual(auditChat.items.map((item) => item.id), [attachedChatMessage, courseChatMessageId]);
+            assert.equal(auditChat.items[0].attachment.version_id, attachedVersion);
+            assert.deepEqual(Object.keys(auditChat.items[0]).sort(), ["attachment", "body", "created_at", "id", "room_title", "sender_name"]);
             const auditDetail = JSON.parse(await sql(`select details from public.audit_events where action='course.chat_inspected' and resource_id=${q(runA)}`));
             assert.equal(auditDetail.purpose, "Fictional audit");
             assert.equal(auditDetail.premium_enabled, false);
+            for (const who of [participant, lecturer, client]) {
+                await assert.rejects(rpc(who, "course_chat_attachment_access", [attachedChatMessage, attachedVersion, null, null]), /42501/);
+            }
+            await assert.rejects(rpc(secondAdmin, "course_chat_attachment_access", [attachedChatMessage, attachedVersion, companyB, "Fictional audit"]), /42501/);
+            assert.equal((await rpc(secondAdmin, "course_chat_attachment_access", [attachedChatMessage, attachedVersion, companyA, "Fictional audit"])).version_id, attachedVersion);
+            assert.equal(await sql(`select count(*) from public.audit_events where action='course.chat_inspected'
+                and resource_id=${q(runA)} and details->>'attachment_version_id'=${q(attachedVersion)}`), "1");
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);
@@ -414,6 +478,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 randomUUID(),
             ]);
             await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
+            await assert.rejects(rpc(participant, "course_chat_attachment_access", [
+                attachedChatMessage, attachedVersion, null, null,
+            ]), /42501/);
+            assert.equal(await actor(participant, `select count(*) from public.messages where id=${q(attachedChatMessage)}`), "0");
             let current = (await rpc(admin, "company_premium_settings")).find(
                 (item) => item.organisation_id === companyA,
             ).version;

@@ -1,11 +1,16 @@
-/** A text-only participant-course room; all reads and posts recheck live course entitlement. */
-import { useRef, useState } from "react";
+/** Participant course rooms use scoped history, scan-gated uploads and confirmed posting. */
+import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
+import { acceptedFiles, uploadDocument } from "../files/api";
+import {
+  CourseChatAttachment,
+  type CourseChatFile,
+} from "./course-chat-attachment";
 import "./course-chat-i18n";
 
 type Room = { id: string; title: string | null; can_post: boolean };
@@ -16,17 +21,18 @@ type Message = {
   body: string | null;
   created_at: string;
   deleted_at: string | null;
+  attachment: CourseChatFile | null;
 };
 
+/** Resolve room access independently from message history and drop the thread on denial. */
 export function CourseChat({ run, actor }: { run: string; actor: string }) {
-  const { t, i18n } = useTranslation("courseChat");
+  const { t } = useTranslation("courseChat");
   const online = useOnline();
-  const client = useQueryClient();
+  const roomField = useId();
   const [selected, setSelected] = useState<string | null>(null);
-  const [body, setBody] = useState("");
-  const retry = useRef<{ signature: string; key: string } | null>(null);
   const rooms = useQuery({
     queryKey: ["course-chat-rooms", actor, run],
+    enabled: online,
     queryFn: async () => {
       const { data, error } = await db().rpc("course_chat_rooms", {
         p_run_id: run,
@@ -36,52 +42,14 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
       return data as Room[];
     },
     staleTime: 0,
+    // The open course is revalidated frequently. Discard its private cache on exit.
+    gcTime: 0,
+    retry: false,
     refetchInterval: 3000,
   });
   const room =
     rooms.data?.find((candidate) => candidate.id === selected) ??
     rooms.data?.[0];
-  const messages = useQuery({
-    queryKey: ["course-chat-messages", actor, run, room?.id],
-    enabled: Boolean(room?.id && rooms.isSuccess),
-    queryFn: async () => {
-      const { data, error } = await db().rpc("course_chat_messages", {
-        p_room_id: room!.id,
-        p_before_at: null,
-        p_before_id: null,
-        p_limit: 50,
-      });
-      if (error) throw error;
-      if (!Array.isArray(data)) throw new Error("invalid_course_chat_messages");
-      return data as Message[];
-    },
-    staleTime: 0,
-    refetchInterval: 3000,
-  });
-  const send = useMutation({
-    mutationFn: async () => {
-      requireOnline();
-      if (!room?.can_post) throw new Error("room_unavailable");
-      const text = body.trim();
-      if (!text || text.length > 8000) throw new Error("invalid_message");
-      const signature = JSON.stringify([room.id, text]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("send_course_chat_message", {
-        p_room_id: room.id,
-        p_body: text,
-        p_client_id: retry.current.key,
-      });
-      if (error || !data) throw error ?? new Error("unconfirmed");
-    },
-    onSuccess: async () => {
-      retry.current = null;
-      setBody("");
-      await client.invalidateQueries({
-        queryKey: ["course-chat-messages", actor, run, room?.id],
-      });
-    },
-  });
   return (
     <section
       id="course-chat"
@@ -89,18 +57,18 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
       aria-label={t("title")}
     >
       <h2>{t("title")}</h2>
-      {rooms.isPending ? (
-        <Loading />
-      ) : rooms.isError ? (
+      {!online || rooms.isError ? (
         <Notice kind="error">{t("unavailable")}</Notice>
+      ) : rooms.isPending ? (
+        <Loading />
       ) : !room ? (
         <p>{t("emptyRooms")}</p>
       ) : (
         <>
           {rooms.data.length > 1 && (
-            <Field id="course-chat-room" label={t("title")}>
+            <Field id={roomField} label={t("title")}>
               <select
-                id="course-chat-room"
+                id={roomField}
                 value={room.id}
                 onChange={(event) => setSelected(event.target.value)}
               >
@@ -112,60 +80,263 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
               </select>
             </Field>
           )}
-          <h3>{room.title || t("title")}</h3>
-          <p className="muted">{t("latest")}</p>
-          {messages.isPending ? (
-            <Loading />
-          ) : messages.isError ? (
-            <ErrorState retry={() => void messages.refetch()} />
-          ) : !messages.data.length ? (
-            <p>{t("emptyMessages")}</p>
-          ) : (
-            <ol className="course-chat-messages">
-              {messages.data.map((message) => (
-                <li key={message.id}>
-                  <strong>{message.sender_name}</strong>
-                  <time dateTime={message.created_at}>
-                    {new Intl.DateTimeFormat(i18n.language, {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    }).format(new Date(message.created_at))}
-                  </time>
-                  <p>{message.deleted_at ? t("deleted") : message.body}</p>
-                </li>
-              ))}
-            </ol>
-          )}
-          {room.can_post ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                send.mutate();
-              }}
-            >
-              <Field id="course-chat-message" label={t("message")}>
-                <textarea
-                  id="course-chat-message"
-                  value={body}
-                  maxLength={8000}
-                  onChange={(event) => setBody(event.target.value)}
-                  disabled={!online || send.isPending || messages.isError}
-                />
-              </Field>
-              <Button
-                disabled={
-                  !online || send.isPending || messages.isError || !body.trim()
-                }
-              >
-                {t("send")}
-              </Button>
-            </form>
-          ) : (
-            <p className="muted">{t("readOnly")}</p>
-          )}
-          {send.isError && <Notice kind="error">{t("failed")}</Notice>}
+          <CourseChatThread key={room.id} room={room} actor={actor} run={run} />
         </>
       )}
     </section>
+  );
+}
+
+/** The thread owns its draft, including upload/request IDs. Switching rooms
+ * unmounts the previous draft, avoiding cross-room file and retry reuse. */
+function CourseChatThread({
+  room,
+  run,
+  actor,
+}: {
+  room: Room;
+  run: string;
+  actor: string;
+}) {
+  const { t, i18n } = useTranslation("courseChat");
+  const client = useQueryClient();
+  const messageField = useId();
+  const attachmentField = useId();
+  const [body, setBody] = useState("");
+  const [attachment, setAttachment] = useState<{
+    id: string;
+    version: string;
+    name: string;
+  } | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [invalidDrop, setInvalidDrop] = useState(false);
+  const uploadRetry = useRef<{ file: File; key: string } | null>(null);
+  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const historyKey = ["course-chat-messages", actor, run, room.id];
+  const messages = useQuery({
+    queryKey: historyKey,
+    queryFn: async () => {
+      const { data, error } = await db().rpc("course_chat_messages", {
+        p_room_id: room.id,
+        p_before_at: null,
+        p_before_id: null,
+        p_limit: 50,
+      });
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("invalid_course_chat_messages");
+      return data as Message[];
+    },
+    staleTime: 0,
+    // The open course is revalidated frequently. Discard its private cache on exit.
+    gcTime: 0,
+    retry: false,
+    refetchInterval: 3000,
+  });
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      requireOnline();
+      if (!room.can_post) throw new Error("room_unavailable");
+      setProgress(0);
+      if (uploadRetry.current?.file !== file)
+        uploadRetry.current = { file, key: crypto.randomUUID() };
+      const document = await uploadDocument(
+        file,
+        {
+          scope: "room",
+          roomId: room.id,
+          clientId: uploadRetry.current.key,
+          messageOnly: true,
+          courseChat: true,
+        },
+        setProgress,
+      );
+      if (!document.current_version_id) throw new Error("version_unavailable");
+      return {
+        id: document.id,
+        version: document.current_version_id,
+        name: document.original_name,
+      };
+    },
+    onSuccess: (document) => {
+      uploadRetry.current = null;
+      setAttachment(document);
+    },
+  });
+  const send = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      if (!room.can_post) throw new Error("room_unavailable");
+      const text = body.trim();
+      if ((!text && !attachment) || text.length > 8000)
+        throw new Error("invalid_message");
+      const signature = JSON.stringify([
+        text,
+        attachment?.id,
+        attachment?.version,
+      ]);
+      if (retry.current?.signature !== signature)
+        retry.current = { signature, key: crypto.randomUUID() };
+      const args = {
+        p_room_id: room.id,
+        p_body: text,
+        p_client_id: retry.current.key,
+      };
+      const { data, error } = attachment
+        ? await db().rpc("send_course_chat_attachment", {
+            ...args,
+            p_document_id: attachment.id,
+            p_version_id: attachment.version,
+          })
+        : await db().rpc("send_course_chat_message", args);
+      if (error || !data) throw error ?? new Error("unconfirmed");
+    },
+    onSuccess: async () => {
+      retry.current = null;
+      setBody("");
+      setAttachment(null);
+      setInvalidDrop(false);
+      upload.reset();
+      await client.invalidateQueries({ queryKey: historyKey });
+    },
+  });
+  const busy = send.isPending || upload.isPending;
+
+  /** Both the keyboard-accessible picker and drag/drop start the same upload. */
+  function selectAttachment(files: FileList | null) {
+    if (!files?.length || busy || attachment) return;
+    setInvalidDrop(files.length !== 1);
+    if (files.length === 1) upload.mutate(files[0]);
+  }
+  return (
+    <>
+      <h3>{room.title || t("title")}</h3>
+      <p className="muted">{t("latest")}</p>
+      {messages.isPending ? (
+        <Loading />
+      ) : messages.isError ? (
+        <ErrorState retry={() => void messages.refetch()} />
+      ) : !messages.data.length ? (
+        <p>{t("emptyMessages")}</p>
+      ) : (
+        <ol className="course-chat-messages">
+          {messages.data.map((message) => (
+            <li key={message.id}>
+              <strong>{message.sender_name}</strong>
+              <time dateTime={message.created_at}>
+                {new Intl.DateTimeFormat(i18n.language, {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                }).format(new Date(message.created_at))}
+              </time>
+              {message.deleted_at ? (
+                <p>{t("deleted")}</p>
+              ) : (
+                message.body && <p>{message.body}</p>
+              )}
+              {!message.deleted_at && message.attachment && (
+                <CourseChatAttachment
+                  key={message.attachment.version_id}
+                  message={message.id}
+                  attachment={message.attachment}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {!room.can_post ? (
+        <p className="muted">{t("readOnly")}</p>
+      ) : (
+        messages.isSuccess && (
+          <form
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes("Files"))
+                event.preventDefault();
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              selectAttachment(event.dataTransfer.files);
+            }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!busy && !upload.isError) send.mutate();
+            }}
+          >
+            <Field id={messageField} label={t("message")}>
+              <textarea
+                id={messageField}
+                value={body}
+                maxLength={8000}
+                onChange={(event) => setBody(event.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            {attachment ? (
+              <p>
+                {attachment.name}{" "}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => setAttachment(null)}
+                >
+                  {t("removeAttachment")}
+                </Button>
+              </p>
+            ) : (
+              <Field id={attachmentField} label={t("attach")}>
+                <input
+                  id={attachmentField}
+                  type="file"
+                  accept={acceptedFiles}
+                  disabled={busy}
+                  onChange={(event) => {
+                    selectAttachment(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </Field>
+            )}
+            {invalidDrop && (
+              <Notice kind="error">{t("singleAttachment")}</Notice>
+            )}
+            {upload.isPending && (
+              <p role="status">{t("scanProgress", { progress })}</p>
+            )}
+            {upload.isError && (
+              <>
+                <Notice kind="error">{t("uploadFailed")}</Notice>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    if (uploadRetry.current)
+                      upload.mutate(uploadRetry.current.file);
+                  }}
+                >
+                  {t("retryUpload")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    uploadRetry.current = null;
+                    upload.reset();
+                  }}
+                >
+                  {t("removeAttachment")}
+                </Button>
+              </>
+            )}
+            <Button
+              disabled={busy || upload.isError || (!body.trim() && !attachment)}
+            >
+              {t("send")}
+            </Button>
+            {send.isError && <Notice kind="error">{t("failed")}</Notice>}
+          </form>
+        )
+      )}
+    </>
   );
 }

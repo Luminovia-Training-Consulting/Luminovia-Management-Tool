@@ -447,3 +447,50 @@ Deno.test(
         assert(Number(resolutions) === 1 && reads === 3);
     },
 );
+
+Deno.test("course chat download checks the exact version, scan hash and post-storage authorization", async () => {
+    const bytes = new TextEncoder().encode("Fictional course file");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+        .map((value) => value.toString(16).padStart(2, "0")).join("");
+    const version = "52b7ddee-2166-485a-bcee-04d0eea958d2";
+    let revoked = false;
+    let revokeDuringRead = false;
+    let downloadCount = 0;
+    let downloadBytes = bytes;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => true,
+        rpc: async (_token, name, args) => {
+            assert(name === "course_chat_attachment_access");
+            assert(args.p_message_id === id);
+            return {
+                data: revoked ? null : {
+                    version_id: version, size_bytes: bytes.length,
+                    object_path: "fictional/exact-chat-file", name: "exercise.txt",
+                    sha256: hash, mime_type: "text/plain",
+                },
+                error: null,
+            };
+        },
+        download: async (path) => {
+            downloadCount++;
+            assert(path === "fictional/exact-chat-file");
+            if (revokeDuringRead) revoked = true;
+            return downloadBytes;
+        },
+        render: async () => { throw new Error("Course chat does not render documents"); },
+    });
+    const attachment = {kind: "course_chat_attachment", id, version_id: version};
+    const ok = await handler(request(attachment));
+    assert(ok.status === 200 && await ok.text() === "Fictional course file");
+    assert(ok.headers.get("cache-control") === "no-store, private");
+    assert((await handler(request({...attachment, version_id: id}))).status === 403);
+    assert((await handler(request({...attachment, organisation_id: id}))).status === 400);
+    assert(downloadCount === 1);
+    downloadBytes = new Uint8Array(bytes.length);
+    assert((await handler(request(attachment))).status === 503);
+    downloadBytes = bytes;
+    revokeDuringRead = true;
+    const denied = await handler(request(attachment));
+    assert(denied.status === 403 && !(await denied.text()).includes("Fictional course file"));
+});

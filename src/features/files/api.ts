@@ -38,6 +38,8 @@ export interface UploadContext {
     replaceId?: string;
     clientId?: string;
     messageOnly?: boolean;
+    /** Read scan status through the course reservation projection. */
+    courseChat?: boolean;
 }
 
 /** Guide the browser file picker; the server independently checks MIME type, magic bytes, size and scanning. */
@@ -80,6 +82,7 @@ export async function uploadDocument(
     form.set("client_id", context.clientId ?? crypto.randomUUID());
     if (context.roomId) form.set("room_id", context.roomId);
     if (context.messageOnly) form.set("message_only", "true");
+    if (context.courseChat) form.set("course_chat", "true");
     if (context.jobId) form.set("job_id", context.jobId);
     if (context.replaceId) form.set("replace_id", context.replaceId);
     if (context.ownerId) form.set("owner_id", context.ownerId);

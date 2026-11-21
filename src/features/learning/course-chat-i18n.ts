@@ -22,6 +22,26 @@ const pairs: Record<string, [string, string]> = {
     "Die Nachricht wurde nicht bestätigt. Bitte erneut versuchen.",
     "The message was not confirmed. Please retry.",
   ],
+  attach: ["Datei anhängen", "Attach file"],
+  singleAttachment: [
+    "Bitte nur eine Datei anhängen.",
+    "Attach one file at a time.",
+  ],
+  removeAttachment: ["Anhang entfernen", "Remove attachment"],
+  scanProgress: [
+    "Datei wird übertragen und geprüft ({{progress}} %).",
+    "Uploading and scanning file ({{progress}}%).",
+  ],
+  uploadFailed: [
+    "Der Anhang wurde nicht freigegeben.",
+    "The attachment was not cleared.",
+  ],
+  retryUpload: ["Datei erneut versuchen", "Retry file upload"],
+  downloadAttachment: ["{{name}} herunterladen", "Download {{name}}"],
+  downloadFailed: [
+    "Der Anhang ist nicht verfügbar.",
+    "The attachment is unavailable.",
+  ],
   deleted: ["Nachricht gelöscht", "Message deleted"],
 };
 

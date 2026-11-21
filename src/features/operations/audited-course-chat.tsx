@@ -5,6 +5,10 @@ import { Field, Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
 import { db } from "../../lib/supabase";
+import {
+  CourseChatAttachment,
+  type CourseChatFile,
+} from "../learning/course-chat-attachment";
 
 type Page = {
   items: {
@@ -13,6 +17,7 @@ type Page = {
     sender_name: string;
     room_title: string | null;
     body: string;
+    attachment: CourseChatFile | null;
   }[];
   next_cursor: { at: string; id: string } | null;
 };
@@ -86,7 +91,8 @@ export function AuditedCourseChat({
         </Button>
       </form>
       {failed && <Notice kind="error">{t("premiumFailed")}</Notice>}
-      {page &&
+      {online &&
+        page &&
         (page.items.length ? (
           <>
             <ol className="course-chat-messages">
@@ -99,7 +105,19 @@ export function AuditedCourseChat({
                   {message.room_title && (
                     <p className="muted">{message.room_title}</p>
                   )}
-                  <p className="preserve-text">{message.body}</p>
+                  {message.body && (
+                    <p className="preserve-text">{message.body}</p>
+                  )}
+                  {message.attachment && (
+                    <CourseChatAttachment
+                      message={message.id}
+                      attachment={message.attachment}
+                      inspection={{
+                        organisation_id: organisation,
+                        reason: accepted,
+                      }}
+                    />
+                  )}
                 </li>
               ))}
             </ol>

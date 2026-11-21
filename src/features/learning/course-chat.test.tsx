@@ -1,3 +1,4 @@
+/** Component checks for scoped course chat and scan/confirmation boundaries. */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,8 +10,18 @@ const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   revoked: false,
   canPost: true,
+  uploadDocument: vi.fn(),
+  downloadPortalDocument: vi.fn(),
+  attachment: false,
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
+vi.mock("../files/api", () => ({
+  acceptedFiles: ".txt",
+  uploadDocument: fake.uploadDocument,
+}));
+vi.mock("./api", () => ({
+  downloadPortalDocument: fake.downloadPortalDocument,
+}));
 vi.mock("../../lib/online", () => ({
   useOnline: () => true,
   requireOnline: () => undefined,
@@ -21,6 +32,9 @@ beforeEach(async () => {
   await i18n.changeLanguage("en");
   fake.revoked = false;
   fake.canPost = true;
+  fake.attachment = false;
+  fake.uploadDocument.mockReset();
+  fake.downloadPortalDocument.mockReset();
   fake.rpc.mockReset().mockImplementation((name: string) => {
     if (name === "course_chat_rooms")
       return Promise.resolve(
@@ -47,6 +61,9 @@ beforeEach(async () => {
             body: "Fictional course question",
             created_at: "2026-11-20T12:00:00Z",
             deleted_at: null,
+            attachment: fake.attachment
+              ? { version_id: "version", name: "exercise.txt", size_bytes: 4 }
+              : null,
           },
         ],
         error: null,
@@ -116,4 +133,65 @@ it("shows a scoped read-only room without offering to send", async () => {
     screen.getByText("You can read messages for this course."),
   ).toBeVisible();
   expect(screen.queryByRole("textbox")).toBeNull();
+});
+
+it("keeps the draft from sending until scanning confirms the exact version", async () => {
+  const user = userEvent.setup();
+  let clearScan: (value: unknown) => void = () => undefined;
+  fake.uploadDocument.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        clearScan = resolve;
+      }),
+  );
+  show();
+  const picker = await screen.findByLabelText("Attach file");
+  const file = new File(["data"], "exercise.txt", { type: "text/plain" });
+  await user.upload(picker, file);
+  expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  expect(fake.uploadDocument).toHaveBeenCalledWith(
+    file,
+    expect.objectContaining({
+      roomId: "room-a",
+      messageOnly: true,
+      courseChat: true,
+    }),
+    expect.any(Function),
+  );
+  clearScan({
+    id: "document",
+    current_version_id: "version",
+    original_name: "exercise.txt",
+  });
+  await screen.findByText("exercise.txt");
+  await user.click(screen.getByRole("button", { name: "Send message" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("send_course_chat_attachment", {
+      p_room_id: "room-a",
+      p_body: "",
+      p_client_id: expect.any(String),
+      p_document_id: "document",
+      p_version_id: "version",
+    }),
+  );
+});
+
+it("downloads read-only history by message and exact version without querying documents", async () => {
+  const user = userEvent.setup();
+  fake.canPost = false;
+  fake.attachment = true;
+  fake.downloadPortalDocument.mockResolvedValue(undefined);
+  show();
+  await user.click(
+    await screen.findByRole("button", { name: "Download exercise.txt" }),
+  );
+  expect(fake.downloadPortalDocument).toHaveBeenCalledWith(
+    {
+      kind: "course_chat_attachment",
+      id: "message-a",
+      version_id: "version",
+    },
+    "exercise.txt",
+    expect.any(AbortSignal),
+  );
 });

@@ -115,15 +115,32 @@ Deno.serve(async (request: Request) => {
             // Owner/scope inputs identify targets only. RPCs enforce current permissions, quotas and idempotency.
             const messageOnly = form.get('message_only');
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
+            const courseChat = form.get('course_chat');
+            if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
             const reserved = messageOnly === 'true'
-                ? await user.rpc('reserve_message_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_room_id: roomId, p_client_id: clientId})
+                ? await user.rpc(courseChat === 'true' ? 'reserve_course_chat_document' : 'reserve_message_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_room_id: roomId, p_client_id: clientId})
                 : await user.rpc('reserve_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_scope: scope, p_kind: kind, p_room_id: roomId, p_job_id: jobId, p_client_id: clientId, p_replace_id: replaceId, p_owner_id: ownerId});
             if (reserved.error) return json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            const doc = await visible(reservation.document_id);
+            // Course participants deliberately have no REST access to general document
+            // tables. The scoped caller RPC reads only their reservation in this room.
+            const courseStatus = async () => {
+                const status = await user.rpc('course_chat_upload_status', {
+                    p_room_id: roomId,
+                    p_document_id: reservation.document_id,
+                    p_version_id: reservation.version_id,
+                });
+                if (status.error || !status.data?.document) throw new Error('access_denied');
+                return status.data as {document: Document; sha256: string | null};
+            };
+            const scoped = courseChat === 'true' ? await courseStatus() : null;
+            const doc = scoped?.document ?? await visible(reservation.document_id);
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
-            const requestedVersion = await user.from('document_versions').select('sha256').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
+            const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
+            const requestedVersion = scoped
+                ? {data: {sha256: scoped.sha256}, error: null}
+                : await user.from('document_versions').select('sha256').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
             if (requestedVersion.error || !requestedVersion.data) return json(503, {error: 'upload_failed'});
             // A retry must not attach different payload bytes to the same reservation.
             if (requestedVersion.data.sha256 && requestedVersion.data.sha256 !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
@@ -183,7 +200,7 @@ Deno.serve(async (request: Request) => {
                     await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_rejected', resource_id: doc.id});
                     return json(422, {error: 'scan_rejected', document_id: doc.id});
                 }
-                await visible(doc.id); // Membership can change while an upload is being scanned.
+                await currentDocument(); // Membership can change while an upload is being scanned.
                 // Recheck access after the long scan and promote exactly the stored bytes that were scanned.
                 const cleanExisting = await service.storage.from('portal-clean').info(reservation.object_path);
                 if (cleanExisting.error) {
@@ -204,7 +221,7 @@ Deno.serve(async (request: Request) => {
                 if (version.error || update.error) return json(503, {error: 'upload_failed'});
                 await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_clean', resource_id: doc.id});
                 await service.storage.from('portal-quarantine').remove([reservation.object_path]);
-                return json(200, {document: await visible(doc.id)});
+                return json(200, {document: await currentDocument()});
             });
         }
         const data = JSON.parse(new TextDecoder().decode(await bounded(request, 4096))) as { action?: string; id?: string; version_id?: string; user_id?: string; evidence_id?: string };

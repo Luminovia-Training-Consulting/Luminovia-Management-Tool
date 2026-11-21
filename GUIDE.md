@@ -248,6 +248,8 @@ Editors can publish a numbered welcome revision with the course description, lea
 
 The course chat admits assigned lecturers and eligible enrolled learners through current room membership. Linked company contacts can read their own course group. Under **Administration → Companies → Retained data**, an administrator can provide a reason to inspect the tenant’s course chat. The system records each inspection, including when Premium is off. Personal chats and unrelated groups use their own access rules.
 
+Use **Attach file** in a course chat to scan a file before sending it, with or without a message. The file becomes visible with the confirmed message. Members and linked company readers can download the exact shared version while their course access remains active. Audited admin inspection can retrieve retained attachments with the same company and reason. The course materials list is managed independently.
+
 Use the attendance register to mark present, absent or excused by session, optionally recording arrival, departure and a note. Authorised staff and company contacts can see the class register, upload evidence as a protected PDF and import the session’s CSV template. Review the proposed rows before confirming the entire import. Changes after the first marking require a reason and the current version. An issued completion document must be revoked before corrections that would change its eligibility. Learners see their allowed course and completion information.
 
 Ended-course feedback is available to eligible learners and customers. Ordinary summaries omit authors and remain withheld until three responses. The server retains the author privately for eligibility and duplicates.

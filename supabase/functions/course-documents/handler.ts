@@ -100,6 +100,26 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 name = "course_document_access";
                 args = {p_kind: kind, p_id: body.id};
             } else if (
+                kind === "course_chat_attachment" &&
+                uuid(body.id) &&
+                uuid(body.version_id) &&
+                (
+                    (body.organisation_id === undefined && body.reason === undefined) ||
+                    (uuid(body.organisation_id) && typeof body.reason === "string" &&
+                        body.reason.trim().length >= 8 && body.reason.trim().length <= 300)
+                ) &&
+                Object.keys(body).every((key) =>
+                    ["kind", "id", "version_id", "organisation_id", "reason"].includes(key),
+                )
+            ) {
+                name = "course_chat_attachment_access";
+                args = {
+                    p_message_id: body.id,
+                    p_version_id: body.version_id,
+                    p_organisation_id: body.organisation_id ?? null,
+                    p_reason: body.reason ?? null,
+                };
+            } else if (
                 kind === "wiki_resource" &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
@@ -148,7 +168,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 kind === "resource" ||
                 kind === "exam" ||
                 kind === "request_resource" ||
-                kind === "wiki_resource"
+                kind === "wiki_resource" ||
+                kind === "course_chat_attachment"
             ) {
                 let objectPath: string | null = null;
                 if (kind === "wiki_resource") {
@@ -161,6 +182,13 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 } else if (typeof first.data.object_path === "string") {
                     objectPath = first.data.object_path;
                 }
+                if (kind === "course_chat_attachment" &&
+                    (first.data.version_id !== body.version_id ||
+                        !Number.isSafeInteger(first.data.size_bytes) ||
+                        Number(first.data.size_bytes) < 1 ||
+                        Number(first.data.size_bytes) > 100 * 1024 * 1024)) {
+                    return json(403, "document_unavailable");
+                }
                 if (!objectPath || typeof first.data.sha256 !== "string")
                     return json(403, "document_unavailable");
                 bytes = await dependencies.download(objectPath);
@@ -171,7 +199,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 ]
                     .map((value) => value.toString(16).padStart(2, "0"))
                     .join("");
-                if (digest !== first.data.sha256) {
+                if (digest !== first.data.sha256 ||
+                    (kind === "course_chat_attachment" && bytes.length !== first.data.size_bytes)) {
                     return json(503, "document_integrity_failed");
                 }
                 mime = String(first.data.mime_type ?? "application/octet-stream");
