@@ -1116,6 +1116,7 @@ class Updater:
         promoted = False
         checkpoint = None
         public_unblocked = False
+        recovering = self.state.get("manualRecoveryRequired") is True
         mode = "validation"
         changed = set()
         reviewed = None
@@ -1130,11 +1131,13 @@ class Updater:
                 self.require_fresh_complete_backup(stage)
             else:
                 pending = self.plan_migrations(stage, manifest)
+            if recovering and pending:
+                raise UpdateError("forward_recovery_requires_applied_migrations")
             changed, controller_changed, runtime_files = self.release_changes(manifest)
             runtime_changed, database_changed = self.verify_runtime(stage, manifest)
             if (self.www / "current").exists() and not (self.www / "current").is_symlink():
                 raise UpdateError("static_current_must_be_release_symlink")
-            mode = "full" if changed or pending or runtime_changed or not old_target else "site_controller"
+            mode = "full" if recovering or changed or pending or runtime_changed or not old_target else "site_controller"
             if mode == "full":
                 self.preflight_space(stage)
                 self.pull_runtime_images(stage)
@@ -1189,7 +1192,7 @@ class Updater:
             if controller_changed:
                 self.install_controller(stage)
             self.state.update(
-                {"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files, "networkRetryAttempts": 0, "nextNetworkRetryAt": None})
+                {"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "forwardRetryAvailable": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files, "networkRetryAttempts": 0, "nextNetworkRetryAt": None})
             atomic_json(self.state_file, self.state)
             return {"status": "updated", "commit": commit, "mode": mode}
         except Exception as error:
@@ -1218,8 +1221,9 @@ class Updater:
                         self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
 
                     self.restore_checkpoint(stage, checkpoint, public_unblocked=False, restart_old_runtime=restart_old_runtime, verify_health=lambda: self.health(env, private_api=True))
-                    self.maintenance.unlink(missing_ok=True)
-                    self.health(env)
+                    if not recovering:
+                        self.maintenance.unlink(missing_ok=True)
+                        self.health(env)
                     recovered = True
                 except Exception:
                     recovered = False
@@ -1233,16 +1237,17 @@ class Updater:
                     self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *self.mail_relay(), *WRITERS])
                     self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
                     self.health(env, private_api=True)
-                    self.maintenance.unlink(missing_ok=True)
-                    self.health(env)
+                    if not recovering:
+                        self.maintenance.unlink(missing_ok=True)
+                        self.health(env)
                     recovered = True
                 except Exception:
                     recovered = False
-            if not recovered:
+            if recovering or not recovered:
                 self.maintenance.write_text("Operator recovery required.\n", encoding="utf-8")
                 self.maintenance.chmod(0o644)
-            self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": not recovered, "lastAttemptMode": mode})
-            self.state["automaticRollbackCompleted"] = bool(recovered and checkpoint is not None and not public_unblocked)
+            self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": recovering or not recovered, "forwardRetryAvailable": public_unblocked or (recovering and recovered), "lastAttemptMode": mode})
+            self.state["automaticRollbackCompleted"] = bool(recovered and not recovering and checkpoint is not None and not public_unblocked)
             atomic_json(self.state_file, self.state)
             if isinstance(error, RuntimeImagePullError) and not stopped and not runtime_mutated and not promoted:
                 raise RuntimeImagePullError(code) from error
@@ -1253,9 +1258,10 @@ class Updater:
 
     # Acquire the updater lock, respect OS/recovery fences, and attempt at most one eligible release.
     def once(self, *, package=None, manifest_path=None, retry_failed=False, reviewed_migration_plan=None):
-        if reviewed_migration_plan is not None:
-            if package is None or manifest_path is None:
-                raise UpdateError("reviewed_migration_requires_explicit_local_release")
+        local = package is not None and manifest_path is not None
+        if reviewed_migration_plan is not None and not local:
+            raise UpdateError("reviewed_migration_requires_explicit_local_release")
+        if reviewed_migration_plan is not None or (retry_failed and local):
             if not getattr(self, "_reviewed_global_lock_held", False):
                 with self.reviewed_host_lock():
                     return self.once(package=package, manifest_path=manifest_path, retry_failed=retry_failed, reviewed_migration_plan=reviewed_migration_plan)
@@ -1269,18 +1275,18 @@ class Updater:
             self.state = json.loads(self.state_file.read_text()) if self.state_file.exists() else {}
             if REBOOT_PENDING.exists():
                 return {"status": "operating_system_reboot_pending"}
-            if self.state.get("manualRecoveryRequired") and not retry_failed:
+            recovering = self.state.get("manualRecoveryRequired") is True
+            if recovering and not (retry_failed and local and self.state.get("forwardRetryAvailable") is True):
                 return {"status": "operator_recovery_required", "commit": self.state.get("failedCommit")}
+            if recovering and reviewed_migration_plan is not None:
+                raise UpdateError("forward_recovery_requires_applied_migrations")
             if self.os_updates_busy():
                 return {"status": "operating_system_security_update_running"}
-            if self.maintenance.exists() and not (retry_failed and self.state.get("manualRecoveryRequired")):
+            if self.maintenance.exists() and not recovering:
                 return {"status": "maintenance_already_active"}
+            failed_commit = self.state.get("failedCommit")
+            verify_local_release = reviewed_migration_plan is not None or recovering
             if retry_failed:
-                if reviewed_migration_plan is not None:
-                    retry_manifest = json.loads(Path(manifest_path).read_text())
-                    validate_manifest(retry_manifest)
-                    if self.state.get("failedCommit") != retry_manifest["commit"]:
-                        raise UpdateError("reviewed_retry_requires_exact_failed_commit")
                 self.state["failedCommit"] = None
             elif self.state.get("nextNetworkRetryAt"):
                 try:
@@ -1291,12 +1297,15 @@ class Updater:
             if package is not None:
                 manifest = json.loads(Path(manifest_path).read_text())
                 validate_manifest(manifest)
+                if retry_failed and verify_local_release and manifest["commit"] != failed_commit:
+                    raise UpdateError("reviewed_retry_requires_exact_failed_commit")
                 if manifest["commit"] == self.state.get("currentCommit"):
                     return {"status": "current", "commit": manifest["commit"]}
                 if manifest["commit"] == self.state.get("failedCommit"):
                     return {"status": "failed_release_suppressed", "commit": manifest["commit"]}
-                if reviewed_migration_plan is not None:
+                if verify_local_release:
                     self.verify_reviewed_release_identity(manifest)
+                if reviewed_migration_plan is not None:
                     return self.apply(Path(package), manifest, reviewed_migration_plan=reviewed_migration_plan)
                 return self.apply(Path(package), manifest)
             if not self.state.get("currentCommit") and self.state.get("bootstrapApproved") is not True:

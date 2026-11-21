@@ -9,7 +9,7 @@ The authorised instance is **https://cms.luminovia.org**, fully self-hosted on t
 - `compose.yml` / `Caddyfile` / `clamd.conf`: static frontend, HTTPS/API allowlist and private scanner.
 - `supabase/`: unchanged official production bundle, pinned image digests, licence and provenance.
 - `instance.json`: nonsecret deployment identity and explicit development capacity.
-- `apply-migrations.mjs --development-vps`: exact-source incremental application migrations; never reset/seed.
+- [Reviewed updates](../../OPERATIONS.md#section-reviewed-migration-plans): exact-source incremental migrations with backup, health verification and recovery.
 - `backup.mjs --development-vps --quiescent`: streaming off-site database/object backup with restricted files.
 - `restore-check.mjs --latest-development-vps`: isolated database/object recovery using the manifest's reviewed image, never restoration over the VPS.
 - `restore-check.mjs --latest-development-vps-upgrade`: bounded 17.6-to-17.12 candidate restore, including exact migration SQL/roles/file hashes.

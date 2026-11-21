@@ -1,3 +1,11 @@
+# 21 November 2026 — Participant activity, dedicated API and release recovery
+
+The internal Premium participant centre now shows scoped invitations, confirmed and removed associations, reference updates and new enrolment changes. The log records the company at the event and keeps submitted IDs, addresses and dispatch outcomes private. PostgreSQL and PostgREST 16.5 passed the scope, privacy and pagination checks, with 36 focused frontend cases, 16 documentation and runtime checks and seven API surface cases.
+
+The dedicated gateway forwards only the current course and local administration functions, scoped database RPCs, Auth and the Realtime WebSocket. The Caddy and Envoy test exercised its allowed and denied routes, scanned-file route selectors, 60-request test budget, deep links and maintenance response. The signed browser package suite passed all 22 tests.
+
+The Hostinger updater now binds a forward retry to the exact failed immutable release and its already applied migrations. It captures the current state before retrying and keeps maintenance active after a failed attempt. The old standalone SQL deployment script was removed. All 66 updater/controller tests pass. A disposable PostgreSQL replay from the 18 historical `bb322746` migrations to 236 migrations retained accounts, course enrolment, contract and invoice links, partial payment, document metadata and configured quotas. A second application found zero pending migrations. A separate self-hosted rehearsal used an encrypted database dump and physical Storage archive. A fresh native GoTrue session could sign in with the original password and user ID on the recovered copy, see its enrolment and recover the original scanned handout bytes. All probes used disposable local data.
+
 # 21 November 2026 — Typed Premium class and chat controls
 
 The internal API publishes closed request and response shapes for class assignment and course-chat protection. Both catalogues use the same app validators. Real PostgreSQL compares the published contracts with current, updated and scoped responses in all three editions. The internal explorer and download omit dedicated-only branding writes.

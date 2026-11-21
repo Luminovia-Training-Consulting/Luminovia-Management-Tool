@@ -18,7 +18,7 @@ This pass covers source implementation and local tests. CI, deployment, producti
 
 ## Open product work after the 21 November source review
 
-- The company participant centre lists active memberships and supports invitations and association requests. The selected participant now has a scoped course and attendance view and a versioned company reference. The scoped invitation/action history and consolidated multi-course assignment controls remain open.
+- The company participant centre lists active memberships and supports invitations and association requests. The selected participant has a scoped course and attendance view and a versioned company reference. The company activity log records invitations and membership changes while protecting addresses, submitted IDs and unconfirmed outcomes. Consolidated multi-course assignment remains open.
 - Complete the learner, lecturer and company journeys across Premium OFF/ON and both dedicated editions, including native Realtime revocation, exact document delivery and physical PWA acceptance. Published welcome content, isolated permission checks and licence-grace checks are recorded in the work log.
 - Complete general platform gaps in exception invoice issuance, structured settlement and contract-specific instalment deadlines, and handle formal changes affecting shared schedules or retained course evidence.
 - Connect the public Website sender separately and complete notification delivery and the remaining typed API, browser and accessibility acceptance.
@@ -42,6 +42,8 @@ This pass covers source implementation and local tests. CI, deployment, producti
 - [x] Read the exact installation, database licence and migration ledger over the private operator connection. The status receipt contains operational metadata and preserves read-only access.
 - [x] Produce DE/EN CSV participation reports with per-course attendance counts and completion states. The dedicated API rechecks learner cohort, course scope and licence on each page.
 - [x] Provide a cold, encrypted Academy backup and restore command with a separate age identity, installed-revision and archive checks, and restoration into a new empty target. Native PostgreSQL recovery and byte-level checks passed.
+- [x] Put dedicated public ingress on a course-only Edge route list, protect file access through the course gateways, and keep raw Storage and PostgreSQL table paths private. The native Caddy/Envoy check covers accepted routes, rejected commercial routes, WebSocket and the signed request budget.
+- [x] Retain confirmed live writes across an explicitly retried Hostinger release failure. Verify the exact immutable release and current migration history before taking a fresh checkpoint. A repeated failure keeps maintenance active. The isolated historical PostgreSQL rehearsal checks records and unchanged second application.
 - [ ] Boot each fresh dedicated target with all pinned services, apply migrations, pin its licence, confirm first-admin, and repeat course, SMTP, PWA and backup/restore acceptance on the explicit target.
 
 - [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.

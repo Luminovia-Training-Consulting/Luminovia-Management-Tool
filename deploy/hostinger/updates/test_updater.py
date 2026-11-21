@@ -752,7 +752,62 @@ class InstallationTests(unittest.TestCase):
             self.assertNotIn("restore-checkpoint", updater.calls)
             self.assertTrue(updater.maintenance.exists())
             self.assertTrue(json.loads(updater.state_file.read_text())["manualRecoveryRequired"])
+            self.assertTrue(json.loads(updater.state_file.read_text())["forwardRetryAvailable"])
             self.assertEqual(gate_during_static_rollback, [True])
+
+    def test_forward_retry_rechecks_release_and_reopens_even_when_all_bytes_match(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory)
+            updater = FakeUpdater(instance(directory))
+            manifest_path = Path(directory) / "manifest.json"
+            alternate = {**manifest, "commit": "c" * 40}
+            manifest_path.write_text(json.dumps(alternate))
+            installed_runtime(updater.root, files)
+            updater.state = {"currentCommit": OLD, "failedCommit": COMMIT, "manualRecoveryRequired": True, "forwardRetryAvailable": True}
+            u.atomic_json(updater.state_file, updater.state)
+            updater.maintenance.write_text("Operator recovery required.\n")
+            updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest"}}
+            updater.download = lambda url, path, limit: path.write_text(json.dumps(manifest))
+            lock = Path(directory) / "maintenance.lock"
+            with patch.object(u, "REBOOT_PENDING", Path(directory) / "no-reboot"), patch.object(u, "REVIEWED_ROOT_UID", os.geteuid()), patch.object(u, "MAINTENANCE_LOCK", lock):
+                self.assertEqual(updater.once(retry_failed=True)["status"], "operator_recovery_required")
+                arguments = {"package": archive, "manifest_path": manifest_path, "retry_failed": True}
+                with self.assertRaisesRegex(u.UpdateError, "exact_failed_commit"):
+                    updater.once(**arguments)
+                manifest_path.write_text(json.dumps({**manifest, "archiveSha256": "9" * 64}))
+                with self.assertRaisesRegex(u.UpdateError, "local_manifest_differs"):
+                    updater.once(**arguments)
+                self.assertEqual(updater.calls, [])
+                manifest_path.write_text(json.dumps(manifest))
+                source = files[manifest["migrations"][0]["path"]].decode()
+                updater.pending = [(manifest["migrations"][0]["version"], "add_example", source)]
+                with self.assertRaisesRegex(u.UpdateError, "forward_recovery_requires_applied_migrations"):
+                    updater.once(**arguments)
+                updater.pending = []
+                self.assertTrue(updater.maintenance.exists())
+                self.assertNotIn("backup", updater.calls)
+                self.assertEqual(updater.once(**arguments), {"status": "updated", "commit": COMMIT, "mode": "full"})
+            self.assertIn("checkpoint", updater.calls)
+            self.assertNotIn("restore-checkpoint", updater.calls)
+            self.assertFalse(updater.maintenance.exists())
+            self.assertFalse(updater.state["manualRecoveryRequired"])
+            self.assertEqual(updater.state["appliedMigrationVersions"], [])
+
+    def test_failed_forward_retry_keeps_maintenance_and_uses_only_fresh_checkpoint(self):
+        for rollback_fails in (False, True):
+            with self.subTest(rollback_fails=rollback_fails), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                updater.maintenance.write_text("Operator recovery required.\n")
+                updater.state = {"manualRecoveryRequired": True, "forwardRetryAvailable": True}
+                updater.fail_health_once = True
+                updater.fail_checkpoint_restore = rollback_fails
+                with self.assertRaisesRegex(u.UpdateError, "static_release_health_failed"):
+                    updater.apply(archive, manifest)
+                self.assertLess(updater.calls.index("checkpoint"), updater.calls.index("restore-checkpoint"))
+                self.assertTrue(updater.maintenance.exists())
+                self.assertTrue(updater.state["manualRecoveryRequired"])
+                self.assertEqual(updater.state["forwardRetryAvailable"], not rollback_fails)
 
     def test_checkpoint_resume_failure_reconciles_db_mailpit_and_paused_web_before_unblocking(self):
         with tempfile.TemporaryDirectory() as directory:

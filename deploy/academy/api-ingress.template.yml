@@ -1,4 +1,4 @@
-# Dedicated public API limit. Internal service traffic uses api-gw directly.
+# Dedicated public API surface and rate limit. Private services use api-gw directly.
 static_resources:
   listeners:
     - name: academy-api-ingress
@@ -9,7 +9,7 @@ static_resources:
         - filters:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
-                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: academy_api_ingress
                 normalize_path: true
                 merge_slashes: true
@@ -20,27 +20,71 @@ static_resources:
                   name: academy_api
                   virtual_hosts:
                     - name: dedicated_gateway
-                      domains: ['*']
+                      domains: ["*"]
                       routes:
-                        - match: { prefix: "/" }
+                        - match:
+                            { path: "/functions/v1/accounts/v1/academy/users" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match:
+                            {
+                              path: "/functions/v1/accounts/v1/academy/company-invitations",
+                            }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/functions/v1/company-integration" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/functions/v1/course-documents" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match:
+                            path: "/functions/v1/files"
+                            query_parameters:
+                              - name: mode
+                                string_match:
+                                  safe_regex:
+                                    {
+                                      regex: "academy-(material|student-exam|course-chat|attendance|answer-key|logo)",
+                                    }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/functions/v1/human-login" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/functions/v1/human-recovery" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/functions/v1/mail-admin" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path_separated_prefix: "/auth/v1/admin" }
+                          direct_response: { status: 404 }
+                        - match: { prefix: "/auth/v1/" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { prefix: "/rest/v1/rpc/" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { path: "/realtime/v1/websocket" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match: { prefix: "/" }
+                          direct_response: { status: 404 }
                 http_filters:
                   - name: envoy.filters.http.local_ratelimit
                     typed_config:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
                       stat_prefix: academy_licence
                       token_bucket:
                         max_tokens: ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE
                         tokens_per_fill: ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE
                         fill_interval: 60s
-                      filter_enabled: { default_value: { numerator: 100, denominator: HUNDRED } }
-                      filter_enforced: { default_value: { numerator: 100, denominator: HUNDRED } }
+                      filter_enabled:
+                        {
+                          default_value:
+                            { numerator: 100, denominator: HUNDRED },
+                        }
+                      filter_enforced:
+                        {
+                          default_value:
+                            { numerator: 100, denominator: HUNDRED },
+                        }
                       response_headers_to_add:
                         - header: { key: retry-after, value: "60" }
                           append_action: OVERWRITE_IF_EXISTS_OR_ADD
                   - name: envoy.filters.http.router
                     typed_config:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
     - name: academy-api-gateway
       connect_timeout: 5s

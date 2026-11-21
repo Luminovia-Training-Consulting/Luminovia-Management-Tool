@@ -29,6 +29,38 @@ const template = await readFile(
   "utf8",
 );
 const { files } = JSON.parse(await readFile(manifestFile, "utf8"));
+const allowedApi = [
+  "/auth/v1/settings",
+  "/rest/v1/rpc/installation_capabilities",
+  "/functions/v1/accounts/v1/academy/users",
+  "/functions/v1/accounts/v1/academy/company-invitations",
+  "/functions/v1/company-integration?limit=2",
+  "/functions/v1/course-documents",
+  "/functions/v1/files?mode=academy-material",
+  "/functions/v1/files?mode=academy-student-exam",
+  "/functions/v1/files?mode=academy-course-chat",
+  "/functions/v1/files?mode=academy-attendance",
+  "/functions/v1/files?mode=academy-answer-key",
+  "/functions/v1/files?mode=academy-logo&expected_version=0",
+  "/functions/v1/human-login",
+  "/functions/v1/human-recovery",
+  "/functions/v1/mail-admin",
+];
+const blockedApi = [
+  "/rest/v1/",
+  "/rest/v1/jobs",
+  "/rest/v1/invoices",
+  "/rest/v1/contracts",
+  "/functions/v1/accounts/v1/me",
+  "/functions/v1/accounts/openapi.json",
+  "/functions/v1/calendar-feed",
+  "/functions/v1/invite-lecturer",
+  "/functions/v1/website-enquiries",
+  "/functions/v1/files",
+  "/functions/v1/files?mode=invoice",
+  "/functions/v1/files/extra",
+  "/storage/v1/object/public/portal-documents/fixture.pdf",
+];
 const upstream = createServer((request, response) => {
   response.end(
     JSON.stringify({
@@ -64,8 +96,8 @@ try {
   const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
   const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
   assert.ok(
-    allowance >= 2 && allowance <= 1000,
-    "Use a staging licence with 2–1,000 requests per minute",
+    allowance >= allowedApi.length + blockedApi.length + 1 && allowance <= 1000,
+    "Use a staging licence with 29–1,000 requests per minute",
   );
   const envoyConfig = join(root, "envoy.yml");
   await writeFile(
@@ -191,12 +223,15 @@ try {
     "/backend/internal",
   ])
     await request(route, 404);
-  const { bytes, headers } = await request("/backend/auth/v1/settings", 200);
-  assert.deepEqual(JSON.parse(bytes), {
-    path: "/auth/v1/settings",
-    referer: null,
-  });
-  assert.match(headers, /cache-control: no-store, private/);
+  for (const path of blockedApi) {
+    const { bytes } = await request("/backend" + path, 404);
+    assert.equal(bytes.length, 0);
+  }
+  for (const path of allowedApi) {
+    const { bytes, headers } = await request("/backend" + path, 200);
+    assert.deepEqual(JSON.parse(bytes), { path, referer: null });
+    assert.match(headers, /cache-control: no-store, private/);
+  }
   const socket = connectTls({
     host: "127.0.0.1",
     port: Number(localPort),
@@ -235,27 +270,26 @@ try {
     socket.destroy();
   }
 
-  for (let consumed = 2; consumed < allowance; consumed++)
-    await request("/backend/rest/v1/", 200);
-  assert.match(
-    (await request("/backend/rest/v1/", 429)).headers,
-    /retry-after: 60/,
-  );
+  const restProbe = "/backend/rest/v1/rpc/installation_capabilities";
+  for (
+    let consumed = allowedApi.length + blockedApi.length + 1;
+    consumed < allowance;
+    consumed++
+  )
+    await request(restProbe, 200);
+  assert.match((await request(restProbe, 429)).headers, /retry-after: 60/);
   assert.deepEqual((await request("/", 200)).bytes, shell);
 
   const marker = join(browser, "maintenance.enabled");
   await writeFile(marker, "integration test", { flag: "wx", mode: 0o600 });
   try {
-    assert.match(
-      (await request("/backend/rest/v1/", 503)).headers,
-      /retry-after: 60/,
-    );
+    assert.match((await request(restProbe, 503)).headers, /retry-after: 60/);
     assert.deepEqual((await request("/", 200)).bytes, shell);
   } finally {
     await rm(marker);
   }
   console.log(
-    `Verified ${files.length} staged files and the ${allowance}-request burst allowance through local TLS.`,
+    `Verified ${files.length} staged files, dedicated API routes and the ${allowance}-request burst allowance through local TLS.`,
   );
 } finally {
   caddy?.kill();
