@@ -1,6 +1,8 @@
 /** Test the public request handler against the dedicated backend's real transaction and grants. */
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { createCompanyIntegrationHandler } from "../supabase/functions/company-integration/handler.ts";
 import {
   configureAcademyCourseAccess,
@@ -39,6 +41,19 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         api_requests_per_minute: 100,
       },
     };
+    const { paths } = academyOpenApi("https://academy.example.invalid", {
+      name: "Fictional integration Academy",
+      installationId: terms.installation_id,
+      edition,
+    });
+    async function contractResponse(relativePath, method, response, status) {
+      assert.equal(response.status, status);
+      const schema =
+        paths[relativePath][method].responses[status].content[
+          "application/json"
+        ].schema;
+      return z.fromJSONSchema(schema).parse(await response.json());
+    }
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
     const setup = {
       envelope: signAcademyLicence(terms, privateKey),
@@ -188,10 +203,17 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
           headers: { Authorization: "Bearer " + key.credential },
         }),
       );
-    assert.equal((await enrol(reader)).status, 401);
-    assert.equal((await enrol(writer)).status, 404);
-    assert.equal((await report(reader, third)).status, 404);
-    assert.equal((await report(reader, second)).status, 404);
+    const enrolmentsPath = "/functions/v1/company-integration/enrolments";
+    const reportPath = "/functions/v1/company-integration/participation";
+    await contractResponse(enrolmentsPath, "post", await enrol(reader), 401);
+    await contractResponse(enrolmentsPath, "post", await enrol(writer), 404);
+    await contractResponse(reportPath, "get", await report(reader, third), 404);
+    await contractResponse(
+      reportPath,
+      "get",
+      await report(reader, second),
+      404,
+    );
     await sql(`
       with accepted as (
         insert into private.company_participant_link_requests(
@@ -201,14 +223,25 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       )
       insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at)
       select ${q(org)},${q(learner)},'active',id,${q(admin)},now() from accepted;`);
-    assert.equal((await enrol(writer)).status, 200);
-    assert.equal((await enrol(writer)).status, 200);
-    assert.deepEqual(await (await report(reader)).json(), {
-      course_id: first,
-      session_count: 0,
-      enrolled_count: 1,
-      completed_count: 0,
-    });
+    const receipt = await contractResponse(
+      enrolmentsPath,
+      "post",
+      await enrol(writer),
+      200,
+    );
+    assert.deepEqual(
+      await contractResponse(enrolmentsPath, "post", await enrol(writer), 200),
+      receipt,
+    );
+    assert.deepEqual(
+      await contractResponse(reportPath, "get", await report(reader), 200),
+      {
+        course_id: first,
+        session_count: 0,
+        enrolled_count: 1,
+        completed_count: 0,
+      },
+    );
     await assert.rejects(
       actor(admin, gateway("integration_course_operation")),
       /42501/,
