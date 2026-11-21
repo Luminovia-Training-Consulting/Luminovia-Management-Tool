@@ -8,15 +8,13 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { CompanyParticipantDetails } from "./company-participant-detail";
+import {
+  type CompanyParticipant,
+  companyParticipantsSchema,
+} from "./company-participant-schema";
 import "./i18n";
 
-type CompanyParticipant = {
-  user_id: string;
-  luminovia_user_id: string;
-  display_name: string;
-  joined_at: string;
-  version: number;
-};
 type ParticipantAccess = { organisation_id: string; premium_enabled: boolean };
 
 /** Give the caller only the participant directory and invitation controls for one selected company. */
@@ -33,6 +31,9 @@ export function CompanyParticipantsPanel({
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(
+    null,
+  );
   const [removeTarget, setRemoveTarget] = useState<CompanyParticipant | null>(
     null,
   );
@@ -48,7 +49,8 @@ export function CompanyParticipantsPanel({
       if (error) throw error;
       return data as ParticipantAccess;
     },
-    enabled: Boolean(organisationId),
+    enabled: online && Boolean(organisationId),
+    refetchInterval: 15_000,
   });
   const participants = useQuery({
     queryKey: ["company-participants", actor, organisationId],
@@ -57,9 +59,9 @@ export function CompanyParticipantsPanel({
         p_organisation_id: organisationId,
       });
       if (error) throw error;
-      return (data ?? []) as CompanyParticipant[];
+      return companyParticipantsSchema.parse(data ?? []);
     },
-    enabled: access.data?.premium_enabled === true,
+    enabled: online && access.data?.premium_enabled === true,
   });
   const requestLink = useMutation({
     mutationFn: async (value: string) => {
@@ -120,12 +122,16 @@ export function CompanyParticipantsPanel({
     onError: () => setNotice("failed"),
   });
 
+  if (!online) return null;
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
   if (!access.data?.premium_enabled) return null;
   if (participants.isPending) return <Loading />;
   if (participants.isError)
     return <ErrorState retry={() => void participants.refetch()} />;
+  const selected = participants.data.find(
+    (row) => row.user_id === selectedParticipant,
+  );
 
   return (
     <section
@@ -226,21 +232,45 @@ export function CompanyParticipantsPanel({
               <div>
                 <strong>{participant.display_name}</strong>
                 <small className="muted">{participant.luminovia_user_id}</small>
+                {participant.company_reference && (
+                  <p className="muted">
+                    {t("participantCompanyReference")} ·{" "}
+                    {participant.company_reference}
+                  </p>
+                )}
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!online || remove.isPending}
-                onClick={() => setRemoveTarget(participant)}
-              >
-                {t("removeParticipant")}
-              </Button>
+              <div className="company-participant-row-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSelectedParticipant(participant.user_id)}
+                >
+                  {t("participantOpenDetails")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!online || remove.isPending}
+                  onClick={() => setRemoveTarget(participant)}
+                >
+                  {t("removeParticipant")}
+                </Button>
+              </div>
             </article>
           ))
         ) : (
           <p className="muted">{t("participantListEmpty")}</p>
         )}
       </div>
+      {selected && (
+        <CompanyParticipantDetails
+          key={`${actor}:${organisationId}:${selected.user_id}`}
+          actor={actor}
+          organisationId={organisationId}
+          participant={selected}
+          onClose={() => setSelectedParticipant(null)}
+        />
+      )}
       <Dialog
         open={removeTarget !== null}
         onOpenChange={(open) => {

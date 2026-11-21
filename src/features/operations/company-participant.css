@@ -1,0 +1,36 @@
+.company-participant-row,
+.company-participant-row-actions,
+.company-participant-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.company-participant-details dd {
+  margin-inline-start: 0;
+}
+
+.company-participant-reference,
+.company-participant-courses,
+.company-participant-courses ul {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+.company-participant-courses {
+  margin-block: 1rem;
+}
+
+.company-participant-courses p,
+.company-participant-courses h3,
+.company-participant-courses ul {
+  margin: 0;
+}
+
+.company-participant-courses li {
+  overflow-wrap: anywhere;
+}

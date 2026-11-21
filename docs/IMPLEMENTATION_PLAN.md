@@ -18,7 +18,7 @@ This pass covers source implementation and local tests. CI, deployment, producti
 
 ## Open product work after the 21 November source review
 
-- Finish the company participant centre. The current centre lists active memberships and supports invitations and links. It still needs the consolidated per-participant course and attendance view, company reference numbers and a scoped invitation/action history.
+- The company participant centre lists active memberships and supports invitations and association requests. The selected participant now has a scoped course and attendance view and a versioned company reference. The scoped invitation/action history and consolidated multi-course assignment controls remain open.
 - Complete the learner, lecturer and company journeys across Premium OFF/ON and both dedicated editions, including native Realtime revocation, exact document delivery and physical PWA acceptance. Published welcome content, isolated permission checks and licence-grace checks are recorded in the work log.
 - Complete general platform gaps in exception invoice issuance, structured settlement and contract-specific instalment deadlines, and handle formal changes affecting shared schedules or retained course evidence.
 - Connect the public Website sender separately and complete notification delivery and the remaining typed API, browser and accessibility acceptance.

@@ -5,6 +5,42 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  participantOpenDetails: ["Kurse und Teilnahme", "Courses and attendance"],
+  participantDetailsDescription: [
+    "Einschreibungen und Anwesenheit für dieses Unternehmen.",
+    "Enrolment and attendance for this company.",
+  ],
+  participantCompanyReference: ["Unternehmensreferenz", "Company reference"],
+  participantSaveReference: ["Referenz speichern", "Save reference"],
+  participantReferenceSaved: ["Referenz gespeichert.", "Reference saved."],
+  participantReferenceStale: [
+    "Die Mitgliedschaft wurde geändert. Übernimm den aktuellen Stand, bevor du erneut speicherst.",
+    "The membership changed. Reload its current value before saving again.",
+  ],
+  participantReferenceError: [
+    "Die Referenz konnte nicht gespeichert werden. Prüfe, ob sie bereits vergeben ist.",
+    "The reference could not be saved. Check whether it is already in use.",
+  ],
+  participantUseCurrentReference: [
+    "Aktuelle Referenz übernehmen",
+    "Use current reference",
+  ],
+  participantCourseActivity: [
+    "Kurse und Anwesenheit",
+    "Courses and attendance",
+  ],
+  participantNoCourses: [
+    "Dieses Unternehmen hat noch keine Einschreibungen für diese Person.",
+    "This company has no enrolments for this participant yet.",
+  ],
+  "participantEnrolment.enrolled": ["Eingeschrieben", "Enrolled"],
+  "participantEnrolment.completed": ["Abgeschlossen", "Completed"],
+  "participantEnrolment.removed": ["Teilnahme beendet", "Enrolment ended"],
+  participantAttendanceCounts: [
+    "{{present}} anwesend · {{absent}} abwesend · {{excused}} entschuldigt · {{sessions}} Termine",
+    "{{present}} present · {{absent}} absent · {{excused}} excused · {{sessions}} sessions",
+  ],
+  participantMoreCourses: ["Weitere Kurse laden", "Load more courses"],
   inspectCourseChat: ["Kurschat prüfen", "Inspect course chat"],
   inspectCourseChatReason: [
     "Grund für den protokollierten Zugriff",

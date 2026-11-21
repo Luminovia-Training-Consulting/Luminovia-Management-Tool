@@ -1,3 +1,9 @@
+# 21 November 2026 — Premium company participant centre
+
+The selected participant's company view now lists only enrolments from the current authorised company, with its scheduled courses and aggregate present, absent and excused counts. The company reference is optional, case-insensitively unique within its company and updated against the observed membership version. Only private membership state stores the reference. A successful write does not alter Auth, enrolment or attendance. The public API documents both operations.
+
+Focused PostgreSQL and native HTTP verified paging, legacy and current attendance states, exact retry, stale revisions, duplicate references, different company references, disabled Premium and current company scope. Full browser and system acceptance remain deferred.
+
 # 21 November 2026 — Standalone Academy participation and encrypted recovery
 
 The dedicated participation export reports learner reference, enrolment, attendance totals and completion status in German or English. Company and lecturer access uses the current course scope on every page. The report omits notes, exam answers and completion snapshots. PostgreSQL exercises both academy editions and refusal in the internal edition. Component tests cover two-page download, denial after the first page and unavailable offline export. Chromium with native GoTrue and PostgREST verified the CSV download and the absence of the export action for learners on desktop and mobile.

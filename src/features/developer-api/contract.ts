@@ -82,6 +82,12 @@ import {
   companyPremiumSettingsSchema,
   retainedCompanyLmsSchema,
 } from "../operations/company-premium-schema.ts";
+import {
+  companyParticipantOverviewSchema,
+  companyParticipantReferenceSchema,
+  companyParticipantsSchema,
+  companyReferenceLimit,
+} from "../operations/company-participant-schema.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -1507,18 +1513,40 @@ const nativePaths = {
     "companyParticipants",
     "Premium LMS",
     "List current participants",
-    "Requires Premium and current participant management rights for the requested company.",
+    "Requires Premium and current participant management rights for the requested company. References belong to this company membership and can be null.",
     organisation,
+    z.toJSONSchema(companyParticipantsSchema),
+  ),
+  "/rest/v1/rpc/company_participant_overview": rpc(
+    "companyParticipantOverview",
+    "Premium LMS",
+    "Read one participant's company course and attendance summary",
+    "Requires current participant management rights, current Premium and an active participant membership in the requested company. Returns only that company's enrolments and confirmed attendance counts. Notes and other participants are excluded.",
     {
-      type: "array",
-      items: object({
-        user_id: uuid,
-        luminovia_user_id: text,
-        display_name: text,
-        joined_at: { type: "string", format: "date-time" },
-        version,
-      }),
+      ...organisation,
+      p_user_id: uuid,
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 30 },
+      p_offset: { type: "integer", minimum: 0, default: 0 },
     },
+    z.toJSONSchema(companyParticipantOverviewSchema),
+    ["p_limit", "p_offset"],
+  ),
+  "/rest/v1/rpc/set_company_participant_reference": rpc(
+    "setCompanyParticipantReference",
+    "Premium LMS",
+    "Set or clear a company-owned participant reference",
+    "Requires current participant management rights, Premium and an active company participant membership. Submit the observed membership version. Send null to clear the reference. An outdated version or a duplicate reference for that company returns HTTP 409.",
+    {
+      ...organisation,
+      p_user_id: uuid,
+      p_reference: {
+        type: ["string", "null"],
+        minLength: 1,
+        maxLength: companyReferenceLimit,
+      },
+      p_expected_version: { ...version, minimum: 1 },
+    },
+    z.toJSONSchema(companyParticipantReferenceSchema),
   ),
   "/rest/v1/rpc/my_company_participant_invitations": rpc(
     "myCompanyParticipantInvitations",
