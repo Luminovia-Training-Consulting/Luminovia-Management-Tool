@@ -518,9 +518,7 @@ export function Shell() {
             {profile.data?.active && online && !guestOnly && !previewMode && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
-            <Preferences
-              onSave={participantOnly ? undefined : saveUiPreferences}
-            />
+            <Preferences onSave={saveUiPreferences} />
             <details className="account-menu" ref={accountMenu}>
               <summary title={t("profile")}>
                 {limitedAccount ? (

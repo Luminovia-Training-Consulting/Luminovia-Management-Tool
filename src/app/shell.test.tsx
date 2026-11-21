@@ -96,37 +96,41 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("keeps the selected language while the account preference is being saved", async () => {
-  await i18n.changeLanguage("de");
-  loadUi.mockResolvedValue({
-    language: "de",
-    theme: "system",
-    sidebar_collapsed: false,
-    version: 0,
-  });
-  let finishSave!: () => void;
-  saveUi.mockReturnValue(
-    new Promise<void>((resolve) => {
-      finishSave = resolve;
-    }),
-  );
-  try {
-    const { user } = setup();
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Sprache" }),
-      "en",
-    );
-    expect(saveUi).toHaveBeenCalledWith({ language: "en" });
-    expect(loadUi).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("combobox", { name: "Language" })).toHaveValue(
-      "en",
-    );
-  } finally {
-    finishSave();
-    cleanup();
+it.each(["lecturer", "guest", "participant"])(
+  "keeps the %s's selected language while the account preference is being saved",
+  async (role) => {
+    access.roles = [role];
     await i18n.changeLanguage("de");
-  }
-});
+    loadUi.mockResolvedValue({
+      language: "de",
+      theme: "system",
+      sidebar_collapsed: false,
+      version: 0,
+    });
+    let finishSave!: () => void;
+    saveUi.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+    try {
+      const { user } = setup("/profile");
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Sprache" }),
+        "en",
+      );
+      expect(saveUi).toHaveBeenCalledWith({ language: "en" });
+      expect(loadUi).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("combobox", { name: "Language" })).toHaveValue(
+        "en",
+      );
+    } finally {
+      finishSave();
+      cleanup();
+      await i18n.changeLanguage("de");
+    }
+  },
+);
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(

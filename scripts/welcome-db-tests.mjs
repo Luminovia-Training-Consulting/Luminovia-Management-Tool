@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("welcome_test", async ({sql, actor}) => {
     const first = randomUUID(),
@@ -12,15 +13,21 @@ await withTestDatabase("welcome_test", async ({sql, actor}) => {
     await sql(
         `insert into auth.users(id,email) values ${[first, peer, admin, inactive].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${first}','lecturer'),('${peer}','lecturer'),('${admin}','admin');update public.profiles set active=false where id='${inactive}'`,
     );
-    const get = async (id) =>
-        JSON.parse(await actor(id, "select public.get_welcome_progress()"));
-    const save = async (id, step, status, version) =>
-        JSON.parse(
+    const get = async (id) => {
+        const result = JSON.parse(await actor(id, "select public.get_welcome_progress()"));
+        assertLmsResponse("get_welcome_progress", result);
+        return result;
+    };
+    const save = async (id, step, status, version) => {
+        const result = JSON.parse(
             await actor(
                 id,
                 `select public.save_welcome_progress(${q(step)},${q(status)},${version})`,
             ),
         );
+        assertLmsResponse("save_welcome_progress", result);
+        return result;
+    };
     let checks = 0;
     const check = async (name, fn) => {
         await fn();

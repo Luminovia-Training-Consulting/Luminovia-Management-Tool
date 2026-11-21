@@ -1,18 +1,17 @@
 /** Account-scoped UI settings. Login controls still work locally before a session exists. */
-import { z } from "zod";
 import { db } from "./supabase";
 import { requireOnline } from "./online";
+import {
+  uiPreferencesSchema,
+  type UiPreferences,
+  type UiPreferencesPatch,
+} from "./ui-preferences-schema";
 
-export const uiPreferencesSchema = z.object({
-  language: z.enum(["de", "en"]),
-  theme: z.enum(["system", "light", "dark"]),
-  sidebar_collapsed: z.boolean(),
-  version: z.number().int().nonnegative(),
-});
-export type UiPreferences = z.infer<typeof uiPreferencesSchema>;
-export type UiPreferencesPatch = Partial<
-  Pick<UiPreferences, "language" | "theme" | "sidebar_collapsed">
->;
+export {
+  uiPreferencesSchema,
+  type UiPreferences,
+  type UiPreferencesPatch,
+} from "./ui-preferences-schema";
 
 export async function loadUiPreferences(): Promise<UiPreferences> {
   const { data, error } = await db().rpc("ui_preferences");

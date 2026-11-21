@@ -4,33 +4,19 @@ import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { validZone } from "../../lib/dates";
+import {
+  dashboardPreferencesSchema,
+  type DashboardPreferences,
+} from "./personal-schema";
 
-export const widgetIds = [
-  "teaching_day",
-  "activity",
-  "contracts",
-  "files",
-  "followups",
-] as const;
-export type WidgetId = (typeof widgetIds)[number];
-const widgetSchema = z.enum(widgetIds);
-export const dashboardPreferencesSchema = z.object({
-  widget_order: z
-    .array(widgetSchema)
-    .length(widgetIds.length)
-    .refine((ids) => new Set(ids).size === widgetIds.length),
-  hidden_widgets: z
-    .array(widgetSchema)
-    .max(widgetIds.length)
-    .refine((ids) => new Set(ids).size === ids.length),
-  version: z.number().int().nonnegative(),
-});
-export type DashboardPreferences = z.infer<typeof dashboardPreferencesSchema>;
-export const defaultDashboardPreferences: DashboardPreferences = {
-  widget_order: [...widgetIds],
-  hidden_widgets: [],
-  version: 0,
-};
+export {
+  dashboardPreferencesSchema,
+  defaultDashboardPreferences,
+  widgetIds,
+  type DashboardPreferences,
+  type WidgetId,
+} from "./personal-schema";
+
 export const dashboardPreferencesKey = (actor: string) =>
   ["dashboard-preferences", actor] as const;
 export const dashboardPreferencesQuery = (actor: string) =>

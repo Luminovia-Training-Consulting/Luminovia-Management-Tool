@@ -7,6 +7,7 @@ import { academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
+import { personalPreferencesPaths } from "./personal-preferences-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   notificationCredentialPaths,
@@ -411,6 +412,7 @@ const saveCalendarSubscription = rpc(
 
 const nativePaths = {
   ...fileDiscoveryPaths,
+  ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("dashboard_personal", async ({sql, actor}) => {
     const [teacher, peer, admin] = Array.from({length: 3}, randomUUID);
@@ -12,8 +13,12 @@ await withTestDatabase("dashboard_personal", async ({sql, actor}) => {
         "files",
         "followups",
     ];
-    const rpc = async (who, name, args = []) =>
-        JSON.parse(await actor(who, `select public.${name}(${args.join(",")})`));
+    const rpc = async (who, name, args = []) => {
+        const result = JSON.parse(await actor(who, `select public.${name}(${args.join(",")})`));
+        if (name === "dashboard_preferences" || name === "save_dashboard_preferences")
+            assertLmsResponse(name, result);
+        return result;
+    };
     let checks = 0;
     const check = async (name, run) => {
         await run();
