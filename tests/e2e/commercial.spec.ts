@@ -485,13 +485,12 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         .getByRole("button", {name: "Zahlung speichern", exact: true})
         .click();
     await expect(adminPage.getByRole("dialog")).not.toBeVisible();
-    await expect(reviewCard.getByText("Bezahlt", {exact: true})).toBeVisible();
+    await expect(
+        reviewCard.locator(".commercial-status-paid", {hasText: /^Bezahlt$/}),
+    ).toBeVisible();
     await page.reload();
     await expect(
-        page
-            .locator("article")
-            .filter({has: page.getByRole("heading", {name: number, exact: true})})
-            .getByText("Bezahlt", {exact: true}),
+        invoice.locator(".commercial-status-paid", {hasText: /^Bezahlt$/}),
     ).toBeVisible();
     const api = await actor(lecturer);
     const records = await api.rpc("invoice_records", {p_all: false});
@@ -499,6 +498,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     const record = records.data.find(
         (item: { number: string }) => item.number === number,
     );
+    expect(record.status).toBe("paid");
     expect(Number(record.total_amount)).toBe(123.45);
     expect(Number(record.paid_amount)).toBe(123.45);
     expect(record.currency).toBe("EUR");

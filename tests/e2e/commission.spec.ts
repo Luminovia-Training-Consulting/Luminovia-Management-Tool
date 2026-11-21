@@ -512,7 +512,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             .click();
         await expect(ownerPage.getByRole("dialog")).not.toBeVisible();
         await expect(
-            ownerInvoice.getByText("Bezahlt", {exact: true}),
+            ownerInvoice.locator(".commercial-status-paid", {hasText: /^Bezahlt$/}),
         ).toBeVisible();
         await a11y(ownerPage);
         await ownerPage.screenshot({
