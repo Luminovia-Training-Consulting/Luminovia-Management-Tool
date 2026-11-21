@@ -80,3 +80,16 @@ it("uploads a PDF through the checked file path before attaching its exact versi
     await waitFor(() => expect(fake.upload).toHaveBeenCalledWith(file,{scope:"personal",kind:"material"}));
     expect(fake.attach).toHaveBeenCalledWith("run","session","version");
 });
+
+it("requires an unambiguous local attendance time on a daylight saving transition", async () => {
+    view();
+    await screen.findByText("Fictional Learner");
+    const input = screen.getByLabelText("arrivalTime");
+    const button = screen.getByRole("button", {name: "attendancepresent"});
+    for (const value of ["2026-03-29T02:25", "2026-10-25T02:25"]) {
+        fireEvent.change(input, {target: {value}});
+        await userEvent.click(button);
+        expect(await screen.findByText("attendanceInvalidTime")).toBeVisible();
+    }
+    expect(fake.save).not.toHaveBeenCalled();
+});

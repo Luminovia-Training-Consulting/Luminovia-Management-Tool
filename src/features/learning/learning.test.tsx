@@ -388,3 +388,22 @@ describe("connected course workspace", () => {
         ).not.toBeInTheDocument();
     });
 });
+
+it("hides the loaded Premium workspace offline and rechecks it on reconnect", async () => {
+    const connectivity = vi.spyOn(window.navigator, "onLine", "get");
+    connectivity.mockReturnValue(true);
+    try {
+        setup();
+        expect(await screen.findByText("Shared safe description")).toBeVisible();
+        connectivity.mockReturnValue(false);
+        act(() => window.dispatchEvent(new Event("offline")));
+        expect(screen.queryByText("Shared safe description")).not.toBeInTheDocument();
+        fake.error = new Error("company_premium_lms_off");
+        connectivity.mockReturnValue(true);
+        act(() => window.dispatchEvent(new Event("online")));
+        expect(await screen.findByRole("heading", {name: "Lernarbeitsbereich deaktiviert"})).toBeVisible();
+        expect(screen.queryByText("Shared safe description")).not.toBeInTheDocument();
+    } finally {
+        connectivity.mockRestore();
+    }
+});

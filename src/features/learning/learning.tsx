@@ -746,13 +746,20 @@ export function CourseWorkspacePage() {
     const {id = ""} = useParams();
     const actor = useAuth().session!.user.id;
     const {t, i18n} = useTranslation("learning");
-    const query = useQuery(courseWorkspaceQuery(actor, id));
-    if (query.isFetching && query.isStale) return <Loading/>;
+    const online = useOnline();
+    const query = useQuery({
+        ...courseWorkspaceQuery(actor, id),
+        enabled: online,
+        staleTime: 0,
+        refetchOnMount: "always",
+        refetchInterval: 10_000,
+    });
+    if (!online) return <Notice>{t("workspaceOffline")}</Notice>;
+    if (query.isFetching && !query.isFetchedAfterMount) return <Loading/>;
     if (query.isPending) return <Loading/>;
     if (query.isError) {
         if (
-            query.error instanceof Error &&
-            query.error.message.includes("company_premium_lms_off")
+            query.error.message?.includes("company_premium_lms_off")
         ) {
             return (
                 <section className="panel">

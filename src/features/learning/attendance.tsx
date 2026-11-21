@@ -20,7 +20,8 @@ function localTime(value: string | null, zone: string) {
 function instant(value: string, zone: string) {
     if (!value) return null;
     const time = DateTime.fromISO(value, {zone});
-    if (!time.isValid) throw new Error("attendanceInvalidTime");
+    if (!time.isValid || time.toFormat("yyyy-MM-dd'T'HH:mm") !== value ||
+        time.getPossibleOffsets().length !== 1) throw new Error("attendanceInvalidTime");
     return time.toUTC().toISO();
 }
 
@@ -73,7 +74,7 @@ function RowEditor({course, actor, session, row}: {
                     disabled={!online || save.isPending || (row.version > 0 && reason.trim().length < 3)}
                     onClick={() => save.mutate(status)}>{t(`attendance${status}`)}</Button>)}
         </div>
-        {save.isError && <Notice kind="error">{t("attendanceSaveFailed")}</Notice>}
+        {save.isError && <Notice kind="error">{t(save.error.message === "attendanceInvalidTime" ? "attendanceInvalidTime" : "attendanceSaveFailed")}</Notice>}
     </li>;
 }
 
@@ -117,7 +118,7 @@ export function AttendancePanel({course, actor}: {course: CourseWorkspace; actor
         </Field>
         {query.isPending && <Loading/>}
         {query.isError && <ErrorState retry={() => void query.refetch()}/>}
-        {query.data && <>
+        {query.isSuccess && online && <>
             <p>{t("attendanceZone", {zone: course.time_zone})}</p>
             {!query.data.rows.length && <p>{t("attendanceNoParticipants")}</p>}
             <ul className="learning-resources">

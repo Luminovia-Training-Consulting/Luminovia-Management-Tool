@@ -156,6 +156,8 @@ const pairs: Record<string, [string, string]> = {
     departureTime: ["Ende der Anwesenheit (optional)", "Departure (optional)"],
     attendanceNote: ["Notiz (optional)", "Note (optional)"],
     attendanceCorrectionReason: ["Begründung der Korrektur", "Reason for correction"],
+    workspaceOffline: ["Verbinde dich mit dem Internet, um den aktuellen Zugriff auf den Kursarbeitsbereich zu prüfen.", "Connect to the internet to check current access to the course workspace."],
+    attendanceInvalidTime: ["Diese Uhrzeit existiert nicht oder ist wegen der Zeitumstellung doppelt. Wähle eine eindeutige Uhrzeit in der Kurszeitzone.", "This time is skipped or repeated during a clock change. Choose an unambiguous time in the course’s time zone."],
     attendanceSaveFailed: ["Anwesenheit konnte nicht gespeichert werden. Bitte Daten und Berechtigung prüfen.", "Attendance could not be saved. Check details and access."],
     attendanceNoParticipants: ["Keine eingeschriebenen Teilnehmenden.", "No enrolled participants."],
     attendanceEvidence: ["PDF-Anwesenheitsnachweise", "PDF attendance evidence"],

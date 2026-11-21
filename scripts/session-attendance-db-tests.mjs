@@ -92,7 +92,16 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
       where id=${q(attached.resource_id)}`),/Retained attendance evidence cannot be unshared/);
     await assert.rejects(rpc(participant,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
     assert.equal((await rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)])).sha256,repeat("a",64));
-    await rpc(admin,"set_company_premium",[q(org),"false","1",q(randomUUID())]);
+    const toggle = actor(admin, `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});select pg_sleep(0.7)`);
+    let holdsPremiumLock = false;
+    for (let index = 0; index < 30 && !holdsPremiumLock; index++) {
+        holdsPremiumLock = await sql(`select exists(select 1 from pg_stat_activity
+          where datname=current_database() and pid<>pg_backend_pid() and wait_event='PgSleep')`) === "t";
+        if (!holdsPremiumLock) await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal(holdsPremiumLock, true);
+    const lateSave = assert.rejects(save(teacher,"present",4,{reason:"Concurrent edit"}), /42501/);
+    await Promise.all([toggle, lateSave]);
     await assert.rejects(register(company),/42501/);
     await assert.rejects(save(teacher,"present",4,{reason:"Retest"}),/42501/);
     await assert.rejects(rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
