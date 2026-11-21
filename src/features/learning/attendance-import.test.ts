@@ -74,6 +74,22 @@ describe("attendance import preview", () => {
     ).toHaveLength(1);
   });
 
+  it("previews reviewed times for the exact session and rejects a valid instant on another day", () => {
+    const session = {
+      starts_at: "2026-11-20T08:00:00Z",
+      ends_at: "2026-11-20T10:00:00Z",
+    };
+    const document = `${attendanceCsvHeader}\na,Name,present,2026-11-20T09:15+01:00,2026-11-20T10:50+01:00,,`;
+    expect(parseAttendanceCsv(document, roster, session)).toHaveLength(1);
+    expect(() =>
+      parseAttendanceCsv(
+        document.replaceAll("2026-11-20", "2026-11-21"),
+        roster,
+        session,
+      ),
+    ).toThrow(expect.objectContaining({ row: 2 }));
+  });
+
   it.each([
     "x,Foreign,present,,,,",
     "a,Name,other,,,,",

@@ -323,17 +323,33 @@ const pairs: Record<string, [string, string]> = {
     "Prüfe Zeile {{row}} und das Dateiformat. Die gesamte Datei muss gültig sein.",
     "Check row {{row}} and the file format. The full file must be valid.",
   ],
-  attendanceImportConfirm: [
+  attendanceImportConfirm_one: [
+    "{{count}} Änderung verbindlich speichern",
+    "Confirm and save {{count}} change",
+  ],
+  attendanceImportConfirm_other: [
     "{{count}} Änderungen verbindlich speichern",
     "Confirm and save {{count}} changes",
   ],
-  attendanceImportSaved: [
+  attendanceImportSession: [
+    "Geprüfter Kurstermin: {{date}} ({{zone}})",
+    "Reviewed course session: {{date}} ({{zone}})",
+  ],
+  attendanceImportSaved_one: [
+    "{{count}} Änderung gespeichert.",
+    "Saved {{count}} change.",
+  ],
+  attendanceImportSaved_other: [
     "{{count}} Änderungen gespeichert.",
     "Saved {{count}} changes.",
   ],
   attendanceImportFailed: [
     "Änderungen konnten nicht bestätigt werden. Lade das Register neu und prüfe den Stand vor einem weiteren Import.",
     "The changes could not be confirmed. Reload the register and verify its state before another import.",
+  ],
+  attendanceImportChanged: [
+    "Das Register wurde seit der Vorschau geändert. Prüfe den aktuellen Stand und wähle die Datei erneut aus.",
+    "The register changed after the preview. Review the current register and select the file again.",
   ],
   attendanceSaveFailed: [
     "Anwesenheit konnte nicht gespeichert werden. Bitte Daten und Berechtigung prüfen.",

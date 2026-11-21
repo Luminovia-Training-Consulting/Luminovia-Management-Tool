@@ -5,12 +5,17 @@ import {
   academyDraftPayload,
   academyDraftReceipt,
 } from "../learning/academy-draft-schema.ts";
-import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import {
   academyCourseCapacity,
   academyCoursePublication,
   academyPublishedCourse,
 } from "../learning/academy-publication-schema.ts";
+import {
+  attendanceImportReceiptSchema,
+  attendanceImportRowSchema,
+  attendanceRegisterSchema,
+  maxAttendanceImportRows,
+} from "../learning/attendance-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import {
   meetingLinkResult,
@@ -548,6 +553,23 @@ const coursePaths = {
       version: attendanceVersion,
       minutes: attendanceVersion,
     }),
+    true,
+  ),
+  "/rest/v1/rpc/import_course_session_attendance": courseOperation(
+    "importAcademyCourseSessionAttendance",
+    "Save a confirmed attendance import for one exact session",
+    "Review the CSV or XLSX locally first. Send the confirmed structured rows and last-read versions. The same started-session and current-enrolment rules apply to every row. Duplicate identities are rejected. If any row fails, every change is rolled back. The original file stays in the browser.",
+    "active",
+    record({
+      ...run,
+      p_session_id: uuid,
+      p_rows: {
+        ...list(z.toJSONSchema(attendanceImportRowSchema)),
+        minItems: 1,
+        maxItems: maxAttendanceImportRows,
+      },
+    }),
+    z.toJSONSchema(attendanceImportReceiptSchema),
     true,
   ),
   "/rest/v1/rpc/set_course_exam_required": courseOperation(

@@ -32,6 +32,7 @@ const writePaths = [
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
 const examDownload = "/functions/v1/course-documents";
+const attendanceImport = "/rest/v1/rpc/import_course_session_attendance";
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
@@ -64,6 +65,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           bootstrap,
           upload,
           examDownload,
+          attendanceImport,
           ...readPaths,
           ...writePaths,
           ...draftPaths,
@@ -132,6 +134,31 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(command.responses).toHaveProperty("409");
     });
 
+    it("documents the active-only atomic attendance import and version conflicts", () => {
+      const operation = spec.paths[attendanceImport].post;
+      expect(operation["x-portal-licence"]).toBe("active");
+      expect(operation.responses).toHaveProperty("409");
+      expect(
+        operation.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_run_id", "p_session_id", "p_rows"],
+        properties: {
+          p_rows: {
+            minItems: 1,
+            maxItems: 200,
+            items: {
+              additionalProperties: false,
+              required: expect.arrayContaining([
+                "user_id",
+                "status",
+                "expected_version",
+              ]),
+            },
+          },
+        },
+      });
+    });
+
     it("documents the active-only decision and student publication with a grace-readable exact PDF", () => {
       const write = spec.paths[writePaths[6]].post;
       expect(write["x-portal-licence"]).toBe("active");
@@ -190,9 +217,6 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         {
           required: expect.arrayContaining(["p_expected_version"]),
         },
-      );
-      expect(spec.paths).not.toHaveProperty(
-        "/rest/v1/rpc/import_course_session_attendance",
       );
       expect(spec.paths).not.toHaveProperty(
         "/rest/v1/rpc/attach_course_session_evidence",

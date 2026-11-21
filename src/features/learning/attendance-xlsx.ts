@@ -6,6 +6,7 @@ import {
   attendanceCsvHeader,
   maxAttendanceImportRows,
   validateAttendanceRows,
+  type AttendanceImportSession,
 } from "./attendance-import";
 
 const maxWorkbookBytes = 1_048_576;
@@ -179,7 +180,11 @@ function* worksheetRows(sheet: Element, strings: string[]) {
 }
 
 /** Build a preview in memory. The caller still must confirm the ordinary versioned import RPC. */
-export async function readAttendanceXlsx(file: File, current: AttendanceRow[]) {
+export async function readAttendanceXlsx(
+  file: File,
+  current: AttendanceRow[],
+  session?: AttendanceImportSession,
+) {
   if (
     file.size > maxWorkbookBytes ||
     !file.name.toLowerCase().endsWith(".xlsx")
@@ -247,7 +252,7 @@ export async function readAttendanceXlsx(file: File, current: AttendanceRow[]) {
     ) {
       throw new AttendanceImportError(1);
     }
-    return validateAttendanceRows(rows, current);
+    return validateAttendanceRows(rows, current, session);
   } catch (error) {
     if (error instanceof AttendanceImportError) throw error;
     throw new AttendanceImportError(1, { cause: error });

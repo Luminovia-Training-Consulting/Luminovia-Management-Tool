@@ -43,6 +43,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_course_material_action",
             "/rest/v1/rpc/course_session_register",
             "/rest/v1/rpc/save_course_session_attendance",
+            "/rest/v1/rpc/import_course_session_attendance",
             "/rest/v1/rpc/set_course_exam_required",
             "/rest/v1/rpc/academy_student_exam_pdf_options",
             "/rest/v1/rpc/share_course_exam_pdf",

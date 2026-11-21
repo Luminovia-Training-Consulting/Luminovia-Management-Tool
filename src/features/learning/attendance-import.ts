@@ -1,24 +1,27 @@
 /** Converts a local attendance template into a versioned register preview. */
 import { DateTime } from "luxon";
-import type { AttendanceRow, AttendanceStatus } from "./attendance-api";
+import type {
+  AttendanceRegister,
+  AttendanceRow,
+  AttendanceStatus,
+} from "./attendance-api";
+import {
+  maxAttendanceImportRows,
+  type AttendanceImportRow,
+} from "./attendance-schema";
+
+export { maxAttendanceImportRows } from "./attendance-schema";
 
 export const attendanceCsvHeader =
   "user_id,name,status,arrival_at,departure_at,note,reason";
 const maxImportTextBytes = 65_536;
-export const maxAttendanceImportRows = 200;
 const acceptedStatuses: readonly string[] = ["present", "absent", "excused"];
 const isoInstant =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
-
-type ImportRow = {
-  user_id: string;
-  status: AttendanceStatus;
-  arrival_at: string | null;
-  departure_at: string | null;
-  note: string;
-  reason: string;
-  expected_version: number;
-};
+export type AttendanceImportSession = Pick<
+  AttendanceRegister,
+  "starts_at" | "ends_at"
+>;
 
 /** Reports the worksheet row or CSV record the operator needs to review. */
 export class AttendanceImportError extends Error {
@@ -34,14 +37,19 @@ export class AttendanceImportError extends Error {
 export function parseAttendanceCsv(
   source: string,
   current: AttendanceRow[],
-): ImportRow[] {
+  session?: AttendanceImportSession,
+): AttendanceImportRow[] {
   if (new TextEncoder().encode(source).length > maxImportTextBytes)
     throw new AttendanceImportError(1);
   const input = source.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const headerEnd = input.indexOf("\n");
   if (headerEnd < 0 || input.slice(0, headerEnd) !== attendanceCsvHeader)
     throw new AttendanceImportError(1);
-  return validateAttendanceRows(csvRows(input.slice(headerEnd + 1)), current);
+  return validateAttendanceRows(
+    csvRows(input.slice(headerEnd + 1)),
+    current,
+    session,
+  );
 }
 
 /** Keep CSV quoting, physical file syntax and logical record numbers out of domain validation. */
@@ -73,9 +81,12 @@ function* csvRows(data: string) {
 export function validateAttendanceRows(
   records: Iterable<{ rowNumber: number; columns: string[] }>,
   current: AttendanceRow[],
-): ImportRow[] {
+  session?: AttendanceImportSession,
+): AttendanceImportRow[] {
   const roster = new Map(current.map((row) => [row.user_id, row]));
-  const rows: ImportRow[] = [];
+  const start = session && DateTime.fromISO(session.starts_at);
+  const end = session && DateTime.fromISO(session.ends_at);
+  const rows: AttendanceImportRow[] = [];
   const seen = new Set<string>();
   const encoder = new TextEncoder();
   let textBytes = 0;
@@ -95,17 +106,23 @@ export function validateAttendanceRows(
     }
     seen.add(id);
     if (!proposed && !arrival && !departure && !note && !reason) continue;
+    const arrivalTime = arrival && DateTime.fromISO(arrival);
+    const departureTime = departure && DateTime.fromISO(departure);
     if (
       !acceptedStatuses.includes(proposed) ||
       (proposed !== "present" && (arrival || departure)) ||
-      [arrival, departure].some(
-        (value) =>
-          value &&
-          (!isoInstant.test(value) || !DateTime.fromISO(value).isValid),
-      ) ||
-      (arrival &&
-        departure &&
-        DateTime.fromISO(arrival) > DateTime.fromISO(departure)) ||
+      (arrivalTime && (!isoInstant.test(arrival) || !arrivalTime.isValid)) ||
+      (departureTime &&
+        (!isoInstant.test(departure) || !departureTime.isValid)) ||
+      (arrivalTime && departureTime && arrivalTime > departureTime) ||
+      (start &&
+        end &&
+        arrivalTime &&
+        (arrivalTime < start.minus({ hours: 1 }) || arrivalTime > end)) ||
+      (start &&
+        end &&
+        departureTime &&
+        (departureTime < start || departureTime > end.plus({ hours: 1 }))) ||
       note.length > 1000 ||
       reason.length > 500 ||
       (user.version > 0 && reason.trim().length < 3)
@@ -138,7 +155,11 @@ export function attendanceCsvTemplate(rows: AttendanceRow[]) {
 }
 
 /** Decode only a bounded UTF-8 CSV file before making a local preview. */
-export async function readAttendanceCsv(file: File, current: AttendanceRow[]) {
+export async function readAttendanceCsv(
+  file: File,
+  current: AttendanceRow[],
+  session?: AttendanceImportSession,
+) {
   if (
     file.size > maxImportTextBytes ||
     !file.name.toLowerCase().endsWith(".csv")
@@ -147,5 +168,6 @@ export async function readAttendanceCsv(file: File, current: AttendanceRow[]) {
   return parseAttendanceCsv(
     new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()),
     current,
+    session,
   );
 }

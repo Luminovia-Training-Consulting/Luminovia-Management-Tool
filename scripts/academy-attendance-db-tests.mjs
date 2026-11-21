@@ -11,6 +11,7 @@ const gate = (name, method = "POST") =>
   `set local request.path=${q("/rpc/" + name)};set local request.method=${q(method)}; select public.require_portal_access();`;
 const read = "course_session_register";
 const write = "save_course_session_attendance";
+const importWrite = "import_course_session_attendance";
 
 for (const edition of ["customer-self-hosted", "customer-managed"]) {
   await withTestDatabase("academy_session_register", async ({ sql, actor }) => {
@@ -147,6 +148,21 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       actor(who, gate(write) + saveSql(status, expected, options))
         .then(JSON.parse)
         .then((value) => response(write, value));
+    const importSql = (rows, exact, course) =>
+      `select public.import_course_session_attendance(${q(course)},${q(exact)},${q(JSON.stringify(rows))}::jsonb)`;
+    const importRows = (who, rows, exact = session, course = run) =>
+      actor(who, gate(importWrite) + importSql(rows, exact, course))
+        .then(JSON.parse)
+        .then((value) => response(importWrite, value));
+    const importedEntry = (userId, expectedVersion) => ({
+      user_id: userId,
+      expected_version: expectedVersion,
+      status: "excused",
+      arrival_at: null,
+      departure_at: null,
+      note: "Fictional imported register entry",
+      reason: "Confirmed structured record",
+    });
     const row = (register, id = learner) =>
       register.rows.find((entry) => entry.user_id === id);
     const setProfile = (enabled, release = terms.release_commit) =>
@@ -159,10 +175,18 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       );
     await assert.rejects(register(manager), /42501/);
     await assert.rejects(actor(manager, saveSql("present", 0)), /42501/);
+    await assert.rejects(
+      actor(manager, importSql([importedEntry(learner, 0)], session, run)),
+      /42501/,
+    );
     await setProfile(true);
     for (const who of [learner, peer, foreignClient, teacher, outside]) {
       await assert.rejects(register(who), /42501/);
       await assert.rejects(save(who, "absent", 0), /42501/);
+      await assert.rejects(
+        importRows(who, [importedEntry(learner, 0)]),
+        /42501/,
+      );
     }
     const assignment = await actor(
       manager,
@@ -175,16 +199,25 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(register(teacher, foreignSession), /42501/);
     await assert.rejects(register(client, foreignSession, foreignRun), /42501/);
     await assert.rejects(save(teacher, "present", 0), /42501/);
+    await assert.rejects(
+      importRows(teacher, [importedEntry(learner, 0)]),
+      /42501/,
+    );
     for (const blocked of [
       "course_workspace_action",
-      "import_course_session_attendance",
       "attach_course_session_evidence",
     ]) {
       await assert.rejects(actor(manager, gate(blocked)), /42501/);
     }
     await assert.rejects(actor(teacher, gate(write, "GET")), /42501/);
     await assert.rejects(actor(teacher, gate(write, "HEAD")), /42501/);
+    await assert.rejects(actor(teacher, gate(importWrite, "GET")), /42501/);
+    await assert.rejects(actor(teacher, gate(importWrite, "HEAD")), /42501/);
     await assert.rejects(sql("set role service_role; " + gate(read)), /42501/);
+    await assert.rejects(
+      sql("set role service_role; " + gate(importWrite)),
+      /42501/,
+    );
 
     // Move the first fixture session across its start for register acceptance.
     // Leave the technical allocation pending so its ordinary release is tested below.
@@ -244,10 +277,73 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       /private comment|Scanned instructor correction|Manual manager correction|Fictional other learner/,
     );
 
+    const batch = [importedEntry(learner, 2), importedEntry(peer, 0)].sort(
+      (left, right) => left.user_id.localeCompare(right.user_id),
+    );
+    await assert.rejects(importRows(teacher, [batch[0], batch[0]]), /22023/);
+    await assert.rejects(
+      importRows(teacher, [batch[0], importedEntry(outside, 0)]),
+      /42501/,
+    );
+    await assert.rejects(importRows(teacher, batch, foreignSession), /42501/);
+    await assert.rejects(
+      importRows(client, batch, foreignSession, foreignRun),
+      /42501/,
+    );
+    await assert.rejects(importRows(learner, batch), /42501/);
+    // The first row sorts before the stale second row and must roll back with it.
+    await assert.rejects(
+      importRows(teacher, [
+        batch[0],
+        {
+          ...batch[1],
+          expected_version: batch[1].expected_version + 1,
+        },
+      ]),
+      /PT409/,
+    );
+    assert.deepEqual(await register(manager), committed);
+    assert.equal(
+      await sql(`select count(*) from public.audit_events
+      where action='course.attendance_imported' and resource_id=${q(session)}`),
+      "0",
+    );
+    assert.deepEqual(await importRows(client, batch), { saved: 2 });
+    const retainedRegister = await register(manager);
+    assert.equal(row(retainedRegister).version, 3);
+    assert.equal(row(retainedRegister, peer).version, 1);
+    assert.equal(row(retainedRegister).status, "excused");
+    assert.equal(
+      row(retainedRegister, peer).note,
+      "Fictional imported register entry",
+    );
+    assert.equal(retainedRegister.history.length, 4);
+    await assert.rejects(importRows(teacher, batch), /PT409/);
+    assert.equal(
+      await sql(`select count(*) from public.audit_events
+      where action='course.attendance_imported' and actor_id=${q(client)} and resource_id=${q(session)}
+        and (details->>'saved')::integer=2`),
+      "1",
+    );
+
+    const learnerAfterImport = await actor(
+      learner,
+      gate("course_workspace") + `select public.course_workspace(${q(run)})`,
+    ).then(JSON.parse);
+    assert.equal(
+      learnerAfterImport.sessions.find((item) => item.id === session).version,
+      3,
+    );
+    assert.doesNotMatch(
+      JSON.stringify(learnerAfterImport),
+      /Fictional imported register entry|Confirmed structured record|Fictional other learner/,
+    );
+
     await sql(
       `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
     );
     await assert.rejects(register(client), /42501/);
+    await assert.rejects(importRows(client, batch), /42501/);
     await assert.rejects(
       save(client, "excused", 2, { reason: "Revoked contact" }),
       /42501/,
@@ -258,6 +354,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_release_course_instructor(${q(run)},${q(assignment.claim_id)},'Fictional teaching change',${q(randomUUID())})`,
     );
     await assert.rejects(register(teacher), /42501/);
+    await assert.rejects(importRows(teacher, batch), /42501/);
     await assert.rejects(
       save(teacher, "present", 2, { reason: "Released teacher" }),
       /42501/,
@@ -272,7 +369,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       release_commit: newRelease,
       expires_at: date(-2),
     });
-    assert.deepEqual(await register(manager), committed);
+    assert.deepEqual(await register(manager), retainedRegister);
+    await assert.rejects(importRows(manager, batch), /42501/);
+    await assert.rejects(
+      actor(manager, importSql(batch, session, run)),
+      /42501/,
+    );
     await assert.rejects(
       save(manager, "absent", 2, { reason: "Grace is read-only" }),
       /42501/,
@@ -288,6 +390,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       grace_until: date(-1),
     });
     await assert.rejects(register(manager), /42501/);
+    await assert.rejects(importRows(manager, batch), /42501/);
     await assert.rejects(
       save(manager, "present", 2, { reason: "Licence expired" }),
       /42501/,
@@ -296,10 +399,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       await sql(
         `select count(*) from private.course_attendance_audit where session_id=${q(session)}`,
       ),
-      "2",
+      "4",
     );
     console.log(
-      `PASS ${edition} exact register roles, private learner, single winning correction, licence grace and retained audits`,
+      `PASS ${edition} exact register roles, private learner, single winning correction, atomic import, licence grace and retained audits`,
     );
   });
 }

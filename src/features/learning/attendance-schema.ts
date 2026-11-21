@@ -8,6 +8,21 @@ const minutes = z.number().int().nonnegative();
 const note = z.string().max(1000);
 const status = z.enum(["present", "absent", "excused"]);
 
+export const maxAttendanceImportRows = 200;
+export const attendanceImportRowSchema = z.strictObject({
+  user_id: uuid,
+  status,
+  arrival_at: instant.nullable(),
+  departure_at: instant.nullable(),
+  note,
+  reason: z.string().max(500),
+  expected_version: version,
+});
+export const attendanceImportReceiptSchema = z.strictObject({
+  saved: z.number().int().min(1).max(maxAttendanceImportRows),
+});
+export type AttendanceImportRow = z.infer<typeof attendanceImportRowSchema>;
+
 /** A retained snapshot predating the session register has the original six fields. */
 const priorAttendance = {
   session_id: uuid,

@@ -5,8 +5,13 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
+import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
-import type { AttendanceRow } from "./attendance-api";
+import type { AttendanceRegister } from "./attendance-api";
+import {
+  attendanceImportReceiptSchema,
+  type AttendanceImportRow,
+} from "./attendance-schema";
 import {
   AttendanceImportError,
   attendanceCsvTemplate,
@@ -17,22 +22,24 @@ import {
 type AttendanceImportRequest = {
   p_run_id: string;
   p_session_id: string;
-  p_rows: Awaited<ReturnType<typeof readAttendanceCsv>>;
+  p_rows: AttendanceImportRow[];
 };
 
 /** Keep workbook bytes local and submit only confirmed, versioned register rows online. */
 export function AttendanceImportPanel({
   run,
-  session,
-  rows,
-  onSaved,
+  register,
+  refreshRegister,
 }: {
   run: string;
-  session: string;
-  rows: AttendanceRow[];
-  onSaved: () => Promise<unknown>;
+  register: Pick<
+    AttendanceRegister,
+    "session_id" | "starts_at" | "ends_at" | "time_zone" | "rows"
+  >;
+  refreshRegister: () => Promise<unknown>;
 }) {
-  const { t } = useTranslation("learning");
+  const { t, i18n } = useTranslation("learning");
+  const { rows, time_zone: timeZone } = register;
   const id = useId();
   const online = useOnline();
   const [preview, setPreview] = useState<AttendanceImportRequest["p_rows"]>();
@@ -46,13 +53,15 @@ export function AttendanceImportPanel({
         "import_course_session_attendance",
         confirmed,
       );
-      if (error || data?.saved !== confirmed.p_rows.length)
+      if (error) throw error;
+      const receipt = attendanceImportReceiptSchema.safeParse(data);
+      if (!receipt.success || receipt.data.saved !== confirmed.p_rows.length)
         throw new Error("attendance_import_unconfirmed");
-      return Number(data.saved);
+      return receipt.data.saved;
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       setPreview(undefined);
-      await onSaved();
+      await refreshRegister();
     },
   });
 
@@ -66,9 +75,9 @@ export function AttendanceImportPanel({
     try {
       if (file.name.toLowerCase().endsWith(".xlsx")) {
         const workbook = await import("./attendance-xlsx");
-        setPreview(await workbook.readAttendanceXlsx(file, rows));
+        setPreview(await workbook.readAttendanceXlsx(file, rows, register));
       } else {
-        setPreview(await readAttendanceCsv(file, rows));
+        setPreview(await readAttendanceCsv(file, rows, register));
       }
     } catch (error) {
       setInvalidRow(error instanceof AttendanceImportError ? error.row : 1);
@@ -78,7 +87,7 @@ export function AttendanceImportPanel({
   }
 
   return (
-    <details>
+    <details className="attendance-import">
       <summary>{t("attendanceImport")}</summary>
       <p>{t("attendanceImportHelp")}</p>
       <a
@@ -110,10 +119,19 @@ export function AttendanceImportPanel({
       )}
       {preview && (
         <>
+          <p>
+            {t("attendanceImportSession", {
+              date: dateTime(register.starts_at, i18n.language, timeZone),
+              zone: timeZone,
+            })}
+          </p>
           <ul>
             {preview.map((entry) => (
               <li key={entry.user_id}>
-                {rows.find((row) => row.user_id === entry.user_id)?.name} ·{" "}
+                {rows
+                  .find((row) => row.user_id === entry.user_id)
+                  ?.name.trim() || t("attendanceUnnamedParticipant")}{" "}
+                · <code>{entry.user_id}</code> ·{" "}
                 {t(`attendance${entry.status}`)}
                 {entry.arrival_at && <> · {entry.arrival_at}</>}
                 {entry.departure_at && <> – {entry.departure_at}</>}
@@ -130,7 +148,7 @@ export function AttendanceImportPanel({
             onClick={() =>
               save.mutate({
                 p_run_id: run,
-                p_session_id: session,
+                p_session_id: register.session_id,
                 p_rows: preview,
               })
             }
@@ -143,7 +161,13 @@ export function AttendanceImportPanel({
         <Notice>{t("attendanceImportSaved", { count: save.data })}</Notice>
       )}
       {save.isError && (
-        <Notice kind="error">{t("attendanceImportFailed")}</Notice>
+        <Notice kind="error">
+          {t(
+            "code" in save.error && save.error.code === "PT409"
+              ? "attendanceImportChanged"
+              : "attendanceImportFailed",
+          )}
+        </Notice>
       )}
     </details>
   );

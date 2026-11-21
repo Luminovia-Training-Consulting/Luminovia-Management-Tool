@@ -358,13 +358,12 @@ export function AttendancePanel({
               ),
             )}
           </ul>
-          {!academy && query.data.rows.length > 0 && (
+          {canEdit && query.data.rows.length > 0 && (
             <AttendanceImportPanel
-              key={session}
+              key={`${actor}:${course.id}:${session}:${query.data.starts_at}:${query.data.ends_at}`}
               run={course.id}
-              session={session}
-              rows={query.data.rows}
-              onSaved={() =>
+              register={query.data}
+              refreshRegister={() =>
                 client.invalidateQueries({
                   queryKey: attendanceRegisterKey(actor, course.id, session),
                 })

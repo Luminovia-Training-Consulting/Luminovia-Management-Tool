@@ -123,6 +123,10 @@
   margin: 0;
 }
 
+.academy-attendance-register .attendance-import summary {
+  min-block-size: 44px;
+}
+
 @media (max-width: 600px) {
   .academy-draft-actions,
   .academy-attendance-register .attendance-actions {

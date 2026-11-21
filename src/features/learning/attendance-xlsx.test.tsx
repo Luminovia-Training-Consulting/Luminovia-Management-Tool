@@ -24,7 +24,7 @@ vi.mock("../../lib/online", () => ({
   useOnline: () => true,
 }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 
 const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -166,16 +166,21 @@ it("reviews the XLSX without uploading it, then submits only current versioned r
       if (!this.options) setOptions.call(this, options);
     },
   );
-  const onSaved = vi.fn(async () => {});
+  const refreshRegister = vi.fn(async () => {});
   rpc.mockResolvedValue({ data: { saved: 1 }, error: null });
   const client = new QueryClient();
   render(
     <QueryClientProvider client={client}>
       <AttendanceImportPanel
         run="run"
-        session="selected-session"
-        rows={roster}
-        onSaved={onSaved}
+        register={{
+          session_id: "selected-session",
+          starts_at: "2026-11-21T08:00:00Z",
+          ends_at: "2026-11-21T09:00:00Z",
+          time_zone: "Europe/Berlin",
+          rows: roster,
+        }}
+        refreshRegister={refreshRegister}
       />
     </QueryClientProvider>,
   );
@@ -187,11 +192,13 @@ it("reviews the XLSX without uploading it, then submits only current versioned r
     name: "attendanceImportConfirm",
   });
   expect(screen.getByText(/Current Roster Name/)).toBeVisible();
+  expect(screen.getByText("attendanceImportSession")).toBeVisible();
+  expect(screen.getByText("sample-learner")).toBeVisible();
   expect(screen.queryByText(/Untrusted file name/)).toBeNull();
   expect(rpc).not.toHaveBeenCalled();
 
   fireEvent.click(confirm);
-  await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+  await waitFor(() => expect(refreshRegister).toHaveBeenCalledOnce());
   expect(rpc).toHaveBeenCalledExactlyOnceWith(
     "import_course_session_attendance",
     {

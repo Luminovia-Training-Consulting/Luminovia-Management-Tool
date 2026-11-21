@@ -245,6 +245,10 @@ beforeEach(async () => {
           minutes: 60,
         };
         break;
+      case "import_course_session_attendance":
+        fake.attendanceVersion++;
+        data = { saved: 1 };
+        break;
       case "course_welcome_content":
         data = {
           version: 1,
@@ -338,7 +342,54 @@ it("opens the branded register deep link and reloads the exact server-confirmed 
       p_expected_version: 0,
     }),
   );
-  expect(document.querySelector('input[type="file"]')).toBeNull();
+  expect(screen.queryByLabelText(/attendance.*PDF/i)).toBeNull();
+  expect(screen.getByText("Import attendance from CSV or XLSX")).toBeVisible();
+});
+
+it("previews the exact branded session's CSV and imports it only on confirmation", async () => {
+  fake.registerAvailable = true;
+  open(`/courses/${id}/workspace#course-register`);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Import attendance from CSV or XLSX"),
+  );
+  const bytes = new TextEncoder().encode(
+    `user_id,name,status,arrival_at,departure_at,note,reason\n${learnerId},File name,present,,,Fictional import note,\n`,
+  );
+  const file = new File([bytes], "attendance.csv", { type: "text/csv" });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: async () => bytes.buffer,
+  });
+  await user.upload(screen.getByLabelText("Review CSV or XLSX file"), file);
+  const confirm = await screen.findByRole("button", {
+    name: "Confirm and save 1 change",
+  });
+  expect(screen.getByText(/Reviewed course session:/)).toBeVisible();
+  expect(screen.getByText(learnerId)).toBeVisible();
+  expect(screen.queryByText("File name")).toBeNull();
+  expect(
+    fake.rpc.mock.calls.some(
+      ([name]) => name === "import_course_session_attendance",
+    ),
+  ).toBe(false);
+  await user.click(confirm);
+  expect(await screen.findByText("Saved 1 change.")).toBeVisible();
+  expect(await screen.findByText("Current status: Present")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("import_course_session_attendance", {
+    p_run_id: id,
+    p_session_id: sessionId,
+    p_rows: [
+      {
+        user_id: learnerId,
+        status: "present",
+        arrival_at: null,
+        departure_at: null,
+        note: "Fictional import note",
+        reason: "",
+        expected_version: 0,
+      },
+    ],
+  });
 });
 
 it("opens the course hub without activating the full edition and reuses scoped active workspaces", async () => {

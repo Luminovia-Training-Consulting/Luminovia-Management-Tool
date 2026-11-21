@@ -182,7 +182,7 @@ it("allows only confirmed manual academy edits and blocks repeat submissions aft
   view(course, "active");
   expect(await screen.findByText("Fictional Learner")).toBeVisible();
   expect(screen.queryByLabelText("attendancePdfLabel")).toBeNull();
-  expect(document.querySelector('input[type="file"]')).toBeNull();
+  expect(screen.getByText("attendanceImport")).toBeVisible();
   await userEvent.click(
     screen.getByRole("button", { name: "attendancepresent" }),
   );
@@ -212,6 +212,7 @@ it("renders the register and its notes without academy writes during grace", asy
   expect(
     screen.queryByRole("button", { name: "attendancepresent" }),
   ).toBeNull();
+  expect(screen.queryByText("attendanceImport")).toBeNull();
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(document.querySelector('input[type="file"]')).toBeNull();
   expect(fake.save).not.toHaveBeenCalled();
@@ -224,6 +225,7 @@ it("does not offer dedicated register changes before the session starts", async 
   expect(
     screen.queryByRole("button", { name: "attendancepresent" }),
   ).toBeNull();
+  expect(screen.queryByText("attendanceImport")).toBeNull();
 });
 
 it("excludes participant-only viewers from the register", () => {
