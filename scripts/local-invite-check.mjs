@@ -5,6 +5,8 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {mkdirSync, writeFileSync} from "node:fs";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
 
@@ -91,6 +93,11 @@ const headers = {
     apikey: process.env.SUPABASE_ANON_KEY,
     Authorization: `Bearer ${session.access_token}`,
 };
+const invitationContract = portalOpenApi(url).paths["/functions/v1/invite-lecturer"].post;
+const requestSchema = z.fromJSONSchema(invitationContract.requestBody.content["application/json"].schema);
+const invitationBody = requestSchema.parse(body);
+const responseSchema = (status) =>
+    z.fromJSONSchema(invitationContract.responses[String(status)].content["application/json"].schema);
 const inviteUrl = `${url}/functions/v1/invite-lecturer`;
 const options = await fetch(inviteUrl, {
     method: "OPTIONS",
@@ -106,7 +113,7 @@ assert.ok(
 const response = await fetch(inviteUrl, {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(invitationBody),
 });
 const result = await response.json();
 assert.equal(
@@ -114,6 +121,7 @@ assert.equal(
     200,
     `Local invite function HTTP ${response.status}: ${JSON.stringify(result)}`,
 );
+responseSchema(response.status).parse(result);
 assert.equal(result.status, "sent");
 assert.ok(
     [headers.Origin, "*"].includes(
@@ -123,12 +131,20 @@ assert.ok(
 const retry = await fetch(inviteUrl, {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(invitationBody),
 });
 const retryResult = await retry.json();
 assert.equal(retry.status, 200);
+responseSchema(retry.status).parse(retryResult);
 assert.equal(retryResult.invitation_id, result.invitation_id);
 assert.ok(["sent", "already_sent"].includes(retryResult.status));
+const conflict = await fetch(inviteUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({...invitationBody, email: `duplicate-${email}`}),
+});
+assert.equal(conflict.status, 409);
+responseSchema(conflict.status).parse(await conflict.json());
 const listed = await checked(
     service.auth.admin.listUsers({perPage: 1000}),
     "Read invited user",
@@ -189,9 +205,10 @@ writeFileSync(
 const denied = await fetch(inviteUrl, {
     method: "POST",
     headers: {...headers, Origin: "https://untrusted.example.invalid"},
-    body: JSON.stringify(body),
+    body: JSON.stringify(invitationBody),
 });
 assert.equal(denied.status, 403);
+responseSchema(denied.status).parse(await denied.json());
 console.log(
     "PASS: actual local Edge runtime, password-only admin session, CORS preflight, durable invitation+lecturer role+profile, idempotent retry and exactly one Mailpit email with custom token-hash callback, denied untrusted origin. No real email sent.",
 );

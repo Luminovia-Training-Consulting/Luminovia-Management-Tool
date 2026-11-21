@@ -3525,7 +3525,98 @@ const paths: Record<string, Record<string, unknown>> = {
   },
 };
 
+const legacyInvitationResponse = (
+  description: string,
+  properties: Record<string, unknown>,
+  required = Object.keys(properties),
+) => ({
+  description,
+  content: json({ ...object(properties), required }),
+});
+
 const credentialPaths = {
+  "/functions/v1/invite-lecturer": {
+    post: {
+      operationId: "legacyInviteLecturer",
+      tags: ["Accounts"],
+      summary:
+        "Invite a subordinate lecturer through the compatibility endpoint",
+      description:
+        "Requires an approved origin, enabled local invitation delivery and current authority to invite the lecturer role. Send at most 2048 UTF-8 bytes with a stable retry key. Only sent confirms delivery during this call. Retry with the original key and do not send again while the result is uncertain. Prefer the current Accounts invitation operation for new clients.",
+      parameters: [
+        {
+          name: "Origin",
+          in: "header",
+          required: true,
+          schema: { ...text, format: "uri" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: json({
+          ...object({
+            email: { ...text, format: "email", maxLength: 254 },
+            display_name: { ...text, maxLength: 120 },
+            idempotency_key: uuid,
+          }),
+          required: ["email", "idempotency_key"],
+        }),
+      },
+      responses: {
+        "200": {
+          description: "Invitation outcome",
+          content: json({
+            oneOf: [
+              object({
+                status: { enum: ["sent", "already_sent", "failed"] },
+                invitation_id: uuid,
+              }),
+              {
+                ...object({
+                  status: { const: "in_progress" },
+                  invitation_id: uuid,
+                }),
+                required: ["status"],
+              },
+            ],
+          }),
+        },
+        "400": legacyInvitationResponse("Invalid invitation", {
+          error: { const: "invalid_request" },
+        }),
+        "401": legacyInvitationResponse("Authentication required", {
+          error: { const: "authentication_required" },
+        }),
+        "403": legacyInvitationResponse("Origin or authority refused", {
+          error: { enum: ["origin_not_allowed", "permission_required"] },
+        }),
+        "405": legacyInvitationResponse("Unsupported method", {
+          error: { const: "method_not_allowed" },
+        }),
+        "409": legacyInvitationResponse(
+          "Invitation request conflicts with the stored reservation",
+          { status: { const: "idempotency_conflict" }, invitation_id: uuid },
+          ["status"],
+        ),
+        "413": legacyInvitationResponse("Request exceeds 2048 bytes", {
+          error: { const: "request_too_large" },
+        }),
+        "429": legacyInvitationResponse("Invitation rate limit reached", {
+          status: { const: "throttled" },
+        }),
+        "502": legacyInvitationResponse(
+          "Delivery failed or could not be confirmed",
+          {
+            status: { const: "failed" },
+            invitation_id: uuid,
+          },
+        ),
+        "503": legacyInvitationResponse("Invitation delivery unavailable", {
+          error: { enum: ["invitations_disabled", "invitation_unavailable"] },
+        }),
+      },
+    },
+  },
   "/rest/v1/rpc/save_calendar_subscription": {
     post: {
       ...nativeDownloadPaths["/rest/v1/rpc/save_calendar_subscription"].post,
