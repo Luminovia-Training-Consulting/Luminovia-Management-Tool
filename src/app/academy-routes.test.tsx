@@ -34,6 +34,7 @@ const fake = vi.hoisted(() => ({
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
   administration: false,
+  draftScheduleRevision: 1,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -177,6 +178,7 @@ beforeEach(async () => {
   fake.publication = null;
   fake.publicationAttempts = 0;
   fake.administration = false;
+  fake.draftScheduleRevision = 1;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -318,6 +320,26 @@ beforeEach(async () => {
         break;
       case "academy_timetable":
         data = { rows: [], next: null };
+        break;
+      case "academy_save_draft_schedule":
+        fake.draftScheduleRevision++;
+        // The receipt retains the previously confirmed session ID.
+        data = {
+          revision: fake.draftScheduleRevision,
+          time_zone: "Australia/Brisbane",
+          delivery_type: "online",
+          venue: "Fictional venue update",
+          sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+        };
+        break;
+      case "academy_draft_schedule":
+        data = {
+          revision: fake.draftScheduleRevision,
+          time_zone: "Australia/Brisbane",
+          delivery_type: "online",
+          venue: "",
+          sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+        };
         break;
       case "academy_publish_course":
         fake.publicationAttempts++;
@@ -570,6 +592,31 @@ it("does not show administration or its navigation link to a learner", async () 
   expect(
     screen.queryByRole("button", { name: "Save organisation" }),
   ).not.toBeInTheDocument();
+});
+
+it("edits a draft schedule using its last confirmed revision and stable session ID", async () => {
+  fake.publication = { published: false, capacity: null };
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Edit draft schedule and venue", { exact: true }),
+  );
+  const venue = await screen.findByRole("textbox", {
+    name: "Venue (optional)",
+  });
+  await user.type(venue, "Fictional venue update");
+  await user.click(screen.getByRole("button", { name: "Save schedule" }));
+  expect(await screen.findByText("Schedule saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("academy_save_draft_schedule", {
+    p_course_id: id,
+    p_expected_revision: 1,
+    p_payload: {
+      time_zone: "Australia/Brisbane",
+      delivery_type: "online",
+      venue: "Fictional venue update",
+      sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+    },
+  });
 });
 
 it("confirms course publication online and retries the reviewed capacity", async () => {

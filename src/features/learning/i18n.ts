@@ -262,6 +262,25 @@ const pairs: Record<string, [string, string]> = {
   ],
   academyAddSession: ["Termin hinzufügen", "Add session"],
   academySaveDraft: ["Entwurf speichern", "Save draft"],
+  academyEditDraftSchedule: [
+    "Termine und Kursort bearbeiten",
+    "Edit draft schedule and venue",
+  ],
+  academyLockedDraftSchedule: [
+    "Der Terminplan ist nach der Zuweisung oder Freigabe festgelegt.",
+    "The schedule is locked after instructor assignment or publication.",
+  ],
+  academyDraftWallTimeHint: [
+    "Beginn und Ende gelten in dieser Zeitzone.",
+    "Starts and ends use this time zone.",
+  ],
+  academySaveDraftSchedule: ["Terminplan speichern", "Save schedule"],
+  academyDraftScheduleSaved: ["Terminplan gespeichert.", "Schedule saved."],
+  academyDraftScheduleFailed: [
+    "Der Terminplan wurde nicht gespeichert. Lade den aktuellen Stand und prüfe deine Eingaben.",
+    "The schedule was not saved. Reload the current schedule and check your changes.",
+  ],
+  academyReloadDraftSchedule: ["Terminplan neu laden", "Reload schedule"],
   academyDraftTimesInvalid: [
     "Prüfe die Zeitzone und die Beginn- und Endzeiten aller Termine.",
     "Check the time zone and the start and end of each session.",

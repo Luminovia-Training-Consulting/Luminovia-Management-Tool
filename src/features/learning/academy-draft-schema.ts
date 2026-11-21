@@ -25,3 +25,17 @@ export const academyDraftPayload = z.strictObject({
   venue: z.string().max(500),
   sessions: z.array(session).min(1).max(60),
 });
+
+export const academyDraftScheduleInput = academyDraftPayload.extend({
+  sessions: z
+    .array(session.extend({ id: z.uuid().nullable() }))
+    .min(1)
+    .max(60),
+});
+export const academyDraftScheduleReceipt = academyDraftPayload.extend({
+  revision: z.number().int().min(1),
+  sessions: z
+    .array(session.extend({ id: z.uuid() }))
+    .min(1)
+    .max(60),
+});

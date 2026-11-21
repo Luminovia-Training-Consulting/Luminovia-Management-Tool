@@ -111,7 +111,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, ...changes }))}::jsonb)`,
       );
     const choices = (who, orgSearch = "", templateSearch = "") =>
-      actor(who, `${gate(choicesPath)} select coalesce(public.academy_course_draft_options(${q(orgSearch)},${q(templateSearch)})::text,'null')`).then(JSON.parse);
+      actor(
+        who,
+        `${gate(choicesPath)} select coalesce(public.academy_course_draft_options(${q(orgSearch)},${q(templateSearch)})::text,'null')`,
+      ).then(JSON.parse);
     const draftPayload = {
       time_zone: payload.time_zone,
       delivery_type: payload.delivery_type,
@@ -119,8 +122,20 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       sessions,
     };
     const draftRequest = randomUUID();
-    const draft = (who, { id = draftRequest, company = org, chosen = null, title = "Fictional reusable workshop", body = draftPayload } = {}) =>
-      actor(who, `${gate(draftPath)} select public.academy_create_course_draft(${q(id)},${q(company)},${chosen === null ? "null" : q(chosen)},${title === null ? "null" : q(title)},${q(JSON.stringify(body))}::jsonb)`).then(JSON.parse);
+    const draft = (
+      who,
+      {
+        id = draftRequest,
+        company = org,
+        chosen = null,
+        title = "Fictional reusable workshop",
+        body = draftPayload,
+      } = {},
+    ) =>
+      actor(
+        who,
+        `${gate(draftPath)} select public.academy_create_course_draft(${q(id)},${q(company)},${chosen === null ? "null" : q(chosen)},${title === null ? "null" : q(title)},${q(JSON.stringify(body))}::jsonb)`,
+      ).then(JSON.parse);
 
     await assert.rejects(save(manager), /42501/);
     await assert.rejects(choices(manager), /42501/);
@@ -275,10 +290,21 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal(await sql("select count(*) from public.course_runs"), "1");
     assert.equal(await sql("select count(*) from public.course_sessions"), "2");
 
-    await renew({ release_commit: nextRelease, issued_at: date(-4), starts_at: date(-3) });
-    const specification = academyOpenApi("https://academy.example.invalid", { name: "Fictional Academy", installationId: installation, edition });
+    await renew({
+      release_commit: nextRelease,
+      issued_at: date(-4),
+      starts_at: date(-3),
+    });
+    const specification = academyOpenApi("https://academy.example.invalid", {
+      name: "Fictional Academy",
+      installationId: installation,
+      edition,
+    });
     const validateResponse = (path, data) => {
-      const schema = specification.paths["/rest/v1" + path].post.responses["200"].content["application/json"].schema;
+      const schema =
+        specification.paths["/rest/v1" + path].post.responses["200"].content[
+          "application/json"
+        ].schema;
       assert.equal(z.fromJSONSchema(schema).safeParse(data).success, true);
     };
     const catalogue = await choices(manager, "academy", "workshop");
@@ -287,7 +313,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       templates: [{ id: template, title: "Fictional Workshop" }],
     });
     validateResponse(choicesPath, catalogue);
-    assert.deepEqual(await choices(manager, "%", "%"), { organisations: [], templates: [] });
+    assert.deepEqual(await choices(manager, "%", "%"), {
+      organisations: [],
+      templates: [],
+    });
     for (const user of [learner, teacher]) {
       assert.equal(await choices(user), null);
       await assert.rejects(draft(user), /42501/);
@@ -295,24 +324,141 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(actor(manager, gate(choicesPath, "GET")), /42501/);
     await assert.rejects(draft(manager, { company: archivedOrg }), /22023/);
     await assert.rejects(draft(manager, { chosen: template }), /22023/);
-    await assert.rejects(draft(manager, { chosen: archivedTemplate, title: null }), /22023/);
-    await assert.rejects(draft(manager, { body: { ...draftPayload, sessions: [sessions[0], sessions[0]] } }), /22023/);
-    assert.equal(await sql("select count(*) from public.course_templates where title='Fictional reusable workshop'"), "0");
-    assert.equal(await sql("select count(*) from private.academy_course_draft_requests"), "0");
+    await assert.rejects(
+      draft(manager, { chosen: archivedTemplate, title: null }),
+      /22023/,
+    );
+    await assert.rejects(
+      draft(manager, {
+        body: { ...draftPayload, sessions: [sessions[0], sessions[0]] },
+      }),
+      /22023/,
+    );
+    assert.equal(
+      await sql(
+        "select count(*) from public.course_templates where title='Fictional reusable workshop'",
+      ),
+      "0",
+    );
+    assert.equal(
+      await sql("select count(*) from private.academy_course_draft_requests"),
+      "0",
+    );
     const [first, repeat] = await Promise.all([draft(manager), draft(manager)]);
     assert.deepEqual(repeat, first);
     validateResponse(draftPath, first);
-    assert.equal(await sql("select count(*) from public.course_templates where title='Fictional reusable workshop'"), "1");
-    assert.equal(await sql(`select count(*) from public.course_sessions where course_run_id=${q(first.course_run_id)}`), "2");
-    await assert.rejects(draft(manager, { title: "Changed request title" }), /PT409/);
-    const fromExisting = await draft(manager, { id: randomUUID(), chosen: first.template_id, title: null });
+    assert.equal(
+      await sql(
+        "select count(*) from public.course_templates where title='Fictional reusable workshop'",
+      ),
+      "1",
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from public.course_sessions where course_run_id=${q(first.course_run_id)}`,
+      ),
+      "2",
+    );
+    await assert.rejects(
+      draft(manager, { title: "Changed request title" }),
+      /PT409/,
+    );
+    const fromExisting = await draft(manager, {
+      id: randomUUID(),
+      chosen: first.template_id,
+      title: null,
+    });
     assert.notEqual(fromExisting.course_run_id, first.course_run_id);
     assert.equal(fromExisting.template_id, first.template_id);
-    await sql(`update public.course_runs set archived_at=now() where id=${q(first.course_run_id)}`);
+    const schedulePath = "/rpc/academy_draft_schedule";
+    const revisePath = "/rpc/academy_save_draft_schedule";
+    const schedule = (who = manager, course = first.course_run_id) =>
+      actor(
+        who,
+        `${gate(schedulePath)} select coalesce(public.academy_draft_schedule(${q(course)})::text,'null')`,
+      ).then(JSON.parse);
+    const revise = (who, revision, changes) =>
+      actor(
+        who,
+        `${gate(revisePath)} select public.academy_save_draft_schedule(${q(first.course_run_id)},${revision},${q(JSON.stringify(changes))}::jsonb)`,
+      ).then(JSON.parse);
+    const original = await schedule();
+    validateResponse(schedulePath, original);
+    assert.equal(original.revision, 1);
+    const foreignSession = (await schedule(manager, fromExisting.course_run_id))
+      .sessions[0];
+    const change = {
+      time_zone: "Australia/Brisbane",
+      venue: "Fictional workshop room",
+      delivery_type: "onsite",
+      sessions: [
+        {
+          id: original.sessions[0].id,
+          starts_at: "2028-07-14T08:00:00+10:00",
+          ends_at: "2028-07-14T09:00:00+10:00",
+        },
+        {
+          id: null,
+          starts_at: "2028-07-14T10:00:00+10:00",
+          ends_at: "2028-07-14T11:00:00+10:00",
+        },
+      ],
+    };
+    await assert.rejects(schedule(learner), /42501/);
+    await assert.rejects(revise(teacher, 1, change), /42501/);
+    await assert.rejects(
+      revise(manager, 1, { ...change, sessions: [foreignSession] }),
+      /22023/,
+    );
+    await assert.rejects(
+      revise(manager, 1, {
+        ...change,
+        sessions: [change.sessions[0], change.sessions[0]],
+      }),
+      /22023/,
+    );
+    assert.deepEqual(await schedule(), original);
+    const [updated, retry] = await Promise.all([
+      revise(manager, 1, change),
+      revise(manager, 1, change),
+    ]);
+    assert.deepEqual(retry, updated);
+    assert.equal(updated.revision, 2);
+    assert.equal(updated.sessions[0].id, original.sessions[0].id);
+    assert.notEqual(updated.sessions[1].id, original.sessions[1].id);
+    assert.equal(
+      Date.parse(updated.sessions[1].starts_at),
+      Date.parse(change.sessions[1].starts_at),
+    );
+    validateResponse(revisePath, updated);
+    await assert.rejects(
+      revise(manager, 1, { ...change, venue: "Conflicting room" }),
+      /PT409/,
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from public.audit_events where action='academy.course.schedule_updated' and resource_id=${q(first.course_run_id)}`,
+      ),
+      "1",
+    );
+    await sql(
+      `update public.course_runs set published=true where id=${q(first.course_run_id)}`,
+    );
+    assert.equal(await schedule(), null);
+    await assert.rejects(revise(manager, 2, change), /PT409/);
+    assert.equal(
+      await sql(
+        `select venue from public.course_runs where id=${q(first.course_run_id)}`,
+      ),
+      change.venue,
+    );
+    await sql(
+      `update public.course_runs set archived_at=now() where id=${q(first.course_run_id)}`,
+    );
     await assert.rejects(draft(manager), /PT409/);
     assert.equal(await sql("select count(*) from public.jobs"), "0");
     console.log(
-      `PASS ${edition} course and atomic draft sessions, template reuse, exact retry and scope, locked release, grace and expiry`,
+      `PASS ${edition} course creation and draft edits, stable session IDs, template reuse, exact retries, publication lock, grace and expiry`,
     );
   });
 }

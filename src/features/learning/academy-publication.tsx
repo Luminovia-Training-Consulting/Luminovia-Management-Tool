@@ -7,6 +7,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { courseHubQuery } from "./api";
+import { AcademyDraftSchedule } from "./academy-draft-schedule";
 import {
   academyCourseCapacity,
   academyCoursePublication,
@@ -79,6 +80,9 @@ export function AcademyCoursePublication({
       {publication.data?.published === false && (
         <>
           <p>{t("academyUnpublishedCourse")}</p>
+          {!readOnly && (
+            <AcademyDraftSchedule courseId={courseId} actor={actor} />
+          )}
           {!readOnly && (
             <form
               onSubmit={(event) => {

@@ -4,6 +4,8 @@ import {
   academyDraftOptions,
   academyDraftPayload,
   academyDraftReceipt,
+  academyDraftScheduleInput,
+  academyDraftScheduleReceipt,
 } from "../learning/academy-draft-schema.ts";
 import {
   academyCourseCapacity,
@@ -451,6 +453,27 @@ const coursePaths = {
     z.toJSONSchema(academyDraftReceipt),
     true,
   ),
+  "/rest/v1/rpc/academy_draft_schedule": courseOperation(
+    "readAcademyDraftSchedule",
+    "Read the latest editable draft schedule",
+    "Requires current course management. Returns null when the course has been published or assigned, or has enrolment or attendance records.",
+    "active",
+    record({ p_course_id: uuid }),
+    z.toJSONSchema(academyDraftScheduleReceipt.nullable()),
+  ),
+  "/rest/v1/rpc/academy_save_draft_schedule": courseOperation(
+    "saveAcademyDraftSchedule",
+    "Update an unallocated course draft schedule and venue",
+    "Supply the last-read revision and the complete set of one to sixty non-overlapping sessions with explicit UTC offsets. Existing entries keep their session IDs. Null IDs create new sessions. Stale or allocated courses return 409. Repeating the previous successful revision with identical contents returns the confirmed schedule.",
+    "active",
+    record({
+      p_course_id: uuid,
+      p_expected_revision: { type: "integer", minimum: 1 },
+      p_payload: z.toJSONSchema(academyDraftScheduleInput),
+    }),
+    z.toJSONSchema(academyDraftScheduleReceipt),
+    true,
+  ),
   "/rest/v1/rpc/academy_course_publication": courseOperation(
     "readAcademyCoursePublication",
     "Read the draft or published course state",
@@ -729,7 +752,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.14.0",
+      version: "1.15.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

@@ -45,6 +45,8 @@ const administrationPaths = [
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
+  "/rest/v1/rpc/academy_draft_schedule",
+  "/rest/v1/rpc/academy_save_draft_schedule",
 ] as const;
 
 for (const edition of ["customer-self-hosted", "customer-managed"] as const) {

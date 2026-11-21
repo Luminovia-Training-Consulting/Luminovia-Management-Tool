@@ -55,6 +55,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/remove_course_exam_pdf",
             "/rest/v1/rpc/academy_course_draft_options",
             "/rest/v1/rpc/academy_create_course_draft",
+            "/rest/v1/rpc/academy_draft_schedule",
+            "/rest/v1/rpc/academy_save_draft_schedule",
             "/rest/v1/rpc/academy_course_publication",
             "/rest/v1/rpc/academy_publish_course",
             "/rest/v1/rpc/academy_learning_action",
