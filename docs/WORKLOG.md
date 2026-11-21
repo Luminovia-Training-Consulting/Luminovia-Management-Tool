@@ -1,3 +1,13 @@
+# 22 November 2026 — Scoped LMS integrations and full verification
+
+The portal and both Academy editions issue separate organisation keys for the published course index, confirmed learner enrolment and aggregate participation reports. Rotation preserves scope. Enrolment reuses the normal course transaction, audit and participant chat synchronization. A repeated request returns the existing enrolment and cannot undo a removal or completion. Internal Premium OFF denies the new operations. Dedicated requests require the active course profile and licence.
+
+Real Docker Edge and REST passed enrolment and reporting, tenant denial, Premium OFF, concurrent replay, manual removal and key rotation/revocation with fixture cleanup. Both Academy databases passed the matching service-dispatch and issuer-role checks. The signed release verifier accepts the exact archived 1.28 catalogue and validates the new output. Current catalogues contain 366 internal and 85 Academy paths per dedicated edition.
+
+The integrated transport tests matched live HTTP to the published document and file contracts. A connected learner lost room events, history and previously accessible file bytes after withdrawal while the teacher continued to receive events. The Academy's signed worker now displays its own short name in push notifications. Native desktop and mobile Chromium received a synthetic notification from each built edition and used the expected brand and icon.
+
+The source audit removed unused route relays, an indirect component import and an unreachable invitation-fixture path. The local readiness checks require direct responses from the owned listener. The Academy ingress fixture now uses its own trusted loopback TLS peer and exact allowed routes. Hosted CI had completed successfully on `3a090225` before these changes, with both browser lanes, native retained-data and System verification. Current-source CI is dispatched with publication disabled.
+
 # 22 November 2026 — Local Docker, API and Academy acceptance
 
 The canonical `./portal test --phase system` passed on signed revision `67502ec0` in the isolated Debian Docker guest. It ran 1,431 unit and component tests, 25 base PostgreSQL/RLS checks with 50 genuinely concurrent requests, 155 additional SQL suites and 58 live API suites. The runner verified clean and quarantined files with ClamAV, exact Storage bytes, stop/start retention, current role boundaries, the two login identifiers, password recovery and delivery through local Mailpit. Cleanup passed. The host exposes the private guest Docker daemon through the `luminovia-qa` context.
