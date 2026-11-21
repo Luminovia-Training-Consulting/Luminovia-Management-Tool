@@ -140,6 +140,8 @@ function infrastructurePlan(config) {
   const redirects = [site + "/auth/callback", site + "/auth/password"];
   const verifyPath =
     new URL(api).pathname.replace(/\/$/, "") + "/auth/v1/verify";
+  const storageNamespace =
+    "academy-" + config.installation_id.replaceAll("-", "");
   return {
     site,
     api,
@@ -163,7 +165,8 @@ function infrastructurePlan(config) {
       MAILER_URLPATHS_EMAIL_CHANGE: verifyPath,
       SMTP_ADMIN_EMAIL: config.smtp.sender_email,
       SMTP_SENDER_NAME: config.smtp.sender_name,
-      STORAGE_TENANT_ID: "academy-" + config.installation_id,
+      GLOBAL_S3_BUCKET: storageNamespace + "-files",
+      STORAGE_TENANT_ID: storageNamespace,
       REGION: config.data_region,
     },
   };

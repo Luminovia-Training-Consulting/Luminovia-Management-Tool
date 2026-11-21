@@ -751,6 +751,10 @@ test("derives a tenant-specific staging handoff for the exact active browser rel
   assert.equal(plan.infrastructure.time_zone, "Asia/Kathmandu");
   assert.equal(plan.environment.REGION, config.data_region);
   assert.equal(plan.environment.PORTAL_DATA_DIR, config.data_directory);
+  const storageNamespace =
+    "academy-" + metadata.installationId.replaceAll("-", "");
+  assert.equal(plan.environment.STORAGE_TENANT_ID, storageNamespace);
+  assert.equal(plan.environment.GLOBAL_S3_BUCKET, storageNamespace + "-files");
   assert.equal(plan.environment.PORTAL_BACKEND_NETWORK, config.backend_network);
   assert.equal(plan.environment.PORTAL_INVITES_ENABLED, "false");
   assert.equal(plan.environment.PORTAL_WEBSITE_ENQUIRIES_ENABLED, "false");

@@ -65,6 +65,8 @@ function requireMatchingRuntime(root, config, identity, runtime, browser) {
     PORTAL_WWW_DIR: identity.browser_directory,
     PORTAL_APP_ORIGIN: identity.portal_origin,
     PORTAL_DOMAIN: new URL(identity.portal_origin).hostname,
+    GLOBAL_S3_BUCKET: identity.compose_project + "-files",
+    STORAGE_TENANT_ID: identity.compose_project,
     SUPABASE_PUBLIC_URL: identity.api_base_url,
     SITE_URL: identity.portal_origin,
     API_EXTERNAL_URL: identity.api_base_url + "/auth/v1",

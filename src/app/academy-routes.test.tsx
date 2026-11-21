@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -574,9 +575,11 @@ it("creates an academy draft from the selected company and preserves its request
     await screen.findByText(/The course draft could not be confirmed/),
   ).toBeVisible();
   await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
-  expect(
-    await screen.findByRole("heading", { name: "Fictional course room" }),
-  ).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.getByRole("heading", { name: "Fictional course room" }),
+    ).toBeVisible(),
+  );
   const writes = fake.rpc.mock.calls
     .filter(([name]) => name === "academy_create_course_draft")
     .map(([, data]) => data);

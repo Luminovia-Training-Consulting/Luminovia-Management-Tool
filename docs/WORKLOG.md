@@ -4,6 +4,8 @@ Both dedicated editions enforce signed seat limits across account reservation an
 
 The private Mailpit override points GoTrue invitation and recovery mail at the local capture mailbox. Both editions passed through the image-pinned GoTrue and Mailpit binaries with the rendered capture settings. Both fictional messages used that academy's own verification origin and path. Provider delivery, public DNS and full independent Compose deployment remain acceptance steps.
 
+Both built licence panels passed in Chromium at 1,440, Pixel 7 and 320 pixels with native Auth and REST. The browser verified active and grace status, current occupancy, a German dark layout and removal of the licence panel after an administrator lost authority. The signed 1.21 catalogue now has 44 scoped operations. The isolated E2E release package check accepted both editions and the 75-request TLS ingress test.
+
 # 21 November 2026 — Signed API allowance and private database target
 
 The dedicated ingress profile translates the signed per-installation API allowance into a local Envoy bucket. Browser files and internal health, Auth and database communication remain outside that public quota. The image-pinned Caddy 2.11.9 and Envoy 1.40.2 accepted the same check for both exact compiled `74f23362` browser releases. All 102 static files per edition matched their signed SHA-256. With a 75-request fictional licence the next public API request returned HTTP 429 and `Retry-After`, while the browser shell and maintenance fence stayed reachable.
