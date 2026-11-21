@@ -100,6 +100,11 @@ import {
   preparationSchema,
   teachingDaySchema,
 } from "../dashboard/personal-schema.ts";
+import {
+  qualificationCertificatePage,
+  qualificationHistoryPage,
+  qualificationReviewSchema,
+} from "../qualifications/schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -545,6 +550,28 @@ const jobBriefingResult = object({
   can_manage: boolean,
   can_edit: boolean,
 });
+
+const qualificationTarget = { p_user_id: uuid, p_topic_id: uuid };
+const qualificationPage = {
+  p_before_at: { ...nullableDateTime, default: null },
+  p_before_id: { ...nullableUuid, default: null },
+  p_limit: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+};
+const qualificationReview = z.toJSONSchema(qualificationReviewSchema);
+const taxonomyKinds = ["topic", "tool", "language"];
+const taxonomyFields = {
+  label_de: { ...text, minLength: 1, maxLength: 120 },
+  label_en: { ...text, minLength: 1, maxLength: 120 },
+  kind: { enum: taxonomyKinds },
+  parent_id: nullableUuid,
+  aliases: {
+    type: "array",
+    maxItems: 20,
+    items: { ...text, minLength: 1, maxLength: 120 },
+  },
+  description_de: { ...text, maxLength: 4000 },
+  description_en: { ...text, maxLength: 4000 },
+};
 
 const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
@@ -1646,6 +1673,108 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/qualification_review": rpc(
+    "readLecturerQualificationReview",
+    "Qualifications",
+    "Read a lecturer's selected qualification and current evidence",
+    "Requires the lecturer's own account or current qualification review authority. The exact shared scanned version is returned when its grant remains current. Downloads recheck evidence authority.",
+    qualificationTarget,
+    qualificationReview,
+  ),
+  "/rest/v1/rpc/save_qualification_evidence": rpc(
+    "saveOwnQualificationEvidence",
+    "Qualifications",
+    "Share or withdraw a clean certificate version for a selected topic",
+    "Requires the current lecturer's own selected topic and own scanned certificate. Pass null for the version ID to withdraw. Use the last-read qualification version and repeat an unchanged request with the same request ID.",
+    {
+      p_topic_id: uuid,
+      p_version_id: nullableUuid,
+      p_expected_version: version,
+      ...idempotency,
+    },
+    qualificationReview,
+  ),
+  "/rest/v1/rpc/attest_qualification": rpc(
+    "attestLecturerQualification",
+    "Qualifications",
+    "Record a current qualification decision",
+    "Requires qualification verification authority and a topic selected by the lecturer. A verified decision may reference the current shared evidence or use management attestation. Use a future timestamp or null for expiry. Pass the current version and a request ID.",
+    {
+      ...qualificationTarget,
+      p_verified: boolean,
+      p_valid_until: nullableDateTime,
+      p_evidence_id: nullableUuid,
+      p_expected_version: version,
+      ...idempotency,
+    },
+    qualificationReview,
+  ),
+  "/rest/v1/rpc/own_qualification_certificates": rpc(
+    "readOwnQualificationCertificates",
+    "Qualifications",
+    "List the current lecturer's scanned private certificate versions",
+    "Optional search matches the file name. For another page send both parts of the returned cursor with the same filters. The operation excludes deleted, unscanned and foreign certificates.",
+    {
+      p_search: { ...text, maxLength: 160, default: "" },
+      ...qualificationPage,
+    },
+    z.toJSONSchema(qualificationCertificatePage),
+    ["p_search", ...Object.keys(qualificationPage)],
+  ),
+  "/rest/v1/rpc/qualification_history": rpc(
+    "readQualificationHistory",
+    "Qualifications",
+    "Read the qualification's recorded evidence and decisions",
+    "Requires the lecturer's own account or current qualification review authority. For another page send both parts of the returned cursor. The result records evidence changes and attestation decisions.",
+    { ...qualificationTarget, ...qualificationPage },
+    z.toJSONSchema(qualificationHistoryPage),
+    Object.keys(qualificationPage),
+  ),
+  "/rest/v1/rpc/taxonomy_catalogue": rpc(
+    "readCourseTaxonomyCatalogue",
+    "Courses",
+    "Read the searchable topic, tool and language catalogue",
+    "Requires an active account. Archived entries require taxonomy management authority. Each topic includes only course templates that the caller may read.",
+    {
+      p_search: { type: ["string", "null"], maxLength: 120, default: "" },
+      p_kind: { enum: ["", ...taxonomyKinds], default: "" },
+      p_include_archived: { ...boolean, default: false },
+    },
+    {
+      type: "array",
+      maxItems: 500,
+      items: object({
+        ...taxonomyFields,
+        id: uuid,
+        archived_at: nullableDateTime,
+        version: { ...version, minimum: 1 },
+        related_courses: {
+          type: "array",
+          items: object({ id: uuid, title: text }),
+        },
+      }),
+    },
+    ["p_search", "p_kind", "p_include_archived"],
+  ),
+  "/rest/v1/rpc/save_taxonomy_topic": rpc(
+    "saveCourseTaxonomyTopic",
+    "Courses",
+    "Create or revise a topic, tool or language",
+    "Requires current taxonomy management authority. To create an entry, send null for the ID and version zero. To update, send the last-read version. The server verifies hierarchy, active parents and unique labels.",
+    {
+      p_id: nullableUuid,
+      p_payload: {
+        ...object({
+          ...taxonomyFields,
+          parent_id: { anyOf: [nullableUuid, { const: "" }] },
+        }),
+        required: ["label_de", "label_en", "kind"],
+      },
+      p_version: { ...version, default: 0 },
+    },
+    uuid,
+    ["p_version"],
+  ),
   "/rest/v1/rpc/knowledge_access": rpc(
     "readKnowledgeAccess",
     "Knowledge",
@@ -1716,6 +1845,84 @@ const nativePaths = {
       type: "array",
       maxItems: 20,
       items: object({ id: uuid, version_id: uuid, name: text }),
+    },
+  ),
+  "/rest/v1/rpc/forum_thread": rpc(
+    "readStaffForumThread",
+    "Knowledge",
+    "Read the current staff discussion",
+    "Requires current staff forum access. Includes the caller's subscription state, current moderation flags and the metadata version needed for a reviewed edit.",
+    { p_id: uuid },
+    object({
+      id: uuid,
+      title: text,
+      category_id: uuid,
+      category_label_de: text,
+      category_label_en: text,
+      owner_id: uuid,
+      owner_name: text,
+      locked: boolean,
+      pinned: boolean,
+      archived: boolean,
+      accepted_post_id: nullableUuid,
+      post_count: { type: "integer", minimum: 0 },
+      subscribed: boolean,
+      created_at: sessionInstant,
+      updated_at: sessionInstant,
+      metadata_version: wikiVersion,
+    }),
+  ),
+  "/rest/v1/rpc/forum_posts": rpc(
+    "readStaffForumPosts",
+    "Knowledge",
+    "Read the visible staff discussion posts",
+    "Requires access to the thread. Posts are ordered oldest first. A removed post has a deletion timestamp and a blank structured document.",
+    { p_thread_id: uuid },
+    {
+      type: "array",
+      maxItems: 500,
+      items: object({
+        id: uuid,
+        thread_id: uuid,
+        author_id: uuid,
+        author_name: text,
+        content: knowledgeDocument,
+        created_at: sessionInstant,
+        edited_at: nullableDateTime,
+        deleted_at: nullableDateTime,
+        version: wikiVersion,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/create_forum_thread": rpc(
+    "createStaffForumThread",
+    "Knowledge",
+    "Start a staff discussion",
+    "Requires a current staff account and an active forum category. The structured first post must contain text. The current author is subscribed automatically.",
+    {
+      p_category_id: uuid,
+      p_title: { ...text, minLength: 1, maxLength: 200 },
+      p_content: knowledgeDocument,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/add_forum_post": rpc(
+    "addStaffForumPost",
+    "Knowledge",
+    "Reply to a staff discussion",
+    "Requires an accessible discussion that is open for posting. The structured reply must contain text. Repeat an unchanged reply to the same thread with the original client ID.",
+    { p_thread_id: uuid, p_content: knowledgeDocument, p_client_id: uuid },
+    uuid,
+  ),
+  "/rest/v1/rpc/edit_forum_post": voidRpc(
+    "editOwnStaffForumPost",
+    "Knowledge",
+    "Save a new revision of an authored discussion post",
+    "Requires the author's own visible post in an open thread. Pass its last-read version. The edited document must contain text.",
+    {
+      p_post_id: uuid,
+      p_content: knowledgeDocument,
+      p_expected_version: wikiVersion,
     },
   ),
   "/rest/v1/rpc/job_briefing": rpc(

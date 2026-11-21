@@ -1,57 +1,15 @@
 import { queryOptions } from "@tanstack/react-query";
-import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import {
+  qualificationCertificatePage,
+  qualificationHistoryPage,
+  qualificationReviewSchema,
+  type Cursor,
+} from "./schema";
 
-const uuid = z.string().uuid();
-const instant = z.string().datetime({ offset: true });
-const hash = z.string().regex(/^[0-9a-f]{64}$/);
-const evidence = z.object({
-  id: uuid,
-  version_id: uuid,
-  document_id: uuid,
-  name: z.string(),
-  sha256: hash,
-  created_at: instant,
-});
-const reviewSchema = z.object({
-  user_id: uuid,
-  topic_id: uuid,
-  version: z.number().int().nonnegative(),
-  verified: z.boolean(),
-  valid_until: instant.nullable(),
-  evidence: evidence.nullable(),
-});
-const certificate = z.object({
-  version_id: uuid,
-  document_id: uuid,
-  name: z.string(),
-  sha256: hash,
-  version: z.number().int().positive(),
-  created_at: instant,
-});
-const event = z.object({
-  id: uuid,
-  action: z.enum(["bind", "withdraw", "deselect", "attest"]),
-  version: z.number().int().positive(),
-  evidence_id: uuid.nullable(),
-  verified: z.boolean().nullable(),
-  valid_until: instant.nullable(),
-  basis: z.enum(["management_attestation", "document_evidence"]).nullable(),
-  created_at: instant,
-  actor_name: z.string().nullable(),
-});
-const cursorSchema = z.object({ at: instant, id: uuid });
-const page = <T extends z.ZodType>(item: T) =>
-  z
-    .object({
-      items: z.array(item),
-      has_more: z.boolean(),
-      next_cursor: cursorSchema.nullable(),
-    })
-    .refine((value) => value.has_more === (value.next_cursor !== null));
-export type Cursor = z.infer<typeof cursorSchema>;
-export type Certificate = z.infer<typeof certificate>;
+export type { Certificate, Cursor } from "./schema";
+
 export const qualificationKey = (actor: string, user: string, topic: string) =>
   ["qualification", actor, user, topic] as const;
 
@@ -68,7 +26,7 @@ export function qualificationReviewQuery(
         p_topic_id: topic,
       });
       if (error) throw error;
-      return reviewSchema.parse(data);
+      return qualificationReviewSchema.parse(data);
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -90,7 +48,7 @@ export function certificatesQuery(
         p_limit: 20,
       });
       if (error) throw error;
-      return page(certificate).parse(data);
+      return qualificationCertificatePage.parse(data);
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -114,7 +72,7 @@ export function qualificationHistoryQuery(
         p_limit: 20,
       });
       if (error) throw error;
-      return page(event).parse(data);
+      return qualificationHistoryPage.parse(data);
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -135,7 +93,7 @@ export async function saveEvidence(
     p_request_id: request,
   });
   if (error) throw error;
-  return reviewSchema.parse(data);
+  return qualificationReviewSchema.parse(data);
 }
 
 export async function attestEvidence(
@@ -157,7 +115,7 @@ export async function attestEvidence(
     p_request_id: request,
   });
   if (error) throw error;
-  return reviewSchema.parse(data);
+  return qualificationReviewSchema.parse(data);
 }
 
 export function qualificationDenied(error: unknown) {

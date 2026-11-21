@@ -1,6 +1,8 @@
 /** Real PostgreSQL exact-version grants, legacy history, ownership and lock races. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
@@ -49,12 +51,25 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
         foreign = await document(peer),
         cv = await document(teacher, "cv"),
         rejected = await document(teacher, "certificate", "rejected");
+    const {paths} = portalOpenApi("https://portal.example.invalid");
+    const schema = (name) => z.fromJSONSchema(
+        paths[`/rest/v1/rpc/${name}`].post.responses["200"].content["application/json"].schema,
+    );
+    const parse = (name) => {
+        const response = schema(name);
+        return (data) => response.parse(JSON.parse(data));
+    };
+    const recordResponse = parse("qualification_review");
+    const saveResponse = parse("save_qualification_evidence");
+    const attestResponse = parse("attest_qualification");
+    const historyResponse = parse("qualification_history");
+    const certificatesResponse = parse("own_qualification_certificates");
     const record = (who = teacher, t = topic) =>
         actor(
             who,
             `select public.qualification_review(${q(teacher)},${q(t)})`,
             "aal1",
-        ).then(JSON.parse);
+        ).then(recordResponse);
     const save = (
         version,
         expected,
@@ -65,7 +80,7 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
         actor(
             who,
             `select public.save_qualification_evidence(${q(t)},${version ? q(version) : "null"},${expected},${q(key)})`,
-        ).then(JSON.parse);
+        ).then(saveResponse);
     const access = (id, who = manager, aal = "aal1") =>
         actor(
             who,
@@ -77,13 +92,13 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
             who,
             `select public.attest_qualification(${q(teacher)},${q(topic)},true,'2045-01-01T00:00Z',${evidence ? q(evidence) : "null"},${expected},${q(key)})`,
             "aal1",
-        ).then(JSON.parse);
+        ).then(attestResponse);
     const history = (who = manager, limit = 20, cursor = null) =>
         actor(
             who,
             `select public.qualification_history(${q(teacher)},${q(topic)},${cursor ? q(cursor.at) : "null"},${cursor ? q(cursor.id) : "null"},${limit})`,
             "aal1",
-        ).then(JSON.parse);
+        ).then(historyResponse);
     const check = async (name, run) => {
         await run();
         checks++;
@@ -131,7 +146,7 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
                 ),
                 "1",
             );
-            const page = JSON.parse(
+            const page = certificatesResponse(
                 await actor(
                     teacher,
                     `select public.own_qualification_certificates('Original',null,null,1)`,

@@ -75,13 +75,21 @@ const wikiPage = resultSchema("wiki_page");
 const wikiReceipt = resultSchema("save_wiki_page");
 const wikiHistory = resultSchema("wiki_page_history");
 const knowledgeAccess = resultSchema("knowledge_access");
+const forumPosts = resultSchema("forum_posts");
+const forumThread = resultSchema("forum_thread");
+const forumThreadReceipt = resultSchema("create_forum_thread");
+const forumPostReceipt = resultSchema("add_forum_post");
 /** Calls the public RPC as the test identity and returns its scalar database value. */
 const value = (id, fn, args = [], aal) =>
     actor(
         id,
         `select public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
         aal,
-    );
+    ).then((wire) => {
+        if (fn === "create_forum_thread") return forumThreadReceipt.parse(wire);
+        if (fn === "add_forum_post") return forumPostReceipt.parse(wire);
+        return wire;
+    });
 /** Aggregates public RPC rows into JSON under the checked caller identity. */
 const rows = (id, fn, args = [], aal) =>
     actor(
@@ -90,7 +98,9 @@ const rows = (id, fn, args = [], aal) =>
         aal,
     ).then((wire) => {
         const payload = JSON.parse(wire);
-        return fn === "wiki_page_history" ? wikiHistory.parse(payload) : payload;
+        if (fn === "wiki_page_history") return wikiHistory.parse(payload);
+        if (fn === "forum_posts") return forumPosts.parse(payload);
+        return payload;
     });
 const a = randomUUID(),
     b = randomUUID(),
@@ -444,7 +454,7 @@ try {
             );
             await value(a, "accept_forum_answer", [thread, reply]);
             assert.equal(
-                JSON.parse(await value(b, "forum_thread", [thread])).accepted_post_id,
+                forumThread.parse(JSON.parse(await value(b, "forum_thread", [thread]))).accepted_post_id,
                 reply,
             );
             const other = await value(b, "create_forum_thread", [
@@ -522,7 +532,7 @@ try {
                 content: [{type: "paragraph"}],
             });
             assert.equal(
-                JSON.parse(await value(a, "forum_thread", [thread])).accepted_post_id,
+                forumThread.parse(JSON.parse(await value(a, "forum_thread", [thread]))).accepted_post_id,
                 null,
             );
             assert.equal(
@@ -598,7 +608,7 @@ try {
                 "aal1",
             );
             assert.equal(
-                JSON.parse(await value(b, "forum_thread", [thread])).archived,
+                forumThread.parse(JSON.parse(await value(b, "forum_thread", [thread]))).archived,
                 false,
             );
         },

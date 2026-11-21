@@ -1,6 +1,8 @@
 /** Real temporary PostgreSQL checks. Native Auth is covered separately. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {applyPasswordOnlyPermissionPolicy, quoteSql as q, withTestDatabase,} from "./testing/database.mjs";
 
 await withTestDatabase(
@@ -22,6 +24,12 @@ await withTestDatabase(
                    ('${lecturer}', 'lecturer'),
                    ('${outsider}', 'client');`,
         );
+        const {paths} = portalOpenApi("https://portal.example.invalid");
+        const topicRoutes = ["taxonomy_catalogue", "save_taxonomy_topic"];
+        const schemas = new Map(topicRoutes.map((name) => [
+            name,
+            z.fromJSONSchema(paths[`/rest/v1/rpc/${name}`].post.responses["200"].content["application/json"].schema),
+        ]));
         /** Calls the business database API under the fixture's controlled identity/permission claims. */
         const rpc = async (who, name, args = [], aal = "aal1") => {
             const result = await actor(
@@ -29,6 +37,8 @@ await withTestDatabase(
                 `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "boolean" || typeof value === "number" ? String(value) : q(typeof value === "object" ? JSON.stringify(value) : value))).join(",")})`,
                 aal,
             );
+            const response = schemas.get(name);
+            if (response) return response.parse(name === "save_taxonomy_topic" ? result : JSON.parse(result));
             try {
                 return JSON.parse(result);
             } catch {
