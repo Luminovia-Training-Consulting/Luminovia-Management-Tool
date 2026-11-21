@@ -105,6 +105,10 @@ Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/genera
 
 ## Base URLs and authentication
 
+Open /api/docs while signed in to browse the interactive OpenAPI contract. The explorer starts with requests disabled. Authorization uses the current account's short-lived access token and the configured publishable key. Copyable Swagger commands omit the injected credentials. Download the document from /api/openapi.json. It covers the account facade and the named Premium LMS operations. Use the catalogue below for the remaining native RPCs.
+
+Send POST /functions/v1/human-login with JSON fields identifier and password. The identifier may be the existing verified email address or the unique installation-local username. Use the returned access_token for subsequent API calls and protect the refresh_token. Invalid credentials return 401 and exhausted attempt budgets return 429. Password recovery currently uses the verified email address. Use account_username to read your own alias and version. Call save_account_username with p_username and p_expected_version to change it, or send null to remove it. Usernames are normalized to lowercase, 3–32 ASCII characters, and unique across the installation.
+
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses \`http://127.0.0.1:54321\`; a selfhost gateway can expose the API beneath \`/backend\`. Read \`VITE_SUPABASE_URL\` from the approved environment rather than hard-coding a deployment hostname.
 
 Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA is disabled. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.

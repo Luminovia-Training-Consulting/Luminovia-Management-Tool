@@ -1,11 +1,44 @@
 # Persistent implementation plan
 
+## Requested changes from the 19 November roadmap
+
+Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). Hosting and the independent [white-label product](../WHITELABEL_ROADMAP.md) are sequenced after core acceptance.
+
+| Items | Source status and ownership | Remaining evidence or work |
+| --- | --- | --- |
+| FC-01 | Separate Website repository | Translation and browser check belong to the Website workstream. |
+| FC-02, FC-03, FC-20 | Public demo and theme exist. Redesigned presentation is in progress. | Compare to the portal across roles, language, theme and viewport sizes. |
+| FC-04, FC-05 | Playwright suites exist for the operational journeys. | Run complete role journeys and inspect layout at 390, 768, 1280 and 1920 px. |
+| FC-06, FC-07, FC-12 | Calendar tools disclosure, subscription, export and offline schedule are present. | Confirm responsive boundaries and independent actions in the browser. |
+| FC-08, FC-09, FC-10 | Shared forum route, permission-gated Contracts link and account action layout are present. | Run navigation, keyboard and confirmation checks. |
+| FC-11, FC-13, FC-32 | Courses, company workspace and staff preview are present. | Check all role routes, deep links and preview versus actual permissions. |
+| FC-14, FC-15, FC-18, FC-19 | Individual compensation and role fallback, self-declared expertise and qualification gates are present. | Verify effective quotes, immutable snapshots and verification-required claims. |
+| FC-16, FC-17, FC-24 | Native password minimum, role authority and random profile User IDs are present. | Confirm native Auth 7/8 boundary, API role checks and retained upgrades. |
+| FC-21, FC-22 | Contract picker and staff PDF registration are present. | Verify actual scanner, exact file version, manager scope and UI. |
+| FC-23 | Admin mail transport and connection diagnostics are present. | Verify authorised provider delivery and monitor workers in the final operational phase. |
+| FC-25, FC-26, FC-27, FC-28, FC-29, FC-30 | Job subject filters, reopen flow, next-start sorting, claim locking, assigned projections and history filter are present. | Run SQL concurrency, notification and role browser cases. |
+| FC-31 | Private calendar colour preferences and event-source styles are present. | Validate persistence, actor privacy and contrast. |
+| FC-33 | Finance trends exist. | Verify each role projection and reconcile exact original-currency totals. |
+| FC-34, FC-35, FC-36, FC-37 | End-of-block invoice gate, direct link, review, due dates, priority and labelled states are present. | Run full invoice upload, eligibility, receipt, payment and reversal journeys. |
+| FC-38, FC-39, FC-40, FC-52, FC-53 | Company entitlement, retained summaries and scoped LMS guards exist. The participant search and roster changes pass targeted SQL. | Complete per-service off/on test matrix, active connection revocation, queued delivery and stale browser tests. |
+| FC-41, FC-42, FC-43, FC-44 | Participant account invitations, verified association, course membership and scoped workspace are present. | Complete native Auth, multi-company lifecycle, roster, learner route and online change tests. |
+| FC-45, FC-46 | Course groups and scanned version gateway exist. | Complete participant chat/posts, scoped audit view and live removal/revocation checks. |
+| FC-47 | The new course workspace welcome section stores append-only revisions and checks Premium on read and write. | Verify live publication across editors and enrolled participants in the browser. |
+| FC-48, FC-49 | Implementation in progress. | Exam flag/version, public exam PDF and separate private evidence require exact-byte acceptance. |
+| FC-50, FC-51 | Earlier attendance verification is present. Staff daily register and evidence work is in progress. | Complete role/browser and retained-data checks. |
+| FC-54 | Existing coursework, quizzes and completion APIs require a current Premium integration check. | Confirm learner access, paid-company scope and staff data separation across all flows. |
+| FC-55, FC-56, FC-57, FC-58 | Local verification and release runners exist. | Run final combined checks, retained-data restore and operational acceptance before proceeding with a real-user release. |
+| G7.1, G7.2 | Human username/email session exchange and own username management implemented. | Run native Auth and browser verification. Username-based recovery and integration credential management remain open. |
+| G7.3–G7.6 | Swagger route and OpenAPI download implemented for the account facade and selected Premium RPCs. | Complete typed contracts, compatibility, scoped keys, webhooks and the full API acceptance matrix. |
+| G8, WL-T01–WL-T15 | Dedicated customer installations are a follow-on product. | Edition policy, branding, installation, licences, customer-local operations and end-to-end proof remain open. |
+
 ## Premium LMS participant read boundary — 21 November 2026
 
 - [x] Keep participant-only Auth identities separate from operational actors and retain the existing accepted, per-company membership plus current Premium entitlement checks.
 - [x] Add the participant search RPC and course-welcome read RPC to the explicit REST allowlist; each read function must enforce its own current course and Premium scope.
 - [x] Correct the company enrolment roster read to check current Premium and caller scope in a stable snapshot; writes continue to lock and serialize with the company switch.
-- [ ] Run the focused Premium database suite against a disposable PostgreSQL instance. This workspace currently cannot connect to Docker, so the new SQL assertions have not executed.
+- [x] Run the focused Premium database suite against a disposable Supabase PostgreSQL 17.12 instance. All six groups passed.
+- [x] Publish versioned course welcome content for permitted staff and company contacts, with read access for currently eligible learners and an entitlement check on each request. Two component and one SQL integration groups passed.
 - [ ] Finish the wider Premium LMS: participant course notifications, course chat posting and attachment delivery, direct API/realtime policy audit, complete learner browser journeys and current-head acceptance. Keep these paths closed until their resource checks and tests are complete.
 
 ## Current-main browser CI repair — 18 November 2026

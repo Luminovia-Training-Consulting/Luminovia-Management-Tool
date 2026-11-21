@@ -13,7 +13,8 @@ begin
   if private.actor_active() then return; end if;
   if private.guest_actor() and path in (
     '/profiles', '/user_roles', '/rpc/portal_access', '/rpc/get_my_permissions',
-    '/rpc/account_me', '/rpc/save_account_profile', '/rpc/ui_preferences', '/rpc/save_ui_preferences'
+    '/rpc/account_me', '/rpc/save_account_profile', '/rpc/ui_preferences', '/rpc/save_ui_preferences',
+    '/rpc/account_username', '/rpc/save_account_username'
   ) then return; end if;
   if private.participant_actor() and path in (
     '/profiles', '/user_roles', '/rpc/portal_access', '/rpc/get_my_permissions',
@@ -21,7 +22,8 @@ begin
     '/rpc/course_workspace', '/rpc/course_workspace_action', '/rpc/course_document_access',
     '/rpc/cancel_own_course_enrolment', '/rpc/course_operation_destinations',
     '/rpc/my_company_participant_invitations', '/rpc/accept_company_participant_invitation',
-    '/rpc/unified_search', '/rpc/course_welcome_content'
+    '/rpc/unified_search', '/rpc/course_welcome_content',
+    '/rpc/account_username', '/rpc/save_account_username'
   ) then return; end if;
   raise exception 'Operational portal access required' using errcode = '42501';
 end;

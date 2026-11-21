@@ -2,6 +2,10 @@
 
 Started from `main` at `e6a47f1b`. The API documentation block adds a signed-in Swagger explorer and an OpenAPI 3.1 download served by the development server and included in the production build. It reuses the account facade contract and adds the scoped participant directory, participant-link request, company entitlement and course entitlement RPCs. Broader typed business coverage, integration credentials and webhooks remain open. Eight focused contract/session tests passed and the production build completed. The native browser journey is part of the existing Playwright suite. Local Docker could not start because its IPv4 NAT setup failed, so end-to-end tests against the full Supabase stack are pending.
 
+Published course welcome revisions through the current Premium and course authority. Added participant-scoped search and corrected the company roster read so it can execute in a read-only snapshot. Replayed all migrations against an isolated PostgreSQL 17.12 instance using the pinned Supabase image's binaries and a private Unix socket. The welcome group and six company-entitlement groups passed. Twelve course workspace and welcome component tests passed.
+
+Added username and email password sign-in against the same Auth UUID and an account screen for changing the alias. The canonical HTTP test uses fictional identities to check that both credentials yield native Auth tokens for the same account. The disposable SQL alias suite, 15 focused login/account tests, four Edge handler tests, TypeScript, and seven documentation checks passed locally. Native Auth exchange and browser acceptance still require a running complete local stack.
+
 # 18 November 2026 — direct-main CI continuation
 
 Merged the verified calendar recurrence-window and exact existing-deadline fixes from `codex/bug-hunt-current-main-20261117` directly into `main` as merge commit `427de191`; retained the newer `main` worklog/plan during the documentation conflict. The focused calendar, lifecycle and date suites passed 27/27. A second stale remote bug-hunt branch had no additional source changes beyond that calendar fix, so it was not merged wholesale.

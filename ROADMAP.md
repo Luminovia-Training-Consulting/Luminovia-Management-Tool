@@ -489,7 +489,7 @@ A development agent must implement actual automated tests, not only describe the
 
 ### E. Premium LMS — complete integrated feature set
 
-The authoritative detailed implementation and security contract is [LMS_PREMIUM_SCOPE.md](LMS_PREMIUM_SCOPE.md). These additions **supersede** the earlier request that management should be able to switch Premium: **only `admin` may toggle Premium**.
+The detailed implementation and security contract is in [section 8](#8-premium-lms--full-functional-and-technical-scope). Only users with the active `admin` role may toggle Premium.
 
 | ID    | Priority | Clear requirement                                                                                                                                                                                                                | Acceptance criterion                                                                                      |
 |-------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|

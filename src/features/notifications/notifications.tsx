@@ -261,6 +261,9 @@ export function SettingsPage() {
     return (
         <>
             <PageHeading title={t("settings")} description={t("settingsHelp")}/>
+            <Link className="text-link" to="/api/docs">
+                {de ? "API-Dokumentation" : "API documentation"}
+            </Link>
             <section className="panel settings-section">
                 <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
                 <Preferences onSave={saveUiPreferences}/>

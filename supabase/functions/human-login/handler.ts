@@ -88,7 +88,7 @@ export function createHumanLoginHandler(
       const email = identifier.includes("@") ? identifier : await deps.resolveUsername(identifier);
       // Unknown aliases use an impossible email through the same Auth password flow.
       const session = await deps.signIn(email ?? "unknown@invalid.invalid", input.password);
-      if (!session || !uuid.test(session.user_id) || !await deps.active(session.user_id))
+      if (!email || !session || !uuid.test(session.user_id) || !await deps.active(session.user_id))
         return json(401, failure);
       return json(200, {
         access_token: session.access_token,

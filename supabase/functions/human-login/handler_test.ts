@@ -41,6 +41,12 @@ Deno.test("unknown, wrong password and disabled account share the failure", asyn
     assertEquals(await response.json(), {error: "invalid_credentials"});
   }
 });
+Deno.test("an unresolved alias never receives credentials even if the fallback Auth call succeeds", async () => {
+  const handler = createHumanLoginHandler(deps({signIn: async () => session}), []);
+  const response = await handler(post("missing.alias", "Valid42!"));
+  assertEquals(response.status, 401);
+  assertEquals(await response.json(), {error: "invalid_credentials"});
+});
 Deno.test("rate cap, disallowed origin and malformed payload do not issue sessions", async () => {
   let calls = 0;
   const handler = createHumanLoginHandler(deps({reserve: async () => false, signIn: async () => {calls++; return session;}}), ["https://portal.example.invalid"]);
