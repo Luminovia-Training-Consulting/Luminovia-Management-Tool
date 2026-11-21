@@ -556,14 +556,20 @@ try {
         200,
     );
     assert.deepEqual((await request(teacher, "me")).body.roles, ["lecturer"]);
-    assert.equal(
-        (
-            await request(manager, `users/${teacher.id}/roles`, "PUT", {
-                roles: ["client", "lecturer"],
-            })
-        ).status,
-        400,
+    const combined = await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["client", "lecturer"],
+    });
+    assert.equal(combined.status, 200);
+    assert.deepEqual((await request(teacher, "me")).body.roles, ["client", "lecturer"]);
+    assert.deepEqual(
+        await checked(teacher.client.rpc("client_organisations"), "No unassigned company membership"),
+        [],
     );
+    const teachingOnly = await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["lecturer"],
+    });
+    assert.equal(teachingOnly.status, 200);
+    assert.deepEqual((await request(teacher, "me")).body.roles, ["lecturer"]);
     assert.equal(
         (
             await request(manager, `users/${admin.id}/status`, "PATCH", {

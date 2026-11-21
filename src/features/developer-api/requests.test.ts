@@ -188,6 +188,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
     const workspace = "/rest/v1/rpc/course_workspace";
     const download = portalOpenApi(backend, true, brand);
     const interactive = portalOpenApi(backend, false, brand);
+    const privateActions = [
+      "issue_company_integration_key",
+      "academy_subscribe_course_webhook",
+      "save_mail_configuration",
+      "queue_mail_connection_test",
+    ].map((name) => "/rest/v1/rpc/" + name);
 
     it("renders the exact branded RPC operations and leaves Edge operations in the download", () => {
       expect(interactive.info).toEqual(download.info);
@@ -201,13 +207,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       const rpcPaths = Object.fromEntries(
         Object.entries(download.paths).filter(
           ([path]) =>
-            path.startsWith("/rest/v1/rpc/") &&
-            path !== "/rest/v1/rpc/issue_company_integration_key",
+            path.startsWith("/rest/v1/rpc/") && !privateActions.includes(path),
         ),
       );
       expect(interactive.paths).toEqual(rpcPaths);
-      expect(download.paths).toHaveProperty(
-        "/rest/v1/rpc/issue_company_integration_key",
+      for (const path of privateActions) {
+        expect(download.paths).toHaveProperty(path);
+        expect(interactive.paths).not.toHaveProperty(path);
+      }
+      expect(interactive.paths).toHaveProperty(
+        "/rest/v1/rpc/get_mail_configuration",
       );
       expect(interactive.paths).toHaveProperty(workspace);
       expect(interactive.paths).not.toHaveProperty(
@@ -258,6 +267,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
     });
 
     it.each([
+      ...privateActions.map((path) => ({
+        url: backend + path,
+        method: "POST",
+      })),
       { url: backend + workspace, method: "GET" },
       { url: backend + workspace + "?select=*", method: "POST" },
       { url: backend + workspace + "#result", method: "POST" },

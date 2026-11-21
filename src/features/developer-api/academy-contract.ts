@@ -1433,7 +1433,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
   };
 }
 
-/** Keep Edge and file operations in the downloadable academy contract. */
+/** Keep secret-issuing, credential-bearing and Edge calls in the downloadable Academy contract. */
 export function academyExplorerOpenApi(
   backend: string,
   brand: AcademyIdentity,
@@ -1452,9 +1452,15 @@ export function academyExplorerOpenApi(
     },
     paths: Object.fromEntries(
       Object.entries(document.paths).filter(
-        ([path]) =>
+        ([path, methods]) =>
           /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path) &&
-          path !== "/rest/v1/rpc/issue_company_integration_key",
+          path !== "/rest/v1/rpc/issue_company_integration_key" &&
+          path !== "/rest/v1/rpc/academy_subscribe_course_webhook" &&
+          Object.values(methods).every(
+            (operation) =>
+              !("x-portal-document-only" in operation) ||
+              operation["x-portal-document-only"] !== true,
+          ),
       ),
     ),
   };
