@@ -3,7 +3,7 @@ import {useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {BookOpen, CheckCircle2, Download, Plus} from "lucide-react";
+import {BookOpen, CheckCircle2, Plus} from "lucide-react";
 import {DateTime} from "luxon";
 import {useAuth} from "../auth/auth-context";
 import {useOnline} from "../../lib/online";
@@ -13,7 +13,7 @@ import {Button} from "../../components/ui/button";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {contactEmailLink, contactPhoneLink} from "../profile/contact-api";
 import {teachingLink} from "../dashboard/personal-api";
-import {courseAction, courseHubQuery, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, downloadCourseDocument, repeatCourse,} from "./api";
+import {courseAction, courseHubQuery, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, repeatCourse,} from "./api";
 import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";
@@ -22,6 +22,7 @@ import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
 import {CourseChat} from "./course-chat";
+import {DownloadButton, Resources} from "./resources";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 
@@ -51,44 +52,6 @@ function Result({error, success}: { error: boolean; success?: boolean }) {
     ) : success ? (
         <Notice>{t("saved")}</Notice>
     ) : null;
-}
-
-/** Routes an explicit document request through the protected byte/fact gateway. */
-function DownloadButton({
-                            kind,
-                            id,
-                            name,
-                        }: {
-    kind: "resource" | "attendance" | "completion";
-    id: string;
-    name: string;
-}) {
-    const {t} = useTranslation("learning");
-    const online = useOnline();
-    const download = useMutation({
-        mutationFn: () => downloadCourseDocument(kind, id, name),
-    });
-    return (
-        <>
-            <Button
-                variant="secondary"
-                disabled={!online || download.isPending}
-                onClick={() => download.mutate()}
-            >
-                <Download size={16} aria-hidden="true"/>
-                {t("download")}
-            </Button>
-            {download.isError && (
-                <Notice kind="error">
-                    {t(
-                        download.error.message === "unsupported_glyph"
-                            ? "unsupportedGlyph"
-                            : "downloadError",
-                    )}
-                </Notice>
-            )}
-        </>
-    );
 }
 
 /** Lists course access granted by current assignment or organisation membership. */
@@ -333,121 +296,6 @@ function CourseContact({course, actor}: WorkProps) {
                     </Field>
                     <p className="muted">{t("contactHelp")}</p>
                     <Button disabled={!online || save.isPending}>{t("save")}</Button>
-                </form>
-            )}
-            <Result error={save.isError}/>
-        </section>
-    );
-}
-
-/** Shares only reviewed clean versions and records acknowledgement of that exact version. */
-function Resources({course, actor}: WorkProps) {
-    const {t} = useTranslation("learning");
-    const online = useOnline();
-    const save = useAction(course.id, actor);
-    const [version, setVersion] = useState("");
-    const [audience, setAudience] = useState("all");
-    const [category, setCategory] = useState("material");
-    return (
-        <section className="panel learning-panel" aria-label={t("resources")}>
-            <h2>{t("resources")}</h2>
-            <p>{t("resourceHelp")}</p>
-            {!course.resources.length && <p>{t("noResources")}</p>}
-            <ul className="learning-resources">
-                {course.resources.map((resource) => (
-                    <li key={resource.id}>
-                        <strong>{resource.name}</strong>
-                        <small>
-                            {t("version", {version: resource.version})} ·{" "}
-                            {t(resource.category)}
-                        </small>
-                        <div className="form-actions">
-                            <DownloadButton
-                                kind="resource"
-                                id={resource.id}
-                                name={resource.name}
-                            />
-                            <Button
-                                variant="ghost"
-                                disabled={!online || save.isPending || resource.acknowledged}
-                                onClick={() =>
-                                    save.mutate({
-                                        action: "resource_acknowledge",
-                                        payload: {id: resource.id},
-                                    })
-                                }
-                            >
-                                {t(resource.acknowledged ? "acknowledged" : "acknowledge")}
-                            </Button>
-                            {course.access.manager && (
-                                <Button
-                                    variant="ghost"
-                                    disabled={!online || save.isPending}
-                                    onClick={() =>
-                                        save.mutate({
-                                            action: "resource_remove",
-                                            payload: {id: resource.id},
-                                        })
-                                    }
-                                >
-                                    {t("unshare")}
-                                </Button>
-                            )}
-                        </div>
-                    </li>
-                ))}
-            </ul>
-            {course.access.manager && (
-                <form
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        save.mutate({
-                            action: "resource_share",
-                            payload: {version_id: version, audience, category},
-                        });
-                    }}
-                >
-                    <Field id="share-version" label={t("reviewedVersion")}>
-                        <select
-                            id="share-version"
-                            value={version}
-                            required
-                            onChange={(event) => setVersion(event.target.value)}
-                        >
-                            <option value="">{t("choose")}</option>
-                            {course.share_options.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                    {item.name} · {item.version}
-                                </option>
-                            ))}
-                        </select>
-                    </Field>
-                    <Field id="resource-audience" label={t("audience")}>
-                        <select
-                            id="resource-audience"
-                            value={audience}
-                            onChange={(event) => setAudience(event.target.value)}
-                        >
-                            {["all", "staff", "client"].map((value) => (
-                                <option value={value} key={value}>
-                                    {t(value)}
-                                </option>
-                            ))}
-                        </select>
-                    </Field>
-                    <Field id="resource-category" label={t("category")}>
-                        <select
-                            id="resource-category"
-                            value={category}
-                            onChange={(event) => setCategory(event.target.value)}
-                        >
-                            <option value="material">{t("material")}</option>
-                            <option value="report">{t("report")}</option>
-                        </select>
-                    </Field>
-                    <Button disabled={!online || save.isPending || !version}>
-                        {t("share")}
-                    </Button>
                 </form>
             )}
             <Result error={save.isError}/>

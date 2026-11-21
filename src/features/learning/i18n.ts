@@ -104,6 +104,22 @@ const pairs: Record<string, [string, string]> = {
     writeEmail: ["E-Mail schreiben", "Write email"],
     call: ["Anrufen", "Call"],
     resources: ["Kursdateien", "Course files"],
+    owner_staff: ["Verwaltung", "Staff"],
+    owner_company: ["Unternehmen", "Company"],
+    owner_lecturer: ["Lehrkraft", "Lecturer"],
+    uploadCourseFile: ["Neue Kursdatei freigeben", "Share a new course file"],
+    uploadCourseFileHelp: [
+        "Die Datei wird geprüft und erst nach bestätigter Freigabe für diesen Kurs sichtbar. Höchstens 10 MiB.",
+        "The file is scanned and becomes visible to this course only after confirmed sharing. Maximum 10 MiB.",
+    ],
+    chooseCourseFile: ["Datei auswählen", "Choose file"],
+    uploadAndShare: ["Datei prüfen und freigeben", "Scan and share file"],
+    uploadProgress: ["Datei wird geprüft: {{progress}} %", "Scanning file: {{progress}}%"],
+    courseFileShared: ["Geprüfte Dateifassung für den Kurs freigegeben.", "Reviewed file version shared with the course."],
+    courseFileUploadError: [
+        "Upload oder Freigabe wurde nicht bestätigt. Die Datei ist nicht als Kursmaterial freigegeben; bitte Berechtigung und aktuellen Stand prüfen.",
+        "Upload or sharing was not confirmed. The file is not shared as course material; check your permission and current state.",
+    ],
     resourceHelp: [
         "Jede Freigabe gilt für eine konkret geprüfte Dateifassung. Eine Bestätigung dokumentiert den Empfang dieser Fassung.",
         "Each share refers to one reviewed file version. Acknowledgement records receipt of that version.",

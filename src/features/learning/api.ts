@@ -45,6 +45,8 @@ export interface CourseResource {
     category: string;
     audience: string;
     acknowledged: boolean;
+    ownership_kind: "staff" | "company" | "lecturer";
+    can_remove: boolean;
 }
 
 export interface QuizQuestion {

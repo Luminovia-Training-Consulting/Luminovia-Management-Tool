@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {act, cleanup, render, screen, waitFor} from "@testing-library/react";
+import {act, cleanup, fireEvent, render, screen, waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter, Route, Routes} from "react-router-dom";
@@ -9,6 +9,7 @@ import i18n from "../../lib/i18n";
 
 const fake = vi.hoisted(() => ({
     rpc: vi.fn(),
+    upload: vi.fn(),
     workspace: {} as CourseWorkspace,
     error: null as unknown,
     pending: undefined as Promise<unknown> | undefined,
@@ -17,6 +18,7 @@ vi.mock("../auth/auth-context", () => ({
     useAuth: () => ({session: {user: {id: "learner-a"}}}),
 }));
 vi.mock("../../lib/supabase", () => ({db: () => fake}));
+vi.mock("../files/api", () => ({acceptedFiles: ".pdf", uploadDocument: fake.upload}));
 vi.mock("./destinations", () => ({CourseDestinations: () => null}));
 const clients: QueryClient[] = [];
 
@@ -86,6 +88,7 @@ beforeEach(async () => {
         };
         return request;
     });
+    fake.upload.mockReset();
 });
 afterEach(() => {
     cleanup();
@@ -175,10 +178,8 @@ describe("connected course workspace", () => {
             name: "Geprüfte Dateifassung",
         });
         await user.selectOptions(versions, "clean-version");
-        const audience = screen.getByRole("combobox", {name: "Sichtbarkeit"});
-        expect(
-            screen.queryByRole("option", {name: "Teilnehmende"}),
-        ).not.toBeInTheDocument();
+        const audience = document.getElementById("resource-audience") as HTMLSelectElement;
+        expect(audience.querySelector('option[value="participants"]')).not.toBeNull();
         await user.selectOptions(audience, "staff");
         await user.click(screen.getByRole("button", {name: "Fassung freigeben"}));
         await waitFor(() =>
@@ -193,6 +194,43 @@ describe("connected course workspace", () => {
                 }),
             ),
         );
+    });
+    it("uploads a clean lecturer file and shares exactly its returned version", async () => {
+        fake.upload.mockResolvedValue({current_version_id: "new-clean-version"});
+        const user = userEvent.setup();
+        setup();
+        await user.upload(await screen.findByLabelText("Datei auswählen"),
+            new File(["fictional PDF bytes"], "Fictional-course.pdf", {type: "application/pdf"}));
+        expect((screen.getByLabelText("Datei auswählen") as HTMLInputElement).files).toHaveLength(1);
+        expect(screen.getByRole("button", {name: "Datei prüfen und freigeben"})).toBeEnabled();
+        await user.selectOptions(document.getElementById("upload-resource-audience") as HTMLSelectElement, "participants");
+        fireEvent.submit((screen.getByLabelText("Datei auswählen") as HTMLInputElement).form!);
+        await waitFor(() => expect(fake.upload).toHaveBeenCalledWith(
+            expect.objectContaining({name: "Fictional-course.pdf"}),
+            {scope: "personal", kind: "material"}, expect.any(Function),
+        ));
+        await waitFor(() => expect(fake.rpc).toHaveBeenCalledWith("course_workspace_action", expect.objectContaining({
+            p_action: "resource_share",
+            p_payload: {version_id: "new-clean-version", audience: "participants", category: "material"},
+        })));
+    });
+    it("does not offer removal of a company-owned course file to a lecturer", async () => {
+        fake.workspace.resources = [{id: "company-file", name: "Fictional company handout", version_id: "clean-version", version: 1,
+            sha256: "a".repeat(64), category: "material", audience: "all", acknowledged: false,
+            ownership_kind: "company", can_remove: false}];
+        setup();
+        expect(await screen.findByText("Fictional company handout")).toBeVisible();
+        expect(screen.queryByRole("button", {name: "Freigabe zurücknehmen"})).not.toBeInTheDocument();
+    });
+    it("does not create a course share when the scanner rejects an upload", async () => {
+        fake.upload.mockRejectedValue(new Error("scan_rejected"));
+        const user = userEvent.setup();
+        setup();
+        await user.upload(await screen.findByLabelText("Datei auswählen"),
+            new File(["fictional contents"], "Rejected.pdf", {type: "application/pdf"}));
+        fireEvent.submit((screen.getByLabelText("Datei auswählen") as HTMLInputElement).form!);
+        expect(await screen.findByText(/Upload oder Freigabe wurde nicht bestätigt/)).toBeVisible();
+        expect(fake.rpc.mock.calls.some(([name, args]) => name === "course_workspace_action" && args.p_action === "resource_share")).toBe(false);
     });
     it("renders no course workspace content when the Premium projection is OFF", async () => {
         fake.workspace.lms_enabled = false;
