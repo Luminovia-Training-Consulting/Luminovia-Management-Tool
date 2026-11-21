@@ -200,7 +200,7 @@ On the installation host, keep the [webhook worker environment](webhook-worker.e
 node --env-file="$runtime_root/runtime.env.webhooks.env" scripts/company-course-webhook-worker.mjs --watch
 ```
 
-Run the worker from the reviewed release checkout with its locked production dependencies under the installation supervisor. The same command without `--watch` processes one finite batch. The [receiver example](../../scripts/examples/verify-company-course-webhook.mjs) verifies the syntax, message timestamp, event ID and HMAC before interpreting the payload. Store each verified event ID atomically with its downstream change and acknowledge repeats. Delivery can arrive out of order. Queued events are bound to the exact active release and never transfer to a replacement release. A disabled or expired licensed profile pauses delivery and invalidates the worker's ability to prepare an event.
+Run the worker from the reviewed release checkout with its locked production dependencies under the installation supervisor. The same command without `--watch` processes one finite batch. The [receiver quickstart](../../scripts/examples/README.md#signed-course-webhook-receiver) shows how to validate signed requests, commit retry-safe receipts in a private SQLite inbox and expose the receiver through a customer-controlled HTTPS proxy. Delivery can arrive out of order. Queued events are bound to the exact active release. A disabled or expired licensed profile pauses delivery and invalidates the worker's ability to prepare an event.
 
 ## Connect a published course index
 

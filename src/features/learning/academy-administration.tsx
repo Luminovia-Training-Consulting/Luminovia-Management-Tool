@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   ErrorState,
   Field,
@@ -509,6 +510,16 @@ export function AcademyAdministrationPage() {
     <>
       <PageHeading
         title={word("Akademie verwalten", "Academy administration")}
+        action={
+          <Button asChild variant="secondary">
+            <Link to="/help?topic=academy-manage-courses">
+              {word(
+                "Anleitung zur Akademieverwaltung",
+                "Academy administration guide",
+              )}
+            </Link>
+          </Button>
+        }
       />
       <AcademyLicencePanel actor={actor} />
       {can_create_management && (

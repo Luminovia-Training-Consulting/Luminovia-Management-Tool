@@ -1,6 +1,8 @@
 /** Wiki attachment version and access tests against an isolated real PostgreSQL database. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("wiki_attachments", async ({sql, actor}) => {
@@ -53,10 +55,14 @@ await withTestDatabase("wiki_attachments", async ({sql, actor}) => {
             `select public.manage_wiki_attachment(${q(page)},${rev},${q(version)},${remove})`,
             aal,
         );
+    const response = z.fromJSONSchema(
+        portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/wiki_attachments"].post
+            .responses["200"].content["application/json"].schema,
+    );
     const list = async (who, aal = "aal1") =>
-        JSON.parse(
+        response.parse(JSON.parse(
             await actor(who, `select public.wiki_attachments(${q(page)})`, aal),
-        );
+        ));
     await assert.rejects(list(peer), /42501/);
     await assert.rejects(manage(author, foreign.v), /42501/);
     await assert.rejects(manage(author, contract.v), /42501/);

@@ -8,6 +8,7 @@ const actors = [
   { name: "management", primary: "management" },
   { name: "company", primary: "client", landing: "/client" },
   { name: "participant", primary: "participant", landing: "/learning" },
+  { name: "guest", primary: "guest", landing: "/profile" },
   { name: "lecturer", primary: "lecturer", teaches: true },
   { name: "senior lecturer", primary: "senior_lecturer", teaches: true },
   {
@@ -97,12 +98,41 @@ for (const role of actors) {
 
       const destination =
         "landing" in role ? new RegExp(`${role.landing}$`) : /\/$/;
-      await login(
-        page,
-        profile.email,
-        role.primary === "participant" ? destination : /\/$/,
-      );
+      const restricted =
+        role.primary === "participant" || role.primary === "guest";
+      let identifier = profile.email;
+      if (isMobile) {
+        const ownApi = api(process.env.SUPABASE_ANON_KEY!);
+        const account = await checked(
+          ownApi.auth.signInWithPassword({
+            email: profile.email,
+            password: process.env.E2E_PASSWORD!,
+          }),
+          { requireData: true },
+        );
+        expect(account.user?.id).toBe(profile.id);
+        identifier = `qa-${profile.id.slice(0, 16)}`;
+        await checked(
+          ownApi.rpc("save_account_username", {
+            p_username: identifier,
+            p_expected_version: 0,
+          }),
+        );
+      }
+      await login(page, identifier, restricted ? destination : /\/$/);
       await expect(page.locator("html")).toHaveAttribute("lang", language);
+      const viewport = page.viewportSize()!;
+      for (const width of [320, 390, 768, 1440, 1920]) {
+        await page.setViewportSize({ width, height: viewport.height });
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          )
+          .toBe(true);
+      }
+      await page.setViewportSize(viewport);
       const sidebarLink = (href: string) =>
         page.locator(`.sidebar a[href="${href}"]`);
       const consent = page.getByRole("checkbox", { name: claimTerms });
@@ -146,7 +176,7 @@ for (const role of actors) {
         await expect(dialog).toHaveCount(0);
       }
 
-      if (role.primary !== "participant") {
+      if (!restricted) {
         await page.goto("/files");
         await page
           .getByRole("button", { name: /^(Datei hochladen|Upload file)$/i })

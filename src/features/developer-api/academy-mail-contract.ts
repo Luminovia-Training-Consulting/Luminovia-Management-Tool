@@ -1,4 +1,4 @@
-/** Exact local-administrator SMTP paths for the dedicated academy catalogue. */
+/** Closed mail transport contracts for both portal editions. */
 import { z } from "zod";
 
 const credentials = [{ apiKey: [], bearerAuth: [] }];
@@ -193,6 +193,129 @@ export const academyMailPaths = {
         "400": response("Invalid request", edgeError),
         "401": response("Authentication required", edgeError),
         "403": response("Origin or current administrator refused", edgeError),
+        "503": response("Test unavailable", edgeError),
+      },
+    },
+  },
+};
+
+const internalSecurity = [{ publicApiKey: [], bearerAuth: [] }];
+const internalTags = ["Mail transport"];
+const internalForbidden = response(
+  "Current mail administration authority required",
+);
+const mailProtocol = z.enum(["smtp", "imap"]);
+const imapDraft = z.union([
+  z.strictObject({
+    enabled: z.literal(true),
+    host: enabledFields.host,
+    port: z.literal(993),
+    security: z.literal("implicit_tls"),
+    ...writeOnly,
+  }),
+  z.strictObject({
+    enabled: z.literal(true),
+    host: enabledFields.host,
+    port: z.literal(143),
+    security: z.literal("starttls"),
+    ...writeOnly,
+  }),
+  z.strictObject({
+    enabled: z.literal(false),
+    host: z.string().max(253).optional(),
+    port: z
+      .union([z.literal(143), z.literal(993)])
+      .nullable()
+      .optional(),
+    security: z.enum(["implicit_tls", "starttls"]).optional(),
+    ...writeOnly,
+  }),
+]);
+
+export const internalMailRead = {
+  "/rest/v1/rpc/get_mail_configuration": {
+    post: {
+      operationId: "readMailConfiguration",
+      tags: internalTags,
+      summary: "Read the SMTP and IMAP configuration status",
+      description:
+        "Requires current mail administration authority. Includes configured SMTP and IMAP transports, credential-presence flags and sanitized test results.",
+      security: internalSecurity,
+      requestBody: { required: false, content: json(z.strictObject({})) },
+      responses: {
+        "200": response("Redacted configuration", configuration),
+        "401": response("Authentication required"),
+        "403": internalForbidden,
+      },
+    },
+  },
+};
+
+export const internalMailDownload = {
+  "/rest/v1/rpc/save_mail_configuration": {
+    post: {
+      operationId: "saveMailConfiguration",
+      tags: internalTags,
+      summary: "Save the SMTP and IMAP providers",
+      description:
+        "Requires current mail administration authority. Pass the last-read configuration version. Enabled transports require paired port and TLS settings. Supply both credential values to replace a transport's credentials. Stored credentials remain in Vault.",
+      security: internalSecurity,
+      requestBody: {
+        required: true,
+        content: json(
+          z.strictObject({
+            p_expected_version: z.number().int().min(0).max(2147483647),
+            p_smtp: smtpDraft,
+            p_imap: imapDraft,
+          }),
+        ),
+      },
+      responses: {
+        "200": response("Redacted confirmed configuration", configuration),
+        "400": response("Invalid transport settings or credential pair"),
+        "401": response("Authentication required"),
+        "403": internalForbidden,
+        "409": response("The configuration version changed"),
+      },
+    },
+  },
+  "/rest/v1/rpc/queue_mail_connection_test": {
+    post: {
+      operationId: "queueMailConnectionTest",
+      tags: internalTags,
+      summary: "Reserve a single SMTP or IMAP handshake",
+      description:
+        "Requires current mail administration authority. Use mail-admin to both queue and run the connection test.",
+      security: internalSecurity,
+      requestBody: {
+        required: true,
+        content: json(z.strictObject({ p_protocol: mailProtocol })),
+      },
+      responses: {
+        "200": response("Single-use request identifier", z.uuid()),
+        "400": response("Transport settings or credentials are missing"),
+        "401": response("Authentication required"),
+        "403": internalForbidden,
+      },
+    },
+  },
+  "/functions/v1/mail-admin": {
+    post: {
+      operationId: "checkMailConnection",
+      tags: internalTags,
+      summary: "Check a saved mail transport without delivering mail",
+      description:
+        "Requires current mail administration authority. Checks TLS and authentication for the specified SMTP or IMAP transport. Returns a fixed status and optional safe error code.",
+      security: internalSecurity,
+      requestBody: {
+        required: true,
+        content: json(z.strictObject({ protocol: mailProtocol })),
+      },
+      responses: {
+        "200": response("Sanitized handshake result", result),
+        "400": response("Invalid request", edgeError),
+        "401": response("Authentication required", edgeError),
+        "403": response("Origin or current authority refused", edgeError),
         "503": response("Test unavailable", edgeError),
       },
     },

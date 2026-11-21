@@ -81,11 +81,12 @@ test("individual account roles, scoped invitations and linked status management 
     await expect(
         roleDialog.getByLabel("Management", {exact: true}),
     ).toBeVisible();
-    await expect(
-        roleDialog.getByLabel("Kursteilnehmer:in", {exact: true}),
-    ).toHaveCount(0);
+    const learnerRole = roleDialog.getByLabel("Kursteilnehmer:in", {exact: true});
+    await expect(learnerRole).toBeVisible();
+    await expect(learnerRole).not.toBeChecked();
     await expect(roleDialog.getByLabel("Gast", {exact: true})).toBeVisible();
     await roleDialog.getByLabel("Senior-Dozent:in", {exact: true}).check();
+    await learnerRole.check();
     await roleDialog
         .getByRole("button", {name: "Rollen speichern", exact: true})
         .click();
@@ -107,6 +108,7 @@ test("individual account roles, scoped invitations and linked status management 
     );
     expect(actualRoles.map((row) => row.role).sort()).toEqual([
         "lecturer",
+        "participant",
         "senior_lecturer",
     ]);
     await teacherRow

@@ -3,6 +3,7 @@
  * IDs/routes identify authored sections; optional role/permission hints grant no data access.
  */
 import type { GuideModule } from "./guide";
+import lmsHelpGuides from "./lms-catalog";
 export type { GuideModule } from "./guide";
 export { guideText } from "./guide";
 
@@ -93,6 +94,7 @@ export const guideModules: GuideModule[] = [
   {
     id: "security",
     path: "/auth/password",
+    area: "access",
     title: { de: "Anmeldung & Sicherheit", en: "Sign-in & security" },
     summary: {
       de: "Melde dich mit deinem Konto an und verwalte dein Passwort.",
@@ -100,14 +102,14 @@ export const guideModules: GuideModule[] = [
     },
     steps: {
       de: [
-        "Melde dich mit dem eingeladenen Konto an; die Demo benötigt keine Zugangsdaten.",
-        "Verwende für die Anmeldung deine E-Mail-Adresse und dein Passwort.",
-        "Bewahre Zugangsdaten und Wiederherstellungsmöglichkeiten sicher auf; teile keine Codes.",
+        "Öffne die Einladung und richte dein Passwort ein. Melde dich anschließend mit deiner E-Mail-Adresse oder deinem Benutzernamen und deinem Passwort an.",
+        "Falls dein Konto eine zusätzliche Sicherheitsprüfung verlangt, bestätige sie mit der eingerichteten Methode.",
+        "Öffne bei einem vergessenen Passwort die Wiederherstellung auf der Anmeldeseite. Gib deine E-Mail-Adresse oder deinen Benutzernamen ein und öffne den neuesten Link im Postfach des Kontos.",
       ],
       en: [
-        "Sign in with your invited account; the demo needs no credentials.",
-        "Use your email address and password to sign in.",
-        "Keep credentials and recovery options secure; never share codes.",
+        "Open the invitation and set your password. Then sign in with your email address or username and your password.",
+        "If your account requires an additional security check, confirm it using the method already set up.",
+        "If you forget your password, open recovery on the sign-in page. Enter your email address or username, then open the latest link in the account's mailbox.",
       ],
     },
     problem: {
@@ -116,16 +118,18 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Prüfe E-Mail-Adresse und Verbindung. Verwende den neuesten Wiederherstellungslink.",
-        "Bei fehlender Einladung wende dich an die zuständige Verwaltung. Sende keine Passwörter oder Codes mit.",
+        "Prüfe Verbindung, Konto und die Adresse des Portals. Sieh auch im Spamordner des hinterlegten Postfachs nach.",
+        "Bitte die zuständige Verwaltung um Hilfe, wenn eine Einladung fehlt oder die Zustellung nicht funktioniert. Teile dabei keine Passwörter oder Codes.",
       ],
       en: [
-        "Check your email address and connection. Use the newest recovery link.",
-        "For a missing invitation, contact the responsible administrator. Never include passwords or codes.",
+        "Check your connection, account and portal address. Check the spam folder in the mailbox attached to your account.",
+        "Ask the responsible administrator for help if the invitation or delivery is missing. Keep passwords and codes private.",
       ],
     },
     keywords: [
       "login",
+      "benutzername",
+      "username",
       "passwort",
       "password",
       "einladung",
@@ -399,6 +403,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "courses",
+    area: "courses",
     path: "/courses",
     title: { de: "Kurse & Vorlagen", en: "Courses & templates" },
     summary: {
@@ -971,6 +976,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "accounts",
+    area: "administration",
     path: "/admin/accounts",
     permission: "users.manage",
     title: { de: "Konten & Einladungen", en: "Accounts & invitations" },
@@ -1158,4 +1164,4 @@ const recovery = [
   },
 ];
 
-export default { modules: guideModules, recovery };
+export default { modules: [...guideModules, ...lmsHelpGuides], recovery };

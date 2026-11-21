@@ -545,6 +545,54 @@ test("public help searches practical recovery instructions and keeps the selecte
         (url) => url.searchParams.get("topic") === "files",
     );
 });
+test("LMS help filters course guides, supports keyboard reading and opens the matching demo role", async ({
+  page,
+}) => {
+  await page.goto("/help");
+  await page
+    .getByRole("combobox", { name: "Themenbereich" })
+    .selectOption("courses");
+  await expect(page.getByRole("link", { name: /^Dateizentrale/ })).toHaveCount(
+    0,
+  );
+  await page
+    .getByRole("link", { name: /^Meine Kurse und Lernmaterialien/ })
+    .press("Enter");
+  await expect(
+    page.getByRole("heading", {
+      name: "Meine Kurse und Lernmaterialien",
+      level: 2,
+    }),
+  ).toBeFocused();
+  await page.getByRole("combobox", { name: "Sprache" }).selectOption("en");
+  await expect(
+    page.getByRole("heading", {
+      name: "My courses and learning materials",
+      level: 2,
+    }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get("area") === "courses" &&
+      url.searchParams.get("topic") === "lms-learning",
+  );
+  await accessibleWithoutOverflow(page);
+  await page.getByRole("button", { name: "Back to overview" }).click();
+  await expect(
+    page.getByRole("searchbox", { name: "Search help" }),
+  ).toBeFocused();
+  await page
+    .getByRole("link", { name: /^My courses and learning materials/ })
+    .press("Enter");
+  await page
+    .getByRole("link", { name: "Practise this section in the demo" })
+    .click();
+  await expect(page.getByRole("combobox", { name: "Demo role" })).toHaveValue(
+    "participant",
+  );
+  await expect(page.getByRole("heading", { name: "My courses" })).toBeVisible();
+});
+
 test("Premium learner demo mirrors scoped course navigation and keeps practice local in both themes", async ({
   page,
 }, testInfo) => {

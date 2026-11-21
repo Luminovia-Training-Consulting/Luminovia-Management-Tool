@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import type { AcademyAdministration } from "../accounts/academy-schema";
@@ -74,7 +75,9 @@ function setup(
 ) {
   render(
     <QueryClientProvider client={client}>
-      <AcademyAdministrationPage />
+      <MemoryRouter>
+        <AcademyAdministrationPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   return userEvent.setup();
@@ -106,6 +109,9 @@ it("creates an organisation then invites the learner into that exact organisatio
     return { status: "created", user_id: member.id };
   });
   const user = setup();
+  expect(
+    await screen.findByRole("link", { name: "Academy administration guide" }),
+  ).toHaveAttribute("href", "/help?topic=academy-manage-courses");
   await user.type(await screen.findByLabelText("Organisation name"), org.name);
   await user.clear(screen.getByLabelText("Time zone"));
   await user.type(screen.getByLabelText("Time zone"), org.time_zone);

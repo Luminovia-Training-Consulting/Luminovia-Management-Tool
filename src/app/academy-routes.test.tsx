@@ -47,6 +47,7 @@ const fake = vi.hoisted(() => ({
   administration: false as boolean | "management",
   publicDemo: false,
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
+  brandName: null as string | null,
   brandLinkConflict: false,
   draftScheduleRevision: 1,
   withdrawalAvailable: false,
@@ -212,6 +213,7 @@ beforeEach(async () => {
   fake.administration = false;
   fake.publicDemo = false;
   fake.brandLinks = null;
+  fake.brandName = null;
   fake.brandLinkConflict = false;
   fake.draftScheduleRevision = 1;
   fake.withdrawalAvailable = false;
@@ -247,6 +249,15 @@ beforeEach(async () => {
             installation_id: fake.returnedInstallation,
             version: 0,
             png_base64: null,
+          };
+          break;
+        case "academy_public_branding":
+          data = {
+            installation_id: fake.returnedInstallation,
+            version: fake.brandName ? 1 : 0,
+            name: fake.brandName,
+            short_name: fake.brandName ? "Training" : null,
+            theme_color: fake.brandName ? "#284554" : null,
           };
           break;
         case "academy_public_brand_links":
@@ -742,7 +753,17 @@ it("creates an academy draft from the selected company and preserves its request
 });
 
 it("publishes only academy guides and its own downloadable OpenAPI contract", async () => {
+  fake.actor = null;
+  fake.brandName = "Fictional Training Centre";
   open("/help?topic=academy-assessments");
+  expect(
+    await screen.findByRole("link", { name: fake.brandName }),
+  ).toHaveTextContent("Training");
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_logo",
+    {},
+    { get: true },
+  );
   expect(
     await screen.findByRole("heading", {
       name: "Exams, attendance and completion",
@@ -759,6 +780,35 @@ it("publishes only academy guides and its own downloadable OpenAPI contract", as
   expect(
     screen.getByRole("link", { name: "Open section in the portal" }),
   ).toHaveAttribute("href", "/learning");
+});
+
+it("documents included Premium LMS and Academy integration separately from the vendor portal", async () => {
+  open("/help?area=administration&topic=academy-lms-access");
+  expect(
+    await screen.findByText(
+      /does not have a separate per-company Premium switch/,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByText(/Administration → Customers/)).toBeNull();
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: "Topic area" }),
+    "integrations",
+  );
+  await userEvent.click(
+    screen.getByRole("link", { name: /^API keys and signed course webhooks/ }),
+  );
+  expect(
+    screen.getByRole("heading", {
+      name: "API keys and signed course webhooks",
+      level: 2,
+    }),
+  ).toHaveFocus();
+  expect(
+    screen.getByText(/store the signing key on the receiver/),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Open section in the portal" }),
+  ).toHaveAttribute("href", "/administration");
 });
 
 it("opens the dedicated timetable through its main navigation link", async () => {

@@ -230,6 +230,13 @@ export const participantInvitesResult = itemList(
   }),
 );
 
+export const courseEnrolmentCandidatesResult = {
+  ...itemList(
+    record({ user_id: uuid, display_name: text, luminovia_user_id: text }),
+  ),
+  maxItems: 100,
+};
+
 export const courseEnrolmentsResult = itemList(
   record({
     user_id: uuid,

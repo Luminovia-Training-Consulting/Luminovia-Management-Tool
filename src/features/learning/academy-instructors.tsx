@@ -202,7 +202,9 @@ export function AcademyInstructors({
         <Button
           type="button"
           disabled={
-            !online || save.isPending || (releasing && reason.trim().length < 3)
+            !online ||
+            save.isPending ||
+            (releasing && Array.from(reason.trim()).length < 5)
           }
           onClick={() => save.mutate()}
         >

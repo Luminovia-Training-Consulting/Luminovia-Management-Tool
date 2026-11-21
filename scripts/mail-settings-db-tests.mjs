@@ -1,6 +1,8 @@
 /** Isolated PostgreSQL authorization and Vault tests for SMTP/IMAP Administration; never contacts a provider. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
@@ -17,6 +19,12 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
     await sql(
         `insert into auth.users(id,email) values('${admin}','admin@example.invalid'),('${manager}','manager@example.invalid'),('${lecturer}','lecturer@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer');`,
     );
+    const {paths} = portalOpenApi("https://portal.example.invalid");
+    const mailPaths = ["get_mail_configuration", "save_mail_configuration", "queue_mail_connection_test"];
+    const mailResponses = new Map(mailPaths.map((name) => [
+        name,
+        z.fromJSONSchema(paths[`/rest/v1/rpc/${name}`].post.responses["200"].content["application/json"].schema),
+    ]));
     /** Run one business RPC as a fixture identity, preserving the auth.jwt and RLS boundary. */
     const rpc = (who, name, args = []) =>
         actor(
@@ -30,7 +38,11 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
                             : q(typeof value === "object" ? JSON.stringify(value) : value),
                 )
                 .join(",")}))`,
-        ).then((value) => JSON.parse(value));
+        ).then((value) => {
+            const payload = JSON.parse(value);
+            const response = mailResponses.get(name);
+            return response ? response.parse(payload) : payload;
+        });
     /** Exercise the relay-only public wrapper with a fictional signed service-role claim. */
     const serviceRpc = (name, args = []) =>
         sql(

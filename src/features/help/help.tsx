@@ -3,8 +3,8 @@
  * filtering and recovery guidance require no backend data and send no support messages.
  */
 import {
-  installationBrand,
   portalInternalEdition,
+  publicDemoEnabled,
 } from "../../lib/installation-brand";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -18,8 +18,10 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
+import { useAcademyBrand } from "../branding/academy-branding";
+import { AcademyBrandImage } from "../branding/academy-logo-image";
 import helpCatalogue from "@edition-help";
-import { type GuideModule, guideText } from "./guide";
+import { type GuideArea, type GuideModule, guideText } from "./guide";
 import "./help.css";
 
 const labels = {
@@ -30,12 +32,15 @@ const labels = {
   },
   search: { de: "Suche in der Hilfe", en: "Search help" },
   placeholder: {
-    de: "Zum Beispiel: Übernahme, Passwort, Upload …",
-    en: "For example: claim, password, upload …",
+    de: "Kurs, Passwort, Webhook",
+    en: "Course, password, webhook",
   },
   demo: { de: "Demo ausprobieren", en: "Try the demo" },
   login: { de: "Zum Portal", en: "Open portal" },
-  topics: { de: "Alle Bereiche", en: "All sections" },
+  topics: { de: "Anleitungen", en: "Guides" },
+  area: { de: "Themenbereich", en: "Topic area" },
+  allAreas: { de: "Alle Themen", en: "All topics" },
+  overview: { de: "Zur Übersicht", en: "Back to overview" },
   problems: { de: "Probleme lösen", en: "Solve problems" },
   selected: { de: "Anleitung", en: "Guide" },
   steps: { de: "So gehst du vor", en: "What to do" },
@@ -54,7 +59,7 @@ const labels = {
     en: "No matching guide found.",
   },
   reset: { de: "Suche zurücksetzen", en: "Clear search" },
-  count: { de: "Gefundene Bereiche", en: "Matching sections" },
+  count: { de: "Gefundene Anleitungen", en: "Matching guides" },
   unknown: {
     de: "Diese Anleitung gibt es nicht. Wähle unten einen Bereich oder die Problemlösung.",
     en: "This guide does not exist. Choose a section below or open troubleshooting.",
@@ -66,6 +71,16 @@ const labels = {
 };
 const { modules: visibleHelpModules, recovery: visibleRecovery } =
   helpCatalogue;
+const areaLabels: Record<GuideArea, { de: string; en: string }> = {
+  courses: { de: "Kurse & LMS", en: "Courses & LMS" },
+  access: { de: "Anmeldung & Zugang", en: "Sign-in & access" },
+  administration: { de: "Verwaltung", en: "Administration" },
+  integrations: { de: "API & Webhooks", en: "API & webhooks" },
+  portal: { de: "Portalnutzung", en: "Using the portal" },
+};
+const areas = (Object.keys(areaLabels) as GuideArea[]).filter((area) =>
+  visibleHelpModules.some((module) => (module.area ?? "portal") === area),
+);
 
 /** Search titles, steps and recovery text in both authored languages regardless of the selected UI language. */
 function searchText(module: GuideModule) {
@@ -89,6 +104,7 @@ function searchText(module: GuideModule) {
 /** Resolve public catalog topics from the URL and keep search/filter state local to this page. */
 export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
   const { i18n } = useTranslation();
+  const brand = useAcademyBrand();
   const Content = embedded ? "section" : "main";
   const text = <T,>(value: { de: T; en: T }) => guideText(value, i18n.language);
   const [params, setParams] = useSearchParams();
@@ -97,24 +113,38 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
   const searchInput = useRef<HTMLInputElement>(null);
   const articleHeading = useRef<HTMLHeadingElement>(null);
   const topic = params.get("topic");
+  const category = areas.find((area) => area === params.get("area")) ?? "";
   const selected = visibleHelpModules.find((module) => module.id === topic);
   const troubleshooting = topic === "troubleshooting";
+  const practicePath =
+    selected?.practicePath ??
+    (portalInternalEdition ? selected?.path : undefined);
   useEffect(() => {
     // URL navigation should reveal the chosen instructions to keyboard users too.
     // Reopening the same topic after a search creates a new history key as well.
     articleHeading.current?.focus();
   }, [location.key]);
   const needle = query.trim().toLocaleLowerCase();
-  const results = visibleHelpModules.filter((module) =>
-    searchText(module).includes(needle),
+  const results = visibleHelpModules.filter(
+    (module) =>
+      (!category || (module.area ?? "portal") === category) &&
+      searchText(module).includes(needle),
   );
 
-  function choose(id?: string) {
-    setQuery("");
+  function topicParams(id?: string) {
     const next = new URLSearchParams(params);
     if (id) next.set("topic", id);
     else next.delete("topic");
-    setParams(next);
+    return next;
+  }
+
+  function choose(id?: string) {
+    setQuery("");
+    setParams(topicParams(id));
+  }
+
+  function topicLink(id: string) {
+    return { pathname: location.pathname, search: `?${topicParams(id)}` };
   }
 
   return (
@@ -124,20 +154,21 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
       </a>
       {!embedded && (
         <header className="help-header">
-          <Link
-            className="help-brand"
-            to="/help"
-            aria-label={installationBrand.name}
-          >
-            <img src={installationBrand.mark} alt="" />
+          <Link className="help-brand" to="/help" aria-label={brand.name}>
             {portalInternalEdition ? (
-              <span>
-                {installationBrand.shortName} <small>PORTAL</small>
-              </span>
+              <>
+                <img src={brand.mark} alt="" />
+                <span>
+                  {brand.shortName} <small>PORTAL</small>
+                </span>
+              </>
             ) : (
-              <span className="installation-brand-name">
-                {installationBrand.shortName}
-              </span>
+              <>
+                <AcademyBrandImage fallback={brand.mark} alt="" />
+                <span className="installation-brand-name">
+                  {brand.shortName}
+                </span>
+              </>
             )}
           </Link>
           <div className="help-header-actions">
@@ -148,7 +179,6 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
       )}
       <Content id="help-main" className="help-main" tabIndex={-1}>
         <section className="help-hero" aria-labelledby="help-title">
-          <div className="eyebrow">{installationBrand.name}</div>
           <h1 id="help-title">{text(labels.title)}</h1>
           <p>
             {text(
@@ -160,37 +190,6 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                   },
             )}
           </p>
-          <div className="help-actions">
-            <Button asChild variant="secondary">
-              <Link to="/api/docs">
-                {i18n.language.startsWith("de")
-                  ? "API-Dokumentation"
-                  : "API documentation"}
-              </Link>
-            </Button>
-            {!portalInternalEdition && (
-              <Button asChild variant="ghost">
-                <a href="/api/openapi.json" download>
-                  OpenAPI JSON
-                </a>
-              </Button>
-            )}
-            {portalInternalEdition && (
-              <Button asChild>
-                <Link to="/demo">
-                  {text(labels.demo)}
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={() => choose("troubleshooting")}
-            >
-              <LifeBuoy size={18} aria-hidden="true" />
-              {text(labels.problems)}
-            </Button>
-          </div>
         </section>
         <div className="help-tools">
           <label className="help-search" htmlFor="help-search">
@@ -204,20 +203,70 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={text(
-                portalInternalEdition
-                  ? labels.placeholder
-                  : {
-                      de: "Kurs, Prüfung, Stundenplan …",
-                      en: "Course, exam, timetable …",
-                    },
-              )}
+              placeholder={text(labels.placeholder)}
             />
           </label>
-          <Button variant="ghost" onClick={() => choose()}>
-            <ArrowLeft size={17} aria-hidden="true" />
-            {text(labels.topics)}
+          <label className="help-category">
+            <span>{text(labels.area)}</span>
+            <select
+              value={category}
+              onChange={(event) => {
+                const next = topicParams();
+                if (event.target.value) next.set("area", event.target.value);
+                else next.delete("area");
+                setParams(next);
+              }}
+            >
+              <option value="">{text(labels.allAreas)}</option>
+              {areas.map((area) => (
+                <option key={area} value={area}>
+                  {text(areaLabels[area])}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="help-actions help-shortcuts">
+          {topic ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                choose();
+                searchInput.current?.focus();
+              }}
+            >
+              <ArrowLeft size={17} aria-hidden="true" />
+              {text(labels.overview)}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => choose("troubleshooting")}
+            >
+              <LifeBuoy size={18} aria-hidden="true" />
+              {text(labels.problems)}
+            </Button>
+          )}
+          <Button asChild variant="secondary">
+            <Link to="/api/docs">
+              {i18n.language.startsWith("de")
+                ? "API-Dokumentation"
+                : "API documentation"}
+            </Link>
           </Button>
+          <Button asChild variant="ghost">
+            <a href="/api/openapi.json" download>
+              OpenAPI JSON
+            </a>
+          </Button>
+          {publicDemoEnabled && (
+            <Button asChild variant="ghost">
+              <Link to="/demo">
+                {text(labels.demo)}
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </Button>
+          )}
         </div>
         {topic && !selected && !troubleshooting && (
           <p role="status" className="help-info">
@@ -255,11 +304,9 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               </ol>
             </section>
             <div className="help-actions">
-              {portalInternalEdition && (
+              {publicDemoEnabled && practicePath && (
                 <Button asChild>
-                  <Link
-                    to={`/demo${selected.path === "/" ? "" : selected.path}`}
-                  >
+                  <Link to={`/demo${practicePath === "/" ? "" : practicePath}`}>
                     {text(labels.practice)}
                   </Link>
                 </Button>
@@ -268,7 +315,7 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                 <Link to={selected.path}>{text(labels.real)}</Link>
               </Button>
             </div>
-            {portalInternalEdition && (
+            {publicDemoEnabled && practicePath && (
               <p className="help-fine-print">{text(labels.access)}</p>
             )}
           </article>
@@ -290,7 +337,10 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                   <article key={item.title.en}>
                     <h3>{text(item.title)}</h3>
                     <p>{text(item.body)}</p>
-                    <Link to={`/help?topic=${item.topic}`}>
+                    <Link
+                      to={topicLink(item.topic)}
+                      onClick={() => setQuery("")}
+                    >
                       {text(
                         visibleHelpModules.find(
                           (module) => module.id === item.topic,
@@ -326,7 +376,7 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                 <Link
                   className={`help-card help-accent-${index % 7}`}
                   key={module.id}
-                  to={`/help?topic=${module.id}`}
+                  to={topicLink(module.id)}
                   onClick={() => setQuery("")}
                 >
                   <BookOpen size={21} aria-hidden="true" />

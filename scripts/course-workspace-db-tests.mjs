@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("course_workspace", async ({sql, actor}) => {
@@ -541,11 +543,17 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                     ends_at: new Date(Date.now() + 7 * 86400000 + 3600000).toISOString(),
                 },
             ];
-            const created = await rpc(client, "repeat_client_request", [
+            const operation = portalOpenApi("https://portal.example.invalid").paths[
+                "/rest/v1/rpc/repeat_client_request"
+            ].post;
+            const request = z.fromJSONSchema(operation.requestBody.content["application/json"].schema);
+            const response = z.fromJSONSchema(operation.responses["200"].content["application/json"].schema);
+            request.parse({p_request_id: original, p_sessions: sessions, p_client_id: key});
+            const created = response.parse(await rpc(client, "repeat_client_request", [
                 q(original),
                 q(JSON.stringify(sessions)),
                 q(key),
-            ]);
+            ]));
             assert.equal(
                 await rpc(client, "repeat_client_request", [
                     q(original),

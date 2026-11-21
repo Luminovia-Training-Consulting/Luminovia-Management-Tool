@@ -62,7 +62,8 @@ def fixture(directory, *, extra=None, members=None):
 # Create only this case's temporary installation tree.
 def instance(directory):
     root = Path(directory) / "instance"
-    (root / "private").mkdir(parents=True)
+    root.mkdir(mode=0o700)
+    (root / "private").mkdir(mode=0o700)
     (root / "private/selfhost.env").write_text("SUPABASE_PUBLIC_URL='https://cms.luminovia.org/backend'\nSUPABASE_PUBLISHABLE_KEY='" + KEY + "'\nPORTAL_APP_ORIGIN='https://cms.luminovia.org'\n")
     (root / "source").mkdir()
     (root / "www/releases/bootstrap/assets").mkdir(parents=True)

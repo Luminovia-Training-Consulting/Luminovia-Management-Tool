@@ -5,6 +5,8 @@ import {spawn} from "node:child_process";
 import {readdir, readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {withMigrationReplayLock} from "./testing/database.mjs";
 
 const container =
@@ -61,6 +63,18 @@ const actor = (id, statement, aal = "aal1") =>
     sql(
         `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({sub: id, aal, role: "authenticated"}))};${statement};commit;`,
     );
+const {paths, components} = portalOpenApi("https://portal.example.invalid");
+const operation = (name) => paths[`/rest/v1/rpc/${name}`].post;
+const compileSchema = (schema) => z.fromJSONSchema(JSON.parse(
+    JSON.stringify({...schema, $defs: components.schemas}).replaceAll("#/components/schemas/", "#/$defs/"),
+));
+const resultSchema = (name) => compileSchema(
+    operation(name).responses["200"].content["application/json"].schema,
+);
+const wikiPage = resultSchema("wiki_page");
+const wikiReceipt = resultSchema("save_wiki_page");
+const wikiHistory = resultSchema("wiki_page_history");
+const knowledgeAccess = resultSchema("knowledge_access");
 /** Calls the public RPC as the test identity and returns its scalar database value. */
 const value = (id, fn, args = [], aal) =>
     actor(
@@ -74,7 +88,10 @@ const rows = (id, fn, args = [], aal) =>
         id,
         `select coalesce(json_agg(x),'[]') from public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "number" || typeof x === "boolean" ? String(x) : quote(x))).join(",")}) x`,
         aal,
-    ).then(JSON.parse);
+    ).then((wire) => {
+        const payload = JSON.parse(wire);
+        return fn === "wiki_page_history" ? wikiHistory.parse(payload) : payload;
+    });
 const a = randomUUID(),
     b = randomUUID(),
     admin = randomUUID(),
@@ -137,7 +154,7 @@ const save = (who, id, title, content, state, expected = null, aal) =>
         "save_wiki_page",
         [id, title, "de", wikiCategory, JSON.stringify(content), state, expected],
         aal,
-    ).then(JSON.parse);
+    ).then((wire) => wikiReceipt.parse(JSON.parse(wire)));
 let wikiCategory, forumCategory, page, thread, reply;
 try {
     await sql(`create database ${database}`, "postgres");
@@ -167,7 +184,7 @@ try {
         "Participants and anonymous identities have no knowledge access or write capability",
         async () => {
             assert.deepEqual(
-                JSON.parse(await value(participant, "knowledge_access")),
+                knowledgeAccess.parse(JSON.parse(await value(participant, "knowledge_access"))),
                 {
                     can_author: false,
                     can_publish_wiki: false,
@@ -197,10 +214,20 @@ try {
     await check(
         "Staff authors save private wiki drafts; staff peers are denied while permitted admins can review them",
         async () => {
+            const input = compileSchema(operation("save_wiki_page").requestBody.content["application/json"].schema);
+            const draft = {
+                p_id: null, p_title: "Draft wiki", p_locale: "de", p_category_id: wikiCategory,
+                p_content: rich, p_status: "draft",
+            };
+            input.parse(draft);
+            assert.equal(input.safeParse({...draft, p_content: doc("Draft text")}).success, true);
+            assert.equal(input.safeParse({...draft, p_content: {
+                type: "doc", content: [{type: "paragraph", content: [{type: "image", attrs: {src: "/unapproved"}}]}],
+            }}).success, false);
             page = (await save(a, null, "Draft wiki", rich, "draft")).page_id;
             assert.deepEqual(await rows(b, "wiki_pages_list"), []);
             await assert.rejects(value(b, "wiki_page", [page]), /access denied/);
-            const adminReview = JSON.parse(await value(admin, "wiki_page", [page]));
+            const adminReview = wikiPage.parse(JSON.parse(await value(admin, "wiki_page", [page])));
             assert.equal(adminReview.title, "Draft wiki");
             assert.equal(adminReview.status, "draft");
             assert.equal((await rows(a, "wiki_pages_list"))[0].has_draft, true);
@@ -231,7 +258,7 @@ try {
             );
             assert.equal(result.version, 2);
             assert.equal(result.published_version, 2);
-            const published = JSON.parse(await value(b, "wiki_page", [page]));
+            const published = wikiPage.parse(JSON.parse(await value(b, "wiki_page", [page])));
             assert.deepEqual(published.content, rich);
             assert.equal(published.version, 2);
             assert.equal(published.has_draft, false);
@@ -252,7 +279,7 @@ try {
                 "draft",
                 2,
             );
-            const visible = JSON.parse(await value(b, "wiki_page", [page]));
+            const visible = wikiPage.parse(JSON.parse(await value(b, "wiki_page", [page])));
             assert.equal(visible.title, "Published wiki");
             assert.equal(visible.version, 2);
             assert.ok(

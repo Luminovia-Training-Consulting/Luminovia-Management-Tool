@@ -108,13 +108,17 @@ export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
         title={t("hub")}
         description={t("hubHelp")}
         action={
-          academy && (
-            <Button asChild variant="secondary">
-              <Link to="/help?topic=academy-classes">
-                {t("helpGuides", { ns: "translation" })}
-              </Link>
-            </Button>
-          )
+          <Button asChild variant="secondary">
+            <Link
+              to={
+                academy
+                  ? "/help?topic=academy-classes"
+                  : "/help?topic=lms-learning"
+              }
+            >
+              {t("helpGuides", { ns: "translation" })}
+            </Link>
+          </Button>
         }
       />
       {!online ? (

@@ -1,6 +1,8 @@
 /** Own-day shared-course projection against complete disposable SQL history; fictional contacts/files only. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
@@ -24,8 +26,12 @@ await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
     await sql(
         `insert into auth.users(id,email)values ${[teacher, peer, client].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(teacher)},'lecturer'),(${q(peer)},'lecturer'),(${q(client)},'client');insert into public.organisations(id,name)values(${q(org)},'Fictional teaching academy'),(${q(otherOrg)},'Other private academy');insert into public.organisation_contacts(id,organisation_id,name,email,phone,notes)values(${q(contact)},${q(org)},'Explicit course contact','course@example.invalid','+49 40 123','Private internal note never returned'),(${q(foreignContact)},${q(otherOrg)},'Private foreign contact','secret@example.invalid','','Secret other organisation');insert into public.course_templates(id,title)values(${q(template)},'Fictional daily course');insert into public.course_runs(id,template_id,organisation_id)values(${q(run)},${q(template)},${q(org)});insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)values(${q(job)},${q(run)},'Fictional current day','Fictional academy','online','filled',100,'EUR','fixed_total',100,'Fictional terms');insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)values(${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional accepted terms',1);insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at)values(${q(session)},${q(claim)},${q(teacher)},date_trunc('day',now())+interval '10 hours',date_trunc('day',now())+interval '11 hours');update public.profiles set time_zone='UTC' where id=${q(teacher)};insert into private.course_preparation_items(run_id,label,done)values(${q(run)},'Shared completed item',true),(${q(run)},'Shared missing item',false);`,
     );
+    const teachingDay = z.fromJSONSchema(
+        portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/teaching_day"].post
+            .responses["200"].content["application/json"].schema,
+    );
     const day = async (who = teacher) =>
-        JSON.parse(await actor(who, "select public.teaching_day()"));
+        teachingDay.parse(JSON.parse(await actor(who, "select public.teaching_day()")));
     let count = 0;
     const check = async (name, fn) => {
         await fn();

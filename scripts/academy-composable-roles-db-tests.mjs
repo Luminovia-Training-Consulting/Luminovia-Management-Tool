@@ -7,7 +7,8 @@ import {
 } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
-import { academyMemberRoles } from "../src/features/accounts/academy-schema.ts";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 
 for (const edition of ["customer-self-hosted", "customer-managed"]) {
   await withTestDatabase("academy_composable_roles", async ({ actor, sql }) => {
@@ -84,12 +85,23 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       select to_jsonb(public.${name}(${args.map(literal).join(",")}));`,
         )) || "null",
       );
-    const read = async (target = combined) =>
-      academyMemberRoles.parse(
-        await rpc(admin, "academy_member_roles", target),
+    const { paths } = academyOpenApi("https://academy.example.invalid", {
+      name: "Practice Academy",
+      installationId: terms.installation_id,
+      edition,
+    });
+    const response = (endpoint) =>
+      z.fromJSONSchema(
+        paths[`/rest/v1/rpc/${endpoint}`].post.responses["200"].content[
+          "application/json"
+        ].schema,
       );
+    const readRoles = response("academy_member_roles");
+    const changeRoles = response("academy_set_member_role");
+    const read = async (target = combined) =>
+      readRoles.parse(await rpc(admin, "academy_member_roles", target));
     const change = async (role, scope, enabled, revision, target = combined) =>
-      academyMemberRoles.parse(
+      changeRoles.parse(
         await rpc(
           admin,
           "academy_set_member_role",

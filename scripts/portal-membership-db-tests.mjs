@@ -1,6 +1,8 @@
 /** Participant role fences and current scoped company and learner review authority. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("portal_membership", async ({sql, actor}) => {
@@ -166,7 +168,13 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
         actor(participant, "select set_config('request.path','/rpc/people_directory',true);select public.require_portal_access()"),
         /42501/,
     );
-    const reviewed = async () => JSON.parse(await actor(participant, "select public.reviewable_courses()"));
+    const reviewResponse = z.fromJSONSchema(
+        portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/reviewable_courses"].post
+            .responses["200"].content["application/json"].schema,
+    );
+    const reviewed = async () => reviewResponse.parse(
+        JSON.parse(await actor(participant, "select public.reviewable_courses()")),
+    );
     assert.equal((await reviewed())[0].review,null);
     const learnerReview = await actor(participant,
         `select public.submit_course_review('${run}','${lecturer}',4,'Helpful practice',0)`);

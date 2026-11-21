@@ -138,6 +138,52 @@ describe("installation and integration credential contracts", () => {
     }
   });
 
+  it("resolves the security scheme on every published operation", () => {
+    const catalogue = portalOpenApi(backend);
+    const schemes = catalogue.components.securitySchemes;
+    for (const [path, methods] of Object.entries(catalogue.paths)) {
+      for (const method of Object.values(methods)) {
+        const { security = [] } = method as {
+          security?: Record<string, string[]>[];
+        };
+        for (const entry of security) {
+          for (const name of Object.keys(entry)) {
+            expect(schemes, path).toHaveProperty(name);
+          }
+        }
+      }
+    }
+  });
+
+  it("describes both internal mail transports while keeping secret-bearing operations download-only", () => {
+    const read = "/rest/v1/rpc/get_mail_configuration";
+    const save = "/rest/v1/rpc/save_mail_configuration";
+    const test = "/functions/v1/mail-admin";
+    const { paths: download } = portalOpenApi(backend);
+    expect(paths[read].post.responses["200"]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            additionalProperties: false,
+            properties: {
+              smtp: { additionalProperties: false },
+              imap: { additionalProperties: false },
+            },
+          },
+        },
+      },
+    });
+    expect(download[save].post).toHaveProperty(
+      "requestBody.content.application/json.schema.properties.p_imap.anyOf",
+    );
+    expect(download[test].post).toHaveProperty(
+      "requestBody.content.application/json.schema.properties.protocol.enum",
+      ["smtp", "imap"],
+    );
+    expect(paths[save]).toBeUndefined();
+    expect(paths[test]).toBeUndefined();
+  });
+
   it("keeps one-time credentials in the download and exposes a closed list projection", () => {
     const prefix = "/rest/v1/rpc/";
     const issue = prefix + "issue_company_integration_key";
@@ -609,10 +655,25 @@ describe("documented Premium course and spending operations", () => {
       "p_terms_version",
     ]);
     expect(paths["/rest/v1/rpc/portal_access"].post).toMatchObject({
+      security: [{ publicApiKey: [], bearerAuth: [] }],
       responses: {
+        "412": {
+          content: {
+            "application/json": {
+              schema: { properties: { code: { const: "PT412" } } },
+            },
+          },
+        },
+        "428": {
+          content: {
+            "application/json": {
+              schema: { properties: { code: { const: "PT428" } } },
+            },
+          },
+        },
         "200": {
           content: {
-            "application/json": { schema: { type: ["boolean", "null"] } },
+            "application/json": { schema: { type: "boolean" } },
           },
         },
       },

@@ -1,3 +1,11 @@
+# 21 November 2026 — LMS help and Wiki navigation
+
+The bilingual help in the internal portal and the dedicated Academy groups guides by topic and searches both authored languages. Embedded help keeps the Wiki section in the URL when users open a guide or troubleshoot. Article selection places keyboard focus on the heading. Returning to the overview focuses the search field. The internal course hub and Academy administration link to their respective guides. The Academy help header uses the current local branding with the signed package fallback.
+
+The guides cover account sign-in and password recovery, course access, teaching, enrolment, internal Premium activation, dedicated LMS entitlement and branding, scoped API credentials and signed course-webhook setup. Demo practice opens the matching fictional role where the installation publishes a demo.
+
+Both production builds and 73 focused Vitest cases passed. Playwright checked both public-help journeys on desktop and mobile Chromium. The separately built self-hosted Academy help passed keyboard, German and English, layout and axe checks on desktop, mobile and a 320px dark viewport, using fictional public branding responses. The help requested only public branding data. These checks cover the guide flows. Cross-role acceptance of live course operations remains in the implementation plan.
+
 # 21 November 2026 — Outstanding exceptional approvals and browser acceptance
 
 Finance can find awaiting-submission approvals after the original review leaves its queue. A fresh desktop or mobile browser session can revoke an approval and reopen the original review. The lecturer sees the updated eligibility. Tests use fictional contract document metadata for this browser workflow. A complete exceptional PDF upload and scanner workflow remains pending in Chromium, with the scanned-version requirement checked in PostgreSQL.

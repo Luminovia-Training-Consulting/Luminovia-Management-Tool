@@ -1,6 +1,8 @@
 /** Real PostgreSQL job-to-course/chat projection and revocation boundaries. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("job_navigation", async ({sql, actor}) => {
@@ -22,10 +24,14 @@ await withTestDatabase("job_navigation", async ({sql, actor}) => {
    insert into public.chat_rooms(id,job_id,kind,title) values(${q(room)},${q(job)},'lecturer_course','Fictional lecturer room');
    insert into public.chat_rooms(id,course_run_id,kind,title) values(${q(hiddenRoom)},${q(run)},'participant_course','Fictional hidden room');
    insert into public.chat_members(room_id,user_id) values(${q(room)},${q(teacher)});`);
+    const response = z.fromJSONSchema(
+        portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/job_related_navigation"].post
+            .responses["200"].content["application/json"].schema,
+    );
     const get = async (who, aal = "aal1") =>
-        JSON.parse(
+        response.parse(JSON.parse(
             await actor(who, `select public.job_related_navigation(${q(job)})`, aal),
-        );
+        ));
     assert.deepEqual(await get(teacher), {
         course_id: run,
         rooms: [{id: room, kind: "lecturer_course"}],

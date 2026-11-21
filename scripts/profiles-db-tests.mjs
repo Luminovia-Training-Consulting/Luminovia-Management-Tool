@@ -5,6 +5,8 @@ import {spawn} from "node:child_process";
 import {readdir, readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {withMigrationReplayLock} from "./testing/database.mjs";
 
 const container =
@@ -70,6 +72,11 @@ const lecturer = randomUUID(),
 const run = randomUUID(),
     org = randomUUID(),
     template = randomUUID();
+const {paths} = portalOpenApi("https://portal.example.invalid");
+const courseResponses = new Map(["profile_courses", "lecturer_reviews"].map((name) => [
+    name,
+    z.fromJSONSchema(paths[`/rest/v1/rpc/${name}`].post.responses["200"].content["application/json"].schema),
+]));
 /** Calls the business database API under the fixture's controlled identity/permission claims. */
 const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
@@ -77,6 +84,8 @@ const rpc = (who, name, args = [], aal = "aal1") =>
         `select public.${name}(${args.map((x) => (x === null ? "null" : typeof x === "number" || typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
         aal,
     ).then((x) => {
+        const response = courseResponses.get(name);
+        if (response) return response.parse(JSON.parse(x));
         try {
             return JSON.parse(x);
         } catch {

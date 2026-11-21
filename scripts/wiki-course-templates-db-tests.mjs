@@ -4,6 +4,8 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
@@ -46,8 +48,12 @@ await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
             who,
             `select public.manage_wiki_course_template(${q(page)},${rev},${q(target)},${remove})`,
         );
+    const references = z.fromJSONSchema(
+        portalOpenApi("https://portal.example.invalid").paths["/rest/v1/rpc/wiki_course_templates"].post
+            .responses["200"].content["application/json"].schema,
+    );
     const list = async (who) =>
-        JSON.parse(await actor(who, `select public.wiki_course_templates(${q(page)})`));
+        references.parse(JSON.parse(await actor(who, `select public.wiki_course_templates(${q(page)})`)));
 
     await assert.rejects(manage(author, 1, privateTemplate), /42501/);
     await manage(author, 1, template);

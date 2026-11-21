@@ -44,6 +44,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/functions/v1/accounts/v1/academy/users",
             "/functions/v1/accounts/v1/academy/company-invitations",
             "/functions/v1/mail-admin",
+            "/functions/v1/human-login",
+            "/functions/v1/human-recovery",
             "/rest/v1/rpc/academy_administration",
             "/rest/v1/rpc/academy_public_branding",
             "/rest/v1/rpc/academy_course_participation_report",
@@ -73,6 +75,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_save_username",
             "/rest/v1/rpc/academy_save_appearance",
             "/rest/v1/rpc/academy_set_management",
+            "/rest/v1/rpc/academy_member_roles",
+            "/rest/v1/rpc/academy_set_member_role",
+            "/rest/v1/rpc/manage_course_enrolment",
             "/rest/v1/rpc/academy_course_material_action",
             "/rest/v1/rpc/course_session_register",
             "/rest/v1/rpc/course_withdrawal_window",
@@ -200,14 +205,21 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       `${gate(endpoint, method)} select public.${endpoint}(${args.map(q).join(",")})`,
     );
     if (responseSchemas.has(endpoint)) {
-      const payload = [
+      const scalar = [
         "academy_ensure_course_chat",
         "send_course_chat_message",
         "send_course_chat_attachment",
-      ].includes(endpoint)
-        ? value
-        : JSON.parse(value);
-      checkResponse(endpoint, payload);
+      ].includes(endpoint);
+      const boolean = [
+        "portal_access",
+        "authenticator_settings_available",
+      ].includes(endpoint);
+      if (boolean) assert.match(value, /^[tf]$/);
+      if (boolean) {
+        checkResponse(endpoint, value === "t");
+      } else {
+        checkResponse(endpoint, scalar ? value : JSON.parse(value));
+      }
     }
     return value;
   };
@@ -428,6 +440,12 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.equal(
     await sql(`select private.company_premium_enabled(${q(org)})`),
     "f",
+  );
+  assert.equal(await call(admin, "portal_access"), "t");
+  assert.equal(await call(admin, "authenticator_settings_available"), "f");
+  assert.deepEqual(
+    JSON.parse(await call(admin, "course_workspace_entitlement", [run])),
+    { lms_enabled: true },
   );
   const adminView = await workspace(admin, run);
   assert.equal(adminView.lms_enabled, true);

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { internalInstallationBrand } from "../../lib/installation-brand";
 import { academyOpenApi } from "./academy-contract";
@@ -67,6 +68,21 @@ const personalPaths = [
   "/rest/v1/rpc/academy_save_username",
   "/rest/v1/rpc/academy_save_appearance",
 ] as const;
+const academyParityPaths = [
+  "/rest/v1/rpc/portal_access",
+  "/rest/v1/rpc/authenticator_settings_available",
+  "/rest/v1/rpc/course_workspace_entitlement",
+  "/rest/v1/rpc/course_enrolments",
+  "/rest/v1/rpc/course_enrolment_candidates",
+  "/rest/v1/rpc/manage_course_enrolment",
+  "/rest/v1/rpc/academy_course_instructor_candidates",
+  "/rest/v1/rpc/academy_assign_course_instructor",
+  "/rest/v1/rpc/academy_release_course_instructor",
+  "/rest/v1/rpc/academy_member_roles",
+  "/rest/v1/rpc/academy_set_member_role",
+  "/functions/v1/human-login",
+  "/functions/v1/human-recovery",
+] as const;
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
@@ -123,6 +139,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           ...readPaths,
           ...writePaths,
           ...draftPaths,
+          ...academyParityPaths,
         ].sort(),
       );
       expect(spec.webhooks.companyCourseEvent.post.operationId).toBe(
@@ -161,6 +178,86 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("documents session prerequisites and keeps human credential requests download-only", () => {
+      const read = spec.paths["/rest/v1/rpc/portal_access"].post;
+      expect(read["x-portal-licence"]).toBe("active-or-grace");
+      expect(
+        read.responses["412"].content["application/json"].schema.properties
+          .code,
+      ).toEqual({ const: "PT412" });
+      expect(
+        read.responses["428"].content["application/json"].schema.properties
+          .code,
+      ).toEqual({ const: "PT428" });
+      const explorer = portalOpenApi(backend, false, brand);
+      const internal = portalOpenApi(backend);
+      for (const path of [
+        "/functions/v1/human-login",
+        "/functions/v1/human-recovery",
+      ] as const) {
+        expect(spec.paths[path]).toEqual(internal.paths[path]);
+        expect(explorer.paths[path]).toBeUndefined();
+        expect(spec.paths[path].post.security).toEqual([]);
+      }
+    });
+
+    it("describes licence, assignment, enrolment and scoped role states", () => {
+      const roster = spec.paths["/rest/v1/rpc/course_enrolments"].post;
+      expect(roster["x-portal-licence"]).toBe("active-or-grace");
+      const enrol = spec.paths["/rest/v1/rpc/manage_course_enrolment"].post;
+      expect(enrol["x-portal-licence"]).toBe("active");
+      expect(enrol.responses).toHaveProperty("204");
+      expect(enrol.responses).not.toHaveProperty("200");
+      expect(enrol.responses).toHaveProperty("409");
+
+      const assign =
+        spec.paths["/rest/v1/rpc/academy_assign_course_instructor"].post;
+      const assignment = z.fromJSONSchema(
+        assign.responses["200"].content["application/json"]
+          .schema as z.core.JSONSchema.JSONSchema,
+      );
+      expect(
+        assignment.safeParse({ status: "cancelled", claim_id: id }).success,
+      ).toBe(true);
+      expect(assignment.safeParse({ status: "conflict" }).success).toBe(true);
+      expect(
+        assignment.safeParse({ status: "confirmed", amount: 50 }).success,
+      ).toBe(false);
+
+      const change = spec.paths["/rest/v1/rpc/academy_set_member_role"].post;
+      const roleRequest = z.fromJSONSchema(
+        change.requestBody.content["application/json"].schema,
+      );
+      const request = {
+        p_user_id: id,
+        p_role: "participant",
+        p_organisation_id: id,
+        p_enabled: true,
+        p_expected_revision: "f".repeat(32),
+      };
+      expect(roleRequest.safeParse(request).success).toBe(true);
+      expect(
+        roleRequest.safeParse({ ...request, p_organisation_id: null }).success,
+      ).toBe(false);
+      expect(
+        roleRequest.safeParse({ ...request, p_role: "lecturer" }).success,
+      ).toBe(false);
+      expect(
+        roleRequest.safeParse({
+          ...request,
+          p_role: "admin",
+          p_organisation_id: null,
+        }).success,
+      ).toBe(false);
+      expect(
+        roleRequest.safeParse({
+          ...request,
+          p_enabled: false,
+          p_organisation_id: null,
+        }).success,
+      ).toBe(true);
     });
 
     it("keeps the scanner-bound logo contract public for read and admin-only for deletion", () => {

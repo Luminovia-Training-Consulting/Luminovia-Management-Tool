@@ -1,4 +1,4 @@
-# Example clients · Beispielclients
+# Integration examples · Integrationsbeispiele
 
 ## Deutsch
 
@@ -35,3 +35,62 @@ node --test scripts/runtime-course-index-examples.test.mjs
 The test runs all three clients on a temporary loopback listener with the Edge request handler and fictional course and credential fixtures. The [database tests](../academy-course-index-db-tests.mjs) cover the persisted organisation boundaries and actual key lifecycle.
 
 Der Test führt alle drei Clients über einen temporären lokalen Listener mit dem Edge-Handler und fiktiven Kursen und Schlüsseln aus. Die [Datenbanktests](../academy-course-index-db-tests.mjs) prüfen die gespeicherten Organisationsgrenzen sowie den tatsächlichen Lebenszyklus der Schlüssel.
+
+## Signed course webhook receiver
+
+### Deutsch
+
+Der [Empfänger](company-course-webhook-receiver.mjs) startet mit der Node-Version aus [`.node-version`](../../.node-version) und legt eine persistente SQLite-Inbox für genau ein Abonnement an. Öffne **Admin → Unternehmen → API-Integrationen → Kurs-Webhooks** oder **Academy-Verwaltung → Signierte Kurs-Webhooks** und erstelle ein Abonnement mit einem vom Betreiber freigegebenen Zielalias. Kopiere den einmal angezeigten Signaturschlüssel in den privaten Secret Store des Empfängers.
+
+Starte den Empfänger mit dem unten gezeigten Befehl. Richte für echte Zustellungen einen HTTPS-Reverse-Proxy ein, der `POST /course-events` unverändert an den Loopback-Port weitergibt. Hinterlege die öffentliche HTTPS-Adresse einschließlich Pfad in der Zielzuordnung des [Workers](../../OPERATIONS.md#company-course-webhooks). Sieh in der Zustellhistorie im Portal nach und lies die letzten 50 Einträge mit `receipts`. Für einen Schlüsselwechsel widerrufst du das bisherige Abonnement, erstellst ein neues und startest den Empfänger mit dem neuen Signaturschlüssel.
+
+`204` bestätigt einen gespeicherten Eintrag oder die bestätigte Wiederholung derselben Event-ID. Eine abweichende Nutzlast unter derselben ID liefert `409`. Bei ungültiger Signatur, abgelaufenem Zeitstempel oder unpassender ID liefert der Empfänger `401`. Verarbeitet die Inbox einen Schreibvorgang gerade nicht, fordert `503` den Worker zum erneuten Versuch auf. Die Reihenfolge der Zustellung kann von `occurred_at` abweichen. Für eine CRM-Verarbeitung liest ein separater Consumer die Inbox und verwendet die Event-ID auch bei seinen eigenen Änderungen. Sichere die Inbox und behalte Einträge, solange ein erneuter Zustellversuch oder eine Wiederverarbeitung möglich ist.
+
+### English
+
+The [receiver](company-course-webhook-receiver.mjs) runs with the Node version in [`.node-version`](../../.node-version) and opens a durable SQLite inbox for one subscription. In **Admin → Companies → API integrations → Course webhooks** or **Academy administration → Signed course webhooks**, create a subscription for an operator-approved receiver alias. Copy the one-time subscription signing key to the receiver's private secret store.
+
+Start the receiver with the command below. For real deliveries, configure an HTTPS reverse proxy to forward `POST /course-events` and preserve its original body and signature headers. Set the full public HTTPS URL in the [worker destination map](../../OPERATIONS.md#company-course-webhooks). Check the delivery history in the portal and use `receipts` to read the latest 50 entries. To rotate the key, revoke the old subscription, create a new subscription and restart the receiver with its signing key.
+
+`204` acknowledges a durable entry or a verified repeat of the same event ID. Changed payload under the same ID returns `409`. Invalid signatures, expired timestamps and mismatched IDs return `401`. If the inbox cannot commit a write, `503` requests a retry. Delivery order can differ from `occurred_at`. A separate CRM consumer reads the inbox and uses the event ID to deduplicate its own changes. Back up the inbox and retain its entries for as long as deliveries or downstream work can be replayed.
+
+```bash
+receiver_state="$HOME/.local/state/luminovia-course-sync"
+install -d -m 700 "$receiver_state"
+export LUMINOVIA_WEBHOOK_RECEIVER_DB="$receiver_state/events.sqlite"
+read -rs LUMINOVIA_WEBHOOK_RECEIVER_SECRET
+export LUMINOVIA_WEBHOOK_RECEIVER_SECRET
+node scripts/examples/company-course-webhook-receiver.mjs
+unset LUMINOVIA_WEBHOOK_RECEIVER_SECRET
+
+node scripts/examples/company-course-webhook-receiver.mjs receipts
+```
+
+Default bind address · Standardadresse: `127.0.0.1:8788`. Use `LUMINOVIA_WEBHOOK_RECEIVER_PORT` for a different local port.
+
+Example HTTPS proxy · Beispiel für einen HTTPS-Proxy:
+
+```caddyfile
+events.example.invalid {
+  @course_event {
+    path /course-events
+    method POST
+  }
+  handle @course_event {
+    reverse_proxy 127.0.0.1:8788
+  }
+  handle {
+    respond 404
+  }
+}
+```
+
+Local verification · Lokale Prüfung:
+
+```bash
+node --test scripts/runtime-company-course-webhook{,-receiver}.test.mjs
+```
+
+The suites cover raw-byte HMAC verification, replay after restart, conflicting event IDs, invalid input and temporary SQLite failure. The internal and Academy PostgreSQL suites run the actual worker and the same receiver over loopback.
+
+Die Tests prüfen die Signatur über die Originalbytes, Wiederholungen nach Neustart, widersprüchliche Event-IDs, ungültige Eingaben und einen vorübergehenden SQLite-Fehler. Die PostgreSQL-Tests der internen und der Academy-Edition führen den echten Worker und denselben Empfänger über Loopback aus.

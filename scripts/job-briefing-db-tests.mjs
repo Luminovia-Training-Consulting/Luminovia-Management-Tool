@@ -2,6 +2,8 @@
  * contacts, versioned edits and retries. Native Auth/HTTP is verified separately. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 const admin = "bd100000-0000-4000-8000-000000000001";
@@ -54,9 +56,15 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
             "aal1",
         );
     };
+    const {paths} = portalOpenApi("https://portal.example.invalid");
+    const response = (name) => z.fromJSONSchema(
+        paths[`/rest/v1/rpc/${name}`].post.responses["200"].content["application/json"].schema,
+    );
+    const readBrief = response("job_briefing");
+    const writeBrief = response("save_job_briefing");
     /** Read only the public invoker projection under the selected actual SQL actor. */
     const get = async (job, who = admin, aal = "aal1") =>
-        JSON.parse(await actor(who, `select public.job_briefing(${q(job)})`, aal));
+        readBrief.parse(JSON.parse(await actor(who, `select public.job_briefing(${q(job)})`, aal)));
     /** Bind the complete reviewed payload, expected version and request key. */
     const save = async (
         job,
@@ -66,13 +74,13 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
         who = admin,
         aal = "aal1",
     ) =>
-        JSON.parse(
+        writeBrief.parse(JSON.parse(
             await actor(
                 who,
                 `select public.save_job_briefing(${q(job)},${version === null ? "null" : version},${key === null ? "null" : q(key)},${q(JSON.stringify(values))}::jsonb)`,
                 aal,
             ),
-        );
+        ));
     /** Count only completed assertions; no failed or skipped case becomes acceptance evidence. */
     const check = async (name, fn) => {
         await fn();

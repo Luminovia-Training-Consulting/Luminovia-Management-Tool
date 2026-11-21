@@ -2,7 +2,7 @@
  * DOM regressions for URL-selected guides, bilingual search, language switches and recovery text.
  * Catalog checks cover authored completeness and route identity, not live feature permissions.
  */
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -27,7 +27,10 @@ afterEach(() => {
 
 function page(path = "/help") {
   const router = createMemoryRouter(
-    [{ path: "/help", element: <HelpCenter /> }],
+    [
+      { path: "/help", element: <HelpCenter /> },
+      { path: "/wiki", element: <HelpCenter embedded /> },
+    ],
     { initialEntries: [path] },
   );
   render(<RouterProvider router={router} />);
@@ -135,6 +138,64 @@ describe("public bilingual help", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Aufträge übernehmen" }),
     ).toHaveFocus();
+  });
+  it("keeps Wiki context through category, keyboard article selection and recovery", async () => {
+    const router = page("/wiki?section=help");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Themenbereich" }),
+      "courses",
+    );
+    expect(router.state.location.search).toBe("?section=help&area=courses");
+    expect(screen.queryByRole("link", { name: /^Dateizentrale/ })).toBeNull();
+    const course = screen.getByRole("link", {
+      name: /^Meine Kurse und Lernmaterialien/,
+    });
+    course.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(router.state.location.pathname).toBe("/wiki");
+    expect(router.state.location.search).toBe(
+      "?section=help&area=courses&topic=lms-learning",
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Meine Kurse und Lernmaterialien",
+        level: 2,
+      }),
+    ).toHaveFocus();
+    expect(
+      screen.getByRole("link", { name: "Diesen Bereich in der Demo üben" }),
+    ).toHaveAttribute("href", "/demo/learning?role=participant");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Zur Übersicht" }),
+    );
+    expect(screen.getByRole("searchbox")).toHaveFocus();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Probleme lösen" }),
+    );
+    const recovery = screen.getByRole("region", {
+      name: "Probleme Schritt für Schritt lösen",
+    });
+    await userEvent.click(
+      within(recovery).getByRole("link", { name: "Anmeldung & Sicherheit" }),
+    );
+    expect(router.state.location.search).toBe(
+      "?section=help&area=courses&topic=security",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Anmeldung & Sicherheit", level: 2 }),
+    ).toHaveFocus();
+  });
+  it("documents internal Premium activation and both sign-in identifiers", async () => {
+    const router = page("/help?topic=premium-lms");
+    expect(screen.getByText(/wähle das aktive Unternehmen/)).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Diesen Bereich in der Demo üben" }),
+    ).toBeNull();
+    await act(async () => router.navigate("/help?topic=security"));
+    expect(
+      screen.getByText(/E-Mail-Adresse oder deinem Benutzernamen/),
+    ).toBeVisible();
+    expect(screen.getByText(/Postfach des Kontos/)).toBeVisible();
   });
   it("keeps complete authored guides and unique routes for every current section", () => {
     expect(new Set(guideModules.map((module) => module.id)).size).toBe(

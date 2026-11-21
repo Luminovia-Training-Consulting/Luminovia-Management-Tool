@@ -75,10 +75,11 @@ it("waits for a confirmed booking then requires a reason to release the same ass
   await user.click(screen.getByRole("button", { name: "Release assignment" }));
   const confirmation = within(screen.getByRole("dialog"));
   expect(confirmation.getByRole("button", { name: "Confirm" })).toBeDisabled();
-  await user.type(
-    confirmation.getByRole("textbox", { name: "Reason" }),
-    "Course schedule adjustment",
-  );
+  const reason = confirmation.getByRole("textbox", { name: "Reason" });
+  await user.type(reason, " abcd ");
+  expect(confirmation.getByRole("button", { name: "Confirm" })).toBeDisabled();
+  await user.clear(reason);
+  await user.type(reason, "Course schedule adjustment");
   await user.click(confirmation.getByRole("button", { name: "Confirm" }));
   expect(await screen.findByText("Assignment updated.")).toBeVisible();
   expect(api.rpc).toHaveBeenCalledWith("academy_release_course_instructor", {

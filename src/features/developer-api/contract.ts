@@ -1,3 +1,10 @@
+import {
+  internalMailDownload,
+  internalMailRead,
+} from "./academy-mail-contract.ts";
+import { knowledgeDocument, knowledgeSchemas } from "./knowledge-contract.ts";
+import { sessionPaths } from "./session-contract.ts";
+import { humanAuthPaths } from "./human-auth-contract.ts";
 import { companyCourseIndexPath } from "./company-course-index-contract.ts";
 import {
   companyCourseWebhook,
@@ -31,6 +38,7 @@ import {
   notificationPaths,
 } from "./notifications-contract.ts";
 import {
+  courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
   courseWelcomePublishedResult,
   courseWelcomeResult,
@@ -87,6 +95,11 @@ import {
   jobSchema,
   savedViewSchema,
 } from "../jobs/discovery-schema.ts";
+import {
+  preparationIds,
+  preparationSchema,
+  teachingDaySchema,
+} from "../dashboard/personal-schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -441,6 +454,98 @@ const courseRunRequest = {
   required: ["template_id", "sessions"],
 };
 const readinessRun = { p_course_run_id: uuid };
+const clientRequestStatus = { enum: ["submitted", "published", "cancelled"] };
+const clientRequestFields = {
+  title: { ...text, minLength: 1, maxLength: 200 },
+  description: { ...text, maxLength: 12000, default: "" },
+  delivery_type: { enum: ["online", "onsite"] },
+  location: { ...text, maxLength: 500, default: "" },
+  time_zone: { ...text, default: "Europe/Berlin" },
+  sessions: courseRunRequest.properties.sessions,
+  topic_ids: { type: "array", items: uuid, maxItems: 100, default: [] },
+  gross_amount: proposedAmount,
+  gross_total_amount: proposedAmount,
+  currency: { enum: ["EUR", "AUD"] },
+  rate_unit: rateUnit,
+};
+const clientRequestInput = {
+  ...object(clientRequestFields),
+  required: [
+    "title",
+    "delivery_type",
+    "sessions",
+    "gross_amount",
+    "gross_total_amount",
+    "currency",
+    "rate_unit",
+  ],
+};
+const clientRequestDocument = {
+  version_id: uuid,
+  category: { enum: ["material", "report"] },
+};
+const clientRequestBriefFields = {
+  teaching_units: { type: "integer", minimum: 1, maximum: 9999 },
+  unit_minutes: { enum: [45, 60] },
+  instructions: { ...text, maxLength: 4000 },
+  required_documents: {
+    type: "array",
+    maxItems: 30,
+    items: { ...text, minLength: 1, maxLength: 300 },
+  },
+  documents: {
+    type: "array",
+    maxItems: 20,
+    items: object(clientRequestDocument),
+  },
+};
+const clientRequestBriefInput = {
+  ...object(clientRequestBriefFields),
+  required: ["teaching_units", "unit_minutes"],
+};
+const nullableClientRequestBrief = {
+  anyOf: [object(clientRequestBriefFields), { type: "null" }],
+};
+
+const wikiVersion = { ...version, minimum: 1 };
+const wikiPublishedVersion = { type: ["integer", "null"], minimum: 1 };
+const wikiLocale = { enum: ["de", "en"] };
+const wikiStatus = { enum: ["draft", "published", "archived"] };
+const wikiPage = object({
+  id: uuid,
+  title: text,
+  locale: wikiLocale,
+  category_id: uuid,
+  category_label_de: text,
+  category_label_en: text,
+  owner_id: uuid,
+  owner_name: text,
+  status: wikiStatus,
+  version: wikiVersion,
+  published_version: wikiPublishedVersion,
+  has_draft: boolean,
+  updated_at: sessionInstant,
+  content: knowledgeDocument,
+});
+const jobBriefingFields = {
+  reference_url: { ...text, maxLength: 2048 },
+  reference_label: { ...text, maxLength: 120 },
+  reference_description: { ...text, maxLength: 4000 },
+  contact_name: { ...text, maxLength: 120 },
+  contact_email: { ...text, maxLength: 254 },
+  contact_phone: { ...text, maxLength: 50 },
+  contact_description: { ...text, maxLength: 2000 },
+  contact_visibility: { enum: ["after_claim", "offer_viewers"] },
+};
+const jobBriefingResult = object({
+  ...jobBriefingFields,
+  version,
+  has_contact: boolean,
+  contact_visible: boolean,
+  can_manage: boolean,
+  can_edit: boolean,
+});
+
 const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
 
@@ -688,6 +793,8 @@ const jobViewMutation = (
 });
 
 const nativePaths = {
+  ...sessionPaths(false),
+  ...internalMailRead,
   "/rest/v1/rpc/course_class_options": rpc(
     "readCourseClass",
     "Courses",
@@ -1329,6 +1436,342 @@ const nativePaths = {
       requestBody: { required: true, content: json(courseWelcomeWrite) },
     },
   },
+  "/rest/v1/rpc/client_requests": rpc(
+    "readCompanyCourseRequests",
+    "Courses",
+    "List the current company course requests",
+    "Returns up to 500 requests in the caller's current company or authorised finance scope. An optional organisation ID narrows this scope. Amounts and their currency refer to the requested or saved company quote.",
+    { p_organisation_id: nullableUuid },
+    {
+      type: "array",
+      maxItems: 500,
+      items: object({
+        ...clientRequestFields,
+        gross_amount: { type: "number" },
+        gross_total_amount: { type: "number" },
+        id: uuid,
+        organisation_id: uuid,
+        organisation_name: text,
+        status: { enum: [...clientRequestStatus.enum, "assigned"] },
+        job_id: nullableUuid,
+        assigned_lecturer_id: nullableUuid,
+        assigned_lecturer_name: { type: ["string", "null"] },
+        assigned_lecturers: {
+          type: "array",
+          items: object({ id: uuid, display_name: text }),
+        },
+        created_at: sessionInstant,
+      }),
+    },
+    ["p_organisation_id"],
+  ),
+  "/rest/v1/rpc/client_request_brief": rpc(
+    "readCompanyCourseRequestBrief",
+    "Courses",
+    "Read the current course request brief",
+    "Requires current company access or the finance permission for the exact request. The brief may be null for older requests. Document names and checksums are returned only for currently readable versions.",
+    { p_request_id: uuid },
+    object({
+      version,
+      brief: nullableClientRequestBrief,
+      editable: boolean,
+      documents: {
+        type: "array",
+        maxItems: 20,
+        items: object({
+          ...clientRequestDocument,
+          name: text,
+          sha256: { ...text, pattern: "^[0-9a-f]{64}$" },
+        }),
+      },
+    }),
+  ),
+  "/rest/v1/rpc/client_request_history": rpc(
+    "readCompanyCourseRequestHistory",
+    "Courses",
+    "Read immutable course request revisions",
+    "Requires current company access or the finance permission for the exact request. Returns up to 25 revisions from newest to oldest. Use the oldest returned ID to read the previous page.",
+    {
+      p_request_id: uuid,
+      p_before: { type: ["integer", "null"], format: "int64" },
+    },
+    {
+      type: "array",
+      maxItems: 25,
+      items: object({
+        id: { type: "integer", format: "int64", minimum: 1 },
+        event: {
+          enum: [...clientRequestStatus.enum, "baseline", "brief_saved"],
+        },
+        created_at: sessionInstant,
+        snapshot: object({
+          status: clientRequestStatus,
+          brief_version: version,
+          brief: nullableClientRequestBrief,
+          payload: object(clientRequestFields),
+          job_id: nullableUuid,
+        }),
+      }),
+    },
+    ["p_before"],
+  ),
+  "/rest/v1/rpc/create_client_request_with_brief": rpc(
+    "createCompanyCourseRequestWithBrief",
+    "Courses",
+    "Submit a company course request with a teaching brief",
+    "Requires a current company contact or finance permission for the selected organisation. The whole request and brief are saved together. Planned sessions must cover the teaching time. The caller can share exact clean material versions. Repeat the same client ID and values to recover the original request.",
+    {
+      p_organisation_id: uuid,
+      p_client_id: uuid,
+      p_payload: clientRequestInput,
+      p_brief: clientRequestBriefInput,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/save_client_request_brief": rpc(
+    "saveCompanyCourseRequestBrief",
+    "Courses",
+    "Revise the teaching brief of a submitted course request",
+    "Requires current company access or the finance permission. The request must be unpublished. Send the previously confirmed brief version, or zero for an older request with no brief. The response is the next confirmed version.",
+    {
+      p_request_id: uuid,
+      p_brief: clientRequestBriefInput,
+      p_expected_version: version,
+    },
+    { ...version, minimum: 1 },
+  ),
+  "/rest/v1/rpc/job_related_navigation": rpc(
+    "readVisibleJobCourseDestinations",
+    "Courses",
+    "List the course and chat destinations for a visible job",
+    "Requires access to the job. The server checks the linked course and each chat room independently. A course outside the current relationship appears as null.",
+    { p_job_id: uuid },
+    object({
+      course_id: nullableUuid,
+      rooms: {
+        type: "array",
+        items: object({
+          id: uuid,
+          kind: { enum: ["lecturer_course", "participant_course"] },
+        }),
+      },
+    }),
+  ),
+  "/rest/v1/rpc/repeat_client_request": rpc(
+    "repeatClientCourseRequest",
+    "Courses",
+    "Request a new course using an existing delivered request",
+    "Requires a current contact of the exact company and an original request linked to a course whose sessions have ended. Provide new future nonoverlapping sessions. The original course brief is copied without its documents. The result identifies the new request. Reuse the client ID for an exact retry.",
+    {
+      p_request_id: uuid,
+      p_client_id: uuid,
+      p_sessions: courseRunRequest.properties.sessions,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/profile_courses": rpc(
+    "readVisibleTaughtCourses",
+    "Courses",
+    "List visible courses taught by a lecturer",
+    "Both the person's profile and each course must be visible to the current caller. Course summaries may be visible without direct workspace access. Check can_open before offering a course link.",
+    { p_user_id: uuid },
+    {
+      type: "array",
+      items: object({
+        course_run_id: uuid,
+        title: text,
+        time_zone: text,
+        starts_at: sessionInstant,
+        ends_at: sessionInstant,
+        state: { enum: ["past", "current", "upcoming"] },
+        can_open: boolean,
+        topic_ids: { type: "array", items: uuid },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/reviewable_courses": rpc(
+    "readReviewableCourses",
+    "Courses",
+    "List completed courses that the current actor can review",
+    "The server verifies current Premium and course relationship for every result. Each entry includes the current actor's own review or null. A withdrawn review may be shown to its author with deleted set to true.",
+    {},
+    {
+      type: "array",
+      items: object({
+        course_run_id: uuid,
+        title: text,
+        lecturer_id: uuid,
+        lecturer_name: text,
+        ends_at: sessionInstant,
+        review: {
+          anyOf: [
+            { type: "null" },
+            object({
+              id: uuid,
+              rating: { type: "integer", minimum: 1, maximum: 5 },
+              comment: text,
+              version: { ...version, minimum: 1 },
+              hidden: boolean,
+              moderation_reason: text,
+              deleted: boolean,
+            }),
+          ],
+        },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/lecturer_reviews": rpc(
+    "readVisibleLecturerReviews",
+    "Courses",
+    "List the latest visible course reviews for a lecturer",
+    "The current actor must be able to read the profile and reviewed course. The response shows the caller's own reviews and permitted reviews by others. Only the author or an authorised moderator receives a reviewer ID and moderation details.",
+    { p_user_id: uuid },
+    {
+      type: "array",
+      maxItems: 100,
+      items: object({
+        id: uuid,
+        course_run_id: uuid,
+        course_title: text,
+        rating: { type: "integer", minimum: 1, maximum: 5 },
+        comment: text,
+        version: { ...version, minimum: 1 },
+        created_at: sessionInstant,
+        updated_at: sessionInstant,
+        mine: boolean,
+        reviewer_label: { enum: ["self", "participant"] },
+        reviewer_id: nullableUuid,
+        hidden: boolean,
+        moderation_reason: text,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/knowledge_access": rpc(
+    "readKnowledgeAccess",
+    "Knowledge",
+    "Read this session's authoring and moderation permissions",
+    "Current database role and permissions determine which actions are available. Every subsequent operation independently checks the specific resource and current authority.",
+    {},
+    object({
+      can_author: boolean,
+      can_publish_wiki: boolean,
+      can_moderate_forum: boolean,
+    }),
+  ),
+  "/rest/v1/rpc/wiki_page": rpc(
+    "readVisibleWikiPage",
+    "Knowledge",
+    "Read the current visible wiki revision",
+    "The page owner and wiki managers can read the latest revision. Other eligible readers receive the published revision of a current page.",
+    { p_id: uuid },
+    wikiPage,
+  ),
+  "/rest/v1/rpc/wiki_page_history": rpc(
+    "readVisibleWikiHistory",
+    "Knowledge",
+    "Read the wiki page's authorised revision history",
+    "Returns latest revisions first. The page owner and wiki managers can see drafts. Other eligible readers receive published revisions.",
+    { p_id: uuid },
+    {
+      type: "array",
+      items: object({
+        version: wikiVersion,
+        title: text,
+        locale: wikiLocale,
+        editor_name: text,
+        created_at: sessionInstant,
+        published: boolean,
+        content: knowledgeDocument,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/save_wiki_page": rpc(
+    "saveWikiRevision",
+    "Knowledge",
+    "Save a wiki draft or publish an authorised revision",
+    "Supply null as the page ID for a new page. For an existing page, send its last-read version to detect a concurrent edit. Requires current authoring access and an active wiki category. Publishing and archiving require wiki management authority. Published content must contain text.",
+    {
+      p_id: nullableUuid,
+      p_title: { ...text, minLength: 1, maxLength: 200 },
+      p_locale: wikiLocale,
+      p_category_id: uuid,
+      p_content: knowledgeDocument,
+      p_status: wikiStatus,
+      p_expected_version: wikiPublishedVersion,
+    },
+    object({
+      page_id: uuid,
+      version: wikiVersion,
+      published_version: wikiPublishedVersion,
+    }),
+    ["p_expected_version"],
+  ),
+  "/rest/v1/rpc/wiki_attachments": rpc(
+    "readVisibleWikiAttachments",
+    "Knowledge",
+    "List attachments of the visible wiki revision",
+    "The reader needs access to the exact page and selected revision. A listed attachment refers to a scanned version. Use the authorised files operation to download it.",
+    { p_page_id: uuid },
+    {
+      type: "array",
+      maxItems: 20,
+      items: object({ id: uuid, version_id: uuid, name: text }),
+    },
+  ),
+  "/rest/v1/rpc/job_briefing": rpc(
+    "readVisibleJobBriefing",
+    "Courses",
+    "Read the authorised teaching brief and contact for a job",
+    "Requires current job management or an eligible lecturer with access to the job. Contact fields are empty when the selected contact visibility or current claim does not allow disclosure.",
+    { p_job_id: uuid },
+    jobBriefingResult,
+  ),
+  "/rest/v1/rpc/save_job_briefing": rpc(
+    "saveJobBriefing",
+    "Courses",
+    "Save job briefing references and contact visibility",
+    "Requires current job management. Send the job ID, last-read version and a request ID. Omitted briefing fields are cleared or set to their default. Repeating an identical request returns the latest authorised brief.",
+    {
+      p_job_id: uuid,
+      p_expected_version: { ...version, maximum: 2147483646 },
+      p_request_id: uuid,
+      p_payload: { ...object(jobBriefingFields), required: [] },
+    },
+    jobBriefingResult,
+  ),
+  "/rest/v1/rpc/wiki_course_templates": rpc(
+    "readWikiCourseTemplateReferences",
+    "Courses",
+    "List visible course template references on a wiki page",
+    "The read follows the caller's visible wiki revision and independent course template authority. The page owner and wiki managers may see the current revision. Other permitted readers see the published revision.",
+    { p_page_id: uuid },
+    {
+      type: "array",
+      maxItems: 20,
+      items: object({ template_id: uuid, title: text, archived: boolean }),
+    },
+  ),
+  "/rest/v1/rpc/teaching_day": rpc(
+    "readOwnTeachingDay",
+    "Courses",
+    "Read the current local day's teaching and course preparation",
+    "Uses the current profile's IANA time zone. The response includes the lecturer's current confirmed sessions, authorised course resources, deliberately selected course contacts and personal preparation. Other active roles receive an empty list.",
+    {},
+    z.toJSONSchema(teachingDaySchema),
+  ),
+  "/rest/v1/rpc/save_teaching_preparation": rpc(
+    "saveOwnTeachingPreparation",
+    "Courses",
+    "Save one item of the assigned lecturer's preparation",
+    "Requires the current lecturer's own confirmed assignment with an unreleased session. Send the last-read preparation version or zero for a new preparation record.",
+    {
+      p_claim_id: uuid,
+      p_item: z.toJSONSchema(z.enum(preparationIds)),
+      p_done: boolean,
+      p_expected_version: version,
+    },
+    z.toJSONSchema(preparationSchema),
+  ),
   "/rest/v1/rpc/set_course_exam_required": rpc(
     "setCourseExamRequired",
     "Premium LMS",
@@ -1496,15 +1939,7 @@ const nativePaths = {
         "Find participants eligible for course enrolment",
         "Requires current Premium and course-management authority or a current contact of the exact company. Searches display names or Luminovia User IDs literally within active accepted company associations. Excludes current enrolled and completed entries. Returns at most 100 matches.",
         {},
-        {
-          type: "array",
-          items: object({
-            user_id: uuid,
-            display_name: text,
-            luminovia_user_id: text,
-          }),
-          maxItems: 100,
-        },
+        courseEnrolmentCandidatesResult,
       ).post,
       requestBody: {
         required: true,
@@ -2052,80 +2487,8 @@ const credentialPaths = {
     },
   },
   ...notificationCredentialPaths,
-  "/functions/v1/human-login": {
-    post: {
-      operationId: "humanLogin",
-      tags: ["Authentication"],
-      summary: "Establish a native Supabase session with a username or email",
-      description:
-        "Pass credentials in the TLS request body. Existing users keep their current Supabase identity and permissions.",
-      security: [],
-      requestBody: {
-        required: true,
-        content: json(
-          object({
-            identifier: { ...text, maxLength: 254 },
-            password: {
-              ...text,
-              minLength: 1,
-              maxLength: 128,
-              format: "password",
-              writeOnly: true,
-            },
-          }),
-        ),
-      },
-      responses: {
-        "200": {
-          description: "Native short-lived access token and refresh token",
-          content: json(
-            object({
-              access_token: text,
-              refresh_token: text,
-              expires_in: { type: "integer" },
-              token_type: { const: "bearer" },
-            }),
-          ),
-        },
-        "400": { description: "Invalid request" },
-        "401": { description: "Invalid credentials or unavailable account" },
-        "403": { description: "Browser origin denied" },
-        "429": { description: "Credential attempt limit reached" },
-        "503": { description: "Authentication temporarily unavailable" },
-      },
-    },
-  },
-  "/functions/v1/human-recovery": {
-    post: {
-      operationId: "humanRecovery",
-      tags: ["Authentication"],
-      summary: "Request username recovery using native PKCE",
-      description:
-        "A browser must supply an allowed Origin and that origin's exact /auth/callback URL. The client keeps the PKCE verifier.",
-      security: [],
-      requestBody: {
-        required: true,
-        content: json(
-          object({
-            username: { ...text, pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$" },
-            code_challenge: { ...text, pattern: "^[A-Za-z0-9_-]{43}$" },
-            code_challenge_method: { const: "s256" },
-            redirect_to: { ...text, format: "uri" },
-          }),
-        ),
-      },
-      responses: {
-        "202": {
-          description:
-            "Request accepted without revealing the account or delivery status",
-          content: json(object({})),
-        },
-        "400": { description: "Invalid alias, challenge or callback" },
-        "403": { description: "Browser origin denied" },
-        "415": { description: "JSON body required" },
-      },
-    },
-  },
+  ...humanAuthPaths,
+  ...internalMailDownload,
 };
 
 /** Publish only supported, explicitly described product operations. */
@@ -2179,13 +2542,14 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.1.0",
+      version: "1.2.0",
       description:
         "Account and business contracts with native RPC schemas derived from the migrated database. Current permissions, company scope and entitlements still apply. The repository API reference describes feature-specific JSON payloads and integration flows.",
     },
     servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
     components: {
       ...accountOpenApi.components,
+      schemas: knowledgeSchemas,
       securitySchemes: {
         ...accountOpenApi.components.securitySchemes,
         ...(includeNonInteractive

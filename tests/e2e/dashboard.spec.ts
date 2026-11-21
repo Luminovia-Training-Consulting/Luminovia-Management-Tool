@@ -199,5 +199,5 @@ test("password-only authentication management follow-ups never include another l
             name: "Meine offenen Vertragsbestätigungen",
             exact: true,
         }),
-    ).toBeVisible();
+    ).toHaveCount(0);
 });

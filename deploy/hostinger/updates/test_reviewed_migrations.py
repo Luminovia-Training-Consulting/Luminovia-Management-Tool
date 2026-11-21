@@ -394,6 +394,7 @@ class ReviewedLifecycleTests(unittest.TestCase):
 class ReviewedLockAndCliTests(unittest.TestCase):
     def test_global_lock_rejects_another_process_and_retains_inherited_lock(self):
         with reviewed_fixture() as (updater, _archive, _manifest, _path, _plan, _manifest_path):
+            u.MAINTENANCE_LOCK.touch(mode=0o600, exist_ok=False)
             child = subprocess.Popen([sys.executable, "-c", "import fcntl,sys; f=open(sys.argv[1],'w'); fcntl.flock(f,fcntl.LOCK_EX); print('held',flush=True); sys.stdin.read()", str(u.MAINTENANCE_LOCK)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
             try:
                 self.assertEqual(child.stdout.readline().strip(), "held")

@@ -1,6 +1,8 @@
 /** Real request-brief authorization/history with a separately configured fictional role-pricing policy. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {z} from "zod";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("client_request_brief", async ({sql, actor}) => {
@@ -37,14 +39,28 @@ await withTestDatabase("client_request_brief", async ({sql, actor}) => {
         required_documents: ["Course outline", "Accessible handout"],
         documents: [],
     };
-    const rpc = async (who, name, args = []) =>
-        JSON.parse(
+    const {paths} = portalOpenApi("https://portal.example.invalid");
+    const operation = (name) => paths[`/rest/v1/rpc/${name}`].post;
+    const schemas = new Map([
+        "create_client_request_with_brief",
+        "client_request_brief",
+        "client_request_history",
+        "save_client_request_brief",
+    ].map((name) => [
+        name,
+        z.fromJSONSchema(operation(name).responses["200"].content["application/json"].schema),
+    ]));
+    const rpc = async (who, name, args = []) => {
+        const result = JSON.parse(
             await actor(
                 who,
                 `select to_jsonb(public.${name}(${args.join(",")}))`,
                 "aal1",
             ),
         );
+        const schema = schemas.get(name);
+        return schema ? schema.parse(result) : result;
+    };
     const create = (who, body = brief, key = randomUUID()) =>
         rpc(who, "create_client_request_with_brief", [
             q(org),
@@ -88,12 +104,23 @@ await withTestDatabase("client_request_brief", async ({sql, actor}) => {
                 "0",
             );
             const key = creationKey;
+            const requestBody = z.fromJSONSchema(
+                operation("create_client_request_with_brief").requestBody.content["application/json"].schema,
+            );
+            requestBody.parse({p_organisation_id: org, p_client_id: key, p_payload: payload, p_brief: brief});
             request = await create(client, brief, key);
             assert.equal(await create(client, brief, key), request);
             await assert.rejects(
                 create(client, {...brief, instructions: "Changed retry"}, key),
                 /22023/,
             );
+            const requestList = z.fromJSONSchema(
+                operation("client_requests").responses["200"].content["application/json"].schema,
+            );
+            const visible = requestList.parse(JSON.parse(await actor(client,
+                `select jsonb_agg(to_jsonb(request)) from public.client_requests(${q(org)}) request`,
+            )));
+            assert.deepEqual(visible.map(({id}) => id), [request]);
             assert.equal((await read()).brief.teaching_units, 1);
             assert.equal(
                 await sql(

@@ -21,6 +21,29 @@ test("delivered runtime exports have actual production references beyond their i
         [],
     );
 });
+
+test("both edition routes count as used through the production alias", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-edition-entrypoints-"));
+    try {
+        mkdirSync(join(fixture, "src/app"), {recursive: true});
+        writeFileSync(join(fixture, "src/main.tsx"), "import Routes from '@edition-routes'; Routes();");
+        for (const [file, name] of [["portal-routes", "PortalRoutes"], ["academy-routes", "AcademyRoutes"]]) {
+            writeFileSync(join(fixture, "src/app", file + ".tsx"), `export default function ${name}() {} export const disconnected = true;`);
+        }
+        const graph = auditFrontend(fixture);
+        assert.deepEqual(graph.unreachable, []);
+        assert.deepEqual(graph.unresolved, []);
+        const exports = scanRuntimeExports(fixture);
+        assert.deepEqual(exports.map(({name, external}) => [name, external]), [
+            ["AcademyRoutes", 1],
+            ["disconnected", 0],
+            ["disconnected", 0],
+            ["PortalRoutes", 1],
+        ]);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
+});
 // Erased type references must not disguise a value with no runtime consumer.
 // Temporary source fixtures retain genuine calls, runtime typeof and shorthand use.
 test("type-only references cannot disguise unused runtime exports, while calls and runtime typeof still count", () => {

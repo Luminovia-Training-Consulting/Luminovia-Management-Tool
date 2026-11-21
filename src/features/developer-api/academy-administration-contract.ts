@@ -4,6 +4,7 @@ import {
   academyAdministration,
   academyInvitationReceipt,
   academyManagedAccount,
+  academyMemberRoles,
   academyOrganisation,
 } from "../accounts/academy-schema.ts";
 
@@ -71,6 +72,7 @@ function memberWrite(
   description: string,
   request: z.ZodType,
   conflict = "The expected state changed. Read the current directory.",
+  response: z.ZodType = academyManagedAccount,
 ) {
   return {
     post: {
@@ -83,8 +85,8 @@ function memberWrite(
       requestBody: { required: true, content: json(request) },
       responses: {
         "200": {
-          description: "The current local account",
-          content: json(academyManagedAccount),
+          description: "The current local account state",
+          content: json(response),
         },
         "400": error("Invalid account ID, state or version"),
         "401": error("Authentication required"),
@@ -95,7 +97,65 @@ function memberWrite(
   };
 }
 
+const roleChange = {
+  p_user_id: z.uuid(),
+  p_expected_revision: academyMemberRoles.shape.revision,
+};
+const companyRole = z.enum(["client", "participant"]);
+
 export const academyAdministrationPaths = {
+  "/rest/v1/rpc/academy_member_roles": {
+    post: {
+      operationId: "readAcademyMemberRoles",
+      tags: ["Local academy administration"],
+      summary: "Read a local account's roles and company memberships",
+      description: `${read} Requires a current local administrator. Returns role assignments with independent company scopes and the revision required for a change. Protected administrators and the current account cannot be edited here.`,
+      security: credentials,
+      "x-portal-licence": "active-or-grace",
+      requestBody: {
+        required: true,
+        content: json(z.strictObject({ p_user_id: z.uuid() })),
+      },
+      responses: {
+        "200": {
+          description:
+            "The current role assignments and available write actions",
+          content: json(academyMemberRoles),
+        },
+        "401": error("Authentication required"),
+        "403": error(
+          "Current local administration authority over this account required",
+        ),
+      },
+    },
+  },
+  "/rest/v1/rpc/academy_set_member_role": memberWrite(
+    "changeAcademyMemberRole",
+    "Grant or revoke one role for a local account",
+    "Only a current local administrator can make the change. Provide the last-read role revision. A grant requires an active and confirmed account. The account must retain a role. A company contact or participant grant requires an active organisation and affects only that membership.",
+    z.union([
+      z.strictObject({
+        ...roleChange,
+        p_role: z.enum(["management", "lecturer"]),
+        p_organisation_id: z.null(),
+        p_enabled: z.boolean(),
+      }),
+      z.strictObject({
+        ...roleChange,
+        p_role: companyRole,
+        p_organisation_id: z.uuid(),
+        p_enabled: z.literal(true),
+      }),
+      z.strictObject({
+        ...roleChange,
+        p_role: companyRole,
+        p_organisation_id: z.uuid().nullable(),
+        p_enabled: z.literal(false),
+      }),
+    ]),
+    "The expected revision changed or the account would lose its last role.",
+    academyMemberRoles,
+  ),
   "/rest/v1/rpc/academy_administration": {
     post: {
       operationId: "readAcademyAdministration",

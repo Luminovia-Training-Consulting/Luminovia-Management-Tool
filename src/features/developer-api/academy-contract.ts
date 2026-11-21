@@ -43,6 +43,8 @@ import {
   courseParticipationReportSchema,
 } from "../learning/course-participation-report-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
+import { humanAuthPaths } from "./human-auth-contract.ts";
+import { sessionPaths } from "./session-contract.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { academyClassPaths } from "./academy-class-contract.ts";
@@ -54,6 +56,9 @@ import {
   academyTimetableSchema,
 } from "../learning/academy-timetable-schema.ts";
 import {
+  courseEnrolmentCandidatesResult,
+  courseEnrolmentsResult,
+  enrolmentState,
   courseWelcomePublishedResult,
   courseWelcomeResult,
   courseWelcomeWrite,
@@ -570,6 +575,126 @@ const messagePage = {
 // Advertise a closed subset of the migrated academy gate. An advertised RPC
 // still runs the installation, licence, role and resource checks in Postgres.
 const coursePaths = {
+  ...sessionPaths(true),
+  "/rest/v1/rpc/course_workspace_entitlement": courseOperation(
+    "readAcademyCourseWorkspaceEntitlement",
+    "Check access to a course workspace",
+    "Checks the current session's relationship to the course. The licensed academy course profile includes Premium LMS without an organisation switch.",
+    "active-or-grace",
+    record({ p_run_id: uuid }),
+    record({ lms_enabled: boolean }),
+  ),
+  "/rest/v1/rpc/course_enrolments": courseOperation(
+    "readAcademyCourseEnrolments",
+    "Read the course enrolment roster",
+    "Requires current course management or a current company contact for the course's organisation. Includes removed enrolments.",
+    "active-or-grace",
+    record({ p_course_run_id: uuid }),
+    courseEnrolmentsResult,
+  ),
+  "/rest/v1/rpc/course_enrolment_candidates": courseOperation(
+    "readAcademyCourseEnrolmentCandidates",
+    "Find eligible course participants",
+    "Requires current course management or a current company contact for the course's organisation. Searches active, accepted participants by display name or user ID and excludes current enrolled or completed entries.",
+    "active",
+    record(
+      {
+        p_course_run_id: uuid,
+        p_search: { ...nullable({ ...string, maxLength: 120 }), default: "" },
+      },
+      ["p_course_run_id"],
+    ),
+    courseEnrolmentCandidatesResult,
+  ),
+  "/rest/v1/rpc/manage_course_enrolment": {
+    post: {
+      operationId: "manageAcademyCourseEnrolment",
+      tags: ["Licensed course profile"],
+      summary: "Set a participant's course enrolment status",
+      description: `${writeAccess} Requires current course management or a current company contact for the course's organisation and an active participant association. Completion requires ended sessions. Enrolment in a dedicated course draft requires publication and an available place. The server synchronizes participant chat access with the enrolment.`,
+      security: credentials,
+      "x-portal-licence": "active",
+      requestBody: {
+        required: true,
+        content: content(
+          record({
+            p_course_run_id: uuid,
+            p_user_id: uuid,
+            p_status: enrolmentState,
+          }),
+        ),
+      },
+      responses: {
+        "204": { description: "Change confirmed" },
+        "400": error("Invalid input"),
+        "401": error("Authentication required"),
+        "403": error(
+          "Course authority or licence unavailable for this operation",
+        ),
+        "409": error(
+          "Publication or capacity conflict. Read the current course. The error details are academy_course_unpublished or academy_course_capacity_reached.",
+        ),
+      },
+    },
+  },
+  "/rest/v1/rpc/academy_course_instructor_candidates": courseOperation(
+    "readAcademyCourseInstructorCandidates",
+    "Find local instructors for a course",
+    "Requires current course management. Searches active instructors by literal display name. An assignment ID is present for an instructor's existing confirmed assignment to this course.",
+    "active",
+    record(
+      {
+        p_course_id: uuid,
+        p_search: { ...string, maxLength: 120, default: "" },
+      },
+      ["p_course_id"],
+    ),
+    {
+      ...list(
+        record({ id: uuid, name: string, assignment_id: nullable(uuid) }),
+      ),
+      maxItems: 50,
+    },
+  ),
+  "/rest/v1/rpc/academy_assign_course_instructor": courseOperation(
+    "assignAcademyCourseInstructor",
+    "Assign a local instructor to scheduled sessions",
+    "Requires current course management, an eligible instructor and future sessions. The server checks the instructor's availability under a database lock. Repeat the same request ID and arguments to read its current confirmation or cancellation.",
+    "active",
+    record({ p_course_id: uuid, p_instructor_id: uuid, p_request_id: uuid }),
+    {
+      oneOf: [
+        record({
+          status: { enum: ["confirmed", "cancelled"] },
+          claim_id: uuid,
+        }),
+        record({
+          status: {
+            enum: [
+              "not_eligible",
+              "idempotency_conflict",
+              "already_assigned",
+              "schedule_required",
+              "conflict",
+            ],
+          },
+        }),
+      ],
+    },
+  ),
+  "/rest/v1/rpc/academy_release_course_instructor": courseOperation(
+    "releaseAcademyCourseInstructor",
+    "Release a local instructor's future course assignment",
+    "Requires current course management. Pass the assignment ID, a request ID and a reason with 5 to 1000 characters after trimming. An exact retry returns the same confirmation. Reusing a request ID with different details or trying to release a started or archived assignment returns 400.",
+    "active",
+    record({
+      p_course_id: uuid,
+      p_claim_id: uuid,
+      p_request_id: uuid,
+      p_reason: { ...string, minLength: 5, maxLength: 1000 },
+    }),
+    record({ status: { const: "cancelled" }, claim_id: uuid }),
+  ),
   "/rest/v1/rpc/delivery_preferences": {
     post: {
       ...notificationPaths["/rest/v1/rpc/delivery_preferences"].post,
@@ -1013,7 +1138,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.27.0",
+      version: "1.28.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1275,6 +1400,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
         },
       },
       ...coursePaths,
+      ...humanAuthPaths,
     },
     webhooks: { companyCourseEvent: companyCourseWebhook },
     components: {

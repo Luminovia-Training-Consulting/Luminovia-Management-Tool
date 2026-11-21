@@ -102,6 +102,9 @@ it("groups current, next and past courses and preserves a direct scoped chat des
     </QueryClientProvider>,
   );
   const current = await screen.findByRole("region", { name: "Laufende Kurse" });
+  expect(
+    screen.getByRole("link", { name: "Hilfe & Anleitungen" }),
+  ).toHaveAttribute("href", "/help?topic=lms-learning");
   expect(within(current).getByText("Fictional company A")).toBeVisible();
   expect(
     within(current).getByRole("link", { name: "Kurs-Chat" }),

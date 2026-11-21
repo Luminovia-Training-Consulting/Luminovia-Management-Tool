@@ -224,8 +224,8 @@ function hasPrivateMaterial(source) {
   return false;
 }
 
-// Reviewed full-document fingerprints from tracked releases before catalogue
-// 1.20. Some revisions shipped distinct operations under the same version.
+// Reviewed full-document fingerprints from prior tracked releases. Some
+// revisions shipped distinct operations under the same version.
 const reviewedHistoricCatalogueDigests = new Set([
   "193ee8fbcd27ef61541dbc590ad4ae49c7e1170413843779ba72aadeb314cc19", // 1.2.0 at 9fc7124b
   "53dc4e16854b8da09dfa47ca7b3b0882bf844916eeb5a82fd54a919e73019f2a", // 1.3.0 at a14b2bf1
@@ -259,6 +259,7 @@ const reviewedHistoricCatalogueDigests = new Set([
   "48cd02400c2caa6d17adef84661d171fa43fd5ec6e5a8b76365f92d06e95cb0e", // 1.24.0 at 746e1b2c
   "525694fd71b2da5fdb0e9db2d191709561e49fbcf757f08a8f5c5e00d93205e6", // 1.25.0 at 07dc3047
   "ca0d23471b82a757384bba6c4cbd69aa0ea6a2ac18ce9eeac732660e6f890684", // 1.26.0 at 2f8409fc
+  "35c70d4d2eb31dcf558b00f59b4fc78dd4084900996cc5a7f15d15277df46a2c", // 1.27.0 at 80f1cf71
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */

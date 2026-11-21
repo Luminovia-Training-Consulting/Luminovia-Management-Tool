@@ -21,6 +21,9 @@ This pass covers source implementation and local tests. CI, deployment, producti
 
 ## Open product work after the 21 November source review
 
+The internal portal and dedicated Academy expose searchable German and English guides for sign-in, recovery, learning, teaching, enrolment, Premium and course integrations. The Academy adds branding guidance. The Wiki keeps guide and troubleshooting navigation within the selected help section. The work log records focused desktop, mobile and keyboard evidence for this guide surface.
+
+- The company participant centre lists active memberships, invitations, association history, scoped attendance and a versioned company reference. The batch enrolment journey passed as company, admin and learner in both native desktop and mobile Chromium. Its stale selection rejection and safe retry were exercised against real GoTrue, PostgreSQL and PostgREST.
 - Complete the learner, lecturer and company journeys across Premium OFF/ON and both dedicated editions, including native Realtime revocation and exact document delivery. Physical-device PWA acceptance is outside the current scope. Published welcome content, isolated permission checks and licence-grace checks are recorded in the work log.
 - Complete contract-specific interim invoices with credits and reconciliation across several invoices, linked schedule changes that alter the session count, and formal changes affecting retained course evidence.
 - Connect the public Website sender separately and complete notification delivery and the remaining typed API, browser and accessibility acceptance.

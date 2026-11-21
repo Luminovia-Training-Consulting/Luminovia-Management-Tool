@@ -1,7 +1,12 @@
+export type GuideArea =
+  "access" | "courses" | "administration" | "integrations" | "portal";
+
 /** Bilingual authored content plus optional visibility hints for a known portal destination. */
 export type GuideModule = {
   id: string;
   path: string;
+  area?: GuideArea;
+  practicePath?: string | false;
   title: { de: string; en: string };
   summary: { de: string; en: string };
   steps: { de: string[]; en: string[] };
