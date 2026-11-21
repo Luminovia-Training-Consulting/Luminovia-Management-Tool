@@ -522,7 +522,7 @@ test("job briefing upgrade follows the accepted enquiry migration", () => {
     );
 });
 
-test("M4 candidate source stages all discovered API suites and exact catalogue assets without replacing retained runtime data", (t) => {
+test("candidate source stages the actual API contract and catalogue without copying private files or replacing retained runtime data", (t) => {
     const directory = mkdtempSync(join(tmpdir(), "candidate-source-fixture-"));
     t.after(() => rmSync(directory, {recursive: true, force: true}));
     const source = resolve("."),
@@ -545,8 +545,25 @@ test("M4 candidate source stages all discovered API suites and exact catalogue a
         readFileSync(join(scratch, "data/course-building-blocks.json")),
         readFileSync(join(source, "data/course-building-blocks.json")),
     );
+    const contract = "src/features/developer-api/contract.ts";
+    assert.deepEqual(readFileSync(join(scratch, contract)), readFileSync(join(source, contract)));
+    writeFileSync(join(scratch, "package.json"), '{"type":"module"}\n');
+    symlinkSync(join(source, "node_modules"), join(scratch, "node_modules"), "dir");
+    const importCheck = spawnSync(process.execPath, [
+        "--input-type=module", "--eval",
+        `import {assertLmsResponse} from "./scripts/testing/premium-lms-contract.mjs";
+        if (typeof assertLmsResponse !== "function") process.exit(1);`,
+    ], {cwd: scratch, encoding: "utf8"});
+    assert.equal(importCheck.status, 0, importCheck.stderr);
+
+    writeFileSync(join(scratch, "src/obsolete-contract.ts"), "throw new Error('stale');");
+    writeFileSync(join(baseline, "src/.env.source-fixture"), "fictional environment value");
+    mkdirSync(join(baseline, "src/private"));
+    writeFileSync(join(baseline, "src/private/fixture.txt"), "fictional private value");
     stageCandidateSource(baseline, scratch);
     assert(!existsSync(join(scratch, "data")));
+    for (const excluded of ["src/obsolete-contract.ts", "src/.env.source-fixture", "src/private"])
+        assert(!existsSync(join(scratch, excluded)));
     assert.equal(
         readFileSync(join(scratch, "runtime-data/retained-fixture"), "utf8"),
         "keep bytes",

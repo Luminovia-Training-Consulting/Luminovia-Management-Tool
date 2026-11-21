@@ -266,6 +266,8 @@ function copySource(source, target) {
 export function stageCandidateSource(sourceRoot, scratch) {
     for (const item of [
         "scripts",
+        // API fixtures import the production response contract and its schemas.
+        "src",
         "supabase/functions",
         "supabase/templates",
         "supabase/migrations",
