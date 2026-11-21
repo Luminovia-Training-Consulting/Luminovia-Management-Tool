@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {createECDH, randomBytes, randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 const key = () => {
     const ecdh = createECDH("prime256v1");
@@ -25,11 +26,13 @@ await withTestDatabase("web_push_test", async ({sql, actor}) => {
         sql(
             `begin;set local role service_role;select coalesce(to_jsonb(public.${name}(${args})),'null'::jsonb);commit;`,
         ).then(JSON.parse);
-    const own = (id, name, args = "") =>
-        actor(
-            id,
+    const own = async (id, name, args = "") => {
+        const result = JSON.parse(await actor(id,
             `select coalesce(to_jsonb(public.${name}(${args})),'null'::jsonb)`,
-        ).then(JSON.parse);
+        ));
+        assertLmsResponse(name, result);
+        return result;
+    };
     const subscription = {
         endpoint: "https://fcm.googleapis.com/fcm/send/fictional-provider-token",
         keys: {p256dh: key(), auth: randomBytes(16).toString("base64url")},

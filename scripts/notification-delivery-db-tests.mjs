@@ -3,14 +3,18 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase(
     "notification_delivery_test",
     async ({sql, actor}) => {
         const [teacher, peer, admin] = Array.from({length: 3}, randomUUID);
         const json = (value) => `${q(JSON.stringify(value))}::jsonb`;
-        const userRpc = async (id, name, args = []) =>
-            JSON.parse(await actor(id, `select public.${name}(${args.join(",")})`));
+        const userRpc = async (id, name, args = []) => {
+            const result = JSON.parse(await actor(id, `select public.${name}(${args.join(",")})`));
+            assertLmsResponse(name, result);
+            return result;
+        };
         const service = async (name, args = []) =>
             JSON.parse(
                 await sql(

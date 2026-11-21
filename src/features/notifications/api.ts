@@ -6,63 +6,19 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 
-/** Validate notification data and require a strictly internal, non-executable navigation destination. */
-const notificationItemSchema = z.object({
-  id: z.string().uuid(),
-  kind: z.string(),
-  created_at: z.string().datetime({ offset: true }),
-  read_at: z.string().datetime({ offset: true }).nullable(),
-  // Server-resolved internal destinations only; malformed API data must never
-  // turn a notification into an external or executable link.
-  href: z
-    .string()
-    .refine(
-      (path) =>
-        path.startsWith("/") &&
-        !path.startsWith("//") &&
-        !path.includes("\\") &&
-        [...path].every(
-          (char) => char.charCodeAt(0) > 32 && char.charCodeAt(0) !== 127,
-        ),
-    )
-    .nullable(),
-  title: z.string(),
-});
-/**
- * Accept legacy inbox pages and validate quiet-hour attention when present.
- * Active quiet summaries require a count bounded by the complete unread total;
- * inactive/legacy pages omit that count. The server decides current visibility.
- */
-const inboxPageSchema = z
-  .object({
-    items: z.array(notificationItemSchema),
-    unread_count: z.number().int().nonnegative(),
-    quiet_active: z.boolean().optional(),
-    attention_count: z.number().int().nonnegative().optional(),
-    as_of: z.string().datetime({ offset: true }),
-  })
-  .refine((page) =>
-    page.quiet_active === true
-      ? page.attention_count !== undefined &&
-        page.attention_count <= page.unread_count
-      : page.attention_count === undefined,
-  );
-/** Four category flags retain their independent positive CAS version; quiet-hour settings use a separate API. */
-export const notificationPreferencesSchema = z.object({
-  chat: z.boolean(),
-  forum: z.boolean(),
-  job_updates: z.boolean(),
-  reminders: z.boolean(),
-  version: z.number().int().positive(),
-});
-/** Notification type derived from runtime-validated inbox data. */
-export type NotificationItem = z.infer<typeof notificationItemSchema>;
-/** Validated inbox page with server-provided unread count and read-state timestamp. */
-export type InboxPage = z.infer<typeof inboxPageSchema>;
-/** Versioned personal categories derived directly from the validated schema. */
-export type NotificationPreferences = z.infer<
-  typeof notificationPreferencesSchema
->;
+import {
+  inboxPageSchema,
+  notificationPreferencesSchema,
+  type InboxPage,
+  type NotificationItem,
+  type NotificationPreferences,
+} from "./schema";
+export {
+  notificationPreferencesSchema,
+  type InboxPage,
+  type NotificationItem,
+  type NotificationPreferences,
+} from "./schema";
 
 /** Stable timestamp/ID continuation for an inbox page. */
 interface Cursor {

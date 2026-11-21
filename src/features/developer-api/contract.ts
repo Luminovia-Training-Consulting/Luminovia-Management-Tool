@@ -7,6 +7,10 @@ import { academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
+  notificationCredentialPaths,
+  notificationPaths,
+} from "./notifications-contract.ts";
+import {
   courseEnrolmentsResult,
   enrolmentState,
   meetingLinkResult,
@@ -404,6 +408,7 @@ const saveCalendarSubscription = rpc(
 );
 
 const nativePaths = {
+  ...notificationPaths,
   ...enquiriesSupportPaths,
   "/rest/v1/rpc/export_my_calendar": rpc(
     "exportMyCalendar",
@@ -1422,6 +1427,7 @@ const credentialPaths = {
       },
     },
   },
+  ...notificationCredentialPaths,
   "/functions/v1/human-login": {
     post: {
       operationId: "humanLogin",

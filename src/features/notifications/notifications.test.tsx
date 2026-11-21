@@ -116,7 +116,7 @@ beforeEach(async () => {
         result.data = { ...state.attention };
       else if (name === "save_attention_preferences") {
         if (payload?.p_expected_version !== state.attention.version)
-          result = { data: null, error: { code: "40001", message: "stale" } };
+          result = { data: null, error: { code: "PT409", message: "stale" } };
         else {
           state.attention = {
             ...(payload?.p_payload as Omit<typeof state.attention, "version">),

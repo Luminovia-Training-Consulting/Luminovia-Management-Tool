@@ -4,22 +4,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 
-export const pushDevicesSchema = z.object({
-  enabled: z.boolean(),
-  public_key: z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{87}$/)
-    .nullable(),
-  devices: z.array(
-    z.object({
-      id: z.string().uuid(),
-      label: z.string(),
-      device_token: z.string().uuid(),
-      created_at: z.string().datetime({ offset: true }),
-      expires_at: z.string().datetime({ offset: true }),
-    }),
-  ),
-});
+import { pushDevicesSchema } from "./schema";
+export { pushDevicesSchema } from "./schema";
+
 export const pushKey = (actor: string) => ["push-devices", actor];
 export const pushDevicesQuery = (actor: string) =>
   queryOptions({

@@ -68,7 +68,7 @@ await withApiFixture(
         assert.equal(simultaneous.filter((result) => !result.error).length, 1);
         assert.equal(
             simultaneous.find((result) => result.error)?.error.code,
-            "40001",
+            "PT409",
         );
         const saved = await preferences(owner);
         assert.equal(saved.version, 1);
@@ -220,7 +220,7 @@ await withApiFixture(
         const before = await preferences(owner);
         assert.equal(
             (await save(owner, {...current, enabled: false}, 1)).error?.code,
-            "40001",
+            "PT409",
         );
         assert.deepEqual(await preferences(owner), before);
         await checked(

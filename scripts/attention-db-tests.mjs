@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("attention_test", async ({sql, actor}) => {
     const [teacher, peer, administrator] = Array.from({length: 3}, randomUUID);
@@ -14,8 +15,11 @@ await withTestDatabase("attention_test", async ({sql, actor}) => {
     update public.profiles
     set time_zone='Australia/Brisbane'
     where id = ${q(teacher)};`);
-    const rpc = async (who, name, args = []) =>
-        JSON.parse(await actor(who, `select public.${name}(${args.join(",")})`));
+    const rpc = async (who, name, args = []) => {
+        const result = JSON.parse(await actor(who, `select public.${name}(${args.join(",")})`));
+        assertLmsResponse(name, result);
+        return result;
+    };
     const defaults = (enabled = true) => ({
         enabled,
         start_time: "22:00",
@@ -100,7 +104,7 @@ await withTestDatabase("attention_test", async ({sql, actor}) => {
             ])
                 await assert.rejects(save(teacher, payload, 0), /22023/);
             await assert.rejects(save(teacher, defaults(), -1), /22023/);
-            await assert.rejects(save(teacher, defaults(), 99), /40001/);
+            await assert.rejects(save(teacher, defaults(), 99), /PT409/);
             assert.equal((await rpc(teacher, "attention_preferences")).version, 0);
             assert.equal(
                 await sql("select count(*) from private.attention_preferences"),
@@ -117,7 +121,7 @@ await withTestDatabase("attention_test", async ({sql, actor}) => {
             ]);
             assert.equal(results.filter((v) => v.status === "fulfilled").length, 1);
             const rejected = results.find((v) => v.status === "rejected");
-            assert.match(rejected.reason.message, /40001/);
+            assert.match(rejected.reason.message, /PT409/);
             assert.equal((await rpc(teacher, "attention_preferences")).version, 1);
             assert.equal((await rpc(peer, "attention_preferences")).version, 0);
         },
@@ -244,7 +248,7 @@ await withTestDatabase("attention_test", async ({sql, actor}) => {
         "Stale later writes leave the saved zone/window untouched and disabling restores the complete counter",
         async () => {
             const current = await rpc(teacher, "attention_preferences");
-            await assert.rejects(save(teacher, defaults(false), 1), /40001/);
+            await assert.rejects(save(teacher, defaults(false), 1), /PT409/);
             assert.deepEqual(await rpc(teacher, "attention_preferences"), current);
             await save(
                 teacher,

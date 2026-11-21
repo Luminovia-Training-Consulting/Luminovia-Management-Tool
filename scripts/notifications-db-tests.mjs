@@ -2,13 +2,16 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("notification_test", async ({sql, actor}) => {
     const [teacher, peer, admin] = Array.from({length: 3}, randomUUID);
     /** Calls the business database API under the fixture's controlled identity/permission claims. */
     const rpc = async (who, name, args = []) => {
         const value = await actor(who, `select public.${name}(${args.join(",")})`);
-        return JSON.parse(value);
+        const result = JSON.parse(value);
+        if (name !== "claim_job") assertLmsResponse(name, result);
+        return result;
     };
     let checks = 0;
     /** Counts and reports a case only after all of its assertions have completed successfully. */
