@@ -4,6 +4,7 @@ import {randomUUID} from "node:crypto";
 import {spawn} from "node:child_process";
 import {z} from "zod";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("enquiries_test", async (fixture) => {
     const {sql, actor, container, database} = fixture;
@@ -138,9 +139,14 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         sql(
             `set role service_role;select public.receive_website_enquiry(${q(hash)},'${key}',${q(JSON.stringify(body))}::jsonb)`,
         );
+    const projection = async (name, result) => {
+        const body = JSON.parse(await result);
+        assertLmsResponse(name, body);
+        return body;
+    };
     const detail = (who, id, aal = "aal1") =>
-        actor(who, `select public.enquiry_detail('${id}')`, aal).then(JSON.parse);
-    const manage = (
+        projection("enquiry_detail", actor(who, `select public.enquiry_detail('${id}')`, aal));
+    const manage = async (
         who,
         id,
         action,
@@ -148,12 +154,15 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         version,
         key = randomUUID(),
         aal = "aal1",
-    ) =>
-        actor(
+    ) => {
+        const result = await actor(
             who,
             `select public.manage_enquiry('${id}',${q(action)},${q(JSON.stringify(body))}::jsonb,${version},'${key}')`,
             aal,
         );
+        assertLmsResponse("manage_enquiry", result);
+        return result;
+    };
     let checks = 0;
     const check = async (name, fn) => {
         await fn();
@@ -298,13 +307,21 @@ await withTestDatabase("enquiries_test", async (fixture) => {
                 (await detail(manager, id)).payload.message,
                 payload.message,
             );
-            const page = JSON.parse(
-                await actor(
-                    manager,
-                    "select public.enquiry_inbox('Fictional Training Company')",
-                    "aal1",
-                ),
+            const context = await projection(
+                "enquiry_context", actor(manager, "select public.enquiry_context()"),
             );
+            assert.equal(context.can_convert, true);
+            assert.ok(context.staff.some(({id}) => id === manager));
+            const page = await projection("enquiry_inbox", actor(
+                manager,
+                "select public.enquiry_inbox('Fictional Training Company')",
+                "aal1",
+            ));
+            const paged = await projection("enquiry_inbox", actor(
+                manager, "select public.enquiry_inbox('', '', null, null, 1)",
+            ));
+            assert.equal(paged.has_more, true);
+            assert.equal(paged.items[0].id, paged.next_cursor.id);
             assert.equal(page.items[0].id, id);
             assert.equal(JSON.stringify(page).includes(payload.email), false);
         },
@@ -422,7 +439,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             assert.equal(
                 results.filter(
                     (r) =>
-                        r.status === "rejected" && /Enquiry changed/.test(r.reason.message),
+                        r.status === "rejected" && /PT409.*Enquiry changed/s.test(r.reason.message),
                 ).length,
                 1,
             );
@@ -729,6 +746,12 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             await sql(
                 "delete from public.role_permissions where role='management' and permission='courses.manage'",
             );
+            const restricted = await projection(
+                "enquiry_context", actor(manager, "select public.enquiry_context()"),
+            );
+            assert.equal(restricted.can_convert, false);
+            assert.deepEqual(restricted.templates, []);
+            assert.equal((await detail(manager, current)).course_run_id, null);
             await assert.rejects(
                 manage(manager, current, "convert", conversion, 2, request),
                 /Course management.*required/i,

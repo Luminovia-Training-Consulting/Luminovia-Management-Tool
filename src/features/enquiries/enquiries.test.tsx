@@ -6,7 +6,14 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { EnquiriesPage } from "./enquiries";
-import { enquirySessions } from "./api";
+import { enquiryError, enquirySessions } from "./api";
+
+it.each(["PT409", "40001"])(
+  "presents the %s response as a version conflict",
+  (code) => {
+    expect(enquiryError({ code })).toBe("conflict");
+  },
+);
 
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),

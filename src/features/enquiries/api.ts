@@ -5,79 +5,21 @@ import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { zonedInstant } from "../../lib/dates";
 
-export const enquiryStatuses = [
-  "received",
-  "reviewing",
-  "awaiting_customer",
-  "converted",
-  "closed",
-] as const;
-const choice = z.object({ id: z.uuid(), label: z.string() });
-const contextSchema = z.object({
-  organisations: z.array(choice),
-  templates: z.array(choice),
-  staff: z.array(choice),
-  can_convert: z.boolean(),
-});
-const listItem = z.object({
-  id: z.uuid(),
-  company_name: z.string(),
-  topic: z.string(),
-  status: z.enum(enquiryStatuses),
-  version: z.number().int().positive(),
-  received_at: z.string(),
-  updated_at: z.string(),
-  responsible_name: z.string().nullable(),
-});
-const pageSchema = z.object({
-  items: z.array(listItem),
-  has_more: z.boolean(),
-  next_cursor: z.object({ at: z.string(), id: z.uuid() }).nullable(),
-});
-const detailSchema = z.object({
-  id: z.uuid(),
-  status: z.enum(enquiryStatuses),
-  responsible_id: z.uuid().nullable(),
-  organisation_id: z.uuid().nullable(),
-  course_run_id: z.uuid().nullable(),
-  version: z.number().int().positive(),
-  received_at: z.string(),
-  updated_at: z.string(),
-  payload: z.object({
-    company_name: z.string(),
-    contact_name: z.string(),
-    email: z.email(),
-    phone: z.string(),
-    topic: z.string(),
-    message: z.string(),
-    preferred_dates: z.string(),
-    duration: z.string(),
-    delivery_type: z.enum(["online", "onsite", "flexible"]),
-    time_zone: z.string(),
-    locale: z.enum(["de", "en"]),
-    privacy_notice_version: z.string(),
-    consent: z.literal(true),
-  }),
-  history: z.array(
-    z.object({
-      id: z.uuid(),
-      action: z.string(),
-      reason: z.string(),
-      actor_name: z.string().nullable(),
-      created_at: z.string(),
-    }),
-  ),
-});
-export type Enquiry = z.infer<typeof detailSchema>;
-export type EnquiryContext = z.infer<typeof contextSchema>;
-type Cursor = z.infer<typeof pageSchema>["next_cursor"];
-export type EnquiryAction =
-  | "status"
-  | "assign"
-  | "link_customer"
-  | "create_customer"
-  | "convert"
-  | "note";
+import {
+  enquiryContextSchema,
+  enquiryDetailSchema,
+  enquiryPageSchema,
+  type Cursor,
+  type Enquiry,
+  type EnquiryAction,
+} from "./schema";
+export {
+  enquiryStatuses,
+  type Enquiry,
+  type EnquiryAction,
+  type EnquiryContext,
+} from "./schema";
+
 /** Directory choices are returned only under the caller's live management authority. */
 export const enquiryContextQuery = (actor: string) =>
   queryOptions({
@@ -88,7 +30,7 @@ export const enquiryContextQuery = (actor: string) =>
         .rpc("enquiry_context")
         .abortSignal(signal);
       if (error) throw error;
-      return contextSchema.parse(data);
+      return enquiryContextSchema.parse(data);
     },
     retry: false,
     staleTime: 0,
@@ -114,7 +56,7 @@ export const enquiryInboxQuery = (
         })
         .abortSignal(signal);
       if (error) throw error;
-      return pageSchema.parse(data);
+      return enquiryPageSchema.parse(data);
     },
     retry: false,
     staleTime: 0,
@@ -129,7 +71,7 @@ export const enquiryDetailQuery = (actor: string, id: string) =>
         .rpc("enquiry_detail", { p_enquiry_id: id })
         .abortSignal(signal);
       if (error) throw error;
-      return detailSchema.parse(data);
+      return enquiryDetailSchema.parse(data);
     },
     retry: false,
     staleTime: 0,
@@ -160,7 +102,11 @@ export async function manageEnquiry(
 export function enquiryError(error: unknown) {
   const code =
     error && typeof error === "object" && "code" in error ? error.code : "";
-  return code === "40001" ? "conflict" : code === "42501" ? "denied" : "error";
+  return code === "PT409" || code === "40001"
+    ? "conflict"
+    : code === "42501"
+      ? "denied"
+      : "error";
 }
 
 /** Offer meaningful next choices; PostgreSQL independently enforces the lifecycle. */

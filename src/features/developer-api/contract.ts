@@ -4,6 +4,7 @@ import {
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
 import { academyOpenApi } from "./academy-contract.ts";
+import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   courseEnrolmentsResult,
@@ -371,6 +372,7 @@ const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
 
 const nativePaths = {
+  ...enquiriesSupportPaths,
   "/rest/v1/rpc/save_course_run": rpc(
     "saveCourseRun",
     "Courses",

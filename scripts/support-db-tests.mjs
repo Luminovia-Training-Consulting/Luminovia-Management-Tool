@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("support_test", async ({sql, actor}) => {
     const owner = randomUUID(),
@@ -17,23 +18,27 @@ await withTestDatabase("support_test", async ({sql, actor}) => {
         category: "technical",
         description: "Expected a readable fictional course page.",
     };
+    const success = async (name, result, asJson = true) => {
+        const value = await result;
+        const body = asJson ? JSON.parse(value) : value;
+        assertLmsResponse(name, body);
+        return body;
+    };
     const create = async (
         who,
         body = payload,
         key = randomUUID(),
         aal = "aal1",
     ) =>
-        actor(
+        success("create_support_ticket", actor(
             who,
             `select public.create_support_ticket(${q(JSON.stringify(body))}::jsonb,'${key}')`,
             aal,
-        );
-    const get = async (who, id, aal = "aal1") =>
-        JSON.parse(await actor(who, `select public.support_ticket('${id}')`, aal));
-    const list = async (who, search = "", aal = "aal1") =>
-        JSON.parse(
-            await actor(who, `select public.support_tickets(${q(search)})`, aal),
-        );
+        ), false);
+    const get = (who, id, aal = "aal1") =>
+        success("support_ticket", actor(who, `select public.support_ticket('${id}')`, aal));
+    const list = (who, search = "", aal = "aal1") =>
+        success("support_tickets", actor(who, `select public.support_tickets(${q(search)})`, aal));
     const change = async (
         who,
         id,
@@ -43,11 +48,11 @@ await withTestDatabase("support_test", async ({sql, actor}) => {
         key = randomUUID(),
         aal = "aal1",
     ) =>
-        actor(
+        success("update_support_ticket", actor(
             who,
             `select public.update_support_ticket('${id}',${q(action)},${q(JSON.stringify(body))}::jsonb,${version},'${key}')`,
             aal,
-        );
+        ), false);
     let checks = 0;
     const check = async (name, fn) => {
         await fn();
@@ -114,11 +119,12 @@ await withTestDatabase("support_test", async ({sql, actor}) => {
                 ),
                 "f",
             );
-            assert.equal(
-                JSON.parse(await actor(owner, "select public.support_context()")).staff
-                    .length,
-                0,
-            );
+            const ownerContext = await success("support_context", actor(owner, "select public.support_context()"));
+            assert.deepEqual(ownerContext.staff, []);
+            assert.deepEqual(ownerContext.report, []);
+            const managerContext = await success("support_context", actor(support, "select public.support_context()"));
+            assert.ok(managerContext.staff.some(({id}) => id === support));
+            assert.ok(managerContext.report.some(({category, total}) => category === "technical" && total === 1));
             assert.equal((await list(admin, "", "aal1")).items.length, 1);
         },
     );
@@ -366,7 +372,7 @@ await withTestDatabase("support_test", async ({sql, actor}) => {
                 outcomes.filter(
                     (o) =>
                         o.status === "rejected" &&
-                        /Support ticket changed/.test(o.reason.message),
+                        /PT409.*Support ticket changed/s.test(o.reason.message),
                 ).length,
                 1,
             );

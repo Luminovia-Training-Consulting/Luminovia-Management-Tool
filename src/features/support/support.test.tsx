@@ -295,6 +295,7 @@ describe("connected private support desk", () => {
       newTicketSchema.safeParse({ ...base, course_run_id: "forged" }).success,
     ).toBe(false);
     expect(supportError({ code: "40001" })).toBe("conflict");
+    expect(supportError({ code: "PT409" })).toBe("conflict");
     expect(supportError({ code: "42501" })).toBe("denied");
     expect(supportError({ code: "54000" })).toBe("rateLimit");
   });
