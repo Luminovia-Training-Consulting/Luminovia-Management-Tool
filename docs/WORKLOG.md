@@ -8,6 +8,8 @@ Added username and email password sign-in against the same Auth UUID and an acco
 
 Added optional course exam PDFs, separated learner copies from staff answer keys and connected the existing quiz, feedback and completion flows to current Premium workspaces. The document gateway now recognizes active participant identities and still checks the precise resource and clean bytes. Enabled row security on the internal ledgers and tightened private function grants. All seven Premium database groups, six API surface groups, 11 course-document Edge tests and 18 learning component tests passed. Fixed source lint failures in invoice fixtures, role preview, mail and calendar settings. The 40 focused component tests and repository ESLint/typecheck passed.
 
+Updated the fictional demo with role-aware navigation and interactive course samples, alongside dark theme and mobile navigation improvements. The 21 demo component tests passed on the integrated branch. The separate demo worktree passed 14 desktop and mobile Chromium tests, including viewport and accessibility checks. Full comparison with authenticated views remains pending.
+
 # 18 November 2026 — direct-main CI continuation
 
 Merged the verified calendar recurrence-window and exact existing-deadline fixes from `codex/bug-hunt-current-main-20261117` directly into `main` as merge commit `427de191`; retained the newer `main` worklog/plan during the documentation conflict. The focused calendar, lifecycle and date suites passed 27/27. A second stale remote bug-hunt branch had no additional source changes beyond that calendar fix, so it was not merged wholesale.

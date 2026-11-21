@@ -7,7 +7,7 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 | Items | Source status and ownership | Remaining evidence or work |
 | --- | --- | --- |
 | FC-01 | Separate Website repository | Translation and browser check belong to the Website workstream. |
-| FC-02, FC-03, FC-20 | Public demo and theme exist. Redesigned presentation is in progress. | Compare to the portal across roles, language, theme and viewport sizes. |
+| FC-02, FC-03, FC-20 | Demo adds role-specific navigation and fictional course filtering. The dark palette and mobile navigation are updated. | Complete side-by-side comparison against authenticated portal role views. |
 | FC-04, FC-05 | Playwright suites exist for the operational journeys. | Run complete role journeys and inspect layout at 390, 768, 1280 and 1920 px. |
 | FC-06, FC-07, FC-12 | Calendar tools disclosure, subscription, export and offline schedule are present. | Confirm responsive boundaries and independent actions in the browser. |
 | FC-08, FC-09, FC-10 | Shared forum route, permission-gated Contracts link and account action layout are present. | Run navigation, keyboard and confirmation checks. |
