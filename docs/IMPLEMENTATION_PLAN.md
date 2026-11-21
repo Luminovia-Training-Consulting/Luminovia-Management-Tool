@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Academy bootstrap, release packaging and restored CI verification
+
+- [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.
+- [x] Enable active-licence meeting links with scoped editing and participant reads for the dedicated course-access profile. Verify read-only grace, expiry and retained data.
+- [x] Sign and verify fictional browser packages for both dedicated editions with independent Ed25519 keys, exact release hashes and the signed licence.
+- [x] Add typed assignment amendment requests and responses using the same redacted snapshot schema as the browser.
+- [x] Synchronize participant course-chat membership after ordinary successful lecturer claims and include the Realtime marker in the reviewed course-chat deletion scope.
+- [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
+
 ## Lecturer materials and classroom links
 
 - [x] Preserve the reviewed version and selected audience when a lecturer retries sharing after a successful scan. Local component and desktop/mobile Chromium checks cover the retry.
@@ -9,7 +18,7 @@
 
 ## Requested changes from the 19 November roadmap
 
-The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged as `0d89891d` on 21 November 2026. Subsequent roadmap work targets `main` directly. The current instruction excludes GitHub Actions evaluation and leaves Hostinger until after the core implementation and local acceptance. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). White-label source development is now explicitly in scope with the [commercial edition roadmap](../WHITELABEL_ROADMAP.md). Hosting and customer release remain after local and retained-data acceptance.
+The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/63) merged as `0d89891d` on 21 November 2026. Subsequent roadmap work targets `main` directly. Current verification includes GitHub Actions and leaves Hostinger until after the core implementation and retained-data acceptance. “Present” means the owning implementation exists. Tests and release acceptance are tracked separately. The feature IDs below refer to [the core roadmap](../ROADMAP.md). White-label source development is in scope with the [commercial edition roadmap](../WHITELABEL_ROADMAP.md).
 
 | Items | Source status and ownership | Remaining evidence or work |
 | --- | --- | --- |

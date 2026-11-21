@@ -1,3 +1,13 @@
+# 21 November 2026 — Academy onboarding, signed browser releases and CI repair
+
+Both dedicated editions now support a one-time first administrator assignment to an existing confirmed Auth identity. The operator command checks the signed licence and exact release. PostgreSQL confirms concurrent bootstrap requests leave one grant and a retained receipt. A loopback run with pinned GoTrue 2.197.0 and PostgREST 14.18 used a real password login and verified that the resulting token could access the course profile only after the operator enabled it.
+
+White-Label course participants can read the published meeting link. Assigned lecturers and course managers can change it under an active licence. The signed browser distribution step checks the exact installation, edition, build, archive contents and installation licence. Both branded fictional browser archives were built from their tracked source and verified offline. Assignment changes now have explicit OpenAPI request and response schemas derived from the same redacted data shape the browser consumes.
+
+Ordinary confirmed claims now synchronize lecturer membership in participant course rooms. The reviewed room-deletion plan includes its Realtime marker, so a newer marker invalidates an outdated deletion plan. PostgreSQL exercised both operations and the concurrent claim, withdrawal and retry paths.
+
+Restored the existing whole-source formatter gate, corrected behavioural and fixture failures exposed by the system and browser jobs, and fixed the retained-data upgrade fixture to wait for the verified end of its teaching sessions before submitting an invoice. Idle auto-merge sweeps now check for actual work with read-only authority before requesting the existing protected App token.
+
 # 21 November 2026 — Lecturer materials, meeting links and licensed academy course access
 
 Assigned lecturers can retry publishing a scanned personal file to the same course audience and reuse its exact reviewed version. The upload reservation also keeps the same identifier when the selected file needs another upload request. Assigned lecturers and course managers can publish, replace or clear an HTTPS meeting link for an active online course. Enrolled participants receive the scoped link. Conflicting edits return HTTP 409. The audit event records the version and action without the URL.
