@@ -16,6 +16,7 @@ import {
   workspaceResult,
 } from "./learning-contract.ts";
 import { z } from "zod";
+import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -753,51 +754,9 @@ const nativePaths = {
     "courseSessionRegister",
     "Premium LMS",
     "Read an exact course session attendance register",
-    "Requires current Premium and this course's management, teaching or company contact access. Returns only enrolled or completed participants for the requested session, with current versions, retained PDF evidence and correction history.",
+    "Requires current Premium and this course's management, teaching or company contact access. Returns enrolled or completed participants for the requested session, with current versions, retained PDF evidence and correction history. Historical verification receipts have only state and minutes. Register receipts include the recorded status, arrival, departure and note. Learners cannot call this staff and company register.",
     { ...course, p_session_id: uuid },
-    object({
-      session_id: uuid,
-      starts_at: { type: "string", format: "date-time" },
-      ends_at: { type: "string", format: "date-time" },
-      time_zone: text,
-      rows: {
-        type: "array",
-        items: object({
-          user_id: uuid,
-          name: text,
-          status: {
-            type: ["string", "null"],
-            enum: ["present", "absent", "excused", null],
-          },
-          arrival_at: nullableDateTime,
-          departure_at: nullableDateTime,
-          note: { type: "string", maxLength: 1000 },
-          version,
-        }),
-      },
-      evidence: {
-        type: "array",
-        items: object({
-          id: uuid,
-          resource_id: uuid,
-          version_id: uuid,
-          name: text,
-          attached_at: { type: "string", format: "date-time" },
-        }),
-      },
-      history: {
-        type: "array",
-        items: object({
-          id: uuid,
-          user_id: uuid,
-          actor_id: uuid,
-          old_state: { type: ["object", "null"], additionalProperties: true },
-          new_state: { type: "object", additionalProperties: true },
-          reason: text,
-          created_at: { type: "string", format: "date-time" },
-        }),
-      },
-    }),
+    z.toJSONSchema(attendanceRegisterSchema),
   ),
   "/rest/v1/rpc/save_course_session_attendance": rpc(
     "saveCourseSessionAttendance",

@@ -488,14 +488,16 @@ try {
         }
     }
 
-    // Seed a separate historical accepted snapshot as fixture setup. The real
-    // claims above remain future-dated for the pre-end denial assertion.
+    // Use an independent accepted block with one elapsed session and one
+    // upcoming final session, without changing the claims exercised above.
     const completedJob = randomUUID(),
         completedClaim = randomUUID(),
-        completedSession = randomUUID(),
-        completedAssignmentSession = randomUUID(),
+        finalSession = randomUUID(),
+        finalAllocation = randomUUID(),
         completedStart = new Date(Date.now() - 2 * 86400000).toISOString(),
-        completedEnd = new Date(Date.now() - 86400000).toISOString();
+        completedEnd = new Date(Date.now() - 86400000).toISOString(),
+        finalStart = new Date(Date.now() + 86400000).toISOString(),
+        finalEnd = new Date(Date.now() + 25 * 3600000).toISOString();
     await checked(
         service.from("jobs").insert({
             id: completedJob,
@@ -514,13 +516,11 @@ try {
     );
     jobs.push(completedJob);
     await checked(
-        service.from("job_sessions").insert({
-            id: completedSession,
-            job_id: completedJob,
-            starts_at: completedStart,
-            ends_at: completedEnd,
-        }),
-        "Seed its historical scheduled session",
+        service.from("job_sessions").insert([
+            {job_id: completedJob, starts_at: completedStart, ends_at: completedEnd},
+            {id: finalSession, job_id: completedJob, starts_at: finalStart, ends_at: finalEnd},
+        ]),
+        "Seed its elapsed and future scheduled sessions",
     );
     await checked(
         service.from("job_claims").insert({
@@ -539,14 +539,11 @@ try {
         "Seed the matching accepted claim snapshot",
     );
     await checked(
-        service.from("assignment_sessions").insert({
-            id: completedAssignmentSession,
-            claim_id: completedClaim,
-            lecturer_id: a.id,
-            starts_at: completedStart,
-            ends_at: completedEnd,
-        }),
-        "Seed the exact historical assigned session",
+        service.from("assignment_sessions").insert([
+            {claim_id: completedClaim, lecturer_id: a.id, starts_at: completedStart, ends_at: completedEnd},
+            {id: finalAllocation, claim_id: completedClaim, lecturer_id: a.id, starts_at: finalStart, ends_at: finalEnd},
+        ]),
+        "Seed both exact assigned sessions",
     );
     const invoiceBytes = pdf(
         "Fictional compensation statement - no tax calculation.",
@@ -575,23 +572,18 @@ try {
     const beforeAcceptedBlockEnds = await a.client.rpc("submit_invoice", invoiceArgs);
     assert.equal(beforeAcceptedBlockEnds.error?.code, "22023");
     assert.match(beforeAcceptedBlockEnds.error?.message ?? "", /invoice_not_ready/);
-    // The isolated fixture advances its accepted schedule clock; it creates no
-    // attendance or quiz evidence, which is intentionally not an invoice gate.
-    const pastStart = new Date(Date.now() - 2 * 86400000).toISOString(),
-        pastEnd = new Date(Date.now() - 86400000).toISOString();
+    // Move only the final fixture session to a distinct elapsed interval.
+    const completedFinalSession = {
+        starts_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+        ends_at: new Date(Date.now() - 11 * 3600000).toISOString(),
+    };
     await checked(
-        service
-            .from("job_sessions")
-            .update({starts_at: pastStart, ends_at: pastEnd})
-            .in("job_id", jobs),
-        "Advance fictional accepted final sessions beyond current time",
+        service.from("job_sessions").update(completedFinalSession).eq("id", finalSession),
+        "Move only the exact fictional final scheduled session into the past",
     );
     await checked(
-        service
-            .from("assignment_sessions")
-            .update({starts_at: pastStart, ends_at: pastEnd})
-            .in("claim_id", claims),
-        "Advance exact isolated assignment-session snapshots beyond current time",
+        service.from("assignment_sessions").update(completedFinalSession).eq("id", finalAllocation),
+        "Move only the matching immutable fixture allocation into the past",
     );
     const invoice = await checked(
         a.client.rpc("submit_invoice", invoiceArgs),

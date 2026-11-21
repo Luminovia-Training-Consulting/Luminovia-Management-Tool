@@ -23,7 +23,7 @@ const course = {
   access: { manager: false, client: true, learner: false },
 } as CourseWorkspace;
 const participant = {
-  user_id: "approved",
+  user_id: "43d83f70-e5cf-4f28-bf0b-65e9781dfd10",
   display_name: "Fictional approved learner",
   luminovia_user_id: "LU-FICTIONAL",
 };
@@ -66,7 +66,7 @@ describe("Premium course enrolment management", () => {
   it("searches accepted associations and waits for a confirmed enrolment", async () => {
     let roster: Record<string, string>[] = [];
     const session = {
-      id: "session-a",
+      id: "9f9a92be-1b47-4b25-bf7a-c3aec254376a",
       starts_at: "2050-01-02T09:00:00Z",
       ends_at: "2050-01-02T11:00:00Z",
       attendance: null,
@@ -82,6 +82,10 @@ describe("Premium course enrolment management", () => {
         return reply(roster.length ? [] : [participant]);
       if (name === "course_session_register")
         return reply({
+          session_id: session.id,
+          starts_at: session.starts_at,
+          ends_at: session.ends_at,
+          time_zone: course.time_zone,
           rows: roster.map(({ user_id, display_name }) => ({
             user_id,
             name: display_name,
@@ -163,7 +167,7 @@ describe("Premium course enrolment management", () => {
       name === "course_enrolments"
         ? reply([
             {
-              user_id: "approved",
+              user_id: participant.user_id,
               display_name: participant.display_name,
               status: "enrolled",
             },

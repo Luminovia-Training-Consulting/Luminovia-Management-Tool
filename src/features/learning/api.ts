@@ -2,6 +2,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import type { WorkspaceAttendanceHistory } from "./attendance-schema";
 
 export interface CourseOverview {
   id: string;
@@ -136,15 +137,7 @@ export interface CourseWorkspace {
       version: number;
     }[];
   }[];
-  attendance_history: {
-    id: string;
-    user_id: string;
-    session_id: string;
-    reason: string;
-    old_state: unknown;
-    new_state: { state: string; minutes: number };
-    created_at: string;
-  }[];
+  attendance_history: WorkspaceAttendanceHistory;
   repeat_request: {
     id: string;
     sessions: { starts_at: string; ends_at: string }[];

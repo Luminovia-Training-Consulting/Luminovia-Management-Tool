@@ -288,6 +288,72 @@ Deno.test(
 );
 
 Deno.test(
+    "academy resource download stops releasing bytes when access ends during Storage read",
+    async () => {
+        const bytes = new TextEncoder().encode("Fictional scanned course handout");
+        const sha256 = [
+            ...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+        ]
+            .map((v) => v.toString(16).padStart(2, "0"))
+            .join("");
+        for (const revoke of ["licence", "course-role"]) {
+            let current = true;
+            const events: string[] = [];
+            const objectPath = "fictional/exact-scanned-version";
+            const handler = createCourseDocumentHandler({
+                origins: [origin],
+                authenticate: async (token) => {
+                    assert(token === "fictional-token");
+                    events.push("auth");
+                    return current || revoke === "course-role";
+                },
+                rpc: async (token, name, args) => {
+                    assert(token === "fictional-token");
+                    assert(name === "course_document_access");
+                    assert(
+                        JSON.stringify(args) ===
+                            JSON.stringify({ p_kind: "resource", p_id: id }),
+                    );
+                    events.push("resolve");
+                    return {
+                        data: current
+                            ? {
+                                object_path: objectPath,
+                                sha256,
+                                name: "Handout.txt",
+                                mime_type: "text/plain",
+                            }
+                            : null,
+                        error: null,
+                    };
+                },
+                download: async (path) => {
+                    assert(path === objectPath);
+                    events.push("download");
+                    current = false;
+                    return bytes;
+                },
+                render: async () => {
+                    throw new Error("unexpected_render");
+                },
+            });
+            const response = await handler(request({ kind: "resource", id }));
+            assert(response.status === 403);
+            assert(response.headers.get("cache-control")?.includes("no-store"));
+            assert(!response.headers.has("content-disposition"));
+            const error = revoke === "licence"
+                ? "document_unavailable"
+                : "document_changed_or_revoked";
+            assert((await response.json()).error === error);
+            const expectedEvents = revoke === "licence"
+                ? "auth,resolve,download,auth"
+                : "auth,resolve,download,auth,resolve";
+            assert(events.join(",") === expectedEvents);
+        }
+    },
+);
+
+Deno.test(
     "request resources dispatch exact request/version and recheck membership after protected byte read",
     async () => {
         const bytes = new TextEncoder().encode("Fictional exact request file");

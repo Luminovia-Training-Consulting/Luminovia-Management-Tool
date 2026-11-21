@@ -2,6 +2,9 @@
  * Reviewed JSON payloads projected by the Premium LMS migration chain.
  * The generated native catalogue owns PostgreSQL signatures and REST gates.
  */
+import { z } from "zod";
+import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
+
 const text = { type: "string" };
 const boolean = { type: "boolean" };
 const uuid = { ...text, format: "uuid" };
@@ -165,17 +168,7 @@ const workspaceFields = {
   repeat_request: nullable(
     record({ id: uuid, sessions: itemList(record(dateRange)) }),
   ),
-  attendance_history: itemList(
-    record({
-      id: uuid,
-      user_id: uuid,
-      session_id: uuid,
-      reason: text,
-      old_state: { type: ["object", "null"], additionalProperties: true },
-      new_state: { type: "object", additionalProperties: true },
-      created_at: dateTime,
-    }),
-  ),
+  attendance_history: z.toJSONSchema(workspaceAttendanceHistorySchema),
   roster: itemList(
     record({
       user_id: uuid,

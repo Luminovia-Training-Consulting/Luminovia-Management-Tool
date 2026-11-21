@@ -1,0 +1,238 @@
+/** Test caller-scoped exact course resources and licence changes in both dedicated editions. */
+import assert from "node:assert/strict";
+import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
+import { prepareAcademyInstallation } from "./academy-installation.mjs";
+import { signAcademyLicence } from "./academy-licence.mjs";
+import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
+
+const path = "/rpc/course_document_access";
+const gate = (target = path, method = "POST") =>
+  `set local request.path=${q(target)};set local request.method=${q(method)};select public.require_portal_access();`;
+const read = (share, kind = "resource") =>
+  `select public.course_document_access(${q(kind)},${q(share)})`;
+
+for (const edition of ["customer-self-hosted", "customer-managed"]) {
+  await withTestDatabase("academy_course_document", async ({ sql, actor }) => {
+    const [
+      installation,
+      manager,
+      teacher,
+      learner,
+      outside,
+      client,
+      otherClient,
+      org,
+      otherOrg,
+      template,
+      run,
+      otherRun,
+      consent,
+      document,
+      sharedVersion,
+      newerVersion,
+      unhashedVersion,
+      share,
+      staffShare,
+      clientShare,
+      otherShare,
+      unscannedShare,
+    ] = Array.from({ length: 22 }, randomUUID);
+    const key = generateKeyPairSync("ed25519");
+    const now = Date.now();
+    const date = (offset) => new Date(now + offset * 86400000).toISOString();
+    const terms = {
+      installation_id: installation,
+      edition,
+      release_commit: "ab".repeat(20),
+      issued_at: date(-8),
+      starts_at: date(-5),
+      expires_at: date(20),
+      grace_until: date(25),
+      modules: ["lms"],
+      limits: {
+        seat_count: 20,
+        storage_bytes: 2_000_000,
+        api_requests_per_minute: 60,
+      },
+    };
+    await prepareAcademyInstallation(
+      {
+        envelope: signAcademyLicence(terms, key.privateKey),
+        publicKey: key.publicKey,
+        expected: terms,
+        now,
+      },
+      sql,
+    );
+    const v1 = "Fictional first scanned handout.";
+    const v2 = "Fictional updated scanned handout.";
+    const hash = (text) => createHash("sha256").update(text).digest("hex");
+    const objectPath = "fictional/" + sharedVersion;
+    const users = [
+      [manager, "admin"],
+      [teacher, "lecturer"],
+      [learner, "participant"],
+      [outside, "lecturer"],
+      [client, "client"],
+      [otherClient, "client"],
+    ];
+    // An operator prepares the fictional retained bytes and shares; this
+    // acceptance step never opens browser upload or sharing in customer editions.
+    await sql(`insert into auth.users(id,email,email_confirmed_at) values
+      ${users.map(([id]) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
+      insert into public.user_roles(user_id,role) values
+      ${users.map(([id, role]) => `(${q(id)},${q(role)})`).join(",")};
+      insert into public.organisations(id,name) values
+        (${q(org)},'Fictional Academy'),(${q(otherOrg)},'Fictional Other Academy');
+      insert into public.client_organisation_memberships(user_id,organisation_id)
+        values (${q(client)},${q(org)}),(${q(otherClient)},${q(otherOrg)});
+      insert into public.course_templates(id,title) values(${q(template)},'Fictional Workshop');
+      insert into public.course_runs(id,template_id,organisation_id)
+        values (${q(run)},${q(template)},${q(org)}),(${q(otherRun)},${q(template)},${q(otherOrg)});
+      insert into public.course_sessions(course_run_id,starts_at,ends_at)
+        values (${q(run)},now()+interval '1 day',now()+interval '25 hours');
+      insert into private.company_participant_link_requests
+        (id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at)
+        select ${q(consent)},${q(org)},${q(manager)},${q(randomUUID())},luminovia_user_id,id,'accepted',now()+interval '1 day'
+        from public.profiles where id=${q(learner)};
+      insert into private.company_participant_memberships
+        (organisation_id,user_id,status,link_request_id,invited_by,joined_at)
+        values (${q(org)},${q(learner)},'active',${q(consent)},${q(manager)},now());
+      insert into public.course_enrolments(course_run_id,user_id,enrolled_by,status)
+        values (${q(run)},${q(learner)},${q(manager)},'enrolled');
+      insert into public.documents
+        (id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+        values (${q(document)},${q(teacher)},${q(teacher)},'personal','material','current.txt','text/plain',
+          ${v2.length},'clean',${q(randomUUID())});
+      insert into public.document_versions
+        (id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+        values (${q(sharedVersion)},${q(document)},${q(teacher)},${q(randomUUID())},1,${q(objectPath)},
+            'first.txt','text/plain',${v1.length},'clean',${q(hash(v1))}),
+          (${q(newerVersion)},${q(document)},${q(teacher)},${q(randomUUID())},2,${q("fictional/" + newerVersion)},
+            'current.txt','text/plain',${v2.length},'clean',${q(hash(v2))}),
+          (${q(unhashedVersion)},${q(document)},${q(teacher)},${q(randomUUID())},3,${q("fictional/" + unhashedVersion)},
+            'unscanned.txt','text/plain',20,'clean',null);
+      update public.documents set current_version_id=${q(newerVersion)} where id=${q(document)};
+      insert into private.course_resources(id,run_id,version_id,audience,category,created_by,ownership_kind)
+        values (${q(share)},${q(run)},${q(sharedVersion)},'participants','material',${q(teacher)},'lecturer'),
+          (${q(staffShare)},${q(run)},${q(sharedVersion)},'staff','material',${q(teacher)},'lecturer'),
+          (${q(clientShare)},${q(run)},${q(sharedVersion)},'client','material',${q(teacher)},'lecturer'),
+          (${q(otherShare)},${q(otherRun)},${q(sharedVersion)},'all','material',${q(manager)},'staff'),
+          (${q(unscannedShare)},${q(run)},${q(unhashedVersion)},'all','material',${q(teacher)},'lecturer');`);
+
+    const access = (who, selected = share, kind = "resource") =>
+      actor(who, gate() + read(selected, kind)).then(JSON.parse);
+    const configure = (enabled, release = terms.release_commit) =>
+      sql(
+        `select private.configure_academy_course_access(${q(installation)},${q(release)},${enabled})`,
+      );
+    const renew = (changes) =>
+      sql(
+        `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, ...changes }))}::jsonb)`,
+      );
+    await assert.rejects(access(manager), /42501/);
+    await assert.rejects(actor(manager, read(share)), /42501/);
+    await configure(true);
+    for (const [target, method] of [
+      [path, "GET"],
+      [path, "HEAD"],
+      ["/documents", "GET"],
+      ["/document_versions", "GET"],
+      ["/rpc/course_workspace_action", "POST"],
+      ["/rpc/reserve_document", "POST"],
+      ["/rpc/course_chat_attachment_access", "POST"],
+    ]) {
+      await assert.rejects(actor(manager, gate(target, method)), /42501/);
+    }
+    await assert.rejects(sql("set role anon; " + read(share)), /42501/);
+    await assert.rejects(
+      sql("set role service_role; " + gate() + read(share)),
+      /42501/,
+    );
+    for (const kind of [
+      "exam",
+      "completion",
+      "attendance",
+      "wiki_resource",
+      "course_chat_attachment",
+    ]) {
+      await assert.rejects(access(manager, share, kind), /42501/);
+      await assert.rejects(actor(manager, read(share, kind)), /42501/);
+    }
+    const assignment = await actor(
+      manager,
+      gate("/rpc/academy_assign_course_instructor") +
+        `select public.academy_assign_course_instructor(${q(run)},${q(teacher)},${q(randomUUID())})`,
+    ).then(JSON.parse);
+    assert.equal(assignment.status, "confirmed");
+    const exact = {
+      id: sharedVersion,
+      document_id: document,
+      object_path: objectPath,
+      name: "first.txt",
+      mime_type: "text/plain",
+      sha256: hash(v1),
+    };
+    for (const who of [manager, teacher, learner]) {
+      assert.deepEqual(await access(who), exact);
+    }
+    assert.deepEqual(await access(teacher, staffShare), exact);
+    assert.deepEqual(await access(client, clientShare), exact);
+    await assert.rejects(access(learner, staffShare), /42501/);
+    await assert.rejects(access(learner, clientShare), /42501/);
+    await assert.rejects(access(otherClient, clientShare), /42501/);
+    await assert.rejects(access(client), /42501/);
+    await assert.rejects(access(outside), /42501/);
+    await assert.rejects(access(learner, otherShare), /42501/);
+    await assert.rejects(access(manager, newerVersion), /42501/);
+    await assert.rejects(access(manager, unscannedShare), /42501/);
+    await sql(
+      `update private.course_resources set removed_at=now() where id=${q(share)}`,
+    );
+    await assert.rejects(access(learner), /42501/);
+    await sql(
+      `update private.course_resources set removed_at=null where id=${q(share)}`,
+    );
+    await sql(
+      `update public.documents set deleted_at=now() where id=${q(document)}`,
+    );
+    await assert.rejects(access(manager), /42501/);
+    await sql(
+      `update public.documents set deleted_at=null where id=${q(document)}`,
+    );
+
+    await actor(
+      manager,
+      gate("/rpc/academy_release_course_instructor") +
+        `select public.academy_release_course_instructor(${q(run)},${q(assignment.claim_id)},'Fictional assignment release',${q(randomUUID())})`,
+    );
+    await assert.rejects(access(teacher), /42501/);
+    assert.deepEqual(await access(learner), exact);
+    const nextRelease = "cd".repeat(20);
+    await renew({ release_commit: nextRelease, issued_at: date(-7) });
+    await assert.rejects(actor(manager, read(share)), /42501/);
+    await configure(true, nextRelease);
+    await renew({
+      release_commit: nextRelease,
+      issued_at: date(-6),
+      expires_at: date(-2),
+    });
+    assert.deepEqual(await access(learner), exact);
+    await renew({
+      release_commit: nextRelease,
+      issued_at: date(-5),
+      expires_at: date(-2),
+      grace_until: date(-1),
+    });
+    await assert.rejects(access(learner), /42501/);
+    await assert.rejects(actor(manager, read(share)), /42501/);
+    assert.equal(
+      await sql(`select count(*) from private.course_resources
+      where id=${q(share)} and version_id=${q(sharedVersion)} and removed_at is null`),
+      "1",
+    );
+    console.log(
+      `PASS ${edition} course audience, exact scanned version, revocation and retained files after expiry`,
+    );
+  });
+}

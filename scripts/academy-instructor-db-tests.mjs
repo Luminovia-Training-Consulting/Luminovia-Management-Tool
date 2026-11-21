@@ -140,6 +140,19 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       who,
       `select public.publish_course_welcome_content(${[run, ...initialWelcome, version].map(q).join(",")})`,
     );
+  const rooms = (who, course = run) =>
+    call(who, "course_chat_rooms", [course], "GET").then(JSON.parse);
+  const openChat = (who, course = run) =>
+    call(who, "academy_ensure_course_chat", [course]);
+  const readChat = (who, room) =>
+    call(who, "course_chat_messages", [room], "GET").then(JSON.parse);
+  const postChat = (who, room, text, key = randomUUID()) =>
+    call(who, "send_course_chat_message", [room, text, key]);
+  const marker = (who, room) =>
+    actor(
+      who,
+      `select revision from public.course_chat_activity where room_id=${q(room)}`,
+    );
   const candidateConfiguration = configure(installation, terms.release_commit);
   await assert.rejects(actor(admin, candidateConfiguration), /42501/);
   await assert.rejects(
@@ -156,6 +169,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(meeting(admin, initialLink, 0), /42501/);
   await assert.rejects(directMeeting(admin, initialLink, 0), /42501/);
   await assert.rejects(welcome(admin), /42501/);
+  await assert.rejects(rooms(admin), /42501/);
+  await assert.rejects(openChat(admin), /42501/);
   await assert.rejects(publishWelcome(admin, 0), /42501/);
   await assert.rejects(directWelcome(admin, 0), /42501/);
   await assert.rejects(
@@ -192,9 +207,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "commission_report",
     "search_portal",
     "course_workspace_action",
-    "course_document_access",
     "repeat_client_request",
-    "course_chat_rooms",
+    "send_message",
+    "send_course_chat_attachment",
+    "edit_message",
     "company_course_webhook_subscribe",
     "account_me",
   ]) {
@@ -209,8 +225,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     ["/rpc/academy_assign_course_instructor", "GET"],
     ["/rpc/set_course_meeting_link", "GET"],
     ["/rpc/set_course_meeting_link", "HEAD"],
+    ["/rpc/course_document_access", "GET"],
+    ["/rpc/course_document_access", "HEAD"],
     ["/rpc/publish_course_welcome_content", "GET"],
     ["/rpc/publish_course_welcome_content", "HEAD"],
+    ["/rpc/academy_ensure_course_chat", "GET"],
+    ["/rpc/send_course_chat_message", "GET"],
+    ["/course_chat_activity", "GET"],
+    ["/messages", "GET"],
   ]) {
     await assert.rejects(
       actor(
@@ -252,6 +274,28 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     can_edit: true,
     version: 0,
   });
+  assert.deepEqual(await rooms(admin), []);
+  await assert.rejects(openChat(teacher), /42501/);
+  await assert.rejects(openChat(participant), /42501/);
+  const [room, replayedRoom] = await Promise.all([
+    openChat(admin),
+    openChat(admin),
+  ]);
+  assert.match(room, /^[0-9a-f-]{36}$/);
+  assert.equal(replayedRoom, room);
+  assert.deepEqual(await rooms(admin), [
+    { id: room, title: "Practical training", can_post: true },
+  ]);
+  assert.equal(
+    await sql(`select count(*) from public.audit_events
+    where resource_id=${q(room)} and action='course.chat.opened'`),
+    "1",
+  );
+  await assert.rejects(readChat(teacher, room), /42501/);
+  await assert.rejects(
+    postChat(participant, room, "Before enrolment"),
+    /42501/,
+  );
   await assert.rejects(meeting(teacher, initialLink, 0), /42501/);
   await assert.rejects(workspace(teacher, run), /42501/);
   await assert.rejects(publishWelcome(teacher, 0), /42501/);
@@ -274,6 +318,43 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.deepEqual(participantView.roster, []);
   assert.equal(participantView.repeat_request, null);
   assert.equal(participantView.meeting_link.can_edit, false);
+  assert.deepEqual(
+    (await rooms(participant)).map(({ id }) => id),
+    [room],
+  );
+  assert.deepEqual(await readChat(participant, room), []);
+  await assert.rejects(readChat(foreign, room), /42501/);
+  const messageKey = randomUUID();
+  const message = await postChat(
+    participant,
+    room,
+    "Fictional welcome",
+    messageKey,
+  );
+  assert.equal(
+    await postChat(participant, room, "Fictional welcome", messageKey),
+    message,
+  );
+  await assert.rejects(
+    postChat(participant, room, "Different text", messageKey),
+    /22023/,
+  );
+  const firstMarker = await marker(participant, room);
+  assert.match(firstMarker, /^[0-9a-f-]{36}$/);
+  assert.equal(await marker(foreign, room), "");
+  assert.equal(
+    await actor(
+      participant,
+      `select count(*) from public.messages where id=${q(message)}`,
+    ),
+    "0",
+  );
+  const history = await readChat(admin, room);
+  assert.equal(history.length, 1);
+  assert.equal(history[0].id, message);
+  assert.equal(history[0].body, "Fictional welcome");
+  assert.equal(history[0].attachment, null);
+
   await assert.rejects(meeting(participant, initialLink, 0), /42501/);
   await assert.rejects(meeting(foreign, initialLink, 0), /42501/);
   assert.deepEqual(await welcome(participant), {
@@ -308,10 +389,24 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   );
   await enrol(admin, participant, "removed");
   await assert.rejects(workspace(participant, run), /42501/);
+  await assert.rejects(readChat(participant, room), /42501/);
+  await assert.rejects(postChat(participant, room, "After removal"), /42501/);
+  assert.equal(await marker(participant, room), "");
+
   await enrol(admin, participant);
   const result = await assign(admin, run, teacher);
   assert.equal(result.status, "confirmed");
   assert.equal((await workspace(teacher, run)).access.teacher, true);
+  assert.equal((await rooms(teacher))[0].can_post, true);
+  const teacherMessage = await postChat(
+    teacher,
+    room,
+    "Fictional instructor message",
+  );
+  assert.notEqual(await marker(participant, room), firstMarker);
+  assert.equal((await readChat(participant, room)).at(-1).id, teacherMessage);
+  await assert.rejects(readChat(guest, room), /42501/);
+
   await assert.rejects(
     publishWelcome(teacher, 0, initialWelcome, conflictingRun),
     /42501/,
@@ -469,6 +564,18 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(meeting(admin, null, 2), /42501/);
   assert.deepEqual(await welcome(participant), currentWelcome);
   await assert.rejects(publishWelcome(admin, 2), /42501/);
+  assert.equal((await rooms(participant))[0].can_post, false);
+  assert.equal((await readChat(participant, room)).length, 2);
+  await assert.rejects(postChat(participant, room, "Read-only grace"), /42501/);
+  await assert.rejects(
+    actor(
+      participant,
+      `select public.send_message(${q(room)},'Raw send',${q(randomUUID())})`,
+    ),
+    /42501/,
+  );
+  assert.notEqual(await marker(participant, room), "");
+
   await assert.rejects(directWelcome(teacher, 2), /42501/);
   await assert.rejects(directMeeting(teacher, null, 2), /42501/);
   await assert.rejects(assign(admin, run, teacher), /42501/);
@@ -492,6 +599,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(workspace(admin, run), /42501/);
   await assert.rejects(directMeeting(admin, null, 2), /42501/);
   await assert.rejects(welcome(participant), /42501/);
+  await assert.rejects(rooms(participant), /42501/);
+  await assert.rejects(readChat(participant, room), /42501/);
+  assert.equal(await marker(participant, room), "");
+  assert.equal(
+    await sql(`select count(*) from public.messages where room_id=${q(room)}`),
+    "2",
+  );
+
   assert.equal(
     await sql(
       `select count(*) from private.course_welcome_revisions where course_run_id=${q(run)}`,
@@ -532,7 +647,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     false,
   );
   console.log(
-    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, release binding, grace/read-only, expiry and dormant browser`,
+    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
   );
 };
 

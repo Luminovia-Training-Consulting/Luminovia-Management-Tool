@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
+import { portalInternalEdition } from "../../lib/installation-brand";
 import { requireOnline, useOnline } from "../../lib/online";
 import { acceptedFiles, uploadDocument } from "../files/api";
 import {
@@ -27,9 +28,29 @@ type Message = {
 const messagesPerPage = 50;
 
 /** Resolve room access independently from message history and drop the thread on denial. */
-export function CourseChat({ run, actor }: { run: string; actor: string }) {
+export function CourseChat({
+  run,
+  actor,
+  canCreate = false,
+}: {
+  run: string;
+  actor: string;
+  canCreate?: boolean;
+}) {
   const { t } = useTranslation("courseChat");
   const online = useOnline();
+  const client = useQueryClient();
+  const createRoom = useMutation({
+    mutationFn: async ({ run }: { run: string; actor: string }) => {
+      requireOnline();
+      const { data, error } = await db().rpc("academy_ensure_course_chat", {
+        p_run_id: run,
+      });
+      if (error || !data) throw error ?? new Error("unconfirmed");
+    },
+    onSuccess: (_, { run, actor }) =>
+      client.invalidateQueries({ queryKey: ["course-chat-rooms", actor, run] }),
+  });
   const roomField = useId();
   const [selected, setSelected] = useState<string | null>(null);
   const rooms = useQuery({
@@ -64,7 +85,21 @@ export function CourseChat({ run, actor }: { run: string; actor: string }) {
       ) : rooms.isPending ? (
         <Loading />
       ) : !room ? (
-        <p>{t("emptyRooms")}</p>
+        <>
+          <p>{t("emptyRooms")}</p>
+          {canCreate && (
+            <Button
+              type="button"
+              disabled={createRoom.isPending}
+              onClick={() => createRoom.mutate({ run, actor })}
+            >
+              {t("create")}
+            </Button>
+          )}
+          {createRoom.isError && (
+            <Notice kind="error">{t("createFailed")}</Notice>
+          )}
+        </>
       ) : (
         <>
           {rooms.data.length > 1 && (
@@ -214,7 +249,7 @@ function CourseChatThread({
 
   /** Both the keyboard-accessible picker and drag/drop start the same upload. */
   function selectAttachment(files: FileList | null) {
-    if (!files?.length || busy || attachment) return;
+    if (!portalInternalEdition || !files?.length || busy || attachment) return;
     setInvalidDrop(files.length !== 1);
     if (files.length === 1) upload.mutate(files[0]);
   }
@@ -277,13 +312,15 @@ function CourseChatThread({
               ) : (
                 message.body && <p>{message.body}</p>
               )}
-              {!message.deleted_at && message.attachment && (
-                <CourseChatAttachment
-                  key={message.attachment.version_id}
-                  message={message.id}
-                  attachment={message.attachment}
-                />
-              )}
+              {portalInternalEdition &&
+                !message.deleted_at &&
+                message.attachment && (
+                  <CourseChatAttachment
+                    key={message.attachment.version_id}
+                    message={message.id}
+                    attachment={message.attachment}
+                  />
+                )}
             </li>
           ))}
         </ol>
@@ -315,32 +352,33 @@ function CourseChatThread({
                 disabled={busy}
               />
             </Field>
-            {attachment ? (
-              <p>
-                {attachment.name}{" "}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => setAttachment(null)}
-                >
-                  {t("removeAttachment")}
-                </Button>
-              </p>
-            ) : (
-              <Field id={attachmentField} label={t("attach")}>
-                <input
-                  id={attachmentField}
-                  type="file"
-                  accept={acceptedFiles}
-                  disabled={busy}
-                  onChange={(event) => {
-                    selectAttachment(event.currentTarget.files);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </Field>
-            )}
+            {portalInternalEdition &&
+              (attachment ? (
+                <p>
+                  {attachment.name}{" "}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => setAttachment(null)}
+                  >
+                    {t("removeAttachment")}
+                  </Button>
+                </p>
+              ) : (
+                <Field id={attachmentField} label={t("attach")}>
+                  <input
+                    id={attachmentField}
+                    type="file"
+                    accept={acceptedFiles}
+                    disabled={busy}
+                    onChange={(event) => {
+                      selectAttachment(event.currentTarget.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </Field>
+              ))}
             {invalidDrop && (
               <Notice kind="error">{t("singleAttachment")}</Notice>
             )}

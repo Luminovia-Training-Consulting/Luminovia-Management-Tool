@@ -894,7 +894,11 @@ function CourseWorkspaceLayout({
               <AttendancePanel course={course} actor={actor} />
             </div>
           )}
-          <CourseChat run={course.id} actor={actor} />
+          <CourseChat
+            run={course.id}
+            actor={actor}
+            canCreate={!portalInternalEdition && course.access.manager}
+          />
           {hasActivities && (
             <div className="course-room-section" id="course-learning">
               <Feedback

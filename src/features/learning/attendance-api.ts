@@ -3,39 +3,16 @@ import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
-export type AttendanceStatus = "present" | "absent" | "excused";
-export interface AttendanceRow {
-  user_id: string;
-  name: string;
-  status: AttendanceStatus | null;
-  arrival_at: string | null;
-  departure_at: string | null;
-  note: string;
-  version: number;
-}
-export interface AttendanceRegister {
-  session_id: string;
-  starts_at: string;
-  ends_at: string;
-  time_zone: string;
-  rows: AttendanceRow[];
-  evidence: {
-    id: string;
-    resource_id: string;
-    version_id: string;
-    name: string;
-    attached_at: string;
-  }[];
-  history: {
-    id: string;
-    user_id: string;
-    actor_id: string;
-    old_state: unknown;
-    new_state: unknown;
-    reason: string;
-    created_at: string;
-  }[];
-}
+import {
+  attendanceRegisterSchema,
+  type AttendanceRow,
+  type AttendanceStatus,
+} from "./attendance-schema";
+export type {
+  AttendanceRegister,
+  AttendanceRow,
+  AttendanceStatus,
+} from "./attendance-schema";
 
 /** Shared prefix for every cached session register of this actor and course. */
 export const attendanceRegistersKey = (actor: string, run: string) =>
@@ -62,7 +39,7 @@ export const attendanceRegisterQuery = (
         })
         .abortSignal(signal);
       if (error) throw error;
-      return data as AttendanceRegister;
+      return attendanceRegisterSchema.parse(data);
     },
     enabled: Boolean(session),
     staleTime: 0,

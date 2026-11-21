@@ -13,10 +13,18 @@ const fake = vi.hoisted(() => ({
   uploadDocument: vi.fn(),
   downloadPortalDocument: vi.fn(),
   attachment: false,
+  internalEdition: true,
+  roomAvailable: true,
   channel: vi.fn(),
   on: vi.fn(),
   subscribe: vi.fn(),
   removeChannel: vi.fn(),
+}));
+vi.mock("../../lib/installation-brand", async (load) => ({
+  ...(await load<typeof import("../../lib/installation-brand")>()),
+  get portalInternalEdition() {
+    return fake.internalEdition;
+  },
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
@@ -43,6 +51,8 @@ beforeEach(async () => {
   fake.revoked = false;
   fake.canPost = true;
   fake.attachment = false;
+  fake.internalEdition = true;
+  fake.roomAvailable = true;
   const channel = { on: fake.on, subscribe: fake.subscribe };
   fake.channel.mockReset().mockReturnValue(channel);
   fake.on.mockReset().mockReturnValue(channel);
@@ -56,16 +66,22 @@ beforeEach(async () => {
         fake.revoked
           ? { data: null, error: { code: "42501" } }
           : {
-              data: [
-                {
-                  id: "room-a",
-                  title: "Fictional course room",
-                  can_post: fake.canPost,
-                },
-              ],
+              data: fake.roomAvailable
+                ? [
+                    {
+                      id: "room-a",
+                      title: "Fictional course room",
+                      can_post: fake.canPost,
+                    },
+                  ]
+                : [],
               error: null,
             },
       );
+    if (name === "academy_ensure_course_chat") {
+      fake.roomAvailable = true;
+      return Promise.resolve({ data: "room-a", error: null });
+    }
     if (name === "course_chat_messages")
       return Promise.resolve({
         data: [
@@ -95,13 +111,44 @@ afterEach(() => {
   client.clear();
 });
 
-function show() {
+function show(canCreate = false) {
   render(
     <QueryClientProvider client={client}>
-      <CourseChat run="course-a" actor="learner" />
+      <CourseChat run="course-a" actor="learner" canCreate={canCreate} />
     </QueryClientProvider>,
   );
 }
+
+it("opens a dedicated text channel only through the course-specific action", async () => {
+  fake.internalEdition = false;
+  fake.roomAvailable = false;
+  fake.attachment = true;
+  const user = userEvent.setup();
+  show(true);
+  await user.click(
+    await screen.findByRole("button", { name: "Open course chat" }),
+  );
+  expect(fake.rpc).toHaveBeenCalledWith("academy_ensure_course_chat", {
+    p_run_id: "course-a",
+  });
+  expect(await screen.findByText("Fictional course question")).toBeVisible();
+  expect(screen.queryByLabelText("Attach file")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /exercise.txt/ }),
+  ).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Message"), "Fictional text reply");
+  await user.click(screen.getByRole("button", { name: "Send message" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "send_course_chat_message",
+      expect.objectContaining({
+        p_room_id: "room-a",
+        p_body: "Fictional text reply",
+      }),
+    ),
+  );
+  expect(fake.uploadDocument).not.toHaveBeenCalled();
+});
 
 it("shows only current course-room text and posts without attachment arguments", async () => {
   const user = userEvent.setup();

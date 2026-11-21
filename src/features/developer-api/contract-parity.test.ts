@@ -510,6 +510,33 @@ describe("documented Premium course and spending operations", () => {
                       ],
                     },
                   },
+                  history: {
+                    items: {
+                      additionalProperties: false,
+                      properties: {
+                        actor_id: { format: "uuid" },
+                        new_state: {
+                          anyOf: [
+                            {
+                              required: ["state", "minutes"],
+                              additionalProperties: false,
+                            },
+                            {
+                              required: [
+                                "state",
+                                "minutes",
+                                "arrival_at",
+                                "departure_at",
+                                "staff_note",
+                                "register_status",
+                              ],
+                              additionalProperties: false,
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },

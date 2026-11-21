@@ -1,3 +1,13 @@
+# 21 November 2026 — Dedicated course messages, files and typed attendance history
+
+Both dedicated editions can open one course text channel from the licensed course profile. The channel binds the acting manager, currently assigned instructors and currently enrolled participants. PostgreSQL confirms idempotent room creation and posting, immediate revocation, preservation of messages, and visibility of only the opaque Realtime marker to current members. Pinned GoTrue and PostgREST exercised the actual room, history and send routes with password tokens. The dedicated WebSocket and full browser run still require the native customer stack.
+
+The same profile serves the exact scanned version currently shared with a permitted course audience, including during read-only grace. Local PostgreSQL covers instructor release, learner removal, foreign users and retained bytes metadata after expiry. The real document handler, pinned PostgREST and controlled Auth/Storage test adapters check digest validation and a second live authorization before returning the bytes. Customer uploads and chat attachments remain closed pending their scanner and Storage transport acceptance.
+
+The staff register and OpenAPI now share exact current and historical attendance snapshot schemas, including the empty PostgreSQL row shape. Database tests confirm that learner and company workspace projections cannot disclose staff correction history; the scoped company register remains available to authorised contacts.
+
+The `ed302557` GitHub run passed every fast gate and all three CodeQL categories. The native retained-data gate passed through the avatar and both chat API suites, then reached a commercial fixture that expected rejection for a block that had already ended. The new fixture checks the same accepted assignment both immediately before and after its exact final session. Final integrated native and browser checks remain pending.
+
 # 21 November 2026 — Desktop and mobile acceptance repairs
 
 The first completed integrated Chromium runs on `5e1c4158` passed 102 of 109 desktop journeys and 96 of 109 mobile journeys. The later `bcfcd6d3` mobile run passed 98 of 109. The follow-up corrects the reported cases and retains their role, persistence and byte comparisons.

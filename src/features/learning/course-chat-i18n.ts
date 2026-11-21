@@ -6,6 +6,11 @@ const pairs: Record<string, [string, string]> = {
     "Für diesen Kurs ist noch kein Chat freigegeben.",
     "No chat is available for this course yet.",
   ],
+  create: ["Kurs-Chat öffnen", "Open course chat"],
+  createFailed: [
+    "Der Kurs-Chat konnte nicht geöffnet werden. Prüfe deine Berechtigung und den Status der Akademie.",
+    "The course chat could not be opened. Check your access and academy status.",
+  ],
   emptyMessages: ["Noch keine Nachrichten.", "No messages yet."],
   latest: ["Neueste Nachrichten", "Latest messages"],
   earlier: ["Frühere Nachrichten", "Earlier messages"],
