@@ -311,14 +311,14 @@ Deno.test("company invite parser fixes the role to participant and its organizat
         organisation_id: id,
         idempotency_key: key,
     });
-    assertEquals(parsed, {
+    assert.deepEqual(parsed, {
         email: "person@example.invalid",
         display_name: "Fictional participant",
         role: "participant",
         organisation_id: id,
         idempotency_key: key,
     });
-    assertEquals(
+    assert.deepEqual(
         parseCompanyParticipantInvitation({
             email: "person@example.invalid",
             display_name: "Fictional participant",
@@ -339,14 +339,14 @@ Deno.test("company invitation response is generic when no email delivery is rese
             idempotency_key: key,
         }),
     );
-    assertEquals(response.status, 202);
-    assertEquals(await response.json(), {status: "requested"});
-    assertEquals(f.calls, [
+    assert.deepEqual(response.status, 202);
+    assert.deepEqual(await response.json(), {status: "requested"});
+    assert.deepEqual(f.calls, [
         "authenticate",
         "reserve_company_participant_invitation",
         "privileged:claim_company_participant_invitation",
     ]);
-    assertEquals(f.calls.includes("send"), false);
+    assert.deepEqual(f.calls.includes("send"), false);
 });
 Deno.test("company participant invitation delivery stays service-only and returns no account details", async () => {
     const privilegedCalls: string[] = [];
@@ -354,7 +354,7 @@ Deno.test("company participant invitation delivery stays service-only and return
         privilegedRpc: async (name, args) => {
             privilegedCalls.push(name);
             if (name === "claim_company_participant_invitation") {
-                assertEquals(args, {p_request_id: key});
+                assert.deepEqual(args, {p_request_id: key});
                 return {
                     data: {
                         deliver: true,
@@ -369,7 +369,7 @@ Deno.test("company participant invitation delivery stays service-only and return
                     error: null,
                 };
             }
-            assertEquals(args, {p_request_id: key, p_success: true});
+            assert.deepEqual(args, {p_request_id: key, p_success: true});
             return {data: null, error: null};
         },
     });
@@ -381,14 +381,14 @@ Deno.test("company participant invitation delivery stays service-only and return
             idempotency_key: id,
         }),
     );
-    assertEquals(response.status, 202);
-    assertEquals(await response.json(), {status: "requested"});
-    assertEquals(privilegedCalls, [
+    assert.deepEqual(response.status, 202);
+    assert.deepEqual(await response.json(), {status: "requested"});
+    assert.deepEqual(privilegedCalls, [
         "claim_company_participant_invitation",
         "finish_company_participant_invitation",
     ]);
-    assertEquals(f.calls.includes("send"), true);
-    assertEquals(f.calls.includes("complete"), true);
+    assert.deepEqual(f.calls.includes("send"), true);
+    assert.deepEqual(f.calls.includes("complete"), true);
 });
 Deno.test(
     "valid bearer CLI requests work without Origin; foreign origins fail before auth",
