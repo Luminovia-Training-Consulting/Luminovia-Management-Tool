@@ -30,23 +30,27 @@ test("individual account roles, scoped invitations and linked status management 
     });
     await search.fill(teacher.name);
     await expect(search).toBeFocused();
-    const roleEdit = page.getByRole("button", {
+    // A debounced search can still display other accounts when the action is found.
+    const teacherRow = page.getByRole("listitem").filter({
+        has: page.getByText(teacher.email, {exact: true}),
+    });
+    const roleEdit = teacherRow.getByRole("button", {
             name: "Rollen bearbeiten",
             exact: true,
         }),
-        deleteAction = page.getByRole("button", {
+        deleteAction = teacherRow.getByRole("button", {
             name: `Endgültig löschen: ${teacher.name}`,
             exact: true,
         });
     await expect(roleEdit).toBeVisible();
     await expect(deleteAction).toBeVisible();
-    await expect(page.locator(".account-list .public-user-id code")).toHaveText(
+    await expect(teacherRow.locator(".public-user-id code")).toHaveText(
         /^LV-[0-9A-F]{4}(?:-[0-9A-F]{4}){4}$/,
     );
     const initialViewport = page.viewportSize();
     for (const width of [390, 768, 1280, 1920]) {
         await page.setViewportSize({width, height: 900});
-        const group = page.locator(".account-list-actions"),
+        const group = teacherRow.locator(".account-list-actions"),
             groupBox = await group.boundingBox(),
             deleteBox = await deleteAction.boundingBox(),
             roleBox = await roleEdit.boundingBox();
@@ -105,7 +109,7 @@ test("individual account roles, scoped invitations and linked status management 
         "lecturer",
         "senior_lecturer",
     ]);
-    await page
+    await teacherRow
         .getByRole("link", {
             name: "Profil, Nachweise und Kontostatus verwalten",
             exact: true,
