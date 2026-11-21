@@ -83,6 +83,14 @@ export function candidateDatabaseCommand(command) {
     );
 }
 
+/** Leave room for concurrent Auth, claims and retained-data probes on hosted CI. */
+export function candidateDatabaseOptions(database, hostedCi) {
+    const options = {...database, command: candidateDatabaseCommand(database.command)};
+    if (hostedCi && Number.isSafeInteger(database.mem_limit) && database.mem_limit > 0)
+        options.mem_limit = Math.max(database.mem_limit, 640 * 1024 ** 2);
+    return options;
+}
+
 /** Docker inspect and cgroup counters are enough to separate a memory kill
  * from other failure signals without printing process, query or container details. */
 export function candidateDatabaseMemoryDiagnostics(inspection, cgroupEvents) {
@@ -781,10 +789,10 @@ export async function checkCandidate({
                 service.restart = "no";
                 service.ports = [];
             }
-            configuration.services.db.container_name = "supabase_db_" + project;
-            configuration.services.db.command = candidateDatabaseCommand(
-                configuration.services.db.command,
-            );
+            configuration.services.db = {
+                ...candidateDatabaseOptions(configuration.services.db, process.env.GITHUB_ACTIONS === "true"),
+                container_name: "supabase_db_" + project,
+            };
             configuration.services.clamav.container_name =
                 "portal_scanner_" + project;
             configuration.services.web.ports = Object.entries(ports).map(

@@ -11,7 +11,7 @@ import {createServer} from "node:net";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
-import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
+import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
 
 test("crash diagnostics retain a safe primary signal ahead of a recovery-error flood", () => {
     const secret = "fictional-candidate-password-12345";
@@ -63,6 +63,22 @@ test("the scratch database retains memory defaults and emits the PostgreSQL sign
     assert.equal(candidateDatabaseCommand(undefined), undefined);
     const other = ["init", "log_min_messages=fatal"];
     assert.equal(candidateDatabaseCommand(other), other);
+});
+
+test("hosted CI gives the disposable database headroom without lowering larger limits", () => {
+    const database = Object.freeze({mem_limit: 384 * 1024 ** 2, command: [
+        "postgres", "-c", "shared_buffers=128MB", "-c", "work_mem=4MB",
+    ]});
+    assert.deepEqual(candidateDatabaseOptions(database, false), database);
+    assert.deepEqual(candidateDatabaseOptions(database, true), {
+        ...database,
+        mem_limit: 640 * 1024 ** 2,
+    });
+    const larger = {...database, mem_limit: 768 * 1024 ** 2};
+    assert.deepEqual(candidateDatabaseOptions(larger, true), larger);
+    assert.deepEqual(candidateDatabaseOptions({command: database.command}, true), {
+        command: database.command,
+    });
 });
 
 test("memory diagnostics report an owned database worker OOM without copying other cgroup data", () => {

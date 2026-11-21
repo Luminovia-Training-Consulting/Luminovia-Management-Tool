@@ -46,6 +46,8 @@ The broader isolated SQL run passed all 157 earlier database suites with the pat
 
 The release workflow now checks out `refs/heads/main` and compares the checkout to the approved revision before dependency installation. The release-policy test exercises both a matching checkout and a newer commit arriving after the gate. Validation workflows run with CMS publication disabled.
 
+The API explorer's authenticated browser checks allow the observed cold Vite compilation before inspecting the page. The same tests still require explicit authorisation and execute real account and native RPC reads. Both Chromium profiles passed the focused cold-server run. Hosted CI now gives its isolated candidate database at least 640 MiB after a recorded 384 MiB container OOM. The native tests retain the same PostgreSQL configuration, concurrency and fixture cases.
+
 ## 22 November 2026 — Protected HTTP and course Realtime contract
 
 The downloadable Portal contract describes the existing document request variants, upload metadata, binary media types and typed denial responses. Both editions share the protection headers and error definitions. The API reference explains the course activity event and the separate, permission-filtered notification inbox.

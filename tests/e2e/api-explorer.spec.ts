@@ -16,6 +16,15 @@ async function operation(page: Page, method: "get" | "post", path: string) {
   });
 }
 
+async function openExplorer(page: Page) {
+  await page.goto("/api/docs");
+  // The isolated development server compiles the lazy Swagger module on the
+  // first authenticated visit. Keep the operation assertions on their normal budget.
+  await expect(
+    page.getByRole("heading", { name: "API-Dokumentation", exact: true }),
+  ).toBeVisible({ timeout: 25_000 });
+}
+
 test("the API explorer executes a documented read only after authorization", async ({
   page,
   request,
@@ -36,10 +45,7 @@ test("the API explorer executes a documented read only after authorization", asy
   await page.goto("/api/docs");
   await expect(page).toHaveURL(/\/login$/);
   await login(page, account.email);
-  await page.goto("/api/docs");
-  await expect(
-    page.getByRole("heading", { name: "API-Dokumentation" }),
-  ).toBeVisible();
+  await openExplorer(page);
   const accountPath = "/functions/v1/accounts/v1/me";
   await (await operation(page, "get", accountPath)).click();
   await expect(
@@ -88,10 +94,7 @@ test("an authenticated participant can run an own-account RPC through the API ex
     "participant",
   );
   await login(page, learner.email, /\/learning$/);
-  await page.goto("/api/docs");
-  await expect(
-    page.getByRole("heading", { name: "API-Dokumentation" }),
-  ).toBeVisible();
+  await openExplorer(page);
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
