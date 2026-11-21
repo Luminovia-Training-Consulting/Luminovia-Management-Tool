@@ -317,7 +317,7 @@ describe("versioned notification preferences API", () => {
   });
 
   it("preserves the exact concurrency rejection rather than accepting a stale draft", async () => {
-    const error = { code: "40001", message: "stale_version" };
+    const error = { code: "PT409", message: "stale_version" };
     rpc.mockReturnValue(response({ ...preferences, version: 5 }, error));
     await expect(saveNotificationPreferences(preferences)).rejects.toBe(error);
   });

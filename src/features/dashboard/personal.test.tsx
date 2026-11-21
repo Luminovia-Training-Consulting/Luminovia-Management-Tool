@@ -236,7 +236,7 @@ describe("personal dashboard", () => {
     await user.click(
       screen.getByRole("checkbox", { name: "Zuletzt hinzugefügte Dateien" }),
     );
-    fake.errors.save_dashboard_preferences = { code: "40001" };
+    fake.errors.save_dashboard_preferences = { code: "PT409" };
     await user.click(
       screen.getByRole("button", { name: "Dashboard speichern" }),
     );

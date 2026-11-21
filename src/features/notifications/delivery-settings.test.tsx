@@ -35,7 +35,7 @@ beforeEach(async () => {
       name === "delivery_preferences"
         ? { data: { ...initial }, error: null }
         : state.conflict
-          ? { data: null, error: { code: "40001" } }
+          ? { data: null, error: { code: "PT409" } }
           : { data: { ...args.p_payload, version: 2 }, error: null },
     );
     return Object.assign(request, { abortSignal: () => request });

@@ -123,7 +123,7 @@ await withTestDatabase("dashboard_personal", async ({sql, actor}) => {
             assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
             assert.match(
                 results.find((r) => r.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             assert.equal((await rpc(teacher, "dashboard_preferences")).version, 2);
         },

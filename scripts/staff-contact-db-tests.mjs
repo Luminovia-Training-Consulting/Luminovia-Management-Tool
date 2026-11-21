@@ -96,7 +96,7 @@ await withTestDatabase("staff_contact", async ({sql, actor}) => {
                     q(JSON.stringify(payload)),
                     "0",
                 ]),
-                /40001/,
+                /PT409/,
             );
             assert.equal(
                 (await rpc(owner, "contact_visibility_preferences")).version,
@@ -120,7 +120,7 @@ await withTestDatabase("staff_contact", async ({sql, actor}) => {
             assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
             assert.match(
                 results.find((r) => r.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             await rpc(owner, "save_contact_visibility_preferences", [
                 q(JSON.stringify({email_visible: true, phone_visible: true})),

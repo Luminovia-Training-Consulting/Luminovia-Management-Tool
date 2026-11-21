@@ -46,7 +46,7 @@ function VisibilityForm({
     save.error &&
     typeof save.error === "object" &&
     "code" in save.error &&
-    save.error.code === "40001",
+    (save.error.code === "PT409" || save.error.code === "40001"),
   );
   const dirty =
     draft.email_visible !== initial.email_visible ||

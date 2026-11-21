@@ -142,7 +142,7 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
             );
             assert.match(
                 results.find((result) => result.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             assert.equal((await rpc(teacher, "notification_preferences")).version, 2);
             assert.equal((await rpc(peer, "notification_preferences")).chat, true);

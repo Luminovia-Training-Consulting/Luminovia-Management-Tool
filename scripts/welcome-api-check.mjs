@@ -42,7 +42,7 @@ await withApiFixture(async ({service, actor, checked}) => {
         status: "active",
         version: 0,
     });
-    assert.equal((await save(first, "files", "active", 0)).error?.code, "40001");
+    assert.equal((await save(first, "files", "active", 0)).error?.code, "PT409");
     assert.ok(
         (
             await first.client.rpc("save_welcome_progress", {

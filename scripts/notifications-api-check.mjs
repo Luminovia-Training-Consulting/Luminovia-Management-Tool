@@ -152,7 +152,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
         ),
     );
     assert.equal(saves.filter((result) => !result.error).length, 1);
-    assert.equal(saves.find((result) => result.error)?.error.code, "40001");
+    assert.equal(saves.find((result) => result.error)?.error.code, "PT409");
     assert.equal(
         (
             await checked(

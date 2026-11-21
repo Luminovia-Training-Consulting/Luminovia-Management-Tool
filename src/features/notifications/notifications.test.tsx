@@ -126,7 +126,7 @@ beforeEach(async () => {
         }
       } else if (name === "save_notification_preferences")
         result = state.staleSave
-          ? { data: null, error: { code: "40001", message: "stale" } }
+          ? { data: null, error: { code: "PT409", message: "stale" } }
           : {
               data: { ...(payload?.p_payload as object), version: 2 },
               error: null,

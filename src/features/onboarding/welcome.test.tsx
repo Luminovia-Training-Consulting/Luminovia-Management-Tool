@@ -136,7 +136,7 @@ describe("server-confirmed personal welcome guide", () => {
     const { user, client } = mount({
       state: { step: "profile", status: "active", version: 3 },
     });
-    rpc.mockReturnValueOnce(response(null, { code: "40001" }));
+    rpc.mockReturnValueOnce(response(null, { code: "PT409" }));
     await user.click(screen.getByRole("button", { name: "Weiter" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "nicht gespeichert",

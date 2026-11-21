@@ -55,7 +55,7 @@ await withApiFixture(
             ),
         );
         assert.equal(saves.filter((result) => !result.error).length, 1);
-        assert.equal(saves.find((result) => result.error)?.error.code, "40001");
+        assert.equal(saves.find((result) => result.error)?.error.code, "PT409");
         assert.deepEqual(await prefs(owner.client), {...payload, version: 2});
         assert.equal((await prefs(peer.client)).email_enabled, false);
         assert.equal((await prefs(administrator.client)).email_enabled, false);

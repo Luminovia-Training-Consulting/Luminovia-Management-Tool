@@ -47,7 +47,7 @@ function DeliveryForm({
     save.error !== null &&
     typeof save.error === "object" &&
     "code" in save.error &&
-    save.error.code === "40001";
+    (save.error.code === "PT409" || save.error.code === "40001");
 
   function edit(values: Partial<DeliveryPreferences>) {
     setDraft((previous) => ({ ...previous, ...values }));

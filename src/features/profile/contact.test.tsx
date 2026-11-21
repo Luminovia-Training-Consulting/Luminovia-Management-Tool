@@ -199,7 +199,7 @@ describe("explicit staff contact visibility", () => {
         name: "Telefonnummer für das Team anzeigen",
       }),
     );
-    fake.errors.save_contact_visibility_preferences = { code: "40001" };
+    fake.errors.save_contact_visibility_preferences = { code: "PT409" };
     await user.click(
       screen.getByRole("button", { name: "Kontaktfreigabe speichern" }),
     );

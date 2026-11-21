@@ -52,7 +52,7 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         ),
     );
     assert.equal(results.filter((r) => !r.error).length, 1);
-    assert.equal(results.find((r) => r.error).error.code, "40001");
+    assert.equal(results.find((r) => r.error).error.code, "PT409");
     assert.deepEqual(await checked(owner.client.rpc("dashboard_preferences")), {
         ...payload,
         version: 1,

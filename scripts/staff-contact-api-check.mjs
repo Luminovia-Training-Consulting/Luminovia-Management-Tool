@@ -32,7 +32,7 @@ await withApiFixture(async ({actor, checked, service}) => {
         ),
     );
     assert.equal(attempts.filter((r) => !r.error).length, 1);
-    assert.equal(attempts.find((r) => r.error).error.code, "40001");
+    assert.equal(attempts.find((r) => r.error).error.code, "PT409");
     assert.deepEqual(await contact(peer), {
         email: owner.email,
         phone: "+49 40 123456",

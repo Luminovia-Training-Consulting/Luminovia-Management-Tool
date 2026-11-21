@@ -111,11 +111,11 @@ await withTestDatabase("welcome_test", async ({sql, actor}) => {
         async () => {
             await assert.rejects(
                 save(first, "files", "active", 1),
-                /Welcome progress changed/,
+                /PT409.*Welcome progress changed/,
             );
             await assert.rejects(
                 save(first, "files", "active", 0),
-                /Welcome progress changed/,
+                /PT409.*Welcome progress changed/,
             );
             const outcomes = await Promise.allSettled([
                 save(peer, "profile", "active", 0),
