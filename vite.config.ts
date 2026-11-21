@@ -21,22 +21,41 @@ export default defineConfig(({ mode }) => {
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
     mode === "production",
   );
-  const {brand, assets} = loadAcademyBrand(process.env.PORTAL_ACADEMY_BRAND_FILE, resolve("public"));
+  const { brand, assets } = loadAcademyBrand(
+    process.env.PORTAL_ACADEMY_BRAND_FILE,
+    resolve("public"),
+  );
   const internal = brand.edition === "internal";
-  const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  const escapeHtml = (value: string) =>
+    value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const openApiPath = "/api/openapi.json";
   const openApi =
-    JSON.stringify(portalOpenApi(env.VITE_SUPABASE_URL ?? "", true, brand), null, 2) + "\n";
+    JSON.stringify(
+      portalOpenApi(env.VITE_SUPABASE_URL ?? "", true, brand),
+      null,
+      2,
+    ) + "\n";
   return {
     publicDir: internal ? "public" : false,
     define: {
       __PORTAL_INSTALLATION_BRAND__: JSON.stringify(brand),
       __PORTAL_INTERNAL_EDITION__: JSON.stringify(internal),
     },
-    ...(!internal && {server: {fs: {deny: [
-      ".env", ".env.*", "*.{crt,pem}", "**/.git/**",
-      "**/public/brand/luminovia-logo-*", "**/public/icons/**", "**/src/features/demo/**",
-    ]}}}),
+    ...(!internal && {
+      server: {
+        fs: {
+          deny: [
+            ".env",
+            ".env.*",
+            "*.{crt,pem}",
+            "**/.git/**",
+            "**/public/brand/luminovia-logo-*",
+            "**/public/icons/**",
+            "**/src/features/demo/**",
+          ],
+        },
+      },
+    }),
     plugins: [
       react(),
       tailwindcss(),
@@ -44,13 +63,21 @@ export default defineConfig(({ mode }) => {
         name: "portal-academy-assets",
         transformIndexHtml(html) {
           if (internal) return html;
-          const description = brand.defaultLanguage === "de"
-            ? `${brand.name} · Kurse und Lernbereiche`
-            : `${brand.name} · Courses and learning workspaces`;
-          return html.replace('lang="de"', `lang="${brand.defaultLanguage}"`)
-            .replace('<title>Luminovia Portal</title>', `<title>${escapeHtml(brand.name)}</title>`)
+          const description =
+            brand.defaultLanguage === "de"
+              ? `${brand.name} · Kurse und Lernbereiche`
+              : `${brand.name} · Courses and learning workspaces`;
+          return html
+            .replace('lang="de"', `lang="${brand.defaultLanguage}"`)
+            .replace(
+              "<title>Luminovia Portal</title>",
+              `<title>${escapeHtml(brand.name)}</title>`,
+            )
             .replace('content="#172b4b"', `content="${brand.themeColor}"`)
-            .replace('Luminovia Portal – gemeinsam lehren, lernen und organisieren.', escapeHtml(description));
+            .replace(
+              "Luminovia Portal – gemeinsam lehren, lernen und organisieren.",
+              escapeHtml(description),
+            );
         },
         configureServer(server) {
           if (internal) return;
@@ -58,10 +85,15 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use((req, res, next) => {
             const path = req.url?.split("?")[0]?.slice(1) ?? "";
             const bytes = assets.get(path);
-            if (!bytes || (req.method !== "GET" && req.method !== "HEAD")) return next();
-            const contentType = path.endsWith(".png") ? "image/png"
-              : path.endsWith(".woff2") ? "font/woff2"
-              : path.endsWith(".js") ? "text/javascript" : "text/plain; charset=utf-8";
+            if (!bytes || (req.method !== "GET" && req.method !== "HEAD"))
+              return next();
+            const contentType = path.endsWith(".png")
+              ? "image/png"
+              : path.endsWith(".woff2")
+                ? "font/woff2"
+                : path.endsWith(".js")
+                  ? "text/javascript"
+                  : "text/plain; charset=utf-8";
             res.setHeader("Content-Type", contentType);
             res.setHeader("X-Content-Type-Options", "nosniff");
             res.end(req.method === "HEAD" ? undefined : bytes);
@@ -69,7 +101,7 @@ export default defineConfig(({ mode }) => {
         },
         generateBundle() {
           for (const [fileName, source] of assets) {
-            this.emitFile({type: "asset", fileName, source});
+            this.emitFile({ type: "asset", fileName, source });
           }
         },
       },
@@ -122,7 +154,9 @@ export default defineConfig(({ mode }) => {
         // Do not discard an in-progress form by immediately activating a new
         // service worker; the interface offers the update to the user.
         registerType: "prompt",
-        ...(internal && {includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"]}),
+        ...(internal && {
+          includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"],
+        }),
         manifest: {
           name: brand.name,
           short_name: brand.shortName,
@@ -149,6 +183,8 @@ export default defineConfig(({ mode }) => {
             /^\/auth\//,
             /^\/rest\//,
             /^\/storage\//,
+            /^\/functions\//,
+            /^\/realtime\//,
             /^\/api\/openapi\.json$/,
           ],
         },

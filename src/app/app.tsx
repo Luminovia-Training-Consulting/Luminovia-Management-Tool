@@ -23,6 +23,7 @@ import {
 } from "../lib/installation-brand";
 import { CustomerInstallationAccess } from "../features/auth/installation-access";
 import { Button } from "../components/ui/button";
+import { PwaInstallOffer } from "../components/pwa-install";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { ChangeRequestsPage } from "../features/changes/changes";
@@ -254,6 +255,7 @@ function AppNotices() {
   } = useRegisterSW();
   return (
     <>
+      <PwaInstallOffer enabled={online && !refresh} />
       {!online && (
         <div className="connection-banner" role="status">
           {t("offline")}

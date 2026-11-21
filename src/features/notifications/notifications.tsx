@@ -52,23 +52,28 @@ import { CategorySelector, NotificationRow } from "./notification-common";
 import { useReadState } from "./use-notification-read-state";
 
 /** Load inbox history on demand through cursors and keep filter/read state separate. */
-export function NotificationsPage() {
+export function NotificationsPage({
+  academy,
+}: { academy?: "active" | "grace" } = {}) {
   const [category, setCategory] = useState<NotificationCategory>("all");
   const { t } = useTranslation("inbox");
   const actor = useAuth().session!.user.id;
   const client = useQueryClient();
   const online = useOnline();
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const roles = useQuery(userRolesQuery(actor));
+  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const participantOnly = isParticipantOnly(roles.data);
+  const readOnly = academy === "grace";
+  const sensitive = Boolean(academy) || participantOnly;
   const query = useInfiniteQuery({
     ...notificationInboxQuery(actor, unreadOnly),
-    enabled: online || (roles.isSuccess && !participantOnly),
+    enabled: online || (!academy && roles.isSuccess && !participantOnly),
     refetchOnReconnect: "always",
-    staleTime: participantOnly ? 0 : undefined,
-    refetchInterval: participantOnly ? 10_000 : undefined,
+    staleTime: sensitive ? 0 : undefined,
+    refetchOnMount: academy ? "always" : undefined,
+    refetchInterval: sensitive ? 10_000 : undefined,
   });
-  const profile = useQuery(profileQuery(actor));
+  const profile = useQuery({ ...profileQuery(actor), enabled: !academy });
   const mark = useReadState(actor);
   const refresh = useMutation({
     mutationFn: async () => {
@@ -78,7 +83,13 @@ export function NotificationsPage() {
     onSuccess: () =>
       client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
   });
-  const first = online && !query.isError ? query.data?.pages[0] : undefined;
+  const awaitingAcademy = Boolean(
+    academy && query.isFetching && !query.isFetchedAfterMount,
+  );
+  const first =
+    online && !query.isError && !awaitingAcademy
+      ? query.data?.pages[0]
+      : undefined;
   const loadedItems = mergeNotificationPages(query.data?.pages);
   const items = online
     ? loadedItems
@@ -89,10 +100,12 @@ export function NotificationsPage() {
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
-      <div className="panel notification-category-panel">
-        <CategorySelector value={category} onChange={setCategory} />
-        <p className="notification-filter-scope">{t("loadedScope")}</p>
-      </div>
+      {!academy && (
+        <div className="panel notification-category-panel">
+          <CategorySelector value={category} onChange={setCategory} />
+          <p className="notification-filter-scope">{t("loadedScope")}</p>
+        </div>
+      )}
       <div className="panel inbox-toolbar">
         <label htmlFor="inbox-filter">{t("title")}</label>
         <select
@@ -106,22 +119,24 @@ export function NotificationsPage() {
         {first && (
           <span role="status">{t("count", { count: first.unread_count })}</span>
         )}
-        <Button
-          variant="secondary"
-          disabled={
-            !online || mark.isPending || !first?.unread_count || query.isError
-          }
-          onClick={() =>
-            mark.mutate({ ids: null, before: first!.as_of, read: true })
-          }
-        >
-          {t("markAll")}
-        </Button>
-        {roles.isSuccess && !participantOnly && (
+        {!readOnly && (
+          <Button
+            variant="secondary"
+            disabled={
+              !online || mark.isPending || !first?.unread_count || query.isError
+            }
+            onClick={() =>
+              mark.mutate({ ids: null, before: first!.as_of, read: true })
+            }
+          >
+            {t("markAll")}
+          </Button>
+        )}
+        {!academy && roles.isSuccess && !participantOnly && (
           <Link to="/settings">{t("preferences")}</Link>
         )}
       </div>
-      {roles.isSuccess && !participantOnly && (
+      {!academy && roles.isSuccess && !participantOnly && (
         <section className="panel inbox-reminders">
           <Button
             disabled={!online || refresh.isPending}
@@ -136,9 +151,9 @@ export function NotificationsPage() {
       {(mark.isError || refresh.isError) && (
         <Notice kind="error">{t("error")}</Notice>
       )}
-      {!online && participantOnly ? (
+      {!online && sensitive ? (
         <Notice>{t("offlineInbox")}</Notice>
-      ) : query.isPending ? (
+      ) : query.isPending || awaitingAcademy ? (
         <Loading />
       ) : query.isError ? (
         <ErrorState retry={() => void query.refetch()} />
@@ -162,8 +177,13 @@ export function NotificationsPage() {
                 <NotificationRow
                   key={item.id}
                   item={item}
-                  zone={profile.data?.time_zone ?? "Europe/Berlin"}
+                  zone={
+                    academy
+                      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+                      : (profile.data?.time_zone ?? "Europe/Berlin")
+                  }
                   disabled={!online || mark.isPending}
+                  readOnly={readOnly}
                   mark={(id, read) =>
                     mark.mutate({ ids: [id], before: null, read })
                   }

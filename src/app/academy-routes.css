@@ -1,4 +1,5 @@
 .academy-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -37,4 +38,38 @@
 
 .academy-main > .notice {
   margin-block-end: 1rem;
+}
+
+.academy-notification-menu > summary {
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  border-radius: 0.65rem;
+}
+
+.academy-notification-menu > summary:hover,
+.academy-notification-menu[open] > summary {
+  background: var(--blue-soft);
+  color: var(--ink);
+}
+
+.academy-notification-menu > .notification-popover {
+  inset-inline-end: 0;
+  top: calc(100% + 0.35rem);
+  max-height: min(65dvh, 32rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+@media (max-width: 600px) {
+  .academy-notification-menu {
+    position: static;
+  }
+
+  .academy-notification-menu > .notification-popover {
+    inset-inline: 1rem;
+    width: auto;
+    max-width: none;
+  }
 }

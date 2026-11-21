@@ -115,12 +115,14 @@ export function NotificationRow({
   zone,
   compact,
   disabled,
+  readOnly,
   mark,
 }: {
   item: NotificationItem;
   zone: string;
   compact?: boolean;
   disabled: boolean;
+  readOnly?: boolean;
   mark: (id: string, read: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("inbox");
@@ -136,7 +138,7 @@ export function NotificationRow({
       ) : (
         !compact && <p className="muted">{t("unavailable")}</p>
       )}
-      {(!compact || !item.read_at) && (
+      {!readOnly && (!compact || !item.read_at) && (
         <Button
           size="sm"
           variant="ghost"

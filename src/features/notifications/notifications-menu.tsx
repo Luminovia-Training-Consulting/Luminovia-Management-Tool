@@ -14,29 +14,53 @@ import "./notifications.css";
 import "./attention-i18n";
 
 /** Observe the bounded own preview and expose the shared bell/unread state. */
-export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
+export function NotificationsMenu({
+  id,
+  zone,
+  academy,
+}: {
+  id: string;
+  zone: string;
+  academy?: "active" | "grace";
+}) {
   const { t } = useTranslation("inbox");
   const [category, setCategory] = useState<NotificationCategory>("all");
   const online = useOnline();
-  const query = useQuery(notificationPreviewQuery(id));
+  const query = useQuery({
+    ...notificationPreviewQuery(id),
+    ...(academy && {
+      enabled: online,
+      staleTime: 0,
+      refetchOnMount: "always",
+      refetchInterval: 10_000,
+    }),
+  });
   const mark = useReadState(id);
   const { t: attentionText } = useTranslation("attention");
-  const count = query.isError
-    ? 0
-    : (query.data?.attention_count ?? query.data?.unread_count ?? 0);
-  const quiet = !query.isError && query.data?.quiet_active;
-  const countLabel = query.isError
-    ? t("unavailable")
-    : quiet
-      ? `${attentionText("criticalCount", { count })}; ${attentionText("active")}; ${attentionText("totalCount", { count: query.data?.unread_count ?? 0 })}`
-      : t("count", { count });
+  const awaitingAcademy = Boolean(
+    academy && (!online || (query.isFetching && !query.isFetchedAfterMount)),
+  );
+  const count =
+    query.isError || awaitingAcademy
+      ? 0
+      : (query.data?.attention_count ?? query.data?.unread_count ?? 0);
+  const quiet = !query.isError && !awaitingAcademy && query.data?.quiet_active;
+  const countLabel =
+    query.isError || awaitingAcademy
+      ? t("unavailable")
+      : quiet
+        ? `${attentionText("criticalCount", { count })}; ${attentionText("active")}; ${attentionText("totalCount", { count: query.data?.unread_count ?? 0 })}`
+        : t("count", { count });
   const menu = useRef<HTMLDetailsElement>(null);
   const location = useLocation();
   useEffect(() => {
     if (menu.current) menu.current.open = false;
   }, [location.pathname, location.search]);
   return (
-    <details className="notification-menu" ref={menu}>
+    <details
+      className={`notification-menu${academy ? " academy-notification-menu" : ""}`}
+      ref={menu}
+    >
       <summary aria-label={`${t("title")}: ${countLabel}`}>
         <Bell aria-hidden="true" size={21} />
         {count > 0 && (
@@ -47,9 +71,15 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
       </summary>
       <div className="notification-popover">
         <h2>{t("title")}</h2>
-        <CategorySelector value={category} onChange={setCategory} />
-        <p className="notification-filter-scope">{t("recentScope")}</p>
-        {query.isPending ? (
+        {!academy && (
+          <>
+            <CategorySelector value={category} onChange={setCategory} />
+            <p className="notification-filter-scope">{t("recentScope")}</p>
+          </>
+        )}
+        {academy && !online ? (
+          <Notice>{t("offlineInbox")}</Notice>
+        ) : query.isPending || awaitingAcademy ? (
           <Loading />
         ) : query.isError ? (
           <ErrorState retry={() => void query.refetch()} />
@@ -74,6 +104,7 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
                   zone={zone}
                   compact
                   disabled={!online || mark.isPending}
+                  readOnly={academy === "grace"}
                   mark={(id, read) =>
                     mark.mutate({ ids: [id], before: null, read })
                   }

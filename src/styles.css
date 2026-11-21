@@ -1003,6 +1003,20 @@ legend {
   font-size: 12px;
 }
 
+.pwa-install-offer {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  padding: 0.25rem 1rem;
+  border-block-end: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.pwa-install-offer > button {
+  min-height: 44px;
+}
+
 /* Personal dashboard heading and distinct brand hero composition. */
 .dashboard-heading {
   display: flex;

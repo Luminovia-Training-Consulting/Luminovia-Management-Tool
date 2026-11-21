@@ -21,6 +21,8 @@ import { Password } from "../features/auth/password";
 import { HelpCenter } from "../features/help/help";
 import { LearningHubPage } from "../features/learning/course-hub";
 import { CourseWorkspacePage } from "../features/learning/learning";
+import { NotificationsMenu } from "../features/notifications/notifications-menu";
+import { NotificationsPage } from "../features/notifications/notifications";
 import { installationBrand } from "../lib/installation-brand";
 import { db, isConfigured } from "../lib/supabase";
 import "./academy-routes.css";
@@ -28,7 +30,7 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam))?$/i;
+  /^(?:\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam))?)$/i;
 
 function AcademyLogin() {
   const { session } = useAuth();
@@ -87,6 +89,11 @@ function AcademyCourseProfile() {
               <span>{installationBrand.name}</span>
             </Link>
             <div className="academy-header-actions">
+              <NotificationsMenu
+                id={session.user.id}
+                zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
+                academy={access}
+              />
               <Preferences />
               <Button
                 variant="secondary"
@@ -136,6 +143,11 @@ function AcademyCourseHub() {
   return <LearningHubPage academy={access} />;
 }
 
+function AcademyInbox() {
+  const access = useOutletContext<"active" | "grace">();
+  return <NotificationsPage academy={access} />;
+}
+
 export function AcademyRoutes() {
   return (
     <Routes>
@@ -154,6 +166,7 @@ export function AcademyRoutes() {
         <Route element={<AcademyCourseProfile />}>
           <Route index element={<Navigate to="/learning" replace />} />
           <Route path="/learning" element={<AcademyCourseHub />} />
+          <Route path="/notifications" element={<AcademyInbox />} />
           <Route
             path="/courses"
             element={<Navigate to="/learning" replace />}

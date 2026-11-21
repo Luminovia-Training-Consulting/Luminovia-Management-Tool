@@ -73,6 +73,13 @@ test("built PWA registers its shell, supports offline deep links and never cache
         await expect(
             page.getByRole("status").filter({hasText: "Du bist offline"}),
         ).toBeVisible();
+        const apiTab = await context.newPage();
+        try {
+            for (const path of ["/functions/v1/files", "/realtime/v1/websocket"])
+                await expect(apiTab.goto(path)).rejects.toThrow(/ERR_INTERNET_DISCONNECTED/);
+        } finally {
+            await apiTab.close();
+        }
         const offlineCachedUrls = await page.evaluate(async () => {
             return (
                 await Promise.all(

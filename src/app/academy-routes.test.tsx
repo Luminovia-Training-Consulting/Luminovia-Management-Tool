@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -29,6 +30,7 @@ const fake = vi.hoisted(() => ({
   examRequired: false,
   canCreateDraft: false,
   draftAttempts: 0,
+  notificationRead: false,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -168,6 +170,7 @@ beforeEach(async () => {
   fake.examRequired = false;
   fake.canCreateDraft = false;
   fake.draftAttempts = 0;
+  fake.notificationRead = false;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -263,6 +266,27 @@ beforeEach(async () => {
               templates: [{ id: sessionId, title: "Fictional template" }],
             }
           : null;
+        break;
+      case "notification_inbox":
+        data = {
+          items: [
+            {
+              id: learnerId,
+              kind: "chat_message",
+              title: "Fictional course notice",
+              created_at: start,
+              read_at: fake.notificationRead ? end : null,
+              href: `/courses/${id}/workspace#course-chat`,
+            },
+          ],
+          unread_count: fake.notificationRead ? 0 : 1,
+          as_of: end,
+          quiet_active: false,
+        };
+        break;
+      case "mark_notifications":
+        fake.notificationRead = true;
+        data = 1;
         break;
       case "academy_create_course_draft":
         fake.draftAttempts++;
@@ -398,6 +422,47 @@ it("creates an academy draft from the selected company and preserves its request
     },
   });
   expect(writes[1]).toEqual(writes[0]);
+});
+
+it("opens the branded inbox from the bell and saves read state on the server", async () => {
+  open("/learning");
+  const user = userEvent.setup();
+  await user.click(await screen.findByLabelText(/^Notifications:.*1/));
+  expect(await screen.findByText("Fictional course notice")).toBeVisible();
+  await user.click(screen.getByRole("link", { name: "All notifications" }));
+  expect(
+    await screen.findByRole("heading", { name: "Notifications", level: 1 }),
+  ).toBeVisible();
+  const inbox = within(screen.getByRole("main"));
+  await user.click(await inbox.findByRole("button", { name: "Mark as read" }));
+  expect(fake.rpc).toHaveBeenCalledWith("mark_notifications", {
+    p_ids: [learnerId],
+    p_all_before: null,
+    p_read: true,
+  });
+  expect(
+    await inbox.findByRole("button", { name: "Mark as unread" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: /Notification settings|Preferences/i }),
+  ).toBeNull();
+  expect(fake.from).not.toHaveBeenCalled();
+});
+
+it("reads the same branded inbox in grace without exposing write controls", async () => {
+  fake.licence = "grace";
+  open("/notifications");
+  const inbox = within(screen.getByRole("main"));
+  expect(await inbox.findByText("Fictional course notice")).toBeVisible();
+  expect(
+    screen.queryByRole("button", {
+      name: /mark as read|read all notifications/i,
+    }),
+  ).toBeNull();
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "mark_notifications",
+    expect.anything(),
+  );
 });
 
 it("renders the direct course link read-only in German even if individual resources are marked editable", async () => {

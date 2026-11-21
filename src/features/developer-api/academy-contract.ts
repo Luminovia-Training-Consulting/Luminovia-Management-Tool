@@ -6,6 +6,7 @@ import {
   academyDraftReceipt,
 } from "../learning/academy-draft-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
+import { notificationPaths } from "./notifications-contract.ts";
 import {
   meetingLinkResult,
   meetingUrl,
@@ -333,6 +334,26 @@ const messagePage = {
 // Advertise a closed subset of the migrated academy gate. An advertised RPC
 // still runs the installation, licence, role and resource checks in Postgres.
 const coursePaths = {
+  "/rest/v1/rpc/notification_inbox": {
+    post: {
+      ...notificationPaths["/rest/v1/rpc/notification_inbox"].post,
+      operationId: "readAcademyNotifications",
+      tags: ["Licensed course profile"],
+      description: `${readAccess} Only the current account's visible notices for course messages, shared material and own attendance are returned. Uses a stable timestamp and ID cursor.`,
+      security: credentials,
+      "x-portal-licence": "active-or-grace",
+    },
+  },
+  "/rest/v1/rpc/mark_notifications": {
+    post: {
+      ...notificationPaths["/rest/v1/rpc/mark_notifications"].post,
+      operationId: "markOwnAcademyNotifications",
+      tags: ["Licensed course profile"],
+      description: `${writeAccess} Only currently visible course notifications can be changed. A request containing any other account's or revoked ID fails as a whole.`,
+      security: credentials,
+      "x-portal-licence": "active",
+    },
+  },
   "/rest/v1/rpc/academy_course_draft_options": courseOperation(
     "readAcademyDraftOptions",
     "Find organisations and templates for a new course draft",
@@ -575,7 +596,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.7.0",
+      version: "1.8.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
