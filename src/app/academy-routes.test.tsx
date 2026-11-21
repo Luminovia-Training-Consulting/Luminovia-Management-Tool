@@ -431,9 +431,8 @@ it("opens the course hub without activating the full edition and reuses scoped a
       name: /contracts|marketplace|readiness|manage course/i,
     }),
   ).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: /acknowledge|unshare/i }),
-  ).toBeNull();
+  expect(screen.getByRole("button", { name: /acknowledge/i })).toBeVisible();
+  expect(screen.queryByRole("button", { name: /unshare/i })).toBeNull();
   expect(document.querySelector('input[type="file"]')).toBeNull();
   expect(fake.from).not.toHaveBeenCalled();
   expect(fake.rpc.mock.calls.map(([name]) => name)).toEqual(

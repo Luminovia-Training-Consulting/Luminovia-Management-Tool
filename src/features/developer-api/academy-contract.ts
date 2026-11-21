@@ -80,7 +80,7 @@ function courseOperation(
   summary: string,
   description: string,
   licence: "active" | "active-or-grace",
-  request: ReturnType<typeof record> & { oneOf?: object[] },
+  request: object & { required?: string[] },
   response: object,
   staleVersion = false,
 ) {
@@ -94,7 +94,7 @@ function courseOperation(
       security: credentials,
       "x-portal-licence": licence,
       requestBody: {
-        required: request.required.length > 0,
+        required: Boolean(request.required?.length),
         content: content(request),
       },
       responses: {
@@ -453,10 +453,7 @@ const coursePaths = {
     "List visible course sessions for a date range",
     "Specify an inclusive range of up to 31 civil dates in each course’s time zone. Returns up to 100 sessions ordered by exact start and session ID. To continue, supply both values from the last response cursor. Includes only courses currently visible to the caller. Overnight sessions appear from their first visible date.",
     "active-or-grace",
-    {
-      ...record({ p_from: string, p_until: string }, ["p_from", "p_until"]),
-      ...z.toJSONSchema(academyTimetableRequestSchema),
-    },
+    z.toJSONSchema(academyTimetableRequestSchema),
     z.toJSONSchema(academyTimetableSchema),
   ),
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
