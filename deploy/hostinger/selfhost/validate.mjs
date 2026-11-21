@@ -228,13 +228,11 @@ try {
                 );
         }
     }
+    // The readiness probe must reach the listener; validating configuration
+    // alone cannot show that Envoy has bound its actual private port.
     assert.deepEqual(compose.services["api-gw"].healthcheck.test, [
-        "CMD",
-        "/usr/local/bin/envoy",
-        "--mode",
-        "validate",
-        "-c",
-        "/etc/envoy/envoy.yaml",
+        "CMD-SHELL",
+        "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'",
     ]);
     const auth = compose.services.auth.environment;
     assert.equal(auth.GOTRUE_DISABLE_SIGNUP, "true");
