@@ -4,6 +4,12 @@ import {readdir, readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
 import {withMigrationReplayLock} from "./testing/database.mjs";
+import {rpcResponse} from "./testing/openapi-contract.mjs";
+
+const parseCommissionAccess = rpcResponse("commission_access");
+const parseCommercialAccess = rpcResponse("commercial_access");
+const parseOfferPolicy = rpcResponse("commission_offer_policy");
+const parseSpend = rpcResponse("client_spend_summary");
 
 const container =
     process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal";
@@ -187,6 +193,19 @@ try {
     await sql(
         `insert into auth.users(id) values ${[admin, owner, management, client, otherClient, lecturer, senior, ...candidates].map((id) => `('${id}')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${management}','management'),('${client}','client'),('${otherClient}','client'),('${lecturer}','lecturer'),('${senior}','senior_lecturer'),${candidates.map((id) => `('${id}','lecturer')`).join(",")};insert into public.organisations(id,name) values('${org}','Fictional customer A'),('${otherOrg}','Fictional customer B');update public.profiles set display_name='Fictional safe name';`,
     );
+    assert.deepEqual(parseCommissionAccess(await value(admin, "commission_access")), {
+        can_manage_gross: true,
+        can_manage_client_memberships: true,
+        can_request: true,
+        policy_configured: false,
+        regular_lecturer_percent: null,
+        senior_lecturer_percent: null,
+        policy_version: 0,
+    });
+    assert.equal(
+        parseOfferPolicy(await actor(admin, `select coalesce(public.commission_offer_policy(${quote(randomUUID())}), 'null'::jsonb)`)),
+        null,
+    );
     await value(admin, "configure_compensation_policy", [31, 73, 0], "aal1");
     await check(
         "Owner inherits administrative capabilities while management/senior never receive private gross access",
@@ -201,10 +220,14 @@ try {
                 );
                 assert.ok(permissions.includes("finance.gross.read"));
                 assert.ok(permissions.includes("users.roles.manage"));
+                const access = parseCommissionAccess(await value(who, "commission_access"));
+                assert.equal(access.policy_configured, true);
+                assert.equal(access.regular_lecturer_percent, 31);
+                assert.equal(access.senior_lecturer_percent, 73);
             }
             for (const who of [management, senior, lecturer])
                 assert.equal(
-                    JSON.parse(await value(who, "commission_access", [], "aal1"))
+                    parseCommissionAccess(await value(who, "commission_access", [], "aal1"))
                         .can_manage_gross,
                     false,
                 );
@@ -518,8 +541,14 @@ try {
         "Spend and assigned-teacher summaries keep original currencies and cross-organisation privacy",
         async () => {
             const aud = await commissionJob(2, 200, "AUD");
+            assert.deepEqual(parseOfferPolicy(await value(admin, "commission_offer_policy", [aud])), {
+                regular_lecturer_percent: 31,
+                senior_lecturer_percent: 73,
+                policy_version: 1,
+            });
+            await assert.rejects(value(client, "commission_offer_policy", [aud]), /Gross finance permission/);
             assert.equal((await claim(senior, aud)).status, "confirmed");
-            const summary = await rows(client, "client_spend_summary");
+            const summary = parseSpend(JSON.stringify(await rows(client, "client_spend_summary")));
             assert.deepEqual(
                 new Set(summary.map((x) => x.currency)),
                 new Set(["EUR", "AUD"]),
@@ -587,13 +616,13 @@ try {
             for (const [index, who] of [admin, owner].entries()) {
                 const id = await commissionJob(4 + index, 400);
                 assert.equal(
-                    JSON.parse(await value(who, "commercial_access")).can_submit_invoice,
+                    parseCommercialAccess(await value(who, "commercial_access")).can_submit_invoice,
                     false,
                 );
                 assert.equal((await claim(who, id)).status, "not_eligible");
                 await sql(`insert into public.user_roles(user_id,role) values (${quote(who)},'lecturer')`);
                 assert.equal(
-                    JSON.parse(await value(who, "commercial_access")).can_submit_invoice,
+                    parseCommercialAccess(await value(who, "commercial_access")).can_submit_invoice,
                     true,
                 );
                 const result = await claim(who, id);

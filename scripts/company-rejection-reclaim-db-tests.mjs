@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
+import {rpcResponse} from "./testing/openapi-contract.mjs";
+
+const parseRejections = rpcResponse("company_rejected_lecturers");
 
 await withTestDatabase("company_reclaim", async ({sql, actor}) => {
     const [
@@ -117,13 +120,17 @@ await withTestDatabase("company_reclaim", async ({sql, actor}) => {
         "0",
     );
     assert.equal(
-        JSON.parse(
+        parseRejections(
             await actor(
                 company,
                 `select public.company_rejected_lecturers('${job}')`,
             ),
         ).length,
         2,
+    );
+    await assert.rejects(
+        actor(outsider, `select public.company_rejected_lecturers('${job}')`),
+        /Organisation access required/,
     );
     await assert.rejects(
         actor(
@@ -147,7 +154,7 @@ await withTestDatabase("company_reclaim", async ({sql, actor}) => {
         "1",
     );
     assert.equal(
-        JSON.parse(
+        parseRejections(
             await actor(
                 company,
                 `select public.company_rejected_lecturers('${job}')`,

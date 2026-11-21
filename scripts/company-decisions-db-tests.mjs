@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {withTestDatabase} from "./testing/database.mjs";
+import {rpcResponse} from "./testing/openapi-contract.mjs";
+
+const parseDecisions = rpcResponse("company_lecturer_decisions");
+const parseInvoiceReviews = rpcResponse("company_invoice_reviews");
 
 await withTestDatabase("company_decision", async ({sql, actor}) => {
     const manager = randomUUID(),
@@ -37,10 +41,11 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
  insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version,created_at) values ('${claim}','${job}','${teacher}',gen_random_uuid(),100,'EUR','fixed_total',100,'Example terms',1,now()-interval '73 hours'),('${claim2}','${job}','${teacher2}',gen_random_uuid(),100,'EUR','fixed_total',100,'Example terms',1,now());
  insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at) values ('${claim}','${teacher}',now()+interval '10 days',now()+interval '10 days 1 hour'),('${claim2}','${teacher2}',now()+interval '10 days',now()+interval '10 days 1 hour');`);
     const read = async (who) =>
-        JSON.parse(
+        parseDecisions(
             await actor(who, `select public.company_lecturer_decisions('${job}')`),
         );
     await assert.rejects(read(other), /Organisation access required/);
+    await assert.rejects(read(manager), /Organisation access required/);
     assert.equal((await read(company)).length, 2);
     assert.equal(
         (await read(company)).find((x) => x.claim_id === claim2).status,
@@ -50,6 +55,9 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
         (await read(company)).find((x) => x.claim_id === claim).status,
         "auto_accepted",
     );
+    await sql(`update public.assignment_sessions set released_at=now() where claim_id='${claim}'`);
+    assert.equal((await read(company)).find((x) => x.claim_id === claim).can_reject, null);
+    await sql(`update public.assignment_sessions set released_at=null where claim_id='${claim}'`);
     await assert.rejects(
         actor(
             other,
@@ -263,7 +271,7 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
         ),
         true,
     );
-    const queue = JSON.parse(
+    const queue = parseInvoiceReviews(
         await actor(manager, "select public.company_invoice_reviews()", "aal1"),
     );
     assert.equal(queue.length, 1);

@@ -3,6 +3,11 @@ import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
+import {rpcRequest, rpcResponse} from "./testing/openapi-contract.mjs";
+
+const parseCompensation = rpcResponse("lecturer_compensation");
+const parseSaveResponse = rpcResponse("save_lecturer_compensation");
+const parseSaveRequest = rpcRequest("save_lecturer_compensation");
 
 await withTestDatabase("manual_pricing", async ({sql, actor}) => {
     const senior = randomUUID(),
@@ -14,7 +19,7 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
         `insert into auth.users(id) values('${admin}'),('${manager}'),('${teacher}'),('${peer}'),('${senior}');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${teacher}','lecturer'),('${peer}','lecturer'),('${senior}','senior_lecturer')`,
     );
     const config = async (user = teacher) =>
-        JSON.parse(
+        parseCompensation(
             await actor(admin, `select public.lecturer_compensation('${user}')`),
         );
     const defaults = await config();
@@ -62,10 +67,18 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
         ),
     );
     assert.equal(accepted.status, "confirmed");
-    const saved = JSON.parse(
+    const update = parseSaveRequest({
+        p_user_id: teacher,
+        p_mode: "daily",
+        p_percent: 50,
+        p_daily_rate: 200,
+        p_currency: "EUR",
+        p_expected_version: defaults.version,
+    });
+    const saved = parseSaveResponse(
         await actor(
             admin,
-            `select public.save_lecturer_compensation('${teacher}','daily',50,200,'EUR',1)`,
+            `select public.save_lecturer_compensation('${update.p_user_id}','${update.p_mode}',${update.p_percent},${update.p_daily_rate},'${update.p_currency}',${update.p_expected_version})`,
         ),
     );
     assert.equal(saved.version, 2);
