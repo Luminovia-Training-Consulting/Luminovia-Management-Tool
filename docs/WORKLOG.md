@@ -8,6 +8,10 @@ Ordinary confirmed claims now synchronize lecturer membership in participant cou
 
 Restored the existing whole-source formatter gate, corrected behavioural and fixture failures exposed by the system and browser jobs, and fixed the retained-data upgrade fixture to wait for the verified end of its teaching sessions before submitting an invoice. Idle auto-merge sweeps now check for actual work with read-only authority before requesting the existing protected App token.
 
+The local full-extension PostgreSQL replay passed 120 auxiliary suites and 25 canonical SQL groups, including the 50-way claim race. A separate loopback upgrade moved a fictional native GoTrue installation from migration 07700 to the current schema and retained its password hash, existing authenticated token, Auth UUID and academy record. The pinned native self-host Actions job also retained its Auth, private calendar, scanned bytes and accepted financial snapshots before stopping at a test-fixture adapter. The native local runner still stops at the unavailable Docker daemon.
+
+The attendance register now refreshes immediately after confirmed enrolment, including when it was already mounted and empty. Mobile keyboard board navigation selects the permitted column directly and restores the original visible handle after Escape. The guided tour preserves focus restoration until its launcher finishes remounting. Targeted Chromium checks covered both 393 px and 1,440 px on the actual UI with fictional transport. These checks are separate from the complete native browser and release gates.
+
 # 21 November 2026 — Lecturer materials, meeting links and licensed academy course access
 
 Assigned lecturers can retry publishing a scanned personal file to the same course audience and reuse its exact reviewed version. The upload reservation also keeps the same identifier when the selected file needs another upload request. Assigned lecturers and course managers can publish, replace or clear an HTTPS meeting link for an active online course. Enrolled participants receive the scoped link. Conflicting edits return HTTP 409. The audit event records the version and action without the URL.
