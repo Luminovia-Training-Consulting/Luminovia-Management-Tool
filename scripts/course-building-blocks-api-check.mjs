@@ -6,24 +6,18 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {enablePremiumAndLinkParticipant} from "./testing/company-participant.mjs";
 
 await withApiFixture(
     async ({service, actor, passwordOnly, sql, defer, checked}) => {
         const admin = await actor("course-admin", "admin"),
             manager = await actor("course-manager", "management"),
             teacher = await actor("course-teacher", "lecturer"),
-            learner = await actor("course-enrolled-client", "client"),
+            learner = await actor("course-participant", "participant"),
             client = await actor("course-client", "client");
         const runs = [],
             templates = [],
             orgs = [];
-        // Keep the retired enrolment marker as secondary history while the active
-        // client role authorizes this account at the current request boundary.
-        await checked(
-            service
-                .from("user_roles")
-                .insert({user_id: learner.id, role: "participant"}),
-        );
         // Cleanup is scoped to the IDs created below; canonical catalogue rows and
         // unrelated fixtures are retained. Auth deletion follows dependency cleanup.
         defer(async () => {
@@ -53,7 +47,7 @@ await withApiFixture(
                 );
             if (orgs.length)
                 await sql(
-                    `delete from public.client_organisation_memberships where organisation_id in(${orgs.map(q).join(",")});delete from public.organisation_private_details where organisation_id in(${orgs.map(q).join(",")});delete from public.organisations where id in(${orgs.map(q).join(",")});`,
+                    `delete from private.company_premium_audit where organisation_id in(${orgs.map(q).join(",")});delete from public.client_organisation_memberships where organisation_id in(${orgs.map(q).join(",")});delete from public.organisation_private_details where organisation_id in(${orgs.map(q).join(",")});delete from public.organisations where id in(${orgs.map(q).join(",")});`,
                 );
         });
         const catalogue = await checked(
@@ -68,14 +62,20 @@ await withApiFixture(
             24,
         );
         const block = catalogue.find((row) => row.code === "LPC3"),
-            primary = block.building_block_sources.find((row) => row.is_primary);
+            primary = block.building_block_sources.find(
+                (row) => row.is_primary,
+            );
         assert.equal(primary.file_name, "Bausteinbeschreibung-LPIC3.pdf");
+        assert.deepEqual(
+            await checked(client.client.from("building_blocks").select("id")),
+            [],
+            "An unlinked client sees no building blocks",
+        );
         assert.equal(
-            (
-                await checked(learner.client.from("building_blocks").select("id"))
-            ).length,
-            0,
-            "An unlinked client sees no building blocks before course enrolment",
+            (await learner.client.from("building_blocks").select("id")).error
+                ?.code,
+            "42501",
+            "Unenrolled participants cannot read the operational building-block catalogue",
         );
         assert.ok(
             (
@@ -114,6 +114,14 @@ await withApiFixture(
                 p_remove: false,
             }),
         );
+        await enablePremiumAndLinkParticipant({
+            admin,
+            company: client,
+            learner,
+            organisation: org,
+            service,
+            checked,
+        });
         const template = await checked(
             admin.client.rpc("duplicate_course_template", {
                 p_id: block.default_template_id,
@@ -327,7 +335,10 @@ await withApiFixture(
         assert.equal(
             (
                 await checked(
-                    service.from("jobs").select("id").eq("course_run_id", raceRun),
+                    service
+                        .from("jobs")
+                        .select("id")
+                        .eq("course_run_id", raceRun),
                 )
             ).length,
             1,
@@ -339,10 +350,15 @@ await withApiFixture(
                 p_status: "enrolled",
             }),
         );
+        const workspace = await checked(
+            learner.client.rpc("course_workspace", {p_run_id: run}),
+        );
+        assert.equal(workspace.id, run);
+        assert.equal(workspace.access.learner, true);
         assert.equal(
-            (await checked(learner.client.from("building_blocks").select("id")))
-                .length,
-            1,
+            (await learner.client.from("building_blocks").select("id")).error
+                ?.code,
+            "42501",
         );
         await checked(
             admin.client.rpc("manage_course_enrolment", {
@@ -352,9 +368,15 @@ await withApiFixture(
             }),
         );
         assert.equal(
-            (await checked(learner.client.from("building_blocks").select("id")))
-                .length,
-            0,
+            (await learner.client.rpc("course_workspace", {p_run_id: run}))
+                .error?.code,
+            "42501",
+            "Enrolment removal revokes the same participant's scoped workspace",
+        );
+        assert.equal(
+            (await learner.client.from("building_blocks").select("id")).error
+                ?.code,
+            "42501",
         );
         const claim = await checked(
             teacher.client.rpc("claim_job", {
@@ -390,7 +412,9 @@ await withApiFixture(
                 })
             ).error,
         );
-        const alias = block.building_block_sources.find((row) => !row.is_primary);
+        const alias = block.building_block_sources.find(
+            (row) => !row.is_primary,
+        );
         const sourceWrite = await service
             .from("course_templates")
             .update({building_block_source_id: alias.id})
@@ -410,9 +434,8 @@ await withApiFixture(
             ).error,
         );
         assert.equal(
-            (
-                await teacher.client.from("building_blocks").select("id")
-            ).error?.code,
+            (await teacher.client.from("building_blocks").select("id")).error
+                ?.code,
             "42501",
             "Suspended staff are denied at the authenticated request boundary",
         );
@@ -423,7 +446,10 @@ await withApiFixture(
                 p_remove: true,
             }),
         );
-        assert.deepEqual(await checked(client.client.rpc("client_requests")), []);
+        assert.deepEqual(
+            await checked(client.client.rpc("client_requests")),
+            [],
+        );
         console.log(
             "PASS: actual Auth/password-only authentication/REST course building-block catalogue, exact PDF provenance, stale-source denial, run/session identity, gross/net isolation, idempotency/atomic competing offers, real whole-block claim, source freeze, scoped learner/client revocation and suspension.",
         );

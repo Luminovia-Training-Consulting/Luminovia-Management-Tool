@@ -4,92 +4,102 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {readFileSync} from "node:fs";
-import {createClient} from "@supabase/supabase-js";
-import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {withApiFixture} from "./testing/api.mjs";
+import {quoteSql as q} from "./testing/database.mjs";
+import {enablePremiumAndLinkParticipant} from "./testing/company-participant.mjs";
 
-if (process.env.PORTAL_TEST_MODE !== "1")
-    throw new Error("Profile API mutations run only in ./portal test.");
-const config = readFileSync("supabase/config.toml", "utf8");
-assert.match(
-    config,
-    /project_id\s*=\s*"luminovia-portal-test-[a-z0-9]+"/,
-    "Only a disposable canonical project is permitted.",
-);
-process.loadEnvFile(".env.test.local");
-const url = process.env.SUPABASE_URL;
-assert.ok(
-    url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
-);
-/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
-const make = (key) =>
-    createClient(url, key, {
-        auth: {persistSession: false, autoRefreshToken: false},
+await withApiFixture(async (fixture) => {
+    const {service, actor, checked, passwordOnly, sql, defer, suffix} = fixture;
+    const [org, template, run, job, claim] = Array.from(
+        {length: 5},
+        randomUUID,
+    );
+    let businessCreated = false;
+    const teacher = await actor("Teacher", "lecturer"),
+        peer = await actor("Peer", "lecturer"),
+        student = await actor("Student", "participant"),
+        outsider = await actor("Outsider", "participant"),
+        company = await actor("Company", "client"),
+        admin = await actor("Administrator", "admin");
+    const users = [
+        teacher.id,
+        peer.id,
+        student.id,
+        outsider.id,
+        company.id,
+        admin.id,
+    ];
+    defer(async () => {
+        if (businessCreated) {
+            await checked(
+                service
+                    .from("course_reviews")
+                    .delete()
+                    .eq("course_run_id", run),
+                "Clean scoped reviews",
+            );
+            await checked(
+                service
+                    .from("course_enrolments")
+                    .delete()
+                    .eq("course_run_id", run),
+                "Clean scoped attendance",
+            );
+            await checked(
+                service
+                    .from("assignment_sessions")
+                    .delete()
+                    .eq("claim_id", claim),
+                "Clean scoped assignments",
+            );
+            await checked(
+                service.from("job_claims").delete().eq("id", claim),
+                "Clean scoped claim",
+            );
+            await checked(
+                service.from("job_sessions").delete().eq("job_id", job),
+                "Clean scoped job intervals",
+            );
+            await checked(
+                service.from("jobs").delete().eq("id", job),
+                "Clean scoped job",
+            );
+            await checked(
+                service
+                    .from("course_sessions")
+                    .delete()
+                    .eq("course_run_id", run),
+                "Clean scoped course sessions",
+            );
+            await checked(
+                service.from("course_runs").delete().eq("id", run),
+                "Clean scoped run",
+            );
+            await checked(
+                service.from("course_templates").delete().eq("id", template),
+                "Clean scoped template",
+            );
+            await checked(
+                service
+                    .from("client_organisation_memberships")
+                    .delete()
+                    .eq("organisation_id", org),
+                "Clean scoped course customer membership",
+            );
+            await sql(
+                `delete from private.company_premium_audit where organisation_id=${q(org)}`,
+            );
+            await checked(
+                service.from("organisations").delete().eq("id", org),
+                "Clean scoped organisation",
+            );
+        }
+        await checked(
+            service.from("audit_events").delete().in("actor_id", users),
+            "Clean scoped profile audit",
+        );
     });
-const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    users = [],
-    clients = [];
-const suffix = randomUUID(),
-    org = randomUUID(),
-    template = randomUUID(),
-    run = randomUUID(),
-    job = randomUUID(),
-    claim = randomUUID();
-let businessCreated = false;
-
-/** Requires actual SDK success before returning the response data. */
-async function checked(request, label) {
-    const {data, error} = await request;
-    assert.equal(error, null, `${label}: ${error?.message}`);
-    return data;
-}
-
-/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
-async function fixture(name, role) {
-    const email = `profile-${name}-${suffix}@example.invalid`;
-    const data = await checked(
-        service.auth.admin.createUser({
-            email,
-            password: process.env.E2E_PASSWORD,
-            email_confirm: true,
-        }),
-        "Create fictional profile actor",
-    );
-    users.push(data.user.id);
-    await checked(
-        service.from("user_roles").insert({user_id: data.user.id, role}),
-        "Set fixture role",
-    );
-    await checked(
-        service
-            .from("profiles")
-            .update({display_name: `Fictional ${name}`, phone: "Never public"})
-            .eq("id", data.user.id),
-        "Set fixture profile",
-    );
-    const client = make(process.env.SUPABASE_ANON_KEY);
-    clients.push(client);
-    await checked(
-        client.auth.signInWithPassword({
-            email,
-            password: process.env.E2E_PASSWORD,
-        }),
-        "Actual Auth login",
-    );
-    return {id: data.user.id, client};
-}
-
-try {
-    const teacher = await fixture("Teacher", "lecturer"),
-        peer = await fixture("Peer", "lecturer"),
-        student = await fixture("Student", "participant"),
-        outsider = await fixture("Outsider", "participant"),
-        admin = await fixture("Administrator", "admin");
-    await checked(
-        service.from("user_roles").insert({user_id: student.id, role: "client"}),
-        "Give enrolled learner an operational portal role",
-    );
-    await assertPasswordOnly(admin.client);
+    await passwordOnly(admin.client);
     await checked(
         teacher.client.rpc("save_profile_details", {
             p_payload: {
@@ -115,7 +125,7 @@ try {
     assert.equal(
         (await outsider.client.rpc("people_directory")).error?.code,
         "42501",
-        "Retired participant has no operational directory access",
+        "Participant-only accounts have no operational directory access",
     );
     assert.ok(
         (
@@ -135,13 +145,22 @@ try {
     await checked(
         service
             .from("client_organisation_memberships")
-            .insert({user_id: student.id, organisation_id: org}),
-        "Give enrolled learner scoped customer access",
+            .insert({user_id: company.id, organisation_id: org}),
+        "Give the separate customer contact scoped access",
     );
+    await enablePremiumAndLinkParticipant({
+        admin,
+        company,
+        learner: student,
+        organisation: org,
+        service,
+        checked,
+    });
     await checked(
-        service
-            .from("course_templates")
-            .insert({id: template, title: `Fictional past course ${suffix}`}),
+        service.from("course_templates").insert({
+            id: template,
+            title: `Fictional past course ${suffix}`,
+        }),
         "Seed scoped template",
     );
     await checked(
@@ -217,16 +236,23 @@ try {
         }),
         "Attest actual fictional completed attendance",
     );
-    const ownCourses = await checked(
-        student.client.from("course_runs").select("id").eq("id", run),
-        "Own enrolled course",
+    const workspace = await checked(
+        student.client.rpc("course_workspace", {p_run_id: run}),
+        "Own enrolled course workspace",
     );
-    assert.equal(ownCourses.length, 1);
+    assert.equal(workspace.id, run);
+    assert.equal(workspace.access.learner, true);
     assert.equal(
-        (await outsider.client.from("course_runs").select("id").eq("id", run)).error
+        (await outsider.client.rpc("course_workspace", {p_run_id: run})).error
             ?.code,
         "42501",
-        "Retired participant cannot query another enrolment",
+        "Unassociated participants cannot open another course workspace",
+    );
+    assert.equal(
+        (await student.client.from("course_runs").select("id").eq("id", run))
+            .error?.code,
+        "42501",
+        "A scoped learner cannot enumerate the operational course table",
     );
     const tasks = await checked(
         student.client.rpc("reviewable_courses"),
@@ -312,30 +338,45 @@ try {
         }),
         "Revoke course membership",
     );
+    assert.equal(
+        (await student.client.rpc("course_workspace", {p_run_id: run})).error
+            ?.code,
+        "42501",
+        "Course access is denied after enrolment is removed",
+    );
     assert.deepEqual(
-        await checked(
-            student.client.from("course_runs").select("id").eq("id", run),
-            "Course denied after revoke",
-        ),
+        await checked(student.client.rpc("reviewable_courses")),
         [],
     );
+    assert.equal(
+        (
+            await student.client.rpc("submit_course_review", {
+                p_course_run_id: run,
+                p_lecturer_id: teacher.id,
+                p_rating: 5,
+                p_comment: "Revoked participant",
+                p_version: 1,
+            })
+        ).error?.code,
+        "42501",
+    );
     const companyDirectory = await checked(
-        student.client.rpc("people_directory"),
-        "Company staff directory after course removal",
+        company.client.rpc("people_directory"),
+        "Separate company contact retains its staff directory",
     );
     assert.equal(companyDirectory.length, 1);
     assert.equal(companyDirectory[0].id, teacher.id);
     await checked(
-        service
-            .from("client_organisation_memberships")
-            .update({removed_at: new Date().toISOString()})
-            .eq("user_id", student.id)
-            .eq("organisation_id", org),
+        admin.client.rpc("manage_client_organisation", {
+            p_user_id: company.id,
+            p_organisation_id: org,
+            p_remove: true,
+        }),
         "Revoke scoped customer profile access",
     );
     assert.deepEqual(
         await checked(
-            student.client.rpc("people_directory"),
+            company.client.rpc("people_directory"),
             "Directory denied after company membership revocation",
         ),
         [],
@@ -354,66 +395,4 @@ try {
     console.log(
         "PASS: actual Auth/password-only authentication/REST profile labels and safe directory, real completed-course enrolment, restricted history, anonymous author-versioned reviews, password-only authentication moderation, cross-participant and existing-session revocation/suspension.",
     );
-} finally {
-    for (const client of clients) await client.removeAllChannels();
-    if (businessCreated) {
-        await checked(
-            service.from("course_reviews").delete().eq("course_run_id", run),
-            "Clean scoped reviews",
-        );
-        await checked(
-            service.from("course_enrolments").delete().eq("course_run_id", run),
-            "Clean scoped attendance",
-        );
-        await checked(
-            service.from("assignment_sessions").delete().eq("claim_id", claim),
-            "Clean scoped assignments",
-        );
-        await checked(
-            service.from("job_claims").delete().eq("id", claim),
-            "Clean scoped claim",
-        );
-        await checked(
-            service.from("job_sessions").delete().eq("job_id", job),
-            "Clean scoped job intervals",
-        );
-        await checked(
-            service.from("jobs").delete().eq("id", job),
-            "Clean scoped job",
-        );
-        await checked(
-            service.from("course_sessions").delete().eq("course_run_id", run),
-            "Clean scoped course sessions",
-        );
-        await checked(
-            service.from("course_runs").delete().eq("id", run),
-            "Clean scoped run",
-        );
-        await checked(
-            service.from("course_templates").delete().eq("id", template),
-            "Clean scoped template",
-        );
-        await checked(
-            service
-                .from("client_organisation_memberships")
-                .delete()
-                .eq("organisation_id", org),
-            "Clean scoped course customer membership",
-        );
-        await checked(
-            service.from("organisations").delete().eq("id", org),
-            "Clean scoped organisation",
-        );
-    }
-    if (users.length) {
-        await checked(
-            service.from("audit_events").delete().in("actor_id", users),
-            "Clean scoped profile audit",
-        );
-        for (const id of users)
-            await checked(
-                service.auth.admin.deleteUser(id),
-                "Clean temporary profile account",
-            );
-    }
-}
+});
