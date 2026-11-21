@@ -1,10 +1,17 @@
 /**
- * Package a customer browser build from committed source. A detached manifest
- * inventories its exact static bytes; it neither signs nor provisions a release.
+ * Package a customer browser build from committed source. Verify its static
+ * inventory and optionally sign the exact bytes for offline distribution.
  */
 import { deepStrictEqual } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  KeyObject,
+  sign,
+  verify,
+} from "node:crypto";
 import {
   closeSync,
   constants,
@@ -31,6 +38,7 @@ import {
 } from "@zip.js/zip.js";
 import { z } from "zod";
 import { loadAcademyBrand } from "./academy-brand-config.ts";
+import { verifyAcademyLicence } from "./academy-licence.mjs";
 import { validatePublicConfig } from "./public-config.ts";
 
 const packageName = "academy-browser.zip";
@@ -40,6 +48,8 @@ const maxFileBytes = 16 * 1024 * 1024;
 const maxTotalBytes = 64 * 1024 * 1024;
 const maxArchiveBytes = maxTotalBytes + 1024 * 1024;
 const maxFiles = 1024;
+const maxReleaseInputBytes = 16_384;
+const releaseDomain = "Luminovia Academy Browser Release v1\n";
 const fixedFiles = new Set([
   "api/openapi.json",
   "brand/academy-logo.png",
@@ -401,8 +411,8 @@ export async function writeAcademyBrowserPackage({
   return manifest;
 }
 
-/** Verify an existing package in memory, with bounded file writes and without ZIP extraction. */
-export async function verifyAcademyBrowserPackage(directory) {
+/** Read the exact manifest bytes once so the signature covers the inventory that is validated. */
+function readAcademyManifest(directory) {
   if (!isAbsolute(directory) || !lstatSync(directory).isDirectory())
     throw new Error("An absolute package directory is required.");
   deepStrictEqual(
@@ -410,9 +420,12 @@ export async function verifyAcademyBrowserPackage(directory) {
     [packageName, manifestName].sort(),
     "Unexpected files in the package directory.",
   );
-  const manifest = manifestSchema.parse(
-    JSON.parse(text(readRegular(join(directory, manifestName), maxFileBytes))),
-  );
+  const bytes = readRegular(join(directory, manifestName), maxFileBytes);
+  return { manifest: manifestSchema.parse(JSON.parse(text(bytes))), bytes };
+}
+
+/** Verify the archive against the previously read manifest without extracting any file. */
+async function verifyAcademyArchive(directory, manifest) {
   const archive = readRegular(join(directory, packageName), maxArchiveBytes);
   if (sha256(archive) !== manifest.archive.sha256)
     throw new Error("Customer browser archive checksum does not match.");
@@ -474,7 +487,105 @@ export async function verifyAcademyBrowserPackage(directory) {
     "Customer browser inventory does not match.",
   );
   validateBrowserOutput(files, manifest);
+}
+
+/** Verify the package contents against its inventory. This checks integrity against the supplied manifest. */
+export async function verifyAcademyBrowserPackage(directory) {
+  const { manifest } = readAcademyManifest(directory);
+  await verifyAcademyArchive(directory, manifest);
   return manifest;
+}
+
+/** Require an explicit Ed25519 signing key or verifier trust anchor from the operator. */
+function releaseKey(input, type) {
+  const key =
+    input instanceof KeyObject
+      ? input
+      : type === "private"
+        ? createPrivateKey(input)
+        : createPublicKey(input);
+  if (key.type !== type || key.asymmetricKeyType !== "ed25519")
+    throw new Error("academy_browser_release_key");
+  return key;
+}
+
+/** Domain separation prevents a signature for another document type from authorising a release. */
+function releaseMessage(manifestBytes, licence) {
+  return Buffer.from(
+    releaseDomain + sha256(manifestBytes) + "\n" + sha256(licence),
+  );
+}
+
+/** Sign a fully verified package for the exact active licence without writing keys or altering the archive. */
+export async function signAcademyBrowserRelease({
+  directory,
+  licence,
+  licencePublicKey,
+  releasePrivateKey,
+  now,
+}) {
+  const { manifest, bytes } = readAcademyManifest(directory);
+  const { state } = verifyAcademyLicence(
+    licence,
+    licencePublicKey,
+    {
+      installation_id: manifest.installationId,
+      edition: manifest.edition,
+      release_commit: manifest.sourceRevision,
+    },
+    now,
+  );
+  if (state !== "active") throw new Error("academy_browser_release_inactive");
+  await verifyAcademyArchive(directory, manifest);
+  return sign(
+    null,
+    releaseMessage(bytes, licence),
+    releaseKey(releasePrivateKey, "private"),
+  ).toString("base64url");
+}
+
+/**
+ * Check the release signature and independently selected installation, edition
+ * and revision before inspecting the archive. Report licence status separately
+ * so historical bytes remain verifiable during grace and after expiry.
+ */
+export async function verifyAcademyBrowserRelease({
+  directory,
+  licence,
+  licencePublicKey,
+  releasePublicKey,
+  signature,
+  expected,
+  now,
+}) {
+  const { manifest, bytes } = readAcademyManifest(directory);
+  const { state, terms } = verifyAcademyLicence(
+    licence,
+    licencePublicKey,
+    expected,
+    now,
+  );
+  if (
+    terms.installation_id !== manifest.installationId ||
+    terms.edition !== manifest.edition ||
+    terms.release_commit !== manifest.sourceRevision
+  )
+    throw new Error("academy_browser_release_binding");
+  if (typeof signature !== "string" || !/^[A-Za-z0-9_-]{86}$/.test(signature))
+    throw new Error("academy_browser_release_signature");
+  const decoded = Buffer.from(signature, "base64url");
+  if (
+    decoded.toString("base64url") !== signature ||
+    !verify(
+      null,
+      releaseMessage(bytes, licence),
+      releaseKey(releasePublicKey, "public"),
+      decoded,
+    )
+  )
+    throw new Error("academy_browser_release_signature");
+  await verifyAcademyArchive(directory, manifest);
+  return { manifest, licenceState: state };
 }
 
 /** Compile the exact tracked Git checkout in a private source staging directory. */
@@ -575,24 +686,70 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  const [action, directory, ...args] = process.argv.slice(2);
   try {
-    const [action, directory, ...extra] = process.argv.slice(2);
-    if (extra.length || !directory || !["build", "verify"].includes(action))
-      throw new Error(
-        "Use build or verify with an absolute package directory.",
+    if (directory && !args.length && ["build", "verify"].includes(action)) {
+      const manifest =
+        action === "build"
+          ? await buildAcademyBrowserPackage(directory)
+          : await verifyAcademyBrowserPackage(directory);
+      console.log(
+        `${action === "build" ? "Built" : "Verified"} static ${manifest.edition} browser artefact from ${manifest.sourceRevision}: ${manifest.archive.sha256}`,
       );
-    const manifest =
-      action === "build"
-        ? await buildAcademyBrowserPackage(directory)
-        : await verifyAcademyBrowserPackage(directory);
-    console.log(
-      `${action === "build" ? "Built" : "Verified"} static ${manifest.edition} browser artefact from ${manifest.sourceRevision}: ${manifest.archive.sha256}`,
-    );
+    } else if (directory && action === "sign-release" && args.length === 3) {
+      const [licenceFile, licenceKeyFile, releaseKeyFile] = args;
+      const signature = await signAcademyBrowserRelease({
+        directory,
+        licence: text(readRegular(licenceFile, maxReleaseInputBytes)).trim(),
+        licencePublicKey: readRegular(licenceKeyFile, maxReleaseInputBytes),
+        releasePrivateKey: readRegular(releaseKeyFile, maxReleaseInputBytes),
+      });
+      process.stdout.write(signature + "\n");
+    } else if (directory && action === "verify-release" && args.length === 7) {
+      const [
+        signatureFile,
+        licenceFile,
+        licenceKeyFile,
+        releaseKeyFile,
+        installationId,
+        edition,
+        releaseCommit,
+      ] = args;
+      const { manifest, licenceState } = await verifyAcademyBrowserRelease({
+        directory,
+        signature: text(readRegular(signatureFile, 128)).trim(),
+        licence: text(readRegular(licenceFile, maxReleaseInputBytes)).trim(),
+        licencePublicKey: readRegular(licenceKeyFile, maxReleaseInputBytes),
+        releasePublicKey: readRegular(releaseKeyFile, maxReleaseInputBytes),
+        expected: {
+          installation_id: installationId,
+          edition,
+          release_commit: releaseCommit,
+        },
+      });
+      console.log(
+        JSON.stringify({
+          installationId: manifest.installationId,
+          edition: manifest.edition,
+          sourceRevision: manifest.sourceRevision,
+          archiveSha256: manifest.archive.sha256,
+          licenceState,
+          customerReady: manifest.customerReady,
+        }),
+      );
+      if (licenceState !== "active") process.exitCode = 2;
+    } else {
+      throw new Error(
+        "Use build, verify, sign-release or verify-release as documented in DEVELOPMENT.md.",
+      );
+    }
   } catch (error) {
     console.error(
-      error instanceof Error && error.name !== "ZodError"
-        ? error.message
-        : "Invalid customer browser package metadata.",
+      action === "sign-release" || action === "verify-release"
+        ? "Academy browser release rejected. Check the documented inputs, trusted keys and licence binding."
+        : error instanceof Error && error.name !== "ZodError"
+          ? error.message
+          : "Invalid customer browser package metadata.",
     );
     process.exitCode = 1;
   }

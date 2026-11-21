@@ -3651,4 +3651,19 @@ node scripts/academy-browser-package.mjs verify /absolute/new-package-directory
 
 The builder uses Git and tar to stage only the committed source, then compiles in that private temporary directory with the three public build inputs. It compares the owned output with the reviewed brand assets, customer PWA metadata and dormant API installation identity. The ZIP contains static files under `browser/`. The adjacent `manifest.json` records the source revision, package lock digest, edition, installation ID and SHA-256 for the archive and every static file. Verification reads the ZIP without extracting it and rejects unknown paths, nonregular entries, unexpected file metadata and checksum mismatches.
 
-This is a browser-only artefact for offline inspection or a controlled preview. The package does not establish that an installation is licensed or ready for business operations. For distribution, verify the manifest with a trusted release channel or independently verify its expected digest. The checksums detect changed bytes relative to that trusted inventory.
+### Sign and verify an offline browser release
+
+The vendor signs a reviewed browser archive after verifying an active licence for the archive's installation ID, edition and source commit. Keep the licence issue key and browser release signing key off the customer installation. The detached signature binds the exact bytes of `manifest.json` to the exact signed licence. The manifest binds the archive and every file inside it. Keep the signature and licence separate from the static package directory and from the web root.
+
+```sh
+node scripts/academy-browser-package.mjs sign-release /absolute/package \
+  /absolute/academy.licence /absolute/licence-issuer.pub /absolute/release-signer.key \
+  > /absolute/package.release.sig
+
+node scripts/academy-browser-package.mjs verify-release /absolute/package \
+  /absolute/package.release.sig /absolute/academy.licence \
+  /absolute/licence-issuer.pub /absolute/release-signer.pub \
+  INSTALLATION_ID EDITION SOURCE_COMMIT
+```
+
+Customer operators obtain the two trusted Ed25519 public keys and the expected installation ID, edition and exact source commit independently of the incoming package. The verifier reads files without extracting or starting them. It reports the checked identity, archive digest and licence state. Exit status 0 means the signature and package verified with an active licence. Status 2 means the package authenticated but its licence is in grace, expired or not yet valid. Status 1 means verification failed. The signed artefact is still browser-only and intended for offline inspection or a controlled preview. Operational readiness requires the installation and transport acceptance gates.
