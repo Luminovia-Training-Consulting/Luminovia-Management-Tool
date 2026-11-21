@@ -71,10 +71,13 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
             `select public.course_operation_destinations('${run}')`,
         ),
     );
+    assert.deepEqual(Object.keys(destinations).sort(), ["jobs", "lecturers", "organisation", "rooms"]);
     assert.equal(destinations.organisation.name, "Fictional Academy");
     assert.equal(destinations.lecturers.length, 1);
-    assert.equal(destinations.jobs[0].id, job);
+    assert.deepEqual(Object.keys(destinations.lecturers[0]).sort(), ["id", "name"]);
+    assert.deepEqual(destinations.jobs, [{id: job, title: "Fictional assignment"}]);
     assert.equal(destinations.rooms.length, 1);
+    assert.deepEqual(Object.keys(destinations.rooms[0]).sort(), ["id", "name"]);
     await sql(
         `update public.chat_members set removed_at=now() where user_id='${lecturer}' and room_id in (select id from public.chat_rooms where job_id='${job}')`,
     );

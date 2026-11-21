@@ -64,6 +64,41 @@ describe("documented Premium course and spending operations", () => {
     });
   });
 
+  it("documents exactly the scoped course destinations shown in the workspace", () => {
+    const destination =
+      paths["/rest/v1/rpc/course_operation_destinations"].post;
+    expect(
+      destination.requestBody.content["application/json"].schema,
+    ).toMatchObject({
+      required: ["p_run_id"],
+      properties: { p_run_id: { type: "string", format: "uuid" } },
+    });
+    expect(destination.responses["200"]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            required: ["organisation", "lecturers", "jobs", "rooms"],
+            additionalProperties: false,
+            properties: {
+              rooms: {
+                items: {
+                  additionalProperties: false,
+                  required: ["id", "name"],
+                },
+              },
+              jobs: {
+                items: {
+                  additionalProperties: false,
+                  required: ["id", "title"],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("describes assignment changes with optional reads, bounded sessions and explicit transitions", () => {
     const prefix = "/rest/v1/rpc/";
     expect(requestSchema(prefix + "assignment_changes")).toMatchObject({

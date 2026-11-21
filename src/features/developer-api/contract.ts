@@ -17,6 +17,7 @@ import {
   workspaceResult,
 } from "./learning-contract.ts";
 import { z } from "zod";
+import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
 import {
@@ -917,6 +918,14 @@ const nativePaths = {
       ...idempotency,
     },
     z.toJSONSchema(companyPremiumCommandSchema),
+  ),
+  "/rest/v1/rpc/course_operation_destinations": rpc(
+    "courseOperationDestinations",
+    "Courses",
+    "List the company, teaching team and accessible course links",
+    "Requires the current Premium course workspace. Job and lecturer course-chat links retain their own access checks. Each result contains the authorised resource ID and its display label.",
+    course,
+    z.toJSONSchema(courseDestinationsSchema),
   ),
   "/rest/v1/rpc/course_workspace_entitlement": rpc(
     "courseWorkspaceEntitlement",

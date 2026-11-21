@@ -2,17 +2,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { ErrorState, Loading } from "../../components/common";
 import { Button } from "../../components/ui/button";
 
-const schema = z.object({
-  organisation: z.object({ id: z.uuid(), name: z.string() }).nullable(),
-  lecturers: z.array(z.object({ id: z.uuid(), name: z.string() })),
-  jobs: z.array(z.object({ id: z.uuid(), title: z.string() })),
-  rooms: z.array(z.object({ id: z.uuid(), name: z.string().nullable() })),
-});
+import { courseDestinationsSchema } from "./destinations-schema";
 
 export function CourseDestinations({
   actor,
@@ -34,7 +28,7 @@ export function CourseDestinations({
         .rpc("course_operation_destinations", { p_run_id: courseId })
         .abortSignal(signal);
       if (error) throw error;
-      return schema.parse(data);
+      return courseDestinationsSchema.parse(data);
     },
   });
   return (
