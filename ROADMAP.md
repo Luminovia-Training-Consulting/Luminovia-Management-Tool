@@ -9,7 +9,7 @@
 **Authority and reading order:** Read the current implementation and tests, then the [product specification](PRODUCT.md), [original product brief](PRODUCT_BRIEF.txt), [operational extension](OPERATIONS_BRIEF.txt), the **Premium LMS specification (Section 8)**, the **complete feature backlog (Section 9)** and the **full API/Swagger specification (Section 10)** included below in this same file. The latest explicit product decisions **in Sections 8–10** supersede contradictory older product targets
 once adopted and implemented; older descriptions of current source behaviour remain historical evidence, not an implementation of the new target. Keep historical product decisions in their original records; update the current summary rather than silently rewriting history. Development evidence belongs in `docs/WORKLOG.md` and relevant QA/PR artifacts.
 
-This is the **Luminovia core platform roadmap**, NOT the commercial white-label roadmap. Independent white-label packaging, branding and customer installations are tracked separately in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md) and follow only after the core platform is accepted. This roadmap **distinguishes source that already exists from requested work and required acceptance**. Never mark a feature complete only because an implementation file, migration or test is present. The existing
+This is the **Luminovia core platform roadmap**, NOT the commercial white-label roadmap. Independent white-label packaging, branding and customer installations are tracked in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md). The owner included both roadmaps in current source work. Customer release remains subject to their acceptance gates. This roadmap **distinguishes source that already exists from requested work and required acceptance**. Never mark a feature complete only because an implementation file, migration or test is present. The existing
 `cms.luminovia.org` Hostinger KVM deployment is documented as development; a successful development release is not a production sign-off.
 
 ## 1. Product direction and non-negotiable decisions
@@ -55,7 +55,7 @@ The following summary preserves the A–N structure of the original roadmap whil
 | Q — QA, deployment and release **NEW**           | GitHub required checks, isolated tests, migration controller, Hostinger dev updater and backups                                                            | **LMS-11, FC-55–58, API-T01–API-T20:** exhaustive automated and manual acceptance, preserved database, real SMTP/backup restore, full API contract verification, green exact-main CI and separate production approval        |
 | R — Complete platform API & Swagger **NEW**      | The account facade, interactive Swagger, downloadable contract and native catalogue are present. Complete API parity remains open. | **API-01–API-08:** username/email Auth, token access, all supported functionality, documented permission-safe endpoints, Swagger UI, integration keys, webhook/events, API versioning and integration regression tests       |
 
-The earlier unfinished **formal change-request/contract-amendment workflow**, validated accounting interoperability (including applicable electronic invoice formats) and public Website-to-Portal enquiry integration remain on the roadmap. Existing work on client requests, CSV and lifecycle actions does not independently complete them. Do not silently remove these requirements.
+The earlier unfinished **formal change-request/contract-amendment workflow** and public Website-to-Portal enquiry integration remain on the roadmap. Existing work on client requests, CSV and lifecycle actions does not independently complete them. Do not silently remove these requirements.
 
 ## OneDrive change evidence — current working tree
 
@@ -90,7 +90,7 @@ The original `ROADMAP.md` tracks source coverage and remaining work in modules A
 - [x] Automatic **development CMS** release publication prepared with exact-main application/security CI gates and a manual exact-SHA alternative; existing VPS migration/backup/recovery guards retained.
 - [ ] Complete current-head local and CI acceptance, observe real browser login, and verify the actual five-minute Hostinger development updater and installed revision.
 
-The original roadmap also retains **formal assignment change requests/amendments, validated accounting/electronic-invoice interoperability, and public Website-to-Portal enquiry connection** as unfinished work. Do not mark those complete merely because adjacent lifecycle, CSV or portal-side request features already exist. Maintain the original's privacy/processor review, off-site backup/recovery acceptance, supported browsers, calendar/Push tests and production approval boundaries.
+The original roadmap also retains **formal assignment change requests/amendments and public Website-to-Portal enquiry connection** as unfinished work. Do not mark those complete merely because adjacent lifecycle, CSV or portal-side request features already exist. Maintain the original's privacy/processor review, off-site backup/recovery acceptance, supported browsers, calendar/Push tests and production approval boundaries.
 
 ## 3. Workstreams and dependencies
 
@@ -189,7 +189,6 @@ The target is ambitious given the reintroduced participant scope. Treat dates as
 ## 6. Deferred and adjacent roadmap (remain visible)
 
 - Formal change requests and immutable commercial amendments to accepted assignments, with multi-party approval and conflict-safe application.
-- Validated accounting exports/interoperability, where legally appropriate XRechnung/ZUGFeRD, without pretending to be a tax engine or banking system.
 - Authorised public-website enquiry transport into the portal, anti-abuse controls and separate marketing-site deployment approval.
 - Richer global calendar invitations and external provider/device acceptance; additional company reporting and forecasting after baseline correctness.
 - Optional future LMS: online exam submission/grading, question banks, certificates beyond existing verified completion documents and richer learning content. **Not included solely by uploading exam PDFs.**

@@ -1,8 +1,8 @@
 # Luminovia — White-Label LMS & Commercial Editions Roadmap
 
-> **Status:** Planned FOLLOW-ON product extension, **not implemented or production-approved**.  
+> **Status:** Included in the owner's current implementation scope. Dedicated customer release and production approval remain outstanding.
 > **Baseline:** Repository `Luminovia-Training-Consulting/Luminovia-Management-Tool`, main at `6a2a16d9cfb9f6ffdbba738940cfd15b22c7fb96` (checked 19 November 2026).  
-> **Dependency:** Finish, verify and release the agreed functionality in [`ROADMAP.md`](ROADMAP.md) **FIRST**, including the participant Premium LMS, examinations, attendance, course workspaces, contracts, correct permissions, data-preserving migrations and exact-commit green CI. This document describes the **additional** work needed to productise the finished platform for outside organisations.  
+> **Dependency:** Customer releases depend on verified Premium LMS, examinations, attendance, workspace and permission acceptance in [`ROADMAP.md`](ROADMAP.md), plus the dedicated edition's acceptance below. Core and white-label source development can proceed in parallel.
 > **Product:** One maintained codebase, separately configured editions, independent customer data, customer-controlled branding and permissions, a complete supported API, professional installation/update/recovery and commercial licensing.  
 > **Original source:** Existing product and operations documentation; latest owner decisions on hosted learning, self-hosted software sales, company branding, removal of intermediary marketplace/commission features, username-or-email authentication and Swagger/OpenAPI.
 
@@ -43,6 +43,10 @@ The product must be **customer branded end to end**, use an authentic course/par
 `deploy/hostinger/selfhost/generate-env.mjs`](deploy/hostinger/selfhost/generate-env.mjs), [`deploy/hostinger/updates/package.mjs`](deploy/hostinger/updates/package.mjs), [`deploy/hostinger/updates/updater.py`](deploy/hostinger/updates/updater.py), [`deploy/hostinger/backups/README.md`](deploy/hostinger/backups/README.md), [`LICENSE`](LICENSE).
 
 **Observed concrete hard-codings requiring review:** the current shell uses Luminovia imagery/name; the Vite PWA manifest has Luminovia-specific names/icons; self-host development instance metadata is tied to `cms.luminovia.org`; and the current release builder validates a CMS-specific API URL. These are expected to change or gain installation-specific configuration for commercial builds. Their presence does **not** imply white-label source is already implemented.
+
+### Current White-Label source checkpoint
+
+The customer build consumes operator-provided, validated brand assets and verifies installation capability claims before rendering protected routes. The dedicated identity and signed licence are bound to the same installation and exact release. The offline operator command prepares only an empty dedicated database or retries the same installation. Local instructor allocation and release reuse the scheduling and course-access records. The browser archive carries a verified static inventory. The customer runtime remains gated pending the complete release workflow and transport acceptance. [Current results](docs/WORKLOG.md)
 
 ## 1. Product editions and packaging
 
@@ -254,7 +258,7 @@ Implement additive versioned SQL and private configuration based on the existing
 - Release rollback must not rewind a database after newly accepted customer writes. Define forward migrations/compatibility and restore-assisted recovery where necessary. Upgrade preflight, maintenace windows, known-good static releases and post-upgrade smoke tests are mandatory.
 - Maintain full German/English interface, accessible keyboard interactions, explicit loading/failure states, safe mobile layout and tested PWA installation. Branded themes must meet accessibility contrast requirements.
 
-## 13. Implementation sequence — only AFTER the main roadmap is complete
+## 13. Implementation and customer-release sequence
 
 Each milestone is a separate reviewable, fully tested piece. No percentage-complete claims without actual source + current test evidence.
 
