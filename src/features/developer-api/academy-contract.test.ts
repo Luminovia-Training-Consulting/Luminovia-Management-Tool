@@ -218,8 +218,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(withdrawal["x-portal-licence"]).toBe("active");
       expect(withdrawal.responses).toHaveProperty("204");
       expect(
-        withdrawal.requestBody.content["application/json"].schema.required,
-      ).toEqual(["p_run_id", "p_exam_id"]);
+        withdrawal.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_run_id", "p_exam_id"],
+      });
     });
 
     it("describes read-only grace, version conflicts and empty attendance attachments", () => {
