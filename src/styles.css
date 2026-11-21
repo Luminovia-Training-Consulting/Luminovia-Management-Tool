@@ -4260,13 +4260,15 @@ tr + tr td {
   min-width: 0;
   height: auto;
   min-height: 76px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 18px;
   padding-block: 12px;
 }
 
 .header-global-search {
   display: flex;
-  flex: 1 1 360px;
+  flex: 1 1 12rem;
   width: 100%;
   min-width: 0;
   max-width: 620px;
@@ -4305,8 +4307,11 @@ tr + tr td {
 }
 
 .topbar-actions {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   min-width: 0;
+  max-inline-size: 100%;
 }
 
 .topbar-actions > .notification-menu {
@@ -4373,8 +4378,6 @@ tr + tr td {
 
 @media (max-width: 1000px) and (min-width: 761px) {
   .topbar {
-    flex-wrap: wrap;
-    justify-content: flex-end;
     gap: 10px;
     padding-inline: 16px;
   }
@@ -4384,10 +4387,6 @@ tr + tr td {
   }
 
   .topbar-actions {
-    flex: 0 1 auto;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    max-inline-size: 100%;
     gap: 8px;
   }
 }
@@ -4534,6 +4533,18 @@ summary:focus-visible {
 
 .account-menu summary::-webkit-details-marker {
   display: none;
+}
+
+.account-menu-label {
+  min-inline-size: 0;
+  max-inline-size: 16rem;
+}
+
+.account-menu-name {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .account-menu summary small {

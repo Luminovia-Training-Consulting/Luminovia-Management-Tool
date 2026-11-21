@@ -596,8 +596,13 @@ export function Shell() {
                       decorative
                     />
                   )}
-                  <span>
-                    {profile.data?.display_name}
+                  <span className="account-menu-label">
+                    <span
+                      className="account-menu-name"
+                      title={profile.data?.display_name}
+                    >
+                      {profile.data?.display_name}
+                    </span>
                     <small>{t("profile")}</small>
                   </span>
                   <span aria-hidden="true">⌄</span>

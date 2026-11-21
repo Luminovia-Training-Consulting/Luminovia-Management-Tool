@@ -14,6 +14,10 @@ On signed revision `207ca9b5`, the built application passed all 18 bilingual rol
 
 The subsequent built application passed 36 desktop and mobile cases for calendar time zones and DST, ICS privacy, theme contrast, the public demo, bilingual help and the authenticated API explorer. The outer browser job now allows time beyond its existing 30-minute application deadline for the owned stack, built PWA and reports. The inner deadline, test selection and evidence requirements remain in effect.
 
+Both older CI browser jobs reproduced a combined-role header overflow at 1440px. The account label now truncates visually while retaining the full name, and the action cluster can wrap. The extended native regression checks 18 role and browser combinations at six widths. It reproduces the old overflow with a valid long name and confirms at least 120px for the search input at 1440px. Twelve further native workflows exercise reopening, delegated roles, notifications and shared amendments. The Teaching Day SQL fixture now seeds a UTC course day independently of the PostgreSQL server timezone.
+
+The automatic merge workflow previously attempted protected token setup when both App settings were absent. Automatic sweeps now report that configuration state before the token step. Explicit invocations with pending work, partial configurations and unexpected App identities continue to fail. The tested release gate and review checks use their existing permissions.
+
 # 22 November 2026 — Customer credit-note evidence and reviewed export dates
 
 Gross-finance staff can register an already-issued credit note against its original customer invoice. The record retains the clean PDF version and digest, external reference, original currency and reviewed amount. Duplicate requests have one receipt and concurrent amounts are capped against the original invoice. Authorised staff can download the exact version after reopening the dialog. The source invoice's balances, accepted charges, payment records and existing accounting/1 export remain unchanged.

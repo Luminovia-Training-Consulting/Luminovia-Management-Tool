@@ -37,7 +37,11 @@ for (const role of actors) {
     const job = randomUUID();
     const organisation = randomUUID();
     const title = `Fictional teaching offer ${job.slice(0, 8)}`;
-    const profile = await actor(`Fictional ${role.name}`, role.primary);
+    const displayName =
+      "additional" in role
+        ? "Fictional Academic Programme Management and Customer Collaboration Coordinator for Continuous Professional Development"
+        : `Fictional ${role.name}`;
+    const profile = await actor(displayName, role.primary);
     const teaching = "teaches" in role;
     const company = role.primary === "client" || "additional" in role;
     const language = isMobile ? "de" : "en";
@@ -122,7 +126,7 @@ for (const role of actors) {
       await login(page, identifier, restricted ? destination : /\/$/);
       await expect(page.locator("html")).toHaveAttribute("lang", language);
       const viewport = page.viewportSize()!;
-      for (const width of [320, 390, 768, 1440, 1920]) {
+      for (const width of [320, 390, 768, 1024, 1440, 1920]) {
         await page.setViewportSize({ width, height: viewport.height });
         await expect
           .poll(
@@ -130,6 +134,17 @@ for (const role of actors) {
             { message: `${role.name} dashboard at ${width}px` },
           )
           .toBeLessThanOrEqual(width);
+        if ("additional" in role && width === 1440) {
+          const search = page.getByRole("textbox", {
+            name: /^(Search the portal|Im Portal suchen)$/,
+          });
+          await expect
+            .poll(async () => (await search.boundingBox())?.width ?? 0)
+            .toBeGreaterThanOrEqual(120);
+          await expect(page.locator(".account-menu > summary")).toContainText(
+            displayName,
+          );
+        }
       }
       await page.setViewportSize(viewport);
       const sidebarLink = (href: string) =>

@@ -34,6 +34,65 @@ const draft = (number) => ({
     title: privateError,
 });
 
+test("automatic sweeps request a merge token only with the expected protected App configuration", () => {
+    const workflow = readFileSync(
+        new URL("../.github/workflows/auto-merge.yml", import.meta.url),
+        "utf8",
+    );
+    const check = /id: app\n[\s\S]*?^ {8}run: \|\n((?: {10}[^\n]+\n)+)/m
+        .exec(workflow)?.[1];
+    assert.ok(check);
+    const gate = "        if: steps.app.outputs.configured == 'true'";
+    for (const step of [
+        "Create a repository-scoped native merge token",
+        "Verify the existing App identity",
+        "Merge only completely verified current pull requests",
+    ]) {
+        const block = workflow.split(`      - name: ${step}\n`)[1]
+            ?.split("\n      - name:")[0];
+        assert.ok(block?.includes(gate), step);
+    }
+    const scratch = mkdtempSync(join(tmpdir(), "luminovia-app-config-"));
+    try {
+        for (const [event, id, key, status, configured] of [
+            ["workflow_run", "", "", 0, false],
+            ["schedule", "", "", 0, false],
+            ["workflow_dispatch", "", "", 1, false],
+            ["workflow_run", "5776881", "", 1, false],
+            ["workflow_run", "", "fictional-key", 1, false],
+            ["workflow_run", "1", "fictional-key", 1, false],
+            ["workflow_run", "5776881", "fictional-key", 0, true],
+        ]) {
+            const output = join(scratch, "output");
+            const summary = join(scratch, "summary");
+            writeFileSync(output, "");
+            writeFileSync(summary, "");
+            const result = spawnSync("bash", ["-e", "-c", check], {
+                env: {
+                    PATH: process.env.PATH,
+                    EVENT_NAME: event,
+                    APP_ID: id,
+                    APP_KEY: key,
+                    GITHUB_OUTPUT: output,
+                    GITHUB_STEP_SUMMARY: summary,
+                },
+                encoding: "utf8",
+            });
+            assert.equal(result.status, status);
+            assert.equal(
+                readFileSync(output, "utf8"),
+                configured ? "configured=true\n" : "",
+            );
+            assert.doesNotMatch(
+                result.stdout + result.stderr + readFileSync(summary, "utf8"),
+                /fictional-key/,
+            );
+        }
+    } finally {
+        rmSync(scratch, {recursive: true, force: true});
+    }
+});
+
 // Constant trusted preload code: fixture paths and response data are passed as
 // JSON/environment data, never interpolated into executable JavaScript. Every
 // fetch is intercepted; the child cannot fall through to real network access.

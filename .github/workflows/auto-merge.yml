@@ -61,12 +61,23 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".node-version"
-      - name: Require the existing approved merge App
+      - name: Check protected merge App configuration
+        id: app
         env:
           APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
-        run: test "$APP_ID" = "5776881"
+          APP_KEY: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if test -z "$APP_ID" && test -z "$APP_KEY" && test "$EVENT_NAME" != workflow_dispatch; then
+            echo 'Configure the protected GitHub App before enabling automatic merges.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          test "$APP_ID" = "5776881"
+          test -n "$APP_KEY"
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
       - name: Create a repository-scoped native merge token
         id: promotion
+        if: steps.app.outputs.configured == 'true'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ vars.MAINTENANCE_APP_ID }}
@@ -76,10 +87,12 @@ jobs:
           permission-contents: write
           permission-actions: write
       - name: Verify the existing App identity
+        if: steps.app.outputs.configured == 'true'
         env:
           APP_SLUG: ${{ steps.promotion.outputs.app-slug }}
         run: test "$APP_SLUG" = "luminovia-portal-maintenance"
       - name: Merge only completely verified current pull requests
+        if: steps.app.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PROMOTION_TOKEN: ${{ steps.promotion.outputs.token }}
