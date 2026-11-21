@@ -503,7 +503,7 @@ const nativePaths = {
     "setCourseMeetingLink",
     "Premium LMS",
     "Publish or clear an online course meeting link",
-    "Requires a currently confirmed instructor or course manager and an active Premium online course. Submit the last read version. A stale version returns HTTP 409. Use a credential-free HTTPS URL with a domain name. Send null to return to the existing course venue.",
+    "Requires a currently confirmed instructor or course manager of an online course. The internal edition requires active company Premium. Customer editions require an enabled course profile for the active release licence. Licence grace permits reading the saved link. Submit the last read version. A stale version returns HTTP 409. Use a credential-free HTTPS URL with a domain name. Send null to return to the existing course venue.",
     { ...course, p_url: meetingUrl, p_expected_version: version },
     meetingLinkResult,
   ),
