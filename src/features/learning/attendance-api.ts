@@ -37,11 +37,15 @@ export interface AttendanceRegister {
   }[];
 }
 
+/** Shared prefix for every cached session register of this actor and course. */
+export const attendanceRegistersKey = (actor: string, run: string) =>
+  ["attendance-register", actor, run] as const;
+
 export const attendanceRegisterKey = (
   actor: string,
   run: string,
   session: string,
-) => ["attendance-register", actor, run, session] as const;
+) => [...attendanceRegistersKey(actor, run), session] as const;
 
 export const attendanceRegisterQuery = (
   actor: string,

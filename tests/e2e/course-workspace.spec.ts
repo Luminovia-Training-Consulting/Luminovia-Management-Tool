@@ -442,13 +442,17 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
 
     await adminLogin(page,f.manager);
     await page.goto(`/courses/${f.run}/workspace#course-enrolments`);
+    const attendance = page.getByRole("region", {name: "Anwesenheitsliste je Termin", exact: true});
+    await expect(attendance.getByText("Keine eingeschriebenen Teilnehmenden.", {exact: true})).toBeVisible();
     await page.getByLabel("Teilnehmende Person",{exact:true}).selectOption(f.learner.id);
     await page.getByRole("button",{name:"Zum Kurs anmelden",exact:true}).click();
     await page.getByRole("dialog").getByRole("button",{name:"Bestätigen",exact:true}).click();
     await expect(page.getByText("Kursanmeldung aktualisiert.",{exact:true})).toBeVisible();
 
-    await page.getByText("Anwesenheit aus CSV oder XLSX übernehmen",{exact:true}).click();
-    await page.getByLabel("CSV- oder XLSX-Datei prüfen",{exact:true}).setInputFiles({
+    // The mounted session register must get the newly enrolled roster without a reload.
+    await expect(attendance.getByText("Keine eingeschriebenen Teilnehmenden.", {exact: true})).toHaveCount(0);
+    await attendance.getByText("Anwesenheit aus CSV oder XLSX übernehmen",{exact:true}).click();
+    await attendance.getByLabel("CSV- oder XLSX-Datei prüfen",{exact:true}).setInputFiles({
         name:"attendance.xlsx",
         mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         buffer:await attendanceWorkbook(f.learner.id),

@@ -8,6 +8,16 @@ test.skip(
     "Premium mutations require the isolated ./portal test stack.",
 );
 
+/** Use independent SDK sessions to assert the server state for each browser actor. */
+async function signedInClient(email: string) {
+    const client = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(client.auth.signInWithPassword({
+        email,
+        password: process.env.E2E_PASSWORD!,
+    }), {requireData: true});
+    return client;
+}
+
 test("only an actual admin can confirm Premium ON/OFF and inspect retained course data", async ({
                                                                                                     page,
                                                                                                     browser,
@@ -21,7 +31,7 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
     try {
         await login(page, admin.email);
         await page.goto("/admin/clients");
-        await page.getByLabel("Suche", {exact: true}).fill(name);
+        await page.getByRole("searchbox", {name: "Suchen", exact: true}).fill(name);
         await page.getByRole("button", {name, exact: true}).click();
         let premiumSwitch = page.getByRole("switch", {
             name: "Premium aktivieren",
@@ -35,10 +45,11 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
         ).toBeVisible();
         await page.getByRole("button", {name: "Abbrechen", exact: true}).click();
         await expect(premiumSwitch).toHaveAttribute("aria-checked", "false");
-        const unchanged = await admin.client.rpc("company_premium_settings");
-        expect(unchanged.error).toBeNull();
+        const adminClient = await signedInClient(admin.email);
+        const unchanged: {organisation_id: string; enabled: boolean; version: number}[] =
+            await checked(adminClient.rpc("company_premium_settings"), {requireData: true});
         expect(
-            unchanged.data.find((setting) => setting.organisation_id === organisation),
+            unchanged.find((setting) => setting.organisation_id === organisation),
         ).toMatchObject({enabled: false, version: 0});
 
         await premiumSwitch.click();
@@ -78,7 +89,7 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
         const managerPage = await browser.newPage();
         await login(managerPage, manager.email);
         await managerPage.goto("/admin/clients");
-        await managerPage.getByLabel("Suche", {exact: true}).fill(name);
+        await managerPage.getByRole("searchbox", {name: "Suchen", exact: true}).fill(name);
         await managerPage.getByRole("button", {name, exact: true}).click();
         await expect(managerPage.getByText("Premium LMS AUS")).toBeVisible();
         await expect(
@@ -92,7 +103,8 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
                 name: "Beibehaltene Kursdaten ansehen",
             }),
         ).toHaveCount(0);
-        const direct = await manager.client.rpc("set_company_premium", {
+        const managerClient = await signedInClient(manager.email);
+        const direct = await managerClient.rpc("set_company_premium", {
             p_organisation_id: organisation,
             p_enabled: true,
             p_expected_version: 2,

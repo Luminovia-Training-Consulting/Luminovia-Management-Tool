@@ -15,6 +15,7 @@ import {
   type CourseOverview,
   type CourseWorkspace,
 } from "./api";
+import { attendanceRegistersKey } from "./attendance-api";
 import "./enrolment-i18n";
 import "./enrolments.css";
 
@@ -102,6 +103,10 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
         queryClient.invalidateQueries({ queryKey: candidatesKey }),
         queryClient.invalidateQueries({
           queryKey: courseWorkspaceKey(actor, course.id),
+        }),
+        // Each session register reads the current enrolment roster separately.
+        queryClient.invalidateQueries({
+          queryKey: attendanceRegistersKey(actor, course.id),
         }),
       ]);
     },
