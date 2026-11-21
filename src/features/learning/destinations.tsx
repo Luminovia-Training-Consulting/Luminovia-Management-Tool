@@ -17,9 +17,11 @@ const schema = z.object({
 export function CourseDestinations({
                                        actor,
                                        courseId,
+                                       learner = false,
                                    }: {
     actor: string;
     courseId: string;
+    learner?: boolean;
 }) {
     const {i18n} = useTranslation();
     const de = i18n.language.startsWith("de");
@@ -50,6 +52,7 @@ export function CourseDestinations({
                         <dt>{de ? "Zugewiesene Dozent:innen" : "Assigned lecturers"}</dt>
                         <dd>{query.data.lecturers.map((p) => p.name).join(", ") || "—"}</dd>
                     </dl>
+                    {!learner && <>
                     <h3>{de ? "Kurs-Chat" : "Course chat"}</h3>
                     {query.data.rooms.length ? (
                         query.data.rooms.map((room) => (
@@ -80,6 +83,7 @@ export function CourseDestinations({
                                 : "No assignments are available to your account."}
                         </p>
                     )}
+                    </>}
                 </>
             )}
         </section>

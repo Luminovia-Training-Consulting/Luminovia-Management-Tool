@@ -17,7 +17,11 @@ const fake = vi.hoisted(() => ({
 vi.mock("../auth/auth-context", () => ({
     useAuth: () => ({session: {user: {id: "learner-a"}}}),
 }));
-vi.mock("../../lib/supabase", () => ({db: () => fake}));
+vi.mock("../../lib/supabase", () => ({
+    db: () => ({...fake, from: () => ({
+        select: () => ({eq: async () => ({data: [{role: fake.workspace.access.learner ? "participant" : "lecturer"}], error: null})}),
+    })}),
+}));
 vi.mock("../files/api", () => ({acceptedFiles: ".pdf", uploadDocument: fake.upload}));
 vi.mock("./destinations", () => ({CourseDestinations: () => null}));
 const clients: QueryClient[] = [];
@@ -95,14 +99,14 @@ afterEach(() => {
     clients.splice(0).forEach((client) => client.clear());
 });
 
-function setup() {
+function setup(hash = "") {
     const client = new QueryClient({
         defaultOptions: {queries: {retry: false}},
     });
     clients.push(client);
     render(
         <QueryClientProvider client={client}>
-            <MemoryRouter initialEntries={["/courses/course-a/workspace"]}>
+            <MemoryRouter initialEntries={["/courses/course-a/workspace" + hash]}>
                 <Routes>
                     <Route path="/learning" element={<p>Course list</p>}/>
                     <Route
@@ -117,6 +121,23 @@ function setup() {
 }
 
 describe("connected course workspace", () => {
+    it("preserves deep links and limits learner navigation to current sections", async () => {
+        fake.workspace.access = {
+            manager: false, learner: true, teacher: false, client: false,
+            staff: false, lms_enabled: true,
+        };
+        const user = userEvent.setup();
+        setup("#course-chat");
+        const nav = await screen.findByRole("navigation", {name: "Bereiche im Kursraum"});
+        expect(nav.querySelector('[href$="#course-chat"]')).toHaveAttribute("aria-current", "location");
+        expect(nav.querySelector('[href$="#course-exam"]')).toBeNull();
+        expect(nav.querySelector('[href$="#course-register"]')).toBeNull();
+        await user.click(screen.getByRole("link", {name: "Materialien"}));
+        expect(nav.querySelector('[href$="#course-materials"]')).toHaveAttribute("aria-current", "location");
+        expect(screen.getByRole("heading", {name: "Kursübersicht & Termine"})).toBeVisible();
+        expect(document.getElementById("course-chat")).toBeInTheDocument();
+    });
+
     it("connects learner quiz, feedback and completion without staff controls", async () => {
         fake.workspace.access = {
             manager: false, learner: true, teacher: false, client: false,

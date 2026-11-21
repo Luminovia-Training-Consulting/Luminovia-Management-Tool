@@ -158,7 +158,7 @@ const EnquiriesPage = lazy(() =>
     })),
 );
 const LearningHubPage = lazy(() =>
-    import("../features/learning/learning").then((module) => ({
+    import("../features/learning/course-hub").then((module) => ({
         default: module.LearningHubPage,
     })),
 );

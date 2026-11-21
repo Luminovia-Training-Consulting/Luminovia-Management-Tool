@@ -15,6 +15,8 @@ export interface CourseOverview {
     starts_at: string | null;
     ends_at: string | null;
     participant: boolean;
+    organisation_name?: string | null;
+    next_start_at?: string | null;
 }
 
 export interface CourseSession {

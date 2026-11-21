@@ -1,11 +1,12 @@
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
-import {useRef, useState} from "react";
-import {Link, useParams} from "react-router-dom";
+import {useEffect, useRef, useState} from "react";
+import {Link, useLocation, useParams} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {BookOpen, CheckCircle2, Plus} from "lucide-react";
+import {CalendarDays, CheckCircle2, ChevronLeft, Clock, Plus, Video} from "lucide-react";
 import {DateTime} from "luxon";
 import {useAuth} from "../auth/auth-context";
+import {isParticipantOnly} from "../auth/guest-navigation";
 import {useOnline} from "../../lib/online";
 import {userRolesQuery} from "../../lib/queries";
 import {dateTime, zonedInstant} from "../../lib/dates";
@@ -13,11 +14,10 @@ import {Button} from "../../components/ui/button";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {contactEmailLink, contactPhoneLink} from "../profile/contact-api";
 import {teachingLink} from "../dashboard/personal-api";
-import {courseAction, courseHubQuery, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, repeatCourse,} from "./api";
+import {courseAction, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, repeatCourse,} from "./api";
 import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";
-import {CompanyInvitations} from "./company-invitations";
 import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
@@ -52,72 +52,6 @@ function Result({error, success}: { error: boolean; success?: boolean }) {
     ) : success ? (
         <Notice>{t("saved")}</Notice>
     ) : null;
-}
-
-/** Lists course access granted by current assignment or organisation membership. */
-export function LearningHubPage() {
-    const actor = useAuth().session!.user.id;
-    const {t, i18n} = useTranslation("learning");
-    const query = useQuery(courseHubQuery(actor));
-    const roles = useQuery(userRolesQuery(actor));
-    return (
-        <>
-            <PageHeading title={t("hub")} description={t("hubHelp")}/>
-            {roles.data?.length === 1 && roles.data[0] === "participant" && (
-                <CompanyInvitations actor={actor}/>
-            )}
-            {query.isPending ? (
-                <Loading/>
-            ) : query.isError ? (
-                <ErrorState retry={() => void query.refetch()}/>
-            ) : !query.data.length ? (
-                <div className="empty-state">{t("noCourses")}</div>
-            ) : (
-                <div className="learning-grid">
-                    {query.data.map((course) => (
-                        <article className="panel learning-card" key={course.id}>
-                            <BookOpen aria-hidden="true"/>
-                            <h2>
-                                {course.lms_enabled ? (
-                                    <Link to={`/courses/${course.id}/workspace`}>
-                                        {course.title}
-                                    </Link>
-                                ) : (
-                                    course.title
-                                )}
-                            </h2>
-                            <p>
-                                {course.starts_at
-                                    ? dateTime(course.starts_at, i18n.language, course.time_zone)
-                                    : t("unscheduled")}
-                            </p>
-                            <p>
-                                {course.venue} · {course.time_zone}
-                            </p>
-                            {course.lms_enabled ? (
-                                <div className="page-actions">
-                                    <Button asChild>
-                                        <Link to={`/courses/${course.id}/workspace`}>
-                                            {t("openWorkspace")}
-                                        </Link>
-                                    </Button>
-                                    <Button asChild variant="secondary">
-                                        <Link to={`/courses/${course.id}/workspace#course-chat`}>
-                                            {t("courseChat")}
-                                        </Link>
-                                    </Button>
-                                </div>
-                            ) : (
-                                <span className="badge" role="status">
-                  {t("premiumOffCourseBadge")}
-                </span>
-                            )}
-                        </article>
-                    ))}
-                </div>
-            )}
-        </>
-    );
 }
 
 /** Shows client-visible shared preparation and server-confirmed staff checklist changes. */
@@ -722,9 +656,7 @@ function CourseBasics({course}: { course: CourseWorkspace }) {
             <h2>{t("courseOverview")}</h2>
             <p className="preserve-text">{course.description}</p>
             <p className="preserve-text">{course.syllabus}</p>
-            <p>
-                {course.time_zone} · {course.venue}
-            </p>
+            {course.delivery_type !== "online" && course.venue && <p>{course.venue}</p>}
             <ol className="course-workspace-sessions">
                 {course.sessions.map((session) => (
                     <li key={session.id}>
@@ -741,12 +673,141 @@ function CourseBasics({course}: { course: CourseWorkspace }) {
     );
 }
 
-/** Loads the current account's scoped course and gates Premium content on the latest entitlement projection. */
+/** Keep the sections mounted so anchor navigation preserves forms and draft state. */
+function CourseWorkspaceLayout({
+    course, actor, now, refreshing, refresh,
+}: WorkProps & { now: number; refreshing: boolean; refresh: () => void }) {
+    const {t, i18n} = useTranslation("learning");
+    const location = useLocation();
+    const learner = course.access.learner;
+    const editor = course.access.staff || course.access.client;
+    const examVisible = Boolean(course.exams && (course.exams.required || course.exams.can_edit));
+    const hasActivities = learner || editor;
+    const hasRegister = editor && course.sessions.length > 0;
+    const sections = [
+        {id: "course-overview", label: t("courseOverview")},
+        {id: "course-materials", label: t("workspaceMaterials")},
+        ...(examVisible ? [{id: "course-exam", label: t("workspaceExam")}] : []),
+        ...(hasRegister ? [{id: "course-register", label: t("workspaceRegister")}] : []),
+        {id: "course-chat", label: t("courseChat")},
+        ...(hasActivities ? [{id: "course-learning", label: t("workspaceActivities")}] : []),
+    ];
+    const currentSection = sections.find(({id}) => location.hash === "#" + id)?.id ?? "course-overview";
+    const next = course.sessions.find((session) => Date.parse(session.ends_at) > now);
+    const classroom = !course.ended && course.delivery_type === "online" ? teachingLink(course.venue) : null;
+    const pageTarget = learner ? "/learning" : "/courses";
+
+    // React Router may resolve a deep link before the scoped course data
+    // loads. Apply that hash when its destination first becomes available.
+    useEffect(() => {
+        if (location.hash !== "#" + currentSection) return;
+        const target = document.getElementById(currentSection);
+        target?.scrollIntoView?.({block: "start"});
+    }, [currentSection, location.hash]);
+
+    return (
+        <div className="course-room">
+            <div className="course-room-toolbar">
+                <Button asChild variant="ghost">
+                    <Link to={pageTarget}><ChevronLeft size={18} aria-hidden="true"/>{t("back")}</Link>
+                </Button>
+                <Button variant="secondary" onClick={refresh} disabled={refreshing}>
+                    {t("refresh")}
+                </Button>
+            </div>
+            <header className="course-room-header">
+                <div className="course-room-title">
+                    <h1>{course.title}</h1>
+                    <div className="course-room-meta">
+                        <span><Clock size={17} aria-hidden="true"/>{course.time_zone}</span>
+                        <span>{t(course.delivery_type === "online" ? "workspaceOnline" : "workspaceOnSite")}</span>
+                    </div>
+                </div>
+                {next && (
+                    <div className="course-room-next">
+                        <CalendarDays size={22} aria-hidden="true"/>
+                        <div>
+                            <span>{t(Date.parse(next.starts_at) <= now ? "workspaceInSession" : "workspaceNextSession")}</span>
+                            <strong>{dateTime(next.starts_at, i18n.language, course.time_zone)}</strong>
+                        </div>
+                    </div>
+                )}
+                {classroom && learner && (
+                    <Button asChild>
+                        <a href={classroom} target="_blank" rel="noopener noreferrer">
+                            <Video size={18} aria-hidden="true"/>{t("joinClassroom")}
+                        </a>
+                    </Button>
+                )}
+            </header>
+            {!learner && (
+                <div className="page-actions">
+                    {editor && <Button asChild variant="secondary">
+                        <Link to={`/courses?run=${course.id}`}>{t("manageCourse")}</Link>
+                    </Button>}
+                    {editor && <Button asChild variant="secondary">
+                        <Link to={`/readiness/${course.id}`}>{t("courseReadiness")}</Link>
+                    </Button>}
+                </div>
+            )}
+            <div className="course-room-layout">
+                <nav className="course-room-navigation" aria-label={t("workspaceNavigation")}>
+                    <ul>
+                        {sections.map(({id, label}) => (
+                            <li key={id}>
+                                <Link
+                                    to={{pathname: location.pathname, search: location.search, hash: "#" + id}}
+                                    aria-current={id === currentSection ? "location" : undefined}
+                                >{label}</Link>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+                <div className="course-room-content">
+                    <div className="course-room-section" id="course-overview">
+                        <CourseBasics course={course}/>
+                        <CourseWelcomeContent key={course.id} actor={actor} courseId={course.id}
+                            zone={course.time_zone} canEdit={editor}/>
+                        <CourseDestinations actor={actor} courseId={course.id} learner={learner}/>
+                        <CourseContact course={course} actor={actor}/>
+                        {editor && <Preparation course={course} actor={actor}/>}
+                    </div>
+                    <div className="course-room-section" id="course-materials">
+                        <Resources course={course} actor={actor}/>
+                    </div>
+                    {examVisible && (
+                        <div className="course-room-section" id="course-exam">
+                            <CourseExams key={course.exams.version ?? course.exams.required.toString()}
+                                course={course} actor={actor}/>
+                        </div>
+                    )}
+                    {hasRegister && (
+                        <div className="course-room-section" id="course-register">
+                            <AttendancePanel course={course} actor={actor}/>
+                        </div>
+                    )}
+                    <CourseChat run={course.id} actor={actor}/>
+                    {hasActivities && (
+                        <div className="course-room-section" id="course-learning">
+                            <Feedback key={`${course.id}:${course.feedback?.version ?? 0}`} course={course} actor={actor}/>
+                            {(course.access.staff || (learner && course.quiz?.published)) && <Quiz course={course} actor={actor}/>}
+                            {learner && <Completion course={course} actor={actor}/>}
+                            {course.access.client && course.ended && course.repeat_request && <RepeatBooking course={course} actor={actor}/>}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/** Revalidate the signed-in actor's course and entitlement before rendering any protected panels. */
 export function CourseWorkspacePage() {
     const {id = ""} = useParams();
     const actor = useAuth().session!.user.id;
-    const {t, i18n} = useTranslation("learning");
+    const {t} = useTranslation("learning");
     const online = useOnline();
+    const roles = useQuery(userRolesQuery(actor));
     const query = useQuery({
         ...courseWorkspaceQuery(actor, id),
         enabled: online,
@@ -755,101 +816,20 @@ export function CourseWorkspacePage() {
         refetchInterval: 10_000,
     });
     if (!online) return <Notice>{t("workspaceOffline")}</Notice>;
-    if (query.isFetching && !query.isFetchedAfterMount) return <Loading/>;
-    if (query.isPending) return <Loading/>;
-    if (query.isError) {
-        if (
-            query.error.message?.includes("company_premium_lms_off")
-        ) {
-            return (
-                <section className="panel">
-                    <PageHeading title={t("workspaceDisabledTitle")}/>
-                    <Notice>{t("premiumOff")}</Notice>
-                    <Button asChild variant="secondary">
-                        <Link to="/courses">{t("back")}</Link>
-                    </Button>
-                </section>
-            );
-        }
-        return <ErrorState retry={() => void query.refetch()}/>;
-    }
-    const course = query.data;
-    if (!course.lms_enabled)
+    if (query.isPending || (query.isFetching && !query.isFetchedAfterMount)) return <Loading/>;
+    if (query.error?.message?.includes("company_premium_lms_off") ||
+        (query.isSuccess && !query.data.lms_enabled)) {
         return (
-            <>
-                <section className="panel">
-                    <PageHeading title={t("workspaceDisabledTitle")}/>
-                    <Notice>{t("premiumOff")}</Notice>
-                    <Button asChild variant="secondary">
-                        <Link to="/courses">{t("back")}</Link>
-                    </Button>
-                </section>
-            </>
+            <section className="panel">
+                <PageHeading title={t("workspaceDisabledTitle")}/>
+                <Notice>{t("premiumOff")}</Notice>
+                <Button asChild variant="secondary">
+                    <Link to={isParticipantOnly(roles.data) ? "/learning" : "/courses"}>{t("back")}</Link>
+                </Button>
+            </section>
         );
-    return (
-        <>
-            <PageHeading title={course.title} description={t("workspaceHelp")}/>
-            <div className="page-actions">
-                <Button asChild variant="ghost">
-                    <Link to={course.access.learner ? "/learning" : "/courses"}>{t("back")}</Link>
-                </Button>
-                <Button
-                    variant="secondary"
-                    onClick={() => void query.refetch()}
-                    disabled={query.isFetching}
-                >
-                    {t("refresh")}
-                </Button>
-            </div>
-            {!course.access.learner && <div className="page-actions">
-                <Button asChild variant="secondary">
-                    <Link to={`/courses?run=${course.id}`}>
-                        {i18n.language.startsWith("de")
-                            ? "Kurs verwalten"
-                            : "Manage course"}
-                    </Link>
-                </Button>
-                <Button asChild variant="secondary">
-                    <Link to={`/readiness/${course.id}`}>
-                        {i18n.language.startsWith("de")
-                            ? "Kursbereitschaft"
-                            : "Course readiness"}
-                    </Link>
-                </Button>
-            </div>}
-            <div className="learning-workspace course-operations-workspace">
-                <CourseBasics course={course}/>
-                {course.lms_enabled && (
-                    <CourseWelcomeContent key={course.id} actor={actor} courseId={course.id}
-                                          zone={course.time_zone}
-                                          canEdit={course.access.staff || course.access.client}/>
-                )}
-                <CourseDestinations actor={actor} courseId={course.id}/>
-                <CourseContact course={course} actor={actor}/>
-                {(course.access.staff || course.access.client) && (
-                    <Preparation course={course} actor={actor}/>
-                )}
-                <Resources course={course} actor={actor}/>
-                {course.exams && (
-                    <CourseExams
-                        key={course.exams.version ?? course.exams.required.toString()}
-                        course={course}
-                        actor={actor}
-                    />
-                )}
-                {(course.access.learner || course.access.client || course.access.staff) && (
-                    <Feedback key={`${course.id}:${course.feedback?.version ?? 0}`} course={course} actor={actor}/>
-                )}
-                {(course.access.staff || (course.access.learner && course.quiz?.published)) && (
-                    <Quiz course={course} actor={actor}/>
-                )}
-                {course.access.learner && <Completion course={course} actor={actor}/>}
-                <AttendancePanel course={course} actor={actor}/>
-                <CourseChat run={course.id} actor={actor}/>
-                {course.access.client && course.ended && course.repeat_request && (
-                    <RepeatBooking course={course} actor={actor}/>
-                )}
-            </div>
-        </>
-    );
+    }
+    if (query.isError) return <ErrorState retry={() => void query.refetch()}/>;
+    return <CourseWorkspaceLayout key={id} course={query.data} actor={actor}
+        now={query.dataUpdatedAt} refreshing={query.isFetching} refresh={() => void query.refetch()}/>;
 }
