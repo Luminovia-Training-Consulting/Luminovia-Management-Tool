@@ -28,6 +28,62 @@ const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("documented Premium course and spending operations", () => {
+  it("describes assignment changes with optional reads, bounded sessions and explicit transitions", () => {
+    const prefix = "/rest/v1/rpc/";
+    expect(requestSchema(prefix + "assignment_changes")).toMatchObject({
+      required: [],
+      properties: { p_id: { type: ["string", "null"], format: "uuid" } },
+    });
+    expect(
+      paths[prefix + "assignment_changes"].post.responses["200"],
+    ).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            type: "array",
+            items: {
+              properties: {
+                original: {
+                  properties: {
+                    amount: { type: ["number", "null"] },
+                  },
+                },
+                proposed: {
+                  properties: {
+                    sessions: { items: { required: ["starts_at", "ends_at"] } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(requestSchema(prefix + "save_assignment_change")).toMatchObject({
+      properties: {
+        p_payload: {
+          required: ["reason", "changes"],
+          properties: {
+            changes: {
+              additionalProperties: false,
+              properties: {
+                sessions: { maxItems: 60 },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(requestSchema(prefix + "save_assignment_change")).not.toHaveProperty(
+      "properties.p_payload.properties.changes.properties.currency",
+    );
+    expect(requestSchema(prefix + "assignment_change_action")).toMatchObject({
+      properties: {
+        p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },
+      },
+    });
+  });
+
   it("publishes migrated scalar, table and defaulted signatures across business areas", () => {
     expect(Object.keys(paths).length).toBeGreaterThan(250);
     expect(requestSchema("/rest/v1/rpc/job_discovery")).toMatchObject({

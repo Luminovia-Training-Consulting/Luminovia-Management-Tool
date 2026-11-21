@@ -15,6 +15,8 @@ import {
   workspaceActionResult,
   workspaceResult,
 } from "./learning-contract.ts";
+import { z } from "zod";
+import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -298,7 +300,101 @@ const fileGateway = {
   },
 };
 
+// Use the same validation schemas the UI consumes. Input mode permits
+// extra server snapshot details without widening the documented proposal.
+const assignmentChangeResult = z.toJSONSchema(z.array(assignmentChangeSchema), {
+  io: "input",
+});
+const changeCandidatesResult = z.toJSONSchema(z.array(candidateSchema), {
+  io: "input",
+});
+const rateUnit = {
+  enum: ["per_day", "per_hour", "per_teaching_unit", "fixed_total"],
+};
+const proposedAmount = {
+  type: "number",
+  minimum: 0.01,
+  maximum: 9999999999.99,
+  multipleOf: 0.01,
+};
+const listAssignmentChanges = rpc(
+  "assignmentChanges",
+  "Assignments",
+  "Read your scoped change proposals",
+  "Send an optional request ID to read one request. Authorised views include the original and proposed version plus audit events. The server redacts commercial values based on current authority.",
+  { p_id: nullableUuid },
+  assignmentChangeResult,
+);
 const nativePaths = {
+  "/rest/v1/rpc/assignment_changes": {
+    post: {
+      ...listAssignmentChanges.post,
+      requestBody: {
+        required: false,
+        content: json({ ...object({ p_id: nullableUuid }), required: [] }),
+      },
+    },
+  },
+  "/rest/v1/rpc/changeable_assignments": rpc(
+    "changeableAssignments",
+    "Assignments",
+    "Find assignments that can be amended",
+    "Lists scoped future assignments with their current schedules and permission flags. Eligibility is checked again when a proposal is saved or applied.",
+    {},
+    changeCandidatesResult,
+  ),
+  "/rest/v1/rpc/save_assignment_change": rpc(
+    "saveAssignmentChange",
+    "Assignments",
+    "Save a versioned change proposal",
+    "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course.",
+    {
+      p_id: nullableUuid,
+      p_claim_id: uuid,
+      p_expected_version: version,
+      ...idempotency,
+      p_payload: object({
+        reason: { ...text, minLength: 5, maxLength: 2000 },
+        changes: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            sessions: {
+              type: "array",
+              minItems: 1,
+              maxItems: 60,
+              items: object({
+                starts_at: { type: "string", format: "date-time" },
+                ends_at: { type: "string", format: "date-time" },
+              }),
+            },
+            location: { ...text, maxLength: 500 },
+            scope: { ...text, maxLength: 12000 },
+            amount: proposedAmount,
+            total_amount: proposedAmount,
+            rate_unit: rateUnit,
+            terms: { ...text, minLength: 1, maxLength: 8000 },
+            cancel: boolean,
+          },
+        },
+      }),
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/assignment_change_action": rpc(
+    "assignmentChangeAction",
+    "Assignments",
+    "Submit, respond to or apply a change proposal",
+    "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Applying requires the recorded consents and current management authority. The server preserves the original accepted assignment.",
+    {
+      p_id: uuid,
+      p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },
+      p_expected_version: { ...version, minimum: 1 },
+      p_note: { ...text, maxLength: 2000 },
+      ...idempotency,
+    },
+    uuid,
+  ),
   "/rest/v1/rpc/claim_job": rpc(
     "claimJob",
     "Jobs",
