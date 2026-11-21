@@ -17,8 +17,10 @@ const writePaths = [
   "/rest/v1/rpc/publish_course_welcome_content",
   "/rest/v1/rpc/academy_ensure_course_chat",
   "/rest/v1/rpc/send_course_chat_message",
+  "/rest/v1/rpc/academy_course_material_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
+const upload = "/functions/v1/files";
 
 for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
   describe(`${edition} branded OpenAPI catalogue`, () => {
@@ -43,7 +45,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         customer_ready: false,
       });
       expect(Object.keys(spec.paths).sort()).toEqual(
-        [bootstrap, ...readPaths, ...writePaths].sort(),
+        [bootstrap, upload, ...readPaths, ...writePaths].sort(),
       );
       expect(spec).not.toHaveProperty("webhooks");
       expect(Object.keys(spec.components.securitySchemes).sort()).toEqual([
@@ -78,6 +80,64 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("describes the scoped multipart upload and exact publication without scanner APIs", () => {
+      const intake = spec.paths[upload].post;
+      expect(intake).toMatchObject({
+        "x-portal-licence": "active",
+        security: [{ apiKey: [], bearerAuth: [] }],
+        parameters: expect.arrayContaining([
+          {
+            name: "mode",
+            in: "query",
+            required: true,
+            schema: { const: "academy-material" },
+          },
+        ]),
+        requestBody: {
+          content: {
+            "multipart/form-data": {
+              schema: {
+                additionalProperties: false,
+                required: ["academy_course_id", "client_id", "file"],
+                properties: { file: { format: "binary" } },
+              },
+            },
+          },
+        },
+      });
+      expect(
+        intake.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        properties: {
+          document: {
+            properties: {
+              status: { const: "clean" },
+              current_version_id: { format: "uuid" },
+            },
+          },
+        },
+      });
+      expect(
+        spec.paths[writePaths[4]].post.requestBody.content["application/json"]
+          .schema,
+      ).toMatchObject({
+        additionalProperties: false,
+        oneOf: [
+          {
+            properties: { p_action: { const: "resource_share" } },
+            required: ["p_audience", "p_category"],
+          },
+          { properties: { p_action: { const: "resource_remove" } } },
+        ],
+      });
+      for (const servicePath of [
+        "/rest/v1/rpc/reserve_academy_course_material",
+        "/rest/v1/rpc/academy_course_material_status",
+        "/rest/v1/rpc/academy_course_material_scan",
+      ])
+        expect(Object.keys(spec.paths)).not.toContain(servicePath);
     });
 
     it("documents grace reads, rejects writes in grace and keeps file fields out of text chat", () => {

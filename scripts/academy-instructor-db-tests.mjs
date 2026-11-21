@@ -33,15 +33,24 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     edition,
   });
   const responseSchemas = new Map(
-    Object.entries(paths).map(([path, operations]) => {
-      const operation = operations.get ?? operations.post;
-      return [
-        path.split("/").at(-1),
-        z.fromJSONSchema(
-          operation.responses["200"].content["application/json"].schema,
-        ),
-      ];
-    }),
+    // The material suite validates its two own protected transport results.
+    Object.entries(paths)
+      .filter(
+        ([path]) =>
+          ![
+            "/functions/v1/files",
+            "/rest/v1/rpc/academy_course_material_action",
+          ].includes(path),
+      )
+      .map(([path, operations]) => {
+        const operation = operations.get ?? operations.post;
+        return [
+          path.split("/").at(-1),
+          z.fromJSONSchema(
+            operation.responses["200"].content["application/json"].schema,
+          ),
+        ];
+      }),
   );
   const testedContracts = new Set();
   const checkResponse = (endpoint, payload) => {
@@ -241,6 +250,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   );
   const assertDocumentedGate = async (grace = false) => {
     for (const [path, operations] of Object.entries(paths)) {
+      if (!path.startsWith("/rest/v1/rpc/")) continue;
       const method = operations.get ? "GET" : "POST";
       const endpoint = path.split("/").at(-1);
       const request = actor(admin, gate(endpoint, method));

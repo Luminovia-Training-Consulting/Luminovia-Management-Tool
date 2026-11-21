@@ -1,6 +1,8 @@
 /** Test caller-scoped exact course resources and licence changes in both dedicated editions. */
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -288,7 +290,20 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const confirmed = await uploadStatus(teacher, staging);
     assert.equal(confirmed.document.status, "clean");
     assert.equal(confirmed.sha256, digest);
+    const { paths } = academyOpenApi("https://academy.example.invalid", {
+      name: "Fictional Academy",
+      installationId: installation,
+      edition,
+    });
+    const checkResponse = (path, response) => {
+      const schema =
+        paths[path].post.responses["200"].content["application/json"].schema;
+      const validation = z.fromJSONSchema(schema).safeParse(response);
+      assert.ok(validation.success, `${path}: ${validation.error?.message}`);
+    };
+    checkResponse("/functions/v1/files", { document: confirmed.document });
     const newlyShared = await command(teacher, shareCall(staging.version_id));
+    checkResponse("/rest/v1/rpc/academy_course_material_action", newlyShared);
     assert.equal((await access(learner, newlyShared.id)).sha256, digest);
     assert.equal(
       (await access(learner, newlyShared.id)).id,

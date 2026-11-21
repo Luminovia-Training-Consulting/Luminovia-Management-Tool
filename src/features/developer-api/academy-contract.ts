@@ -34,6 +34,17 @@ const error = (description: string) => ({
   ),
 });
 const credentials = [{ apiKey: [], bearerAuth: [] }];
+const materialBytes = 10 * 1024 * 1024;
+const materialMime = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "text/plain",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
 const readAccess =
   "Requires an operator-enabled course profile for the exact installed release, an active or grace-period licence and current course authority. Licence grace permits reads only.";
 const writeAccess =
@@ -77,6 +88,134 @@ function courseOperation(
 }
 
 const run = { p_run_id: uuid };
+const materialAudience = { enum: ["staff", "client", "participants", "all"] };
+const materialCategory = { enum: ["material", "report"] };
+const materialAction = {
+  ...record(
+    {
+      ...run,
+      p_action: { enum: ["resource_share", "resource_remove"] },
+      p_id: uuid,
+      p_audience: nullable(materialAudience),
+      p_category: nullable(materialCategory),
+    },
+    ["p_run_id", "p_action", "p_id"],
+  ),
+  oneOf: [
+    {
+      properties: {
+        p_action: { const: "resource_share" },
+        p_audience: materialAudience,
+        p_category: materialCategory,
+      },
+      required: ["p_audience", "p_category"],
+    },
+    {
+      properties: {
+        p_action: { const: "resource_remove" },
+        p_audience: nil,
+        p_category: nil,
+      },
+    },
+  ],
+};
+const materialUploadResult = record({
+  document: record({
+    id: uuid,
+    owner_id: uuid,
+    uploaded_by: uuid,
+    scope: { const: "personal" },
+    kind: { const: "material" },
+    room_id: nil,
+    job_id: nil,
+    original_name: { ...string, minLength: 1, maxLength: 200 },
+    mime_type: { enum: materialMime },
+    size_bytes: { type: "integer", minimum: 1, maximum: materialBytes },
+    status: { const: "clean" },
+    current_version_id: uuid,
+    created_at: dateTime,
+    deleted_at: nil,
+  }),
+});
+function intakeError(description: string, codes: string[]) {
+  return {
+    description,
+    content: content(
+      record({ error: { enum: codes }, document_id: uuid }, ["error"]),
+    ),
+  };
+}
+
+const materialUpload = {
+  post: {
+    operationId: "uploadAcademyCourseMaterial",
+    tags: ["Licensed course profile"],
+    summary: "Upload and scan an assigned lecturer’s course material",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Only the currently assigned lecturer can upload their own material. Use the same client ID, course, name and bytes to retry an interrupted upload. The response confirms a clean scan of the exact stored version. To share it, pass document.current_version_id to publishAcademyCourseMaterial.`,
+    security: credentials,
+    "x-portal-licence": "active",
+    parameters: [
+      {
+        name: "mode",
+        in: "query",
+        required: true,
+        schema: { const: "academy-material" },
+      },
+      {
+        name: "Origin",
+        in: "header",
+        required: true,
+        schema: { ...string, format: "uri" },
+        example: "https://academy.example.invalid",
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: record({
+            academy_course_id: uuid,
+            client_id: uuid,
+            file: {
+              ...string,
+              format: "binary",
+              description: "One file of up to 10 MiB",
+            },
+          }),
+          encoding: { file: { contentType: materialMime.join(", ") } },
+        },
+      },
+    },
+    responses: {
+      "200": ok(materialUploadResult),
+      "400": intakeError("Invalid request fields or multipart file", [
+        "invalid_request",
+      ]),
+      "401": intakeError("Authentication required", [
+        "authentication_required",
+      ]),
+      "403": intakeError(
+        "Origin, current course assignment or licence denied",
+        ["origin_not_allowed", "access_denied", "upload_not_allowed"],
+      ),
+      "409": intakeError(
+        "The same request was used for different material or the version changed",
+        ["idempotency_conflict", "version_superseded"],
+      ),
+      "413": intakeError("The file was empty or exceeded the allowed size", [
+        "file_size",
+      ]),
+      "415": intakeError("Unsupported or inconsistent file type", [
+        "unsupported_type",
+      ]),
+      "422": intakeError("The scanner rejected the file", ["scan_rejected"]),
+      "503": intakeError(
+        "Storage, scan or upload barrier could not be confirmed",
+        ["deletion_unavailable", "scanner_unavailable", "upload_failed"],
+      ),
+    },
+  },
+};
 const expectedVersion = { type: "integer", minimum: 0 };
 const welcomeText = { ...string, maxLength: 4000 };
 const welcome = {
@@ -186,6 +325,15 @@ const coursePaths = {
     }),
     true,
   ),
+  "/functions/v1/files": materialUpload,
+  "/rest/v1/rpc/academy_course_material_action": courseOperation(
+    "publishAcademyCourseMaterial",
+    "Publish or withdraw a scanned course material version",
+    "Only the currently assigned lecturer can publish their own exact clean version for the selected audience. Use the returned current_version_id from the course upload. Repeating a share for the same version and audience returns the same resource ID. To withdraw your own publication, send the resource ID with resource_remove and omit the audience and category.",
+    "active",
+    materialAction,
+    record({ id: uuid }),
+  ),
   "/rest/v1/rpc/academy_ensure_course_chat": courseOperation(
     "ensureAcademyCourseChat",
     "Open the course participant text room",
@@ -234,7 +382,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.2.0",
+      version: "1.3.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
