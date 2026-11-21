@@ -2,17 +2,17 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { validZone } from "../../lib/dates";
+import {
+  candidatesSchema,
+  ownWaitlistSchema,
+  substitutionReceiptSchema,
+  substitutionsSchema,
+  waitlistSchema,
+  type Substitution,
+} from "./handover-schema";
+export type { Substitution } from "./handover-schema";
 
 const uuid = z.string().uuid();
-const instant = z.string().datetime({ offset: true });
-const waitlistSchema = z.object({
-  job_id: uuid,
-  title: z.string(),
-  joined: z.boolean(),
-  can_join: z.boolean(),
-  available: z.boolean(),
-});
 export const waitlistKey = (actor: string, job: string) =>
   ["job-waitlist", actor, job] as const;
 export const waitlistQuery = (actor: string, job: string) =>
@@ -37,10 +37,7 @@ export const myWaitlistQuery = (actor: string) =>
         .rpc("my_job_waitlist")
         .abortSignal(signal);
       if (error) throw error;
-      return z
-        .array(waitlistSchema.extend({ joined_at: instant }))
-        .max(100)
-        .parse(data);
+      return ownWaitlistSchema.parse(data);
     },
     staleTime: 15000,
     retry: false,
@@ -56,9 +53,6 @@ export async function setWaitlist(job: string, join: boolean) {
   return waitlistSchema.parse(data);
 }
 
-const candidatesSchema = z
-  .array(z.object({ id: uuid, display_name: z.string() }))
-  .max(50);
 export const substitutionCandidatesQuery = (
   actor: string,
   claim: string | null,
@@ -81,68 +75,6 @@ export const substitutionCandidatesQuery = (
     staleTime: 15000,
     retry: false,
   });
-export const substitutionSchema = z
-  .object({
-    id: uuid,
-    job_id: uuid,
-    original_claim_id: uuid,
-    target_user_id: uuid,
-    target_name: z.string(),
-    proposer_name: z.string(),
-    reason: z.string(),
-    // Other lecturers may follow the handover without seeing the recipient's
-    // private net quote or a fingerprint that could reveal it by guessing.
-    quote_hash: z
-      .string()
-      .regex(/^[a-f0-9]{64}$/)
-      .nullable(),
-    status: z.enum([
-      "pending",
-      "accepted",
-      "declined",
-      "withdrawn",
-      "superseded",
-      "expired",
-    ]),
-    expires_at: instant,
-    created_at: instant,
-    accepted_claim_id: uuid.nullable(),
-    can_accept: z.boolean(),
-    can_withdraw: z.boolean(),
-    quote: z.object({
-      title: z.string(),
-      customer_name: z.string(),
-      time_zone: z.string().refine(validZone),
-      delivery_type: z.enum(["online", "onsite"]),
-      location: z.string(),
-      amount: z.number().nonnegative().nullable(),
-      total_amount: z.number().nonnegative().nullable(),
-      currency: z.enum(["EUR", "AUD"]).nullable(),
-      rate_unit: z
-        .enum(["per_day", "per_hour", "per_teaching_unit", "fixed_total"])
-        .nullable(),
-      terms: z.string().nullable(),
-      terms_version: z.number().int().positive().nullable(),
-      requires_contract: z.boolean(),
-      sessions: z
-        .array(z.object({ starts_at: instant, ends_at: instant }))
-        .min(1)
-        .max(500),
-    }),
-  })
-  .refine(
-    (offer) =>
-      !offer.can_accept ||
-      (offer.quote_hash !== null &&
-        offer.quote.amount !== null &&
-        offer.quote.total_amount !== null &&
-        offer.quote.currency !== null &&
-        offer.quote.rate_unit !== null &&
-        offer.quote.terms !== null &&
-        offer.quote.terms_version !== null),
-    "An actionable recipient quote must contain its exact personal terms",
-  );
-export type Substitution = z.infer<typeof substitutionSchema>;
 export const substitutionsKey = (actor: string, job?: string) =>
   ["job-substitutions", actor, job ?? "inbox"] as const;
 export const substitutionsQuery = (actor: string, job?: string) =>
@@ -153,7 +85,7 @@ export const substitutionsQuery = (actor: string, job?: string) =>
         .rpc("job_substitutions", { p_job_id: job ?? null })
         .abortSignal(signal);
       if (error) throw error;
-      return z.array(substitutionSchema).max(100).parse(data);
+      return substitutionsSchema.parse(data);
     },
     staleTime: 15000,
     retry: false,
@@ -191,7 +123,5 @@ export async function respondSubstitution(
     p_accept_terms: consent,
   });
   if (error) throw error;
-  return z
-    .object({ status: z.string(), claim_id: uuid.optional() })
-    .parse(data);
+  return substitutionReceiptSchema.parse(data);
 }

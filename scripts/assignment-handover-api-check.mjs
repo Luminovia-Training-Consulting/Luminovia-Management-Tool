@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withApiFixture(async ({actor, service, checked, sql, defer}) => {
     const original = await actor("handover-original", "lecturer"),
@@ -157,6 +158,11 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
         ),
     );
     assert.ok(joins.every((r) => !r.error && r.data.joined));
+    for (const {data} of joins) assertRpcResponse("set_job_waitlist", data);
+    assertRpcResponse("job_waitlist", await checked(replacement.client.rpc("job_waitlist", {p_job_id: job})));
+    const interest = await checked(replacement.client.rpc("my_job_waitlist"));
+    assertRpcResponse("my_job_waitlist", interest);
+    assert.ok(interest.some((item) => item.job_id === job && item.joined));
     assert.equal(
         await sql(
             `select count(*) from private.job_waitlist where job_id=${q(job)}`,
@@ -174,6 +180,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
             p_claim_id: source.claim_id,
         }),
     );
+    assertRpcResponse("substitution_candidates", candidates);
     assert.ok(candidates.some((person) => person.id === replacement.id));
     assert.ok(
         candidates.every(
@@ -208,17 +215,25 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
     const offerId = await checked(
         original.client.rpc("propose_job_substitution", args),
     );
+    assertRpcResponse("propose_job_substitution", offerId);
     assert.equal(
         await checked(original.client.rpc("propose_job_substitution", args)),
         offerId,
     );
-    const offer = (
-        await checked(replacement.client.rpc("job_substitutions"))
-    ).find((value) => value.id === offerId);
+    const incoming = await checked(replacement.client.rpc("job_substitutions"));
+    assertRpcResponse("job_substitutions", incoming);
+    const offer = incoming.find((value) => value.id === offerId);
     assert.ok(offer);
     assert.equal(offer.quote.sessions.length, 5);
     assert.equal(offer.quote.total_amount, 505);
     assert.ok(!("contract_id" in offer.quote));
+    const history = await checked(original.client.rpc("job_substitutions", {p_job_id: job}));
+    assertRpcResponse("job_substitutions", history);
+    const redacted = history.find((value) => value.id === offerId);
+    assert.ok(redacted);
+    assert.equal(redacted.quote_hash, null);
+    assert.equal(redacted.quote.total_amount, null);
+    assert.equal(redacted.can_accept, false);
     assert.deepEqual(await checked(peer.client.rpc("job_substitutions")), []);
     const response = {
         p_offer_id: offerId,
@@ -260,14 +275,9 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
             .eq("user_id", replacement.id)
             .eq("topic_id", topic),
     );
-    assert.equal(
-        (
-            await checked(
-                replacement.client.rpc("respond_job_substitution", response),
-            )
-        ).status,
-        "not_eligible",
-    );
+    const ineligible = await checked(replacement.client.rpc("respond_job_substitution", response));
+    assertRpcResponse("respond_job_substitution", ineligible);
+    assert.deepEqual(ineligible, {status: "not_eligible"});
     assert.equal(
         await sql(
             `select count(*) from public.assignment_sessions where claim_id=${q(source.claim_id)} and released_at is null`,
@@ -285,6 +295,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
         ),
     );
     assert.ok(replies.every((value) => value.status === "confirmed"));
+    for (const receipt of replies) assertRpcResponse("respond_job_substitution", receipt);
     assert.equal(new Set(replies.map((value) => value.claim_id)).size, 1);
     const claim = replies[0].claim_id;
     const old = await checked(

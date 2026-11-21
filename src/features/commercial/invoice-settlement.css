@@ -1,0 +1,48 @@
+/* Allow nested review rows to wrap before numeric or date controls crowd the viewport. */
+.invoice-settlement {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.invoice-settlement > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.invoice-settlement-unit {
+  min-inline-size: 0;
+  margin-block: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.invoice-settlement-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+}
+
+.invoice-settlement-fields > * {
+  min-inline-size: 0;
+}
+
+.invoice-settlement-actions,
+.invoice-settlement-confirm {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.invoice-settlement-totals > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  column-gap: 0.75rem;
+  padding-block: 0.25rem;
+}
+
+.invoice-settlement-totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

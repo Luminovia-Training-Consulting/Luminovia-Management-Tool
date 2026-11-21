@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 let groups = 0;
 await withTestDatabase("calendar_global", async ({sql, actor}) => {
@@ -43,7 +44,11 @@ await withTestDatabase("calendar_global", async ({sql, actor}) => {
             who,
             `select public.manage_global_event(${id ? q(id) : "null"},${q(action)},${version},${q(key)},${q(JSON.stringify(payload))}::jsonb)`,
             aal,
-        ).then(JSON.parse);
+        ).then((raw) => {
+            const receipt = JSON.parse(raw);
+            assertRpcResponse("manage_global_event", receipt);
+            return receipt;
+        });
     const list = (
         who = teacher,
         manage = false,
@@ -55,7 +60,11 @@ await withTestDatabase("calendar_global", async ({sql, actor}) => {
             who,
             `select public.global_calendar_events(${q(from)},${q(to)},${manage}${extra})`,
             "aal1",
-        ).then(JSON.parse);
+        ).then((raw) => {
+            const page = JSON.parse(raw);
+            assertRpcResponse("global_calendar_events", page);
+            return page;
+        });
     const check = async (name, run) => {
         await run();
         groups++;

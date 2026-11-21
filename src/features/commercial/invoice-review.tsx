@@ -14,6 +14,7 @@ import {
 } from "./api";
 import "./i18n";
 import type { InvoiceReviewCandidate, InvoiceReviewCase } from "./types";
+import { InvoiceSettlementWorksheet } from "./invoice-settlement-worksheet";
 
 /** Translate the closed database reason enum without rendering provider/database messages. */
 function reasonLabel(
@@ -116,9 +117,11 @@ export function MyInvoiceReviewRequests({
 /** Let only finance managers record a review note; never alter accepted totals or payment state. */
 export function InvoiceReviewQueue({ actor }: { actor: string }) {
   const { t, i18n } = useTranslation("commercial");
+  const { t: settlementText } = useTranslation("invoiceSettlement");
   const cache = useQueryClient();
   const queue = useQuery(invoiceReviewCasesQuery(actor));
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState(false);
   const resolve = useMutation({
     mutationFn: async ({ id, note }: { id: string; note: string }) => {
@@ -132,6 +135,7 @@ export function InvoiceReviewQueue({ actor }: { actor: string }) {
     },
     onSuccess: async (id) => {
       setNotes((current) => ({ ...current, [id]: "" }));
+      setSummaries((current) => ({ ...current, [id]: "" }));
       setFailed(false);
       await cache.invalidateQueries({
         queryKey: commercialKeys.finance(actor),
@@ -151,6 +155,8 @@ export function InvoiceReviewQueue({ actor }: { actor: string }) {
       {failed && <Notice kind="error">{t("invoiceReviewFailed")}</Notice>}
       {queue.data.map((review) => {
         const note = notes[review.id] ?? "";
+        const summary = summaries[review.id] ?? "";
+        const sharedNote = [note.trim(), summary].filter(Boolean).join("\n\n");
         return (
           <article className="invoice-review-row" key={review.id}>
             <div>
@@ -168,10 +174,12 @@ export function InvoiceReviewQueue({ actor }: { actor: string }) {
             <Field
               id={`invoice-review-note-${review.id}`}
               label={t("invoiceReviewResolutionNote")}
+              hint={settlementText("sharedNote")}
             >
               <textarea
                 rows={3}
                 maxLength={1000}
+                disabled={resolve.isPending}
                 value={note}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
@@ -181,13 +189,34 @@ export function InvoiceReviewQueue({ actor }: { actor: string }) {
             </Field>
             <Button
               type="button"
-              disabled={!online || note.trim().length < 10 || resolve.isPending}
-              onClick={() => resolve.mutate({ id: review.id, note })}
+              disabled={
+                !online ||
+                note.trim().length < 10 ||
+                sharedNote.length > 1000 ||
+                resolve.isPending
+              }
+              onClick={() =>
+                resolve.mutate({ id: review.id, note: sharedNote })
+              }
             >
               {resolve.isPending && resolve.variables?.id === review.id
                 ? t("saving")
                 : t("resolveInvoiceReview")}
             </Button>
+            {sharedNote.length > 1000 && (
+              <Notice kind="error">{settlementText("noteTooLong")}</Notice>
+            )}
+            <InvoiceSettlementWorksheet
+              currency={review.currency}
+              attached={Boolean(summary)}
+              onSummary={(value) =>
+                setSummaries((current) =>
+                  (current[review.id] ?? "") === value
+                    ? current
+                    : { ...current, [review.id]: value },
+                )
+              }
+            />
           </article>
         );
       })}

@@ -1677,6 +1677,11 @@ legend {
   margin-bottom: 22px;
 }
 
+.calendar-controls > .field {
+  max-inline-size: min(100%, 22rem);
+  margin: 0;
+}
+
 .segmented {
   display: flex;
   gap: 6px;

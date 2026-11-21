@@ -32,6 +32,10 @@ import {
   calendarSubscriptionSchema,
   calendarSwatchSchema,
 } from "../calendar/schema.ts";
+import {
+  globalEventSchema,
+  globalEventsPageSchema,
+} from "../calendar/publications-schema.ts";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import {
@@ -41,6 +45,13 @@ import {
   readinessTaskInputSchema,
 } from "../readiness/schema.ts";
 import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
+import {
+  candidatesSchema as substitutionCandidatesSchema,
+  ownWaitlistSchema,
+  substitutionReceiptSchema,
+  substitutionsSchema,
+  waitlistSchema,
+} from "../jobs/handover-schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -453,12 +464,231 @@ const invoiceSubmission = rpc(
   ["p_due_on"],
 );
 
+const substitutionResponse = rpc(
+  "respondToJobSubstitution",
+  "Assignments",
+  "Accept, decline or withdraw a substitution offer",
+  "Only the recipient can accept or decline. The proposer, original lecturer or a current assignment manager can withdraw. Acceptance requires explicit consent to the exact quote, as returned by job_substitutions. The server checks eligibility and transfers the entire block in one transaction. Only status confirmed is an allocation. Repeating acceptance after a subsequent cancellation returns the current cancelled receipt.",
+  {
+    p_offer_id: uuid,
+    p_action: { enum: ["accept", "decline", "withdraw"] },
+    p_quote_hash: { type: ["string", "null"] },
+    ...idempotency,
+    p_accept_terms: { type: ["boolean", "null"], default: false },
+  },
+  z.toJSONSchema(substitutionReceiptSchema),
+  ["p_accept_terms"],
+);
+
+const handoverPaths = {
+  "/rest/v1/rpc/job_waitlist": rpc(
+    "getJobWaitlistStatus",
+    "Assignments",
+    "Read my interest and availability for a job",
+    "Requires a current lecturer account. Returns only the caller's waitlist state. It never reveals other waiters and cannot reserve a place.",
+    { p_job_id: uuid },
+    z.toJSONSchema(waitlistSchema),
+  ),
+  "/rest/v1/rpc/my_job_waitlist": rpc(
+    "listMyJobWaitlist",
+    "Assignments",
+    "List my waitlisted jobs",
+    "Requires a current lecturer account. Returns up to 100 rows for the caller, most recently joined first. Nonvisible titles are redacted.",
+    {},
+    z.toJSONSchema(ownWaitlistSchema),
+  ),
+  "/rest/v1/rpc/set_job_waitlist": rpc(
+    "setJobWaitlistInterest",
+    "Assignments",
+    "Join or leave a job waitlist",
+    "Joining requires current lecturer access and a full future offer when adding new interest. Joining never allocates sessions. An active caller can remove their own interest even after losing lecturer access. Leave is idempotent and always returns an empty title and false flags.",
+    { p_job_id: uuid, p_join: boolean },
+    z.toJSONSchema(waitlistSchema),
+  ),
+  "/rest/v1/rpc/substitution_candidates": rpc(
+    "listSubstitutionCandidates",
+    "Assignments",
+    "Find currently eligible substitute lecturers",
+    "For the original lecturer or a caller with jobs.manage. Searches display names by literal case-insensitive substring. The server checks the full future uninvoiced assignment and short-notice rules. Eligibility is checked again at acceptance.",
+    {
+      p_claim_id: uuid,
+      p_search: { ...text, maxLength: 120, default: "" },
+      p_limit: { type: "integer", minimum: 1, maximum: 50, default: 30 },
+    },
+    z.toJSONSchema(substitutionCandidatesSchema),
+    ["p_search", "p_limit"],
+  ),
+  "/rest/v1/rpc/propose_job_substitution": rpc(
+    "proposeJobSubstitution",
+    "Assignments",
+    "Offer a full future assignment to a substitute lecturer",
+    "For the current original lecturer or a caller with jobs.manage, subject to the short-notice rule. The server checks the recipient and sends an offer with a fixed quote. It does not release the assignment. Repeat the exact request with the same request ID to receive the original offer ID. A competing outstanding offer can produce HTTP 409.",
+    {
+      p_claim_id: uuid,
+      p_target_user_id: uuid,
+      p_reason: {
+        ...text,
+        minLength: 5,
+        description: "Between 5 and 1000 characters after trimming.",
+      },
+      ...idempotency,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/job_substitutions": rpc(
+    "listJobSubstitutions",
+    "Assignments",
+    "List incoming offers or scoped job substitution history",
+    "Omit the job ID or send null for the current recipient's inbox. Job history requires a related assignment or jobs.manage and shows only authorised offers. Quote amounts, currency, rate unit, terms, terms version and fingerprint are visible only to the recipient of a current-format quote or a caller with finance.gross.read. A redacted quote cannot be used to accept an offer.",
+    { p_job_id: nullableUuid },
+    z.toJSONSchema(substitutionsSchema),
+    ["p_job_id"],
+  ),
+  "/rest/v1/rpc/respond_job_substitution": {
+    post: {
+      ...substitutionResponse.post,
+      requestBody: {
+        required: true,
+        content: json({
+          oneOf: [
+            object({
+              p_offer_id: uuid,
+              p_action: { const: "accept" },
+              p_quote_hash: { ...text, pattern: "^[a-f0-9]{64}$" },
+              ...idempotency,
+              p_accept_terms: { const: true },
+            }),
+            {
+              ...object({
+                p_offer_id: uuid,
+                p_action: { enum: ["decline", "withdraw"] },
+                p_quote_hash: { type: ["string", "null"] },
+                ...idempotency,
+                p_accept_terms: { type: ["boolean", "null"], default: false },
+              }),
+              required: [
+                "p_offer_id",
+                "p_action",
+                "p_quote_hash",
+                "p_request_id",
+              ],
+            },
+          ],
+        }),
+      },
+    },
+  },
+};
+
+const globalEventInstant = { type: "string", format: "date-time" };
+const globalEventWindow = {
+  p_from: globalEventInstant,
+  p_to: globalEventInstant,
+  p_manage: { ...boolean, default: false },
+  p_search: { ...text, maxLength: 160, default: "" },
+  p_before_at: nullableDateTime,
+  p_before_id: nullableUuid,
+  p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+};
+const globalEventWrite = {
+  p_id: nullableUuid,
+  p_action: { enum: ["save", "publish", "unpublish", "archive", "recover"] },
+  p_expected_version: version,
+  ...idempotency,
+  p_payload: object({
+    title: {
+      ...text,
+      minLength: 1,
+      description: "Between 1 and 200 characters after trimming.",
+    },
+    description: { ...text, maxLength: 8000 },
+    link_url: {
+      ...text,
+      maxLength: 2000,
+      description: "An empty string or a valid HTTPS link without credentials.",
+    },
+    starts_at: globalEventInstant,
+    ends_at: globalEventInstant,
+    time_zone: {
+      ...text,
+      description: "The original event time zone, as an IANA identifier.",
+    },
+  }),
+};
+const globalEventManagement = rpc(
+  "manageGlobalEvent",
+  "Calendar",
+  "Save, publish, unpublish, archive or recover a global event",
+  "Requires courses.manage. Create with a null event ID, action save and version zero. Saving changes to an existing event returns it to a draft. Publish explicitly to show the event to ordinary viewers. Archive preserves the event, and recover returns it as a draft. Submit absolute start/end instants with offsets and the original time zone. Replay the exact same action, payload, version and request ID for the original receipt.",
+  globalEventWrite,
+  z.toJSONSchema(globalEventSchema),
+);
+
 const nativePaths = {
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,
+  ...handoverPaths,
+  "/rest/v1/rpc/global_calendar_events": rpc(
+    "listGlobalCalendarEvents",
+    "Calendar",
+    "Page through the global calendar in an absolute time window",
+    "Requires an active operational account. Overlaps the supplied window, with an exclusive end, of at most 93 days. Only published unarchived items are visible by default. An explicit management view requires courses.manage and includes drafts and archives. Search is a literal case-insensitive substring. Pass both next_cursor fields on continuation. Results preserve each event's original IANA time zone and absolute instants.",
+    globalEventWindow,
+    z.toJSONSchema(globalEventsPageSchema),
+    ["p_manage", "p_search", "p_before_at", "p_before_id", "p_limit"],
+  ),
+  "/rest/v1/rpc/manage_global_event": {
+    post: {
+      ...globalEventManagement.post,
+      requestBody: {
+        required: true,
+        content: json({
+          oneOf: [
+            object({
+              ...globalEventWrite,
+              p_id: { type: "null" },
+              p_action: { const: "save" },
+              p_expected_version: { const: 0 },
+            }),
+            object({
+              ...globalEventWrite,
+              p_id: uuid,
+              p_action: { const: "save" },
+              p_expected_version: { ...version, minimum: 1 },
+            }),
+            {
+              ...object({
+                ...globalEventWrite,
+                p_id: uuid,
+                p_action: {
+                  enum: ["publish", "unpublish", "archive", "recover"],
+                },
+                p_expected_version: { ...version, minimum: 1 },
+                p_payload: object({}),
+              }),
+              required: [
+                "p_id",
+                "p_action",
+                "p_expected_version",
+                "p_request_id",
+              ],
+            },
+          ],
+        }),
+      },
+      responses: {
+        ...globalEventManagement.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Includes PostgreSQL 40001 for a changed event version or state. Reload the current event before applying a new change.",
+        },
+      },
+    },
+  },
   "/rest/v1/rpc/submit_invoice": {
     post: {
       ...invoiceSubmission.post,

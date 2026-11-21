@@ -4,7 +4,14 @@
  * Controlled Query/FullCalendar fixtures do not replace native ACL acceptance.
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useState,
+} from "react";
 import {
   act,
   cleanup,
@@ -50,6 +57,7 @@ const state = vi.hoisted(() => ({
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
   initialDate: undefined as string | undefined,
+  displayedZone: undefined as string | undefined,
 }));
 const calendarCalls = () => state.rpc.mock.calls;
 vi.mock("../auth/auth-context", () => ({
@@ -136,7 +144,9 @@ vi.mock("@fullcalendar/react", () => ({
     datesSet,
     eventClick,
     locale,
+    timeZone,
     initialDate,
+    ref,
   }: {
     events: {
       id: string;
@@ -150,10 +160,30 @@ vi.mock("@fullcalendar/react", () => ({
       jsEvent: { preventDefault: () => void };
     }) => void;
     locale: unknown;
+    timeZone: string;
     initialDate?: string;
+    ref?: Ref<{
+      getApi: () => {
+        getDate: () => Date;
+        formatIso: (date: Date, omitTime: boolean) => string;
+      };
+    }>;
   }) {
+    const instanceId = useId();
+    useImperativeHandle(
+      ref,
+      () => ({
+        getApi: () => ({
+          getDate: () => new Date("2030-10-27T12:00:00Z"),
+          formatIso: (date, omitTime) =>
+            omitTime ? date.toISOString().slice(0, 10) : date.toISOString(),
+        }),
+      }),
+      [],
+    );
     state.callbacks.push(datesSet);
     state.initialDate = initialDate;
+    state.displayedZone = timeZone;
     // FullCalendar rebuilds its DateProfile when locale options change and may
     // deliver datesSet again even though the visible instants remain identical.
     useEffect(() => {
@@ -164,7 +194,7 @@ vi.mock("@fullcalendar/react", () => ({
         });
     }, [locale, datesSet]);
     return (
-      <div>
+      <div data-testid="calendar-engine" data-instance={instanceId}>
         <button
           onClick={() =>
             datesSet?.({
@@ -201,6 +231,7 @@ beforeEach(async () => {
   state.datesSetOnLocale = false;
   state.callbacks = [];
   state.initialDate = undefined;
+  state.displayedZone = undefined;
 });
 afterEach(() => {
   cleanup();
@@ -742,6 +773,76 @@ it("validates meeting links, preserves the private note on rejection, and saves 
     }),
   );
   expect(await screen.findByText("Termin gespeichert.")).toBeVisible();
+  client.clear();
+});
+
+it("switches calendar zones without writing and preserves the original DST-fold instant during a metadata edit", async () => {
+  state.events = [
+    {
+      id: "event",
+      user_id: "actor",
+      title: "Fictional autumn appointment",
+      description: "",
+      meeting_url: null,
+      starts_at: "2030-10-27T02:30:18+02:00",
+      ends_at: "2030-10-27T02:15:40+01:00",
+      time_zone: "Europe/Berlin",
+    },
+  ];
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const select = await screen.findByLabelText("Kalenderanzeige in");
+  expect(state.displayedZone).toBe("Europe/Berlin");
+  const originalInstance =
+    screen.getByTestId("calendar-engine").dataset.instance;
+  await user.selectOptions(select, "Australia/Brisbane");
+  expect(state.displayedZone).toBe("Australia/Brisbane");
+  expect(screen.getByTestId("calendar-engine").dataset.instance).not.toBe(
+    originalInstance,
+  );
+  expect(state.initialDate).toBe("2030-10-27");
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  await user.click(screen.getByText("Fictional autumn appointment"));
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Privater Termin" }),
+  );
+  expect(dialog.getByLabelText("Zeitzone", { exact: true })).toHaveValue(
+    "Europe/Berlin",
+  );
+  expect(dialog.getByLabelText("Beginn", { exact: true })).toHaveValue(
+    "2030-10-27T02:30",
+  );
+  await user.type(
+    dialog.getByLabelText("Beschreibung oder Notiz"),
+    "Fictional detail",
+  );
+  state.saveEvent.mockResolvedValue({ data: { id: "event" }, error: null });
+  await user.click(dialog.getByRole("button", { name: "Termin speichern" }));
+  await screen.findByText("Termin gespeichert.");
+  expect(state.saveEvent).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      starts_at: "2030-10-27T02:30:18+02:00",
+      ends_at: "2030-10-27T02:15:40+01:00",
+      time_zone: "Europe/Berlin",
+    }),
+  );
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(screen.getByLabelText("Show calendar in")).toHaveValue(
+    "Australia/Brisbane",
+  );
+  await user.selectOptions(screen.getByLabelText("Show calendar in"), "");
+  expect(state.displayedZone).toBe("Europe/Berlin");
   client.clear();
 });
 

@@ -11,11 +11,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
-import {
-  type GlobalEvent,
-  globalEventPayload,
-  validEventLink,
-} from "./publications-api";
+import { type GlobalEvent, globalEventPayload } from "./publications-api";
+import { validEventLink } from "./publications-schema";
 
 const state = vi.hoisted(() => ({ rpc: vi.fn(), online: true }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
@@ -86,8 +83,18 @@ function setup() {
 }
 
 it("renders only text and explicitly labelled HTTPS links", () => {
-  render(<GlobalEventDetails event={event} onClose={() => {}} />);
+  render(
+    <GlobalEventDetails
+      event={event}
+      displayZone="Australia/Brisbane"
+      onClose={() => {}}
+    />,
+  );
   expect(screen.getByText(event.description)).toBeInTheDocument();
+  expect(
+    screen.getByText(/Zeit in der Kalenderansicht.*Australia\/Brisbane/),
+  ).toBeVisible();
+  expect(screen.getByText(new RegExp(event.time_zone))).toBeVisible();
   expect(document.querySelector("script")).toBeNull();
   expect(
     screen.getByRole("link", { name: "Weiterführenden Link öffnen" }),

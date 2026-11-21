@@ -4,66 +4,14 @@ import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { validZone, zonedInstant } from "../../lib/dates";
+import {
+  globalEventSchema,
+  globalEventsPageSchema,
+  validEventLink,
+  type GlobalEvent,
+} from "./publications-schema";
+export type { GlobalEvent } from "./publications-schema";
 
-const instant = z.string().datetime({ offset: true });
-
-export function validEventLink(value: string) {
-  if (!value) return true;
-  if (
-    value.length > 2000 ||
-    [...value].some((c) => c.charCodeAt(0) <= 32 || c.charCodeAt(0) === 127) ||
-    /[\\]/.test(value) ||
-    !/^https:\/\/[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?([/?#].*)?$/.test(
-      value,
-    )
-  )
-    return false;
-  const host = /^https:\/\/([^/:?#]+)/.exec(value)![1];
-  if (
-    host.length > 253 ||
-    host
-      .split(".")
-      .some(
-        (label) =>
-          label.length > 63 ||
-          !/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label),
-      )
-  )
-    return false;
-  if (
-    /^[0-9.]+$/.test(host) &&
-    (!/^\d{1,3}(\.\d{1,3}){3}$/.test(host) ||
-      host.split(".").some((part) => Number(part) > 255))
-  )
-    return false;
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      Boolean(url.hostname) &&
-      url.port !== "0"
-    );
-  } catch {
-    return false;
-  }
-}
-
-export const globalEventSchema = z.object({
-  id: z.uuid(),
-  title: z.string(),
-  description: z.string(),
-  link_url: z.string().refine(validEventLink),
-  starts_at: instant,
-  ends_at: instant,
-  time_zone: z.string().refine(validZone),
-  published: z.boolean(),
-  archived_at: instant.nullable(),
-  version: z.number().int().positive(),
-  updated_at: instant,
-});
-export type GlobalEvent = z.infer<typeof globalEventSchema>;
 export const globalEventFormSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(8000),
@@ -100,19 +48,6 @@ export function globalEventPayload(
   return { ...parsed, starts_at: starts, ends_at: ends };
 }
 
-const cursor = z.object({ at: instant, id: z.uuid() });
-const page = z
-  .object({
-    items: z.array(globalEventSchema).max(100),
-    has_more: z.boolean(),
-    next_cursor: cursor.nullable(),
-  })
-  .refine(
-    (p) =>
-      p.has_more === Boolean(p.next_cursor) &&
-      (!p.has_more || p.items.length > 0),
-    "Invalid calendar cursor",
-  );
 export const globalEventsQuery = (
   actor: string,
   from: string,
@@ -122,7 +57,7 @@ export const globalEventsQuery = (
 ) =>
   infiniteQueryOptions({
     queryKey: ["global-events", actor, from, to, manage, search],
-    initialPageParam: null as z.infer<typeof cursor> | null,
+    initialPageParam: null as { at: string; id: string } | null,
     queryFn: async ({ pageParam, signal }) => {
       const { data, error } = await db()
         .rpc("global_calendar_events", {
@@ -136,7 +71,7 @@ export const globalEventsQuery = (
         })
         .abortSignal(signal);
       if (error) throw error;
-      return page.parse(data);
+      return globalEventsPageSchema.parse(data);
     },
     getNextPageParam: (p) =>
       p.has_more ? (p.next_cursor ?? undefined) : undefined,

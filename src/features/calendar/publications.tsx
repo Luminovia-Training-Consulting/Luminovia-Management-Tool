@@ -150,12 +150,15 @@ function GlobalEventEditor({
 
 export function GlobalEventDetails({
   event,
+  displayZone,
   onClose,
 }: {
   event: GlobalEvent;
+  displayZone: string;
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation("calendarPublications");
+  const common = useTranslation().t;
   return (
     <Dialog
       open
@@ -170,6 +173,15 @@ export function GlobalEventDetails({
         {dateTime(event.ends_at, i18n.language, event.time_zone)} ·{" "}
         {event.time_zone}
       </p>
+      {displayZone !== event.time_zone && (
+        <p>
+          <strong>
+            {common("calendarDisplayedTime")} ({displayZone})
+          </strong>{" "}
+          {dateTime(event.starts_at, i18n.language, displayZone)} –{" "}
+          {dateTime(event.ends_at, i18n.language, displayZone)}
+        </p>
+      )}
       <p className="preserve-text">{event.description}</p>
       {event.link_url && (
         <a href={event.link_url} target="_blank" rel="noopener noreferrer">

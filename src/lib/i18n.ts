@@ -222,6 +222,15 @@ const pairs: Record<string, [string, string]> = {
   home: ["Übersicht", "Overview"],
   jobs: ["Stellenbörse", "Jobs"],
   calendar: ["Kalender", "Calendar"],
+  calendarDisplayZone: ["Kalenderanzeige in", "Show calendar in"],
+  calendarProfileZone: [
+    "Profilzeitzone ({{zone}})",
+    "Profile time zone ({{zone}})",
+  ],
+  calendarDisplayedTime: [
+    "Zeit in der Kalenderansicht",
+    "Time in the calendar view",
+  ],
   profile: ["Mein Profil", "My profile"],
   admin: ["Verwaltung", "Administration"],
   mailSettings: ["E-Mail-Transport", "Mail transport"],

@@ -1,6 +1,12 @@
 /** Test request/redacted review UI flows using fictional SQL results without touching invoices or payments. */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
@@ -145,4 +151,100 @@ it("requires a reasoned finance note and resolves only the review request", asyn
     "record_invoice_payment",
     expect.anything(),
   );
+});
+
+it("only shares checked lecturer amounts and clears them when the evidence changes", async () => {
+  await i18n.changeLanguage("en");
+  render(
+    <QueryClientProvider client={client}>
+      <InvoiceReviewQueue actor="fictional-manager" />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("Calculate settlement"));
+  await user.type(
+    screen.getByLabelText("Assignment time zone"),
+    "Europe/Berlin",
+  );
+  fireEvent.change(screen.getByLabelText("Service date"), {
+    target: { value: "2030-10-28" },
+  });
+  await user.selectOptions(
+    screen.getByLabelText("Reviewed outcome"),
+    "customer",
+  );
+  await user.type(
+    screen.getByLabelText("Agreed lecturer fee per unit (EUR)"),
+    "142.37",
+  );
+  await user.type(
+    screen.getByLabelText("Agreed customer fee for this unit"),
+    "332.12",
+  );
+  await user.type(
+    screen.getByLabelText(
+      "Cancellation payment actually received for this unit",
+    ),
+    "166.06",
+  );
+  const credit = screen.getByLabelText(
+    "Amount already accounted for this unit (EUR)",
+  );
+  await user.clear(credit);
+  await user.type(credit, "28.47");
+  await user.click(screen.getByRole("button", { name: "Calculate" }));
+  const attach = screen.getByRole("button", {
+    name: "Include amounts in the review note",
+  });
+  expect(attach).toBeDisabled();
+  await user.click(
+    screen.getByLabelText(
+      "I have checked the contract, the services and the associated evidence.",
+    ),
+  );
+  await user.click(attach);
+  expect(
+    screen.getByText("The amounts will be shared in the review note."),
+  ).toBeVisible();
+  await user.clear(credit);
+  await user.type(credit, "30.19");
+  expect(
+    screen.queryByText("The amounts will be shared in the review note."),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Calculate" }));
+  await user.click(
+    screen.getByLabelText(
+      "I have checked the contract, the services and the associated evidence.",
+    ),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Include amounts in the review note" }),
+  );
+  await user.type(
+    screen.getByLabelText("Review note (at least 10 characters)"),
+    "Cancellation evidence reviewed.",
+  );
+  await user.click(screen.getByRole("button", { name: "Record review" }));
+  const resolution = fake.rpc.mock.calls.find(
+    ([name]) => name === "resolve_invoice_review_request",
+  )?.[1];
+  expect(resolution).toEqual({
+    p_request_id: "fictional-review",
+    p_note: expect.stringContaining(
+      "Outstanding amount from calculation: €41.00",
+    ),
+  });
+  expect(resolution.p_note).toContain("Cancellation compensation: €71.19");
+  expect(resolution.p_note).not.toMatch(
+    /332\.12|166\.06|Assessment reference|source/,
+  );
+  expect(
+    fake.rpc.mock.calls
+      .map(([name]) => name)
+      .every((name) =>
+        ["invoice_review_cases", "resolve_invoice_review_request"].includes(
+          name,
+        ),
+      ),
+  ).toBe(true);
 });

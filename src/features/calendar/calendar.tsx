@@ -47,10 +47,12 @@ import {
 } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
-import { validZone, zonedInstant } from "../../lib/dates";
+import { validZone, zonedInstant, zonedInstantForEdit } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Dialog } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
+import { CalendarDisplayZone } from "./display-zone";
+import { calendarFoldLabel } from "./display-time";
 import {
   ErrorState,
   Field,
@@ -106,6 +108,11 @@ function EventForm({
   const client = useQueryClient();
   const online = useOnline();
   const [timeError, setTimeError] = useState(false);
+  // The editor uses the event's original wall times, even in another display zone.
+  const localTime = (instant: string, timeZone: string) =>
+    DateTime.fromISO(instant, { zone: timeZone }).toFormat(
+      "yyyy-MM-dd'T'HH:mm",
+    );
   const {
     register,
     handleSubmit,
@@ -118,12 +125,8 @@ function EventForm({
           time_zone: event.time_zone,
           description: event.description ?? "",
           meeting_url: event.meeting_url ?? "",
-          starts_at: DateTime.fromISO(event.starts_at)
-            .setZone(event.time_zone)
-            .toFormat("yyyy-MM-dd'T'HH:mm"),
-          ends_at: DateTime.fromISO(event.ends_at)
-            .setZone(event.time_zone)
-            .toFormat("yyyy-MM-dd'T'HH:mm"),
+          starts_at: localTime(event.starts_at, event.time_zone),
+          ends_at: localTime(event.ends_at, event.time_zone),
         }
       : {
           title: "",
@@ -141,9 +144,18 @@ function EventForm({
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
       setTimeError(false);
-      const starts = zonedInstant(values.starts_at, values.time_zone);
-      const ends = zonedInstant(values.ends_at, values.time_zone);
-      if (!starts || !ends || ends <= starts) {
+      const convert = (input: string, original: string | undefined) =>
+        original && values.time_zone === event?.time_zone
+          ? zonedInstantForEdit(
+              input,
+              values.time_zone,
+              localTime(original, values.time_zone),
+              original,
+            )
+          : zonedInstant(input, values.time_zone);
+      const starts = convert(values.starts_at, event?.starts_at);
+      const ends = convert(values.ends_at, event?.ends_at);
+      if (!starts || !ends || Date.parse(ends) <= Date.parse(starts)) {
         setTimeError(true);
         throw new Error("invalid_time");
       }
@@ -490,7 +502,14 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
   const online = useOnline();
-  const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  const [displayZone, setDisplayZone] = useState("");
+  const [viewAnchor, setViewAnchor] = useState<{
+    assignment: string | null;
+    date: string;
+  }>();
+  const accountZone = profile.data?.time_zone ?? "";
+  const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
+  const zone = displayZone || profileZone;
   const assignment = calendarParams.get("assignment");
   const assignmentStart = claims.data
     ?.find((claim) => claim.job_id === assignment)
@@ -652,6 +671,9 @@ export function CalendarPage() {
           }),
         ),
       ];
+  // FullCalendar's grid stores civil times internally. Use the exact source
+  // instants to label events in a repeated hour with their separate UTC offsets.
+  const sourceEvents = new Map(events.map((event) => [event.id, event]));
   const customerOptions = [
     ...new Map(
       events
@@ -723,7 +745,19 @@ export function CalendarPage() {
             {publicationText("global")}
           </Button>
         </div>
-        <span className="badge">{zone}</span>
+        <CalendarDisplayZone
+          profileZone={profileZone}
+          value={displayZone}
+          onChange={(nextZone) => {
+            const api = calendarRef.current?.getApi();
+            if (api)
+              setViewAnchor({
+                assignment,
+                date: api.formatIso(api.getDate(), true),
+              });
+            setDisplayZone(nextZone);
+          }}
+        />
       </div>
       <div className="calendar-filters">
         <Field id="calendar-customer" label={filterText("customer")}>
@@ -859,7 +893,10 @@ export function CalendarPage() {
             calendarRef.current?.getApi().changeView(view);
           }}
         />
+        {/* A live timezone change can collapse distinct UTC instants in a DST
+            fold. Build a new date environment from the source events instead. */}
         <FullCalendar
+          key={zone}
           plugins={[
             dayGridPlugin,
             timeGridPlugin,
@@ -871,7 +908,11 @@ export function CalendarPage() {
           timeZone={zone}
           ref={calendarRef}
           initialView={calendarView}
-          initialDate={assignmentStart}
+          initialDate={
+            (viewAnchor?.assignment === assignment
+              ? viewAnchor.date
+              : undefined) ?? assignmentStart
+          }
           headerToolbar={false}
           datesSet={handleDatesSet}
           events={events.filter(
@@ -887,6 +928,19 @@ export function CalendarPage() {
                 .includes(search.trim().toLocaleLowerCase()),
           )}
           height="auto"
+          eventContent={({ event }) => {
+            const source = sourceEvents.get(event.id);
+            const label =
+              source &&
+              calendarFoldLabel(source.start, source.end, zone, i18n.language);
+            if (!label) return true;
+            return (
+              <>
+                <div className="fc-event-time">{label}</div>
+                <div className="fc-event-title">{event.title}</div>
+              </>
+            );
+          }}
           dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
           eventInteractive
           nowIndicator
@@ -954,6 +1008,7 @@ export function CalendarPage() {
       {global && activeGlobal && (
         <GlobalEventDetails
           event={activeGlobal}
+          displayZone={zone}
           onClose={() => setGlobalID(null)}
         />
       )}

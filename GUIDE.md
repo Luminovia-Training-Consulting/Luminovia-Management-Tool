@@ -358,6 +358,8 @@ excluded from direct submission and shown in the separate review flow; recording
 Owner/Administration with current gross-finance permission additionally sees the protected full-fee/net/platform report. It separates offered volume from accepted agreement values, keeps EUR/AUD separate and identifies legacy records whose historical full price is unknown. Lecturer costs from those legacy accepted deals are still included; known full-fee subtotals do not fabricate missing amounts. Financial dashboard cards follow the same role boundaries.
 
 Finance management with current finance permission can show all authorised lecturer records, download the exact invoice version, review it and record an approval/rejection/cancellation note. **Zahlung eintragen / Record payment** documents a payment already made; it does not initiate a bank transfer. Enter the original-currency amount, explicit-zone timestamp and reference. A partial payment leaves the invoice approved; the final payment marks it paid. Overpayment is rejected.
+
+In an invoicing exception review, open the settlement worksheet and enter the evidence for each agreed teaching day or separately agreed assessment. Use the rate in the accepted assignment. The worksheet distinguishes delivered work, timely notice, unauthorised short notice and compensation actually received from the customer. It deducts credited amounts and requires separate review of individually agreed or disputed cases. After checking the result, finance staff may attach the lecturer's totals to the shared resolution note. Customer fee inputs remain in the worksheet. The worksheet does not change the agreed fee, submit an invoice or record a payment. Check the applicable agreement for interim and final payment deadlines.
 **Zahlungsverlauf / Payment history** retains each entry; an authorised **Zahlungseintrag stornieren / Void payment record** corrects an erroneous entry with a reason and recalculates the outstanding balance without deleting its history or moving money.
 
 Use **Rechnungslabels bearbeiten / Edit invoice labels** to classify an authorised invoice with up to 10 comma-separated labels of 50 characters each. The owner or authorised finance manager can save these metadata labels without changing its accepted amounts, document or payment history. Profile labels and invoice labels are separate. Search invoices by number/person/note and combine status, currency and label filters. The invoice CSV exports the current authorised filtered result. Earnings and
@@ -2007,6 +2009,8 @@ are not confirmed offline.
 <a id="section-calendar-time-and-links"></a>
 
 ## Time and links
+
+Use **Kalenderanzeige in / Show calendar in** to change how the calendar displays appointments in the current view. **Profilzeitzone / Profile time zone** restores the account default. A zone change keeps the selected calendar date and leaves stored events and their original zones intact. In a repeated hour the calendar labels the UTC offsets. Global event details show both the original event times and the displayed times when the zones differ.
 
 Database values are finite absolute instants with a stored IANA zone. New API payloads contain an explicit UTC/offset component and four-digit years. Form input is converted according to its zone. Nonexistent local times during the DST jump and ambiguous new local times during the fallback are rejected. Unchanged existing time fields retain their exact seconds and already unambiguously stored DST offsets during text-only edits.
 

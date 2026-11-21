@@ -49,8 +49,9 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     );
     await login(page, owner.email);
     await page.goto("/calendar");
-    await expect(page.locator(".calendar-controls .badge")).toHaveText(
-        "Australia/Brisbane",
+    const displayZone = page.getByLabel("Kalenderanzeige in", {exact: true});
+    await expect(displayZone.locator("option:checked")).toHaveText(
+        "Profilzeitzone (Australia/Brisbane)",
     );
     await page
         .getByRole("button", {name: "Privaten Termin hinzufügen", exact: true})
@@ -146,6 +147,13 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     );
     expect(original.time_zone).toBe("Australia/Brisbane");
     expect(writes).toBe(1);
+    const calendarEvent = page.locator(".fc-event").filter({hasText: title});
+    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^10(?::00| Uhr)$/);
+    await displayZone.selectOption("UTC");
+    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^0{1,2}(?::00| Uhr)$/);
+    expect(writes, "Changing the display zone must not edit the event").toBe(1);
+    await displayZone.selectOption("");
+    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^10(?::00| Uhr)$/);
     await page.reload();
     dialog = await eventDialog(page, title);
     await expect(dialog.getByLabel("Beginn", {exact: true})).toHaveValue(
