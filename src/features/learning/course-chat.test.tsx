@@ -11,6 +11,7 @@ const fake = vi.hoisted(() => ({
   revoked: false,
   canPost: true,
   uploadDocument: vi.fn(),
+  uploadAcademyCourseChatAttachment: vi.fn(),
   downloadPortalDocument: vi.fn(),
   attachment: false,
   internalEdition: true,
@@ -36,6 +37,7 @@ vi.mock("../../lib/supabase", () => ({
 vi.mock("../files/api", () => ({
   acceptedFiles: ".txt",
   uploadDocument: fake.uploadDocument,
+  uploadAcademyCourseChatAttachment: fake.uploadAcademyCourseChatAttachment,
 }));
 vi.mock("./api", () => ({
   downloadPortalDocument: fake.downloadPortalDocument,
@@ -59,6 +61,7 @@ beforeEach(async () => {
   fake.subscribe.mockReset().mockReturnValue(channel);
   fake.removeChannel.mockReset().mockResolvedValue("ok");
   fake.uploadDocument.mockReset();
+  fake.uploadAcademyCourseChatAttachment.mockReset();
   fake.downloadPortalDocument.mockReset();
   fake.rpc.mockReset().mockImplementation((name: string) => {
     if (name === "course_chat_rooms")
@@ -119,7 +122,7 @@ function show(canCreate = false) {
   );
 }
 
-it("opens a dedicated text channel only through the course-specific action", async () => {
+it("opens a dedicated participant channel through the course-specific action", async () => {
   fake.internalEdition = false;
   fake.roomAvailable = false;
   fake.attachment = true;
@@ -132,10 +135,10 @@ it("opens a dedicated text channel only through the course-specific action", asy
     p_run_id: "course-a",
   });
   expect(await screen.findByText("Fictional course question")).toBeVisible();
-  expect(screen.queryByLabelText("Attach file")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Attach file")).toBeVisible();
   expect(
-    screen.queryByRole("button", { name: /exercise.txt/ }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: "Download exercise.txt" }),
+  ).toBeVisible();
   await user.type(screen.getByLabelText("Message"), "Fictional text reply");
   await user.click(screen.getByRole("button", { name: "Send message" }));
   await waitFor(() =>
@@ -199,49 +202,67 @@ it("shows a scoped read-only room without offering to send", async () => {
   expect(screen.queryByRole("textbox")).toBeNull();
 });
 
-it("keeps the draft from sending until scanning confirms the exact version", async () => {
-  const user = userEvent.setup();
-  let clearScan: (value: unknown) => void = () => undefined;
-  fake.uploadDocument.mockImplementation(
-    () =>
-      new Promise((resolve) => {
-        clearScan = resolve;
+it.each([true, false])(
+  "keeps the draft until an exact scan receipt (internal edition: %s)",
+  async (internal) => {
+    fake.internalEdition = internal;
+    const user = userEvent.setup();
+    let clearScan: (value: unknown) => void = () => undefined;
+    const upload = internal
+      ? fake.uploadDocument
+      : fake.uploadAcademyCourseChatAttachment;
+    upload.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          clearScan = resolve;
+        }),
+    );
+    show();
+    const picker = await screen.findByLabelText("Attach file");
+    const file = new File(["data"], "exercise.txt", { type: "text/plain" });
+    await user.upload(picker, file);
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+    if (internal) {
+      expect(upload).toHaveBeenCalledWith(
+        file,
+        expect.objectContaining({
+          roomId: "room-a",
+          messageOnly: true,
+          courseChat: true,
+        }),
+        expect.any(Function),
+      );
+    } else {
+      expect(upload).toHaveBeenCalledWith(
+        file,
+        "room-a",
+        expect.any(String),
+        expect.any(Function),
+      );
+      expect(fake.uploadDocument).not.toHaveBeenCalled();
+    }
+    clearScan({
+      id: "document",
+      current_version_id: "version",
+      original_name: "exercise.txt",
+    });
+    await screen.findByText("exercise.txt");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith("send_course_chat_attachment", {
+        p_room_id: "room-a",
+        p_body: "",
+        p_client_id: expect.any(String),
+        p_document_id: "document",
+        p_version_id: "version",
       }),
-  );
-  show();
-  const picker = await screen.findByLabelText("Attach file");
-  const file = new File(["data"], "exercise.txt", { type: "text/plain" });
-  await user.upload(picker, file);
-  expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
-  expect(fake.uploadDocument).toHaveBeenCalledWith(
-    file,
-    expect.objectContaining({
-      roomId: "room-a",
-      messageOnly: true,
-      courseChat: true,
-    }),
-    expect.any(Function),
-  );
-  clearScan({
-    id: "document",
-    current_version_id: "version",
-    original_name: "exercise.txt",
-  });
-  await screen.findByText("exercise.txt");
-  await user.click(screen.getByRole("button", { name: "Send message" }));
-  await waitFor(() =>
-    expect(fake.rpc).toHaveBeenCalledWith("send_course_chat_attachment", {
-      p_room_id: "room-a",
-      p_body: "",
-      p_client_id: expect.any(String),
-      p_document_id: "document",
-      p_version_id: "version",
-    }),
-  );
-});
+    );
+  },
+);
 
 it("downloads read-only history by message and exact version without querying documents", async () => {
   const user = userEvent.setup();
+  fake.internalEdition = false;
   fake.canPost = false;
   fake.attachment = true;
   fake.downloadPortalDocument.mockResolvedValue(undefined);
@@ -249,6 +270,7 @@ it("downloads read-only history by message and exact version without querying do
   await user.click(
     await screen.findByRole("button", { name: "Download exercise.txt" }),
   );
+  expect(screen.queryByLabelText("Attach file")).toBeNull();
   expect(fake.downloadPortalDocument).toHaveBeenCalledWith(
     {
       kind: "course_chat_attachment",

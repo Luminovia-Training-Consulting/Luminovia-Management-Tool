@@ -88,6 +88,24 @@ export function uploadAcademyCourseMaterial(
   );
 }
 
+/** Upload one scanner-bound draft for a dedicated participant channel. */
+export function uploadAcademyCourseChatAttachment(
+  file: File,
+  roomId: string,
+  clientId: string,
+  onProgress?: (percent: number) => void,
+) {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("academy_room_id", roomId);
+  form.set("client_id", clientId);
+  return transferUpload(
+    form,
+    endpoint() + "?mode=academy-course-chat",
+    onProgress,
+  );
+}
+
 /** Upload a student paper into its course-only exam reservation. */
 export function uploadAcademyStudentExamPdf(
   file: File,

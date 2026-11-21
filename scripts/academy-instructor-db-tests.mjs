@@ -1,6 +1,6 @@
 /** Exercises dedicated academy licence, course access and assignments on disposable databases. */
 import assert from "node:assert/strict";
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
@@ -170,6 +170,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       const payload = [
         "academy_ensure_course_chat",
         "send_course_chat_message",
+        "send_course_chat_attachment",
       ].includes(endpoint)
         ? value
         : JSON.parse(value);
@@ -303,7 +304,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "course_workspace_action",
     "repeat_client_request",
     "send_message",
-    "send_course_chat_attachment",
+    "reserve_course_chat_document",
     "edit_message",
     "company_course_webhook_subscribe",
     "account_me",
@@ -325,6 +326,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     ["/rpc/publish_course_welcome_content", "HEAD"],
     ["/rpc/academy_ensure_course_chat", "GET"],
     ["/rpc/send_course_chat_message", "GET"],
+    ["/rpc/send_course_chat_attachment", "GET"],
+    ["/rpc/course_chat_attachment_access", "GET"],
     ["/course_chat_activity", "GET"],
     ["/messages", "GET"],
   ]) {
@@ -449,6 +452,151 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.equal(history[0].body, "Fictional welcome");
   assert.equal(history[0].attachment, null);
 
+  const chatPayload = "Fictional exercise for the course chat";
+  const digest = createHash("sha256").update(chatPayload).digest("hex");
+  const privateRoom = randomUUID();
+  const nonmemberAdmin = randomUUID();
+  await sql(`insert into public.chat_rooms(id,kind,dm_key) values(${q(privateRoom)},'dm',${q(randomUUID())});
+    insert into public.chat_members(room_id,user_id) values(${q(privateRoom)},${q(participant)});
+    insert into auth.users(id,email,email_confirmed_at) values(${q(nonmemberAdmin)},'outside-course-admin@example.invalid',now());
+    insert into public.user_roles(user_id,role) values(${q(nonmemberAdmin)},'admin')`);
+  const reserve = (who, target = room, request = randomUUID(), hash = digest) =>
+    call(who, "reserve_academy_course_chat_file", [
+      target,
+      "exercise.txt",
+      "text/plain",
+      chatPayload.length,
+      request,
+      hash,
+    ]).then(JSON.parse);
+  const status = (who, draft) =>
+    call(who, "course_chat_upload_status", [
+      room,
+      draft.document_id,
+      draft.version_id,
+    ]).then((value) => (value ? JSON.parse(value) : null));
+  const scan = (draft, action, lease = null, hash = null, scanner = null) =>
+    sql(
+      "begin;set local role service_role;" +
+        gate("academy_course_material_scan") +
+        `select public.academy_course_material_scan(${[draft.document_id, draft.version_id, action, lease, hash, scanner].map((entry) => (entry === null ? "null" : q(entry))).join(",")});commit;`,
+    );
+  const sendAttachment = (who, draft, request = randomUUID()) =>
+    call(who, "send_course_chat_attachment", [
+      room,
+      "",
+      request,
+      draft.document_id,
+      draft.version_id,
+    ]);
+  const getAttachment = (who, message, version, override = false) =>
+    actor(
+      who,
+      gate("course_chat_attachment_access") +
+        `select public.course_chat_attachment_access(${q(message)},${q(version)},${override ? `${q(org)},'Fictional inspection'` : "null,null"})`,
+    ).then(JSON.parse);
+  await assert.rejects(reserve(participant, privateRoom), /42501/);
+  await assert.rejects(reserve(foreign), /42501/);
+  await assert.rejects(reserve(nonmemberAdmin), /42501/);
+  const uploadRequest = randomUUID();
+  const draft = await reserve(participant, room, uploadRequest);
+  assert.deepEqual(await reserve(participant, room, uploadRequest), draft);
+  await assert.rejects(
+    reserve(participant, room, uploadRequest, "c".repeat(64)),
+    /PT409/,
+  );
+  assert.equal(
+    (await status(participant, draft)).document.status,
+    "quarantined",
+  );
+  assert.equal(await status(admin, draft), null);
+  await assert.rejects(sendAttachment(participant, draft), /42501/);
+  await assert.rejects(scan(draft, "begin", null, "c".repeat(64)), /42501/);
+  const scanLease = await scan(draft, "begin", null, digest);
+  await enrol(admin, participant, "removed");
+  assert.equal(await status(participant, draft), null);
+  await assert.rejects(
+    scan(draft, "clean", scanLease, digest, "ClamAV fixture"),
+    /42501/,
+  );
+  await scan(draft, "end", scanLease);
+  await enrol(admin, participant);
+  const freshLease = await scan(draft, "begin", null, digest);
+  await scan(draft, "clean", freshLease, digest, "ClamAV fixture");
+  await scan(draft, "end", freshLease);
+  assert.equal(
+    (await status(participant, draft)).document.current_version_id,
+    draft.version_id,
+  );
+  assert.deepEqual(
+    (await readChat(admin, room)).map((item) => item.attachment),
+    [null],
+  );
+  await assert.rejects(sendAttachment(admin, draft), /42501/);
+  await assert.rejects(
+    sendAttachment(participant, { ...draft, version_id: randomUUID() }),
+    /42501/,
+  );
+  const attachmentRequest = randomUUID();
+  const attachmentMessage = await sendAttachment(
+    participant,
+    draft,
+    attachmentRequest,
+  );
+  assert.equal(
+    await sendAttachment(participant, draft, attachmentRequest),
+    attachmentMessage,
+  );
+  const chatMessage = (await readChat(admin, room)).find(
+    ({ id }) => id === attachmentMessage,
+  );
+  assert.equal(chatMessage.body, "");
+  assert.deepEqual(chatMessage.attachment, {
+    version_id: draft.version_id,
+    name: "exercise.txt",
+    size_bytes: chatPayload.length,
+  });
+  assert.equal(
+    (await getAttachment(admin, attachmentMessage, draft.version_id)).sha256,
+    digest,
+  );
+  assert.equal(
+    (await getAttachment(participant, attachmentMessage, draft.version_id))
+      .version_id,
+    draft.version_id,
+  );
+  await assert.rejects(
+    getAttachment(admin, attachmentMessage, draft.version_id, true),
+    /42501/,
+  );
+  await assert.rejects(
+    getAttachment(nonmemberAdmin, attachmentMessage, draft.version_id),
+    /42501/,
+  );
+  await assert.rejects(
+    getAttachment(nonmemberAdmin, attachmentMessage, draft.version_id, true),
+    /42501/,
+  );
+  await assert.rejects(
+    getAttachment(foreign, attachmentMessage, draft.version_id),
+    /42501/,
+  );
+  await assert.rejects(
+    getAttachment(participant, attachmentMessage, randomUUID()),
+    /42501/,
+  );
+  await assert.rejects(
+    getAttachment(participant, message, draft.version_id),
+    /42501/,
+  );
+  assert.equal(
+    await actor(
+      participant,
+      `select count(*) from public.documents where id=${q(draft.document_id)}`,
+    ),
+    "0",
+  );
+
   await assert.rejects(meeting(participant, initialLink, 0), /42501/);
   await assert.rejects(meeting(foreign, initialLink, 0), /42501/);
   assert.deepEqual(await welcome(participant), {
@@ -485,6 +633,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(workspace(participant, run), /42501/);
   await assert.rejects(readChat(participant, room), /42501/);
   await assert.rejects(postChat(participant, room, "After removal"), /42501/);
+  await assert.rejects(
+    getAttachment(participant, attachmentMessage, draft.version_id),
+    /42501/,
+  );
   assert.equal(await marker(participant, room), "");
 
   await enrol(admin, participant);
@@ -660,7 +812,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.deepEqual(await welcome(participant), currentWelcome);
   await assert.rejects(publishWelcome(admin, 2), /42501/);
   assert.equal((await rooms(participant))[0].can_post, false);
-  assert.equal((await readChat(participant, room)).length, 2);
+  assert.equal((await readChat(participant, room)).length, 3);
+  assert.equal(
+    (await getAttachment(participant, attachmentMessage, draft.version_id))
+      .sha256,
+    digest,
+  );
+  await assert.rejects(reserve(participant), /42501/);
+  await assert.rejects(sendAttachment(participant, draft), /42501/);
   await assert.rejects(postChat(participant, room, "Read-only grace"), /42501/);
   await assert.rejects(
     actor(
@@ -696,10 +855,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   await assert.rejects(welcome(participant), /42501/);
   await assert.rejects(rooms(participant), /42501/);
   await assert.rejects(readChat(participant, room), /42501/);
+  await assert.rejects(
+    getAttachment(participant, attachmentMessage, draft.version_id),
+    /42501/,
+  );
   assert.equal(await marker(participant, room), "");
   assert.equal(
     await sql(`select count(*) from public.messages where room_id=${q(room)}`),
-    "2",
+    "3",
   );
 
   assert.equal(
@@ -739,7 +902,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.equal((await capability()).customer_ready, false);
   assert.deepEqual(testedContracts, new Set(responseSchemas.keys()));
   console.log(
-    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
+    `PASS ${edition} course scope, assignments, enrolments, welcome revisions, meeting links, text and exact attachment chat, marker RLS, release binding, grace/read-only, expiry and dormant browser`,
   );
 };
 

@@ -10,7 +10,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
-import {academyAnswerKeyQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
+import {academyAnswerKeyQuery, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -92,9 +92,10 @@ Deno.serve(async (request: Request) => {
         const query = new URL(request.url).search;
         const examReservation = query === academyStudentExamQuery ? 'reserve_academy_student_exam_pdf'
             : query === academyAnswerKeyQuery ? 'reserve_academy_answer_key_pdf' : null;
-        const academyIntake = examReservation !== null || query === academyMaterialQuery;
+        const academyChat = query === academyCourseChatQuery;
+        const academyIntake = academyChat || examReservation !== null || query === academyMaterialQuery;
         const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
-        if (examReservation && !multipart) return json(400, {error: 'invalid_request'});
+        if (academyIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (academyIntake) {
             const access = await user.rpc('portal_access');
             if (access.error || access.data !== true) throw new Error('access_denied');
@@ -108,13 +109,15 @@ Deno.serve(async (request: Request) => {
         if (multipart) {
             const raw = await bounded(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
-            const materialRun = academyMaterialCourse(form, academyIntake);
+            const materialRun = academyMaterialCourse(form, academyIntake && !academyChat);
+            const chatRoom = academyChatRoom(form, academyChat);
+            const protectedUpload = Boolean(materialRun || chatRoom);
             const file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
             const bytes = new Uint8Array(await file.arrayBuffer());
-            if (materialRun && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
+            if (protectedUpload && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
             const mime = await validateFile(bytes, name, file.type);
             if (examReservation && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -123,7 +126,7 @@ Deno.serve(async (request: Request) => {
             const scope = String(form.get('scope') ?? 'personal');
             const kind = String(form.get('kind') ?? (scope === 'room' ? 'chat' : 'material'));
             if (kind === 'avatar') await validateAvatar(bytes);
-            const roomId = form.get('room_id') || null;
+            const roomId = chatRoom ?? (form.get('room_id') || null);
             const jobId = form.get('job_id') || null;
             const replaceId = form.get('replace_id') || null;
             const ownerId = form.get('owner_id') || null;
@@ -133,7 +136,9 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = materialRun && examReservation
+            const reserved = chatRoom
+                ? await user.rpc('reserve_academy_course_chat_file', {p_room_id: chatRoom, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                : materialRun && examReservation
                 ? await user.rpc(examReservation, {p_run_id: materialRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : materialRun
                 ? await user.rpc('reserve_academy_course_material', {p_run_id: materialRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
@@ -145,7 +150,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            if (materialRun && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+            if (protectedUpload && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
                 return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
@@ -159,7 +164,7 @@ Deno.serve(async (request: Request) => {
                 if (status.error || !status.data?.document) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             };
-            const scoped = materialRun || courseChat === 'true' ? await courseStatus() : null;
+            const scoped = protectedUpload || courseChat === 'true' ? await courseStatus() : null;
             const doc = scoped?.document ?? await visible(reservation.document_id);
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
             const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
@@ -189,13 +194,13 @@ Deno.serve(async (request: Request) => {
             // while this request could still recreate a clean/quarantine object.
             return await withUploadLease({
                 begin: async () => {
-                    if (materialRun) return await academyScan('begin', null, incomingDigest, null);
+                    if (protectedUpload) return await academyScan('begin', null, incomingDigest, null);
                     const r = await service.rpc('deletion_upload_begin', {p_document_id: doc.id, p_version_id: reservation.version_id});
                     if (r.error || typeof r.data !== 'string') throw new Error('access_denied');
                     return r.data;
                 },
                 end: async (lease) => {
-                    if (materialRun) {
+                    if (protectedUpload) {
                         await academyScan('end', lease, null, null);
                         return;
                     }
@@ -223,7 +228,7 @@ Deno.serve(async (request: Request) => {
                 if (digest !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
                 await validateFile(storedBytes, name, mime);
                 if (kind === 'avatar') await validateAvatar(storedBytes);
-                if (!materialRun) {
+                if (!protectedUpload) {
                     await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
                     await service.from('documents').update({status: 'scanning'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
                 }
@@ -232,7 +237,7 @@ Deno.serve(async (request: Request) => {
                 try {
                     verdict = await scan(storedBytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
                 } catch {
-                    if (materialRun) await academyScan('scan_error', lease, null, null);
+                    if (protectedUpload) await academyScan('scan_error', lease, null, null);
                     else {
                         await service.from('document_versions').update({status: 'scan_error'}).eq('id', reservation.version_id);
                         await service.from('documents').update({status: 'scan_error'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
@@ -240,7 +245,7 @@ Deno.serve(async (request: Request) => {
                     return json(503, {error: 'scanner_unavailable', document_id: doc.id});
                 }
                 if (!verdict.clean) {
-                    if (materialRun) await academyScan('rejected', lease, digest, verdict.version);
+                    if (protectedUpload) await academyScan('rejected', lease, digest, verdict.version);
                     else {
                         await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
                         await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
@@ -263,7 +268,7 @@ Deno.serve(async (request: Request) => {
                     const existingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await existingBytes.data.arrayBuffer()))).map(b => b.toString(16).padStart(2, '0')).join('');
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
-                if (materialRun) await academyScan('clean', lease, digest, verdict.version);
+                if (protectedUpload) await academyScan('clean', lease, digest, verdict.version);
                 else {
                     const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
                     const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();
@@ -275,7 +280,6 @@ Deno.serve(async (request: Request) => {
                 return json(200, {document: await currentDocument()});
             });
         }
-        if (academyIntake) return json(400, {error: 'invalid_request'});
         const data = JSON.parse(new TextDecoder().decode(await bounded(request, 4096))) as { action?: string; id?: string; version_id?: string; user_id?: string; evidence_id?: string };
         // Avatar selection is a narrow projection, not a general grant to personal files.
         if (data.action === 'avatar') {

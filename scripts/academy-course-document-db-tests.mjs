@@ -163,7 +163,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       ["/document_versions", "GET"],
       ["/rpc/course_workspace_action", "POST"],
       ["/rpc/reserve_document", "POST"],
-      ["/rpc/course_chat_attachment_access", "POST"],
+      ["/rpc/course_chat_attachment_access", "GET"],
     ]) {
       await assert.rejects(actor(manager, gate(target, method)), /42501/);
     }

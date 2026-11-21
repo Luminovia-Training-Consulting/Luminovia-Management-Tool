@@ -7,7 +7,11 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { requireOnline, useOnline } from "../../lib/online";
-import { acceptedFiles, uploadDocument } from "../files/api";
+import {
+  acceptedFiles,
+  uploadAcademyCourseChatAttachment,
+  uploadDocument,
+} from "../files/api";
 import {
   CourseChatAttachment,
   type CourseChatFile,
@@ -194,17 +198,24 @@ function CourseChatThread({
       setProgress(0);
       if (uploadRetry.current?.file !== file)
         uploadRetry.current = { file, key: crypto.randomUUID() };
-      const document = await uploadDocument(
-        file,
-        {
-          scope: "room",
-          roomId: room.id,
-          clientId: uploadRetry.current.key,
-          messageOnly: true,
-          courseChat: true,
-        },
-        setProgress,
-      );
+      const document = portalInternalEdition
+        ? await uploadDocument(
+            file,
+            {
+              scope: "room",
+              roomId: room.id,
+              clientId: uploadRetry.current.key,
+              messageOnly: true,
+              courseChat: true,
+            },
+            setProgress,
+          )
+        : await uploadAcademyCourseChatAttachment(
+            file,
+            room.id,
+            uploadRetry.current.key,
+            setProgress,
+          );
       if (!document.current_version_id) throw new Error("version_unavailable");
       return {
         id: document.id,
@@ -259,7 +270,8 @@ function CourseChatThread({
 
   /** Both the keyboard-accessible picker and drag/drop start the same upload. */
   function selectAttachment(files: FileList | null) {
-    if (!portalInternalEdition || !files?.length || busy || attachment) return;
+    if (readOnly || !room.can_post || !files?.length || busy || attachment)
+      return;
     setInvalidDrop(files.length !== 1);
     if (files.length === 1) upload.mutate(files[0]);
   }
@@ -322,15 +334,13 @@ function CourseChatThread({
               ) : (
                 message.body && <p>{message.body}</p>
               )}
-              {portalInternalEdition &&
-                !message.deleted_at &&
-                message.attachment && (
-                  <CourseChatAttachment
-                    key={message.attachment.version_id}
-                    message={message.id}
-                    attachment={message.attachment}
-                  />
-                )}
+              {!message.deleted_at && message.attachment && (
+                <CourseChatAttachment
+                  key={message.attachment.version_id}
+                  message={message.id}
+                  attachment={message.attachment}
+                />
+              )}
             </li>
           ))}
         </ol>
@@ -362,33 +372,32 @@ function CourseChatThread({
                 disabled={busy}
               />
             </Field>
-            {portalInternalEdition &&
-              (attachment ? (
-                <p>
-                  {attachment.name}{" "}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => setAttachment(null)}
-                  >
-                    {t("removeAttachment")}
-                  </Button>
-                </p>
-              ) : (
-                <Field id={attachmentField} label={t("attach")}>
-                  <input
-                    id={attachmentField}
-                    type="file"
-                    accept={acceptedFiles}
-                    disabled={busy}
-                    onChange={(event) => {
-                      selectAttachment(event.currentTarget.files);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </Field>
-              ))}
+            {attachment ? (
+              <p>
+                {attachment.name}{" "}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => setAttachment(null)}
+                >
+                  {t("removeAttachment")}
+                </Button>
+              </p>
+            ) : (
+              <Field id={attachmentField} label={t("attach")}>
+                <input
+                  id={attachmentField}
+                  type="file"
+                  accept={acceptedFiles}
+                  disabled={busy}
+                  onChange={(event) => {
+                    selectAttachment(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </Field>
+            )}
             {invalidDrop && (
               <Notice kind="error">{t("singleAttachment")}</Notice>
             )}

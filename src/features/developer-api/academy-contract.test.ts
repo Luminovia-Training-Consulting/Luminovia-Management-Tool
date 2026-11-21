@@ -31,6 +31,7 @@ const writePaths = [
   "/rest/v1/rpc/academy_set_course_capacity",
   "/rest/v1/rpc/academy_learning_action",
   "/rest/v1/rpc/remove_course_exam_pdf",
+  "/rest/v1/rpc/send_course_chat_attachment",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -266,6 +267,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-material",
                 "academy-student-exam",
                 "academy-answer-key",
+                "academy-course-chat",
               ],
             },
           },
@@ -275,7 +277,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
             "multipart/form-data": {
               schema: {
                 additionalProperties: false,
-                required: ["academy_course_id", "client_id", "file"],
+                required: ["client_id", "file"],
+                oneOf: [
+                  { required: ["academy_course_id"] },
+                  { required: ["academy_room_id"] },
+                ],
                 properties: { file: { format: "binary" } },
               },
             },
@@ -311,6 +317,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       for (const servicePath of [
         "/rest/v1/rpc/reserve_academy_student_exam_pdf",
         "/rest/v1/rpc/reserve_academy_answer_key_pdf",
+        "/rest/v1/rpc/reserve_academy_course_chat_file",
+        "/rest/v1/rpc/course_chat_upload_status",
+        "/rest/v1/rpc/course_chat_attachment_access",
         "/rest/v1/rpc/reserve_academy_course_material",
         "/rest/v1/rpc/academy_course_material_status",
         "/rest/v1/rpc/academy_course_material_scan",
@@ -346,7 +355,17 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       ).toMatchObject({
         items: {
           additionalProperties: false,
-          properties: { attachment: { type: "null" } },
+          properties: {
+            attachment: {
+              anyOf: [
+                {
+                  additionalProperties: false,
+                  required: ["version_id", "name", "size_bytes"],
+                },
+                { type: "null" },
+              ],
+            },
+          },
         },
       });
       expect(
@@ -356,6 +375,30 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       ).toMatchObject({
         additionalProperties: false,
         properties: { repeat_request: { type: "null" } },
+      });
+      expect(
+        spec.paths["/rest/v1/rpc/send_course_chat_attachment"].post.requestBody
+          .content["application/json"].schema,
+      ).toMatchObject({
+        additionalProperties: false,
+        required: [
+          "p_room_id",
+          "p_body",
+          "p_client_id",
+          "p_document_id",
+          "p_version_id",
+        ],
+      });
+      expect(
+        spec.paths[examDownload].post.requestBody.content["application/json"]
+          .schema,
+      ).toMatchObject({
+        oneOf: expect.arrayContaining([
+          expect.objectContaining({
+            additionalProperties: false,
+            required: ["kind", "id", "version_id"],
+          }),
+        ]),
       });
       expect(isDocumentedRequest(backend + bootstrap, "GET", backend)).toBe(
         true,

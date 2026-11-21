@@ -10,6 +10,7 @@ import {
   saveQualificationEvidence,
   uploadAcademyAnswerKeyPdf,
   uploadAcademyCourseMaterial,
+  uploadAcademyCourseChatAttachment,
   uploadAcademyStudentExamPdf,
   uploadDocument,
 } from "./api";
@@ -122,6 +123,33 @@ describe("online, authenticated document transfers", () => {
       });
     },
   );
+  it("sends an academy chat draft only with its room, retry key and file", async () => {
+    const promise = uploadAcademyCourseChatAttachment(
+      file(),
+      "course-room",
+      "key",
+    );
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect(request.open).toHaveBeenCalledWith(
+      "POST",
+      "https://fictional.example.invalid/backend/functions/v1/files?mode=academy-course-chat",
+    );
+    expect([...request.form!.keys()].sort()).toEqual([
+      "academy_room_id",
+      "client_id",
+      "file",
+    ]);
+    expect(request.form!.get("academy_room_id")).toBe("course-room");
+    expect(request.form!.get("client_id")).toBe("key");
+    request.respond(200, {
+      document: { status: "clean", current_version_id: "reviewed-version" },
+    });
+    await expect(promise).resolves.toMatchObject({
+      current_version_id: "reviewed-version",
+    });
+  });
+
   it("keeps sent bytes below completion until the server confirms clean storage", async () => {
     const progress = vi.fn();
     const { promise, request } = await transfer(progress);

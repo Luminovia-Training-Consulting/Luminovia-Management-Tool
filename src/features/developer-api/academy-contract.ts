@@ -147,22 +147,40 @@ const materialAction = {
   ],
 };
 const materialUploadResult = record({
-  document: record({
-    id: uuid,
-    owner_id: uuid,
-    uploaded_by: uuid,
-    scope: { const: "personal" },
-    kind: { const: "material" },
-    room_id: nil,
-    job_id: nil,
-    original_name: { ...string, minLength: 1, maxLength: 200 },
-    mime_type: { enum: materialMime },
-    size_bytes: { type: "integer", minimum: 1, maximum: materialBytes },
-    status: { const: "clean" },
-    current_version_id: uuid,
-    created_at: dateTime,
-    deleted_at: nil,
-  }),
+  document: {
+    ...record({
+      id: uuid,
+      owner_id: uuid,
+      uploaded_by: uuid,
+      scope: { enum: ["personal", "room"] },
+      kind: { enum: ["material", "chat"] },
+      room_id: nullable(uuid),
+      job_id: nil,
+      original_name: { ...string, minLength: 1, maxLength: 200 },
+      mime_type: { enum: materialMime },
+      size_bytes: { type: "integer", minimum: 1, maximum: materialBytes },
+      status: { const: "clean" },
+      current_version_id: uuid,
+      created_at: dateTime,
+      deleted_at: nil,
+    }),
+    oneOf: [
+      {
+        properties: {
+          scope: { const: "personal" },
+          kind: { const: "material" },
+          room_id: nil,
+        },
+      },
+      {
+        properties: {
+          scope: { const: "room" },
+          kind: { const: "chat" },
+          room_id: uuid,
+        },
+      },
+    ],
+  },
 });
 function intakeError(description: string, codes: string[]) {
   return {
@@ -177,8 +195,9 @@ const materialUpload = {
   post: {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
-    summary: "Upload and scan course material or an exam PDF",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students.`,
+    summary:
+      "Upload and scan course material, an exam PDF or a course-chat attachment",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -192,6 +211,7 @@ const materialUpload = {
             "academy-material",
             "academy-student-exam",
             "academy-answer-key",
+            "academy-course-chat",
           ],
         },
       },
@@ -207,15 +227,25 @@ const materialUpload = {
       required: true,
       content: {
         "multipart/form-data": {
-          schema: record({
-            academy_course_id: uuid,
-            client_id: uuid,
-            file: {
-              ...string,
-              format: "binary",
-              description: "One file of up to 10 MiB",
-            },
-          }),
+          schema: {
+            ...record(
+              {
+                academy_course_id: uuid,
+                academy_room_id: uuid,
+                client_id: uuid,
+                file: {
+                  ...string,
+                  format: "binary",
+                  description: "One file of up to 10 MiB",
+                },
+              },
+              ["client_id", "file"],
+            ),
+            oneOf: [
+              { required: ["academy_course_id"] },
+              { required: ["academy_room_id"] },
+            ],
+          },
           encoding: { file: { contentType: materialMime.join(", ") } },
         },
       },
@@ -279,8 +309,9 @@ const courseDocumentDownload = {
   post: {
     operationId: "downloadAcademyCourseDocument",
     tags: ["Licensed course profile"],
-    summary: "Download a scanned exam PDF or completion record",
-    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Only the current assigned instructor or course manager can download a published answer key, including while the exam setting is off. Completion records are rendered from retained verified facts. The caller’s authority is checked again before delivery.`,
+    summary:
+      "Download an exam PDF, completion record or exact course-chat attachment",
+    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Only the current assigned instructor or course manager can download a published answer key, including while the exam setting is off. Completion records are rendered from retained verified facts. For a course-chat attachment, send its message ID and exact version ID from the room history. Only current room members can download the attachment. The caller’s authority is checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [
@@ -293,19 +324,34 @@ const courseDocumentDownload = {
     ],
     requestBody: {
       required: true,
-      content: content(
-        record({ kind: { enum: ["exam", "completion"] }, id: uuid }),
-      ),
+      content: content({
+        oneOf: [
+          record({ kind: { enum: ["exam", "completion"] }, id: uuid }),
+          record({
+            kind: { const: "course_chat_attachment" },
+            id: uuid,
+            version_id: uuid,
+          }),
+        ],
+      }),
     },
     responses: {
       "200": {
-        description: "Private PDF",
+        description: "Private course document or attachment",
         headers: {
           "Cache-Control": { schema: string },
           "Content-Disposition": { schema: string },
         },
         content: {
           "application/pdf": { schema: { ...string, format: "binary" } },
+          ...Object.fromEntries(
+            materialMime
+              .filter((mime) => mime !== "application/pdf")
+              .map((mime) => [
+                mime,
+                { schema: { ...string, format: "binary" } },
+              ]),
+          ),
         },
       },
       "400": examFileError("Invalid request", ["invalid_request"]),
@@ -364,7 +410,13 @@ const messages = {
       body: nullable(string),
       created_at: dateTime,
       deleted_at: nullable(dateTime),
-      attachment: nil,
+      attachment: nullable(
+        record({
+          version_id: uuid,
+          name: string,
+          size_bytes: { type: "integer", minimum: 1, maximum: materialBytes },
+        }),
+      ),
     }),
   ),
   maxItems: 100,
@@ -727,7 +779,7 @@ const coursePaths = {
   ),
   "/rest/v1/rpc/course_chat_rooms": courseOperation(
     "listAcademyCourseChatRooms",
-    "List my course participant text rooms",
+    "List my course participant rooms",
     "Returns current participant-room memberships for the specified course. Grace sets can_post to false.",
     "active-or-grace",
     record(run),
@@ -735,11 +787,25 @@ const coursePaths = {
   ),
   "/rest/v1/rpc/course_chat_messages": courseOperation(
     "readAcademyCourseChatMessages",
-    "Read text messages from a course participant room",
-    "Requires current room membership. Use the oldest returned timestamp and ID together to read an earlier page. Omit both or send both as null for the latest page. Each page is returned oldest first. Deleted messages have a null body and the attachment field is always null.",
+    "Read messages and attachment metadata from a course participant room",
+    "Requires current room membership. Use the oldest returned timestamp and ID together to read an earlier page. Omit both or send both as null for the latest page. Each page is returned oldest first. Deleted messages have a null body and attachment. When present, attachment includes the exact version ID, file name and size.",
     "active-or-grace",
     messagePage,
     messages,
+  ),
+  "/rest/v1/rpc/send_course_chat_attachment": courseOperation(
+    "sendAcademyCourseChatAttachment",
+    "Post a message with one scanned course-chat attachment",
+    "Requires current course room membership and the sender's own exact clean draft from academy-course-chat. The message body may be empty. Retry with the same client ID, room, body, document and version. The message is created only after the scan is confirmed.",
+    "active",
+    record({
+      p_room_id: uuid,
+      p_body: { ...string, maxLength: 8000 },
+      p_client_id: uuid,
+      p_document_id: uuid,
+      p_version_id: uuid,
+    }),
+    uuid,
   ),
   "/rest/v1/rpc/send_course_chat_message": courseOperation(
     "sendAcademyCourseChatMessage",

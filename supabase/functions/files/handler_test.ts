@@ -3,7 +3,7 @@
  */
 import {downloadDisposition, safeName, validateFile} from './validation.ts';
 import {scan} from './clamav.ts';
-import {academyMaterialCourse} from './academy-material.ts';
+import {academyChatRoom, academyMaterialCourse} from './academy-material.ts';
 
 // Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = 'assertion failed'): asserts value {
@@ -29,6 +29,29 @@ Deno.test('dedicated course multipart selector rejects duplicates and all other 
         let rejected = false;
         try {
             academyMaterialCourse(form, mode);
+        } catch (error) {
+            rejected = error instanceof Error && error.message === 'invalid_request';
+        }
+        assert(rejected);
+    }
+});
+
+Deno.test('dedicated chat multipart never accepts a course ID, duplicate room or generic transport', () => {
+    const room = '52b7ddee-2166-485a-bcee-04d0eea958d1';
+    const form = () => {
+        const body = new FormData();
+        body.set('academy_room_id', room);
+        body.set('client_id', room);
+        body.set('file', new File(['fictional room note'], 'note.txt'));
+        return body;
+    };
+    assert(academyChatRoom(form(), true) === room);
+    for (const [active, extra] of [[false, null], [true, 'room_id'], [true, 'academy_course_id'], [true, 'academy_room_id']] as const) {
+        const body = form();
+        if (extra) body.append(extra, room);
+        let rejected = false;
+        try {
+            academyChatRoom(body, active);
         } catch (error) {
             rejected = error instanceof Error && error.message === 'invalid_request';
         }
