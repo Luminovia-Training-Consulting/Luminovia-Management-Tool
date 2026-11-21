@@ -608,7 +608,7 @@ const announcementHistory = {
 };
 const announcementAdminResponse = z.toJSONSchema(adminAnnouncementSchema);
 const announcementCommand = rpc(
-  "manageStaffAnnouncement",
+  "native_manage_announcement",
   "Announcements",
   "Save, publish, archive or recover a staff announcement",
   "Requires current announcement management authority. Submit a complete bilingual draft when saving. To create an announcement, use a null ID and version zero. Other operations require the current version and ID. Publishing requires a due and unexpired draft. Repeat the same values and request ID for a safe retry.",
@@ -2186,7 +2186,7 @@ const nativePaths = {
     },
   },
   "/rest/v1/rpc/client_requests": rpc(
-    "readCompanyCourseRequests",
+    "native_client_requests",
     "Courses",
     "List the current company course requests",
     "Returns up to 500 requests in the caller's current company or authorised finance scope. An optional organisation ID narrows this scope. Amounts and their currency refer to the requested or saved company quote.",
@@ -2215,7 +2215,7 @@ const nativePaths = {
     ["p_organisation_id"],
   ),
   "/rest/v1/rpc/client_request_brief": rpc(
-    "readCompanyCourseRequestBrief",
+    "native_client_request_brief",
     "Courses",
     "Read the current course request brief",
     "Requires current company access or the finance permission for the exact request. The brief may be null for older requests. Document names and checksums are returned only for currently readable versions.",
@@ -2236,7 +2236,7 @@ const nativePaths = {
     }),
   ),
   "/rest/v1/rpc/client_request_history": rpc(
-    "readCompanyCourseRequestHistory",
+    "native_client_request_history",
     "Courses",
     "Read immutable course request revisions",
     "Requires current company access or the finance permission for the exact request. Returns up to 25 revisions from newest to oldest. Use the oldest returned ID to read the previous page.",
@@ -2265,7 +2265,7 @@ const nativePaths = {
     ["p_before"],
   ),
   "/rest/v1/rpc/create_client_request_with_brief": rpc(
-    "createCompanyCourseRequestWithBrief",
+    "native_create_client_request_with_brief",
     "Courses",
     "Submit a company course request with a teaching brief",
     "Requires a current company contact or finance permission for the selected organisation. The whole request and brief are saved together. Planned sessions must cover the teaching time. The caller can share exact clean material versions. Repeat the same client ID and values to recover the original request.",
@@ -2278,7 +2278,7 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/save_client_request_brief": rpc(
-    "saveCompanyCourseRequestBrief",
+    "native_save_client_request_brief",
     "Courses",
     "Revise the teaching brief of a submitted course request",
     "Requires current company access or the finance permission. The request must be unpublished. Send the previously confirmed brief version, or zero for an older request with no brief. The response is the next confirmed version.",
@@ -2290,7 +2290,7 @@ const nativePaths = {
     { ...version, minimum: 1 },
   ),
   "/rest/v1/rpc/job_related_navigation": rpc(
-    "readVisibleJobCourseDestinations",
+    "native_job_related_navigation",
     "Courses",
     "List the course and chat destinations for a visible job",
     "Requires access to the job. The server checks the linked course and each chat room independently. A course outside the current relationship appears as null.",
@@ -2307,7 +2307,7 @@ const nativePaths = {
     }),
   ),
   "/rest/v1/rpc/repeat_client_request": rpc(
-    "repeatClientCourseRequest",
+    "native_repeat_client_request",
     "Courses",
     "Request a new course using an existing delivered request",
     "Requires a current contact of the exact company and an original request linked to a course whose sessions have ended. Provide new future nonoverlapping sessions. The original course brief is copied without its documents. The result identifies the new request. Reuse the client ID for an exact retry.",
@@ -2319,7 +2319,7 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/profile_courses": rpc(
-    "readVisibleTaughtCourses",
+    "native_profile_courses",
     "Courses",
     "List visible courses taught by a lecturer",
     "Both the person's profile and each course must be visible to the current caller. Course summaries may be visible without direct workspace access. Check can_open before offering a course link.",
@@ -2339,7 +2339,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/reviewable_courses": rpc(
-    "readReviewableCourses",
+    "native_reviewable_courses",
     "Courses",
     "List completed courses that the current actor can review",
     "The server verifies current Premium and course relationship for every result. Each entry includes the current actor's own review or null. A withdrawn review may be shown to its author with deleted set to true.",
@@ -2370,7 +2370,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/lecturer_reviews": rpc(
-    "readVisibleLecturerReviews",
+    "native_lecturer_reviews",
     "Courses",
     "List the latest visible course reviews for a lecturer",
     "The current actor must be able to read the profile and reviewed course. The response shows the caller's own reviews and permitted reviews by others. Only the author or an authorised moderator receives a reviewer ID and moderation details.",
@@ -2396,7 +2396,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/chat_group_settings": rpc(
-    "readChatGroupSettings",
+    "native_chat_group_settings",
     "Chat",
     "Read group title, description and settings version",
     "Requires current membership of the exact topic or course group. The settings version is required to submit a change.",
@@ -2408,7 +2408,7 @@ const nativePaths = {
     }),
   ),
   "/rest/v1/rpc/chat_mention_candidates": rpc(
-    "readChatMentionCandidates",
+    "native_chat_mention_candidates",
     "Chat",
     "Read the people eligible for a mention in this room",
     "Only current room members can request this projection. The server excludes the caller and checks each recipient's current eligibility.",
@@ -2416,7 +2416,7 @@ const nativePaths = {
     { type: "array", items: chatMention },
   ),
   "/rest/v1/rpc/chat_messages_with_mentions": rpc(
-    "readChatHistoryWithMentions",
+    "native_chat_messages_with_mentions",
     "Chat",
     "Read the current room's visible messages and mentions",
     "Requires current room membership. Hidden messages are omitted. Deleted entries retain timestamps but expose no content, attached file or mentions. Pass the last timestamp and ID together to continue, keeping the same search. Fetch reply previews separately using each selected message's exact content version.",
@@ -2455,7 +2455,7 @@ const nativePaths = {
     [...Object.keys(chatMemberHistory), "p_search", "p_limit"],
   ),
   "/rest/v1/rpc/chat_reply_previews": rpc(
-    "readChatReplyPreviews",
+    "native_chat_reply_previews",
     "Chat",
     "Read reply previews for the current message versions",
     "Requires current membership. Pass up to 40 message IDs and their versions in the same order. A changed message invalidates the entire request. The response maps replies by child message ID. A null preview indicates that the original message is no longer visible.",
@@ -2485,7 +2485,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/chat_topic_pinned_messages": rpc(
-    "readChatTopicMessagePins",
+    "native_chat_topic_pinned_messages",
     "Chat",
     "Read the currently visible pinned messages of a topic group",
     "Requires a current member of the exact topic group. Deleted and personally hidden messages are omitted.",
@@ -2502,7 +2502,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/edit_message_with_mentions": rpc(
-    "editOwnChatMessageWithMentions",
+    "native_edit_message_with_mentions",
     "Chat",
     "Edit an authored message and its selected mentions",
     "Requires the active author, current room membership and the last-read message version. The server rechecks mention eligibility. A textless edit requires the message to retain an attachment. Repeat the same payload with the original client ID.",
@@ -2523,7 +2523,7 @@ const nativePaths = {
     ["p_mention_ids"],
   ),
   "/rest/v1/rpc/comment_context": rpc(
-    "readResourceCommentAccess",
+    "native_comment_context",
     "Comments",
     "Check current staff discussion and moderation access",
     "Requires current staff access to the specified job or course template. An archived resource cannot receive new comments.",
@@ -2531,7 +2531,7 @@ const nativePaths = {
     object({ can_post: boolean, can_moderate: boolean }),
   ),
   "/rest/v1/rpc/resource_comments": rpc(
-    "readResourceComments",
+    "native_resource_comments",
     "Comments",
     "Read the current staff discussion for a job or course template",
     "Requires current staff access to the exact resource. Hidden comments and moderation reasons are visible only to their authors and authorised moderators. A withdrawn comment has an empty body. Send both cursor fields to continue.",
@@ -2560,7 +2560,7 @@ const nativePaths = {
     [...Object.keys(chatMemberHistory), "p_limit"],
   ),
   "/rest/v1/rpc/announcement": rpc(
-    "readVisibleAnnouncement",
+    "native_announcement",
     "Announcements",
     "Read an announcement visible to the current actor",
     "Requires an active account in the current publication's audience and display window. The acknowledgement is specific to the authenticated actor and exact revision.",
@@ -2568,7 +2568,7 @@ const nativePaths = {
     z.toJSONSchema(announcementSchema),
   ),
   "/rest/v1/rpc/announcements": rpc(
-    "readVisibleAnnouncements",
+    "native_announcements",
     "Announcements",
     "List the current actor's announcements",
     "Current audience and display window determine visibility. Filter by literal text or outstanding acknowledgement. Use both cursor fields from the result to continue.",
@@ -2580,7 +2580,7 @@ const nativePaths = {
     [...Object.keys(announcementHistory), "p_unacknowledged"],
   ),
   "/rest/v1/rpc/admin_announcement": rpc(
-    "readStaffAnnouncementAdministration",
+    "native_admin_announcement",
     "Announcements",
     "Read the draft and published announcement revisions",
     "Requires current announcement management authority. Returns the retained draft, current publication and version needed for a change.",
@@ -2588,7 +2588,7 @@ const nativePaths = {
     announcementAdminResponse,
   ),
   "/rest/v1/rpc/admin_announcements": rpc(
-    "readStaffAnnouncementAdministrationList",
+    "native_admin_announcements",
     "Announcements",
     "List announcements available for administration",
     "Requires current announcement management authority. Search the stored draft and current publication. Filter by state and pass both cursor fields from the result to continue.",
@@ -2635,7 +2635,7 @@ const nativePaths = {
     },
   },
   "/rest/v1/rpc/qualification_review": rpc(
-    "readLecturerQualificationReview",
+    "native_qualification_review",
     "Qualifications",
     "Read a lecturer's selected qualification and current evidence",
     "Requires the lecturer's own account or current qualification review authority. The exact shared scanned version is returned when its grant remains current. Downloads recheck evidence authority.",
@@ -2643,7 +2643,7 @@ const nativePaths = {
     qualificationReview,
   ),
   "/rest/v1/rpc/save_qualification_evidence": rpc(
-    "saveOwnQualificationEvidence",
+    "native_save_qualification_evidence",
     "Qualifications",
     "Share or withdraw a clean certificate version for a selected topic",
     "Requires the current lecturer's own selected topic and own scanned certificate. Pass null for the version ID to withdraw. Use the last-read qualification version and repeat an unchanged request with the same request ID.",
@@ -2656,7 +2656,7 @@ const nativePaths = {
     qualificationReview,
   ),
   "/rest/v1/rpc/attest_qualification": rpc(
-    "attestLecturerQualification",
+    "native_attest_qualification",
     "Qualifications",
     "Record a current qualification decision",
     "Requires qualification verification authority and a topic selected by the lecturer. A verified decision may reference the current shared evidence or use management attestation. Use a future timestamp or null for expiry. Pass the current version and a request ID.",
@@ -2671,7 +2671,7 @@ const nativePaths = {
     qualificationReview,
   ),
   "/rest/v1/rpc/own_qualification_certificates": rpc(
-    "readOwnQualificationCertificates",
+    "native_own_qualification_certificates",
     "Qualifications",
     "List the current lecturer's scanned private certificate versions",
     "Optional search matches the file name. For another page send both parts of the returned cursor with the same filters. The operation excludes deleted, unscanned and foreign certificates.",
@@ -2683,7 +2683,7 @@ const nativePaths = {
     ["p_search", ...Object.keys(qualificationPage)],
   ),
   "/rest/v1/rpc/qualification_history": rpc(
-    "readQualificationHistory",
+    "native_qualification_history",
     "Qualifications",
     "Read the qualification's recorded evidence and decisions",
     "Requires the lecturer's own account or current qualification review authority. For another page send both parts of the returned cursor. The result records evidence changes and attestation decisions.",
@@ -2692,7 +2692,7 @@ const nativePaths = {
     Object.keys(qualificationPage),
   ),
   "/rest/v1/rpc/taxonomy_catalogue": rpc(
-    "readCourseTaxonomyCatalogue",
+    "native_taxonomy_catalogue",
     "Courses",
     "Read the searchable topic, tool and language catalogue",
     "Requires an active account. Archived entries require taxonomy management authority. Each topic includes only course templates that the caller may read.",
@@ -2718,7 +2718,7 @@ const nativePaths = {
     ["p_search", "p_kind", "p_include_archived"],
   ),
   "/rest/v1/rpc/save_taxonomy_topic": rpc(
-    "saveCourseTaxonomyTopic",
+    "native_save_taxonomy_topic",
     "Courses",
     "Create or revise a topic, tool or language",
     "Requires current taxonomy management authority. To create an entry, send null for the ID and version zero. To update, send the last-read version. The server verifies hierarchy, active parents and unique labels.",
@@ -2737,7 +2737,7 @@ const nativePaths = {
     ["p_version"],
   ),
   "/rest/v1/rpc/knowledge_access": rpc(
-    "readKnowledgeAccess",
+    "native_knowledge_access",
     "Knowledge",
     "Read this session's authoring and moderation permissions",
     "Current database role and permissions determine which actions are available. Every subsequent operation independently checks the specific resource and current authority.",
@@ -2749,7 +2749,7 @@ const nativePaths = {
     }),
   ),
   "/rest/v1/rpc/wiki_page": rpc(
-    "readVisibleWikiPage",
+    "native_wiki_page",
     "Knowledge",
     "Read the current visible wiki revision",
     "The page owner and wiki managers can read the latest revision. Other eligible readers receive the published revision of a current page.",
@@ -2757,7 +2757,7 @@ const nativePaths = {
     wikiPage,
   ),
   "/rest/v1/rpc/wiki_page_history": rpc(
-    "readVisibleWikiHistory",
+    "native_wiki_page_history",
     "Knowledge",
     "Read the wiki page's authorised revision history",
     "Returns latest revisions first. The page owner and wiki managers can see drafts. Other eligible readers receive published revisions.",
@@ -2776,7 +2776,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/save_wiki_page": rpc(
-    "saveWikiRevision",
+    "native_save_wiki_page",
     "Knowledge",
     "Save a wiki draft or publish an authorised revision",
     "Supply null as the page ID for a new page. For an existing page, send its last-read version to detect a concurrent edit. Requires current authoring access and an active wiki category. Publishing and archiving require wiki management authority. Published content must contain text.",
@@ -2797,7 +2797,7 @@ const nativePaths = {
     ["p_expected_version"],
   ),
   "/rest/v1/rpc/wiki_attachments": rpc(
-    "readVisibleWikiAttachments",
+    "native_wiki_attachments",
     "Knowledge",
     "List attachments of the visible wiki revision",
     "The reader needs access to the exact page and selected revision. A listed attachment refers to a scanned version. Use the authorised files operation to download it.",
@@ -2809,7 +2809,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/forum_thread": rpc(
-    "readStaffForumThread",
+    "native_forum_thread",
     "Knowledge",
     "Read the current staff discussion",
     "Requires current staff forum access. Includes the caller's subscription state, current moderation flags and the metadata version needed for a reviewed edit.",
@@ -2834,7 +2834,7 @@ const nativePaths = {
     }),
   ),
   "/rest/v1/rpc/forum_posts": rpc(
-    "readStaffForumPosts",
+    "native_forum_posts",
     "Knowledge",
     "Read the visible staff discussion posts",
     "Requires access to the thread. Posts are ordered oldest first. A removed post has a deletion timestamp and a blank structured document.",
@@ -2856,7 +2856,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/create_forum_thread": rpc(
-    "createStaffForumThread",
+    "native_create_forum_thread",
     "Knowledge",
     "Start a staff discussion",
     "Requires a current staff account and an active forum category. The structured first post must contain text. The current author is subscribed automatically.",
@@ -2868,7 +2868,7 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/add_forum_post": rpc(
-    "addStaffForumPost",
+    "native_add_forum_post",
     "Knowledge",
     "Reply to a staff discussion",
     "Requires an accessible discussion that is open for posting. The structured reply must contain text. Repeat an unchanged reply to the same thread with the original client ID.",
@@ -2876,7 +2876,7 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/edit_forum_post": voidRpc(
-    "editOwnStaffForumPost",
+    "native_edit_forum_post",
     "Knowledge",
     "Save a new revision of an authored discussion post",
     "Requires the author's own visible post in an open thread. Pass its last-read version. The edited document must contain text.",
@@ -2887,7 +2887,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/job_briefing": rpc(
-    "readVisibleJobBriefing",
+    "native_job_briefing",
     "Courses",
     "Read the authorised teaching brief and contact for a job",
     "Requires current job management or an eligible lecturer with access to the job. Contact fields are empty when the selected contact visibility or current claim does not allow disclosure.",
@@ -2895,7 +2895,7 @@ const nativePaths = {
     jobBriefingResult,
   ),
   "/rest/v1/rpc/save_job_briefing": rpc(
-    "saveJobBriefing",
+    "native_save_job_briefing",
     "Courses",
     "Save job briefing references and contact visibility",
     "Requires current job management. Send the job ID, last-read version and a request ID. Omitted briefing fields are cleared or set to their default. Repeating an identical request returns the latest authorised brief.",
@@ -2908,7 +2908,7 @@ const nativePaths = {
     jobBriefingResult,
   ),
   "/rest/v1/rpc/wiki_course_templates": rpc(
-    "readWikiCourseTemplateReferences",
+    "native_wiki_course_templates",
     "Courses",
     "List visible course template references on a wiki page",
     "The read follows the caller's visible wiki revision and independent course template authority. The page owner and wiki managers may see the current revision. Other permitted readers see the published revision.",
@@ -2920,7 +2920,7 @@ const nativePaths = {
     },
   ),
   "/rest/v1/rpc/teaching_day": rpc(
-    "readOwnTeachingDay",
+    "native_teaching_day",
     "Courses",
     "Read the current local day's teaching and course preparation",
     "Uses the current profile's IANA time zone. The response includes the lecturer's current confirmed sessions, authorised course resources, deliberately selected course contacts and personal preparation. Other active roles receive an empty list.",
@@ -2928,7 +2928,7 @@ const nativePaths = {
     z.toJSONSchema(teachingDaySchema),
   ),
   "/rest/v1/rpc/save_teaching_preparation": rpc(
-    "saveOwnTeachingPreparation",
+    "native_save_teaching_preparation",
     "Courses",
     "Save one item of the assigned lecturer's preparation",
     "Requires the current lecturer's own confirmed assignment with an unreleased session. Send the last-read preparation version or zero for a new preparation record.",

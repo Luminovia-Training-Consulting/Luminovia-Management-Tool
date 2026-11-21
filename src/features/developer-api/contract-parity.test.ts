@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { internalInstallationBrand } from "../../lib/installation-brand";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
 
 const backend = "https://portal.example.invalid";
@@ -27,6 +28,55 @@ const requestSchema = (path: string) =>
   };
 const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
+
+describe("downloadable domain contracts", () => {
+  it("replaces PostgreSQL JSONB transport placeholders with domain schemas", () => {
+    const usesJsonbPlaceholder = (value: unknown): boolean =>
+      typeof value === "object" &&
+      value !== null &&
+      (("x-postgresql-type" in value &&
+        value["x-postgresql-type"] === "jsonb") ||
+        Object.values(value).some(usesJsonbPlaceholder));
+    for (const edition of [
+      "internal",
+      "customer-managed",
+      "customer-self-hosted",
+    ] as const) {
+      const document =
+        edition === "internal"
+          ? portalOpenApi(backend, true)
+          : portalOpenApi(backend, true, {
+              ...internalInstallationBrand,
+              edition,
+              installationId: "90000000-0000-4000-8000-000000000000",
+            });
+      expect(
+        Object.entries(document.paths)
+          .filter(([, operations]) => usesJsonbPlaceholder(operations))
+          .map(([path]) => path),
+        edition,
+      ).toEqual([]);
+    }
+  });
+
+  it("documents the legacy invitation without enabling mail from Swagger", () => {
+    const path = "/functions/v1/invite-lecturer";
+    const operation = portalOpenApi(backend, true).paths[path];
+    expect(operation).toMatchObject({
+      post: {
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { required: ["email", "idempotency_key"] },
+            },
+          },
+        },
+        responses: { "200": {}, "409": {}, "429": {}, "502": {}, "503": {} },
+      },
+    });
+    expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
+  });
+});
 
 describe("shared amendments and internal exceptional invoices", () => {
   it("documents the consent group on assignment changes and flags eligible candidates", () => {

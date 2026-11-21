@@ -38,7 +38,7 @@ export function sessionPaths(dedicated: boolean) {
   return {
     "/rest/v1/rpc/portal_access": {
       post: {
-        operationId: "checkPortalAccess",
+        operationId: dedicated ? "checkPortalAccess" : "native_portal_access",
         tags: ["Authentication"],
         summary: "Check the current session's portal access",
         description: `${scope} The access check runs after any applicable first-password and privileged authenticator requirements.`,
@@ -49,7 +49,9 @@ export function sessionPaths(dedicated: boolean) {
     },
     "/rest/v1/rpc/authenticator_settings_available": {
       post: {
-        operationId: "checkAuthenticatorSettingsAvailability",
+        operationId: dedicated
+          ? "checkAuthenticatorSettingsAvailability"
+          : "native_authenticator_settings_available",
         tags: ["Authentication"],
         summary: "Check whether this session can manage its authenticator",
         description: `${scope} Returns true for an eligible owner or administrator while authenticator enrollment or enforcement is enabled. In the academy edition this also requires an active licence.`,

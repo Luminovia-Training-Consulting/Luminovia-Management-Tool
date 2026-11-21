@@ -235,7 +235,7 @@ const imapDraft = z.union([
 export const internalMailRead = {
   "/rest/v1/rpc/get_mail_configuration": {
     post: {
-      operationId: "readMailConfiguration",
+      operationId: "native_get_mail_configuration",
       tags: internalTags,
       summary: "Read the SMTP and IMAP configuration status",
       description:
@@ -254,7 +254,7 @@ export const internalMailRead = {
 export const internalMailDownload = {
   "/rest/v1/rpc/save_mail_configuration": {
     post: {
-      operationId: "saveMailConfiguration",
+      operationId: "native_save_mail_configuration",
       tags: internalTags,
       summary: "Save the SMTP and IMAP providers",
       description:
