@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Premium LMS participant read boundary — 21 November 2026
+
+- [x] Keep participant-only Auth identities separate from operational actors and retain the existing accepted, per-company membership plus current Premium entitlement checks.
+- [x] Add the participant search RPC and course-welcome read RPC to the explicit REST allowlist; each read function must enforce its own current course and Premium scope.
+- [x] Correct the company enrolment roster read to check current Premium and caller scope in a stable snapshot; writes continue to lock and serialize with the company switch.
+- [ ] Run the focused Premium database suite against a disposable PostgreSQL instance. This workspace currently cannot connect to Docker, so the new SQL assertions have not executed.
+- [ ] Finish the wider Premium LMS: participant course notifications, course chat posting and attachment delivery, direct API/realtime policy audit, complete learner browser journeys and current-head acceptance. Keep these paths closed until their resource checks and tests are complete.
+
 ## Current-main browser CI repair — 18 November 2026
 
 - [x] Confirm only `main` is published and work from the clean local `main` checkout; do not recreate or push bug-hunt branches.

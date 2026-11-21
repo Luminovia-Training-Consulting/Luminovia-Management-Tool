@@ -127,6 +127,60 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
+        "Participant search reaches only scoped REST filter and live company course",
+        async () => {
+            assert.equal(
+                await actor(
+                    participant,
+                    "set local request.path='/rpc/unified_search';select private.require_portal_access();select 1",
+                ),
+                "1",
+            );
+            assert.equal(
+                await actor(
+                    participant,
+                    "set local request.path='/rpc/course_welcome_content';select private.require_portal_access();select 1",
+                ),
+                "1",
+            );
+            await assert.rejects(
+                actor(
+                    participant,
+                    "set local request.path='/rpc/retained_company_lms';select private.require_portal_access()",
+                ),
+                /42501/,
+            );
+            await assert.rejects(
+                actor(
+                    participant,
+                    "set local request.path='/rpc/company_participants';select private.require_portal_access()",
+                ),
+                /42501/,
+            );
+            for (const kind of ["", "clients", "finance", "people", "jobs", "files"]) {
+                await assert.rejects(
+                    rpc(participant, "unified_search", ["Fictional", kind, null, null, null, 40]),
+                    /42501/,
+                );
+            }
+            const result = await rpc(participant, "unified_search", [
+                "Fictional retained LMS course", "courses", null, null, null, 40,
+            ]);
+            assert.deepEqual(result.items.map((item) => item.id).sort(), [runA, runB].sort());
+        },
+    );
+
+    await check(
+        "Company roster read works when Premium is ON and denies participant or other company",
+        async () => {
+            const roster = await rpc(client, "course_enrolments", [runA]);
+            assert.deepEqual(roster.map((item) => item.user_id), [participant]);
+            await assert.rejects(rpc(client, "course_enrolments", [runB]), /42501/);
+            await assert.rejects(rpc(participant, "course_enrolments", [runA]), /42501/);
+        },
+    );
+
+    await check(
         "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
