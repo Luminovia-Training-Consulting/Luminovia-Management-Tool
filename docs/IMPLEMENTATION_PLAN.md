@@ -15,13 +15,16 @@
 - [x] Share typed Premium settings and retained-summary shapes between the browser and OpenAPI. Confirm one accessible switch across company changes and close and discard retained data on role or connection loss.
 - [x] Verify desktop and mobile calendar colours, tour focus and keyboard board navigation in Chromium with fictional transport. Follow up observed native browser failures with role-scoped and responsive assertions.
 - [x] Enable dedicated course text chat with current licensed membership and opaque activity markers. Real GoTrue and PostgREST cover password-token room creation, send, read and closure. Native Realtime exercises marker delivery, denial on the same open socket and resumption after re-enabling the profile.
-- [x] Serve exact scanned versions to authorised dedicated course audiences. PostgreSQL and the document handler cover revocation, digest checking and retained data. Native Storage/provider and upload acceptance remain pending.
+- [x] Serve exact scanned versions to authorised dedicated course audiences. Native Storage API and the document handler verify byte-level downloads with role revocation and retained data in both editions.
 - [x] Document current, retained and empty attendance correction receipt shapes in OpenAPI and validate their scope against real SQL.
 - [x] Allow an assigned academy lecturer to publish or withdraw the exact retained clean version of their own course material. Validate both dedicated editions in PostgreSQL and PostgREST.
 - [x] Document ten licensed course endpoints in each branded package. Verify successful PostgreSQL responses and the exact signed archive layouts for both editions.
 - [x] Connect normal email/username authentication to the dedicated role and licence scope through the existing Edge handler. Native GoTrue and PostgREST confirm stable identities and bounded service calls.
 - [x] Enter only the verified course area from branded desktop and mobile builds, preserving direct links and rechecking the current installation/profile on reconnect. Desktop and mobile journeys passed in both editions with real GoTrue, PostgREST and the Deno login handler.
 - [x] Verify cold offline PWA startup only reveals the actor-bound opted-in schedule and that logout/account changes purge it. Both native Chromium layouts passed.
+- [x] Accept assigned lecturer material uploads through the existing quarantine and scanner. Both dedicated editions passed exact bytes, no raw Storage access, repeated request, changed digest, scanner rejection and retained-object checks using pinned Storage and ClamAV.
+- [x] Publish the twelve-operation branded contract with the exact active-licence upload and publication scope. Keep the scanner and reservation internals closed to the catalogue.
+- [x] Verify the typed preparation, institution-enquiry, support and integration-key contracts against migrated role fixtures, and correct their obsolete-version HTTP responses on both pinned PostgREST versions.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links

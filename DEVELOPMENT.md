@@ -3638,7 +3638,7 @@ A default build uses the Luminovia internal edition. To preview a customer brand
 
 Use `customer-self-hosted` or `customer-managed`. Keep every raster file adjacent to the JSON. Use PNGs with edges no larger than 2048 × 1024 for the logo, and exact square dimensions matching the icon names (180 px for the Apple touch icon). The build validates the format, sizes and chunk checksums, strips ancillary metadata outside the render allowlist and rejects symlinks and traversal. Use self-assembled brand assets with rights appropriate for the chosen installation.
 
-The build replaces logos, browser and PWA metadata, default language and appearance, and the public API title. Customer packages exclude the Luminovia demo chunks, public demo navigation and vendor brand images. A customer session gets private pages only after the same configured backend confirms a matching installation ID and edition, a current licence, and explicit customer LMS readiness. The current customer API document contains no operational paths and current customer database readiness remains false until the operational edition gates are implemented.
+The build replaces logos, browser and PWA metadata, default language and appearance, and the public API title. Customer packages exclude the Luminovia demo chunks, public demo navigation and vendor brand images. The course area requires the same configured backend to confirm the installation ID, edition, current licence and exact operator-enabled course profile. The customer API document describes that profile's scoped calls, including material upload and publication. The general customer readiness flag remains false while the full edition is in acceptance.
 
 ### Verify an offline browser package
 
@@ -3649,7 +3649,7 @@ node scripts/academy-browser-package.mjs build /absolute/new-package-directory
 node scripts/academy-browser-package.mjs verify /absolute/new-package-directory
 ```
 
-The builder uses Git and tar to stage only the committed source, then compiles in that private temporary directory with the three public build inputs. It compares the owned output with the reviewed brand assets, customer PWA metadata and dormant API installation identity. The ZIP contains static files under `browser/`. The adjacent `manifest.json` records the source revision, package lock digest, edition, installation ID and SHA-256 for the archive and every static file. Verification reads the ZIP without extracting it and rejects unknown paths, nonregular entries, unexpected file metadata and checksum mismatches.
+The builder uses Git and tar to stage only the committed source, then compiles in that private temporary directory with the three public build inputs. It compares the owned output with the reviewed brand assets, customer PWA metadata and the API document for the installation. The ZIP contains static files under `browser/`. The adjacent `manifest.json` records the source revision, package lock digest, edition, installation ID and SHA-256 for the archive and every static file. Verification reads the ZIP without extracting it and rejects unknown paths, nonregular entries, unexpected file metadata and checksum mismatches.
 
 ### Sign and verify an offline browser release
 

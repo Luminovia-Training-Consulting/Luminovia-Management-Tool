@@ -627,6 +627,8 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
 
+The reviewed catalogue covers core account, Premium course, attendance, course preparation, integration credential, institution enquiry and support operations. The migrated catalogue still describes some JSON arguments or responses only at their PostgreSQL transport type. Replace those entries with domain contracts tested against the actual actor-scoped responses before completing API-T07 and API-T08.
+
 | Test    | Automated acceptance / observable behaviour                                                                                               |
 |---------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | API-T01 | Email + password logs into an existing account without password reset or identity change; correct Auth UUID and roles                     |
