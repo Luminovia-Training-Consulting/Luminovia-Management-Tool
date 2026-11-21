@@ -10,6 +10,8 @@ test.skip(
     "Course workspace fixtures require canonical disposable services.",
 );
 
+type CompanyInvitation = {organisation_id: string; version: number};
+
 async function fixture({ upcoming = false } = {}) {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
         manager = await actor("Fictional course workspace manager", "admin"),
@@ -207,6 +209,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
             .select("current_version_id")
             .eq("original_name", name)
             .single(),
+        {requireData: true},
     );
     await resources
         .getByLabel("Geprüfte Dateifassung", {exact: true})
@@ -300,6 +303,7 @@ test("company reviews are current-membership scoped and an unassociated particip
             .eq("course_run_id", f.run)
             .eq("reviewer_id", f.client.id)
             .single(),
+        {requireData: true},
     );
     expect(review.rating).toBe(5);
     await checked(
@@ -307,18 +311,7 @@ test("company reviews are current-membership scoped and an unassociated particip
             .from("client_organisation_memberships")
             .update({removed_at: new Date().toISOString()})
             .eq("user_id", f.client.id)
-            .eq(
-                "organisation_id",
-                (
-                    await checked(
-                        f.service
-                            .from("course_runs")
-                            .select("organisation_id")
-                            .eq("id", f.run)
-                            .single(),
-                    )
-                ).organisation_id,
-            ),
+            .eq("organisation_id", f.org),
     );
     await page.reload();
     await expect(
@@ -355,13 +348,14 @@ test("current instructor publishes a meeting link for a consented participant", 
         email: f.learner.email, password: process.env.E2E_PASSWORD!,
     }));
     const profile = await checked(f.service.from("profiles").select("luminovia_user_id")
-        .eq("id", f.learner.id).single());
+        .eq("id", f.learner.id).single(), {requireData: true});
     await checked(f.adminClient.rpc("request_company_participant_link", {
         p_organisation_id: f.org, p_luminovia_user_id: profile.luminovia_user_id, p_request_id: randomUUID(),
     }));
-    const invitations = await checked(learner.rpc("my_company_participant_invitations"));
+    const invitations: CompanyInvitation[] =
+        await checked(learner.rpc("my_company_participant_invitations"), {requireData: true});
     const invitation = invitations.find((entry) => entry.organisation_id === f.org);
-    expect(invitation).toBeDefined();
+    if (!invitation) throw new Error("Fictional course invitation was not received");
     await checked(learner.rpc("accept_company_participant_invitation", {
         p_organisation_id: f.org, p_expected_version: invitation.version, p_request_id: randomUUID(),
     }));
@@ -433,13 +427,15 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
     const f = await fixture();
     const learner = api(process.env.SUPABASE_ANON_KEY!);
     await checked(learner.auth.signInWithPassword({email:f.learner.email,password:process.env.E2E_PASSWORD!}));
-    const profile = await checked(f.service.from("profiles").select("luminovia_user_id,display_name").eq("id",f.learner.id).single());
+    const profile = await checked(f.service.from("profiles").select("luminovia_user_id").eq("id",f.learner.id).single(),
+        {requireData: true});
     await checked(f.adminClient.rpc("request_company_participant_link", {
         p_organisation_id:f.org,p_luminovia_user_id:profile.luminovia_user_id,p_request_id:randomUUID(),
     }));
-    const invites = await checked(learner.rpc("my_company_participant_invitations"));
+    const invites: CompanyInvitation[] =
+        await checked(learner.rpc("my_company_participant_invitations"), {requireData: true});
     const invite = invites.find((entry) => entry.organisation_id === f.org);
-    expect(invite).toBeDefined();
+    if (!invite) throw new Error("Fictional course invitation was not received");
     await checked(learner.rpc("accept_company_participant_invitation", {
         p_organisation_id:f.org,p_expected_version:invite.version,p_request_id:randomUUID(),
     }));
