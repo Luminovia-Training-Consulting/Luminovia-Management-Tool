@@ -208,7 +208,7 @@ test("combined filters find a real job, claim confirms all five sessions and imm
         .click();
     // Wait for the actual claim receipt while the page may refresh related panels.
     await expect(page.getByRole("status").filter({
-        hasText: /^Dein Auftrag ist bestätigt\.$/,
+        hasText: /^Dein Auftrag ist bestätigt\. Alle Termine sind reserviert\.$/,
     })).toBeVisible();
     const {client, user} = await signInApi(process.env.E2E_LECTURER_EMAIL!);
     const {data: claims, error} = await client
@@ -217,7 +217,27 @@ test("combined filters find a real job, claim confirms all five sessions and imm
         .eq("job_id", id);
     expect(error).toBeNull();
     expect(claims).toHaveLength(1);
-    expect(claims![0].lecturer_id).toBe(user.id);
+    const claim = claims![0];
+    expect(claim).toMatchObject({
+        lecturer_id: user.id,
+        status: "confirmed",
+        amount: 400,
+        total_amount: 2000,
+        currency: "EUR",
+        terms_version: 1,
+        terms: "Fiktive Testkonditionen Version 1.",
+    });
+    const {data: allocations, error: allocationError} = await client
+        .from("assignment_sessions")
+        .select("starts_at,ends_at,released_at")
+        .eq("claim_id", claim.id)
+        .order("starts_at");
+    expect(allocationError).toBeNull();
+    expect(allocations?.map((entry) => ({
+        starts_at: new Date(entry.starts_at).toISOString(),
+        ends_at: new Date(entry.ends_at).toISOString(),
+        released_at: entry.released_at,
+    }))).toEqual(sessions.map(({starts_at, ends_at}) => ({starts_at, ends_at, released_at: null})));
     const {data: storedJob} = await client
         .from("jobs")
         .select("status")

@@ -125,6 +125,9 @@ test("management assigns only subordinate roles while only administration sees a
         expect("regular_lecturer_percent" in reduced).toBe(false);
         expect("senior_lecturer_percent" in reduced).toBe(false);
         expect("policy_version" in reduced).toBe(false);
+        expect((await managerApi.rpc("lecturer_compensation", {
+            p_user_id: teacher.id,
+        })).error?.code).toBe("42501");
         await page.goto("/admin");
         await expect(
             page.getByRole("heading", {
@@ -156,6 +159,15 @@ test("management assigns only subordinate roles while only administration sees a
         await page.getByRole("button", {name: "Abmelden", exact: true}).click();
         await expect(page).toHaveURL(/\/login$/);
         await adminLogin(page, admin);
+        const adminApi = api(process.env.SUPABASE_ANON_KEY!);
+        await checked(adminApi.auth.signInWithPassword({
+            email: admin.email,
+            password: process.env.E2E_PASSWORD!,
+        }), {requireData: true});
+        const policy = await checked(adminApi.rpc("commission_access"), {requireData: true});
+        expect(policy.can_manage_gross).toBe(true);
+        expect(typeof policy.senior_lecturer_percent).toBe("number");
+        const customPercent = policy.senior_lecturer_percent === 31 ? 32 : 31;
         await page.goto("/admin/accounts");
         await page
             .getByRole("searchbox", {name: "Konten suchen", exact: true})
@@ -167,14 +179,19 @@ test("management assigns only subordinate roles while only administration sees a
         const percentage = compensation.getByLabel("Anteil am Kundenbudget (%)", {
             exact: true,
         });
-        await expect(percentage).toHaveValue("50");
-        await percentage.fill("31");
+        await expect(percentage).toHaveValue(String(policy.senior_lecturer_percent));
+        await percentage.fill(String(customPercent));
         await compensation
             .getByRole("button", {name: "Honorar speichern", exact: true})
             .click();
         await expect(compensation.getByRole("status")).toHaveText(
             "Honorar gespeichert.",
         );
+        expect(await checked(adminApi.rpc("lecturer_compensation", {
+            p_user_id: teacher.id,
+        }), {requireData: true})).toMatchObject({
+            percent: customPercent, is_customized: true,
+        });
         await page.reload();
         await page.goto("/admin/accounts");
         await page
@@ -188,7 +205,7 @@ test("management assigns only subordinate roles while only administration sees a
             reloadedCompensation.getByLabel("Anteil am Kundenbudget (%)", {
                 exact: true,
             }),
-        ).toHaveValue("31");
+        ).toHaveValue(String(customPercent));
         const policyScan = await new AxeBuilder({page})
             .include(".account-roles")
             .analyze();

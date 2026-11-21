@@ -15,7 +15,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
     test.setTimeout(120000);
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const admin = await actor("Fictional picker manager", "admin"),
-        learner = await actor("Fictional picker learner", "lecturer");
+        lecturer = await actor("Fictional picker lecturer", "lecturer");
     const org = randomUUID(),
         template = randomUUID(),
         oldTemplate = randomUUID(),
@@ -158,6 +158,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
                 .select("id,status,scope,job_id")
                 .eq("owner_id", admin.id)
                 .single(),
+            {requireData: true},
         );
         expect(stored.status).toBe("clean");
         expect(stored.scope).toBe("job_after");
@@ -259,6 +260,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
                 .eq("owner_id", admin.id)
                 .eq("kind", "participant_course")
                 .single(),
+            {requireData: true},
         );
         expect(channel.course_run_id).toBe(runs[0]);
         expect(channel.job_id).toBeNull();
@@ -276,7 +278,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
                 if (request.url().includes("/rpc/job_picker"))
                     privileged.push(request.url());
             });
-            await login(ordinary, learner.email);
+            await login(ordinary, lecturer.email);
             await ordinary.goto("/files");
             await ordinary
                 .getByRole("button", {name: "Datei hochladen", exact: true})
@@ -294,9 +296,11 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
             await expect(
                 ordinary.getByRole("heading", {name: "Chats", exact: true}),
             ).toBeVisible();
-            await expect(
-                ordinary.getByRole("button", {name: "Gruppe erstellen", exact: true}),
-            ).toHaveCount(0);
+            await ordinary.getByRole("button", {name: "Gruppe erstellen", exact: true}).click();
+            const interestGroup = ordinary.getByRole("dialog", {name: "Neue Gruppe", exact: true});
+            await expect(interestGroup.getByLabel("Gruppenname", {exact: true})).toBeVisible();
+            await expect(interestGroup.getByLabel("Art der Gruppe", {exact: true})).toHaveCount(0);
+            await expect(interestGroup.getByLabel("Kurs für den Teilnahmechat", {exact: true})).toHaveCount(0);
             expect(privileged).toEqual([]);
         } finally {
             await context.close();
@@ -304,6 +308,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
     } finally {
         const rooms = await checked(
             service.from("chat_rooms").select("id").eq("owner_id", admin.id),
+            {requireData: true},
         );
         if (rooms.length) {
             const ids = rooms.map((r) => r.id);
@@ -312,6 +317,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
         }
         const docs = await checked(
             service.from("documents").select("id").eq("owner_id", admin.id),
+            {requireData: true},
         );
         if (docs.length) {
             const ids = docs.map((d) => d.id);
@@ -320,6 +326,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
                     .from("document_versions")
                     .select("object_path")
                     .in("document_id", ids),
+                {requireData: true},
             );
             for (const bucket of ["portal-clean", "portal-quarantine"])
                 await checked(
@@ -356,9 +363,9 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
             service
                 .from("audit_events")
                 .delete()
-                .in("actor_id", [admin.id, learner.id]),
+                .in("actor_id", [admin.id, lecturer.id]),
         );
-        for (const person of [learner, admin])
+        for (const person of [lecturer, admin])
             await checked(service.auth.admin.deleteUser(person.id));
     }
 });
