@@ -180,6 +180,21 @@ async function acceptedJob(
     return {title, id, claimId: result.data.claim_id};
 }
 
+/** Move the exact one-session fictional offer and its accepted allocation into the past. */
+async function finishAcceptedJob(job: Awaited<ReturnType<typeof acceptedJob>>, daysAgo: number) {
+    const starts = Date.now() - daysAgo * 86_400_000;
+    const interval = {
+        starts_at: new Date(starts).toISOString(),
+        ends_at: new Date(starts + 7_200_000).toISOString(),
+    };
+    const scheduled = await service().from("job_sessions").update(interval)
+        .eq("job_id", job.id).select("id").single();
+    expect(scheduled.error).toBeNull();
+    const assigned = await service().from("assignment_sessions").update(interval)
+        .eq("claim_id", job.claimId).select("id").single();
+    expect(assigned.error).toBeNull();
+}
+
 test("executed PDF receipt, original-currency earnings, invoice review and recorded payment corrections work through the UI", async ({
                                                                                                                                          page,
                                                                                                                                          browser,
@@ -351,6 +366,15 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         .getByRole("button", {name: "Rechnung einreichen", exact: true})
         .click();
     dialog = page.getByRole("dialog");
+    for (const job of [eur, aud]) {
+        await expect(dialog.getByText(new RegExp(`^${job.title}: Der letzte geplante Unterrichtstermin hat noch nicht geendet\\.`))).toBeVisible();
+        await expect(dialog.getByRole("checkbox", {name: new RegExp(job.title)})).toHaveCount(0);
+    }
+    await dialog.getByRole("button", {name: "Schließen", exact: true}).click();
+    await finishAcceptedJob(eur, 3);
+    await finishAcceptedJob(aud, 2);
+    await page.reload();
+    await page.getByRole("button", {name: "Rechnung einreichen", exact: true}).click();
     const number = `=QA-${randomUUID().slice(0, 8)}`;
     await dialog.getByLabel("Rechnungsnummer", {exact: true}).fill(number);
     await dialog.getByRole("checkbox", {name: new RegExp(eur.title)}).check();

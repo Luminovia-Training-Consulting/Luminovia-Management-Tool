@@ -319,7 +319,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             .getByRole("button", {name: "Auftrag übernehmen", exact: true})
             .click();
         await expect(teacherPage.getByRole("status").filter({
-            hasText: /^Dein Auftrag ist bestätigt\.$/,
+            hasText: /^Dein Auftrag ist bestätigt\. Alle Termine sind reserviert\.$/,
         })).toBeVisible();
         // Backdate only the fictional isolated schedule, then re-read the
         // course screen so the real final-session gate recalculates eligibility.
@@ -378,7 +378,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
         }
         await teacherPage.reload();
         await teacherPage
-            .getByRole("button", {name: "Rechnung einreichen", exact: true})
+            .getByRole("link", {name: "Rechnung einreichen", exact: true})
             .click();
         await expect(teacherPage).toHaveURL(/\/finance\?claim=/);
         const linkedInvoice = teacherPage.getByRole("dialog", {
