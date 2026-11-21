@@ -13,11 +13,11 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Loading, Notice } from "../../components/common";
 import "./archived-personal-i18n";
 
-type ArchivedMaterial = {
-  id: string;
-  original_name: string;
-  archived_at: string;
-};
+import {
+  archivedPersonalMaterialPageSchema,
+  type ArchivedMaterial,
+} from "./schema";
+
 type Cursor = { at: string; id: string } | null;
 
 /** Own server-confirmed archive list, including a bounded keyset cursor. */
@@ -44,7 +44,7 @@ export function ArchivedPersonalMaterials({ actor }: { actor: string }) {
         p_limit: 30,
       });
       if (error) throw error;
-      return (data ?? []) as ArchivedMaterial[];
+      return archivedPersonalMaterialPageSchema.parse(data ?? []);
     },
     getNextPageParam: (last) =>
       last.length === 30

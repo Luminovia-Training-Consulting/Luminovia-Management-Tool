@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("personal_material_restore", async ({sql, actor}) => {
     const owner = randomUUID(),
@@ -39,12 +40,15 @@ await withTestDatabase("personal_material_restore", async ({sql, actor}) => {
       values(${q(dedicatedVersion)},${q(dedicated)},${q(owner)},${q(randomUUID())},1,'fixture/dedicated','Fictional evidence.txt','text/plain',5,'clean',repeat('c',64));
     update public.documents set current_version_id=${q(dedicatedVersion)},deleted_at=now() where id=${q(dedicated)};
     insert into private.support_attachments(ticket_id,document_id,version_id,attached_by,internal) values(${q(ticket)},${q(dedicated)},${q(dedicatedVersion)},${q(owner)},true);`);
-    const list = (who, aal = "aal1") =>
-        actor(
+    const list = async (who, aal = "aal1") => {
+        const rows = JSON.parse(await actor(
             who,
             "select coalesce(jsonb_agg(x),'[]') from public.archived_personal_materials() x",
             aal,
-        ).then(JSON.parse);
+        ));
+        assertLmsResponse("archived_personal_materials", rows);
+        return rows;
+    };
     const restore = (who, id, aal = "aal1") =>
         actor(who, `select public.restore_personal_material(${q(id)})`, aal);
     assert.deepEqual(

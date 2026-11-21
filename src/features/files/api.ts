@@ -7,26 +7,8 @@ import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { queryOptions } from "@tanstack/react-query";
 
-/** Authorized document metadata with scope, scan state and the exact current version ID. */
-export interface PortalDocument {
-  id: string;
-  owner_id: string;
-  uploaded_by: string;
-  scope: "personal" | "room" | "job_before" | "job_after";
-  kind: string;
-  room_id: string | null;
-  job_id: string | null;
-  original_name: string;
-  mime_type: string;
-  size_bytes: number;
-  status: string;
-  current_version_id: string | null;
-  created_at: string;
-  deleted_at: string | null;
-  personal_tags?: string[];
-  personal_folder?: string;
-  personal_version?: number;
-}
+import type { PortalDocument } from "./schema";
+export type { PortalDocument } from "./schema";
 
 /** Requested file context and optional retry/replacement references; the server validates every relationship. */
 export interface UploadContext {

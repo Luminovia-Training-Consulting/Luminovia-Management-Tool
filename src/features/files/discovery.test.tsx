@@ -310,7 +310,7 @@ it("retains stale drafts and disables offline organisation changes", async () =>
   state.rpc.mockImplementation((name) =>
     name === "document_discovery"
       ? response({ items: [item()], has_more: false, next_cursor: null })
-      : response(null, { code: "40001" }),
+      : response(null, { code: "PT409" }),
   );
   const view = mount();
   await screen.findByText(item().original_name);

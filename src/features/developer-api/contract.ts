@@ -6,6 +6,7 @@ import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts"
 import { academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
+import { fileDiscoveryPaths } from "./file-discovery-contract.ts";
 import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   notificationCredentialPaths,
@@ -409,6 +410,7 @@ const saveCalendarSubscription = rpc(
 );
 
 const nativePaths = {
+  ...fileDiscoveryPaths,
   ...courseBuildingBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,

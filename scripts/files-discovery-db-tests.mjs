@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("files_discovery", async ({sql, actor}) => {
     const teacher = randomUUID(),
@@ -16,15 +17,18 @@ await withTestDatabase("files_discovery", async ({sql, actor}) => {
         checks++;
         console.log("PASS " + name);
     };
-    const read = async (who = teacher, args = "") =>
-        JSON.parse(await actor(who, `select public.document_discovery(${args})`));
-    const save = async (who, id, version, tags = [], folder = "") =>
-        JSON.parse(
-            await actor(
-                who,
-                `select public.save_document_organisation(${q(id)},${q(JSON.stringify({tags, folder}))}::jsonb,${version})`,
-            ),
-        );
+    const metadata = async (name, request) => {
+        const result = JSON.parse(await request);
+        assertLmsResponse(name, result);
+        return result;
+    };
+    const read = (who = teacher, args = "") =>
+        metadata("document_discovery", actor(who, `select public.document_discovery(${args})`));
+    const save = (who, id, version, tags = [], folder = "") =>
+        metadata("save_document_organisation", actor(
+            who,
+            `select public.save_document_organisation(${q(id)},${q(JSON.stringify({tags, folder}))}::jsonb,${version})`,
+        ));
     const oldest = randomUUID(),
         foreign = randomUUID();
     await sql(
@@ -190,11 +194,11 @@ await withTestDatabase("files_discovery", async ({sql, actor}) => {
             );
             assert.match(
                 results.find((item) => item.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             await assert.rejects(
                 save(teacher, oldest, 1, ["Stale"], "Stale"),
-                /40001/,
+                /PT409/,
             );
             for (const payload of [
                 {tags: ["x"], folder: "x", user_id: peer},

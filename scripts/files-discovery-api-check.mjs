@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {withApiFixture} from "./testing/api.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withApiFixture(
     async ({actor, passwordOnly, service, checked, defer, url, suffix}) => {
@@ -49,11 +50,14 @@ await withApiFixture(
         );
         assert.equal(legacy.length, 1000);
         assert.ok(!legacy.some((item) => item.id === oldest));
-        const search = async (who, extra = {}) =>
-            checked(
+        const search = async (who, extra = {}) => {
+            const result = await checked(
                 who.client.rpc("document_discovery", {p_search: suffix, ...extra}),
                 "Read actual authorized discovery",
             );
+            assertLmsResponse("document_discovery", result);
+            return result;
+        };
         assert.equal(
             (await search(owner, {p_search: needle})).items[0].id,
             oldest,
@@ -81,6 +85,7 @@ await withApiFixture(
             write(owner, oldest, 0, ["Private-tag"], "Private folder"),
             "Save actual personal organisation",
         );
+        assertLmsResponse("save_document_organisation", own);
         assert.equal(own.version, 1);
         assert.equal(
             (
@@ -110,10 +115,9 @@ await withApiFixture(
             write(owner, oldest, 1, ["B"], "B"),
         ]);
         assert.equal(concurrent.filter((result) => !result.error).length, 1);
-        assert.equal(
-            concurrent.find((result) => result.error)?.error.code,
-            "40001",
-        );
+        const conflict = concurrent.find((result) => result.error);
+        assert.equal(conflict?.status, 409);
+        assert.equal(conflict?.error.code, "PT409");
         assert.equal(
             (await owner.client.rpc("document_discovery", {p_limit: 101})).error
                 ?.code,

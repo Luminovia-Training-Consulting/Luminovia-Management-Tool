@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
 import { ArchivedPersonalMaterials } from "./archived-personal";
 
+const documentId = "a9bfdb1a-5094-41ee-80db-faf7161a184a";
 const fake = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 const client = new QueryClient({
@@ -37,7 +38,7 @@ it("shows only confirmed archive results and restores after explicit confirmatio
       ? Promise.resolve({
           data: [
             {
-              id: "doc",
+              id: documentId,
               original_name: "Fictional.txt",
               archived_at: "2035-01-01T00:00:00Z",
             },
@@ -67,7 +68,7 @@ it("shows only confirmed archive results and restores after explicit confirmatio
     }),
   );
   expect(fake.rpc).toHaveBeenCalledWith("restore_personal_material", {
-    p_id: "doc",
+    p_id: documentId,
   });
   expect(
     within(confirm).getByRole("button", {
@@ -87,7 +88,7 @@ it("preserves the confirmation and reports failure without claiming success", as
       ? {
           data: [
             {
-              id: "doc",
+              id: documentId,
               original_name: "Fictional.txt",
               archived_at: "2035-01-01T00:00:00Z",
             },
