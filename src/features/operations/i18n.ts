@@ -41,6 +41,85 @@ const pairs: Record<string, [string, string]> = {
     "{{present}} present · {{absent}} absent · {{excused}} excused · {{sessions}} sessions",
   ],
   participantMoreCourses: ["Weitere Kurse laden", "Load more courses"],
+  participantManageLink: [
+    "Bestehendes Konto verknüpfen",
+    "Link an existing account",
+  ],
+  participantManageInvite: ["Per E-Mail einladen", "Invite by email"],
+  participantAssignCourses: ["Kurse zuweisen", "Assign courses"],
+  participantAssignFor: [
+    "Kurse zuweisen · {{name}}",
+    "Assign courses · {{name}}",
+  ],
+  participantAssignHelp: [
+    "Wähle veröffentlichte Kurse, die noch nicht begonnen haben. Die Einschreibung gilt für den gesamten Kurs.",
+    "Choose published courses that have yet to start. Each enrolment covers the entire course.",
+  ],
+  participantAssignSearch: ["Kurse nach Titel suchen", "Find courses by title"],
+  participantAssignSearchButton: ["Suchen", "Search"],
+  participantAssignClearSearch: ["Suche löschen", "Clear search"],
+  participantAssignNoCourses: [
+    "Für diese Person sind aktuell keine weiteren Kurse verfügbar.",
+    "There are currently no more courses available for this participant.",
+  ],
+  participantAssignNoResults: [
+    "Kein Kurs passt zur Suche.",
+    "No courses match the search.",
+  ],
+  participantAssignSelection: [
+    "Ausgewählte Kurse ({{count}})",
+    "Selected courses ({{count}})",
+  ],
+  participantAssignDeselect: [
+    "{{title}} aus Auswahl entfernen",
+    "Remove {{title}} from selection",
+  ],
+  participantAssignLimit: [
+    "Bis zu {{count}} Kurse pro Einschreibungsvorgang.",
+    "Up to {{count}} courses per enrolment request.",
+  ],
+  participantAssignBack: ["Zurück zur Teilnahme", "Back to attendance"],
+  participantAssignConfirm_one: [
+    "In {{count}} Kurs einschreiben",
+    "Enrol in {{count}} course",
+  ],
+  participantAssignConfirmEmpty: [
+    "Auswahl einschreiben",
+    "Enrol in selected courses",
+  ],
+  participantAssignConfirm_other: [
+    "In {{count}} Kurse einschreiben",
+    "Enrol in {{count}} courses",
+  ],
+  participantAssignSaving: ["Einschreibung läuft …", "Enrolling …"],
+  participantAssignUnavailable: [
+    "Mindestens ein Kurs ist nicht mehr verfügbar. Es wurde keine neue Einschreibung vorgenommen. Prüfe die Auswahl.",
+    "At least one course is no longer available. No new enrolments were added. Review your selection.",
+  ],
+  participantAssignError: [
+    "Die Einschreibung konnte nicht bestätigt werden. Prüfe die Auswahl oder versuche es erneut.",
+    "Enrolment could not be confirmed. Review the selection or try again.",
+  ],
+  participantAssignSuccess_one: [
+    "{{count}} neuer Kurs zugewiesen.",
+    "{{count}} new course assigned.",
+  ],
+  participantAssignSuccess_other: [
+    "{{count}} neue Kurse zugewiesen.",
+    "{{count}} new courses assigned.",
+  ],
+  participantAssignUnchanged: [
+    "{{count}} unverändert.",
+    "{{count}} unchanged.",
+  ],
+  participantAssignAlreadyDone: [
+    "Die Teilnahme war bereits erfasst.",
+    "Enrolment was already recorded.",
+  ],
+  participantCourseTimeZone: [
+    "Kurszeitzone: {{zone}}",
+    "Course time zone: {{zone}}",
+  ],
   participantHistory: ["Einladungen und Verlauf", "Invitations and history"],
   participantHistoryDescription: [
     "Anfragen und Aktionen dieses Unternehmens. Die Annahme einer Verknüpfung erscheint als eigener Eintrag.",

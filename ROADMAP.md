@@ -34,7 +34,7 @@ See the [current implementation matrix](docs/IMPLEMENTATION_PLAN.md#requested-ch
 ### Latest LMS implementation and verification
 
 - Course staff can publish versioned welcome content with protected joining instructions and selected scanned course materials. The legacy text-only endpoint preserves the richer fields. PostgreSQL and PostgREST tests cover stale versions, role changes and attachment removal.
-- The Premium company participant centre shows the learner's courses and attendance totals for the current company. It supports a private versioned company reference. PostgreSQL and native HTTP verify pagination, Premium OFF, cross-company isolation and conflicting updates.
+- The Premium company participant centre shows attendance, a private versioned company reference and assignment of several upcoming published courses to one learner. PostgreSQL and native HTTP verify pagination, current Premium and company scope, conflict rollback and retries that retain existing enrolments.
 - Native Chromium has exercised the public demo, meeting links, protected documents, attendance import, course chat and PWA behaviour in the tested desktop and mobile profiles. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) identifies the narrower evidence for each feature and the pending combined acceptance matrix.
 - The current authenticated API inventory and browser RPC types are regenerated from the migrated database. Internal Premium now has closed schemas for school-class assignment and course-chat protection. Other operations still need closed request or response schemas, detailed per-role HTTP coverage and API parity checks. The [API reference](API_REFERENCE.md) records the exact inventory.
 
@@ -132,9 +132,9 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 ### R2.1 — Complete product API, Swagger and integration tooling (`P1`, with security-critical parts `P0`)
 
-- [ ] Implement API-01–API-08 from Section 10 using existing Auth/RPC/Edge/File integrations. Publish a complete versioned operation catalogue, with explicit permissions and authenticated request/response/error schemas.
-- [ ] Add a fully navigable Swagger UI and downloadable OpenAPI 3.1 definition for the real installed edition; interactive requests use short-lived caller tokens and remain subject to RLS.
-- [ ] Add named, scoped, revocable integration credentials and event/webhook support where approved. No permanent password-as-key API; no elevated service credentials in the browser.
+- [ ] Complete API-01–API-08 from Section 10 using the existing Auth, RPC, Edge and file integrations. Fill the remaining permission, request, response and error contracts in the versioned operation catalogue.
+- [x] Add searchable Swagger UI and a downloadable OpenAPI 3.1 definition for the installed edition. Interactive requests use the current caller's session and remain subject to database permission checks. The Academy explorer covers its documented database requests; its download also covers supported file and account requests.
+- [x] Add named, scoped, revocable credentials for the published course index and signed course webhooks. Local fixtures cover credential rotation, revocation, delivery attempts and retry scope. The full API acceptance matrix remains below.
 - [ ] Implement API-T01–API-T20 in the canonical CI suite; validate API parity, authenticated files, Premium OFF denial, versioning, concurrent actions and backward compatibility.
 
 ### R3 — Premium LMS foundation (`P1`, blocking any Premium customer activation)
@@ -298,7 +298,7 @@ Company users cannot assign/change elevated global roles. Assignment/enrolment/v
 **Company participant centre:** Company dashboard presents its scoped participants, public user IDs, company-specific reference IDs, invitation state, linked courses, upcoming courses, attendance summaries for its own courses and scoped action logs. Company may invite/create a participant, link an existing valid participant ID with acceptance, enrol or remove them, and assign one participant to multiple permitted courses. Show duplicate/incompatible-role/disabled-Premium errors without
 exposing other organisations' records.
 
-The internal participant centre now lists invitation requests, consent and scoped actions in **Invitations and history**. Company-entered identifiers and delivery or matching outcomes are private. Enrolment history starts with this update, which records the company when an enrolment changes. Consolidated multi-course assignment controls remain open.
+The internal participant centre lists invitation requests, consent and scoped actions in **Invitations and history**. Company-entered identifiers and delivery or matching outcomes are private. Enrolment events record the owning company at the time of the change. **Courses and attendance → Assign courses** supports filtered selection and enrolment in up to 50 eligible upcoming whole courses in one transaction. Existing active enrolments and completed courses are retained.
 
 **Participant dashboard:** After login, show enabled company contexts, upcoming/current/completed enrolled courses, lecturer/contact information authorised for the course, dates/time zones, virtual classroom link, welcome text, shared learning materials, course group chat, allowed exam files, participant-relevant notifications and permitted learning activities. A participant cannot see the company-wide attendance roster, other participants' individual attendance notes, lecturer remuneration,
 customer contracts or company-private documents.
@@ -611,7 +611,7 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 - Publish a **complete machine-readable OpenAPI 3.1** document (JSON or YAML) describing every supported public API path/method, operation ID, role/scope, request and response schemas, content types, status codes, validation failures, error envelope, examples, cursor rules, upload/download flows, token requirements and API limits.
 - Provide an **interactive Swagger UI** with a discoverable link in Help/Integrations for permitted administrators and developers. Example candidate routes are `/api/docs` and `/api/openapi.json`—**not assertions of existing routes**. Swagger must use the **same version and capabilities** as the running implementation.
-- Provide searchable tags and DE/EN helper content, actionable fake-data examples, tested `curl`, Python and TypeScript samples, API changelog and concrete authorisation/error guidance.
+- Provide searchable tags and DE/EN helper content, actionable fake-data examples, API changelog and concrete authorisation/error guidance. The [published course index quickstart](scripts/examples/README.md) provides tested curl, Python and TypeScript clients for scoped paging and invalid-credential errors.
 - Swagger `Authorize` must authenticate a user safely and use that caller's token. Restricted try-it-out actions must not run without the required permission. Demo/sandbox examples must be isolated fictional data; no production account passwords, server service-role keys or private documents in static docs.
 - Generate/validate schemas against live endpoints and actual response samples during CI. Unsupported or disabled operations must not be presented as usable and must fail closed server-side; provide a clear availability/permission reason.
 

@@ -89,6 +89,10 @@ import {
   retainedCompanyLmsSchema,
 } from "../operations/company-premium-schema.ts";
 import {
+  companyAssignableCoursesSchema,
+  companyCourseAssignmentLimit,
+  companyCourseAssignmentReceiptSchema,
+  companyCourseSearchLimit,
   companyParticipantHistorySchema,
   companyParticipantOverviewSchema,
   companyParticipantReferenceSchema,
@@ -1597,6 +1601,43 @@ const nativePaths = {
     },
     z.toJSONSchema(companyParticipantHistorySchema),
     ["p_before_at", "p_before_id", "p_limit"],
+  ),
+  "/rest/v1/rpc/company_participant_assignable_courses": rpc(
+    "companyParticipantAssignableCourses",
+    "Premium LMS",
+    "Find published upcoming courses that a company participant can join",
+    "Requires current internal participant management rights, active company Premium and an active company participant membership. Filters titles by literal search text. The result excludes currently enrolled and completed courses and is ordered by first start time and course ID.",
+    {
+      ...organisation,
+      p_user_id: uuid,
+      p_search: {
+        type: "string",
+        maxLength: companyCourseSearchLimit,
+        default: "",
+      },
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 30 },
+      p_offset: { type: "integer", minimum: 0, default: 0 },
+    },
+    z.toJSONSchema(companyAssignableCoursesSchema),
+    ["p_search", "p_limit", "p_offset"],
+  ),
+  "/rest/v1/rpc/assign_company_participant_courses": rpc(
+    "assignCompanyParticipantCourses",
+    "Premium LMS",
+    "Enrol one active company participant in multiple whole courses",
+    "Applies the selection in one transaction. Courses must still belong to the company and remain eligible. An unavailable course returns HTTP 409 and rolls back the selection. Already enrolled or completed courses stay unchanged, including on retry. Each selected ID appears once in the receipt.",
+    {
+      ...organisation,
+      p_user_id: uuid,
+      p_run_ids: {
+        type: "array",
+        minItems: 1,
+        maxItems: companyCourseAssignmentLimit,
+        uniqueItems: true,
+        items: uuid,
+      },
+    },
+    z.toJSONSchema(companyCourseAssignmentReceiptSchema),
   ),
   "/rest/v1/rpc/set_company_participant_reference": rpc(
     "setCompanyParticipantReference",

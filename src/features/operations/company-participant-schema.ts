@@ -4,6 +4,8 @@ import { z } from "zod";
 const count = z.int().nonnegative();
 const instant = z.iso.datetime({ offset: true });
 export const companyReferenceLimit = 64;
+export const companyCourseAssignmentLimit = 50;
+export const companyCourseSearchLimit = 200;
 const companyReference = z
   .string()
   .min(1)
@@ -44,6 +46,26 @@ export const companyParticipantOverviewSchema = z.object({
     .max(100),
   has_more: z.boolean(),
 });
+
+const assignableCourse = z.strictObject({
+  run_id: z.uuid(),
+  title: z.string(),
+  starts_at: instant,
+  ends_at: instant,
+  time_zone: z.string(),
+});
+export type AssignableCompanyCourse = z.infer<typeof assignableCourse>;
+export const companyAssignableCoursesSchema = z.strictObject({
+  items: z.array(assignableCourse).max(100),
+  has_more: z.boolean(),
+});
+export const companyCourseAssignmentReceiptSchema = z.strictObject({
+  enrolled: z.array(z.uuid()).max(companyCourseAssignmentLimit),
+  unchanged: z.array(z.uuid()).max(companyCourseAssignmentLimit),
+});
+export type CompanyCourseAssignmentReceipt = z.infer<
+  typeof companyCourseAssignmentReceiptSchema
+>;
 
 export const companyParticipantHistorySchema = z.strictObject({
   items: z

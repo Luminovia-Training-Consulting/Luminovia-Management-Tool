@@ -1,12 +1,55 @@
 .company-participant-row,
 .company-participant-row-actions,
-.company-participant-details {
+.company-participant-details,
+.company-participant-course-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
   overflow-wrap: anywhere;
+}
+
+.company-participant-list {
+  margin-block: 1rem;
+}
+
+.company-participant-row {
+  padding-block: 0.75rem;
+  border-block-start: 1px solid var(--line);
+  align-items: center;
+}
+
+.company-participant-row small {
+  display: block;
+}
+
+.company-participant-row p {
+  margin-block: 0.25rem 0;
+}
+
+.company-participant-invitations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.company-participant-invitations form {
+  min-inline-size: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.company-participant-invitations h3 {
+  margin: 0 0 0.75rem;
+}
+
+.company-participant-details {
+  margin: 1.25rem 0 0;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--line);
 }
 
 .company-participant-details dd {
@@ -22,7 +65,7 @@
 }
 
 .company-participant-courses {
-  margin-block: 1rem;
+  margin-block: 1rem 0;
 }
 
 .company-participant-courses p,
@@ -33,6 +76,105 @@
 
 .company-participant-courses li {
   overflow-wrap: anywhere;
+}
+
+.company-course-assignment,
+.company-course-options,
+.company-course-selection ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.company-course-assignment p {
+  margin: 0;
+}
+
+.company-course-search,
+.company-course-actions,
+.company-course-selection li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.company-course-search .field {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.company-course-options,
+.company-course-selection ul {
+  list-style: none;
+  padding: 0;
+}
+
+.company-course-options label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  min-block-size: 44px;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.company-course-options input {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin-block-start: 0.25rem;
+}
+
+.company-course-options label:has(:checked) {
+  border-color: var(--focus-ring);
+}
+
+.company-course-options small {
+  display: block;
+}
+
+.company-course-selection summary {
+  min-block-size: 44px;
+  align-content: center;
+  cursor: pointer;
+}
+
+.company-course-selection li {
+  align-items: center;
+  justify-content: space-between;
+  overflow-wrap: anywhere;
+}
+
+.company-course-actions {
+  justify-content: flex-end;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--line);
+}
+
+@media (max-width: 520px) {
+  .company-course-search .field {
+    flex-basis: 100%;
+  }
+
+  .dialog-content:has(.company-course-assignment) {
+    scroll-padding-block-end: 7rem;
+  }
+
+  .company-course-actions {
+    position: sticky;
+    inset-block-end: 0;
+    padding-block-end: 0.25rem;
+    background: var(--surface);
+  }
+
+  .company-course-actions .button {
+    flex: 1 1 auto;
+  }
 }
 
 .company-participant-history {

@@ -13,12 +13,14 @@ export function Dialog({
   onOpenChange,
   title,
   description,
+  returnFocusTo,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
+  returnFocusTo?: HTMLElement | null;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -26,7 +28,15 @@ export function Dialog({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay" />
-        <DialogPrimitive.Content className="dialog-content">
+        <DialogPrimitive.Content
+          className="dialog-content"
+          onCloseAutoFocus={(event) => {
+            if (returnFocusTo?.isConnected) {
+              event.preventDefault();
+              returnFocusTo.focus();
+            }
+          }}
+        >
           <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description>
             {description}

@@ -33,9 +33,10 @@ export function CompanyParticipantsPanel({
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(
-    null,
-  );
+  const [detailsTarget, setDetailsTarget] = useState<{
+    userId: string;
+    trigger: HTMLButtonElement;
+  } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<CompanyParticipant | null>(
     null,
   );
@@ -141,7 +142,7 @@ export function CompanyParticipantsPanel({
   if (participants.isError)
     return <ErrorState retry={() => void participants.refetch()} />;
   const selected = participants.data.find(
-    (row) => row.user_id === selectedParticipant,
+    (row) => row.user_id === detailsTarget?.userId,
   );
 
   return (
@@ -171,80 +172,12 @@ export function CompanyParticipantsPanel({
           )}
         </Notice>
       )}
-      <form
-        className="participant-link-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setNotice(null);
-          requestLink.mutate(userId);
-        }}
-      >
-        <Field
-          id={`participant-user-id-${organisationId}`}
-          label={t("participantUserId")}
-        >
-          <input
-            id={`participant-user-id-${organisationId}`}
-            value={userId}
-            maxLength={32}
-            autoComplete="off"
-            onChange={(event) => setUserId(event.currentTarget.value)}
-          />
-        </Field>
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={
-            !online || requestLink.isPending || userId.trim().length < 1
-          }
-        >
-          {t("requestParticipantLink")}
-        </Button>
-      </form>
-      <form
-        className="participant-invite-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setNotice(null);
-          invite.mutate();
-        }}
-      >
-        <Field
-          id={`participant-invite-name-${organisationId}`}
-          label={t("participantInviteName")}
-        >
-          <input
-            id={`participant-invite-name-${organisationId}`}
-            value={displayName}
-            maxLength={120}
-            autoComplete="off"
-            onChange={(event) => setDisplayName(event.currentTarget.value)}
-            required
-          />
-        </Field>
-        <Field
-          id={`participant-invite-email-${organisationId}`}
-          label={t("participantInviteEmail")}
-        >
-          <input
-            id={`participant-invite-email-${organisationId}`}
-            type="email"
-            value={email}
-            maxLength={254}
-            autoComplete="off"
-            onChange={(event) => setEmail(event.currentTarget.value)}
-            required
-          />
-        </Field>
-        <Button type="submit" disabled={!online || invite.isPending}>
-          {t("inviteParticipant")}
-        </Button>
-      </form>
       <div className="company-participant-list">
         {participants.data.length ? (
           participants.data.map((participant) => (
             <article
               className="company-participant-row"
+              aria-label={participant.display_name}
               key={participant.user_id}
             >
               <div>
@@ -261,13 +194,18 @@ export function CompanyParticipantsPanel({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setSelectedParticipant(participant.user_id)}
+                  onClick={(event) => {
+                    setDetailsTarget({
+                      userId: participant.user_id,
+                      trigger: event.currentTarget,
+                    });
+                  }}
                 >
                   {t("participantOpenDetails")}
                 </Button>
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   disabled={!online || remove.isPending}
                   onClick={() => setRemoveTarget(participant)}
                 >
@@ -280,13 +218,87 @@ export function CompanyParticipantsPanel({
           <p className="muted">{t("participantListEmpty")}</p>
         )}
       </div>
+      <div className="company-participant-invitations">
+        <form
+          className="participant-link-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setNotice(null);
+            requestLink.mutate(userId);
+          }}
+        >
+          <h3>{t("participantManageLink")}</h3>
+          <Field
+            id={`participant-user-id-${organisationId}`}
+            label={t("participantUserId")}
+          >
+            <input
+              id={`participant-user-id-${organisationId}`}
+              value={userId}
+              maxLength={32}
+              autoComplete="off"
+              onChange={(event) => setUserId(event.currentTarget.value)}
+            />
+          </Field>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={
+              !online || requestLink.isPending || userId.trim().length < 1
+            }
+          >
+            {t("requestParticipantLink")}
+          </Button>
+        </form>
+        <form
+          className="participant-invite-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setNotice(null);
+            invite.mutate();
+          }}
+        >
+          <h3>{t("participantManageInvite")}</h3>
+          <Field
+            id={`participant-invite-name-${organisationId}`}
+            label={t("participantInviteName")}
+          >
+            <input
+              id={`participant-invite-name-${organisationId}`}
+              value={displayName}
+              maxLength={120}
+              autoComplete="off"
+              onChange={(event) => setDisplayName(event.currentTarget.value)}
+              required
+            />
+          </Field>
+          <Field
+            id={`participant-invite-email-${organisationId}`}
+            label={t("participantInviteEmail")}
+          >
+            <input
+              id={`participant-invite-email-${organisationId}`}
+              type="email"
+              value={email}
+              maxLength={254}
+              autoComplete="off"
+              onChange={(event) => setEmail(event.currentTarget.value)}
+              required
+            />
+          </Field>
+          <Button type="submit" disabled={!online || invite.isPending}>
+            {t("inviteParticipant")}
+          </Button>
+        </form>
+      </div>
       {selected && (
         <CompanyParticipantDetails
           key={`${actor}:${organisationId}:${selected.user_id}`}
           actor={actor}
           organisationId={organisationId}
           participant={selected}
-          onClose={() => setSelectedParticipant(null)}
+          returnFocusTo={detailsTarget?.trigger}
+          onClose={() => setDetailsTarget(null)}
         />
       )}
       {historyOpen && (

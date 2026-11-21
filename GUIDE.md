@@ -253,6 +253,10 @@ In **Willkommen im Kurs / Welcome to the course**, edit the heading, welcome mes
 
 In the internal Premium company's participant centre, open **Kurse und Teilnahme / Courses and attendance** for an active participant. The detail view lists that company's course enrolments and confirmed attendance counts. Save an optional participant reference unique within the company. Clearing the field removes the reference. An older membership version or a duplicate company reference must be resolved before saving again.
 
+**Deutsch.** Über **Kurse zuweisen** kannst du kommende veröffentlichte Kurse nach Titel suchen und mehrere auswählen. Die Auswahl bleibt beim Suchen und Nachladen erhalten. Prüfe die Kurszeitzone und wähle **In … Kurse einschreiben**. Die Bestätigung erscheint in der Teilnahmeübersicht. Wenn ein Kurs inzwischen nicht mehr verfügbar ist, bleibt die Auswahl zur Korrektur geöffnet. In diesem Fall wird keine neue Einschreibung gespeichert.
+
+**English.** Use **Assign courses** to search for upcoming published courses by title and select several at once. Your selection persists across searches and pages. Check each course time zone and select **Enrol in … courses**. The receipt appears in the attendance view. If any course has become unavailable, the selection stays open for review and the portal saves no new enrolments.
+
 Open **Einladungen und Verlauf / Invitations and history** to see requests, accepted links, removal of accepted links, reference changes and new enrolment changes for the selected company. A request entry confirms receipt. The participant's consent appears as a separate event. Entries show the time and activity, with the newest first.
 
 The course chat admits assigned lecturers and eligible enrolled learners through current room membership. Linked company contacts can read their own course group. Under **Administration → Companies → Retained data**, an administrator can provide a reason to inspect the tenant’s course chat. The system records each inspection, including when Premium is off. Personal chats and unrelated groups use their own access rules.

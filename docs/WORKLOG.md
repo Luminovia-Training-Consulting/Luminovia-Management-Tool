@@ -1,3 +1,11 @@
+# 21 November 2026 — Company enrolment and integration examples
+
+The Premium company participant centre now puts the roster ahead of the two invitation forms and gives course assignment priority in the details dialog. Company staff can search published courses, select up to 50 whole courses across searches and enrol one participant in a single transaction. A stale selection rolls back new enrolments while preserving the user's choices for correction. Existing and completed enrolments remain intact. The detail view shows the course time zone and returns keyboard focus to the action after leaving the selection.
+
+Native PostgreSQL and PostgREST 16.5 exercised role and Premium checks, scope, pagination, stale selection rollback, exact-state retry, retained enrolment history and course chat membership. The two new PL/pgSQL routines passed strict SQL lint. The native HTTP requests and responses matched the published OpenAPI schemas. The actual React interface was checked in German desktop light and English mobile dark in Chromium with fictional transport, including long titles, a visible mobile action, keyboard submission and focus restoration.
+
+The roadmap now records the existing Swagger downloads, scoped integration credentials and the bounded supported linked-schedule changes. The bilingual course-index quickstarts run with curl, Python and TypeScript. Four loopback tests exercise the actual Edge handler, scoped catalogue reads, paging, revoked credentials and redirect denial. Joint schedule changes, exception invoicing and the wider role-browser acceptance remain open.
+
 # 21 November 2026 — Standalone Premium LMS without brokerage or accounting
 
 The two dedicated browser packages compile the local LMS, administration, help and API explorer. The build excludes internal marketplace, commercial records, finance and accounting modules as well as their Workbox cache entries. Old business bookmarks lead to the local not-found view. German and English Academy administration labels identify internal instructors and training coordinators. The scoped course index and protected Academy branding upload remain available.
