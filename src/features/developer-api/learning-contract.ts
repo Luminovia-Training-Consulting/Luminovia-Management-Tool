@@ -69,6 +69,18 @@ const quizQuestion = {
 const dateRange = { starts_at: dateTime, ends_at: dateTime };
 const resourceReference = { id: uuid, name: text, version: integer };
 
+export const meetingUrl = nullable({
+  ...text,
+  format: "uri",
+  pattern: "^https://",
+  maxLength: 2048,
+});
+export const meetingLinkResult = record({
+  url: meetingUrl,
+  version: integer,
+  can_edit: boolean,
+});
+
 /** Only staff see answer indices, and learner projections have no roster or attendance history. */
 const workspaceFields = {
   ...courseIdentity,
@@ -83,6 +95,7 @@ const workspaceFields = {
     lms_enabled: { const: true },
   }),
   settings_version: integer,
+  meeting_link: nullable(meetingLinkResult),
   contact: nullable(record({ name: text, email: text, phone: text })),
   contact_options: itemList(record({ id: uuid, name: text })),
   sessions: itemList(

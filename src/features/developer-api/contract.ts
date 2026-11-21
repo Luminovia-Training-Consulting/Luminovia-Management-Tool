@@ -4,6 +4,8 @@ import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 import {
   courseEnrolmentsResult,
   enrolmentState,
+  meetingLinkResult,
+  meetingUrl,
   myWorkspacesResult,
   participantInvitesResult,
   workspaceActionRequest,
@@ -493,9 +495,17 @@ const nativePaths = {
     "readCourseWorkspace",
     "Premium LMS",
     "Read an authorised Premium course workspace",
-    "Requires current Premium and course access. Each response contains actor-scoped sessions, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
+    "Requires current Premium and course access. Each response contains actor-scoped sessions, the current online meeting link, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     workspaceResult,
+  ),
+  "/rest/v1/rpc/set_course_meeting_link": rpc(
+    "setCourseMeetingLink",
+    "Premium LMS",
+    "Publish or clear an online course meeting link",
+    "Requires a currently confirmed instructor or course manager and an active Premium online course. Submit the last read version. Use a credential-free HTTPS URL with a domain name. Send null to return to the existing course venue.",
+    { ...course, p_url: meetingUrl, p_expected_version: version },
+    meetingLinkResult,
   ),
   "/rest/v1/rpc/course_enrolments": rpc(
     "courseEnrolments",

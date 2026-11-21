@@ -86,6 +86,13 @@ beforeEach(async () => {
                     ? Promise.resolve({data: fake.workspace, error: fake.error}).then(
                         resolve,
                     )
+                    : name === "set_course_meeting_link"
+                        ? Promise.resolve(fake.pending).then((data) => {
+                            if (!fake.error && data) {
+                                fake.workspace = {...fake.workspace, meeting_link: data as CourseWorkspace["meeting_link"]};
+                            }
+                            return resolve({data, error: fake.error});
+                        })
                     : ["course_chat_rooms", "course_enrolments", "course_enrolment_candidates"].includes(name)
                         ? Promise.resolve({data: [], error: null}).then(resolve)
                     : Promise.resolve(fake.pending ?? {id: null, saved: true}).then(
@@ -123,6 +130,59 @@ function setup(hash = "") {
 }
 
 describe("connected course workspace", () => {
+    it("publishes and clears the instructor's complete meeting URL after server confirmation", async () => {
+        fake.workspace.ended = false;
+        fake.workspace.meeting_link = {url: null, version: 0, can_edit: true};
+        let confirm: (link: CourseWorkspace["meeting_link"]) => void = () => {};
+        fake.pending = new Promise((resolve) => {confirm = resolve;});
+        const url = "https://training.example.invalid:444/Join%20Now?pwd=fictional#room";
+        const user = userEvent.setup();
+        setup();
+        await user.click(await screen.findByRole("button", {name: "Meetinglink bearbeiten"}));
+        const input = screen.getByRole("textbox", {name: "Meetinglink (HTTPS)"});
+        const publish = screen.getByRole("button", {name: "Meetinglink veröffentlichen"});
+        fireEvent.change(input, {target: {value: "https://user@training.example.invalid"}});
+        expect(publish).toBeDisabled();
+        expect(input).toHaveAccessibleDescription("Gib einen HTTPS-Link mit Domainnamen und ohne eingebettete Zugangsdaten ein.");
+        fireEvent.change(input, {target: {value: url}});
+        await user.click(publish);
+        await waitFor(() => expect(fake.rpc).toHaveBeenCalledWith("set_course_meeting_link", {
+            p_run_id: "course-a", p_url: url, p_expected_version: 0,
+        }));
+        expect(screen.getByRole("link", {name: "Unterrichtslink öffnen"})).toHaveAttribute("href", fake.workspace.venue);
+        expect(screen.queryByText("Änderung auf dem Server gespeichert.")).not.toBeInTheDocument();
+        await act(async () => confirm({url, version: 1, can_edit: true}));
+        expect(await screen.findByRole("link", {name: "Unterrichtslink öffnen"})).toHaveAttribute("href", url);
+        expect(await screen.findByText("Änderung auf dem Server gespeichert.")).toBeVisible();
+        await user.click(screen.getByRole("button", {name: "Meetinglink bearbeiten"}));
+        expect(screen.getByRole("textbox", {name: "Meetinglink (HTTPS)"})).toHaveValue(url);
+        fake.pending = Promise.resolve({url: null, version: 2, can_edit: true});
+        await user.clear(screen.getByRole("textbox", {name: "Meetinglink (HTTPS)"}));
+        await user.click(screen.getByRole("button", {name: "Meetinglink veröffentlichen"}));
+        await waitFor(() => expect(fake.rpc).toHaveBeenCalledWith("set_course_meeting_link", {
+            p_run_id: "course-a", p_url: null, p_expected_version: 1,
+        }));
+        await waitFor(() => expect(screen.getByRole("link", {name: "Unterrichtslink öffnen"}))
+            .toHaveAttribute("href", fake.workspace.venue));
+    });
+
+    it("opens and copies the same current invitation for a learner with no edit controls", async () => {
+        await i18n.changeLanguage("en");
+        const url = "https://training.example.invalid/Join%20Now?pwd=fictional#room";
+        fake.workspace.ended = false;
+        fake.workspace.access = {
+            manager: false, learner: true, teacher: false, client: false,
+            staff: false, lms_enabled: true,
+        };
+        fake.workspace.meeting_link = {url, version: 1, can_edit: false};
+        const user = userEvent.setup();
+        setup();
+        expect(await screen.findByRole("link", {name: "Open virtual classroom"})).toHaveAttribute("href", url);
+        expect(screen.getByRole("link", {name: "Open teaching link"})).toHaveAttribute("href", url);
+        await user.click(screen.getByRole("button", {name: "Copy teaching link"}));
+        expect(await navigator.clipboard.readText()).toBe(url);
+        expect(screen.queryByRole("button", {name: "Edit meeting link"})).not.toBeInTheDocument();
+    });
     it("preserves deep links and limits learner navigation to current sections", async () => {
         fake.workspace.access = {
             manager: false, learner: true, teacher: false, client: false,

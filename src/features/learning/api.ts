@@ -88,6 +88,7 @@ export interface CourseWorkspace {
         lms_enabled: boolean;
     };
     settings_version: number;
+    meeting_link?: { url: string | null; version: number; can_edit: boolean } | null;
     contact: { name: string; email: string; phone: string } | null;
     contact_options: { id: string; name: string }[];
     sessions: CourseSession[];

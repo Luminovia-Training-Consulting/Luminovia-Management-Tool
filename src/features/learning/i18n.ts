@@ -62,6 +62,22 @@ const pairs: Record<string, [string, string]> = {
     workspaceOnline: ["Online", "Online"],
     workspaceOnSite: ["Vor Ort", "On site"],
     joinClassroom: ["Virtuellen Kursraum öffnen", "Open virtual classroom"],
+    meetingLinkEdit: ["Meetinglink bearbeiten", "Edit meeting link"],
+    meetingLinkLabel: ["Meetinglink (HTTPS)", "Meeting link (HTTPS)"],
+    meetingLinkHint: [
+        "Berechtigte Kursteilnehmende sehen den veröffentlichten Link. Lasse das Feld leer, um wieder den hinterlegten Kursort zu verwenden.",
+        "Authorised course participants can see the published link. Leave the field empty to use the configured course venue again.",
+    ],
+    meetingLinkInvalid: [
+        "Gib einen HTTPS-Link mit Domainnamen und ohne eingebettete Zugangsdaten ein.",
+        "Enter an HTTPS link with a domain name and without embedded credentials.",
+    ],
+    meetingLinkChanged: [
+        "Der Meetinglink wurde zwischenzeitlich geändert. Schließe den Entwurf und öffne ihn erneut.",
+        "The meeting link has changed. Close and reopen the editor to load the current version.",
+    ],
+    meetingLinkPublish: ["Meetinglink veröffentlichen", "Publish meeting link"],
+    meetingLinkCancel: ["Bearbeitung abbrechen", "Cancel editing"],
     manageCourse: ["Kurs verwalten", "Manage course"],
     courseReadiness: ["Kursbereitschaft", "Course readiness"],
     unscheduled: ["Termine folgen", "Schedule to follow"],

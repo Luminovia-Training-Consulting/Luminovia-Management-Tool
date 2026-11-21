@@ -14,12 +14,13 @@ import {dateTime, zonedInstant} from "../../lib/dates";
 import {Button} from "../../components/ui/button";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {contactEmailLink, contactPhoneLink} from "../profile/contact-api";
-import {teachingLink} from "../dashboard/personal-api";
 import {courseAction, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, repeatCourse,} from "./api";
 import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";
 import {CourseWelcomeContent} from "./welcome-content";
+import {CourseMeetingLinkEditor} from "./meeting-link";
+import {courseClassroom} from "./meeting-url";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
 import {AcademyInstructors} from "./academy-instructors";
@@ -136,7 +137,7 @@ function Preparation({course, actor}: WorkProps) {
 }
 
 /** Lets a manager explicitly select a same-organisation contact for this course. */
-function CourseContact({course, actor}: WorkProps) {
+function CourseContact({course, actor, url}: WorkProps & {url: string | null}) {
     const {t} = useTranslation("learning");
     const online = useOnline();
     const save = useAction(course.id, actor);
@@ -151,8 +152,6 @@ function CourseContact({course, actor}: WorkProps) {
     const phone = course.contact?.phone
         ? contactPhoneLink(course.contact.phone)
         : null;
-    const url =
-        course.delivery_type === "online" ? teachingLink(course.venue) : null;
     return (
         <section className="panel learning-panel" aria-label={t("courseInfo")}>
             <h2>{t("courseInfo")}</h2>
@@ -190,6 +189,9 @@ function CourseContact({course, actor}: WorkProps) {
                 </div>
             ) : (
                 <p>{course.venue}</p>
+            )}
+            {course.meeting_link?.can_edit && (
+                <CourseMeetingLinkEditor actor={actor} courseId={course.id} current={course.meeting_link}/>
             )}
             <h3>{t("contact")}</h3>
             {course.contact ? (
@@ -699,7 +701,7 @@ function CourseWorkspaceLayout({
     ];
     const currentSection = sections.find(({id}) => location.hash === "#" + id)?.id ?? "course-overview";
     const next = course.sessions.find((session) => Date.parse(session.ends_at) > now);
-    const classroom = !course.ended && course.delivery_type === "online" ? teachingLink(course.venue) : null;
+    const classroom = courseClassroom(course);
     const pageTarget = learner ? "/learning" : "/courses";
 
     // React Router may resolve a deep link before the scoped course data
@@ -737,7 +739,7 @@ function CourseWorkspaceLayout({
                         </div>
                     </div>
                 )}
-                {classroom && learner && (
+                {classroom && learner && !course.ended && (
                     <Button asChild>
                         <a href={classroom} target="_blank" rel="noopener noreferrer">
                             <Video size={18} aria-hidden="true"/>{t("joinClassroom")}
@@ -775,7 +777,7 @@ function CourseWorkspaceLayout({
                             zone={course.time_zone} canEdit={editor}/>
                         <CourseDestinations actor={actor} courseId={course.id} learner={learner || !portalInternalEdition}/>
                         {!portalInternalEdition && course.access.manager && <AcademyInstructors courseId={course.id} actor={actor}/>}
-                        <CourseContact course={course} actor={actor}/>
+                        <CourseContact course={course} actor={actor} url={classroom}/>
                         {editor && <Preparation course={course} actor={actor}/>}
                         {learner && <CourseWithdrawal course={course} actor={actor}/>}
                     </div>
