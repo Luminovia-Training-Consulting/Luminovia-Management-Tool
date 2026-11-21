@@ -56,6 +56,18 @@ describe("documented Premium course and spending operations", () => {
       "company_monthly_accepted_spending",
       "20261121022959_company_monthly_accepted_spending.sql",
     ],
+    [
+      "course_session_register",
+      "20261121021808_course_session_attendance_register.sql",
+    ],
+    [
+      "save_course_session_attendance",
+      "20261121021808_course_session_attendance_register.sql",
+    ],
+    [
+      "attach_course_session_evidence",
+      "20261121021808_course_session_attendance_register.sql",
+    ],
   ])("exposes only an existing public RPC: %s", (name, migration) => {
     expect(source(`supabase/migrations/${migration}`)).toMatch(
       new RegExp(
@@ -115,6 +127,123 @@ describe("documented Premium course and spending operations", () => {
       "minutes",
       "reason",
     ]);
+    expect(paths["/rest/v1/rpc/course_workspace_action"].post).toMatchObject({
+      description: expect.stringContaining(
+        "immutable staff, company or lecturer ownership",
+      ),
+    });
+    expect(
+      source(
+        "supabase/migrations/20261121123000_course_resource_ownership.sql",
+      ),
+    ).toContain(
+      "private.course_resource_command(p_run_id, p_action, p_payload)",
+    );
+    expect(paths).not.toHaveProperty("/rest/v1/rpc/course_resource_command");
+  });
+
+  it("types the session register, versioned correction and retained PDF evidence", () => {
+    expect(
+      requestSchema("/rest/v1/rpc/course_session_register").required,
+    ).toEqual(["p_run_id", "p_session_id"]);
+    expect(
+      requestSchema("/rest/v1/rpc/save_course_session_attendance").required,
+    ).toEqual([
+      "p_run_id",
+      "p_session_id",
+      "p_user_id",
+      "p_status",
+      "p_arrival_at",
+      "p_departure_at",
+      "p_note",
+      "p_reason",
+      "p_expected_version",
+    ]);
+    expect(
+      requestSchema("/rest/v1/rpc/attach_course_session_evidence").required,
+    ).toEqual(["p_run_id", "p_session_id", "p_version_id"]);
+    expect(paths["/rest/v1/rpc/course_session_register"].post).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                required: [
+                  "session_id",
+                  "starts_at",
+                  "ends_at",
+                  "time_zone",
+                  "rows",
+                  "evidence",
+                  "history",
+                ],
+                properties: {
+                  rows: {
+                    items: {
+                      required: [
+                        "user_id",
+                        "name",
+                        "status",
+                        "arrival_at",
+                        "departure_at",
+                        "note",
+                        "version",
+                      ],
+                    },
+                  },
+                  evidence: {
+                    items: {
+                      required: [
+                        "id",
+                        "resource_id",
+                        "version_id",
+                        "name",
+                        "attached_at",
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      paths["/rest/v1/rpc/save_course_session_attendance"].post,
+    ).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                required: ["status", "version", "minutes"],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      paths["/rest/v1/rpc/attach_course_session_evidence"].post,
+    ).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                required: ["id", "resource_id", "version_id"],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      source(
+        "supabase/migrations/20261121021808_course_session_attendance_register.sql",
+      ),
+    ).toContain("Retained attendance evidence cannot be unshared");
   });
 
   it("describes the actual protected gateways and company spending DTO", () => {

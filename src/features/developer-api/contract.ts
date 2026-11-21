@@ -16,6 +16,7 @@ const optionalUsername = {
 const welcomeText = { type: "string", maxLength: 4000 };
 const nullableUuid = { type: ["string", "null"], format: "uuid" };
 const nullableDateTime = { type: ["string", "null"], format: "date-time" };
+const attendanceStatus = { enum: ["present", "absent", "excused"] };
 const object = (properties: Record<string, unknown>) => ({
   type: "object",
   properties,
@@ -69,7 +70,7 @@ const workspaceAction = {
       "courseWorkspaceAction",
       "Premium LMS",
       "Update a course resource or attendance record",
-      "The action is limited here to the documented resource and attendance commands. Current Premium, course role, ownership and version checks are enforced by the database. Resource sharing requires an already clean personal material version; the caller cannot choose ownership.",
+      "The action is limited here to the documented resource and attendance commands. Current Premium, course role, ownership and version checks are enforced by the database. Resource sharing requires a clean personal material version, except that authorized staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership; company contacts can remove company-owned links, and lecturers can remove only their own lecturer-owned links. Retained attendance evidence cannot be removed.",
       {},
       {
         type: "object",
@@ -339,6 +340,86 @@ const nativePaths = {
     uuid,
   ),
   "/rest/v1/rpc/course_workspace_action": workspaceAction,
+  "/rest/v1/rpc/course_session_register": rpc(
+    "courseSessionRegister",
+    "Premium LMS",
+    "Read an exact course session attendance register",
+    "Requires current Premium and this course's management, teaching or company contact access. Returns only enrolled or completed participants for the requested session, with current versions, retained PDF evidence and correction history.",
+    { ...course, p_session_id: uuid },
+    object({
+      session_id: uuid,
+      starts_at: { type: "string", format: "date-time" },
+      ends_at: { type: "string", format: "date-time" },
+      time_zone: text,
+      rows: {
+        type: "array",
+        items: object({
+          user_id: uuid,
+          name: text,
+          status: {
+            type: ["string", "null"],
+            enum: ["present", "absent", "excused", null],
+          },
+          arrival_at: nullableDateTime,
+          departure_at: nullableDateTime,
+          note: { type: "string", maxLength: 1000 },
+          version,
+        }),
+      },
+      evidence: {
+        type: "array",
+        items: object({
+          id: uuid,
+          resource_id: uuid,
+          version_id: uuid,
+          name: text,
+          attached_at: { type: "string", format: "date-time" },
+        }),
+      },
+      history: {
+        type: "array",
+        items: object({
+          id: uuid,
+          user_id: uuid,
+          actor_id: uuid,
+          old_state: { type: ["object", "null"], additionalProperties: true },
+          new_state: { type: "object", additionalProperties: true },
+          reason: text,
+          created_at: { type: "string", format: "date-time" },
+        }),
+      },
+    }),
+  ),
+  "/rest/v1/rpc/save_course_session_attendance": rpc(
+    "saveCourseSessionAttendance",
+    "Premium LMS",
+    "Mark or correct one participant's session attendance",
+    "Requires current Premium and this course's management, teaching or company contact access. The session must have started and the participant must be currently enrolled. Submit the register row version; corrections after version zero need a 3–500 character reason. Present rows may carry arrival and departure instants; absent and excused rows must not. An active completion must be revoked before correction. Minutes are calculated by the server.",
+    {
+      ...course,
+      p_session_id: uuid,
+      p_user_id: uuid,
+      p_status: attendanceStatus,
+      p_arrival_at: nullableDateTime,
+      p_departure_at: nullableDateTime,
+      p_note: { type: "string", maxLength: 1000 },
+      p_reason: { type: "string", maxLength: 500 },
+      p_expected_version: version,
+    },
+    object({
+      status: attendanceStatus,
+      version,
+      minutes: { type: "integer", minimum: 0 },
+    }),
+  ),
+  "/rest/v1/rpc/attach_course_session_evidence": rpc(
+    "attachCourseSessionEvidence",
+    "Premium LMS",
+    "Attach an immutable attendance PDF version",
+    "Requires current Premium and this course's management, teaching or company contact access. The version must be the caller's own current, clean personal material PDF. The resulting course resource is retained as evidence and cannot be unshared or deleted through ordinary file actions.",
+    { ...course, p_session_id: uuid, p_version_id: uuid },
+    object({ id: uuid, resource_id: uuid, version_id: uuid }),
+  ),
   "/functions/v1/course-documents": courseDocuments,
   "/functions/v1/files": courseMaterialUpload,
   "/rest/v1/rpc/company_monthly_accepted_spending": rpc(
