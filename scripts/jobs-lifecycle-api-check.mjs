@@ -12,7 +12,8 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
         jobs = [],
         runs = [],
         templates = [],
-        organisations = [];
+        organisations = [],
+        topic = randomUUID();
     defer(async () => {
         const ids = users.map((x) => `'${x}'`).join(",");
         await sql(
@@ -44,7 +45,19 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
                 service.from("organisations").delete().in("id", organisations),
                 "Clean own lifecycle organisations",
             );
+        await sql(`delete from public.lecturer_topics where topic_id='${topic}';
+          delete from public.topics where id='${topic}';`);
     });
+    // The exact reopened-job audience comes from a requirement unique to this fixture.
+    await checked(service.from("topics").insert({
+        id: topic,
+        kind: "topic",
+        label_de: `Fiktives Auftragsthema ${topic}`,
+        label_en: `Fictional lifecycle topic ${topic}`,
+    }));
+    await checked(service.from("lecturer_topics").insert(
+        [teacher.id, peer.id].map((user_id) => ({user_id, topic_id: topic})),
+    ));
     /** Binds the requested lifecycle action to the job, expected version and retry identity. */
     const req = (job, action, version, payload = {}, key = randomUUID()) => ({
         p_job_id: job,
@@ -65,6 +78,7 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
         currency: "EUR",
         rate_unit: "per_day",
         terms: "Actual accepted fictional terms",
+        topic_ids: [topic],
         sessions: [
             {starts_at: "2048-01-10T08:00:00Z", ends_at: "2048-01-10T09:00:00Z"},
             {starts_at: "2048-01-11T08:00:00Z", ends_at: "2048-01-11T09:00:00Z"},

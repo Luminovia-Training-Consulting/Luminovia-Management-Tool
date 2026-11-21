@@ -7,9 +7,11 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
     const teacher = await actor("withdrawal-teacher", "lecturer"),
         peer = await actor("withdrawal-peer", "lecturer"),
         admin = await actor("withdrawal-admin", "admin"),
-        manager = await actor("withdrawal-management", "management");
-    const users = [teacher, peer, admin, manager].map((item) => item.id);
+        manager = await actor("withdrawal-management", "management"),
+        other = await actor("withdrawal-without-topic", "lecturer");
+    const users = [teacher, peer, admin, manager, other].map((item) => item.id);
     const jobs = [];
+    const topic = randomUUID();
     // Delete only the explicit fictional resource IDs created by this fixture.
     // Private request ledgers reference claims/accounts and must be removed first.
     defer(async () => {
@@ -23,7 +25,8 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
       delete from public.notifications where user_id in(${u});`);
         if (jobs.length) {
             const j = jobs.map((id) => `'${id}'`).join(",");
-            await sql(`delete from public.chat_members where room_id in(select id from public.chat_rooms where job_id in(${j}));
+            await sql(`delete from public.notifications where resource_id in(${j});
+        delete from public.chat_members where room_id in(select id from public.chat_rooms where job_id in(${j}));
         delete from public.chat_rooms where job_id in(${j});
         delete from public.claim_events where claim_id in(select id from public.job_claims where job_id in(${j}));
         delete from public.assignment_sessions where claim_id in(select id from public.job_claims where job_id in(${j}));
@@ -31,7 +34,20 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
         delete from public.job_sessions where job_id in(${j});
         delete from public.jobs where id in(${j});`);
         }
+        await sql(`delete from public.lecturer_topics where topic_id='${topic}';
+          delete from public.topics where id='${topic}';`);
     });
+    // A disposable expertise requirement makes the two expected recipients
+    // independent of lecturers retained by the native upgrade fixture.
+    await checked(service.from("topics").insert({
+        id: topic,
+        kind: "topic",
+        label_de: `Fiktives Rücktrittsthema ${topic}`,
+        label_en: `Fictional withdrawal topic ${topic}`,
+    }));
+    await checked(service.from("lecturer_topics").insert(
+        [teacher.id, peer.id].map((user_id) => ({user_id, topic_id: topic})),
+    ));
     let checks = 0;
     /** Record a group only after its real HTTP assertions complete. */
     const check = async (name, run) => {
@@ -59,6 +75,10 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
                 requires_contract: false,
             }),
             "Create scoped withdrawal offer",
+        );
+        await checked(
+            service.from("job_requirements").insert({job_id: job, topic_id: topic}),
+            "Require the fixture's teaching topic",
         );
         const start = Date.now() + days * 86400000;
         await checked(
@@ -375,6 +395,10 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
                 [peer.id, teacher.id].sort(),
             );
             assert.ok(reopened.every((notice) => notice.read_at === null));
+            const foreignInbox = await checked(other.client.rpc("notification_inbox"));
+            assert.ok(!foreignInbox.items.some(
+                (item) => item.kind === "job_reopened" && item.href === `/jobs/${late.job}`,
+            ));
         },
     );
     console.log(`${checks} actual Auth/password-only authentication/HTTP withdrawal groups passed.`);
