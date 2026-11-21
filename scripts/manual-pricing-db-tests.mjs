@@ -1,5 +1,4 @@
 /** Actual personal-price allocation with immutable accepted snapshots. */
-import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withTestDatabase} from "./testing/database.mjs";
