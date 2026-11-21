@@ -21,6 +21,7 @@ afterEach(() => {
 });
 it("keeps a guest's own profile usable without loading expertise, permissions or qualification widgets", async () => {
     await i18n.changeLanguage("de");
+    fake.rpc.mockResolvedValue({data: {username: "fictional-guest", version: 1}, error: null});
     client = new QueryClient({
         defaultOptions: {queries: {retry: false, staleTime: Infinity}},
     });
@@ -52,7 +53,8 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
     expect(screen.queryByText("Fachgebiete & Expertise")).not.toBeInTheDocument();
     expect(document.querySelector(".profile-privacy-grid")).toBeNull();
     expect(fake.from).not.toHaveBeenCalled();
-    expect(fake.rpc).not.toHaveBeenCalled();
+    expect(await screen.findByDisplayValue("fictional-guest")).toBeVisible();
+    expect(fake.rpc.mock.calls).toEqual([["account_username"]]);
     expect(client.getQueryState(["topics"])?.fetchStatus).toBe("idle");
     expect(client.getQueryState(["expertise", "guest-own"])?.fetchStatus).toBe(
         "idle",

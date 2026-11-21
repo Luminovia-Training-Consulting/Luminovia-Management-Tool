@@ -93,16 +93,16 @@ export async function actor(name: string, role: string) {
 }
 
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
-export async function login(page: Page, email: string) {
+export async function login(page: Page, email: string, landing = /\/$/) {
     await page.goto("/login");
-    await page.getByLabel(/^(E-Mail|Email)$/, {exact: true}).fill(email);
+    await page.getByLabel(/^(Benutzername oder E-Mail|Username or email)$/, {exact: true}).fill(email);
     await page
         .getByLabel(/^(Passwort|Password)$/, {exact: true})
         .fill(process.env.E2E_PASSWORD!);
     await page
         .getByRole("button", {name: /^(Anmelden|Sign in)$/, exact: true})
         .click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(landing);
 }
 
 /** Signs in through the visible password form; server permissions authorize management workflows. */

@@ -5,11 +5,38 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
-import {ArrowLeft, ArrowRight, Bell, BookOpen, BriefcaseBusiness, Building2, CalendarDays, Compass, FileCheck2, FlaskConical, FolderOpen, GraduationCap, Home, type LucideIcon, Menu, MessageCircle, MessagesSquare, Receipt, RotateCcw, Settings2, UserRound, Users, Wallet,} from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
+  Compass,
+  FileCheck2,
+  FlaskConical,
+  FolderOpen,
+  GraduationCap,
+  Home,
+  type LucideIcon,
+  Menu,
+  MessageCircle,
+  MessagesSquare,
+  Receipt,
+  RotateCcw,
+  Settings2,
+  UserRound,
+  Users,
+  Wallet,
+} from "lucide-react";
 import {Button} from "../../components/ui/button";
 import {PageHeading} from "../../components/common";
 import {Preferences} from "../../components/preferences";
-import {PortalNavigation, type PortalNavigationItem,} from "../../components/portal-navigation";
+import {
+  PortalNavigation,
+  type PortalNavigationItem,
+} from "../../components/portal-navigation";
 import {guideModules, guideText} from "../help/catalog";
 import "./i18n";
 import "./demo.css";
@@ -50,7 +77,19 @@ function demoModulesForRole(role: DemoRole) {
         if (role === "participant") {
             return (
                 module.roles?.includes("participant") ||
-                ["/", "/calendar", "/courses", "/chats", "/files", "/notifications", "/settings", "/profile", "/help", "/wiki", "/forum"].includes(module.path)
+        [
+          "/",
+          "/calendar",
+          "/courses",
+          "/chats",
+          "/files",
+          "/notifications",
+          "/settings",
+          "/profile",
+          "/help",
+          "/wiki",
+          "/forum",
+        ].includes(module.path)
             );
         }
         if (module.roles?.length) {
@@ -128,7 +167,13 @@ export function DemoPage() {
     const launcher = useRef<HTMLButtonElement>(null);
     const mobileNavigation = useRef<HTMLDetailsElement>(null);
     const restoreLauncherFocus = useRef(false);
-    const [role, setRole] = useState<DemoRole>("lecturer");
+  const [role, setRole] = useState<DemoRole>(() =>
+    location.pathname.startsWith("/demo/admin")
+      ? "management"
+      : location.pathname.startsWith("/demo/client")
+        ? "client"
+        : "lecturer",
+  );
     const visibleModules = useMemo(() => demoModulesForRole(role), [role]);
     const navigationItems = useMemo(
         () => demoNavigationItems(role, i18n.language),
@@ -179,6 +224,7 @@ export function DemoPage() {
         {},
     );
     const [checked, setChecked] = useState<string[]>([]);
+  const [courseFilter, setCourseFilter] = useState<"all" | "upcoming">("all");
     const [feedback, setFeedback] = useState<{
         key: string;
         path: string;
@@ -197,6 +243,11 @@ export function DemoPage() {
     const selectionIsVisible = visibleModules.some((item) =>
         queryModule ? item.id === queryModule : item.path === requestedPath,
     );
+  useEffect(() => {
+    if (queryModule && selected) {
+      navigate(demoPath(selected.path), { replace: true });
+    }
+  }, [navigate, queryModule, selected]);
     useEffect(() => {
         if (!selectionIsVisible)
             navigate(demoPath(visibleModules[0]?.path ?? "/"), {replace: true});
@@ -241,6 +292,7 @@ export function DemoPage() {
         setContentDrafts({});
         setContentPosts({});
         setChecked([]);
+    setCourseFilter("all");
         setTour(false);
         setComplete(false);
         setRole("lecturer");
@@ -270,6 +322,8 @@ export function DemoPage() {
                 ? event
                 : path === "/chats"
                     ? messages.length > 0
+          : path === "/courses"
+            ? courseFilter === "upcoming"
                     : path === "/files"
                         ? scanned
                         : path === "/finance"
@@ -320,10 +374,19 @@ export function DemoPage() {
                             <select
                                 id="demo-role"
                                 value={role}
-                                onChange={(event) => changeRole(event.currentTarget.value as DemoRole)}
+                onChange={(event) =>
+                  changeRole(event.currentTarget.value as DemoRole)
+                }
                             >
-                                {(["lecturer", "management", "admin", "client", "participant"] as const).map(
-                                    (value) => (
+                {(
+                  [
+                    "lecturer",
+                    "management",
+                    "admin",
+                    "client",
+                    "participant",
+                  ] as const
+                ).map((value) => (
                                         <option key={value} value={value}>
                                             {t(
                                                 value === "client"
@@ -333,16 +396,22 @@ export function DemoPage() {
                                                         : value,
                                             )}
                                         </option>
-                                    ),
-                                )}
+                ))}
                             </select>
                         </label>
                         <Preferences/>
                         <Button asChild variant="secondary">
-                            <Link className="demo-help-link" to="/help">{t("help")}</Link>
+              <Link className="demo-help-link" to="/help">
+                {t("help")}
+              </Link>
                         </Button>
-                        <Link className="demo-login-link" to="/login">{t("login")}</Link>
-                        <details className="mobile-more demo-mobile-more" ref={mobileNavigation}>
+            <Link className="demo-login-link" to="/login">
+              {t("login")}
+            </Link>
+            <details
+              className="mobile-more demo-mobile-more"
+              ref={mobileNavigation}
+            >
                             <summary aria-label={t("navigation")}>
                                 <Menu size={20} aria-hidden="true"/>
                             </summary>
@@ -353,7 +422,9 @@ export function DemoPage() {
                                     className="demo-mobile-navigation"
                                     items={navigationItems}
                                     ariaLabel={t("navigation")}
-                                    onItemClick={() => mobileNavigation.current?.removeAttribute("open")}
+                  onItemClick={() =>
+                    mobileNavigation.current?.removeAttribute("open")
+                  }
                                 />
                             </div>
                         </details>
@@ -367,7 +438,9 @@ export function DemoPage() {
                     {!selected && <p role="alert">{t("invalid")}</p>}
                     <PageHeading
                         eyebrow={t("badge")}
-                        title={path === "/" ? t("title") : guideText(module.title, i18n.language)}
+            title={
+              path === "/" ? t("title") : guideText(module.title, i18n.language)
+            }
                         description={path === "/" ? t("intro") : description}
                         headingRef={heading}
                         headingTabIndex={-1}
@@ -438,16 +511,38 @@ export function DemoPage() {
                     </section>
                     {path === "/" && (
                         <div className="demo-stats kpi-grid">
-                            {demoDashboardStats(role, claimed, event, messages.length, Boolean(publishedJob)).map(
-                                (stat) => (
+              {demoDashboardStats(
+                role,
+                claimed,
+                event,
+                messages.length,
+                Boolean(publishedJob),
+              ).map((stat) => (
                                     <div key={stat.label}>
                                         <span>{t(stat.label)}</span>
                                         <strong>{stat.value}</strong>
                                     </div>
-                                ),
-                            )}
+              ))}
                         </div>
                     )}
+          {path === "/" && (
+            <nav className="demo-shortcuts" aria-label={t("quickAccess")}>
+              {navigationItems
+                .filter((item) =>
+                  ["/jobs", "/calendar", "/courses", "/chats", "/client"].some(
+                    (route) => item.to === demoPath(route),
+                  ),
+                )
+                .slice(0, 4)
+                .map(({ to, label, icon: Icon }) => (
+                  <Link key={to} to={to} className="demo-shortcut">
+                    <Icon size={22} aria-hidden="true" />
+                    <span>{label}</span>
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </Link>
+                ))}
+            </nav>
+          )}
                     <div className="demo-content-grid">
                         <section
                             className="panel demo-practice"
@@ -749,6 +844,53 @@ export function DemoPage() {
                                         </Button>
                                     </form>
                                 </>
+              ) : path === "/courses" ? (
+                <>
+                  <div className="demo-course-toolbar">
+                    <h3>{t("sampleCourses")}</h3>
+                    <label htmlFor="demo-course-filter">
+                      {t("courseFilter")}
+                      <select
+                        id="demo-course-filter"
+                        value={courseFilter}
+                        onChange={(event) =>
+                          setCourseFilter(
+                            event.currentTarget.value as "all" | "upcoming",
+                          )
+                        }
+                      >
+                        <option value="all">{t("filterAll")}</option>
+                        <option value="upcoming">{t("filterUpcoming")}</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="demo-course-list">
+                    <article className="demo-course-card">
+                      <span className="demo-sample-label">{t("sample")}</span>
+                      <h4>{t("course")}</h4>
+                      <p>
+                        {t("sampleOrganisation")} · {date(sessions[0])}
+                      </p>
+                      <div className="demo-course-links">
+                        <Link to="/demo/calendar">{t("sampleSchedule")}</Link>
+                        <Link to="/demo/chats">{t("sampleChat")}</Link>
+                        <Link to="/demo/files">{t("sampleFiles")}</Link>
+                      </div>
+                    </article>
+                    {courseFilter === "all" && (
+                      <article className="demo-course-card">
+                        <span className="demo-sample-label">{t("sample")}</span>
+                        <h4>{t("samplePastCourse")}</h4>
+                        <p>
+                          {t("sampleOrganisation")} · {t("samplePastDate")}
+                        </p>
+                        <div className="demo-course-links">
+                          <Link to="/demo/files">{t("sampleFiles")}</Link>
+                        </div>
+                      </article>
+                    )}
+                  </div>
+                </>
                             ) : (
                                 <>
                                     <h3>

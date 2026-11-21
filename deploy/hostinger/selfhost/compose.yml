@@ -351,6 +351,7 @@ services:
     volumes:
       - ./runtime:/home/deno/functions/main:ro
       - ../supabase/upstream/volumes/functions/deno.jsonc:/home/deno/functions/deno.jsonc:ro
+      - ../../../supabase/functions/_shared:/home/deno/functions/_shared:ro
       - ../../../supabase/functions/files:/home/deno/functions/files:ro
       - ../../../supabase/functions/mail-admin:/home/deno/functions/mail-admin:ro
       - ../../../supabase/functions/invite-lecturer:/home/deno/functions/invite-lecturer:ro
@@ -359,6 +360,9 @@ services:
       - ../../../supabase/functions/website-enquiries:/home/deno/functions/website-enquiries:ro
       - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
       - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
+      - ../../../supabase/functions/human-login:/home/deno/functions/human-login:ro
+      - ../../../supabase/functions/human-recovery:/home/deno/functions/human-recovery:ro
+      - ../../../supabase/functions/company-integration:/home/deno/functions/company-integration:ro
       - deno-cache:/root/.cache/deno
     depends_on:
       api-gw:

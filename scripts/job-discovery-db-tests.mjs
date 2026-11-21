@@ -192,7 +192,7 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 {key: "both", status: "published", start: "2060-06-02T08:00:00Z", topics: [topicA, topicB]},
                 {key: "subject-b", status: "published", start: "2060-06-03T08:00:00Z", topics: [topicB]},
                 {key: "subject-a", status: "published", start: "2060-06-04T08:00:00Z", topics: [topicA]},
-                {key: "expired", status: "published", start: "2060-06-05T08:00:00Z", topics: [topicA], deadline: "2060-05-01T00:00:00Z"},
+                {key: "expired", status: "published", start: "2060-06-05T08:00:00Z", topics: [topicA], deadline: new Date(Date.now() - 86400000).toISOString()},
                 {key: "draft", status: "draft", start: "2060-06-06T08:00:00Z", topics: []},
                 {key: "filled", status: "filled", start: "2060-06-07T08:00:00Z", topics: []},
                 {key: "archived", status: "archived", start: "2060-06-08T08:00:00Z", topics: []},
@@ -201,7 +201,7 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             for (const item of cases) {
                 await sql(
                     `insert into public.jobs(id, title, customer_name, delivery_type, status, amount, total_amount, currency, rate_unit, terms, requires_contract, created_at, created_by, claim_deadline)
-                     values ('${item.id}', 'Fictional ${item.key}', '${marker}', 'online', '${item.status}', 100, 100, 'EUR', 'fixed_total', 'Fictional history terms', false, '2040-01-01T00:00:00Z', '${manager}', ${item.deadline ? `'${item.deadline}'` : "null"});
+                     values ('${item.id}', 'Fictional ${item.key}', '${marker}', 'online', '${item.status}', 100, 100, 'EUR', 'fixed_total', 'Fictional history terms', false, now()-interval '30 days', '${manager}', ${item.deadline ? `'${item.deadline}'` : "null"});
                     insert into public.job_sessions(job_id, starts_at, ends_at)
                     values ('${item.id}', '${item.start}'::timestamptz, '${item.start}'::timestamptz+interval '1 hour')`,
                 );

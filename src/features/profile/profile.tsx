@@ -1,3 +1,4 @@
+import {isGuestOnly, isParticipantOnly} from "../auth/guest-navigation";
 /**
  * Own profile fields, time zone and expertise with evidence/avatar controls.
  * Self-declared expertise is separate from management verification; the own
@@ -132,11 +133,9 @@ export function ProfilePage() {
     const client = useQueryClient();
     const profile = useQuery(profileQuery(session!.user.id));
     const roles = useQuery(userRolesQuery(session!.user.id));
-    const guestOnly =
-        roles.isSuccess &&
-        roles.data.length > 0 &&
-        roles.data.every((role) => role === "guest");
-    const operational = roles.isSuccess && !guestOnly;
+    const guestOnly = isGuestOnly(roles.data);
+    const participantOnly = isParticipantOnly(roles.data);
+    const operational = roles.isSuccess && !guestOnly && !participantOnly;
     const topics = useQuery({...topicsQuery, enabled: operational});
     const expertise = useQuery({
         ...expertiseQuery(session!.user.id),
@@ -187,7 +186,7 @@ export function ProfilePage() {
             />
         );
     if (!profile.data) return <Notice kind="error">{t("profileMissing")}</Notice>;
-    if (guestOnly)
+    if (guestOnly || participantOnly)
         return (
             <>
                 <PageHeading title={t("profile")} description={session!.user.email}/>
@@ -195,8 +194,11 @@ export function ProfilePage() {
                     <strong>{t("luminoviaUserId")}:</strong>{" "}
                     <code>{profile.data.luminovia_user_id}</code>
                 </p>
-                <ProfileForm profile={profile.data}/>
+                {guestOnly && <ProfileForm profile={profile.data}/>}
                 <AccountSettings email={session!.user.email ?? ""}/>
+                {participantOnly && (
+                    <Link className="text-link" to="/api/docs">{t("apiDocumentation")}</Link>
+                )}
                 <datalist id="time-zones">
                     <option>Europe/Berlin</option>
                     <option>Australia/Brisbane</option>

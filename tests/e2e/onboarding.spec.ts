@@ -72,7 +72,7 @@ test("actual Auth invitation link opens password setup and the invited account c
     );
     await page.getByRole("button", {name: "Abmelden", exact: true}).click();
     await expect(page).toHaveURL(/\/login/);
-    await page.getByLabel("E-Mail", {exact: true}).fill(email);
+    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page.getByLabel("Passwort", {exact: true}).fill(password);
     await page.getByRole("button", {name: "Anmelden", exact: true}).click();
     await expect(page).toHaveURL(/\/$/);
@@ -104,7 +104,7 @@ test("real browser password recovery consumes a Mailpit email and keeps the PKCE
     await page
         .getByRole("button", {name: "Passwort vergessen?", exact: true})
         .click();
-    await page.getByLabel("E-Mail", {exact: true}).fill(email);
+    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page
         .getByRole("button", {name: "Link anfordern", exact: true})
         .click();
@@ -150,7 +150,7 @@ test("real browser password recovery consumes a Mailpit email and keeps the PKCE
         "Dein Passwort wurde gespeichert.",
     );
     await page.getByRole("button", {name: "Abmelden", exact: true}).click();
-    await page.getByLabel("E-Mail", {exact: true}).fill(email);
+    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page.getByLabel("Passwort", {exact: true}).fill(password);
     await page.getByRole("button", {name: "Anmelden", exact: true}).click();
     await expect(page).toHaveURL(/\/$/);

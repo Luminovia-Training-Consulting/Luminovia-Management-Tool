@@ -63,7 +63,7 @@ async function account(label: string): Promise<Account> {
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
 async function login(page: Page, user: Account) {
     await page.goto("/login");
-    await page.getByLabel("E-Mail", {exact: true}).fill(user.email);
+    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(user.email);
     await page
         .getByLabel("Passwort", {exact: true})
         .fill(process.env.E2E_PASSWORD!);

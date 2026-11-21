@@ -233,6 +233,7 @@ describe("lifecycle reads and connected cache refresh", () => {
             ["commission-report", "actor-a"],
             ["client-requests", "actor-a"],
             ["client-spend", "actor-a"],
+            ["company-monthly-spending", "actor-a", null],
             ["notifications", "actor-a", "preview"],
             ["chat-rooms", "actor-a"],
             ["chat-members", "actor-a", "room-a"],

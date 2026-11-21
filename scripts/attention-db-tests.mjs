@@ -151,11 +151,16 @@ await withTestDatabase("attention_test", async ({sql, actor}) => {
     await check(
         "Quiet attention excludes optional badges while preserving every inbox item and critical receipt",
         async () => {
-            const optional = Array.from(
-                {length: 17},
-                () => `(${q(teacher)},'chat_message',${q(randomUUID())})`,
-            );
-            await sql(`insert into public.notifications(user_id,kind,resource_id) values${optional.join(",")};
+            const room = randomUUID();
+            const messages = Array.from({length: 17}, randomUUID);
+            const optional = messages.map((id) => `(${q(teacher)},'chat_message',${q(id)})`);
+            await sql(`insert into public.chat_rooms(id,kind,owner_id,dm_key)
+      values(${q(room)},'dm',${q(teacher)},${q([teacher, peer].sort().join(":"))});
+      insert into public.chat_members(room_id,user_id)
+      values(${q(room)},${q(teacher)}),(${q(room)},${q(peer)});
+      insert into public.messages(id,room_id,sender_id,body,client_id,request_hash)
+      values${messages.map((id) => `(${q(id)},${q(room)},${q(teacher)},'Fictional optional chat',${q(randomUUID())},'fixture')`).join(",")};
+      insert into public.notifications(user_id,kind,resource_id) values${optional.join(",")};
       insert into public.notifications(id,user_id,kind,resource_id) values${critical.map((id, i) => `(${q(id)},${q(teacher)},${q(["claim_confirmed", "claim_cancelled", "contract_available"][i])},${q(randomUUID())})`).join(",")};
       insert into public.notifications(user_id,kind,resource_id) values(${q(peer)},'claim_confirmed',${q(randomUUID())});`);
             const minute = Number(

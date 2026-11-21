@@ -45,6 +45,8 @@ export interface CourseResource {
     category: string;
     audience: string;
     acknowledged: boolean;
+    ownership_kind: "staff" | "company" | "lecturer";
+    can_remove: boolean;
 }
 
 export interface QuizQuestion {
@@ -63,6 +65,18 @@ export interface CourseWorkspace {
     delivery_type: string;
     ended: boolean;
     lms_enabled: boolean;
+    exams: {
+        required: boolean;
+        version: number | null;
+        can_edit: boolean;
+        documents: {
+            id: string;
+            name: string;
+            version_id: string;
+            version: number;
+            audience: "students" | "exam_staff";
+        }[];
+    };
     access: {
         manager: boolean;
         teacher: boolean;
@@ -219,6 +233,7 @@ export type PortalDocumentRequest =
     | {
     kind:
         | "resource"
+        | "exam"
         | "wiki_resource"
         | "attendance"
         | "completion"
@@ -276,7 +291,7 @@ export async function downloadPortalDocument(
 
 /** Adapts course document kinds to the common protected download boundary. */
 export async function downloadCourseDocument(
-    kind: "resource" | "attendance" | "completion",
+    kind: "resource" | "exam" | "attendance" | "completion",
     id: string,
     name: string,
     signal?: AbortSignal,

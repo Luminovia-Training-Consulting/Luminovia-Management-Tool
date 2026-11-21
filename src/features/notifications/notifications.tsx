@@ -9,7 +9,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {useTranslation} from "react-i18next";
 import {notificationCategory, type NotificationCategory} from "./categories";
-import {isGuestOnly} from "../auth/guest-navigation";
+import {isGuestOnly, isParticipantOnly} from "../auth/guest-navigation";
 import {PushSettings} from "./push-settings";
 import {useAuth} from "../auth/auth-context";
 import {Button} from "../../components/ui/button";
@@ -36,7 +36,15 @@ export function NotificationsPage() {
     const client = useQueryClient();
     const online = useOnline();
     const [unreadOnly, setUnreadOnly] = useState(false);
-    const query = useInfiniteQuery(notificationInboxQuery(actor, unreadOnly));
+    const roles = useQuery(userRolesQuery(actor));
+    const participantOnly = isParticipantOnly(roles.data);
+    const query = useInfiniteQuery({
+        ...notificationInboxQuery(actor, unreadOnly),
+        enabled: online || (roles.isSuccess && !participantOnly),
+        refetchOnReconnect: "always",
+        staleTime: participantOnly ? 0 : undefined,
+        refetchInterval: participantOnly ? 10_000 : undefined,
+    });
     const profile = useQuery(profileQuery(actor));
     const mark = useReadState(actor);
     const refresh = useMutation({
@@ -47,8 +55,11 @@ export function NotificationsPage() {
         onSuccess: () =>
             client.invalidateQueries({queryKey: notificationKeys.all(actor)}),
     });
-    const first = query.data?.pages[0];
-    const items = mergeNotificationPages(query.data?.pages);
+    const first = online && !query.isError ? query.data?.pages[0] : undefined;
+    const loadedItems = mergeNotificationPages(query.data?.pages);
+    const items = online ? loadedItems : loadedItems.filter(
+        (item) => !item.kind.startsWith("course_") && item.kind !== "chat_message",
+    );
     return (
         <>
             <PageHeading title={t("title")} description={t("description")}/>
@@ -80,9 +91,9 @@ export function NotificationsPage() {
                 >
                     {t("markAll")}
                 </Button>
-                <Link to="/settings">{t("preferences")}</Link>
+                {roles.isSuccess && !participantOnly && <Link to="/settings">{t("preferences")}</Link>}
             </div>
-            <section className="panel inbox-reminders">
+            {roles.isSuccess && !participantOnly && <section className="panel inbox-reminders">
                 <Button
                     disabled={!online || refresh.isPending}
                     onClick={() => refresh.mutate()}
@@ -91,11 +102,13 @@ export function NotificationsPage() {
                 </Button>
                 <p>{t("refreshHelp")}</p>
                 {refresh.isSuccess && <Notice>{t("refreshed")}</Notice>}
-            </section>
+            </section>}
             {(mark.isError || refresh.isError) && (
                 <Notice kind="error">{t("error")}</Notice>
             )}
-            {query.isPending ? (
+            {!online && participantOnly ? (
+                <Notice>{t("offlineInbox")}</Notice>
+            ) : query.isPending ? (
                 <Loading/>
             ) : query.isError ? (
                 <ErrorState retry={() => void query.refetch()}/>
@@ -261,6 +274,9 @@ export function SettingsPage() {
     return (
         <>
             <PageHeading title={t("settings")} description={t("settingsHelp")}/>
+            <Link className="text-link" to="/api/docs">
+                {de ? "API-Dokumentation" : "API documentation"}
+            </Link>
             <section className="panel settings-section">
                 <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
                 <Preferences onSave={saveUiPreferences}/>

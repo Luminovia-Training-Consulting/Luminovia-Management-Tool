@@ -5,9 +5,10 @@ import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
 import {CalendarColorPreferences} from "./calendar-colors";
+import type {CalendarColors} from "./calendar-color-api";
 
 const fake = vi.hoisted(() => ({
-    settings: {} as Record<string, any>,
+    settings: {} as CalendarColors,
     rpc: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({db: () => ({rpc: fake.rpc})}));
@@ -33,15 +34,15 @@ beforeEach(async () => {
         customer_event_color: "#FFF0C5",
         version: 0,
     };
-    fake.rpc.mockImplementation(async (name: string, args?: Record<string, any>) => {
+    fake.rpc.mockImplementation(async (name: string, args?: {p_personal_event_color: string; p_assignment_event_color: string; p_customer_event_color: string}) => {
         if (name === "get_my_calendar_color_preferences")
             return {data: structuredClone(fake.settings), error: null};
-        if (name === "save_my_calendar_color_preferences") {
+        if (name === "save_my_calendar_color_preferences" && args) {
             fake.settings = {
                 personal_event_color: args?.p_personal_event_color,
                 assignment_event_color: args?.p_assignment_event_color,
                 customer_event_color: args?.p_customer_event_color,
-                version: (fake.settings.version as number) + 1,
+                version: fake.settings.version + 1,
             };
             return {data: structuredClone(fake.settings), error: null};
         }

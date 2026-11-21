@@ -20,6 +20,9 @@ await withTestDatabase("job_text_sort", async ({sql, actor}) => {
     (${q(jobs[2])},'Test C','Fictional Alpha','online','published',10,'EUR','fixed_total',10,'Fictional terms'),
     (${q(jobs[3])},'Test D','Fictional Other','online','draft',10,'EUR','fixed_total',10,'Fictional terms'),
     (${q(jobs[4])},'Test E','Fictional Zero','online','published',10,'EUR','fixed_total',10,'Fictional terms');
+    insert into public.job_sessions(job_id,starts_at,ends_at)
+    select id,now()+interval '5 days',now()+interval '5 days 1 hour'
+    from public.jobs where id in (${jobs.map(q).join(",")});
     insert into public.job_requirements(job_id,topic_id) values(${q(jobs[0])},${q(x)}),(${q(jobs[0])},${q(y)}),(${q(jobs[1])},${q(y)}),(${q(jobs[2])},${q(y)});
     insert into public.organisations(id,name) values(${q(org)},'Fictional policy organisation');
     insert into private.compensation_policy(singleton,version,regular_percent,senior_percent,updated_by) values(true,1,10,90,${q(manager)});

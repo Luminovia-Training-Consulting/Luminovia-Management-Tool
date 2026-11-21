@@ -43,6 +43,8 @@ vi.mock("../knowledge/api", () => ({
         }),
 }));
 vi.mock("./api", () => ({
+    chatContactsQuery: (actor: string) =>
+        ({queryKey: ["chat-contacts", actor], queryFn: async () => []}),
     chatKeys: {rooms: (actor: string) => ["chat-rooms", actor]},
     chatRoomsQuery: (actor: string) =>
         ({queryKey: ["chat-rooms", actor], queryFn: async () => []}),

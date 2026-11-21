@@ -105,6 +105,10 @@ Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/genera
 
 ## Base URLs and authentication
 
+Open /api/docs while signed in to browse the interactive OpenAPI contract. The explorer starts with requests disabled. Authorization uses the current account's short-lived access token and the configured publishable key. Copyable Swagger commands omit the injected credentials. Download the document from /api/openapi.json. It covers the account facade and the named Premium LMS operations. Use the catalogue below for the remaining native RPCs.
+
+Send POST /functions/v1/human-login with JSON fields identifier and password. The identifier may be the existing verified email address or the unique installation-local username. Use the returned access_token for subsequent API calls and protect the refresh_token. Invalid credentials return 401 and exhausted attempt budgets return 429. For password recovery, native Auth accepts the verified email address. The portal also accepts the username and preserves the Supabase SDK's original PKCE verifier. The browser sends the lowercase username, S256 challenge and its allowed /auth/callback URL to POST /functions/v1/human-recovery. A valid request returns 202 while the server handles lookup and email delivery in the background. This acknowledgement does not reveal the account or confirm delivery. Use account_username to read your own alias and version. Call save_account_username with p_username and p_expected_version to change it, or send null to remove it. Usernames are normalized to lowercase, 3–32 ASCII characters, and unique across the installation.
+
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses \`http://127.0.0.1:54321\`; a selfhost gateway can expose the API beneath \`/backend\`. Read \`VITE_SUPABASE_URL\` from the approved environment rather than hard-coding a deployment hostname.
 
 Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA is disabled. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
@@ -229,6 +233,16 @@ All private responses use no-store semantics and current resource checks. IDs ar
 The exact \`course-documents\` JSON request shapes are: \`{kind:"qualification_passport",locale:"de"|"en"}\`; \`{kind:"resource"|"completion"|"attendance"|"wiki_resource"|"assignment_confirmation",id:"<uuid>"}\`; \`{kind:"request_resource",id:"<version-uuid>",request_id:"<uuid>"}\`; or \`{kind:"earnings_statement",from:"YYYY-MM-DD",until:"YYYY-MM-DD",all?:boolean}\`. Unknown keys and kinds are rejected. The gateway checks the actor and resource before and after reading or rendering; a valid ID alone grants nothing.
 
 The current lecturer invitation screen also calls the compatibility \`POST /functions/v1/invite-lecturer\` endpoint. It requires an approved browser Origin, bearer JWT, enabled invitation configuration and a JSON body with \`email\`, optional \`display_name\` and stable \`idempotency_key\` UUID (maximum 2,048 request bytes). Only \`status:"sent"\` confirms delivery; reservation conflicts, throttling, unavailable delivery and uncertain sends must be handled without an automatic second email. New account administration can instead use the account facade's invitation route, which has its own schema and permission checks.
+
+## API compatibility
+
+The OpenAPI information version follows semantic versioning for the explicitly documented contracts. Add optional fields and new operations without changing current semantics. Keep an existing operation and its parser during a deprecation window. Give renamed fields or incompatible required inputs a new versioned operation and announce the replacement before removing the previous contract. Record changes with the release notes. The generated native catalogue lists implementation signatures and permission metadata. Published business behaviour remains subject to current actor, ownership, course and edition checks.
+
+## Company integration keys
+
+In **Admin → Companies → API integrations**, active administrators or owners can issue a company key, replace it or revoke it. The screen displays the secret once. Store it in a backend secret manager. The key uses the fixed \`courses.read\` scope and expires. The list reports expiry, revocation and last successful use. Rotation invalidates the old key immediately, and issuer suspension or company archiving prevents use. The table stores only a hash of the secret.
+
+Call \`GET /functions/v1/company-integration\` from a backend with \`Authorization: Bearer <integration-key>\` and no Origin header. This endpoint advertises its separate credential in the downloaded OpenAPI document. Portal sessions continue to use the account and native API. Query parameters are \`limit\` (1–50, default 25) and \`after\` (the previous page’s \`next_cursor\`). Results contain \`items\` with published course-run \`id\`, \`title\` and \`time_zone\`; a null \`next_cursor\` marks the final page. Company scope is fixed to the key. The endpoint returns HTTP 429 and \`Retry-After\` at 60 requests per minute per key.
 
 ## Calendar feeds, source revisions and privacy
 

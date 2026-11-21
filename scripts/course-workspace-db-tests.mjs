@@ -224,6 +224,47 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             );
         },
     );
+    await check("Course file ownership is immutable and removal follows the staff/company/lecturer matrix", async () => {
+        const addMaterial = async (owner, name) => {
+            const documentId = randomUUID(), version = randomUUID();
+            await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+                       values (${q(documentId)},${q(owner)},${q(owner)},'personal','material',${q(name)},'application/pdf',10,'clean',${q(randomUUID())});
+                       insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+                       values (${q(version)},${q(documentId)},${q(owner)},${q(randomUUID())},1,${q(`fictional/${name}`)},${q(name)},'application/pdf',10,'clean',${q("a".repeat(64))});
+                       update public.documents set current_version_id=${q(version)} where id=${q(documentId)};`);
+            return version;
+        };
+        const staffVersion = await addMaterial(admin, "Staff.pdf");
+        const lecturerVersion = await addMaterial(teacher, "Lecturer.pdf");
+        const companyVersion = await addMaterial(client, "Company.pdf");
+        const staffLink = (await action(admin, "resource_share", {version_id: staffVersion, audience: "all", category: "material"})).id;
+        const lecturerLink = (await action(teacher, "resource_share", {version_id: lecturerVersion, audience: "all", category: "material"})).id;
+        const companyLink = (await action(client, "resource_share", {version_id: companyVersion, audience: "all", category: "material"})).id;
+        await assert.rejects(action(teacher, "resource_share", {version_id: companyVersion, audience: "staff", category: "material"}), /42501/);
+        await assert.rejects(action(client, "resource_share", {version_id: lecturerVersion, audience: "staff", category: "material"}), /42501/);
+        await assert.rejects(action(learner, "resource_share", {version_id: lecturerVersion, audience: "staff", category: "material"}), /42501/);
+        const visible = await workspace(teacher);
+        assert.equal(visible.resources.find((row) => row.id === staffLink).can_remove, false);
+        assert.equal(visible.resources.find((row) => row.id === companyLink).ownership_kind, "company");
+        assert.equal(visible.resources.find((row) => row.id === lecturerLink).can_remove, true);
+        assert.equal((await workspace(client)).resources.find((row) => row.id === companyLink).can_remove, true);
+        assert.equal((await workspace(learner)).resources.find((row) => row.id === companyLink).can_remove, false);
+        for (const link of [staffLink, companyLink]) await assert.rejects(action(teacher, "resource_remove", {id: link}), /42501/);
+        for (const link of [staffLink, lecturerLink]) await assert.rejects(action(client, "resource_remove", {id: link}), /42501/);
+        await assert.rejects(action(learner, "resource_remove", {id: lecturerLink}), /42501/);
+        await assert.rejects(sql(`update private.course_resources set ownership_kind='lecturer' where id=${q(companyLink)}`), /42501/);
+        await action(teacher, "resource_remove", {id: lecturerLink});
+        await action(client, "resource_remove", {id: companyLink});
+        assert.equal((await action(client, "resource_share", {version_id: companyVersion, audience: "all", category: "material"})).id, companyLink);
+        assert.equal((await workspace(client)).resources.find((row) => row.id === companyLink).ownership_kind, "company");
+        await action(client, "resource_remove", {id: companyLink});
+        await action(admin, "resource_remove", {id: staffLink});
+        assert.equal((await workspace(learner)).resources.some((row) => [staffLink, lecturerLink, companyLink].includes(row.id)), false);
+        await rpc(admin, "set_company_premium", [q(org), "false", "1", q(randomUUID())]);
+        await assert.rejects(action(teacher, "resource_share", {version_id: lecturerVersion, audience: "all", category: "material"}), /42501/);
+        await assert.rejects(action(client, "resource_remove", {id: companyLink}), /42501/);
+        await rpc(admin, "set_company_premium", [q(org), "true", "2", q(randomUUID())]);
+    });
     await check(
         "Personal notebook is owner-only while course Q&A admits enrolled learners and assigned teachers",
         async () => {

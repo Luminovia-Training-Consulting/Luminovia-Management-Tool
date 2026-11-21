@@ -4,6 +4,7 @@ import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter} from "react-router-dom";
 import i18n from "../../lib/i18n";
 import {ChatPage} from "./chat";
+import {knowledgeKeys} from "../knowledge/api";
 import {RoomActivity} from "./room-activity";
 
 const fake = vi.hoisted(() => ({rpc: vi.fn(), from: vi.fn()}));
@@ -24,6 +25,7 @@ it("renders the existing server message time using the cached preferred zone and
     client.setQueryData(["profile", "actor"], {time_zone: "Europe/Berlin"});
     client.setQueryData(["permissions", "actor"], []);
     client.setQueryData(["user-roles", "actor"], []);
+    client.setQueryData(knowledgeKeys.access("actor"), {can_author: false});
     client.setQueryData(
         ["chat-rooms", "actor"],
         [

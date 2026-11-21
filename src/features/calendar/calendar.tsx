@@ -5,7 +5,8 @@
  */
 import {useBlocker, useSearchParams} from "react-router-dom";
 import {assignmentCalendarMetadataQuery} from "../jobs/discovery-api";
-import {CalendarColorPreferences, calendarColorsQuery, defaultCalendarColors,} from "./calendar-colors";
+import {CalendarColorPreferences} from "./calendar-colors";
+import {calendarColorsQuery, defaultCalendarColors} from "./calendar-color-api";
 import {orgQuery, runsQuery, templatesQuery} from "../operations/data";
 import {useCallback, useEffect, useRef, useState} from "react";
 import type {DatesSetArg} from "@fullcalendar/core";

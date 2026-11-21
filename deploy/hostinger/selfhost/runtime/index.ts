@@ -26,6 +26,9 @@ const PORTAL_FUNCTIONS = new Set([
     "calendar-feed",
     "website-enquiries",
     "mail-admin",
+    "human-login",
+    "human-recovery",
+    "company-integration",
 ]);
 
 const JWT_SECRET = Deno.env.get("JWT_SECRET");
@@ -353,14 +356,20 @@ Deno.serve({onError}, async (req: Request) => {
     const {pathname} = url;
     const path_parts = pathname.split("/");
     const service_name = path_parts[1];
-    // Only this exact read-only GET uses an owner-issued revocable capability.
-    // Its handler verifies the hash against current active ownership. All other
-    // methods, suffixes and reviewed functions retain the normal JWT boundary.
+    // Browser credential and recovery endpoints enforce their own online rate
+    // checks. The calendar GET uses an owner-issued revocable capability.
+    // Other methods and suffixes retain the normal JWT boundary.
+    const credentialExchange =
+        (service_name === "human-login" || service_name === "human-recovery") &&
+        pathname === `/${service_name}` &&
+        (req.method === "POST" || req.method === "OPTIONS");
     const capabilityFeed =
         service_name === "calendar-feed" &&
         pathname === "/calendar-feed" &&
         req.method === "GET";
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed) {
+    const companyIntegration =
+        service_name === "company-integration" && pathname === "/company-integration" && req.method === "GET";
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegration) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);

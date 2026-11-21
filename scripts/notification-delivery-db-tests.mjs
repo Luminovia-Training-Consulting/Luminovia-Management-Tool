@@ -352,7 +352,7 @@ await withTestDatabase(
             async () => {
                 const quiet = (zone, start, end, now) =>
                     sql(
-                        `select private.email_quiet_until(${q(zone)},${q(start)}::time,${q(end)}::time,${q(now)}::timestamptz)::text`,
+                        `begin;set local time zone 'UTC';select private.email_quiet_until(${q(zone)},${q(start)}::time,${q(end)}::time,${q(now)}::timestamptz)::text;commit;`,
                     );
                 assert.equal(
                     await quiet(

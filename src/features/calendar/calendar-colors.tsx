@@ -1,5 +1,6 @@
 /** Read and save each actor's private calendar event colors using a versioned RPC. */
-import {useEffect, useState} from "react";
+import {useState} from "react";
+import {calendarColorsQuery, type CalendarColors} from "./calendar-color-api";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {Button} from "../../components/ui/button";
@@ -7,13 +8,6 @@ import {ErrorState, Field, Loading, Notice} from "../../components/common";
 import {useOnline} from "../../lib/online";
 import {db} from "../../lib/supabase";
 import "./filter-i18n";
-
-export type CalendarColors = {
-    personal_event_color: string;
-    assignment_event_color: string;
-    customer_event_color: string;
-    version: number;
-};
 
 const palette = [
     {value: "#DCE9F8", key: "calendarColorBlue"},
@@ -24,24 +18,6 @@ const palette = [
     {value: "#F5DDE7", key: "calendarColorPink"},
     {value: "#DFE6EA", key: "calendarColorSlate"},
 ] as const;
-/** Match the SQL getter's untouched-account defaults until the private read finishes. */
-export const defaultCalendarColors: CalendarColors = {
-    personal_event_color: "#E1EDDA",
-    assignment_event_color: "#DCE9F8",
-    customer_event_color: "#FFF0C5",
-    version: 0,
-};
-
-/** Query key and getter are explicitly actor-scoped; no administrator reads another user's choices. */
-export const calendarColorsQuery = (actor: string) => ({
-    queryKey: ["calendar-color-preferences", actor] as const,
-    queryFn: async () => {
-        const {data, error} = await db().rpc("get_my_calendar_color_preferences");
-        if (error) throw error;
-        return data as CalendarColors;
-    },
-});
-
 /** Persist private-event, assignment and light customer-event colors independently for this actor. */
 export function CalendarColorPreferences({actor}: { actor: string }) {
     const {t} = useTranslation("calendarFilter");
@@ -49,13 +25,11 @@ export function CalendarColorPreferences({actor}: { actor: string }) {
     const cache = useQueryClient();
     const options = calendarColorsQuery(actor);
     const query = useQuery(options);
-    const [draft, setDraft] = useState<CalendarColors | null>(null);
+    const [edits, setDraft] = useState<CalendarColors | null>(null);
+    const draft = edits ?? query.data;
     const [notice, setNotice] = useState<"saved" | "failed" | "conflict" | null>(
         null,
     );
-    useEffect(() => {
-        if (query.data) setDraft(query.data);
-    }, [query.data]);
     const save = useMutation({
         mutationFn: async () => {
             if (!online) throw new Error("offline");
@@ -63,7 +37,7 @@ export function CalendarColorPreferences({actor}: { actor: string }) {
             const {data, error} = await db().rpc(
                 "save_my_calendar_color_preferences",
                 {
-                    p_expected_version: query.data.version,
+                    p_expected_version: draft.version,
                     p_personal_event_color: draft.personal_event_color,
                     p_assignment_event_color: draft.assignment_event_color,
                     p_customer_event_color: draft.customer_event_color,
@@ -74,6 +48,7 @@ export function CalendarColorPreferences({actor}: { actor: string }) {
         },
         onSuccess: (value) => {
             cache.setQueryData(options.queryKey, value);
+            setDraft(null);
             setNotice("saved");
         },
         onError: (error) =>
@@ -114,11 +89,7 @@ export function CalendarColorPreferences({actor}: { actor: string }) {
                                 onChange={(event) => {
                                     const value = event.currentTarget.value;
                                     setNotice(null);
-                                    setDraft((current) =>
-                                        current
-                                            ? {...current, [key]: value}
-                                            : current,
-                                    );
+                                    setDraft({...draft, [key]: value});
                                 }}
                             >
                                 {palette.map((color) => (

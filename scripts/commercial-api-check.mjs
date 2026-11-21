@@ -572,9 +572,9 @@ try {
     });
     assert.equal(beforeFinalSession.error?.code, "22023");
     assert.match(beforeFinalSession.error?.message ?? "", /invoice_not_ready/);
-    const beforeFinalSession = await a.client.rpc("submit_invoice", invoiceArgs);
-    assert.equal(beforeFinalSession.error?.code, "22023");
-    assert.match(beforeFinalSession.error?.message ?? "", /invoice_not_ready/);
+    const beforeAcceptedBlockEnds = await a.client.rpc("submit_invoice", invoiceArgs);
+    assert.equal(beforeAcceptedBlockEnds.error?.code, "22023");
+    assert.match(beforeAcceptedBlockEnds.error?.message ?? "", /invoice_not_ready/);
     // The isolated fixture advances its accepted schedule clock; it creates no
     // attendance or quiz evidence, which is intentionally not an invoice gate.
     const pastStart = new Date(Date.now() - 2 * 86400000).toISOString(),

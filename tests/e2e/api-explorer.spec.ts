@@ -1,0 +1,81 @@
+import { expect, test } from "@playwright/test";
+import { actor, login } from "./helpers/accounts-support";
+
+test.skip(
+  process.env.PORTAL_TEST_MODE !== "1",
+  "Use the isolated portal stack.",
+);
+
+test("the API explorer executes a documented read only after authorization", async ({
+  page,
+  request,
+}) => {
+  const account = await actor("Fictional API explorer lecturer", "lecturer");
+  const staticContract = await request.get("/api/openapi.json");
+  expect(staticContract.ok()).toBe(true);
+  expect(await staticContract.json()).toMatchObject({
+    openapi: "3.1.0",
+    paths: { "/functions/v1/accounts/v1/me": { get: {} } },
+  });
+
+  await page.goto("/api/docs");
+  await expect(page).toHaveURL(/\/login$/);
+  await login(page, account.email);
+  await page.goto("/api/docs");
+  await expect(
+    page.getByRole("heading", { name: "API-Dokumentation" }),
+  ).toBeVisible();
+  const readOperation = page.getByRole("button", {
+    name: /GET.*\/functions\/v1\/accounts\/v1\/me(?:$|\s)/,
+  });
+  await readOperation.click();
+  await expect(
+    page.getByRole("button", { name: "Try it out", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Mit meinem Konto autorisieren" })
+    .click();
+  await readOperation.click();
+  await page.getByRole("button", { name: "Try it out", exact: true }).click();
+  const response = page.waitForResponse(
+    (item) =>
+      item.request().method() === "GET" &&
+      new URL(item.url()).pathname.endsWith("/functions/v1/accounts/v1/me"),
+  );
+  await page.getByRole("button", { name: "Execute", exact: true }).click();
+  expect((await response).status()).toBe(200);
+  await page.getByRole("button", { name: "Anfragen deaktivieren" }).click();
+  await expect(
+    page.getByRole("button", { name: "Execute", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("an authenticated participant can run an own-account RPC through the API explorer", async ({
+  page,
+}) => {
+  const learner = await actor(
+    "Fictional API explorer participant",
+    "participant",
+  );
+  await login(page, learner.email, /\/learning$/);
+  await page.goto("/api/docs");
+  await expect(
+    page.getByRole("heading", { name: "API-Dokumentation" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Mit meinem Konto autorisieren" })
+    .click();
+  await page
+    .getByRole("button", { name: /POST.*\/rest\/v1\/rpc\/account_username/ })
+    .click();
+  await page.getByRole("button", { name: "Try it out", exact: true }).click();
+  const response = page.waitForResponse(
+    (item) =>
+      item.request().method() === "POST" &&
+      new URL(item.url()).pathname.endsWith("/rpc/account_username"),
+  );
+  await page.getByRole("button", { name: "Execute", exact: true }).click();
+  const result = await response;
+  expect(result.status()).toBe(200);
+  expect(await result.json()).toEqual({ username: null, version: 0 });
+});

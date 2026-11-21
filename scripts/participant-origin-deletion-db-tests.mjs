@@ -12,19 +12,30 @@ await withTestDatabase(
             other = randomUUID(),
             roomA = randomUUID(),
             roomB = randomUUID(),
-            message = randomUUID();
+            message = randomUUID(),
+            organisation = randomUUID(),
+            template = randomUUID(),
+            runA = randomUUID(),
+            runB = randomUUID();
         await sql(`insert into auth.users(id, email)
                    values (${q(admin)}, 'fixture-admin@example.invalid'),
                           (${q(member)}, 'fixture-member@example.invalid'),
                           (${q(other)}, 'fixture-other@example.invalid');
    insert into public.user_roles(user_id,role) values (${q(admin)},'admin'),(${q(member)},'lecturer'),(${q(other)},'lecturer');
-   insert into public.chat_rooms(id,kind,title,owner_id) values (${q(roomA)},'participant_course','Fictional A',${q(admin)}),(${q(roomB)},'participant_course','Fictional B',${q(admin)});
+   insert into public.organisations(id,name) values (${q(organisation)},'Fictional course company');
+   insert into public.course_templates(id,title) values (${q(template)},'Fictional course');
+   insert into public.course_runs(id,template_id,organisation_id) values
+     (${q(runA)},${q(template)},${q(organisation)}),(${q(runB)},${q(template)},${q(organisation)});
+   insert into public.chat_rooms(id,kind,title,owner_id,course_run_id) values
+     (${q(roomA)},'participant_course','Fictional A',${q(admin)},${q(runA)}),
+     (${q(roomB)},'participant_course','Fictional B',${q(admin)},${q(runB)});
    insert into public.chat_members(room_id,user_id) values (${q(roomA)},${q(admin)}),(${q(roomA)},${q(member)}),(${q(roomB)},${q(admin)}),(${q(roomB)},${q(other)});
    insert into private.participant_chat_origins(room_id,user_id,manual) values (${q(roomA)},${q(admin)},true),(${q(roomA)},${q(member)},true),(${q(roomB)},${q(admin)},true),(${q(roomB)},${q(other)},true);
    insert into public.messages(id,room_id,sender_id,client_id,request_hash,body) values(${q(message)},${q(roomB)},${q(admin)},${q(randomUUID())},'fixture','Fictional text');
    insert into private.chat_hidden_messages(user_id,message_id) values (${q(other)},${q(message)});
    create schema storage; create table storage.objects(bucket_id text,name text,primary key(bucket_id,name));
    create trigger permanent_deletion_storage_fence before insert or update on storage.objects for each row execute function private.guard_deleted_storage_path();`);
+        await actor(admin, `select public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`);
         const call = (name, args) =>
             actor(admin, `select public.${name}(${args})`, "aal2").then(JSON.parse);
         const service = (name, args) =>

@@ -23,7 +23,8 @@ import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
-import {type ClientOrganisation, clientOrganisationsQuery, type ClientRequest, clientRequestsQuery, clientSpendQuery, commissionAccessQuery, commissionKeys,} from "./commission-api";
+import {type ClientOrganisation, clientOrganisationsQuery, type ClientRequest, clientRequestsQuery, clientSpendQuery, companyMonthlySpendingQuery, commissionAccessQuery, commissionKeys,} from "./commission-api";
+import {CompanySpendingChart} from "./company-spending-chart";
 import {PublishClientRequest} from "./pricing";
 import {RequestBriefFields, RequestBriefPanel} from "./request-brief";
 import {cleanRequestBrief, initialRequestBrief, validRequestBrief,} from "./request-brief-api";
@@ -585,6 +586,10 @@ export function ClientPortalPage() {
         enabled: eligible,
     });
     const spend = useQuery({...clientSpendQuery(actor), enabled: eligible});
+    const monthly = useQuery({
+        ...companyMonthlySpendingQuery(actor, organisation || null),
+        enabled: Boolean(access.data?.can_request && !access.data?.can_manage_gross),
+    });
     const profile = useQuery(profileQuery(actor));
     const [writing, setWriting] = useState(false);
     const [search, setSearch] = useState("");
@@ -632,15 +637,18 @@ export function ClientPortalPage() {
                     <Link to="/learning">{t("learning:hub")}</Link>
                 </Button>
             </div>
-            {orgs.isError || requests.isError || spend.isError ? (
+            {orgs.isError || requests.isError || spend.isError ||
+                (monthly.isEnabled && monthly.isError) ? (
                 <ErrorState
                     retry={() => {
                         void orgs.refetch();
                         void requests.refetch();
                         void spend.refetch();
+                        if (monthly.isError) void monthly.refetch();
                     }}
                 />
-            ) : orgs.isPending || requests.isPending || spend.isPending ? (
+            ) : orgs.isPending || requests.isPending || spend.isPending ||
+                (monthly.isEnabled && monthly.isPending) ? (
                 <Loading/>
             ) : (
                 <>
@@ -684,6 +692,8 @@ export function ClientPortalPage() {
                                 </section>
                             ))}
                     </div>
+                    {!access.data.can_manage_gross && monthly.data &&
+                        <CompanySpendingChart rows={monthly.data}/>}
                     {access.data.can_request && !access.data.can_manage_gross &&
                         orgs.data.map((org) => (
                             <CompanyParticipantsPanel

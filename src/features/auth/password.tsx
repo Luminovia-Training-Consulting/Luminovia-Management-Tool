@@ -21,7 +21,7 @@ const schema = z.object({
         .regex(/[A-Z]/)
         .regex(/[a-z]/)
         .regex(/[0-9]/)
-        .regex(/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/),
+        .regex(/[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/),
 });
 
 /** Change the current session's password and confirm only the successful SDK response. */

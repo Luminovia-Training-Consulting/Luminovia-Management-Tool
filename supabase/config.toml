@@ -409,6 +409,14 @@ verify_jwt = true
 # Owner-issued revocable capability; the handler performs its own live checks.
 verify_jwt = false
 
+[functions.human-login]
+# Password verification and rate limits are enforced by the credential handler/Auth.
+verify_jwt = false
+
+[functions.human-recovery]
+# Public recovery requires an allowed browser origin and server-side alias/rate checks.
+verify_jwt = false
+
 [functions.course-documents]
 static_files = ["./functions/course-documents/assets/DejaVuSans.ttf"]
 
@@ -442,3 +450,6 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+[functions.company-integration]
+verify_jwt = false

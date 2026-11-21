@@ -1,5 +1,5 @@
 /** Administrator-only SMTP/IMAP settings; secret values are write-only and tests run through the private relay. */
-import {type FormEvent, useEffect, useState} from "react";
+import {type FormEvent, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
@@ -28,7 +28,7 @@ type Transport = {
     credentials_configured: boolean;
     last_test: ConnectionResult | null;
 };
-type MailConfiguration = { version: number; smtp: Transport; imap: Transport };
+export type MailConfiguration = { version: number; smtp: Transport; imap: Transport };
 type TransportDraft = {
     enabled: boolean;
     host: string;
@@ -39,11 +39,12 @@ type TransportDraft = {
     username: string;
     password: string;
 };
-type MailDraft = { smtp: TransportDraft; imap: TransportDraft };
+type MailDraft = { version: number; smtp: TransportDraft; imap: TransportDraft };
 
 /** Convert the safe server projection into form state without ever hydrating credentials. */
 function draftFrom(configuration: MailConfiguration): MailDraft {
     return {
+        version: configuration.version,
         smtp: {
             enabled: configuration.smtp.enabled,
             host: configuration.smtp.host ?? "smtp.hostinger.com",
@@ -115,13 +116,11 @@ export function AdminMailPage() {
             return result.data as MailConfiguration;
         },
     });
-    const [draft, setDraft] = useState<MailDraft | null>(null);
+    const [edits, setDraft] = useState<MailDraft | null>(null);
+    const draft = edits ?? (configuration.data ? draftFrom(configuration.data) : null);
     const [notice, setNotice] = useState<
         "saved" | "saveFailed" | "conflict" | "testFailed" | null
     >(null);
-    useEffect(() => {
-        if (configuration.data) setDraft(draftFrom(configuration.data));
-    }, [configuration.data]);
 
     const save = useMutation({
         mutationFn: async () => {
@@ -129,7 +128,7 @@ export function AdminMailPage() {
             if (!draft || !configuration.data)
                 throw new Error("configuration_unavailable");
             const {data, error} = await db().rpc("save_mail_configuration", {
-                p_expected_version: configuration.data.version,
+                p_expected_version: draft.version,
                 p_smtp: {
                     ...draft.smtp,
                     port: draft.smtp.port === "" ? null : Number(draft.smtp.port),
@@ -148,6 +147,7 @@ export function AdminMailPage() {
         },
         onSuccess: (value) => {
             cache.setQueryData(queryKey, value);
+            setDraft(null);
             setNotice("saved");
         },
         onError: (error) =>
@@ -193,11 +193,9 @@ export function AdminMailPage() {
     /** Change one field without replacing password drafts in the other transport. */
     function change(protocol: Protocol, patch: Partial<TransportDraft>) {
         setNotice(null);
-        setDraft((current) =>
-            current
-                ? {...current, [protocol]: {...current[protocol], ...patch}}
-                : current,
-        );
+        if (draft) {
+            setDraft({...draft, [protocol]: {...draft[protocol], ...patch}});
+        }
     }
 
     /** Save first, then ask the internal relay to perform a no-message protocol handshake. */

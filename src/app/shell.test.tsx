@@ -92,6 +92,7 @@ function setup(path = "/", initiallyCollapsed = true) {
                         <Route index element={<p>Private workspace</p>}/>
                         <Route path="settings" element={<NavigationTarget/>}/>
                         <Route path="profile" element={<NavigationTarget/>}/>
+                        <Route path="api/docs" element={<NavigationTarget/>}/>
                         <Route path="files" element={<NavigationTarget/>}/>
                         <Route path="courses" element={<p>Live courses route</p>}/>
                         <Route path="search" element={<NavigationTarget/>}/>
@@ -369,4 +370,20 @@ describe("Royal workspace sidebar preference", () => {
             within(sidebar).getByRole("button", {name: "Abmelden"}),
         ).toBeVisible();
     });
+});
+it("lets participant-only accounts open their own profile without opening operational navigation", async () => {
+    access.roles = ["participant"];
+    setup("/profile", false);
+    const sidebar = screen.getByRole("complementary", {name: "Menü"});
+    expect(within(sidebar).getByRole("link", {name: "Meine Kurse"})).toHaveAttribute("href", "/learning");
+    expect(within(sidebar).getByRole("link", {name: "Benachrichtigungen"})).toHaveAttribute("href", "/notifications");
+    expect(screen.getByLabelText("Fixture location")).toHaveTextContent("/profile");
+    expect(within(sidebar).queryByRole("link", {name: "Aufträge"})).toBeNull();
+});
+
+
+it("allows a participant's signed-in API explorer route", () => {
+    access.roles = ["participant"];
+    setup("/api/docs");
+    expect(screen.getByLabelText("Fixture location")).toHaveTextContent("/api/docs");
 });

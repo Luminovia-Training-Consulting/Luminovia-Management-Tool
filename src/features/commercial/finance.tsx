@@ -2,7 +2,7 @@
  * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
  * confirmed server rows; payment reversals require their own auditable action.
  */
-import {useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
@@ -890,11 +890,8 @@ export function FinancePage() {
         ...invoicesQuery(actor, effectiveAll),
         enabled: !access.isPending,
     });
-    const [submitting, setSubmitting] = useState(false);
-    useEffect(() => {
-        if (requestedClaimId && access.data?.can_submit_invoice)
-            setSubmitting(true);
-    }, [requestedClaimId, access.data?.can_submit_invoice]);
+    const [openedInvoiceForm, setSubmitting] = useState(false);
+    const submitting = Boolean(access.data?.can_submit_invoice && (openedInvoiceForm || requestedClaimId));
     const [invoiceSearch, setInvoiceSearch] = useState("");
     const [invoiceStatus, setInvoiceStatus] = useState("");
     const [invoiceCurrency, setInvoiceCurrency] = useState("");
@@ -1188,6 +1185,7 @@ export function FinancePage() {
             >
                 {submitting && access.data?.can_submit_invoice && (
                     <SubmitInvoice
+                        key={requestedClaimId ?? "manual"}
                         actor={actor}
                         zone={zone}
                         initialClaimId={requestedClaimId}
