@@ -94,13 +94,11 @@ beforeEach(() => {
   fake.save
     .mockReset()
     .mockResolvedValue({ status: "present", version: 1, minutes: 60 });
-  fake.attach
-    .mockReset()
-    .mockResolvedValue({
-      id: "evidence",
-      resource_id: "resource",
-      version_id: "version",
-    });
+  fake.attach.mockReset().mockResolvedValue({
+    id: "evidence",
+    resource_id: "resource",
+    version_id: "version",
+  });
   fake.upload
     .mockReset()
     .mockResolvedValue({ status: "clean", current_version_id: "version" });
