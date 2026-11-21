@@ -3,6 +3,7 @@ import {
   type InstallationBrand,
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
+import { accountingPaths } from "./accounting-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
@@ -1700,6 +1701,7 @@ const internalCapabilities = {
 
 const paths: Record<string, Record<string, unknown>> = {
   ...nativeExplorerPaths,
+  ...accountingPaths,
   ...Object.fromEntries(
     Object.entries(accountOpenApi.paths).map(([path, methods]) => [
       "/functions/v1/accounts" + path,

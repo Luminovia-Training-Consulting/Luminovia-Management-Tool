@@ -12,7 +12,7 @@
 | Website enquiries | Trusted intake, bounded validation, versioned triage and explicit conversion. `enquiries-api-check.mjs` and `enquiries.spec.ts` cover the portal side. | The separate public Website sender and its delivery remain external to this implementation. |
 | UI and PWA | The public demo, DE/EN, themes, keyboard and mobile layouts have browser coverage. The inbox popover supports Escape and outside dismissal. The calendar has a view timezone selector and explicit UTC offsets for repeated times. PWA install and offline controls exist. | Review every authenticated role and page in the browser. Verify the wider browser and tablet matrix and PWA installation on physical devices. |
 | Notifications | Inbox, read-state, categories, quiet hours and local push and mail adapters have existing fixtures. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
-| API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed responses for selected domains. | Review the rest of the catalogue and prove each supported request and response against the live API. |
+| API and developer tools | Native RPC catalogue, Swagger and OpenAPI download, scoped keys, rotation, webhook runtime and typed responses for selected domains including internal accounting. | Review the rest of the catalogue and prove each supported request and response against the live API. |
 
 This pass covers source implementation and local tests. CI, deployment, production mail and hosting acceptance are tracked separately.
 

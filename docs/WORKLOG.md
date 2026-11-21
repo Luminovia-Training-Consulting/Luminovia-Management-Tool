@@ -1,3 +1,9 @@
+# 21 November 2026 — Accounting API contracts and invitation browser coverage
+
+Published eight accounting OpenAPI contracts in both internal API views, sharing invoice, payment, capability and snapshot validators with the application. A fresh PostgreSQL 17.12 replay with PostgREST 16.5 and fictional fixture JWTs validated all eight successful wire shapes and five denial/validation results. The real Auth/Storage/scanner integration now checks the same published schemas, partial payment, additive reversal, redacted customer totals, immutable export reads and revoked-role errors. The complete Docker fixture for these new assertions still needs acceptance.
+
+The isolated desktop and mobile Chromium runs passed the calendar time-zone and authenticated owner scenarios on `f9e2c3c3`. Their invitation expectation still targeted the old in-form status. On `58e6ef07` the test follows the mandatory password setup to the authenticated dashboard and proves that sign-out followed by a fresh login with the new password restores that dashboard. Exact Docker acceptance for the corrected test is tracked in run `44897899409`.
+
 # 21 November 2026 — Privileged authenticator and security mail
 
 The installation operator can now stage native TOTP for administrators and owners. Enforcement requires all active privileged accounts to have a verified factor. PostgreSQL checks the signed assurance level, current native session and the verified factor attached to that session. First-password setup stays first. Local caches are partitioned by native session and assurance level. The default installation policy is disabled.

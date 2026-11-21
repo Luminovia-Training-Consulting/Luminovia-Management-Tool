@@ -371,6 +371,8 @@ Open **Buchhaltung und Exporte / Accounting and exports** to select up to 100 au
 
 With current gross-finance permission, choose **Record an external customer invoice** to register an already issued invoice. Select the accepted assignments for one organisation and currency, enter the number, dates and exact total, then upload a dedicated PDF and wait for the scan. Review the entries against that PDF before confirming. An invoice that differs from the accepted charge requires an explanation, and the accepted amount stays in the original record. Record incoming payments and correct entries through a reasoned reversal. The CSV and JSON are portal interchange formats. Generating or validating XRechnung, ZUGFeRD and vendor-specific import files remains separate work.
 
+The internal OpenAPI explorer and download describe accounting permissions, eligible agreements, invoice pagination, customer invoice registration, payment entries and reversals, and immutable export creation and retrieval. Use exact decimal strings in the original currency. Pass both parts of the cursor from the last invoice for the next page. Customer-scoped results omit gross agreement values and claim identities. Reading a saved export checks current access to every included invoice and its original disclosure scope.
+
 <a id="section-user-guide-workbench-favourites-and-reusable-workflows"></a>
 
 ## Workbench, favourites and reusable workflows

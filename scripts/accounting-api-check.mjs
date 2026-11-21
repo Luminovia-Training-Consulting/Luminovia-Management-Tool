@@ -2,9 +2,11 @@
  * invoice PDFs pass the scanner; current permissions gate bytes and snapshots. */
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
+import { z } from "zod";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 import { accountingTestPdf } from "./testing/accounting-pdf.mjs";
+import { accountingPaths } from "../src/features/developer-api/accounting-contract.ts";
 
 await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   const teacher = await actor("accounting-teacher", "lecturer"),
@@ -82,6 +84,20 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
       Authorization: `Bearer ${session.access_token}`,
     };
   };
+  /** Assert both published wire shapes around a real authenticated RPC. */
+  async function documented(who, name, args = {}) {
+    const { post } = accountingPaths[`/rest/v1/rpc/${name}`];
+    const json = "application/json";
+    z.fromJSONSchema(post.requestBody.content[json].schema).parse(args);
+    const { status, data, error } = await who.client.rpc(name, args);
+    assert.equal(
+      status,
+      200,
+      `Documented success for ${name}: ${error?.code ?? ""}`,
+    );
+    z.fromJSONSchema(post.responses["200"].content[json].schema).parse(data);
+    return data;
+  }
   const bytes = accountingTestPdf();
   /** Exercise the existing reservation/Storage/scanner gateway with real PDF
    * bytes. A clean metadata stub would not establish this integration. */
@@ -137,14 +153,16 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     p_invoice_ids: [lecturerInvoice],
     p_request_id: randomUUID(),
   };
-  const first = await checked(
-    teacher.client.rpc("create_accounting_export", args),
-  );
+  const first = await documented(teacher, "create_accounting_export", args);
   assert.equal(first.invoices[0].recorded_total, "100.01");
   assert.equal(first.invoices[0].currency, "AUD");
   assert.equal(first.invoices[0].tax.vat_amount, null);
   assert.deepEqual(
     await checked(teacher.client.rpc("create_accounting_export", args)),
+    first,
+  );
+  assert.deepEqual(
+    await documented(teacher, "accounting_export", { p_id: first.id }),
     first,
   );
   assert.equal(
@@ -189,7 +207,7 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   // customer gross authority from ordinary finance and peer access.
   const beforeDenied = await evidence();
   assert.ok(
-    (await checked(owner.client.rpc("accounting_customer_claims"))).some(
+    (await documented(owner, "accounting_customer_claims")).some(
       (row) => row.claim_id === claim,
     ),
   );
@@ -233,9 +251,7 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     "42501",
   );
   const invoice = (
-    await checked(
-      owner.client.rpc("register_customer_invoice", registrationArgs),
-    )
+    await documented(owner, "register_customer_invoice", registrationArgs)
   ).id;
   assert.equal((await download(manager, customerDoc)).status, 403);
   const actual = await download(customer, customerDoc);
@@ -253,8 +269,10 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     p_reference: "Fictional recorded payment",
     p_request_id: randomUUID(),
   };
-  const paid = await checked(
-    owner.client.rpc("record_customer_invoice_payment", paymentArgs),
+  const paid = await documented(
+    owner,
+    "record_customer_invoice_payment",
+    paymentArgs,
   );
   assert.deepEqual(
     await checked(
@@ -262,17 +280,48 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     ),
     paid,
   );
-  const exported = await checked(
-    customer.client.rpc("create_accounting_export", {
-      p_source: "customer",
-      p_invoice_ids: [invoice],
-      p_request_id: randomUUID(),
-    }),
-  );
+  const exported = await documented(customer, "create_accounting_export", {
+    p_source: "customer",
+    p_invoice_ids: [invoice],
+    p_request_id: randomUUID(),
+  });
   assert.equal(exported.invoices[0].paid_total, "33.34");
   assert.equal(exported.invoices[0].outstanding_total, "166.69");
   assert.equal(exported.invoices[0].accepted_charge_total, null);
   assert.equal(exported.invoices[0].assignments[0].claim_id, null);
+  const reversalArgs = {
+    p_invoice_id: invoice,
+    p_payment_id: paid.id,
+    p_reason: "Fictional duplicate receipt",
+    p_request_id: randomUUID(),
+  };
+  const reversal = await documented(
+    owner,
+    "reverse_customer_invoice_payment",
+    reversalArgs,
+  );
+  assert.notEqual(reversal.id, paid.id);
+  assert.deepEqual(
+    await documented(owner, "reverse_customer_invoice_payment", reversalArgs),
+    reversal,
+  );
+  const customerPage = await documented(customer, "accounting_invoices", {
+    p_source: "customer",
+  });
+  const reversedInvoice = customerPage.items.find(
+    (item) => item.id === invoice,
+  );
+  assert.equal(reversedInvoice.paid_total, "0.00");
+  assert.equal(reversedInvoice.status, "registered");
+  assert.equal(
+    reversedInvoice.payments.find((entry) => entry.id === reversal.id)
+      .reverses_id,
+    paid.id,
+  );
+  assert.deepEqual(
+    await documented(customer, "accounting_export", { p_id: exported.id }),
+    exported,
+  );
   assert.equal(
     (
       await outsider.client.rpc("create_accounting_export", {
@@ -350,11 +399,11 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   const denyRetained = async (name, args) => {
     const response = await retainedRpc(name, args);
     assert.equal(response.status, 403, `Retained token denied for ${name}`);
-    assert.equal(
-      (await response.json()).code,
-      "42501",
-      `Current authority required for ${name}`,
-    );
+    const body = await response.json();
+    const definition =
+      accountingPaths[`/rest/v1/rpc/${name}`].post.responses["403"];
+    z.fromJSONSchema(definition.content["application/json"].schema).parse(body);
+    assert.equal(body.code, "42501", `Current authority required for ${name}`);
   };
   await denyRetained("accounting_export", { p_id: grossExport.id });
   await denyRetained("create_accounting_export", grossExportArgs);
@@ -388,6 +437,10 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   const remaining = await retainedRpc("accounting_access", {});
   assert.equal(remaining.status, 200);
   const access = await remaining.json();
+  z.fromJSONSchema(
+    accountingPaths["/rest/v1/rpc/accounting_access"].post.responses["200"]
+      .content["application/json"].schema,
+  ).parse(access);
   assert.equal(access.can_manage_customer_invoices, false);
   assert.equal(access.can_export_all_lecturers, true);
   const netRead = await retainedRpc("accounting_invoices", {
