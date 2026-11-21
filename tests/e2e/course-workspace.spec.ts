@@ -463,8 +463,8 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
         p_run_id:f.run,p_session_id:f.session,
     }));
     expect((await register()).rows[0].status).toBeNull();
-    await page.getByRole("button",{name:"1 Änderungen verbindlich speichern",exact:true}).click();
-    await expect(page.getByText("1 Änderungen gespeichert.",{exact:true})).toBeVisible();
+    await attendance.getByRole("button",{name:"1 Änderung verbindlich speichern",exact:true}).click();
+    await expect(attendance.getByText("1 Änderung gespeichert.",{exact:true})).toBeVisible();
     expect((await register()).rows[0]).toMatchObject({
         user_id:f.learner.id, status:"present", note:"Reviewed register",version:1,
     });
