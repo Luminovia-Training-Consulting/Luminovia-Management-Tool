@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   academyAccountReceipt,
   academyAdministration,
+  academyManagedAccount,
   academyOrganisation,
 } from "../accounts/academy-schema.ts";
 
@@ -35,6 +36,7 @@ const account = {
 };
 const instructor = { role: z.literal("lecturer"), organisation_id: z.null() };
 const learner = { role: z.literal("participant"), organisation_id: z.uuid() };
+const manager = { role: z.literal("management"), organisation_id: z.null() };
 const invite = { mode: z.literal("invite") };
 const create = {
   mode: z.literal("password"),
@@ -51,11 +53,42 @@ const create = {
 const accountRequest = z.union([
   z.strictObject({ ...account, ...instructor, ...invite }),
   z.strictObject({ ...account, ...learner, ...invite }),
+  z.strictObject({ ...account, ...manager, ...invite }),
   z.strictObject({ ...account, ...instructor, ...create }),
   z.strictObject({ ...account, ...learner, ...create }),
+  z.strictObject({ ...account, ...manager, ...create }),
 ]);
 const isolatedReceipt = academyAccountReceipt.options[0];
 const inProgress = academyAccountReceipt.options[1];
+
+function memberWrite(
+  operationId: string,
+  summary: string,
+  description: string,
+  request: z.ZodType,
+) {
+  return {
+    post: {
+      operationId,
+      tags: ["Local academy administration"],
+      summary,
+      description: `${write} ${description}`,
+      security: credentials,
+      "x-portal-licence": "active",
+      requestBody: { required: true, content: json(request) },
+      responses: {
+        "200": {
+          description: "The current local account",
+          content: json(academyManagedAccount),
+        },
+        "400": error("Invalid account ID, state or version"),
+        "401": error("Authentication required"),
+        "403": error("Current authority over the target account required"),
+        "409": error("The expected state changed. Read the current directory."),
+      },
+    },
+  };
+}
 
 export const academyAdministrationPaths = {
   "/rest/v1/rpc/academy_administration": {
@@ -63,7 +96,7 @@ export const academyAdministrationPaths = {
       operationId: "readAcademyAdministration",
       tags: ["Local academy administration"],
       summary: "Read the local organisation and course-member directory",
-      description: `${read} Other eligible course actors receive null. The bounded read lists up to 200 active organisations and up to 200 local single-role lecturers and learners. The account projection includes display name and current account and confirmation state.`,
+      description: `${read} Other eligible course actors receive null. The bounded read lists up to 200 active organisations and up to 200 manageable academy accounts. Administrators can also see local course managers. The account projection includes display name, current confirmation and activation state, and current lifecycle action flags.`,
       security: credentials,
       "x-portal-licence": "active-or-grace",
       requestBody: { required: false, content: json(noArguments) },
@@ -77,6 +110,26 @@ export const academyAdministrationPaths = {
       },
     },
   },
+  "/rest/v1/rpc/academy_set_member_active": memberWrite(
+    "changeAcademyMemberActivation",
+    "Suspend or reactivate a local academy account",
+    "Course managers can act on a standalone instructor or learner. An administrator can also act on a local course manager. Pass the last observed activation state. Existing Auth identity, enrolment and course evidence are preserved.",
+    z.strictObject({
+      p_user_id: z.uuid(),
+      p_active: z.boolean(),
+      p_expected_active: z.boolean(),
+    }),
+  ),
+  "/rest/v1/rpc/academy_set_management": memberWrite(
+    "changeAcademyManagementDelegation",
+    "Grant or withdraw an existing instructor's management rights",
+    "Only a current local administrator can make the change. A grant requires an active confirmed instructor. Pass the last observed delegation version, or zero for an instructor with no prior delegation. Withdrawing delegated rights preserves the instructor's Auth identity and teaching role.",
+    z.strictObject({
+      p_user_id: z.uuid(),
+      p_enabled: z.boolean(),
+      p_expected_version: z.number().int().min(0).max(2147483647),
+    }),
+  ),
   "/rest/v1/rpc/academy_create_organisation": {
     post: {
       operationId: "createAcademyOrganisation",
@@ -113,8 +166,8 @@ export const academyAdministrationPaths = {
     post: {
       operationId: "provisionAcademyCourseAccount",
       tags: ["Local academy administration"],
-      summary: "Create or invite a local lecturer or learner",
-      description: `${write} Choose password creation or a configured native Auth email invitation. A learner requires one active local organisation. The committed result binds that learner to its organisation. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
+      summary: "Create or invite a local academy account",
+      description: `${write} Choose password creation or a configured native Auth email invitation. A learner requires one active local organisation. Only a current local administrator can provision a course manager. Normal email confirmation applies to invited identities. Repeat a pending request with the same idempotency key and fields to check its status.`,
       security: credentials,
       "x-portal-licence": "active",
       requestBody: { required: true, content: json(accountRequest) },

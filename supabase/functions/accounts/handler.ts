@@ -270,7 +270,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 const {mode, password, role, organisation_id, ...metadata} = input;
                 const base = parseInvitation(metadata);
                 if (!base?.display_name ||
-                    (role !== "lecturer" && role !== "participant") ||
+                    (role !== "lecturer" && role !== "participant" && role !== "management") ||
                     (role === "participant" ? !uuid(organisation_id) : organisation_id !== null) ||
                     (mode !== "password" && mode !== "invite") ||
                     (mode === "password" ? !validAccountPassword(password) : password !== undefined))

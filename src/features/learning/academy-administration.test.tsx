@@ -6,11 +6,14 @@ import i18n from "../../lib/i18n";
 import type { AcademyAdministration } from "../accounts/academy-schema";
 import { AcademyAdministrationPage } from "./academy-administration";
 
-const { read, createAccount, createOrganisation } = vi.hoisted(() => ({
-  read: vi.fn<() => Promise<AcademyAdministration | null>>(),
-  createAccount: vi.fn(),
-  createOrganisation: vi.fn(),
-}));
+const { read, createAccount, createOrganisation, setActive, setManagement } =
+  vi.hoisted(() => ({
+    read: vi.fn<() => Promise<AcademyAdministration | null>>(),
+    createAccount: vi.fn(),
+    createOrganisation: vi.fn(),
+    setActive: vi.fn(),
+    setManagement: vi.fn(),
+  }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "current-academy-actor" } } }),
 }));
@@ -22,6 +25,8 @@ vi.mock("../accounts/academy-api", () => ({
   }),
   createAcademyAccount: createAccount,
   createAcademyOrganisation: createOrganisation,
+  setAcademyMemberActive: setActive,
+  setAcademyManagement: setManagement,
 }));
 
 const org = {
@@ -35,6 +40,10 @@ const member = {
   role: "participant" as const,
   active: true,
   confirmed: false,
+  management_delegated: false,
+  management_version: 0,
+  can_set_active: true,
+  can_set_management: false,
 };
 
 beforeEach(async () => {
@@ -59,10 +68,16 @@ function setup() {
 }
 
 it("creates an organisation then invites the learner into that exact organisation", async () => {
-  read.mockResolvedValue({ can_write: true, organisations: [], accounts: [] });
+  read.mockResolvedValue({
+    can_write: true,
+    can_create_management: false,
+    organisations: [],
+    accounts: [],
+  });
   createOrganisation.mockImplementation(async () => {
     read.mockResolvedValue({
       can_write: true,
+      can_create_management: false,
       organisations: [org],
       accounts: [],
     });
@@ -71,6 +86,7 @@ it("creates an organisation then invites the learner into that exact organisatio
   createAccount.mockImplementation(async () => {
     read.mockResolvedValue({
       can_write: true,
+      can_create_management: false,
       organisations: [org],
       accounts: [member],
     });
@@ -125,8 +141,9 @@ it("uses the live denied or read-only projection to withhold management forms", 
 
   read.mockResolvedValue({
     can_write: false,
+    can_create_management: false,
     organisations: [org],
-    accounts: [member],
+    accounts: [{ ...member, can_set_active: false }],
   });
   setup();
   expect(
@@ -138,4 +155,57 @@ it("uses the live denied or read-only projection to withhold management forms", 
   expect(
     screen.queryByRole("button", { name: "Send invitation" }),
   ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Suspend account/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("lets an admin delegate to a current instructor and suspend the same retained account", async () => {
+  const teacher = {
+    ...member,
+    display_name: "Fictional instructor",
+    role: "lecturer" as const,
+    confirmed: true,
+    can_set_management: true,
+  };
+  const manager = {
+    ...teacher,
+    role: "management" as const,
+    management_delegated: true,
+    management_version: 1,
+  };
+  const projection = {
+    can_write: true,
+    can_create_management: true,
+    organisations: [org],
+  };
+  read.mockResolvedValue({ ...projection, accounts: [teacher] });
+  setManagement.mockImplementation(async () => {
+    read.mockResolvedValue({ ...projection, accounts: [manager] });
+    return manager;
+  });
+  setActive.mockImplementation(async () => {
+    const inactive = { ...manager, active: false };
+    read.mockResolvedValue({ ...projection, accounts: [inactive] });
+    return inactive;
+  });
+  const user = setup();
+  expect(
+    await screen.findByRole("option", { name: "Course manager" }),
+  ).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: /Grant management rights/ }),
+  );
+  expect(setManagement).toHaveBeenCalledWith(teacher, true);
+  expect(
+    await screen.findByRole("button", { name: /Withdraw management rights/ }),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: /Suspend account/ }));
+  expect(setActive).toHaveBeenCalledWith(manager, false);
+  expect(
+    await screen.findByRole("button", { name: /Reactivate account/ }),
+  ).toBeVisible();
+  expect(
+    screen.getByText(/Fictional instructor.*Course manager.*Inactive/),
+  ).toBeVisible();
 });

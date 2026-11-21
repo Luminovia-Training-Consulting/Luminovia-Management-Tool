@@ -13,8 +13,13 @@ import {
   academyAdministrationQuery,
   createAcademyAccount,
   createAcademyOrganisation,
+  setAcademyManagement,
+  setAcademyMemberActive,
 } from "../accounts/academy-api";
-import type { AcademyAdministration } from "../accounts/academy-schema";
+import type {
+  AcademyAdministration,
+  AcademyManagedAccount,
+} from "../accounts/academy-schema";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
 
@@ -140,14 +145,16 @@ function OrganisationForm({
 
 function AccountForm({
   organisations,
+  canCreateManagement,
   word,
   changed,
 }: {
   organisations: AcademyAdministration["organisations"];
+  canCreateManagement: boolean;
   word: Localize;
   changed: () => Promise<unknown>;
 }) {
-  const [role, setRole] = useState<"lecturer" | "participant">("lecturer");
+  const [role, setRole] = useState<AcademyManagedAccount["role"]>("lecturer");
   const [mode, setMode] = useState<"invite" | "password">("invite");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result>();
@@ -229,17 +236,18 @@ function AccountForm({
             <select
               value={role}
               onChange={(event) =>
-                setRole(
-                  event.target.value === "participant"
-                    ? "participant"
-                    : "lecturer",
-                )
+                setRole(event.target.value as AcademyManagedAccount["role"])
               }
             >
               <option value="lecturer">{word("Lehrende", "Instructor")}</option>
               <option value="participant">
                 {word("Teilnehmende", "Learner")}
               </option>
+              {canCreateManagement && (
+                <option value="management">
+                  {word("Kursmanagement", "Course manager")}
+                </option>
+              )}
             </select>
           </Field>
           {role === "participant" && (
@@ -318,6 +326,88 @@ function AccountForm({
   );
 }
 
+function MemberRow({
+  account,
+  word,
+  changed,
+}: {
+  account: AcademyManagedAccount;
+  word: Localize;
+  changed: () => Promise<unknown>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Result>();
+  const roleLabels = {
+    lecturer: word("Lehrende", "Instructor"),
+    participant: word("Teilnehmende", "Learner"),
+    management: word("Kursmanagement", "Course manager"),
+  };
+  const statusLabel = !account.active
+    ? word("Inaktiv", "Inactive")
+    : account.confirmed
+      ? word("Bestätigt", "Confirmed")
+      : word("Bestätigung ausstehend", "Confirmation pending");
+  const activeAction = account.active
+    ? word("Konto sperren", "Suspend account")
+    : word("Konto reaktivieren", "Reactivate account");
+  const managementAction = account.management_delegated
+    ? word("Managementrechte entziehen", "Withdraw management rights")
+    : word("Managementrechte vergeben", "Grant management rights");
+
+  async function change(action: "active" | "management") {
+    if (busy) return;
+    setBusy(true);
+    setResult(undefined);
+    try {
+      if (action === "active")
+        await setAcademyMemberActive(account, !account.active);
+      else await setAcademyManagement(account, !account.management_delegated);
+      await changed();
+      setResult({
+        kind: "ok",
+        message: word("Konto aktualisiert.", "Account updated."),
+      });
+    } catch (error) {
+      setResult({ kind: "error", message: failure(error, word) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li>
+      <p>
+        {account.display_name} · {roleLabels[account.role]} · {statusLabel}
+      </p>
+      {account.can_set_active && (
+        <Button
+          variant="secondary"
+          disabled={busy}
+          aria-label={activeAction + " · " + account.display_name}
+          onClick={() => void change("active")}
+        >
+          {activeAction}
+        </Button>
+      )}
+      {account.can_set_management && (
+        <Button
+          variant="secondary"
+          disabled={busy}
+          aria-label={managementAction + " · " + account.display_name}
+          onClick={() => void change("management")}
+        >
+          {managementAction}
+        </Button>
+      )}
+      {result && (
+        <Notice kind={result.kind === "error" ? "error" : undefined}>
+          {result.message}
+        </Notice>
+      )}
+    </li>
+  );
+}
+
 export function AcademyAdministrationPage() {
   const { session } = useAuth();
   const { i18n } = useTranslation();
@@ -351,7 +441,8 @@ export function AcademyAdministrationPage() {
       </Notice>
     );
 
-  const { accounts, organisations, can_write } = query.data;
+  const { accounts, organisations, can_write, can_create_management } =
+    query.data;
   const changed = () => query.refetch();
 
   return (
@@ -363,7 +454,9 @@ export function AcademyAdministrationPage() {
         <>
           <OrganisationForm word={word} changed={changed} />
           <AccountForm
+            key={String(can_create_management)}
             organisations={organisations}
+            canCreateManagement={can_create_management}
             word={word}
             changed={changed}
           />
@@ -396,29 +489,23 @@ export function AcademyAdministrationPage() {
         )}
       </section>
       <section className="panel">
-        <h2>{word("Lehrende und Teilnehmende", "Instructors and learners")}</h2>
+        <h2>{word("Akademiekonten", "Academy accounts")}</h2>
         {accounts.length === 0 ? (
           <p>
             {word(
-              "Es gibt noch keine Lehrenden oder Teilnehmenden.",
-              "No instructors or learners yet.",
+              "Es gibt noch keine Akademiekonten.",
+              "No academy accounts yet.",
             )}
           </p>
         ) : (
           <ul>
             {accounts.map((account) => (
-              <li key={account.id}>
-                {account.display_name} ·{" "}
-                {account.role === "lecturer"
-                  ? word("Lehrende", "Instructor")
-                  : word("Teilnehmende", "Learner")}{" "}
-                ·{" "}
-                {!account.active
-                  ? word("Inaktiv", "Inactive")
-                  : account.confirmed
-                    ? word("Bestätigt", "Confirmed")
-                    : word("Bestätigung ausstehend", "Confirmation pending")}
-              </li>
+              <MemberRow
+                key={account.id}
+                account={account}
+                word={word}
+                changed={changed}
+              />
             ))}
           </ul>
         )}

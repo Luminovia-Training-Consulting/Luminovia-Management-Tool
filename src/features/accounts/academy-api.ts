@@ -6,7 +6,9 @@ import { accountRequest } from "./api";
 import {
   academyAccountReceipt,
   academyAdministration,
+  academyManagedAccount,
   academyOrganisation,
+  type AcademyManagedAccount,
 } from "./academy-schema";
 
 export const academyAdministrationQuery = (actor: string) =>
@@ -45,7 +47,7 @@ export async function createAcademyAccount(account: {
   display_name: string;
   email: string;
   mode: "password" | "invite";
-  role: "lecturer" | "participant";
+  role: AcademyManagedAccount["role"];
   organisation_id: string | null;
   password?: string;
 }) {
@@ -53,4 +55,32 @@ export async function createAcademyAccount(account: {
   return academyAccountReceipt.parse(
     await accountRequest("academy/users", "POST", account),
   );
+}
+
+export async function setAcademyMemberActive(
+  account: AcademyManagedAccount,
+  active: boolean,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("academy_set_member_active", {
+    p_user_id: account.id,
+    p_active: active,
+    p_expected_active: account.active,
+  });
+  if (error) throw error;
+  return academyManagedAccount.parse(data);
+}
+
+export async function setAcademyManagement(
+  account: AcademyManagedAccount,
+  enabled: boolean,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("academy_set_management", {
+    p_user_id: account.id,
+    p_enabled: enabled,
+    p_expected_version: account.management_version,
+  });
+  if (error) throw error;
+  return academyManagedAccount.parse(data);
 }

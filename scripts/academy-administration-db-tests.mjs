@@ -12,8 +12,8 @@ import { academyAdministrationPaths } from "../src/features/developer-api/academ
 
 for (const edition of ["customer-self-hosted", "customer-managed"]) {
   await withTestDatabase("academy_administration", async ({ sql, actor }) => {
-    const [admin, manager, lecturer, learner] = Array.from(
-      { length: 4 },
+    const [admin, manager, lecturer, learner, owner] = Array.from(
+      { length: 5 },
       randomUUID,
     );
     const now = Date.now();
@@ -44,9 +44,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await configureAcademyCourseAccess({ ...options, enabled: true }, sql);
     await sql(`alter table auth.users add column if not exists created_at timestamptz default clock_timestamp();
       insert into auth.users(id,email,email_confirmed_at) values
-        ${[admin, manager, lecturer, learner].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
+        ${[admin, manager, lecturer, learner, owner].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
       insert into public.user_roles(user_id,role) values
-        (${q(admin)},'admin'),(${q(manager)},'management'),(${q(lecturer)},'lecturer'),(${q(learner)},'participant');`);
+        (${q(admin)},'admin'),(${q(manager)},'management'),(${q(lecturer)},'lecturer'),(${q(learner)},'participant'),(${q(owner)},'owner');`);
     const rpc = async (who, name, argumentList = "") => {
       const data = JSON.parse(
         await actor(
@@ -68,8 +68,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const directory = await rpc(admin, "academy_administration");
     assert.deepEqual(directory.organisations, []);
     assert.equal(directory.can_write, true);
+    assert.equal(directory.can_create_management, true);
+    assert.equal(
+      (await rpc(manager, "academy_administration")).can_create_management,
+      false,
+    );
     assert.equal(await rpc(lecturer, "academy_administration"), null);
     assert.equal(await rpc(learner, "academy_administration"), null);
+    assert.equal(await rpc(owner, "academy_administration"), null);
     const request = randomUUID();
     const orgArgs = [
       q(request),
@@ -201,7 +207,158 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       active: true,
       role: "participant",
       confirmed: false,
+      management_delegated: false,
+      management_version: 0,
+      can_set_active: true,
+      can_set_management: false,
     });
+
+    const newManagerEmail = "new-manager@example.invalid";
+    await assert.rejects(
+      reserve(
+        manager,
+        randomUUID(),
+        newManagerEmail,
+        "management",
+        null,
+        "password",
+      ),
+      /42501/,
+    );
+    const managerRequest = await reserve(
+      admin,
+      randomUUID(),
+      newManagerEmail,
+      "management",
+      null,
+      "password",
+    );
+    const newManager = randomUUID();
+    await sql(`insert into auth.users(id,email,email_confirmed_at)
+      values(${q(newManager)},${q(newManagerEmail)},now())`);
+    assert.deepEqual(
+      await finish(managerRequest.creation_id, newManager, "complete"),
+      { status: "created", user_id: newManager },
+    );
+    assert.equal(
+      (await rpc(newManager, "academy_administration")).can_create_management,
+      false,
+    );
+
+    const delegation = (who, target, enabled, version) =>
+      rpc(
+        who,
+        "academy_set_management",
+        [q(target), enabled, version].join(","),
+      );
+    const activation = (who, target, enabled, expected) =>
+      rpc(
+        who,
+        "academy_set_member_active",
+        [q(target), enabled, expected].join(","),
+      );
+    await assert.rejects(delegation(manager, lecturer, true, 0), /42501/);
+    await assert.rejects(delegation(owner, lecturer, true, 0), /42501/);
+    await assert.rejects(delegation(admin, learner, true, 0), /42501/);
+    await sql(
+      `update auth.users set email_confirmed_at=null where id=${q(admin)}`,
+    );
+    await assert.rejects(delegation(admin, lecturer, true, 0), /42501/);
+    await sql(
+      `update auth.users set email_confirmed_at=now() where id=${q(admin)}`,
+    );
+    const granted = await delegation(admin, lecturer, true, 0);
+    assert.equal(granted.role, "management");
+    assert.equal(granted.management_delegated, true);
+    assert.equal(granted.management_version, 1);
+    assert.equal(
+      (await rpc(lecturer, "academy_administration")).can_create_management,
+      false,
+    );
+    assert.equal(
+      await sql(
+        `select string_agg(role,',' order by role) from public.user_roles where user_id=${q(lecturer)}`,
+      ),
+      "lecturer,management",
+    );
+    await assert.rejects(delegation(admin, lecturer, true, 0), /PT409/);
+    await assert.rejects(activation(manager, lecturer, false, true), /42501/);
+    await assert.rejects(activation(admin, admin, false, true), /42501/);
+    assert.equal(
+      (await activation(admin, lecturer, false, true)).active,
+      false,
+    );
+    await assert.rejects(rpc(lecturer, "academy_administration"), /42501/);
+    const revoked = await delegation(admin, lecturer, false, 1);
+    assert.equal(revoked.role, "lecturer");
+    assert.equal(revoked.management_version, 2);
+    assert.equal((await activation(admin, lecturer, true, false)).active, true);
+    assert.equal(await rpc(lecturer, "academy_administration"), null);
+    assert.equal(
+      await sql(`select count(*) from auth.users where id=${q(lecturer)}`),
+      "1",
+    );
+
+    const [template, run] = Array.from({ length: 2 }, randomUUID);
+    await sql(`insert into public.course_templates(id,title) values(${q(template)},'Retained local course');
+      insert into public.course_runs(id,template_id,organisation_id) values(${q(run)},${q(template)},${q(org.id)});
+      insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+        values(${q(run)},${q(user)},'enrolled',${q(admin)});
+      update auth.users set email_confirmed_at=now() where id=${q(user)}`);
+    assert.equal(
+      (await activation(newManager, user, false, true)).active,
+      false,
+    );
+    await assert.rejects(rpc(user, "academy_administration"), /42501/);
+    assert.equal(
+      (await activation(newManager, user, true, false)).active,
+      true,
+    );
+    assert.equal(await rpc(user, "academy_administration"), null);
+    assert.equal(
+      await sql(
+        `select status from public.course_enrolments where course_run_id=${q(run)} and user_id=${q(user)}`,
+      ),
+      "enrolled",
+    );
+    assert.equal(
+      await sql(
+        `select status from private.company_participant_memberships where organisation_id=${q(org.id)} and user_id=${q(user)}`,
+      ),
+      "active",
+    );
+    await assert.rejects(activation(newManager, manager, false, true), /42501/);
+
+    const revokedAdmin = randomUUID();
+    const revokedManager = randomUUID();
+    const managerToCreate = "reserved-management@example.invalid";
+    await sql(`insert into auth.users(id,email,email_confirmed_at)
+      values(${q(revokedAdmin)},'revoked-admin@example.invalid',now());
+      insert into public.user_roles(user_id,role)
+        values(${q(revokedAdmin)},'admin'),(${q(revokedAdmin)},'management')`);
+    const pendingManager = await reserve(
+      revokedAdmin,
+      randomUUID(),
+      managerToCreate,
+      "management",
+      null,
+      "password",
+    );
+    await sql(`delete from public.user_roles where user_id=${q(revokedAdmin)} and role='admin';
+      insert into auth.users(id,email,email_confirmed_at) values(${q(revokedManager)},${q(managerToCreate)},now())`);
+    await assert.rejects(
+      finish(pendingManager.creation_id, revokedManager, "complete"),
+      /42501/,
+    );
+    assert.deepEqual(
+      await finish(pendingManager.creation_id, revokedManager, "cleanup"),
+      { status: "cleanup", user_id: revokedManager },
+    );
+    await sql(`delete from auth.users where id=${q(revokedManager)}`);
+    assert.deepEqual(
+      await finish(pendingManager.creation_id, revokedManager, "discard"),
+      { status: "failed" },
+    );
 
     const lateEmail = "revoked-creator@example.invalid";
     const late = await reserve(
@@ -243,6 +400,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       `select private.apply_verified_installation_licence(${q(JSON.stringify(grace))}::jsonb)`,
     );
     assert.equal((await rpc(admin, "academy_administration")).can_write, false);
+    await assert.rejects(activation(admin, newManager, false, true), /42501/);
+    await assert.rejects(delegation(admin, lecturer, true, 2), /42501/);
     await assert.rejects(
       rpc(admin, "academy_create_organisation", orgArgs),
       /42501/,
@@ -261,7 +420,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await configureAcademyCourseAccess({ ...options, enabled: false }, sql);
     await assert.rejects(rpc(admin, "academy_administration"), /42501/);
     console.log(
-      `PASS ${edition} local administration, organisation retry, exact Auth finalization, learner membership and revoked actor cleanup`,
+      `PASS ${edition} local administration, current management authority, retained identity and membership, deactivation and reactivation, licence grace and revocation cleanup`,
     );
   });
 }
