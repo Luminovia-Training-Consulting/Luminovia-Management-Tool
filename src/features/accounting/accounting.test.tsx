@@ -93,6 +93,34 @@ it("does not expose customer registration, gross data or management export to or
   ).toBeDisabled();
   expect(rpc).not.toHaveBeenCalled();
 });
+it("distinguishes a fully credited closing invoice from a payment", async () => {
+  const { client } = show();
+  const closingInvoice = {
+    id: "b749e404-89bf-4c7d-9a89-5dfdf029b0b8",
+    kind: "lecturer_invoice",
+    number: "FICTIONAL-CLOSING",
+    issued_on: "2026-11-30",
+    due_on: "2026-11-22",
+    currency: "EUR",
+    recorded_total: "0.00",
+    paid_total: "0.00",
+    outstanding_total: "0.00",
+    status: "paid",
+    assignments: [],
+    payments: [],
+  };
+  client.setQueryData([...accountingKeys.all("teacher"), "invoices", "own"], {
+    pages: [{ items: [closingInvoice], has_more: false }],
+    pageParams: [null],
+  });
+  expect(
+    await screen.findByText("Vollständig verrechnet", { exact: true }),
+  ).toBeVisible();
+  expect(
+    screen.queryByText("Bezahlt", { exact: true }),
+  ).not.toBeInTheDocument();
+});
+
 it("provides English format boundaries and accessible external-document confirmation", async () => {
   await i18n.changeLanguage("en");
   show(true);

@@ -389,6 +389,10 @@ Open **Buchhaltung und Exporte / Accounting and exports** to select up to 100 au
 
 With current gross-finance permission, choose **Record an external customer invoice** to register an already issued invoice. Select the accepted assignments for one organisation and currency, enter the number, dates and exact total, then upload a dedicated PDF and wait for the scan. Review the entries against that PDF before confirming. An invoice that differs from the accepted charge requires an explanation, and the accepted amount stays in the original record. Record incoming payments and correct entries through a reasoned reversal. The CSV and JSON are portal interchange formats. Generating or validating XRechnung, ZUGFeRD and vendor-specific import files remains separate work.
 
+**Deutsch.** Öffne **Kundengutschriften** an der Originalrechnung, um einen bereits ausgestellten Beleg zu erfassen. Trage Nummer, Ausstellungsdatum, Betrag und Grund ein. Prüfe die Angaben gegen das gescannte PDF und bestätige die Erfassung. Berechtigte Finanzmitarbeitende können die genaue PDF-Version später herunterladen. Zahlungen, offene Beträge und Rechnungs-Exporte werden separat geführt.
+
+**English.** Open **Customer credit notes** on the original invoice to record a credit note already issued. Enter its number, issue date, amount and reason. Check the details against the scanned PDF and confirm the evidence. Authorised finance staff can later download the exact PDF version. Payments, outstanding amounts and invoice exports are handled separately.
+
 The internal OpenAPI explorer and download describe accounting permissions, eligible agreements, invoice pagination, customer invoice registration, payment entries and reversals, and immutable export creation and retrieval. Use exact decimal strings in the original currency. Pass both parts of the cursor from the last invoice for the next page. Customer-scoped results omit gross agreement values and claim identities. Reading a saved export checks current access to every included invoice and its original disclosure scope.
 
 <a id="section-user-guide-workbench-favourites-and-reusable-workflows"></a>

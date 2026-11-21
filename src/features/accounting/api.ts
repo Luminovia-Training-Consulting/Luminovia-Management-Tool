@@ -11,6 +11,7 @@ import {
   accountingExportSchema,
   accountingPageSchema,
   accountingReceiptSchema,
+  customerCreditNotePageSchema,
   type AccountingExport,
   type AccountingSource,
 } from "./schema";
@@ -27,6 +28,8 @@ export {
 /** Actor identity prevents one signed-in account reusing another's projections. */
 export const accountingKeys = {
   all: (actor: string) => ["accounting", actor] as const,
+  customerCreditNotes: (actor: string, invoice: string) =>
+    ["accounting", actor, "customer-credit-notes", invoice] as const,
 };
 /** Capabilities come from current SQL authority; UI choices grant no access. */
 export const accountingAccessQuery = (actor: string) =>
@@ -82,10 +85,39 @@ export const accountingInvoicesQuery = (
     },
     staleTime: 10000,
   });
+export const customerCreditNotesQuery = (actor: string, invoice: string) =>
+  infiniteQueryOptions({
+    queryKey: accountingKeys.customerCreditNotes(actor, invoice),
+    initialPageParam: null as Cursor | null,
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, error } = await db()
+        .rpc("accounting_customer_credit_notes", {
+          p_invoice_id: invoice,
+          p_before_at: pageParam?.at ?? null,
+          p_before_id: pageParam?.id ?? null,
+          p_limit: 40,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      const page = customerCreditNotePageSchema.parse(data);
+      if (page.items.some((note) => note.invoice_id !== invoice)) {
+        throw new Error("credit_note_invoice_mismatch");
+      }
+      return page;
+    },
+    getNextPageParam: (page) => {
+      const last = page.items.at(-1);
+      return page.has_more && last
+        ? { at: last.created_at, id: last.id }
+        : undefined;
+    },
+    retry: false,
+  });
 /** Mutations require confirmed online receipts and never update caches optimistically. */
 export async function accountingWrite(
   name:
     | "register_customer_invoice"
+    | "register_customer_credit_note"
     | "record_customer_invoice_payment"
     | "reverse_customer_invoice_payment",
   payload: Record<string, unknown>,

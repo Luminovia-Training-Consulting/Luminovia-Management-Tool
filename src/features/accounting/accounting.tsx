@@ -42,6 +42,7 @@ import {
   type AccountingInvoice,
   type AccountingSource,
 } from "./api";
+import { CustomerCreditNotes } from "./credit-notes";
 import "./i18n";
 import "./accounting.css";
 
@@ -512,6 +513,9 @@ export function AccountingPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [register, setRegister] = useState(false);
   const [payment, setPayment] = useState<AccountingInvoice | null>(null);
+  const [creditInvoice, setCreditInvoice] = useState<AccountingInvoice | null>(
+    null,
+  );
   const [saved, setSaved] = useState(false);
   const [snapshot, setSnapshot] = useState<AccountingExport | null>(null);
   const [denied, setDenied] = useState(false);
@@ -583,6 +587,7 @@ export function AccountingPage() {
             setSnapshot(null);
             setRegister(false);
             setPayment(null);
+            setCreditInvoice(null);
             setDenied(false);
           })()
         }
@@ -741,7 +746,15 @@ export function AccountingPage() {
                 <dt>{t("due")}</dt>
                 <dd>{i.due_on}</dd>
                 <dt>{t("status")}</dt>
-                <dd>{t(i.status === "paid" ? "paidStatus" : i.status)}</dd>
+                <dd>
+                  {t(
+                    i.status !== "paid"
+                      ? i.status
+                      : i.recorded_total === "0.00"
+                        ? "creditedStatus"
+                        : "paidStatus",
+                  )}
+                </dd>
               </dl>
               <div className="accounting-actions">
                 <Button
@@ -753,15 +766,23 @@ export function AccountingPage() {
                 </Button>
                 {i.kind === "customer_invoice" &&
                   access.data.can_manage_customer_invoices && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setPayment(i);
-                        setSaved(false);
-                      }}
-                    >
-                      {t("payment")}
-                    </Button>
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setPayment(i);
+                          setSaved(false);
+                        }}
+                      >
+                        {t("payment")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setCreditInvoice(i)}
+                      >
+                        {t("creditNotes")}
+                      </Button>
+                    </>
                   )}
               </div>
               <small>{i.assignments.map((a) => a.title).join(" · ")}</small>
@@ -805,6 +826,25 @@ export function AccountingPage() {
           <CustomerInvoiceForm
             actor={actor}
             onDone={complete}
+            onDenied={() => setDenied(true)}
+          />
+        )}
+      </Dialog>
+      <Dialog
+        open={
+          Boolean(creditInvoice) && access.data.can_manage_customer_invoices
+        }
+        onOpenChange={(open) => {
+          if (!open) setCreditInvoice(null);
+        }}
+        title={t("creditNotes")}
+        description={t("creditHint")}
+      >
+        {creditInvoice && access.data.can_manage_customer_invoices && (
+          <CustomerCreditNotes
+            key={creditInvoice.id}
+            actor={actor}
+            invoice={creditInvoice}
             onDenied={() => setDenied(true)}
           />
         )}

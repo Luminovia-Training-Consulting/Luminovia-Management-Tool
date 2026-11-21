@@ -160,4 +160,8 @@ export const customerCreditNoteSchema = customerCreditNoteInputSchema
     document_sha256: z.string().regex(/^[a-f0-9]{64}$/),
     created_at: instant,
   });
+export const customerCreditNotePageSchema = z.object({
+  items: z.array(customerCreditNoteSchema),
+  has_more: z.boolean(),
+});
 export type CustomerCreditNote = z.infer<typeof customerCreditNoteSchema>;

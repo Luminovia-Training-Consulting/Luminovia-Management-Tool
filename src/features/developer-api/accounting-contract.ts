@@ -9,6 +9,8 @@ import {
   accountingPageSchema,
   accountingReceiptSchema,
   accountingSourceSchema,
+  customerCreditNoteInputSchema,
+  customerCreditNotePageSchema,
 } from "../accounting/schema.ts";
 import { nativeExplorerPaths } from "./native-contract.ts";
 
@@ -152,6 +154,27 @@ export const accountingPaths = {
         "Timestamp of receipt, at or before the current time.",
       ),
       p_reference: z.string().min(1).max(1000),
+      p_request_id: requestId,
+    }),
+    accountingReceiptSchema,
+  ),
+  "/rest/v1/rpc/accounting_customer_credit_notes": accountingOperation(
+    "accounting_customer_credit_notes",
+    "Internal installation and finance.gross.read required. Lists already-issued credit note evidence for one original customer invoice. Use both cursor values from the last row or omit both.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_before_at: instant.nullable().optional(),
+      p_before_id: id.nullable().optional(),
+      p_limit: z.int().min(1).max(100).default(40),
+    }),
+    customerCreditNotePageSchema,
+  ),
+  "/rest/v1/rpc/register_customer_credit_note": accountingOperation(
+    "register_customer_credit_note",
+    "Internal installation and finance.gross.read required. Records a reviewed, externally issued credit note against the original customer invoice and a dedicated clean single-version PDF. Registered amounts are in the invoice currency. Customer payment and tax accounting are separate.",
+    z.strictObject({
+      p_invoice_id: id,
+      p_payload: customerCreditNoteInputSchema,
       p_request_id: requestId,
     }),
     accountingReceiptSchema,

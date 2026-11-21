@@ -69,6 +69,7 @@ const de = {
   registered: "Erfasst",
   partially_paid: "Teilweise bezahlt",
   paidStatus: "Bezahlt",
+  creditedStatus: "Vollständig verrechnet",
   document: "Geprüfte Rechnungs-PDF herunterladen",
   exportReady: "Export {{id}} bestätigt · {{count}} Rechnungen",
   hash: "Prüfsumme",
@@ -81,7 +82,30 @@ const de = {
   exportHistory:
     "Ein Export bleibt eine Aufnahme zum Erstellungszeitpunkt. Später erfasste Zahlungen erzeugen einen neuen Stand.",
   credits:
-    "Gutschriften und Kundenrechnungsstornierungen benötigen einen eigenen Belegworkflow und werden hier nicht aus Beträgen abgeleitet.",
+    "Ausgestellte Kundengutschriften stehen als separate Nachweise bei der zugehörigen Rechnung.",
+  creditNotes: "Kundengutschriften",
+  creditHint:
+    "Eine bereits ausgestellte Gutschrift zur Originalrechnung erfassen oder den geprüften Beleg herunterladen.",
+  creditInvoice: "Rechnung {{number}} über {{amount}} {{currency}}",
+  creditEvidenceOnly:
+    "Hier dokumentierst du Gutschriftbelege. Zahlungsbuchungen, offene Beträge und Rechnungs-Exporte werden separat geführt.",
+  creditReference: "Gutschriftnummer",
+  creditIssued: "Ausstellungsdatum der Gutschrift",
+  creditAmount: "Betrag der Gutschrift in {{currency}}",
+  creditReason: "Grund der Gutschrift",
+  creditPdf: "Ausgestellter Gutschriftbeleg als PDF",
+  creditConfirm:
+    "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.",
+  creditSave: "Gutschriftbeleg erfassen",
+  creditSaved: "Gutschriftbeleg erfasst.",
+  creditSaveError:
+    "Prüfe den PDF-Beleg, die Gutschriftnummer und den Betrag. Du kannst die Erfassung erneut versuchen.",
+  creditHistoryUnavailable:
+    "Die Gutschriftbelege konnten nicht geladen werden.",
+  creditRetry: "Erneut laden",
+  creditEmpty: "Zu dieser Rechnung wurden noch keine Gutschriften erfasst.",
+  creditDownload: "PDF für Gutschrift {{reference}} herunterladen",
+  creditMore: "Weitere Gutschriften laden",
   invalid:
     "Prüfe Auswahl, Datumsangaben, exakte Dezimalbeträge, Währung und PDF.",
   selectedCount: "{{count}} ausgewählt",
@@ -153,6 +177,7 @@ const en: Record<keyof typeof de, string> = {
   registered: "Registered",
   partially_paid: "Partially paid",
   paidStatus: "Paid",
+  creditedStatus: "Fully credited",
   document: "Download scanned invoice PDF",
   exportReady: "Export {{id}} confirmed · {{count}} invoices",
   hash: "Checksum",
@@ -164,7 +189,29 @@ const en: Record<keyof typeof de, string> = {
   exportHistory:
     "An export remains a snapshot at its creation time. Payments recorded later produce a new snapshot.",
   credits:
-    "Credit notes and customer invoice cancellations require a separate evidence workflow and are not inferred from amounts here.",
+    "Issued customer credit notes are available as separate evidence on the associated invoice.",
+  creditNotes: "Customer credit notes",
+  creditHint:
+    "Record an already-issued credit note against its original invoice or download the verified PDF.",
+  creditInvoice: "Invoice {{number}} for {{amount}} {{currency}}",
+  creditEvidenceOnly:
+    "This section records credit note documents. Payment records, outstanding amounts and invoice exports are handled separately.",
+  creditReference: "Credit note number",
+  creditIssued: "Credit note issue date",
+  creditAmount: "Credit note amount in {{currency}}",
+  creditReason: "Reason for the credit note",
+  creditPdf: "Issued credit note PDF",
+  creditConfirm:
+    "I reviewed the issued PDF, the original invoice and the amount.",
+  creditSave: "Record credit note evidence",
+  creditSaved: "Credit note evidence recorded.",
+  creditSaveError:
+    "Check the PDF, the credit note number and the amount, then retry.",
+  creditHistoryUnavailable: "The credit note evidence could not be loaded.",
+  creditRetry: "Reload credit notes",
+  creditEmpty: "No credit notes have been recorded for this invoice.",
+  creditDownload: "Download PDF for credit note {{reference}}",
+  creditMore: "Load more credit notes",
   invalid: "Check selection, dates, exact decimals, currency and PDF.",
   selectedCount: "{{count}} selected",
 };

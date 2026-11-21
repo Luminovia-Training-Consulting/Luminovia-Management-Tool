@@ -1,3 +1,11 @@
+# 22 November 2026 — Customer credit-note evidence and reviewed export dates
+
+Gross-finance staff can register an already-issued credit note against its original customer invoice. The record retains the clean PDF version and digest, external reference, original currency and reviewed amount. Duplicate requests have one receipt and concurrent amounts are capped against the original invoice. Authorised staff can download the exact version after reopening the dialog. The source invoice's balances, accepted charges, payment records and existing accounting/1 export remain unchanged.
+
+Native Chromium on desktop and mobile verified the original invoice and payment, scanned credit-note PDF, byte-identical download and unchanged JSON/CSV amounts. The customer view does not offer the finance-only credit-note controls. PostgreSQL covered five new credit-note groups and ten existing accounting groups. A late exception invoice keeps its contractual due date in live and exported accounting records. The accounting UI labels a closed zero-balance lecturer invoice as fully credited.
+
+The signed internal build passed the four automated Chromium PWA checks, including cold offline access and account-switch cleanup. TypeScript, ESLint, all 1,430 Vitest cases and 17 runtime and documentation checks passed. The three production builds contain 351 internal API paths and 82 per Academy edition. The native upgrade retained historical data across all 248 migrations. The full local Docker browser run could not start because an independent QA project owns its required database port. The native browser cases use disposable Auth, PostgreSQL, PostgREST, Storage and scanner resources.
+
 # 22 November 2026 — API parity, edition role checks and local Docker recovery
 
 The combined internal OpenAPI download covers 349 published paths, including the new invoice-series operations. Each Academy download covers 82. The operation inventory found a published path for each browser RPC in the applicable edition. The catalogues use domain contracts in place of generic PostgreSQL JSONB transport shapes. Internal account and deletion responses describe their actual success payloads. Existing internal operation IDs remain stable. Academy's interactive Swagger excludes SMTP writes and secret-issuing actions. Those remain documented in the download.

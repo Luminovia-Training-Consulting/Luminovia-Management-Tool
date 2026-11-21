@@ -59,7 +59,7 @@ async function contents(download: Download) {
   return readFileSync(path);
 }
 
-test("customer invoice PDF, exact payment totals and JSON/CSV stay private and bilingual", async ({
+test("customer invoice PDF, credit evidence, payment totals and exports stay private and bilingual", async ({
   page,
   browser,
 }, testInfo) => {
@@ -188,6 +188,74 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
     .click();
   await expect(payment).not.toBeVisible();
   await expect(card.getByText("166.69 AUD", { exact: true })).toBeVisible();
+
+  const creditReference = `CREDIT-${testInfo.project.name}`;
+  const creditBytes = Buffer.concat([
+    bytes,
+    Buffer.from("% Fictional issued credit note\n"),
+  ]);
+  const creditAction = card.getByRole("button", {
+    name: "Kundengutschriften",
+    exact: true,
+  });
+  await creditAction.click();
+  const credit = page.getByRole("dialog", {
+    name: "Kundengutschriften",
+    exact: true,
+  });
+  await credit
+    .getByLabel("Gutschriftnummer", { exact: true })
+    .fill(creditReference);
+  await credit
+    .getByLabel("Ausstellungsdatum der Gutschrift", { exact: true })
+    .fill("2001-02-02");
+  await credit
+    .getByLabel("Betrag der Gutschrift in AUD", { exact: true })
+    .fill("20,05");
+  await credit
+    .getByLabel("Grund der Gutschrift", { exact: true })
+    .fill("Fictional reviewed correction on the issued credit note.");
+  await credit
+    .getByLabel("Ausgestellter Gutschriftbeleg als PDF", { exact: true })
+    .setInputFiles({
+      name: "Fictional issued credit note.pdf",
+      mimeType: "application/pdf",
+      buffer: creditBytes,
+    });
+  await expect(
+    credit.getByText("Fictional issued credit note.pdf", { exact: true }),
+  ).toBeVisible({ timeout: 90000 });
+  const confirmCredit = credit.getByRole("checkbox", {
+    name: "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.",
+    exact: true,
+  });
+  const saveCredit = credit.getByRole("button", {
+    name: "Gutschriftbeleg erfassen",
+    exact: true,
+  });
+  await expect(saveCredit).toBeDisabled();
+  await confirmCredit.check();
+  await saveCredit.click();
+  await expect(
+    credit.getByRole("status").filter({ hasText: "Gutschriftbeleg erfasst." }),
+  ).toBeVisible();
+  await credit.getByRole("button", { name: "Schließen", exact: true }).click();
+
+  await creditAction.click();
+  const storedCredit = credit.locator("li").filter({
+    has: page.getByText(creditReference, { exact: true }),
+  });
+  await expect(storedCredit).toContainText("20.05 AUD");
+  const creditDownload = page.waitForEvent("download", { timeout: 20000 });
+  await storedCredit
+    .getByRole("button", {
+      name: `PDF für Gutschrift ${creditReference} herunterladen`,
+    })
+    .click();
+  expect(await contents(await creditDownload)).toEqual(creditBytes);
+  await credit.getByRole("button", { name: "Schließen", exact: true }).click();
+  await expect(card.getByText("166.69 AUD", { exact: true })).toBeVisible();
+
   await card
     .getByRole("checkbox", {
       name: `Rechnung ${number} auswählen`,
@@ -242,6 +310,12 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
     const clientCard = clientPage.locator("article.accounting-card").filter({
       has: clientPage.getByRole("heading", { name: number, exact: true }),
     });
+    await expect(
+      clientCard.getByRole("button", {
+        name: "Kundengutschriften",
+        exact: true,
+      }),
+    ).toHaveCount(0);
     const document = json.invoices[0];
     const pdfPromise = clientPage.waitForEvent("download", { timeout: 20000 });
     // Keep a failed gateway request visible even if Chromium never emits a download.

@@ -60,6 +60,8 @@ const lookup = "/rest/v1/rpc/accounting_invoices";
 const register = "/rest/v1/rpc/register_customer_invoice";
 const create = "/rest/v1/rpc/create_accounting_export";
 const reverse = "/rest/v1/rpc/reverse_customer_invoice_payment";
+const addCredit = "/rest/v1/rpc/register_customer_credit_note";
+const credits = "/rest/v1/rpc/accounting_customer_credit_notes";
 
 const input = (path: keyof typeof accountingPaths) =>
   z.fromJSONSchema(
@@ -140,6 +142,65 @@ describe("accounting OpenAPI contracts", () => {
         invoices: [
           { ...invoice, public_download_url: "https://example.invalid" },
         ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("publishes reviewed credit note evidence independently of invoice balances", () => {
+    const details = {
+      reference: "Fictional CR-25",
+      issued_on: "2026-11-12",
+      currency: "AUD",
+      amount: "20.03",
+      reason: "Fictional documented adjustment",
+      document_version_id: id,
+    };
+    const p_payload = { ...details, issued_and_reviewed: true };
+    const request = { p_invoice_id: id, p_request_id: id, p_payload };
+    expect(input(addCredit).safeParse(request).success).toBe(true);
+    expect(
+      input(addCredit).safeParse({
+        ...request,
+        p_payload: { ...p_payload, issued_and_reviewed: false },
+      }).success,
+    ).toBe(false);
+    expect(
+      input(addCredit).safeParse({
+        ...request,
+        p_payload: { ...p_payload, paid_total: "33.34" },
+      }).success,
+    ).toBe(false);
+    expect(input(credits).safeParse({ p_invoice_id: id }).success).toBe(true);
+    expect(
+      input(credits).safeParse({ p_invoice_id: id, p_limit: 101 }).success,
+    ).toBe(false);
+    const item = {
+      ...details,
+      id,
+      invoice_id: id,
+      document_id: id,
+      document_sha256: "a".repeat(64),
+      created_at: instant,
+    };
+    expect(
+      result(credits).safeParse({ items: [item], has_more: false }).success,
+    ).toBe(true);
+    expect(
+      result(credits).safeParse({
+        items: [{ ...item, amount: 20.03 }],
+        has_more: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      result(lookup).safeParse({
+        items: [
+          {
+            ...invoice,
+            created_at: instant,
+            credit_note_reference: item.reference,
+          },
+        ],
+        has_more: false,
       }).success,
     ).toBe(false);
   });
