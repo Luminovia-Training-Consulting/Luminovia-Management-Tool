@@ -23,6 +23,11 @@ await withTestDatabase("internal_edition", async ({ sql, actor }) => {
   assert.match(status.installation_id, /^[0-9a-f-]{36}$/);
   assert.deepEqual(JSON.parse(await sql(capability)), status);
   assert.equal(
+    await sql(`select 'security_invoker=true' = any(reloptions)
+      from pg_class where oid = 'public.installation_capability_state'::regclass`),
+    "t",
+  );
+  assert.equal(
     await sql("select private.customer_installation_has_active_licence()"),
     "f",
   );
@@ -73,6 +78,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         ),
         expected,
       );
+      for (const role of ["authenticated", "service_role"]) {
+        assert.deepEqual(JSON.parse(await sql(`set role ${role}; ${capability}`)), expected);
+        await assert.rejects(sql(`set role ${role}; select * from private.installation_verified_licence`), /42501/);
+      }
       assert.equal(
         await sql("select private.customer_installation_has_active_licence()"),
         licence_status === "active" ? "t" : "f",
