@@ -294,12 +294,11 @@ await withApiFixture(
         const stillReviewed = await download(learner, "resource", resource);
         assert.equal(stillReviewed.status, 200);
         assert.deepEqual(new Uint8Array(await stillReviewed.arrayBuffer()), bytes);
-        assert.deepEqual(
-            await checked(
-                learner.client.from("documents").select("id").eq("id", document.id),
-            ),
-            [],
-        );
+        const directDocument = await learner.client.from("documents")
+            .select("id").eq("id", document.id);
+        assert.equal(directDocument.status, 403);
+        assert.equal(directDocument.error?.code, "42501");
+        assert.equal(directDocument.data, null);
         await action(learner, "resource_acknowledge", {id: resource});
         assert.equal((await workspace(learner)).resources[0].acknowledged, true);
         await action(learner, "notebook", {body: "Private learner preparation"});
