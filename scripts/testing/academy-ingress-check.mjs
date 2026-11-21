@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { request as requestHttps } from "node:https";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -62,10 +63,14 @@ const blockedApi = [
   "/storage/v1/object/public/portal-documents/fixture.pdf",
 ];
 const upstream = createServer((request, response) => {
+  response.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "X-Content-Type-Options": "nosniff",
+  });
   response.end(
     JSON.stringify({
-      path: request.url,
-      referer: request.headers.referer ?? null,
+      path: allowedApi.find((path) => path === request.url) ?? null,
+      refererForwarded: request.headers.referer !== undefined,
     }),
   );
 });
@@ -152,33 +157,42 @@ try {
   );
   exited = once(caddy, "close");
 
-  const headersFile = join(root, "headers");
   const trustRoot = join(root, "caddy/pki/authorities/local/root.crt");
+  let ca;
   const request = async (route, status) => {
-    const { stdout } = await exec(
-      "curl",
-      [
-        "--silent",
-        "--show-error",
-        "--noproxy",
-        "*",
-        "--http1.1",
-        "--cacert",
-        trustRoot,
-        "--resolve",
-        hostname + ":" + localPort + ":127.0.0.1",
-        "-H",
-        "Referer: https://private.example.invalid/",
-        "-D",
-        headersFile,
-        "https://" + hostname + ":" + localPort + route,
-      ],
-      { timeout: 3000, encoding: "buffer", maxBuffer: 20 * 1024 * 1024 },
-    );
-    const received = (await readFile(headersFile, "utf8")).toLowerCase();
-    assert.match(received, new RegExp("^http/1.1 " + status + " "));
-    assert.match(received, /content-security-policy:/);
-    return { bytes: stdout, headers: received };
+    ca ??= await readFile(trustRoot);
+    // The manifest can choose a file path within the fixture, never its TLS peer.
+    const received = await new Promise((resolve, reject) => {
+      const probe = requestHttps(
+        {
+          hostname: "127.0.0.1",
+          port: Number(localPort),
+          servername: hostname,
+          headers: {
+            Host: `${hostname}:${localPort}`,
+            Referer: "https://private.example.invalid/",
+          },
+          path: route,
+          ca,
+          signal: AbortSignal.timeout(3000),
+          agent: false,
+        },
+        resolve,
+      );
+      probe.on("error", reject);
+      probe.end();
+    });
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of received) {
+      size += chunk.length;
+      assert.ok(size <= 20 * 1024 * 1024, "Fixture response exceeds 20 MiB");
+      chunks.push(chunk);
+    }
+    assert.equal(received.httpVersion, "1.1");
+    assert.equal(received.statusCode, status, route);
+    assert.ok(received.headers["content-security-policy"]);
+    return { bytes: Buffer.concat(chunks, size), headers: received.headers };
   };
 
   for (let attempt = 0; ; attempt++) {
@@ -201,6 +215,7 @@ try {
     assert.deepEqual((await request(route, 200)).bytes, shell);
   for (const { path: entry, sha256 } of files) {
     const relative = entry.replace(/^browser\//, "");
+    assert.match(relative, /^(?:[a-z0-9][\w.-]*\/)*[a-z0-9][\w.-]*$/i);
     const { bytes, headers } = await request("/" + relative, 200);
     assert.equal(
       createHash("sha256").update(bytes).digest("hex"),
@@ -209,11 +224,11 @@ try {
     );
     if (/^(assets\/|workbox-)/.test(relative))
       assert.match(
-        headers,
-        /cache-control: public, max-age=31536000, immutable/,
+        headers["cache-control"] ?? "",
+        /public, max-age=31536000, immutable/,
       );
     if (["index.html", "manifest.webmanifest", "sw.js"].includes(relative))
-      assert.match(headers, /cache-control: no-cache, no-store/);
+      assert.match(headers["cache-control"] ?? "", /no-cache, no-store/);
   }
   for (const route of [
     "/.env",
@@ -229,14 +244,18 @@ try {
   }
   for (const path of allowedApi) {
     const { bytes, headers } = await request("/backend" + path, 200);
-    assert.deepEqual(JSON.parse(bytes), { path, referer: null });
-    assert.match(headers, /cache-control: no-store, private/);
+    assert.deepEqual(JSON.parse(bytes), { path, refererForwarded: false });
+    assert.equal(headers["content-type"], "application/json; charset=utf-8");
+    assert.ok(
+      headers["x-content-type-options"]?.split(", ").includes("nosniff"),
+    );
+    assert.match(headers["cache-control"] ?? "", /no-store, private/);
   }
   const socket = connectTls({
     host: "127.0.0.1",
     port: Number(localPort),
     servername: hostname,
-    ca: await readFile(trustRoot),
+    ca,
   });
   socket.setTimeout(3000, () =>
     socket.destroy(new Error("WebSocket handshake timed out")),
@@ -277,13 +296,13 @@ try {
     consumed++
   )
     await request(restProbe, 200);
-  assert.match((await request(restProbe, 429)).headers, /retry-after: 60/);
+  assert.equal((await request(restProbe, 429)).headers["retry-after"], "60");
   assert.deepEqual((await request("/", 200)).bytes, shell);
 
   const marker = join(browser, "maintenance.enabled");
   await writeFile(marker, "integration test", { flag: "wx", mode: 0o600 });
   try {
-    assert.match((await request(restProbe, 503)).headers, /retry-after: 60/);
+    assert.equal((await request(restProbe, 503)).headers["retry-after"], "60");
     assert.deepEqual((await request("/", 200)).bytes, shell);
   } finally {
     await rm(marker);
