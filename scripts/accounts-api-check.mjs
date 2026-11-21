@@ -7,6 +7,7 @@ import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {setTimeout as delay} from "node:timers/promises";
 import {createClient} from "@supabase/supabase-js";
+import {verifyAccountHttpResponse} from "./testing/openapi-contract.mjs";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
 
 if (process.env.PORTAL_TEST_MODE !== "1")
@@ -159,11 +160,9 @@ async function request(
         ...(body === undefined ? {} : {body: JSON.stringify(body)}),
         signal: AbortSignal.timeout(30000),
     });
-    return {
-        status: response.status,
-        headers: response.headers,
-        body: await response.json(),
-    };
+    const payload = await response.json();
+    verifyAccountHttpResponse(path, method, response.status, payload);
+    return {status: response.status, headers: response.headers, body: payload};
 }
 
 try {

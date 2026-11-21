@@ -2,8 +2,8 @@
  * Published OpenAPI contract for the account HTTP API. Schemas describe input/output; handlers and current database functions still enforce permissions.
  */
 // Define a JSON response for the published HTTP contract.
-const jsonResponse = (schema: unknown = {type: "object"}) => ({
-    description: "Confirmed server result",
+const jsonResponse = (schema: unknown, description = "Confirmed server result") => ({
+    description,
     content: {"application/json": {schema}},
 });
 const errors = {
@@ -40,11 +40,109 @@ const role = {
     ],
 };
 const storedRole = { ...role, enum: ["owner", ...role.enum] };
+const text = {type: "string"};
+const uuid = {type: "string", format: "uuid"};
+const instant = {type: "string", format: "date-time"};
+const boolean = {type: "boolean"};
+const count = {type: "integer", minimum: 0};
+const nil = {type: "null"};
+const list = (items: object) => ({type: "array", items});
+const record = (properties: Record<string, object>, required = Object.keys(properties)) => ({
+    type: "object",
+    properties,
+    required,
+    additionalProperties: false,
+});
+const deletionKind = {type: "string", pattern: "^[a-z_]{1,40}$"};
+const deletionTarget = {id: uuid, kind: deletionKind, label: text};
+const deletionAccess = record({can_admin: boolean, kinds: list(deletionKind)});
+const deletionResources = record({
+    items: {
+        ...list(record({
+            ...deletionTarget,
+            owner_label: {type: ["string", "null"]},
+            can_delete: boolean,
+        })),
+        maxItems: 100,
+    },
+    next_cursor: {type: ["string", "null"], format: "uuid"},
+});
+const deletionPreview = record({
+    ...deletionTarget,
+    plan_id: uuid,
+    counts: {type: "object", additionalProperties: count},
+    blockers: list(record({code: text, kind: text, count})),
+    can_confirm: boolean,
+    expires_at: instant,
+});
+const deletionReceipt = {operation_id: uuid, kind: deletionKind, id: uuid};
+const deletionOperation = record({
+    ...deletionReceipt,
+    status: {enum: ["pending", "failed", "completed"]},
+});
+const deletionCompleted = jsonResponse(record({
+    ...deletionReceipt,
+    status: {const: "completed"},
+}));
+const deletionRemaining = jsonResponse(
+    record({...deletionReceipt, status: {enum: ["pending", "failed"]}}),
+    "Deletion remains incomplete; the operation ID can be used to resume it.",
+);
+const ownAccount = record({
+    profile: record({
+        id: uuid,
+        luminovia_user_id: {
+            ...text,
+            pattern: "^LV-(?:[0-9A-F]{4}-){4}[0-9A-F]{4}$",
+        },
+        display_name: {...text, maxLength: 120},
+        bio_de: {...text, maxLength: 4000},
+        bio_en: {...text, maxLength: 4000},
+        phone: {type: ["string", "null"], maxLength: 50},
+        time_zone: text,
+        locale: {enum: ["de", "en"]},
+        active: boolean,
+        created_at: instant,
+        email: {type: ["string", "null"], format: "email"},
+    }),
+    roles: list(storedRole),
+    permissions: list(text),
+});
+const createdAccount = record({
+    status: {const: "created"},
+    creation_id: uuid,
+    user_id: uuid,
+});
+const accountCreationConflict = {
+    anyOf: [
+        record({status: {enum: ["in_progress", "failed"]}, creation_id: uuid, user_id: {type: ["string", "null"], format: "uuid"}}),
+        record({error: {const: "invalid_request"}}),
+    ],
+};
+const roleCapability = record({
+    role,
+    permissions: list(text),
+    assignable: boolean,
+});
+const savedRoles = record({id: uuid, roles: {...list(storedRole), minItems: 1, maxItems: 7}});
+const sentInvitation = record({
+    status: {enum: ["sent", "already_sent", "failed"]},
+    invitation_id: uuid,
+});
+const invitationInProgress = record(
+    {status: {const: "in_progress"}, invitation_id: uuid},
+    ["status"],
+);
+const invitationConflict = record(
+    {status: {const: "idempotency_conflict"}, invitation_id: uuid},
+    ["status"],
+);
+
 export const accountOpenApi = {
     openapi: "3.1.0",
     info: {
         title: "Luminovia Account API",
-        version: "1.0.0",
+        version: "1.1.0",
         description:
             "Bearer-authenticated account API. Admin operations require current database capabilities and active-account status. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
     },
@@ -67,7 +165,7 @@ export const accountOpenApi = {
                 operationId: "deletionAccess",
                 summary:
                     "Current typed permanent-deletion capabilities; no private content",
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(deletionAccess), ...errors},
             },
         },
         "/v1/deletions/resources": {
@@ -98,7 +196,7 @@ export const accountOpenApi = {
                         schema: {type: "integer", minimum: 1, maximum: 100, default: 25},
                     },
                 ],
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(deletionResources), ...errors},
             },
         },
         "/v1/deletions/preview": {
@@ -116,7 +214,7 @@ export const accountOpenApi = {
                     },
                 }),
                 responses: {
-                    "200": jsonResponse(),
+                    "200": jsonResponse(deletionPreview),
                     "409": {description: "Target or dependency conflict"},
                     ...errors,
                 },
@@ -138,11 +236,8 @@ export const accountOpenApi = {
                     },
                 }),
                 responses: {
-                    "200": jsonResponse(),
-                    "202": {
-                        description:
-                            "Irreversible deletion is still pending; not completed",
-                    },
+                    "200": deletionCompleted,
+                    "202": deletionRemaining,
                     "409": {
                         description: "Plan expired, scope changed or dependencies conflict",
                     },
@@ -155,7 +250,7 @@ export const accountOpenApi = {
                 operationId: "deletionOperations",
                 summary:
                     "Recover currently authorised incomplete deletion receipts after reload",
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(record({items: list(deletionOperation)})), ...errors},
             },
         },
         "/v1/deletions/operations/{id}": {
@@ -166,10 +261,8 @@ export const accountOpenApi = {
                 parameters: userId,
                 requestBody: jsonBody({type: "object", additionalProperties: false}),
                 responses: {
-                    "200": jsonResponse(),
-                    "202": {
-                        description: "Pending; active writers or external work remain",
-                    },
+                    "200": deletionCompleted,
+                    "202": deletionRemaining,
                     "409": {description: "Dependency conflict"},
                     ...errors,
                 },
@@ -179,7 +272,7 @@ export const accountOpenApi = {
             get: {
                 operationId: "accountMe",
                 summary: "Own profile, roles and permissions",
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(ownAccount), ...errors},
             },
             patch: {
                 operationId: "saveOwnAccount",
@@ -196,7 +289,7 @@ export const accountOpenApi = {
                         locale: {enum: ["de", "en"]},
                     },
                 }),
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(ownAccount), ...errors},
             },
         },
         "/v1/users": {
@@ -231,12 +324,12 @@ export const accountOpenApi = {
                     },
                 }),
                 responses: {
-                    "201": jsonResponse(),
-                    "200": jsonResponse(),
-                    "409": {
-                        description:
-                            "A previous creation request is still running or failed",
-                    },
+                    "201": jsonResponse(createdAccount),
+                    "200": jsonResponse(createdAccount),
+                    "409": jsonResponse(
+                        accountCreationConflict,
+                        "The creation request is already running, failed, or its details changed.",
+                    ),
                     "502": {
                         description:
                             "Account creation was not confirmed; no invitation was sent",
@@ -327,7 +420,7 @@ export const accountOpenApi = {
                 operationId: "accountRoleCatalog",
                 summary: "Read available roles and current database capabilities",
                 responses: {
-                    "200": jsonResponse({type: "array", items: {type: "object"}}),
+                    "200": jsonResponse({ ...list(roleCapability), maxItems: 7 }),
                     ...errors,
                 },
             },
@@ -352,7 +445,7 @@ export const accountOpenApi = {
                         },
                     },
                 }),
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse({anyOf: [savedRoles, nil]}), ...errors},
             },
         },
         "/v1/users/{id}/status": {
@@ -383,7 +476,7 @@ export const accountOpenApi = {
                         schema: {type: "string", format: "uuid"},
                     },
                 ],
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(nil), ...errors},
             },
             delete: {
                 operationId: "revokeClientOrganisation",
@@ -398,7 +491,7 @@ export const accountOpenApi = {
                         schema: {type: "string", format: "uuid"},
                     },
                 ],
-                responses: {"200": jsonResponse(), ...errors},
+                responses: {"200": jsonResponse(nil), ...errors},
             },
         },
         "/v1/invitations": {
@@ -423,15 +516,16 @@ export const accountOpenApi = {
                     },
                 }),
                 responses: {
-                    "200": jsonResponse(),
-                    "409": {
-                        description: "Request identity reused for a different invitation",
-                    },
-                    "429": {description: "Durable invitation rate limit reached"},
-                    "502": {
-                        description:
-                            "Uncertain email send; reservation retained for reconciliation",
-                    },
+                    "200": jsonResponse(
+                        {anyOf: [sentInvitation, invitationInProgress]},
+                        "Delivery result or retained reservation status.",
+                    ),
+                    "409": jsonResponse(invitationConflict, "Request identity reused for a different invitation."),
+                    "429": jsonResponse(record({status: {const: "throttled"}}), "Durable invitation rate limit reached."),
+                    "502": jsonResponse(
+                        record({status: {const: "failed"}, invitation_id: uuid}),
+                        "Delivery could not be confirmed.",
+                    ),
                     ...errors,
                 },
             },

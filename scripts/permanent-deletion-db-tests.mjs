@@ -3,6 +3,7 @@
  * deletion is checked separately by permanent-deletion-api-check.mjs. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {accountResponse} from "./testing/openapi-contract.mjs";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
@@ -23,10 +24,25 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         sql(
             `begin;set local role service_role;set local request.jwt.claims='{"role":"service_role"}';${statement};commit;`,
         );
+    const deletionResponses = new Map([
+        ["deletion_access", accountResponse("/v1/deletions/access", "get")],
+        ["deletion_resources", accountResponse("/v1/deletions/resources", "get")],
+        ["deletion_preview", accountResponse("/v1/deletions/preview", "post")],
+        ["deletion_operations", accountResponse("/v1/deletions/operations", "get")],
+        ["deletion_confirm", accountResponse("/v1/deletions/confirm", "post", "202")],
+    ]);
+    const completedResponse = accountResponse("/v1/deletions/operations/{id}", "post");
     const call = (who, name, args = "", aal = "aal1") =>
-        actor(who, `select public.${name}(${args})`, aal).then(JSON.parse);
+        actor(who, `select public.${name}(${args})`, aal).then((wire) => {
+            const parse = deletionResponses.get(name);
+            if (name === "deletion_confirm" && JSON.parse(wire).status === "completed")
+                return completedResponse(wire);
+            return (parse ?? JSON.parse)(wire);
+        });
     const worker = (name, args) =>
-        service(`select public._deletion_${name}(${args})`).then(JSON.parse);
+        service(`select public._deletion_${name}(${args})`).then(
+            name === "complete" ? completedResponse : JSON.parse,
+        );
     const plan = (kind, id, who = admin) =>
         call(who, "deletion_preview", `${q(kind)},${q(id)}`);
     const confirm = (preview, who = admin, requestId = randomUUID()) =>

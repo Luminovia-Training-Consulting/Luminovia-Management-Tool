@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {createClient} from "@supabase/supabase-js";
+import {verifyAccountHttpResponse} from "./testing/openapi-contract.mjs";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
 
 if (process.env.PORTAL_TEST_MODE !== "1")
@@ -99,7 +100,9 @@ async function request(actor, path, body) {
             signal: AbortSignal.timeout(30000),
         },
     );
-    return {status: response.status, body: await response.json()};
+    const payload = await response.json();
+    verifyAccountHttpResponse("deletions/" + path, body === undefined ? "GET" : "POST", response.status, payload);
+    return {status: response.status, body: payload};
 }
 
 /** Confirm the exact preview without bypassing the HTTP validation/worker. */

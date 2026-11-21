@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {accountResponse} from "./testing/openapi-contract.mjs";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
@@ -41,6 +42,14 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
       insert into public.organisations(id, name)
       values ('${org}', 'Fictional API customer');`,
     );
+    const accountResponses = new Map([
+        ["account_me", accountResponse("/v1/me", "get")],
+        ["save_account_profile", accountResponse("/v1/me", "patch")],
+        ["account_role_catalog", accountResponse("/v1/roles", "get")],
+        ["set_account_roles", accountResponse("/v1/users/{id}/roles", "put")],
+        ["set_account_roles_with_organisation", accountResponse("/v1/users/{id}/roles", "put")],
+        ["manage_client_organisation", accountResponse("/v1/users/{id}/organisations/{organisationId}", "put")],
+    ]);
     /** Calls the business database API under the fixture's controlled identity claims. */
     const rpc = (who, name, args = [], aal = "aal1") =>
         actor(
@@ -48,6 +57,8 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "boolean" || typeof value === "number" ? String(value) : q(value))).join(",")})`,
             aal,
         ).then((value) => {
+            const parse = accountResponses.get(name);
+            if (parse) return parse(value || "null");
             try {
                 return JSON.parse(value);
             } catch {
@@ -62,6 +73,11 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             assert.deepEqual(me.roles, ["lecturer"]);
             assert.deepEqual(me.permissions, []);
             assert.equal("assurance_level" in me, false);
+            const roles = await rpc(admin, "account_role_catalog");
+            assert.equal(roles.length, 7);
+            assert.ok(roles.some(({role}) => role === "participant"));
+            assert.ok(roles.some(({role, assignable}) => role === "lecturer" && assignable));
+            await assert.rejects(rpc(lecturer, "account_role_catalog"), /42501/);
             const adminMe = await rpc(admin, "account_me");
             assert.ok(adminMe.permissions.includes("jobs.manage"));
             assert.equal("assurance_level" in adminMe, false);
