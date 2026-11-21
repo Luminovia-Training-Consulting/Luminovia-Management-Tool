@@ -28,6 +28,9 @@
 - [x] Open the exact session's manual register in both dedicated editions. Real Chromium verifies persisted lecturer changes and the learner's private view. SQL and native HTTP cover scoped company access, concurrency, closure and licence grace.
 - [x] Document and verify private calendar and notification preference, inbox and device contracts. Exclude secret inputs and responses from the interactive explorer. Both pinned PostgREST versions return HTTP 409 for the confirmed stale calendar and quiet-hours writes.
 - [x] Allow the canonical owned preview origin during isolated browser acceptance. Actual Deno and all four desktop/mobile built-PWA checks passed with the corrected origin configuration.
+- [x] Open dedicated course draft creation in the branded browser for current course managers. Native desktop and mobile checks verified both editions, local time interpretation, a persisted unpublished draft and no learner catalogue access. SQL confirms exact retries, rollback and template reuse.
+- [x] Enable versioned exam-required decisions and role-specific exam visibility in both dedicated editions. Verify the exact company and lecturer scope, retained enrolment and rejection of stale changes. Dedicated student PDF and staff answer-key transports remain under separate acceptance.
+- [x] Compare typed source template, job preview, file discovery and archive projections with the native API. Isolate PWA fixture actors from language changes performed by other application cases.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links
