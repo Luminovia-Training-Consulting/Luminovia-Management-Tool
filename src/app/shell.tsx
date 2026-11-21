@@ -212,6 +212,9 @@ export function Shell() {
                 ...(teaching || clientPortalAccess || permissions.data?.includes("finance.manage")
                     ? [{to: "/accounting", icon: Wallet, label: "accountingExports"}]
                     : []),
+                ...(staff || clientPortalAccess
+                    ? [{to: "/changes", icon: FileCheck2, label: "assignmentChanges"}]
+                    : []),
                 ...(clientPortalAccess
                     ? [{to: "/client", icon: Building2, label: "clientPortal"}]
                     : []),
@@ -236,6 +239,7 @@ export function Shell() {
             {to: "/files", icon: FolderOpen, label: "files"},
             {to: "/contracts", icon: FileCheck2, label: "contracts"},
             {to: "/finance", icon: Wallet, label: "finance"},
+            {to: "/changes", icon: FileCheck2, label: "assignmentChanges"},
             {to: "/forum", icon: MessageCircle, label: "forum"},
             {to: "/topics", icon: BookOpen, label: "topics"},
             {to: "/admin", icon: Settings2, label: "admin"},
@@ -251,6 +255,7 @@ export function Shell() {
             {to: "/files", icon: FolderOpen, label: "files"},
             {to: "/contracts", icon: FileCheck2, label: "contracts"},
             {to: "/finance", icon: Wallet, label: "finance"},
+            {to: "/changes", icon: FileCheck2, label: "assignmentChanges"},
             {to: "/topics", icon: BookOpen, label: "topics"},
             {to: "/settings", icon: Settings2, label: "settings"},
             {to: "/profile", icon: UserRound, label: "profile"},
@@ -260,6 +265,7 @@ export function Shell() {
             {to: "/calendar", icon: CalendarDays, label: "calendar"},
             {to: "/courses", icon: GraduationCap, label: "clientCourses"},
             {to: "/client", icon: Building2, label: "clientPortal"},
+            {to: "/changes", icon: FileCheck2, label: "assignmentChanges"},
             {to: "/chats", icon: MessagesSquare, label: "chats"},
             {to: "/files", icon: FolderOpen, label: "files"},
             {to: "/finance", icon: Wallet, label: "finance"},

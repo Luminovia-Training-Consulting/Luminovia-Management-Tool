@@ -16,6 +16,7 @@ const groups: Record<
     courses: [
         "claim_confirmed",
         "claim_cancelled",
+        "assignment_change",
         "assignment_withdrawal_requested",
         "assignment_withdrawal_approved",
         "assignment_withdrawal_rejected",

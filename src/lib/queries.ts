@@ -65,6 +65,7 @@ export const claimsQuery = (id: string) =>
             const {data, error} = await db()
                 .from("job_claims")
                 .select("*,assignment_sessions(*)")
+                .is("assignment_sessions.released_at", null)
                 .eq("lecturer_id", id)
                 .eq("status", "confirmed")
                 .order("created_at", {ascending: false});

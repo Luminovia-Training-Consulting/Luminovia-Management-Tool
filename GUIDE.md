@@ -3476,3 +3476,29 @@ Both new browser journeys passed on96c3c5c with fictional data. The complete run
 |---------|--------------------------|-----------------------------------|
 | Desktop | Saved optional details   | Contact hidden after cancellation |
 | Mobile  | Saved optional details   | Contact hidden after cancellation |
+## Assignment change requests
+
+Open **Assignment changes** or follow the link from one of your confirmed jobs.
+Create a draft, check the before/after comparison, then submit it for consent.
+Management and the assigned lecturer each approve the exact proposal. An
+authorised manager can then apply it. Rejection or withdrawal leaves the booking
+in place and records the reason. A new version requires fresh consent.
+
+This workflow covers future, unstarted, single-position assignments with no
+invoice or invoice-review history. For standalone jobs, a proposal can replace
+the complete schedule. For a dedicated course, the workflow retains session
+identities and their attendance and learning evidence. It supports changes to
+location, scope and, with permission, terms or net pay. Company contacts can
+propose location and scope for their company’s assignment and can read their
+own proposals. Their view hides lecturer terms, compensation and decision notes.
+
+Commissioned net changes require gross-finance authority, retain the original
+currency and customer charge, and preserve the original claim and revenue
+records. An eligible later invoice uses the jointly accepted amount and stores
+a reference to that amendment. The final session still determines when the
+assignment can be invoiced. Cancellation records the decision for the complete
+block. Compensation for cancellation is a separate finance review.
+
+All decisions require an online database confirmation. The portal keeps the
+consent and result history. Any required legal signatures follow the applicable
+contract process.

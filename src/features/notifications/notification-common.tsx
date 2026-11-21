@@ -8,6 +8,7 @@ import type {NotificationItem} from "./api";
 
 /** Known notification kinds for translated labels; unknown kinds use the defined fallback. */
 const knownKinds = new Set([
+    "assignment_change",
     "claim_confirmed",
     "claim_cancelled",
     "assignment_withdrawal_requested",

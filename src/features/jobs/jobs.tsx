@@ -13,6 +13,7 @@ import {refreshJobState} from "./lifecycle-api";
 import {JobDiscovery} from "./discovery";
 import {jobDetailQuery} from "./discovery-api";
 import {ResourceComments} from "../comments/comments";
+import {AssignmentAmendments} from "../changes/changes";
 import {JobBuildingBlockReference} from "../operations/building-blocks";
 import "../commercial/platform-i18n";
 import {JobDocuments} from "../files/files";
@@ -253,6 +254,9 @@ export function JobDetail() {
                         canManage={permissions.data?.includes("jobs.manage") ?? false}
                     />
                     <ResourceComments kind="job" resourceId={job.id}/>
+                    {ownClaim && session && (
+                        <AssignmentAmendments actor={session.user.id} claimId={ownClaim.id}/>
+                    )}
                 </div>
                 <aside className="claim-panel panel">
                     <p className="eyebrow">

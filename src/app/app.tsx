@@ -20,6 +20,7 @@ import {useOnline} from "../lib/online";
 import {Button} from "../components/ui/button";
 import {Dashboard} from "../features/dashboard/dashboard";
 import {WelcomeGuidePage} from "../features/onboarding/welcome";
+import {ChangeRequestsPage} from "../features/changes/changes";
 import {JobDetail, Jobs} from "../features/jobs/jobs";
 import {ProfilePage} from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
@@ -313,6 +314,8 @@ export function App() {
                             <Route path="contracts" element={<ContractsPage/>}/>
                             <Route path="finance" element={<FinancePage/>}/>
                             <Route path="accounting" element={<AccountingPage/>}/>
+                            <Route path="changes" element={<ChangeRequestsPage/>}/>
+                            <Route path="changes/:id" element={<ChangeRequestsPage/>}/>
                             <Route path="wiki" element={<SectionHub kind="knowledge"/>}/>
                             <Route path="forum" element={<SectionHub kind="updates"/>}/>
                             <Route path="files" element={<FilesPage/>}/>
