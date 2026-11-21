@@ -280,6 +280,14 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             const messages = await rpc(participant, "course_chat_messages", [roomA, null, null, 50]);
             assert.deepEqual(messages.map((item) => [item.id, item.body]), [[courseChatMessageId, "Fictional course question"]]);
             assert.equal("document_id" in messages[0], false);
+            const learnerSearch = await rpc(participant, "unified_search", [
+                "Fictional course question", "chats", null, null, null, 40,
+            ]);
+            assert.equal(learnerSearch.items[0].url, `/courses/${runA}/workspace#course-chat`);
+            const staffSearch = await rpc(admin, "unified_search", [
+                "Fictional course question", "chats", null, null, null, 40,
+            ]);
+            assert.equal(staffSearch.items[0].url, `/chats?room=${roomA}`);
             courseChatMessageB = await rpc(participant, "send_course_chat_message", [
                 roomB, "Fictional company B safe message", randomUUID(),
             ]);
@@ -308,6 +316,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 "Fictional company", "chats", null, null, null, 40,
             ]);
             assert.deepEqual(visibleChats.items.map((item) => item.id), [courseChatMessageB]);
+            assert.equal(visibleChats.items[0].url, `/courses/${runB}/workspace#course-chat`);
             assert.equal(await actor(participant,
                 `select count(*) from public.messages where id=${q(courseChatMessageId)}`), "0");
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
