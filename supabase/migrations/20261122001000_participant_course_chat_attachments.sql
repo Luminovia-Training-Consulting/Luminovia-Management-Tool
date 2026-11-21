@@ -63,12 +63,13 @@ $$;
 do $$
 declare
   definition text := pg_get_functiondef('private.reserve_document(text,text,bigint,text,text,uuid,uuid,uuid,uuid,uuid)'::regprocedure);
-  original_start constant text := 'if p_kind = ''contract''';
+  original_start constant text := E'begin\n  if p_kind = ''contract''';
 begin
   if strpos(definition, original_start) = 0 then
     raise exception 'Installed document reservation wrapper has changed';
   end if;
-  execute replace(definition, original_start, $gate$if not private.actor_active() then
+  execute replace(definition, original_start, $gate$begin
+  if not private.actor_active() then
     raise insufficient_privilege;
   end if;
   -- A sent message always refers to its original scanned bytes.
