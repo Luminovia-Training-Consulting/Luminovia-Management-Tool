@@ -3,11 +3,12 @@
  * migration replay. This is metadata only: it creates neither grants nor routes.
  */
 import assert from "node:assert/strict";
+import {randomUUID} from "node:crypto";
 import {readFile, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {scanFrontendRpcReferences} from "./code-integrity.mjs";
-import {withTestDatabase} from "./testing/database.mjs";
+import {quoteSql, withTestDatabase} from "./testing/database.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const catalogue = new URL(
@@ -74,15 +75,6 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
         allByName.set(row.name, overloads);
     }
 
-    // Read roles for coarse REST access only. Each operation remains subject
-    // to its own current entitlement, permissions, ownership and input checks.
-    const gate = await sql("select pg_get_functiondef('private.require_portal_access()'::regprocedure)");
-    function allows(role, name) {
-        const block = gate.match(new RegExp(`private\\.${role}_actor\\(\\) and path in \\(([\\s\\S]*?)\\)`));
-        assert.ok(block, `Review the ${role} REST pre-request rules before regenerating the catalogue`);
-        return block[1].includes(`'/rpc/${name}'`);
-    }
-
     /** SQL admits null values at the transport level; business validation can narrow them. */
     function nullable(schema) {
         if (schema.type === "null") return schema;
@@ -144,6 +136,8 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
         const former = browserCalls.get(name);
         if (!former || feature < former) browserCalls.set(name, feature);
     }
+    const names = [...browserCalls.keys()];
+    const access = await probeRestGates(sql, names);
     return Object.fromEntries([...browserCalls].sort(([a], [b]) => a.localeCompare(b, "en")).map(([name, feature]) => {
         assert.match(name, /^[a-z][a-z0-9_]*$/);
         const signatures = allByName.get(name);
@@ -173,11 +167,57 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
         });
         return [name, {
             feature,
-            participant: allows("participant", name),
-            guest: allows("guest", name),
+            participant: access.participant.has(name),
+            guest: access.guest.has(name),
             overloads,
         }];
     }));
+}
+
+/**
+ * Exercise the same migrated pre-request entry point PostgREST calls. This
+ * covers additive/delegating wrappers without inferring permissions from SQL
+ * text. The fictional profiles and probe helper are rolled back.
+ */
+async function probeRestGates(sql, names) {
+    const sources = names.map((name) => quoteSql(name)).join(",");
+    const roles = ["participant", "guest"];
+    const fixtures = roles.map((role) => ({role, id: randomUUID()}));
+    const statements = fixtures.map(({role,id}) => `
+        set local request.jwt.claims=${quoteSql(JSON.stringify({sub: id, role: "authenticated"}))};
+        select jsonb_build_object('role', ${quoteSql(role)}, 'allowed', coalesce(jsonb_agg(name), '[]'::jsonb))
+          from unnest(array[${sources}]::text[]) as rpc(name)
+          where private.native_rpc_catalogue_probe('/rpc/' || name);
+    `);
+    const result = await sql(`
+        begin;
+        insert into auth.users(id,email,email_confirmed_at) values ${fixtures.map(({id}) =>
+            `(${quoteSql(id)},${quoteSql(id + "@rpc-probe.example.invalid")},now())`).join(",")};
+        delete from public.user_roles where user_id in (${fixtures.map(({id}) => quoteSql(id)).join(",")});
+        insert into public.user_roles(user_id,role) values ${fixtures.map(({id,role}) =>
+            `(${quoteSql(id)},${quoteSql(role)})`).join(",")};
+        create function private.native_rpc_catalogue_probe(path text) returns boolean
+        language plpgsql security invoker set search_path='' as $probe$
+        begin
+            perform set_config('request.path',path,true);
+            perform public.require_portal_access();
+            return true;
+        exception when insufficient_privilege then return false;
+        end;
+        $probe$;
+        grant execute on function private.native_rpc_catalogue_probe(text) to authenticated;
+        set local role authenticated;
+        ${statements.join("\n")}
+        rollback;
+    `);
+    const gates = Object.fromEntries(result.split("\n").map((line) => {
+        const {role, allowed} = JSON.parse(line);
+        return [role, new Set(allowed)];
+    }));
+    for (const role of roles) {
+        assert.ok(gates[role]?.has("portal_access"), `REST gate probe could not authenticate a ${role} fixture`);
+    }
+    return gates;
 }
 
 /** One deterministic line per routine keeps generated diff reviews narrow. */

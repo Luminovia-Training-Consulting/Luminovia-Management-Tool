@@ -57,6 +57,7 @@
         "npm:@types/react@19.3.0",
         "npm:@vitejs/plugin-react@6.3.0",
         "npm:@vitest/coverage-v8@5.1.0",
+        "npm:@zip.js/zip.js@2.25.0",
         "npm:class-variance-authority@0.7.1",
         "npm:clsx@2.1.1",
         "npm:deno@2.9.6",

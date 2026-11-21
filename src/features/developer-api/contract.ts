@@ -695,7 +695,17 @@ const companyWebhookDestination = {
   pattern: "^[a-z][a-z0-9-]{0,39}$",
 };
 const companyWebhookTypes = {
-  enum: ["course.published", "course.updated", "course.schedule_changed"],
+  enum: [
+    "course.published",
+    "course.updated",
+    "course.schedule_changed",
+    "course.assignment_changed",
+    "course.enrolment_changed",
+    "course.exam_published",
+    "course.attendance_changed",
+    "course.completion_changed",
+    "course.material_published",
+  ],
 };
 const companyWebhookList = rpc(
   "companyCourseWebhookList",
@@ -710,6 +720,7 @@ const companyWebhookList = rpc(
       destination: companyWebhookDestination,
       created_at: { type: "string", format: "date-time" },
       integration_label: text,
+      premium_events: boolean,
       active: boolean,
       deliveries: {
         type: "array",
@@ -724,21 +735,39 @@ const companyWebhookList = rpc(
     }),
   },
 );
-const companyWebhookCreate = rpc(
+const companyWebhookCreateBase = rpc(
   "companyCourseWebhookSubscribe",
   "Server integrations",
   "Create a course webhook subscription",
-  "Active admins and owners attach an active key from this company to an operator-configured receiver alias. Store the one-time signing key securely. At most five active subscriptions are allowed per key.",
+  "Active admins and owners attach an active key from this company to an operator-configured receiver alias. Store the one-time signing key securely. The portal explicitly supplies p_premium_events. Only an active admin can choose this scope, and only for a currently enabled company. At most five active subscriptions are allowed per key.",
   {
     p_organisation: uuid,
     p_integration: uuid,
     p_destination: companyWebhookDestination,
+    p_premium_events: boolean,
   },
   object({
     id: uuid,
     signing_secret: { type: "string", pattern: "^[0-9a-f]{64}$" },
   }),
 );
+const companyWebhookCreate = {
+  post: {
+    ...companyWebhookCreateBase.post,
+    requestBody: {
+      required: true,
+      content: json({
+        ...object({
+          p_organisation: uuid,
+          p_integration: uuid,
+          p_destination: companyWebhookDestination,
+          p_premium_events: { ...boolean, default: false },
+        }),
+        required: ["p_organisation", "p_integration", "p_destination"],
+      }),
+    },
+  },
+};
 const companyWebhookRevoke = {
   post: {
     ...rpc(
@@ -930,13 +959,7 @@ const companyCourseWebhook = {
       content: json(
         object({
           id: uuid,
-          type: {
-            enum: [
-              "course.published",
-              "course.updated",
-              "course.schedule_changed",
-            ],
-          },
+          type: companyWebhookTypes,
           version: { const: 1 },
           occurred_at: { type: "string", format: "date-time" },
           course_id: uuid,

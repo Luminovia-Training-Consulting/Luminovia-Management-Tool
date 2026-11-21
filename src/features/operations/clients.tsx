@@ -357,6 +357,9 @@ function ClientWorkspace({
                                 organisation={organisation.id}
                                 archived={Boolean(organisation.archived_at)}
                                 zone={organisation.time_zone}
+                                canSubscribePremium={
+                                    isAdmin && Boolean(premiumSetting?.enabled)
+                                }
                             />
                         )}
                         {premiumSetting?.enabled && (
