@@ -305,7 +305,8 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 ### WL-06 — Licence sales & fulfilment operations (P1)
 
 - [ ] Vendor control plane records customers, editions, licences, provisioning/renewals, allowed modules, support terms and handover.
-- [ ] Signed licence validation and transparent trial/expiration/grace policies; safe status UI for customer admins, data-export plan.
+- [x] Signed licence validation on the exact release with active, read-only grace and expiry gates. Local administrators can review validity, occupied and available seats, retained storage and the signed API allowance. Seat, Storage and ingress limits apply at their owning server boundary.
+- [ ] Complete vendor renewals and trial conversion, apply revised ingress policy to a retained installation, and verify customer export/offboarding.
 - [ ] Written customer licence/terms, third-party/GPL history legal review, security/privacy/retention/processor responsibilities and support agreement.
 
 ### WL-07 — Managed branded hosting (P1)

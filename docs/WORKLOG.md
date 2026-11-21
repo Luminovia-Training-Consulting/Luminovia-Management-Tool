@@ -1,3 +1,9 @@
+# 21 November 2026 — Signed seat limits, administrator receipt and private handover mail
+
+Both dedicated editions enforce signed seat limits across account reservation and reactivation. Each active account with at least one role consumes a seat. An unfinished creation or cleanup reserves capacity until it settles. Lowering the limit preserves active accounts. PostgreSQL verified simultaneous administrators and rejection of stale-snapshot writes. The private licence receipt exposes the current dates, remaining seats, retained storage and signed API allowance to the local administrator only. Native GoTrue and PostgREST also verified grace access and immediate denial after role downgrade.
+
+The private Mailpit override points GoTrue invitation and recovery mail at the local capture mailbox. Both editions passed through the image-pinned GoTrue and Mailpit binaries with the rendered capture settings. Both fictional messages used that academy's own verification origin and path. Provider delivery, public DNS and full independent Compose deployment remain acceptance steps.
+
 # 21 November 2026 — Signed API allowance and private database target
 
 The dedicated ingress profile translates the signed per-installation API allowance into a local Envoy bucket. Browser files and internal health, Auth and database communication remain outside that public quota. The image-pinned Caddy 2.11.9 and Envoy 1.40.2 accepted the same check for both exact compiled `74f23362` browser releases. All 102 static files per edition matched their signed SHA-256. With a 75-request fictional licence the next public API request returned HTTP 429 and `Retry-After`, while the browser shell and maintenance fence stayed reachable.

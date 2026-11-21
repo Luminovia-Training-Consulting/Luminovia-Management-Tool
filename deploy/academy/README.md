@@ -61,7 +61,14 @@ academy_compose config --quiet
 academy_compose up -d --wait
 ```
 
-The default profile starts only the private backend with its own database, Auth, PostgREST, Realtime, Storage, Edge runtime, gateway, mail relay and ClamAV. The services expose no host ports. For isolated mail rehearsal, include `--profile mail-capture` and run the approved capture configuration privately. The mail relay, invitation routes and notification delivery each have separate activation controls. Configure and verify the agreed customer SMTP provider before opening those channels.
+The default profile starts only the private backend with its own database, Auth, PostgREST, Realtime, Storage, Edge runtime, gateway, mail relay and ClamAV. The services expose no host ports. On an isolated test instance, add the capture override to route Auth invitation and recovery mail to the private Mailpit mailbox.
+
+```sh
+academy_compose -f deploy/academy/mail-capture.override.yml \
+  --profile mail-capture up -d --wait
+```
+
+The mail relay, invitation routes and notification delivery each have separate activation controls. Configure and verify the agreed customer SMTP provider before opening those channels.
 
 Wait for the Auth user table, Storage bucket/object tables and Realtime publication. Follow the [existing migration order](../hostinger/selfhost/README.md#migration-and-readiness-order) for the pinned backend and record the applied source versions. Set `PORTAL_ACADEMY_RUNTIME_ROOT` to the absolute initialized root when calling the [signed database preparation command](../../DEVELOPMENT.md#white-label-browser-build). The operator command checks the staged release identity and connects to PostgreSQL inside that Compose project without publishing a database port. An explicit private libpq service is also supported. Prepare the empty academy before creating its first confirmed Auth identity. Then bind that identity with `--first-admin` and explicitly enable the verified course profile with `--course-access on`. Use the same UUID, edition, licence and source revision that were used to stage the browser.
 

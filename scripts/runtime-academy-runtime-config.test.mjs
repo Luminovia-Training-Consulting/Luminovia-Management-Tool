@@ -46,7 +46,7 @@ function initialization(root, options = {}) {
   };
 }
 
-function compose(root, profiles) {
+function compose(root, profiles, capture = false) {
   const result = spawnSync(
     "docker",
     [
@@ -57,6 +57,7 @@ function compose(root, profiles) {
       "deploy/hostinger/selfhost/compose.yml",
       "-f",
       "deploy/academy/compose.override.yml",
+      ...(capture ? ["-f", "deploy/academy/mail-capture.override.yml"] : []),
       ...profiles.flatMap((profile) => ["--profile", profile]),
       "config",
       "--format",
@@ -230,6 +231,7 @@ test(
       const root = join(identity.data_directory, "..");
       const privateOnly = compose(root, []);
       const withProfiles = compose(root, ["ingress", "mail-capture"]);
+      const withCapture = compose(root, ["mail-capture"], true);
       assert.equal(privateOnly.name, identity.compose_project);
       assert.equal(privateOnly.networks.backend.name, identity.backend_network);
       assert.equal(Boolean(privateOnly.networks.backend.external), false);
@@ -248,6 +250,21 @@ test(
         "api-ingress": ingress,
       } = withProfiles.services;
       assert.equal(auth.environment.GOTRUE_SITE_URL, identity.portal_origin);
+      assert.equal(auth.environment.GOTRUE_SMTP_HOST, "mail-relay");
+      assert.equal(
+        withCapture.services.auth.environment.GOTRUE_SMTP_HOST,
+        "mailpit",
+      );
+      assert.equal(
+        withCapture.services.auth.environment.GOTRUE_SMTP_PORT,
+        "1025",
+      );
+      assert.equal(withCapture.services.auth.environment.GOTRUE_SMTP_PASS, "");
+      assert.equal(
+        withCapture.services.auth.depends_on.mailpit.condition,
+        "service_healthy",
+      );
+      assert.equal(Boolean(withCapture.services.mailpit.ports?.length), false);
       assert.ok(
         !Object.hasOwn(auth.environment, "GOTRUE_MAILER_TEMPLATES_INVITE"),
       );
