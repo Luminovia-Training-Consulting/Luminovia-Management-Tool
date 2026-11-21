@@ -421,7 +421,7 @@ test("metadata workflow only executes trusted base code with read-only permissio
         "utf8",
     );
     assert.match(source, /name: PR metadata/);
-    assert.match(source, /pull_request:\s+branches: \[main\]/);
+    assert.match(source, /pull_request:\s+branches:\s*\[\s*main\s*\]/);
     assert.match(source, /ref: refs\/heads\/main/);
     assert.match(
         source,

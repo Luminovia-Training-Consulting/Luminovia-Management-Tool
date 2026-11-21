@@ -568,6 +568,11 @@ function apiFixture({commissions = true, failure} = {}) {
             lecturer,
             manager,
             commissions,
+            waitUntilDelivered: async (endsAt) => {
+                trace.push({name: "delivery-elapsed", endsAt});
+                if (failure === "delivery-elapsed")
+                    throw new Error("Fictional delivery clock did not elapse");
+            },
             upload: async (who, bytes, kind, subject) => {
                 trace.push({
                     actor: who === manager ? "manager" : "lecturer",
@@ -606,9 +611,20 @@ test("pre-upgrade creation uses scanned evidence, real business callers and the 
         "job_offers",
         "claim_job",
         "upload",
+        "delivery-elapsed",
         "submit_invoice",
         "collect",
     ]);
+    const sessions = trace
+        .filter(({name}) => ["create_job", "create_commission_job"].includes(name))
+        .flatMap(({args}) => args.p_payload.sessions)
+        .map(({starts_at, ends_at}) => [Date.parse(starts_at), Date.parse(ends_at)]);
+    assert.equal(sessions.length, 4);
+    assert(sessions.every(([start, end], index) => end > start && (index === 0 || start > sessions[index - 1][1])));
+    assert.equal(
+        trace.find(({name}) => name === "delivery-elapsed").endsAt,
+        sessions.at(-1)[1],
+    );
     assert.equal(
         trace.find((row) => row.name === "upload" && row.kind === "contract")
             .actor,
@@ -647,6 +663,12 @@ test("pre-upgrade creation uses scanned evidence, real business callers and the 
         ),
     );
     assert(!names.includes("configure_compensation_policy"));
+});
+
+test("a failed delivery wait prevents submitting an invoice or accepting a snapshot", async () => {
+    const {options, trace} = apiFixture({failure: "delivery-elapsed"});
+    await assert.rejects(createFinancialWitness(options), /delivery clock did not elapse/);
+    assert.equal(trace.at(-1).name, "delivery-elapsed");
 });
 
 for (const failure of [

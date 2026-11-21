@@ -751,7 +751,7 @@ test("privileged workflow uses only trusted default-branch metadata code; produc
     );
     assert.match(
         ci,
-        /preview-package:[\s\S]*?needs: \[quality, coverage, verify, verify-selfhost, verify-browser, scope\]/,
+        /preview-package:[\s\S]*?needs:\s*\[\s*quality,\s*coverage,\s*verify,\s*verify-selfhost,\s*verify-browser,\s*scope\s*\]/,
     );
     assert.match(ci, /retention-days: 7/);
     const producer = ci.slice(

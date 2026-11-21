@@ -8,6 +8,7 @@ import {closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, unlinkS
 import {createClient} from "@supabase/supabase-js";
 import {readPrivateJson} from "../../../scripts/testing/private-state.mjs";
 import {assertPasswordOnly} from "../../../scripts/testing/password-only.mjs";
+import {setTimeout as delay} from "node:timers/promises";
 
 import {pathToFileURL} from "node:url";
 
@@ -341,6 +342,11 @@ export function assertRetainedFinancialWitness(before, after) {
     );
 }
 
+/** Wait until the fixture has elapsed in the isolated stack's actual clock. */
+async function waitForSessionEnd(endsAt) {
+    await delay(Math.max(0, endsAt - Date.now() + 250));
+}
+
 /** Create retained business evidence through real caller-authenticated RPCs and the scanned upload gateway. */
 export async function createFinancialWitness({
                                                  actorId,
@@ -351,6 +357,7 @@ export async function createFinancialWitness({
                                                  rolePricingAvailable = false,
                                                  upload,
                                                  collect,
+                                                 waitUntilDelivered = waitForSessionEnd,
                                              }) {
     assert(
         !rolePricingAvailable || offerProjectionAvailable,
@@ -366,15 +373,14 @@ export async function createFinancialWitness({
         contractBytes,
         "contract",
     );
-    const start = new Date(Date.now() + 90 * 86400000);
-    start.setUTCHours(8, 0, 0, 0);
+    const contractStart = Date.now();
     const contractId = await checked(
         manager.rpc("register_executed_contract", {
             p_user_id: actorId,
             p_title: "Existing fictional agreement",
             p_document_version_id: contractDocument.versionId,
-            p_effective_from: new Date(Date.now() - 86400000).toISOString(),
-            p_expires_at: new Date(+start + 365 * 86400000).toISOString(),
+            p_effective_from: new Date(contractStart - 86400000).toISOString(),
+            p_expires_at: new Date(contractStart + 365 * 86400000).toISOString(),
             p_kind: "master",
             p_parent_id: null,
             p_client_id: randomUUID(),
@@ -394,8 +400,14 @@ export async function createFinancialWitness({
         invoiceId: null,
         commissionedClaimId: null,
     };
+    // The real claim API requires future sessions; the real invoice API requires
+    // elapsed sessions. Short, non-overlapping fixed-price slots prove both
+    // in the same run without changing an accepted snapshot or the server clock.
+    const firstStart = Date.now() + 30_000;
+    let lastEnd = firstStart;
     for (const commissioned of commissions ? [false, true] : [false]) {
-        const day = +start + (commissioned ? 3 : 0) * 86400000;
+        const start = firstStart + (commissioned ? 6_000 : 0);
+        lastEnd = start + 4_000;
         const payload = {
             title:
                 "Existing fictional " +
@@ -414,8 +426,8 @@ export async function createFinancialWitness({
             requires_contract: true,
             topic_ids: [],
             sessions: [0, 1].map((offset) => ({
-                starts_at: new Date(day + offset * 86400000).toISOString(),
-                ends_at: new Date(day + offset * 86400000 + 3600000).toISOString(),
+                starts_at: new Date(start + offset * 3_000).toISOString(),
+                ends_at: new Date(start + offset * 3_000 + 1_000).toISOString(),
             })),
             ...(commissioned
                 ? {gross_amount: 271.83, gross_total_amount: 271.83}
@@ -469,6 +481,7 @@ export async function createFinancialWitness({
         ),
         "invoice",
     );
+    await waitUntilDelivered(lastEnd);
     ids.invoiceId = await checked(
         lecturer.rpc("submit_invoice", {
             p_number: "EXISTING-" + randomUUID(),
