@@ -517,7 +517,7 @@ try {
     jobs.push(completedJob);
     await checked(
         service.from("job_sessions").insert([
-            {job_id: completedJob, starts_at: completedStart, ends_at: completedEnd},
+            {id: randomUUID(), job_id: completedJob, starts_at: completedStart, ends_at: completedEnd},
             {id: finalSession, job_id: completedJob, starts_at: finalStart, ends_at: finalEnd},
         ]),
         "Seed its elapsed and future scheduled sessions",
@@ -540,7 +540,7 @@ try {
     );
     await checked(
         service.from("assignment_sessions").insert([
-            {claim_id: completedClaim, lecturer_id: a.id, starts_at: completedStart, ends_at: completedEnd},
+            {id: randomUUID(), claim_id: completedClaim, lecturer_id: a.id, starts_at: completedStart, ends_at: completedEnd},
             {id: finalAllocation, claim_id: completedClaim, lecturer_id: a.id, starts_at: finalStart, ends_at: finalEnd},
         ]),
         "Seed both exact assigned sessions",
