@@ -111,7 +111,10 @@ await withTestDatabase(
                 const topic = rows.find((row) => row.id === child);
                 assert.equal(topic.label_en, "EN Fictional child");
                 assert.equal(topic.parent_id, parent);
-                assert.deepEqual(topic.aliases, ["Alternative", "Second"]);
+                // This historical function keeps either spelling when duplicates
+                // differ only in case. Its tie-break uses the database locale.
+                assert.deepEqual(topic.aliases.map((alias) => alias.toLowerCase()), ["alternative", "second"]);
+                assert.equal(topic.aliases[1], "Second");
                 assert.deepEqual(
                     await rpc(lecturer, "taxonomy_catalogue", ["%", "", false], "aal1"),
                     [],
