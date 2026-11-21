@@ -34,7 +34,6 @@ export function CompanyPremiumControl({
   const cache = useQueryClient();
   const [requested, setRequested] = useState<boolean | null>(null);
   const [confirmationStep, setConfirmationStep] = useState(1);
-  const [retainedOpen, setRetainedOpen] = useState(false);
   const [notice, setNotice] = useState<"saved" | "conflict" | "failed" | null>(
     null,
   );
@@ -67,16 +66,6 @@ export function CompanyPremiumControl({
       void cache.invalidateQueries({
         queryKey: ["operations", "company-premium", actor],
       });
-    },
-  });
-  const retained = useMutation({
-    mutationFn: async () => {
-      requireOnline();
-      const { data, error } = await db().rpc("retained_company_lms", {
-        p_organisation_id: setting.organisation_id,
-      });
-      if (error) throw error;
-      return retainedCompanyLmsSchema.parse(data);
     },
   });
 
@@ -121,19 +110,18 @@ export function CompanyPremiumControl({
         {!isAdmin && !archived && (
           <span className="muted">{t("premiumAdminOnly")}</span>
         )}
-        {isAdmin && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!online || retained.isPending}
-            onClick={() => {
-              setRetainedOpen(true);
-              retained.mutate();
-            }}
-          >
-            {t("premiumRetainedData")}
-          </Button>
-        )}
+        {isAdmin &&
+          (online ? (
+            <RetainedCompanySummary
+              key={`${actor}:${setting.organisation_id}`}
+              organisation={setting.organisation_id}
+              zone={zone}
+            />
+          ) : (
+            <Button type="button" variant="secondary" disabled>
+              {t("premiumRetainedData")}
+            </Button>
+          ))}
       </div>
       {notice && (
         <Notice kind={notice === "saved" ? "success" : "error"}>
@@ -200,10 +188,53 @@ export function CompanyPremiumControl({
           </div>
         ) : null}
       </Dialog>
+    </section>
+  );
+}
+
+/** Own each audited read only while this exact actor and organisation are active
+ * and online. Losing that scope unmounts the dialog and its mutation observer. */
+function RetainedCompanySummary({
+  organisation,
+  zone,
+}: {
+  organisation: string;
+  zone?: string;
+}) {
+  const { t } = useTranslation("operations");
+  const [retainedOpen, setRetainedOpen] = useState(false);
+  const retained = useMutation({
+    // A discarded observer must not retain protected response data in the client.
+    gcTime: 0,
+    mutationFn: async () => {
+      requireOnline();
+      const { data, error } = await db().rpc("retained_company_lms", {
+        p_organisation_id: organisation,
+      });
+      if (error) throw error;
+      return retainedCompanyLmsSchema.parse(data);
+    },
+  });
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={retained.isPending}
+        onClick={() => {
+          setRetainedOpen(true);
+          retained.mutate();
+        }}
+      >
+        {t("premiumRetainedData")}
+      </Button>
       <Dialog
         open={retainedOpen}
         onOpenChange={(open) => {
-          if (!open) setRetainedOpen(false);
+          if (open) return;
+          setRetainedOpen(false);
+          retained.reset();
         }}
         title={t("premiumRetainedData")}
         description={t("premiumRetainedHelp")}
@@ -237,10 +268,10 @@ export function CompanyPremiumControl({
                     completions: course.completion_records,
                   })}
                 </p>
-                {isAdmin && course.course_group_messages > 0 && (
+                {course.course_group_messages > 0 && (
                   <AuditedCourseChat
                     key={course.run_id}
-                    organisation={setting.organisation_id}
+                    organisation={organisation}
                     course={course.run_id}
                     zone={zone ?? "UTC"}
                   />
@@ -250,6 +281,6 @@ export function CompanyPremiumControl({
           </div>
         )}
       </Dialog>
-    </section>
+    </>
   );
 }
