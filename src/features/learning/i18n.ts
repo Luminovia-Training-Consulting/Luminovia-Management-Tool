@@ -319,6 +319,18 @@ const pairs: Record<string, [string, string]> = {
   attendanceabsent: ["Abwesend", "Absent"],
   attendanceexcused: ["Entschuldigt", "Excused"],
   attendanceZone: ["Zeiten in {{zone}}", "Times in {{zone}}"],
+  attendanceExportCsv: [
+    "Anwesenheit als CSV herunterladen",
+    "Download attendance CSV",
+  ],
+  attendanceExportPdf: [
+    "Anwesenheit als PDF herunterladen",
+    "Download attendance PDF",
+  ],
+  attendanceExportFailed: [
+    "Der Anwesenheitsbericht konnte nicht heruntergeladen werden.",
+    "The attendance report could not be downloaded.",
+  ],
   arrivalTime: ["Ankunft (optional)", "Arrival (optional)"],
   departureTime: ["Ende der Anwesenheit (optional)", "Departure (optional)"],
   attendanceNote: ["Notiz (optional)", "Note (optional)"],

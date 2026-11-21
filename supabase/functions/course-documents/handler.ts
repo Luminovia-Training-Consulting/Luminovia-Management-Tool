@@ -1,5 +1,7 @@
 /** Protected document boundary: exact caller/origin, finite inputs and a second
  * current-authorization/facts read after rendering or private byte access. */
+import {renderAttendanceCsv} from "./attendance-csv.ts";
+
 interface Dependencies {
     origins: string[];
     authenticate: (token: string) => Promise<boolean>;
@@ -93,7 +95,14 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 // same snapshot label; the database still evaluates current expiry.
                 args = {p_locale: body.locale, p_as_of: new Date().toISOString()};
             } else if (
-                ["resource", "exam", "completion", "attendance"].includes(kind) &&
+                kind === "attendance" && uuid(body.id) &&
+                (body.format === undefined || body.format === "pdf" || body.format === "csv") &&
+                Object.keys(body).every((key) => ["kind", "id", "format"].includes(key))
+            ) {
+                name = "course_document_access";
+                args = {p_kind: kind, p_id: body.id};
+            } else if (
+                ["resource", "exam", "completion"].includes(kind) &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
             ) {
@@ -207,6 +216,11 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 filename = String(first.data.name ?? "course-resource")
                     .replace(/[^A-Za-z0-9._-]/g, "_")
                     .slice(0, 120);
+            } else if (kind === "attendance" && body.format === "csv") {
+                if (first.data.report_scope !== "session") return json(403, "document_unavailable");
+                bytes = renderAttendanceCsv(first.data);
+                mime = "text/csv; charset=utf-8";
+                filename = `luminovia-attendance-${body.id}.csv`;
             } else bytes = await dependencies.render(kind, first.data);
             // Re-check actual Auth and current database membership after potentially
             // slow storage/font work. Facts changing during rendering fail closed.

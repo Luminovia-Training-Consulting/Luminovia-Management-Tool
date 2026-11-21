@@ -158,6 +158,54 @@ Deno.test(
         assert(!(await response.text()).includes("%PDF"));
     },
 );
+Deno.test("attendance CSV escapes spreadsheet formulas and checks the exact permission twice", async () => {
+    const facts = {
+        report_scope: "session",
+        id,
+        course: "+Fictional Course",
+        time_zone: "Europe/Berlin",
+        sessions: [{id, starts_at: "2026-11-01T08:00:00Z", ends_at: "2026-11-01T09:00:00Z"}],
+        roster: [{
+            user_id: id,
+            name: '=DUMMY("Quoted", 1)',
+            sessions: [{session_id: id, status: "excused", minutes: 0}],
+        }],
+    };
+    let changed = false;
+    let calls = 0;
+    let rechecks = 0;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => { rechecks++; return true; },
+        rpc: async (_token, name, args) => {
+            calls++;
+            assert(name === "course_document_access");
+            assert(JSON.stringify(args) === JSON.stringify({p_kind: "attendance", p_id: id}));
+            return {data: changed && calls % 2 === 0 ? {...facts, roster: []} : facts, error: null};
+        },
+        download: async () => { throw new Error("No Storage read expected"); },
+        render: async () => { throw new Error("No PDF render expected"); },
+    });
+    const response = await handler(request({kind: "attendance", id, format: "csv"}));
+    assert(response.status === 200);
+    assert(response.headers.get("content-type") === "text/csv; charset=utf-8");
+    assert(response.headers.get("cache-control") === "no-store, private");
+    assert(response.headers.get("content-disposition")?.endsWith('.csv"'));
+    const csv = await response.text();
+    assert(csv.includes('"\'+Fictional Course"'));
+    assert(csv.includes('"\'=DUMMY(""Quoted"", 1)"'));
+    assert(csv.includes('"excused","","","0"'));
+    assert(calls === 2 && rechecks === 2);
+    changed = true;
+    const conflict = await handler(request({kind: "attendance", id, format: "csv"}));
+    assert(conflict.status === 403);
+    assert(!(await conflict.text()).includes("Fictional Course"));
+    assert((await handler(request({kind: "attendance", id, format: "xlsx"}))).status === 400);
+    assert((await handler(request({kind: "completion", id, format: "csv"}))).status === 400);
+    const legacy = fixture();
+    assert((await legacy.handler(request({kind: "attendance", id, format: "csv"}))).status === 403);
+    assert((await legacy.handler(request({kind: "attendance", id}))).status === 200);
+});
 Deno.test(
     "financial kinds dispatch only reviewed caller-bound RPC argument shapes",
     async () => {

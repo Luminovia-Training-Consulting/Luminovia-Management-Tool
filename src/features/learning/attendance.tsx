@@ -9,12 +9,17 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { uploadDocument } from "../files/api";
-import { downloadCourseDocument, type CourseWorkspace } from "./api";
+import {
+  downloadCourseDocument,
+  downloadPortalDocument,
+  type CourseWorkspace,
+} from "./api";
 import {
   attachAttendancePdf,
   attendanceRegisterKey,
   attendanceRegisterQuery,
   saveAttendance,
+  type AttendanceRegister,
   type AttendanceRow,
   type AttendanceStatus,
 } from "./attendance-api";
@@ -42,6 +47,48 @@ type RowEditorProps = {
   session: string;
   row: AttendanceRow;
 };
+
+function AttendanceExport({ register }: { register: AttendanceRegister }) {
+  const { t } = useTranslation("learning");
+  const day = DateTime.fromISO(register.starts_at, {
+    zone: register.time_zone,
+  }).toISODate();
+  const download = useMutation({
+    mutationFn: (format: "csv" | "pdf") =>
+      downloadPortalDocument(
+        { kind: "attendance", id: register.session_id, format },
+        `attendance-${day ?? "session"}-${register.session_id.slice(0, 8)}.${format}`,
+      ),
+  });
+  return (
+    <div>
+      <div className="form-actions">
+        {(["csv", "pdf"] as const).map((format) => (
+          <Button
+            key={format}
+            type="button"
+            variant="secondary"
+            disabled={download.isPending}
+            onClick={() => download.mutate(format)}
+          >
+            {t(
+              format === "csv" ? "attendanceExportCsv" : "attendanceExportPdf",
+            )}
+          </Button>
+        ))}
+      </div>
+      {download.isError && (
+        <Notice kind="error">
+          {t(
+            download.error.message === "unsupported_glyph"
+              ? "unsupportedGlyph"
+              : "attendanceExportFailed",
+          )}
+        </Notice>
+      )}
+    </div>
+  );
+}
 
 function RowEditor(props: RowEditorProps) {
   const { t } = useTranslation("learning");
@@ -304,6 +351,12 @@ export function AttendancePanel({
       {query.isSuccess && online && (
         <>
           <p>{t("attendanceZone", { zone: course.time_zone })}</p>
+          {academy && (
+            <AttendanceExport
+              key={query.data.session_id}
+              register={query.data}
+            />
+          )}
           {!query.data.rows.length && <p>{t("attendanceNoParticipants")}</p>}
           <ul className="learning-resources attendance-entries">
             {query.data.rows.map((row) =>

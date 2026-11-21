@@ -1,4 +1,4 @@
-import {renderFactPdf} from "./pdf.ts";
+import {factLines, renderFactPdf} from "./pdf.ts";
 import {PDFDocument} from "./vendor/pdf-runtime.js";
 
 const font = await Deno.readFile(
@@ -57,4 +57,24 @@ Deno.test("long attendance reports paginate without clipping or loss of rows", a
     }, font);
     const doc = await PDFDocument.load(bytes);
     assert(doc.getPageCount() >= 5);
+});
+Deno.test("an exact session PDF formats actual local time offsets and distinguishes register statuses", async () => {
+    const session = {id: facts.id, starts_at: "2027-10-31T00:15:00Z", ends_at: "2027-10-31T02:00:00Z"};
+    const documentFacts = {
+        report_scope: "session", course: "Fictional workshop", id: facts.id, time_zone: "Europe/Berlin",
+        sessions: [session], roster: [
+            {name: "Fiktionale Teilnehmende Ä", sessions: [{session_id: session.id, status: "present", minutes: 60,
+                arrival_at: "2027-10-31T00:30:00Z", departure_at: "2027-10-31T01:30:00Z"}]},
+            {name: "Fictional second learner", sessions: [{session_id: session.id, status: "excused", minutes: 0}]},
+            {name: "Fictional third learner", sessions: [{session_id: session.id, status: null, minutes: null}]},
+        ],
+    };
+    const lines = factLines("attendance", documentFacts).join("\n");
+    assert(/Ankunft \/ Arrival: .*02:30.*\+02:00/.test(lines));
+    assert(/Ende \/ Departure: .*02:30.*\+01:00/.test(lines));
+    assert(lines.includes("Entschuldigt / Excused"));
+    assert(lines.includes("Nicht erfasst / Not marked"));
+    const pdf = await PDFDocument.load(await renderFactPdf("attendance", documentFacts, font));
+    assert(pdf.getPageCount() === 1);
+    assert(pdf.getTitle()?.includes("Attendance report"));
 });

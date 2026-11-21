@@ -154,6 +154,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       actor(who, gate(importWrite) + importSql(rows, exact, course))
         .then(JSON.parse)
         .then((value) => response(importWrite, value));
+    const report = (who, exact = session) =>
+      actor(
+        who,
+        gate("course_document_access") +
+          `select public.course_document_access('attendance',${q(exact)})`,
+      ).then(JSON.parse);
     const importedEntry = (userId, expectedVersion) => ({
       user_id: userId,
       expected_version: expectedVersion,
@@ -174,6 +180,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, ...change }))}::jsonb)`,
       );
     await assert.rejects(register(manager), /42501/);
+    await assert.rejects(report(manager), /42501/);
     await assert.rejects(actor(manager, saveSql("present", 0)), /42501/);
     await assert.rejects(
       actor(manager, importSql([importedEntry(learner, 0)], session, run)),
@@ -196,6 +203,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal(assignment.status, "confirmed");
     assert.equal((await register(client, session, run, "GET")).rows.length, 2);
     assert.equal((await register(teacher)).time_zone, "Australia/Brisbane");
+    for (const who of [learner, peer, foreignClient, outside]) {
+      await assert.rejects(report(who), /42501/);
+    }
+    await assert.rejects(report(teacher, foreignSession), /42501/);
+    await assert.rejects(report(client, foreignSession), /42501/);
+    await assert.rejects(report(manager, run), /42501/);
     await assert.rejects(register(teacher, foreignSession), /42501/);
     await assert.rejects(register(client, foreignSession, foreignRun), /42501/);
     await assert.rejects(save(teacher, "present", 0), /42501/);
@@ -240,6 +253,45 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       arrival: "now()-interval '90 minutes'",
     });
     assert.deepEqual(initial, { status: "present", version: 1, minutes: 30 });
+    const initialReport = await report(client);
+    const registered = await register(teacher);
+    assert.deepEqual(await report(teacher), initialReport);
+    assert.equal(initialReport.report_scope, "session");
+    assert.equal(initialReport.id, run);
+    assert.equal(initialReport.time_zone, "Australia/Brisbane");
+    assert.deepEqual(initialReport.sessions, [
+      {
+        id: session,
+        starts_at: registered.starts_at,
+        ends_at: registered.ends_at,
+      },
+    ]);
+    assert.deepEqual(
+      initialReport.roster,
+      registered.rows.map((entry) => ({
+        user_id: entry.user_id,
+        name: entry.name,
+        sessions: [
+          {
+            session_id: session,
+            status: entry.status,
+            arrival_at: entry.arrival_at,
+            departure_at: entry.departure_at,
+            minutes: entry.status === "present" ? 30 : null,
+          },
+        ],
+      })),
+    );
+    assert.doesNotMatch(
+      JSON.stringify(initialReport),
+      /Fictional private comment|private attendance.pdf|staff_note|object_path/,
+    );
+    assert.deepEqual(
+      (await report(teacher, future)).roster.map(
+        (entry) => entry.sessions[0].status,
+      ),
+      [null, null],
+    );
     await assert.rejects(save(client, "absent", 1), /22023/);
     await assert.rejects(save(client, "absent", 0), /PT409/);
     const attempts = await Promise.allSettled([
@@ -318,6 +370,15 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "Fictional imported register entry",
     );
     assert.equal(retainedRegister.history.length, 4);
+    const retainedReport = await report(manager);
+    assert.deepEqual(
+      retainedReport.roster.map((entry) => entry.sessions[0].status),
+      ["excused", "excused"],
+    );
+    assert.doesNotMatch(
+      JSON.stringify(retainedReport),
+      /Fictional imported register entry|Confirmed structured record/,
+    );
     await assert.rejects(importRows(teacher, batch), /PT409/);
     assert.equal(
       await sql(`select count(*) from public.audit_events
@@ -343,6 +404,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
     );
     await assert.rejects(register(client), /42501/);
+    await assert.rejects(report(client), /42501/);
     await assert.rejects(importRows(client, batch), /42501/);
     await assert.rejects(
       save(client, "excused", 2, { reason: "Revoked contact" }),
@@ -354,6 +416,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_release_course_instructor(${q(run)},${q(assignment.claim_id)},'Fictional teaching change',${q(randomUUID())})`,
     );
     await assert.rejects(register(teacher), /42501/);
+    await assert.rejects(report(teacher), /42501/);
     await assert.rejects(importRows(teacher, batch), /42501/);
     await assert.rejects(
       save(teacher, "present", 2, { reason: "Released teacher" }),
@@ -370,6 +433,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       expires_at: date(-2),
     });
     assert.deepEqual(await register(manager), retainedRegister);
+    assert.deepEqual(await report(manager), retainedReport);
+    await assert.rejects(report(learner), /42501/);
     await assert.rejects(importRows(manager, batch), /42501/);
     await assert.rejects(
       actor(manager, importSql(batch, session, run)),
@@ -390,6 +455,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       grace_until: date(-1),
     });
     await assert.rejects(register(manager), /42501/);
+    await assert.rejects(report(manager), /42501/);
     await assert.rejects(importRows(manager, batch), /42501/);
     await assert.rejects(
       save(manager, "present", 2, { reason: "Licence expired" }),

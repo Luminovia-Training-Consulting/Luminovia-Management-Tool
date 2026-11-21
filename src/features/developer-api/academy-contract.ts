@@ -310,8 +310,8 @@ const courseDocumentDownload = {
     operationId: "downloadAcademyCourseDocument",
     tags: ["Licensed course profile"],
     summary:
-      "Download an exam PDF, completion record or exact course-chat attachment",
-    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Only the current assigned instructor or course manager can download a published answer key, including while the exam setting is off. Completion records are rendered from retained verified facts. For a course-chat attachment, send its message ID and exact version ID from the room history. Only current room members can download the attachment. The caller’s authority is checked again before delivery.`,
+      "Download a protected learning document, attachment or attendance report",
+    description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. The caller’s authority and facts are checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [
@@ -326,18 +326,26 @@ const courseDocumentDownload = {
       required: true,
       content: content({
         oneOf: [
-          record({ kind: { enum: ["exam", "completion"] }, id: uuid }),
+          record({ kind: { enum: ["resource", "exam", "completion"] }, id: uuid }),
           record({
             kind: { const: "course_chat_attachment" },
             id: uuid,
             version_id: uuid,
           }),
+          record(
+            {
+              kind: { const: "attendance" },
+              id: uuid,
+              format: { enum: ["pdf", "csv"], default: "pdf" },
+            },
+            ["kind", "id"],
+          ),
         ],
       }),
     },
     responses: {
       "200": {
-        description: "Private course document or attachment",
+        description: "Private course document, chat attachment or attendance report",
         headers: {
           "Cache-Control": { schema: string },
           "Content-Disposition": { schema: string },
@@ -352,6 +360,7 @@ const courseDocumentDownload = {
                 { schema: { ...string, format: "binary" } },
               ]),
           ),
+          "text/csv": { schema: string },
         },
       },
       "400": examFileError("Invalid request", ["invalid_request"]),
@@ -831,7 +840,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.16.0",
+      version: "1.17.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

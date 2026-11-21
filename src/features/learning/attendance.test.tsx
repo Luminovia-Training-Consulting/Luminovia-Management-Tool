@@ -18,6 +18,7 @@ const fake = vi.hoisted(() => ({
   attach: vi.fn(),
   upload: vi.fn(),
   download: vi.fn(),
+  export: vi.fn(),
   register: {
     session_id: "session",
     starts_at: "2026-11-20T09:00:00Z",
@@ -51,7 +52,10 @@ vi.mock("./attendance-api", () => ({
   attachAttendancePdf: fake.attach,
 }));
 vi.mock("../files/api", () => ({ uploadDocument: fake.upload }));
-vi.mock("./api", () => ({ downloadCourseDocument: fake.download }));
+vi.mock("./api", () => ({
+  downloadCourseDocument: fake.download,
+  downloadPortalDocument: fake.export,
+}));
 vi.mock("../../lib/online", () => ({ useOnline: () => true }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -109,6 +113,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ status: "clean", current_version_id: "version" });
   fake.download.mockReset().mockResolvedValue(undefined);
+  fake.export.mockReset().mockResolvedValue(undefined);
 });
 it("requires a correction reason and interprets arrival in the course time zone", async () => {
   fake.register.rows[0].version = 2;
@@ -216,6 +221,30 @@ it("renders the register and its notes without academy writes during grace", asy
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(document.querySelector('input[type="file"]')).toBeNull();
   expect(fake.save).not.toHaveBeenCalled();
+  await userEvent.click(
+    screen.getByRole("button", { name: "attendanceExportCsv" }),
+  );
+  await waitFor(() =>
+    expect(fake.export).toHaveBeenCalledWith(
+      { kind: "attendance", id: "session", format: "csv" },
+      expect.stringMatching(/^attendance-\d{4}-\d{2}-\d{2}-session\.csv$/),
+    ),
+  );
+});
+
+it("requests a protected PDF for the selected register and reports a denied download", async () => {
+  fake.export.mockRejectedValue(new Error("course_document_unavailable"));
+  view(course, "active");
+  await userEvent.click(
+    await screen.findByRole("button", { name: "attendanceExportPdf" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "attendanceExportFailed",
+  );
+  expect(fake.export).toHaveBeenCalledWith(
+    { kind: "attendance", id: "session", format: "pdf" },
+    expect.stringMatching(/^attendance-\d{4}-\d{2}-\d{2}-session\.pdf$/),
+  );
 });
 
 it("does not offer dedicated register changes before the session starts", async () => {
@@ -234,6 +263,9 @@ it("excludes participant-only viewers from the register", () => {
     access: { ...course.access, teacher: false, staff: false, learner: true },
   });
   expect(screen.queryByLabelText("sessionRegister")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "attendanceExportPdf" }),
+  ).toBeNull();
 });
 it("marks an enrolled learner in one click and confirms the API response", async () => {
   view();

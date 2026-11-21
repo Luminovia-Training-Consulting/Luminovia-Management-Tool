@@ -249,6 +249,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(spec.paths).not.toHaveProperty(
         "/rest/v1/rpc/attach_course_session_evidence",
       );
+      const report = spec.paths[examDownload].post;
+      expect(report["x-portal-licence"]).toBe("active-or-grace");
+      expect(
+        report.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        oneOf: expect.arrayContaining([
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["kind", "id"],
+            properties: {
+              kind: { const: "attendance" },
+              id: { format: "uuid" },
+              format: { enum: ["pdf", "csv"], default: "pdf" },
+            },
+          },
+        ]),
+      });
+      expect(Object.keys(report.responses["200"].content)).toEqual(
+        expect.arrayContaining(["application/pdf", "text/csv"]),
+      );
     });
 
     it("describes the scoped multipart upload and exact publication without scanner APIs", () => {

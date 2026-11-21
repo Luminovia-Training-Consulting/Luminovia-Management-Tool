@@ -11,6 +11,11 @@ const titles: Record<string, string> = {
     assignment_confirmation: "Auftragsbestätigung / Assignment confirmation",
     qualification_passport: "Qualifikationspass / Qualification passport",
 };
+const registerStatuses: Record<string, string> = {
+    present: "Anwesend / Present",
+    absent: "Abwesend / Absent",
+    excused: "Entschuldigt / Excused",
+};
 
 function printable(value: unknown): string {
     if (value === null || value === undefined) return "-";
@@ -54,26 +59,51 @@ export function factLines(kind: string, facts: Facts): string[] {
             `Kurs / Course: ${printable(facts.course)}`,
             `Kurs-ID / Course ID: ${printable(facts.id)}`,
         ];
+        const exact = facts.report_scope === "session";
+        const format = exact
+            ? new Intl.DateTimeFormat("de-DE", {
+                timeZone: String(facts.time_zone),
+                day: "numeric", month: "short", year: "numeric",
+                hour: "2-digit", minute: "2-digit", timeZoneName: "longOffset",
+            })
+            : null;
+        const time = (value: unknown) =>
+            value == null ? "-" : format?.format(new Date(String(value)));
+        if (exact) {
+            lines.push(
+                `Termin-ID / Session ID: ${printable(sessions[0]?.id)}`,
+                `Zeitzone / Time zone: ${printable(facts.time_zone)}`,
+                `Termin / Session: ${time(sessions[0]?.starts_at)} - ${time(sessions[0]?.ends_at)}`,
+            );
+        }
         for (
             const person
             of (Array.isArray(facts.roster) ? facts.roster : []) as Facts[]
             ) {
+            const participant = exact && !printable(person.name).trim()
+                ? printable(person.user_id) : printable(person.name);
             lines.push(
                 "",
-                `Teilnehmende Person / Participant: ${printable(person.name)}`,
+                `Teilnehmende Person / Participant: ${participant}`,
             );
             for (
                 const attendance
                 of (Array.isArray(person.sessions) ? person.sessions : []) as Facts[]
                 ) {
-                const session = sessions.find((item) =>
-                    item.id === attendance.session_id
-                );
-                lines.push(
-                    `${printable(session?.starts_at)} | ${
-                        printable(attendance.state)
-                    } | ${printable(attendance.minutes)} min`,
-                );
+                if (exact) {
+                    const status = registerStatuses[printable(attendance.status)]
+                        ?? "Nicht erfasst / Not marked";
+                    lines.push(`Status: ${status} | ${printable(attendance.minutes)} min`);
+                    if (attendance.arrival_at || attendance.departure_at) {
+                        lines.push(
+                            `Ankunft / Arrival: ${time(attendance.arrival_at)}`,
+                            `Ende / Departure: ${time(attendance.departure_at)}`,
+                        );
+                    }
+                } else {
+                    const session = sessions.find((item) => item.id === attendance.session_id);
+                    lines.push(`${printable(session?.starts_at)} | ${printable(attendance.state)} | ${printable(attendance.minutes)} min`);
+                }
             }
         }
         lines.push(

@@ -271,11 +271,11 @@ export type PortalDocumentRequest =
         | "resource"
         | "exam"
         | "wiki_resource"
-        | "attendance"
         | "completion"
         | "assignment_confirmation";
       id: string;
     }
+  | { kind: "attendance"; id: string; format?: "pdf" | "csv" }
   | { kind: "request_resource"; id: string; request_id: string }
   | {
       kind: "course_chat_attachment";
