@@ -80,6 +80,28 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         }),
     );
 
+    // Use real company and participant sessions to establish the verified link
+    // before the course-cancellation path. An identical client retry is safe.
+    const learnerId = await sql(`select luminovia_user_id from public.profiles where id=${q(learner.id)}`);
+    const link = {
+        p_organisation_id: org,
+        p_luminovia_user_id: learnerId,
+        p_request_id: randomUUID(),
+    };
+    const requested = {status: "request_submitted"};
+    assert.equal((await outsider.client.rpc("request_company_participant_link", link)).error?.code, "42501");
+    assert.deepEqual(await checked(company.client.rpc("request_company_participant_link", link)), requested);
+    assert.deepEqual(await checked(company.client.rpc("request_company_participant_link", link)), requested);
+    const pending = await checked(learner.client.rpc("my_company_participant_invitations"));
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0].organisation_id, org);
+    assert.deepEqual(await checked(peer.client.rpc("my_company_participant_invitations")), []);
+    assert.equal((await checked(learner.client.rpc("accept_company_participant_invitation", {
+        p_organisation_id: org,
+        p_expected_version: pending[0].version,
+        p_request_id: randomUUID(),
+    }))).status, "accepted");
+
     // Real JWTs must not allow foreign organisations or another participant to act.
     assert.equal(
         (await outsider.client.rpc("company_lecturer_decisions", {p_job_id: job}))
