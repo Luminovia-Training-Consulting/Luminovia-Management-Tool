@@ -96,7 +96,10 @@ export const accountingInvoiceSchema = z
       paid + outstanding !== total ||
       sum !== paid ||
       paid > total ||
-      record.due_on < record.issued_on ||
+      // Reviewed lecturer settlements can retain a contractual deadline
+      // that passed before the invoice itself was issued.
+      (record.kind === "customer_invoice" &&
+        record.due_on < record.issued_on) ||
       record.payments.some((p) => p.currency !== record.currency)
     )
       context.addIssue({
@@ -137,3 +140,28 @@ export type AccountingExport = z.infer<typeof accountingExportSchema>;
 export type AccountingSource = AccountingExport["source"];
 export const accountingClaimsSchema = z.array(claimSchema);
 export const accountingReceiptSchema = z.object({ id: uuid });
+
+const issueDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const customerCreditNoteInputSchema = z.strictObject({
+  reference: z.string().trim().min(1).max(80),
+  issued_on: issueDate,
+  currency: accountingCurrency,
+  amount: accountingDecimal.refine((value) => value !== "0.00"),
+  reason: z.string().trim().min(5).max(1000),
+  document_version_id: uuid,
+  issued_and_reviewed: z.literal(true),
+});
+export const customerCreditNoteSchema = customerCreditNoteInputSchema
+  .omit({ issued_and_reviewed: true })
+  .extend({
+    id: uuid,
+    invoice_id: uuid,
+    document_id: uuid,
+    document_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    created_at: instant,
+  });
+export const customerCreditNotePageSchema = z.object({
+  items: z.array(customerCreditNoteSchema),
+  has_more: z.boolean(),
+});
+export type CustomerCreditNote = z.infer<typeof customerCreditNoteSchema>;

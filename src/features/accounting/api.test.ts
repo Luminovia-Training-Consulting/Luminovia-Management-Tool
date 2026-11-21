@@ -93,6 +93,25 @@ it("validates canonical round trips and refuses malformed totals, cross-currency
       }),
     ).toThrow();
 });
+it("preserves a reviewed lecturer deadline earlier than the invoice date", () => {
+  const lateLecturerInvoice = {
+    ...invoice,
+    due_on: "2000-12-31",
+  };
+  const parsed = accountingExportSchema.parse({
+    ...snapshot,
+    invoices: [lateLecturerInvoice],
+  });
+  expect(parsed.invoices[0].due_on).toBe("2000-12-31");
+  expect(accountingCsv(parsed)).toContain('"2000-12-31"');
+  expect(
+    accountingExportSchema.safeParse({
+      ...snapshot,
+      invoices: [{ ...lateLecturerInvoice, kind: "customer_invoice" }],
+    }).success,
+  ).toBe(false);
+});
+
 it("retains exact strings and neutralizes formula injection in every authored CSV column", () => {
   const csv = accountingCsv(accountingExportSchema.parse(snapshot));
   expect(csv).toContain('"\'=FICTIONAL()"');
