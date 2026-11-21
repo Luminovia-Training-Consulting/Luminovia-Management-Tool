@@ -10,7 +10,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
-import {academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
+import {academyAnswerKeyQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -90,10 +90,11 @@ Deno.serve(async (request: Request) => {
             if (profile.error || !profile.data?.active) throw new Error('access_denied');
         };
         const query = new URL(request.url).search;
-        const academyExam = query === academyStudentExamQuery;
-        const academyIntake = academyExam || query === academyMaterialQuery;
+        const examReservation = query === academyStudentExamQuery ? 'reserve_academy_student_exam_pdf'
+            : query === academyAnswerKeyQuery ? 'reserve_academy_answer_key_pdf' : null;
+        const academyIntake = examReservation !== null || query === academyMaterialQuery;
         const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
-        if (academyExam && !multipart) return json(400, {error: 'invalid_request'});
+        if (examReservation && !multipart) return json(400, {error: 'invalid_request'});
         if (academyIntake) {
             const access = await user.rpc('portal_access');
             if (access.error || access.data !== true) throw new Error('access_denied');
@@ -115,7 +116,7 @@ Deno.serve(async (request: Request) => {
             const bytes = new Uint8Array(await file.arrayBuffer());
             if (materialRun && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
             const mime = await validateFile(bytes, name, file.type);
-            if (academyExam && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
+            if (examReservation && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
             const clientId = form.get('client_id');
             if (!uuid(clientId)) return json(400, {error: 'invalid_request'});
@@ -132,8 +133,8 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = materialRun && academyExam
-                ? await user.rpc('reserve_academy_student_exam_pdf', {p_run_id: materialRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+            const reserved = materialRun && examReservation
+                ? await user.rpc(examReservation, {p_run_id: materialRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : materialRun
                 ? await user.rpc('reserve_academy_course_material', {p_run_id: materialRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : messageOnly === 'true'

@@ -175,8 +175,8 @@ const materialUpload = {
   post: {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
-    summary: "Upload and scan course material or a student exam PDF",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or publishAcademyStudentExamPdf for the selected mode.`,
+    summary: "Upload and scan course material or an exam PDF",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -186,7 +186,11 @@ const materialUpload = {
         required: true,
         schema: {
           type: "string",
-          enum: ["academy-material", "academy-student-exam"],
+          enum: [
+            "academy-material",
+            "academy-student-exam",
+            "academy-answer-key",
+          ],
         },
       },
       {
@@ -249,12 +253,32 @@ const examFileError = (description: string, codes: string[]) => ({
   description,
   content: content(record({ error: { enum: codes } })),
 });
+const withdrawalOperation = courseOperation(
+  "withdrawAcademyExamPdf",
+  "Withdraw a published exam PDF",
+  "The current authorised editor who owns the publication may withdraw its exact ID from the matching course. The file version is retained. Published answer-key withdrawal is restricted to current course staff.",
+  "active",
+  record({ ...run, p_exam_id: uuid }),
+  nil,
+).post;
+const examWithdrawal = {
+  post: {
+    ...withdrawalOperation,
+    responses: {
+      "204": { description: "Publication withdrawn" },
+      "400": withdrawalOperation.responses["400"],
+      "401": withdrawalOperation.responses["401"],
+      "403": withdrawalOperation.responses["403"],
+    },
+  },
+};
+
 const courseDocumentDownload = {
   post: {
     operationId: "downloadAcademyCourseDocument",
     tags: ["Licensed course profile"],
-    summary: "Download a student exam paper or completion record",
-    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Completion records are rendered from the retained verified facts. The caller's authority is checked again before delivery.`,
+    summary: "Download a scanned exam PDF or completion record",
+    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Only the current assigned instructor or course manager can download a published answer key, including while the exam setting is off. Completion records are rendered from retained verified facts. The caller’s authority is checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [
@@ -474,7 +498,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_workspace": courseOperation(
     "readAcademyCourseWorkspace",
     "Read a course workspace and its online meeting link",
-    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. The exam projection contains the recorded requirement and omits its version for learners. Published student papers appear only while an exam is required. Grace sets meeting and exam editing flags to false. The repeat_request field is always null in these editions.",
+    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. The exam projection contains the recorded requirement and omits its version for learners. Published student papers appear only while an exam is required. Current course staff alone see published answer-key metadata. Course staff can read published keys even when the exam setting is off. Grace clears meeting and exam editing and withdrawal permissions. The repeat_request field is always null in these editions.",
     "active-or-grace",
     record(run),
     record({
@@ -488,7 +512,8 @@ const coursePaths = {
             name: string,
             version_id: uuid,
             version: expectedVersion,
-            audience: { const: "students" },
+            audience: { type: "string", enum: ["students", "exam_staff"] },
+            can_remove: boolean,
           }),
         ),
       }),
@@ -620,12 +645,17 @@ const coursePaths = {
   ),
   "/rest/v1/rpc/share_course_exam_pdf": courseOperation(
     "publishAcademyStudentExamPdf",
-    "Publish an exact previously scanned student exam paper",
-    "The currently assigned instructor, scoped company contact or course manager can publish an eligible version from their own personal files while the exam is required. Supply the ID returned by the exam PDF options operation. Repeating a publication of the same version returns the existing paper ID.",
+    "Publish an exact scanned exam PDF",
+    "The currently assigned instructor, scoped company contact or course manager can publish an eligible student paper while the exam is required. Only the currently assigned instructor or course manager can explicitly publish a staff answer key uploaded through the answer-key mode. Use the exact scanner-confirmed version ID. Repeating a publication of the same version returns its existing ID.",
     "active",
-    record({ ...run, p_version_id: uuid, p_audience: { const: "students" } }),
+    record({
+      ...run,
+      p_version_id: uuid,
+      p_audience: { type: "string", enum: ["students", "exam_staff"] },
+    }),
     uuid,
   ),
+  "/rest/v1/rpc/remove_course_exam_pdf": examWithdrawal,
   "/functions/v1/course-documents": courseDocumentDownload,
   "/rest/v1/rpc/academy_learning_action": courseOperation(
     "saveAcademyLearningActivity",
@@ -699,7 +729,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.12.0",
+      version: "1.13.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

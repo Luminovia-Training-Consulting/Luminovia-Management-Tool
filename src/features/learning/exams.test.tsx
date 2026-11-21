@@ -10,6 +10,7 @@ const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   upload: vi.fn(),
   uploadExam: vi.fn(),
+  uploadAnswer: vi.fn(),
   download: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
@@ -17,6 +18,7 @@ vi.mock("../../lib/online", () => ({ useOnline: () => true }));
 vi.mock("../files/api", () => ({
   uploadDocument: fake.upload,
   uploadAcademyStudentExamPdf: fake.uploadExam,
+  uploadAcademyAnswerKeyPdf: fake.uploadAnswer,
 }));
 vi.mock("./api", () => ({
   courseWorkspaceKey: (actor: string, run: string) => [
@@ -77,6 +79,7 @@ beforeEach(async () => {
     current_version_id: "clean-version",
   });
   fake.uploadExam.mockReset();
+  fake.uploadAnswer.mockReset();
   fake.download.mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => {
@@ -151,8 +154,8 @@ it("submits only the exact academy setting and never offers PDF actions", async 
   expect(fake.upload).not.toHaveBeenCalled();
 });
 
-it("shows the last exam decision without controls or PDF metadata in grace", () => {
-  const model = course(true, true);
+it("hides staff answer keys and editing from a company contact in grace", () => {
+  const model = course(true, true, false);
   model.exams.documents[0].audience = "exam_staff";
   show(model, "grace");
   expect(screen.getByText("Exam required")).toBeVisible();
@@ -255,6 +258,113 @@ it("retries publishing the exact scanned exam PDF for a company editor without u
       },
     ]),
   );
+});
+
+it("keeps the staff answer key separate and publishes the exact scanned version to staff", async () => {
+  const user = userEvent.setup();
+  fake.rpc.mockImplementation((method) =>
+    method === "academy_student_exam_pdf_options"
+      ? { abortSignal: async () => ({ data: [], error: null }) }
+      : Promise.resolve({ data: "published-staff-key", error: null }),
+  );
+  fake.uploadAnswer.mockResolvedValue({
+    status: "clean",
+    current_version_id: "exact-answer-version",
+  });
+  show(course(true, true), "active");
+  const paper = new File(["%PDF-1.7 fictional"], "Student paper.pdf", {
+    type: "application/pdf",
+  });
+  await user.upload(
+    screen.getByLabelText("New student exam paper (PDF)"),
+    paper,
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Document type" }),
+    "exam_staff",
+  );
+  expect(
+    screen.getByRole("button", { name: "Scan and publish for course staff" }),
+  ).toBeDisabled();
+  const answer = new File(["%PDF-1.7 fictional answers"], "Answer key.pdf", {
+    type: "application/pdf",
+  });
+  await user.upload(screen.getByLabelText("New answer key (PDF)"), answer);
+  await user.click(
+    screen.getByRole("button", { name: "Scan and publish for course staff" }),
+  );
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.uploadAnswer).toHaveBeenCalledExactlyOnceWith(
+    answer,
+    "fictional-course",
+    expect.any(String),
+  );
+  expect(fake.uploadExam).not.toHaveBeenCalled();
+  expect(fake.rpc).toHaveBeenCalledWith("share_course_exam_pdf", {
+    p_run_id: "fictional-course",
+    p_version_id: "exact-answer-version",
+    p_audience: "exam_staff",
+  });
+});
+
+it("lets only current staff read a published solution in grace while the exam is off", async () => {
+  const user = userEvent.setup();
+  const model = course(false, false, true);
+  model.exams.documents.push({
+    id: "key-id",
+    name: "Staff-only key.pdf",
+    version: 1,
+    version_id: "version",
+    audience: "exam_staff",
+    can_remove: false,
+  });
+  show(model, "grace");
+  expect(screen.getByText("Staff-only key.pdf")).toBeVisible();
+  expect(screen.queryByLabelText("New answer key (PDF)")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Withdraw Staff-only key.pdf" }),
+  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Download PDF" }));
+  expect(fake.download).toHaveBeenCalledExactlyOnceWith(
+    "exam",
+    "key-id",
+    "Staff-only key.pdf",
+  );
+});
+
+it("withdraws only the exact publication confirmed as removable by the server", async () => {
+  const user = userEvent.setup();
+  const model = course(false, true);
+  model.exams.documents.push(
+    {
+      id: "owned-key",
+      name: "Owned key.pdf",
+      version: 1,
+      version_id: "owned-version",
+      audience: "exam_staff",
+      can_remove: true,
+    },
+    {
+      id: "other-key",
+      name: "Other key.pdf",
+      version: 1,
+      version_id: "other-version",
+      audience: "exam_staff",
+      can_remove: false,
+    },
+  );
+  show(model, "active");
+  expect(
+    screen.queryByRole("button", { name: "Withdraw Other key.pdf" }),
+  ).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "Withdraw Owned key.pdf" }),
+  );
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledExactlyOnceWith("remove_course_exam_pdf", {
+    p_run_id: "fictional-course",
+    p_exam_id: "owned-key",
+  });
 });
 
 it("lets a grace-period learner download only a published student paper", async () => {

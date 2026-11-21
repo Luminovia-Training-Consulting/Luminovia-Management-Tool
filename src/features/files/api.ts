@@ -94,11 +94,34 @@ export function uploadAcademyStudentExamPdf(
   courseId: string,
   clientId: string,
 ) {
+  return uploadAcademyExamFile(
+    file,
+    courseId,
+    clientId,
+    "academy-student-exam",
+  );
+}
+
+/** Upload an answer key into its distinct staff reservation. */
+export function uploadAcademyAnswerKeyPdf(
+  file: File,
+  courseId: string,
+  clientId: string,
+) {
+  return uploadAcademyExamFile(file, courseId, clientId, "academy-answer-key");
+}
+
+function uploadAcademyExamFile(
+  file: File,
+  courseId: string,
+  clientId: string,
+  mode: "academy-student-exam" | "academy-answer-key",
+) {
   const form = new FormData();
   form.set("file", file);
   form.set("academy_course_id", courseId);
   form.set("client_id", clientId);
-  return transferUpload(form, endpoint() + "?mode=academy-student-exam");
+  return transferUpload(form, endpoint() + "?mode=" + mode);
 }
 
 async function transferUpload(

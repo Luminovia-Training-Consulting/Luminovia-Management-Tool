@@ -6,7 +6,11 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
-import { uploadAcademyStudentExamPdf, uploadDocument } from "../files/api";
+import {
+  uploadAcademyAnswerKeyPdf,
+  uploadAcademyStudentExamPdf,
+  uploadDocument,
+} from "../files/api";
 import {
   courseWorkspaceKey,
   downloadCourseDocument,
@@ -101,13 +105,20 @@ export function CourseExams({
       void refresh();
     },
   });
-  const publishVersion = async (selected: string) => {
-    if (!online || !canPublishStudentPaper)
+  const publishVersion = async (
+    selected: string,
+    target: "students" | "exam_staff" = "students",
+  ) => {
+    if (
+      !online ||
+      !canPublishStudentPaper ||
+      (target === "exam_staff" && !course.access.staff)
+    )
       throw new Error("exam_editor_required");
     const { data, error } = await db().rpc("share_course_exam_pdf", {
       p_run_id: course.id,
       p_version_id: selected,
-      p_audience: "students",
+      p_audience: target,
     });
     if (error || typeof data !== "string")
       throw error ?? new Error("unconfirmed");
@@ -127,6 +138,12 @@ export function CourseExams({
     mutationFn: async () => {
       if (!online || !canPublishStudentPaper || !examFile)
         throw new Error("exam_editor_required");
+      const upload =
+        audience === "exam_staff"
+          ? uploadAcademyAnswerKeyPdf
+          : uploadAcademyStudentExamPdf;
+      if (audience === "exam_staff" && !course.access.staff)
+        throw new Error("exam_editor_required");
       let approved = scannedExamVersion;
       if (!approved) {
         if (
@@ -135,7 +152,7 @@ export function CourseExams({
           examFile.bytes.size > 10 * 1024 * 1024
         )
           throw new Error("pdf_required");
-        const document = await uploadAcademyStudentExamPdf(
+        const document = await upload(
           examFile.bytes,
           course.id,
           examFile.uploadId,
@@ -145,7 +162,7 @@ export function CourseExams({
         approved = document.current_version_id;
         setScannedExamVersion(approved);
       }
-      await publishVersion(approved);
+      await publishVersion(approved, audience);
     },
     onSuccess: async () => {
       setExamFile(null);
@@ -173,8 +190,10 @@ export function CourseExams({
     "code" in setting.error &&
     setting.error.code === "PT409";
   const documents = academy
-    ? course.exams.documents.filter(
-        (item) => item.audience === "students" && course.exams.required,
+    ? course.exams.documents.filter((item) =>
+        item.audience === "students"
+          ? course.exams.required
+          : course.access.staff,
       )
     : course.exams.documents;
 
@@ -274,7 +293,37 @@ export function CourseExams({
                 uploadExam.mutate();
             }}
           >
-            <Field id="academy-new-exam-pdf" label={t("studentUploadFile")}>
+            {course.access.staff && (
+              <Field id="academy-exam-audience" label={t("audience")}>
+                <select
+                  id="academy-exam-audience"
+                  value={audience}
+                  disabled={uploadExam.isPending || publish.isPending}
+                  onChange={(event) => {
+                    setAudience(
+                      event.target.value === "exam_staff"
+                        ? "exam_staff"
+                        : "students",
+                    );
+                    setExamFile(null);
+                    setScannedExamVersion(null);
+                    setFileInputRevision((value) => value + 1);
+                    uploadExam.reset();
+                  }}
+                >
+                  <option value="students">{t("students")}</option>
+                  <option value="exam_staff">{t("exam_staff")}</option>
+                </select>
+              </Field>
+            )}
+            <Field
+              id="academy-new-exam-pdf"
+              label={t(
+                audience === "exam_staff"
+                  ? "answerKeyFile"
+                  : "studentUploadFile",
+              )}
+            >
               <input
                 id="academy-new-exam-pdf"
                 key={fileInputRevision}
@@ -297,7 +346,9 @@ export function CourseExams({
               {t(
                 scannedExamVersion
                   ? "retryStudentPublication"
-                  : "scanStudentPdf",
+                  : audience === "exam_staff"
+                    ? "scanAnswerKey"
+                    : "scanStudentPdf",
               )}
             </Button>
             {uploadExam.isPending && (
@@ -381,9 +432,14 @@ export function CourseExams({
                 >
                   {t("download")}
                 </Button>
-                {!academy && canEdit && (
+                {canEdit && (!academy || document.can_remove === true) && (
                   <Button
                     variant="ghost"
+                    aria-label={
+                      academy
+                        ? t("withdrawNamed", { name: document.name })
+                        : undefined
+                    }
                     disabled={!online || remove.isPending}
                     onClick={() => remove.mutate(document.id)}
                   >

@@ -29,6 +29,7 @@ const writePaths = [
   "/rest/v1/rpc/mark_notifications",
   "/rest/v1/rpc/academy_publish_course",
   "/rest/v1/rpc/academy_learning_action",
+  "/rest/v1/rpc/remove_course_exam_pdf",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -166,7 +167,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
     });
 
-    it("documents the active-only decision and student publication with a grace-readable exact PDF", () => {
+    it("documents active exam publication and withdrawal with grace-readable exact PDFs", () => {
       const write = spec.paths[writePaths[6]].post;
       expect(write["x-portal-licence"]).toBe("active");
       expect(write.responses).toHaveProperty("409");
@@ -184,7 +185,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           exams: {
             properties: {
               documents: {
-                items: { properties: { audience: { const: "students" } } },
+                items: {
+                  properties: {
+                    audience: {
+                      type: "string",
+                      enum: ["students", "exam_staff"],
+                    },
+                  },
+                },
               },
             },
           },
@@ -194,7 +202,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         spec.paths[writePaths[8]].post.requestBody.content["application/json"]
           .schema,
       ).toMatchObject({
-        properties: { p_audience: { const: "students" } },
+        properties: {
+          p_audience: { type: "string", enum: ["students", "exam_staff"] },
+        },
       });
       expect(spec.paths[examDownload].post["x-portal-licence"]).toBe(
         "active-or-grace",
@@ -204,9 +214,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "application/pdf"
         ].schema,
       ).toMatchObject({ format: "binary" });
-      expect(spec.paths).not.toHaveProperty(
-        "/rest/v1/rpc/remove_course_exam_pdf",
-      );
+      const withdrawal = spec.paths["/rest/v1/rpc/remove_course_exam_pdf"].post;
+      expect(withdrawal["x-portal-licence"]).toBe("active");
+      expect(withdrawal.responses).toHaveProperty("204");
+      expect(
+        withdrawal.requestBody.content["application/json"].schema.required,
+      ).toEqual(["p_run_id", "p_exam_id"]);
     });
 
     it("describes read-only grace, version conflicts and empty attendance attachments", () => {
@@ -242,7 +255,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
             required: true,
             schema: {
               type: "string",
-              enum: ["academy-material", "academy-student-exam"],
+              enum: [
+                "academy-material",
+                "academy-student-exam",
+                "academy-answer-key",
+              ],
             },
           },
         ]),
@@ -286,6 +303,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(intake.description).toContain("publishAcademyStudentExamPdf");
       for (const servicePath of [
         "/rest/v1/rpc/reserve_academy_student_exam_pdf",
+        "/rest/v1/rpc/reserve_academy_answer_key_pdf",
         "/rest/v1/rpc/reserve_academy_course_material",
         "/rest/v1/rpc/academy_course_material_status",
         "/rest/v1/rpc/academy_course_material_scan",

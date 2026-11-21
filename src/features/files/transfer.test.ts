@@ -8,6 +8,7 @@ import {
   maximumFileSize,
   saveDownload,
   saveQualificationEvidence,
+  uploadAcademyAnswerKeyPdf,
   uploadAcademyCourseMaterial,
   uploadAcademyStudentExamPdf,
   uploadDocument,
@@ -92,6 +93,7 @@ describe("online, authenticated document transfers", () => {
   it.each([
     ["academy-material", uploadAcademyCourseMaterial],
     ["academy-student-exam", uploadAcademyStudentExamPdf],
+    ["academy-answer-key", uploadAcademyAnswerKeyPdf],
   ] as const)(
     "sends %s through the scoped gateway with its stable retry key",
     async (mode, upload) => {

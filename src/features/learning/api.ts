@@ -78,6 +78,7 @@ export interface CourseWorkspace {
       version_id: string;
       version: number;
       audience: "students" | "exam_staff";
+      can_remove?: boolean;
     }[];
   };
   access: {

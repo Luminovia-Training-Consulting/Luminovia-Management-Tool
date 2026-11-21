@@ -14,6 +14,12 @@ const pairs: Record<string, [string, string]> = {
     "Neue Prüfungsaufgaben (PDF)",
     "New student exam paper (PDF)",
   ],
+  answerKeyFile: ["Neuer Lösungsschlüssel (PDF)", "New answer key (PDF)"],
+  scanAnswerKey: [
+    "Lösungsschlüssel prüfen und für das Kursteam freigeben",
+    "Scan and publish for course staff",
+  ],
+  withdrawNamed: ["Freigabe von {{name}} zurückziehen", "Withdraw {{name}}"],
   scanStudentPdf: [
     "Prüfungsdatei prüfen und freigeben",
     "Scan and publish exam paper",

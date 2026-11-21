@@ -211,12 +211,32 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       course = run,
       sha = digest,
       name = "fresh paper.pdf",
+      reserveEndpoint = reserveName,
     ) =>
       actor(
         who,
-        gate(reserveName) +
-          `select public.reserve_academy_student_exam_pdf(${q(course)},${q(name)},${bytes.length},${q(key)},${q(sha)})`,
+        gate(reserveEndpoint) +
+          `select public.${reserveEndpoint}(${q(course)},${q(name)},${bytes.length},${q(key)},${q(sha)})`,
       ).then(JSON.parse);
+    const reserveKey = (who, key, course = run) =>
+      reserve(
+        who,
+        key,
+        course,
+        digest,
+        "Staff-only marking guide.pdf",
+        "reserve_academy_answer_key_pdf",
+      );
+    const withdraw = (who, publication, course = run) =>
+      actor(
+        who,
+        gate("remove_course_exam_pdf") +
+          `select public.remove_course_exam_pdf(${q(course)},${q(publication)})`,
+      );
+    const releaseTeacher = (released) =>
+      sql(
+        `update private.academy_course_instructors set released_at=${released ? "now()" : "null"} where course_id=${q(run)} and instructor_id=${q(teacher)}`,
+      );
     const uploadStatus = (who, file, course = run) =>
       actor(
         who,
@@ -242,6 +262,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(list(teacher), /42501/);
     await assert.rejects(share(teacher, version), /42501/);
     await assert.rejects(reserve(teacher), /42501/);
+    await assert.rejects(reserveKey(teacher), /42501/);
     await set(teacher, true, 0);
     assert.deepEqual(await list(teacher), []);
     assert.deepEqual(
@@ -396,6 +417,117 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       companyPaper.version_id,
     );
 
+    for (const who of [learner, client, stranger, outside])
+      await assert.rejects(reserveKey(who), /42501/);
+    assert.equal((await reserveKey(manager)).status, "quarantined");
+    await assert.rejects(reserveKey(teacher, uploadKey), /PT409/);
+    await assert.rejects(reserveKey(teacher, undefined, otherRun), /42501/);
+    const answerKey = await reserveKey(teacher);
+    const keyLease = await worker(answerKey, "begin", null, digest);
+    await releaseTeacher(true);
+    assert.equal(await uploadStatus(teacher, answerKey), null);
+    await assert.rejects(
+      worker(answerKey, "clean", keyLease, digest, scanner),
+      /42501/,
+    );
+    await worker(answerKey, "end", keyLease);
+    await releaseTeacher(false);
+    const authorizedLease = await worker(answerKey, "begin", null, digest);
+    await worker(answerKey, "clean", authorizedLease, digest, scanner);
+    await worker(answerKey, "end", authorizedLease);
+    assert.equal(
+      (await uploadStatus(teacher, answerKey)).document.current_version_id,
+      answerKey.version_id,
+    );
+    assert.equal(await uploadStatus(manager, answerKey), null);
+    assert.equal(await uploadStatus(client, answerKey), null);
+    assert.ok(
+      !(await list(teacher)).some(({ id }) => id === answerKey.version_id),
+    );
+    await assert.rejects(share(teacher, answerKey.version_id), /42501/);
+    await assert.rejects(materialShare(teacher, answerKey), /42501/);
+    await assert.rejects(
+      share(client, answerKey.version_id, "exam_staff"),
+      /42501/,
+    );
+    await assert.rejects(
+      share(manager, answerKey.version_id, "exam_staff"),
+      /42501/,
+    );
+    const keyShare = await share(teacher, answerKey.version_id, "exam_staff");
+    assert.equal(
+      await share(teacher, answerKey.version_id, "exam_staff"),
+      keyShare,
+    );
+    for (const who of [learner, client, stranger, outside])
+      await assert.rejects(facts(who, keyShare), /42501/);
+    assert.equal((await facts(manager, keyShare)).id, answerKey.version_id);
+    assert.equal((await facts(teacher, keyShare)).id, answerKey.version_id);
+    await assert.rejects(facts(teacher, keyShare, "resource"), /42501/);
+    for (const who of [learner, client]) {
+      const exams = JSON.stringify((await workspace(who)).exams);
+      for (const secret of [
+        answerKey.version_id,
+        keyShare,
+        "Staff-only marking guide.pdf",
+        "exam_staff",
+      ])
+        assert.ok(!exams.includes(secret));
+    }
+    assert.equal(
+      (await workspace(teacher)).exams.documents.find(
+        ({ id }) => id === keyShare,
+      ).can_remove,
+      true,
+    );
+    assert.equal(
+      (await workspace(manager)).exams.documents.find(
+        ({ id }) => id === keyShare,
+      ).can_remove,
+      false,
+    );
+    await assert.rejects(withdraw(manager, keyShare), /42501/);
+    await assert.rejects(withdraw(teacher, keyShare, otherRun), /42501/);
+    await releaseTeacher(true);
+    await assert.rejects(facts(teacher, keyShare), /42501/);
+    await assert.rejects(withdraw(teacher, keyShare), /42501/);
+    assert.equal((await facts(manager, keyShare)).id, answerKey.version_id);
+    await releaseTeacher(false);
+    const racingKeyDownload = createCourseDocumentHandler({
+      origins: ["https://academy.example.invalid"],
+      authenticate: async () => true,
+      rpc: async (_token, _name, args) =>
+        facts(teacher, args.p_id, args.p_kind).then(
+          (data) => ({ data, error: null }),
+          (error) => ({ data: null, error }),
+        ),
+      download: async (path) => {
+        assert.equal(path, (await facts(manager, keyShare)).object_path);
+        await releaseTeacher(true);
+        return bytes;
+      },
+      render: () => {
+        throw new Error("Unexpected generated answer key");
+      },
+    });
+    const raced = await racingKeyDownload(
+      new Request("https://backend.example.invalid/course-documents", {
+        method: "POST",
+        headers: {
+          Origin: "https://academy.example.invalid",
+          Authorization: "Bearer fictional-teacher",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ kind: "exam", id: keyShare }),
+      }),
+    );
+    assert.equal(raced.status, 403);
+    assert.equal((await raced.json()).error, "document_changed_or_revoked");
+    assert.equal(raced.headers.has("content-disposition"), false);
+    await releaseTeacher(false);
+    await withdraw(teacher, freshShare);
+    await assert.rejects(facts(learner, freshShare), /42501/);
+
     const offPaper = await reserve(teacher);
     const offLease = await worker(offPaper, "begin", null, digest);
     const origin = "https://academy.example.invalid";
@@ -456,7 +588,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       /42501/,
     );
     await worker(offPaper, "end", offLease);
+    assert.equal((await facts(teacher, keyShare)).id, answerKey.version_id);
+    assert.ok(
+      (await workspace(teacher)).exams.documents.some(
+        ({ id }) => id === keyShare,
+      ),
+    );
+    await assert.rejects(facts(learner, keyShare), /42501/);
+    await withdraw(teacher, keyShare);
+    await assert.rejects(facts(teacher, keyShare), /42501/);
+    await assert.rejects(facts(manager, keyShare), /42501/);
+    assert.equal(
+      await sql(
+        `select status from public.document_versions where id=${q(answerKey.version_id)}`,
+      ),
+      "clean",
+    );
     await set(teacher, true, 2);
+    assert.equal(
+      await share(teacher, answerKey.version_id, "exam_staff"),
+      keyShare,
+    );
 
     await sql(
       `update public.course_enrolments set status='removed' where course_run_id=${q(run)} and user_id=${q(learner)}`,
@@ -467,7 +619,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     assert.equal((await facts(learner, published)).id, version);
     await assert.rejects(
-      actor(teacher, gate("remove_course_exam_pdf")),
+      actor(teacher, gate("remove_course_exam_pdf", "GET")),
       /42501/,
     );
 
@@ -482,6 +634,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     assert.equal((await facts(learner, published)).id, version);
     assert.equal((await workspace(teacher)).exams.can_edit, false);
+    assert.equal((await facts(teacher, keyShare)).id, answerKey.version_id);
+    assert.equal(
+      (await workspace(teacher)).exams.documents.find(
+        ({ id }) => id === keyShare,
+      ).can_remove,
+      false,
+    );
+    await assert.rejects(facts(learner, keyShare), /42501/);
+    await assert.rejects(withdraw(teacher, keyShare), /42501/);
+    await assert.rejects(reserveKey(teacher), /42501/);
     await assert.rejects(share(teacher, latest), /42501/);
     await assert.rejects(list(teacher), /42501/);
     await assert.rejects(reserve(teacher), /42501/);
@@ -492,6 +654,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       grace_until: date(-1),
     });
     await assert.rejects(facts(learner, published), /42501/);
+    await assert.rejects(facts(teacher, keyShare), /42501/);
     assert.equal(
       await sql(
         `select count(*) from private.course_exam_documents where run_id=${q(run)} and removed_at is null`,
@@ -499,7 +662,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "6",
     );
     console.log(
-      `PASS ${edition} student exam scanner intake, current-role/requirement revocation, exact publication and learner download, retained answers and grace`,
+      `PASS ${edition} exam intake and both audiences, lesson reassignment, scoped withdrawal, exact learner/staff downloads, retention and grace`,
     );
   });
 }
