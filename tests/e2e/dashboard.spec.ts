@@ -127,6 +127,9 @@ test("dashboard previews show actual own activity, scanned files and private app
     ).toHaveValue(filename);
     await page.goto("/");
     await expect(page.getByText(ownTitle, {exact: true})).toBeVisible();
+    // Use the actual reduced-motion preference for a stable accessibility
+    // snapshot without waiting on unrelated or offscreen UI animations.
+    await page.emulateMedia({reducedMotion: "reduce"});
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(
@@ -140,16 +143,6 @@ test("dashboard previews show actual own activity, scanned files and private app
             .getByRole("link", {name: filename, exact: true}),
     ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
-    await page.evaluate(async () => {
-        await Promise.all(
-            document
-                .getAnimations()
-                .filter(
-                    (animation) => animation.effect?.getTiming().iterations !== Infinity,
-                )
-                .map((animation) => animation.finished.catch(() => undefined)),
-        );
-    });
     expect(
         await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,

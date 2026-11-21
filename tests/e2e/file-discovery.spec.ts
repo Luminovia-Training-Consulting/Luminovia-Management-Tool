@@ -93,14 +93,30 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
         await editor
             .getByLabel("Eigener virtueller Ordner", {exact: true})
             .fill(folder);
-        await page.getByLabel("Sprache", {exact: true}).selectOption("en");
-        await expect(editor.getByLabel("Your tags", {exact: true})).toHaveValue(
-            `${tag}\nLinux`,
-        );
+        const mobile = testInfo.project.use.isMobile;
+        const switchLanguage = async () => {
+            await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+            await expect(page.locator("html")).toHaveAttribute("lang", "en");
+        };
+        if (!mobile) {
+            await switchLanguage();
+            await expect(editor.getByLabel("Your tags", {exact: true})).toHaveValue(
+                `${tag}\nLinux`,
+            );
+        }
         await editor
-            .getByRole("button", {name: "Save my organisation", exact: true})
+            .getByRole("button", {name: mobile ? "Eigene Ordnung speichern" : "Save my organisation", exact: true})
             .click();
         await expect(editor).not.toBeVisible();
+        // Touch users cannot select header preferences with a modal open.
+        // Verify the committed German entries in the English editor afterward.
+        if (mobile) {
+            await switchLanguage();
+            await file().getByRole("button", {name: `Organise for me: ${name}`, exact: true}).click();
+            await expect(editor.getByLabel("Your tags", {exact: true})).toHaveValue(`${tag}\nLinux`);
+            await page.keyboard.press("Escape");
+            await expect(editor).not.toBeVisible();
+        }
         await page.getByLabel("Filter by your tag", {exact: true}).fill(tag);
         await page
             .getByLabel("Filter by your folder", {exact: true})

@@ -413,9 +413,9 @@ test("browser history preserves a personal draft until explicitly discarded", as
     const calendarLink = page.getByRole("link", {
         name: "Kalender",
         exact: true,
-    });
-    if (!(await calendarLink.isVisible())) {
-        await page.getByText("Mehr", {exact: true}).click();
+    }).filter({visible: true});
+    if ((page.viewportSize()?.width ?? 1440) <= 760) {
+        await page.locator("details.mobile-more > summary").click();
     }
     await calendarLink.click();
     await expect(page).toHaveURL(/\/calendar/);

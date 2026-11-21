@@ -115,7 +115,10 @@ test("profile opens an actual DM, current member mentions and a dropped scanned 
             .eq("resource_id", message.id),
     );
     expect(alerts).toHaveLength(1);
+    const preferencesLoaded = page.waitForResponse((response) =>
+        new URL(response.url()).pathname.endsWith("/rpc/ui_preferences") && response.ok());
     await page.reload();
+    await preferencesLoaded;
     await expect(
         page
             .locator(".chat-message")
@@ -123,6 +126,7 @@ test("profile opens an actual DM, current member mentions and a dropped scanned 
             .getByRole("list", {name: "Erwähnte Personen", exact: true}),
     ).toContainText(target.name);
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(
         page.getByRole("list", {name: "Mentioned people", exact: true}),

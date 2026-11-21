@@ -178,19 +178,16 @@ test("group owner changes information and a member can only read it", async ({
             .click();
         await expect(page.getByRole("heading", {name: updated})).toHaveCount(0);
         await other.reload();
-        // On narrow screens a selected conversation hides the directory until
-        // the explicit back control returns to the room list.
-        const backToRooms = other.getByRole("button", {
-            name: /^(Unterhaltungen|Conversations)$/,
-            exact: true,
-        });
-        if (await backToRooms.isVisible()) await backToRooms.click();
-        await other
+        // A saved room deep link reopens the thread directly, even when the
+        // mobile layout hides its directory row during the reload.
+        const heading = other.getByRole("heading", {name: updated, exact: true});
+        const roomButton = other
             .locator(".chat-room-row")
             .filter({hasText: updated})
-            .locator(".chat-room-button")
-            .click();
-        await expect(other.getByRole("heading", {name: updated})).toBeVisible();
+            .locator(".chat-room-button").filter({visible: true});
+        await expect(heading.or(roomButton).first()).toBeVisible();
+        if (!(await heading.isVisible())) await roomButton.click();
+        await expect(heading).toBeVisible();
     } finally {
         await context.close();
     }
