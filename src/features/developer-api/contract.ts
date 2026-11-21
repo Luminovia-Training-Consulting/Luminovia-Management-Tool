@@ -325,7 +325,53 @@ const listAssignmentChanges = rpc(
   { p_id: nullableUuid },
   assignmentChangeResult,
 );
+const sessionInstant = {
+  type: "string",
+  format: "date-time",
+  pattern: "(Z|[+-][0-9]{2}:[0-9]{2})$",
+};
+const courseRunRequest = {
+  ...object({
+    template_id: uuid,
+    organisation_id: { anyOf: [nullableUuid, { const: "" }] },
+    time_zone: { ...text, default: "Europe/Berlin" },
+    delivery_type: { enum: ["online", "onsite"], default: "online" },
+    venue: { ...text, default: "" },
+    published: { ...boolean, default: false },
+    archived: { ...boolean, default: false },
+    sessions: {
+      type: "array",
+      minItems: 1,
+      maxItems: 60,
+      items: object({ starts_at: sessionInstant, ends_at: sessionInstant }),
+    },
+  }),
+  required: ["template_id", "sessions"],
+};
 const nativePaths = {
+  "/rest/v1/rpc/save_course_run": rpc(
+    "saveCourseRun",
+    "Courses",
+    "Create or update a scheduled course",
+    "Use a null ID for a new course run. Sessions use explicit offsets and must not overlap. A run linked to a job cannot be edited by this operation. The server validates the intended IANA time zone.",
+    { p_id: nullableUuid, p_payload: courseRunRequest },
+    uuid,
+  ),
+  "/rest/v1/rpc/set_course_visibility": voidRpc(
+    "setCourseVisibility",
+    "Courses",
+    "Apply publication and archive state",
+    "Published runs require a schedule. A run linked to a published or filled job cannot be archived through this operation.",
+    { p_id: uuid, p_published: boolean, p_archived: boolean },
+  ),
+  "/rest/v1/rpc/duplicate_course_run": rpc(
+    "duplicateCourseRun",
+    "Courses",
+    "Duplicate a course schedule",
+    "Creates an unpublished copy of the template reference and scheduled sessions and returns its ID.",
+    { p_id: uuid },
+    uuid,
+  ),
   "/rest/v1/rpc/assignment_changes": {
     post: {
       ...listAssignmentChanges.post,

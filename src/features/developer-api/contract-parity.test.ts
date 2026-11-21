@@ -28,6 +28,42 @@ const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("documented Premium course and spending operations", () => {
+  it("documents course creation, bounded offset-aware sessions and the visibility response", () => {
+    expect(requestSchema("/rest/v1/rpc/save_course_run")).toMatchObject({
+      required: ["p_id", "p_payload"],
+      properties: {
+        p_id: { type: ["string", "null"] },
+        p_payload: {
+          required: ["template_id", "sessions"],
+          properties: {
+            sessions: {
+              minItems: 1,
+              maxItems: 60,
+              items: {
+                required: ["starts_at", "ends_at"],
+                properties: {
+                  starts_at: {
+                    format: "date-time",
+                    pattern: expect.any(String),
+                  },
+                },
+              },
+            },
+            published: { type: "boolean", default: false },
+          },
+        },
+      },
+    });
+    expect(
+      paths["/rest/v1/rpc/set_course_visibility"].post.responses,
+    ).toHaveProperty("204.description");
+    expect(
+      paths["/rest/v1/rpc/duplicate_course_run"].post.responses["200"],
+    ).toMatchObject({
+      content: { "application/json": { schema: { format: "uuid" } } },
+    });
+  });
+
   it("describes assignment changes with optional reads, bounded sessions and explicit transitions", () => {
     const prefix = "/rest/v1/rpc/";
     expect(requestSchema(prefix + "assignment_changes")).toMatchObject({
