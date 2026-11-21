@@ -66,10 +66,10 @@ await withTestDatabase("api_surface", async ({sql}) => {
     );
     assert.equal(
         await sql(
-            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE') and p.oid not in (to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'),to_regprocedure('public.installation_capabilities()'),to_regprocedure('private.installation_capability_projection()'))",
+            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE') and p.oid not in (to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'),to_regprocedure('public.installation_capabilities()'),to_regprocedure('private.installation_capability_projection()'),coalesce(to_regprocedure('public.academy_public_branding()')::oid,0),coalesce(to_regprocedure('private.academy_public_branding()')::oid,0))",
         ),
         "0",
-        "Anonymous actors can only read the public installation bootstrap and run the Data API pre-request hook",
+        "Anonymous actors can only read the public installation bootstrap and Academy branding and run the Data API pre-request hook",
     );
     console.log(
         "PASS Anonymous execution is limited to the public installation bootstrap and pre-request hook",

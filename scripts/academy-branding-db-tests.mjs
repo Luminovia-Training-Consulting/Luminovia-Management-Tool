@@ -1,6 +1,8 @@
 /** Validate the public projection and the licence, role and revision boundaries. */
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { academyBrandingSettings } from "../src/features/branding/academy-branding-schema.ts";
 import {
   configureAcademyCourseAccess,
@@ -77,8 +79,24 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       short_name: null,
       theme_color: null,
     };
-    const read = async () =>
-      academyBrandingSettings.parse(JSON.parse(await publicRead()));
+    const { paths } = academyOpenApi("https://academy.example.invalid", {
+      name: "Fictional Academy",
+      installationId: terms.installation_id,
+      edition,
+    });
+    const readContract = z.fromJSONSchema(
+      paths["/rest/v1/rpc/academy_public_branding"].get.responses["200"]
+        .content["application/json"].schema,
+    );
+    const saveContract = z.fromJSONSchema(
+      paths["/rest/v1/rpc/save_academy_public_branding"].post.responses["200"]
+        .content["application/json"].schema,
+    );
+    const read = async () => {
+      const value = JSON.parse(await publicRead());
+      readContract.parse(value);
+      return academyBrandingSettings.parse(value);
+    };
     const save = async (
       who,
       version,
@@ -89,18 +107,18 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       const args = [version, name, shortName, color]
         .map((item) => (item === null ? "null" : q(String(item))))
         .join(",");
-      return academyBrandingSettings.parse(
-        JSON.parse(
-          await actor(
-            who,
-            "set local request.path='/rpc/save_academy_public_branding';" +
-              "set local request.method='POST'; select public.require_portal_access();" +
-              "select public.save_academy_public_branding(" +
-              args +
-              ");",
-          ),
+      const value = JSON.parse(
+        await actor(
+          who,
+          "set local request.path='/rpc/save_academy_public_branding';" +
+            "set local request.method='POST'; select public.require_portal_access();" +
+            "select public.save_academy_public_branding(" +
+            args +
+            ");",
         ),
       );
+      saveContract.parse(value);
+      return academyBrandingSettings.parse(value);
     };
     assert.deepEqual(await read(), defaults);
     await assert.rejects(publicRead("POST"), /42501/);
