@@ -9,12 +9,13 @@ import {quoteSql as q} from "./testing/database.mjs";
 // enter only via the child environment, and the worker connects only to its
 // fixed loopback relay endpoint. The captured SMTP dialogue stays local.
 const capture = `
-import json, smtplib, sys
+import json, os, smtplib, sys
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0, str(Path("scripts").resolve()))
 import test_notification_mail_worker as fixture
 worker = fixture.worker
+config = worker.Config.from_env(os.environ)
 server = fixture.SmtpServer(sys.argv[1])
 original_smtp = smtplib.SMTP
 def connect(host, port, *, timeout):
