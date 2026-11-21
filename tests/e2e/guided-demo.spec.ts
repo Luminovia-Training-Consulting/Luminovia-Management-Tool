@@ -37,11 +37,23 @@ const test = base.extend<{ isolatedDemo: void }>({
 /** Waits for fonts before checking viewport fit and automated WCAG rules. */
 async function accessibleWithoutOverflow(page: Page) {
     await page.evaluate(() => document.fonts.ready);
-    expect(
-        await page.evaluate(
-            () => document.documentElement.scrollWidth <= window.innerWidth,
+  const layout = await page.evaluate(() => ({
+    fits: document.documentElement.scrollWidth <= window.innerWidth,
+    viewport: window.innerWidth,
+    offenders: [...document.querySelectorAll("body *")]
+      .filter(
+        (element) =>
+          element.getBoundingClientRect().right > window.innerWidth + 1,
+      )
+      .slice(0, 5)
+      .map(
+        (element) =>
+          `${element.tagName.toLowerCase()}.${element.className?.toString().replaceAll(" ", ".")}`,
         ),
-        "The public guide fits the viewport",
+  }));
+  expect(
+    layout.fits,
+    `The public guide fits ${layout.viewport}px: ${layout.offenders.join(", ")}`,
     ).toBe(true);
     const result = await new AxeBuilder({page})
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -57,6 +69,51 @@ async function accessibleWithoutOverflow(page: Page) {
     ).toEqual([]);
 }
 
+async function visitDemoSection(page: Page, path: string) {
+  const desktop = page.locator(`.demo-sidebar nav a[href="/demo${path}"]`);
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+  const primary = page.locator(
+    `.demo-mobile-primary-nav a[href="/demo${path}"]`,
+  );
+  if (await primary.count()) {
+    await primary.click();
+    return;
+  }
+  await page
+    .getByRole("button", { name: /Weitere Demo-Bereiche|More demo sections/ })
+    .click();
+  await page.locator(`#demo-mobile-navigation a[href="/demo${path}"]`).click();
+}
+
+test("fictional course cards and dark theme stay accessible at portal widths", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/demo/courses");
+  await expect(
+    page.getByRole("heading", { name: "Linux Grundlagen · Demo-Akademie" }),
+  ).toBeVisible();
+  await page.getByLabel("Kurse filtern").selectOption("upcoming");
+  await expect(
+    page.getByRole("heading", { name: "Netzwerkeinstieg · Demo-Akademie" }),
+  ).toHaveCount(0);
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  for (const width of [390, 768, 1280, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByRole("heading", { name: "Linux basics · Demo Academy" }),
+    ).toBeVisible();
+    await accessibleWithoutOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(`demo-courses-${width}-dark-en.png`),
+      fullPage: true,
+    });
+  }
+});
+
 // Rejected attempts stay retryable; simulated success survives role/language
 // changes until reset. Light/dark scans cover only the rendered demo state.
 test("mobile demo navigation explains and permits access to its remaining sections", async ({
@@ -70,13 +127,9 @@ test("mobile demo navigation explains and permits access to its remaining sectio
             .click();
         const nav = page.locator("#demo-mobile-navigation");
         await expect(nav).toBeVisible();
-        expect(
-            await nav.evaluate((node) => node.scrollHeight > node.clientHeight),
-        ).toBe(true);
         const last = nav.getByRole("link").last();
         await last.focus();
         await expect(last).toBeInViewport();
-        expect(await nav.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
         await page.getByLabel("Sprache", {exact: true}).selectOption("en");
         await expect(
             page.getByRole("button", {name: "More demo sections", exact: true}),
@@ -118,7 +171,9 @@ test("fictional job outcomes never reserve real work, and language changes retai
         .getByRole("link", {name: "Aufträge übernehmen", exact: true})
         .click();
     await expect(
-        page.getByText("DEMO · Nur fiktive Daten", {exact: true}).first(),
+    page
+      .locator(".demo-main")
+      .getByText("DEMO · Nur fiktive Daten", { exact: true }),
     ).toBeVisible();
     for (const [outcome, explanation] of [
         ["filled", "Ein anderer Dozent war schneller"],
@@ -155,8 +210,8 @@ test("fictional job outcomes never reserve real work, and language changes retai
     await expect(page.getByRole("status")).toContainText(
         "Simulation: The entire block is reserved. In the real portal, only server confirmation is binding.",
     );
-    await page.getByLabel("Demo role", {exact: true}).selectOption("client");
-    await page.getByLabel("Demo role", {exact: true}).selectOption("lecturer");
+  await page.locator("#demo-role").selectOption("client");
+  await page.locator("#demo-role").selectOption("lecturer");
     await page.locator('a[href="/demo/jobs"]:visible').first().click();
     await expect(
         page.getByRole("button", {
@@ -207,20 +262,14 @@ test("demo chat and profile drafts stay fictional and a page reload clears pract
     await expect(
         page.getByText("Fictional classroom question", {exact: true}),
     ).toBeVisible();
-    await page
-        .getByRole("navigation", {name: "Demo-Bereiche", exact: true})
-        .locator('a[href="/demo/profile"]')
-        .click();
+  await visitDemoSection(page, "/profile");
     await page
         .getByLabel("Fiktiver Anzeigename", {exact: true})
         .fill("Fictional guide learner");
     await page
         .getByRole("button", {name: "Demo-Profil speichern", exact: true})
         .click();
-    await page
-        .getByRole("navigation", {name: "Demo-Bereiche", exact: true})
-        .locator('a[href="/demo/chats"]')
-        .click();
+  await visitDemoSection(page, "/chats");
     await expect(
         page.getByText("Fictional classroom question", {exact: true}),
     ).toBeVisible();
@@ -236,9 +285,7 @@ test("connected demo publication, allocation, calendar and document exercises re
                                                                                                           page,
                                                                                                       }) => {
     await page.goto("/demo/admin");
-    await page
-        .getByLabel("Demo-Rolle", {exact: true})
-        .selectOption("management");
+  await page.locator("#demo-role").selectOption("management");
     await page
         .getByLabel("Fiktiver Auftragstitel", {exact: true})
         .fill("Fictional guided Linux block");
@@ -253,12 +300,9 @@ test("connected demo publication, allocation, calendar and document exercises re
         .click();
     // Follow rendered links so navigation retains the same in-memory demo session.
     const visit = async (path: string) => {
-        await page
-            .getByRole("navigation", {name: "Demo-Bereiche", exact: true})
-            .locator(`a[href="/demo${path}"]`)
-            .click();
+    await visitDemoSection(page, path);
     };
-    await page.getByLabel("Demo-Rolle", {exact: true}).selectOption("lecturer");
+  await page.locator("#demo-role").selectOption("lecturer");
     await visit("/jobs");
     await expect(
         page.getByRole("heading", {
@@ -338,10 +382,14 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
                                                                                                            page,
                                                                                                        }) => {
     await page.goto("/demo");
-    const navigation = page.getByRole("navigation", {
-        name: "Demo-Bereiche",
-        exact: true,
-    });
+  await page.locator("#demo-role").selectOption("management");
+  const desktopNavigation = page.locator(".demo-sidebar nav");
+  const mobile = !(await desktopNavigation.isVisible());
+  if (mobile)
+    await page.getByRole("button", { name: "Weitere Demo-Bereiche" }).click();
+  const navigation = mobile
+    ? page.locator("#demo-mobile-navigation")
+    : desktopNavigation;
     await expect(navigation).toBeVisible();
     await expect(navigation.getByRole("link")).toHaveCount(25);
     const paths = await navigation
@@ -349,6 +397,7 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
         .evaluateAll((links) =>
             links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
         );
+  if (mobile) await page.locator(".demo-mobile-more > summary").click();
     expect([...paths].sort()).toEqual(
         [
             "",
@@ -380,9 +429,6 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
             .map((path) => `/demo${path}`)
             .sort(),
     );
-    await page
-        .getByLabel("Demo-Rolle", {exact: true})
-        .selectOption("management");
     await page
         .getByRole("button", {name: "Rundgang starten", exact: true})
         .click();

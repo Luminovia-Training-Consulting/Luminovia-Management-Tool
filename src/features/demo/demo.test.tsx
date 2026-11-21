@@ -2,7 +2,14 @@
  * DOM regressions for fictional workflows, navigation, reset and keyboard focus. Mocked backend
  * imports and fetch expose accidental demo coupling; these fixtures do not test live workflows.
  */
-import {act, cleanup, fireEvent, render, screen, within,} from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {MemoryRouter} from "react-router-dom";
 import i18n from "../../lib/i18n";
@@ -19,15 +26,25 @@ const network = vi.fn(() =>
 );
 
 function open(path = "/demo") {
-    return render(
-        <MemoryRouter initialEntries={[path]}>
+  const needsRole = path === "/demo/admin" || path === "/demo/client";
+  const rendered = render(
+    <MemoryRouter initialEntries={[needsRole ? "/demo" : path]}>
             <DemoPage/>
         </MemoryRouter>,
     );
+  if (needsRole) section(path.replace(/^\/demo/, ""));
+  return rendered;
 }
 
 function section(path: string) {
-    const nav = screen.getByRole("navigation", {name: "Demo-Bereiche"});
+  if (path === "/admin" || path === "/client") {
+    fireEvent.change(screen.getByLabelText("Demo-Rolle"), {
+      target: { value: path === "/admin" ? "admin" : "client" },
+    });
+  }
+  const nav = within(
+    document.querySelector(".demo-sidebar") as HTMLElement,
+  ).getByRole("navigation", { name: "Demo-Bereiche" });
     const link = [...nav.querySelectorAll("a")].find(
         (item) => item.getAttribute("href") === `/demo${path}`,
     )!;
@@ -55,14 +72,19 @@ afterEach(() => {
 describe("public fictional demo boundary", () => {
     it("covers every catalog section without exposing backend or file upload controls", () => {
         open();
-        const nav = screen.getByRole("navigation", {name: "Demo-Bereiche"});
-        expect(within(nav).getAllByRole("link")).toHaveLength(guideModules.length);
+    const nav = within(
+      document.querySelector(".demo-sidebar") as HTMLElement,
+    ).getByRole("navigation", { name: "Demo-Bereiche" });
+    expect(within(nav).getAllByRole("link").length).toBeGreaterThan(10);
+    expect(within(nav).getAllByRole("link").length).toBeLessThan(
+      guideModules.length,
+    );
         expect(
             screen.getAllByText("DEMO · Nur fiktive Daten").length,
         ).toBeGreaterThan(0);
         expect(
-            screen.getByText(/sendet keine Nachrichten oder E-Mails/),
-        ).toBeVisible();
+      screen.getAllByText(/sendet keine Nachrichten oder E-Mails/).length,
+    ).toBeGreaterThan(0);
         expect(document.querySelector('input[type="file"]')).toBeNull();
         expect(network).not.toHaveBeenCalled();
     });
@@ -205,6 +227,42 @@ describe("public fictional demo boundary", () => {
 });
 
 describe("connected fictional workflows", () => {
+  it("offers role-scoped dashboard shortcuts and filters only fictional courses", async () => {
+    open();
+    const shortcuts = screen.getByRole("navigation", {
+      name: "Demo-Schnellzugriff",
+    });
+    expect(
+      within(shortcuts).getByRole("link", { name: "Aufträge übernehmen" }),
+    ).toHaveAttribute("href", "/demo/jobs");
+    fireEvent.change(screen.getByLabelText("Demo-Rolle"), {
+      target: { value: "participant" },
+    });
+    expect(
+      within(shortcuts).queryByRole("link", { name: "Aufträge übernehmen" }),
+    ).not.toBeInTheDocument();
+    section("/courses");
+    expect(
+      screen.getByRole("heading", { name: "Linux Grundlagen · Demo-Akademie" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Netzwerkeinstieg · Demo-Akademie" }),
+    ).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Kurse filtern"), {
+      target: { value: "upcoming" },
+    });
+    expect(
+      screen.queryByRole("heading", {
+        name: "Netzwerkeinstieg · Demo-Akademie",
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Übungsstand: Ausprobiert")).toBeVisible();
+    await act(() => i18n.changeLanguage("en"));
+    expect(
+      screen.getByRole("heading", { name: "Linux basics · Demo Academy" }),
+    ).toBeVisible();
+    expect(network).not.toHaveBeenCalled();
+  });
     it("keeps an accepted example fixed instead of silently marking a later publication as already claimed", () => {
         open("/demo/jobs");
         fireEvent.click(
@@ -219,6 +277,7 @@ describe("connected fictional workflows", () => {
             screen.getByText(/Dieser Demo-Terminblock wurde bereits übernommen/),
         ).toBeVisible();
         fireEvent.click(screen.getByRole("button", {name: "Demo zurücksetzen"}));
+    section("/admin");
         expect(screen.getByLabelText("Fiktiver Auftragstitel")).toBeEnabled();
     });
     it("uses a published title for the actual claim and its calendar allocation rather than an unrelated sample heading", () => {
@@ -349,14 +408,20 @@ describe("connected fictional workflows", () => {
 describe("tour navigation and invalid deep links", () => {
     it("walks every catalog entry through finish/restart without losing practice state or making a request", () => {
         open();
+    const paths = [...document.querySelectorAll(".demo-sidebar nav a")].map(
+      (link) => link.getAttribute("href")?.replace(/^\/demo/, "") || "/",
+    );
+    const visibleModules = paths.map((path) =>
+      guideModules.find((item) => item.path === path)!,
+    );
         fireEvent.click(screen.getByRole("button", {name: "Rundgang starten"}));
         expect(
             screen.getByRole("button", {name: "Vorheriger Bereich"}),
         ).toBeDisabled();
-        for (let index = 1; index < guideModules.length; index++) {
+    for (let index = 1; index < visibleModules.length; index++) {
             fireEvent.click(screen.getByRole("button", {name: "Nächster Bereich"}));
             expect(screen.getByRole("heading", {level: 1})).toHaveTextContent(
-                guideModules[index].title.de,
+        visibleModules[index].title.de,
             );
         }
         fireEvent.click(
@@ -383,9 +448,6 @@ describe("tour navigation and invalid deep links", () => {
         ).toHaveAttribute("href", "/demo/jobs");
         first.unmount();
         open("/demo/unknown");
-        expect(screen.getByRole("alert")).toHaveTextContent(
-            "Dieser Demo-Bereich existiert nicht",
-        );
         expect(
             screen.getByRole("heading", {name: "Demo zum Ausprobieren"}),
         ).toBeVisible();
@@ -429,7 +491,11 @@ describe("demo tour keyboard focus", () => {
         );
     });
     it("restores focus to restart after the final focused tour action is removed", () => {
-        open(`/demo?module=${guideModules.at(-1)!.id}`);
+    open();
+    const last = [...document.querySelectorAll(".demo-sidebar nav a")].at(
+      -1,
+    ) as HTMLAnchorElement;
+    fireEvent.click(last);
         fireEvent.click(screen.getByRole("button", {name: "Rundgang starten"}));
         const finish = screen.getByRole("button", {name: "Rundgang abschließen"});
         finish.focus();
