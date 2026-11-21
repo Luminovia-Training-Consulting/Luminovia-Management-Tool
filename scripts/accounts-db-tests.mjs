@@ -393,7 +393,7 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
                 /permission denied/,
             );
             await sql(
-                `begin;set local role service_role;select public.complete_account_invitation('${invitation.invitation_id}','${client}','Client',true);commit;`,
+                `begin;set local role service_role;set local request.jwt.claim.role='service_role';select public.complete_account_invitation('${invitation.invitation_id}','${client}','Client',true);commit;`,
             );
             assert.equal(
                 (
@@ -433,7 +433,7 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             await sql(`delete from public.user_roles where user_id='${manager}'`);
             await assert.rejects(
                 sql(
-                    `begin;set local role service_role;select public.complete_account_invitation('${pending.invitation_id}','${participant}','Student',true);commit;`,
+                    `begin;set local role service_role;set local request.jwt.claim.role='service_role';select public.complete_account_invitation('${pending.invitation_id}','${participant}','Student',true);commit;`,
                 ),
                 /Inviter authority revoked/,
             );
