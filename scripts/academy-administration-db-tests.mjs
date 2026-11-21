@@ -42,7 +42,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     };
     await prepareAcademyInstallation(options, sql);
     await configureAcademyCourseAccess({ ...options, enabled: true }, sql);
-    await sql(`alter table auth.users add column if not exists created_at timestamptz default clock_timestamp();
+    await sql(`
       insert into auth.users(id,email,email_confirmed_at) values
         ${[admin, manager, lecturer, learner, owner].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
       insert into public.user_roles(user_id,role) values

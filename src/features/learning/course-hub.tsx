@@ -105,7 +105,19 @@ export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
 
   return (
     <>
-      <PageHeading title={t("hub")} description={t("hubHelp")} />
+      <PageHeading
+        title={t("hub")}
+        description={t("hubHelp")}
+        action={
+          academy && (
+            <Button asChild variant="secondary">
+              <Link to="/help?topic=academy-classes">
+                {t("helpGuides", { ns: "translation" })}
+              </Link>
+            </Button>
+          )
+        }
+      />
       {!online ? (
         <Notice>{t("workspaceOffline")}</Notice>
       ) : (

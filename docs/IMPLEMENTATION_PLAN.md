@@ -40,6 +40,11 @@
 - [x] Let the dedicated academy provision organisations, lecturers, learners and its own course managers. Verify Auth identity retention through suspension and management delegation in both editions.
 - [x] Provide the dedicated role-scoped timetable with a bounded local date range. Verify English desktop, German mobile and the repeated local hour at daylight-saving change in both editions.
 - [x] Scan, publish and withdraw staff answer keys with exact-byte access. Verify current staff authority and exclude all key metadata from learner and company-only projections.
+- [x] Confirm learner withdrawal with the existing deadline and preserve retained content. Verify course, chat and protected file revocation with both dedicated runtime editions.
+- [x] Scan and attach a PDF attendance witness to an exact session. Verify active writes, grace reads and delivery-time authority for the current register staff. Exercise the scoped CSV and PDF reports in built desktop and mobile browsers.
+- [x] Extend the dedicated course room from text to scan-confirmed attachments. Verify the real storage digest, message-scoped authorisation and revocation during delivery.
+- [x] Edit unallocated draft schedules with stable session IDs and adjust published group size against existing enrolments. Reject stale or unsafe changes in the database and verify the ordinary desktop/mobile draft journey.
+- [x] Enable preparation for course staff and private learner notes, with source-level and database role, version and content boundaries. Publish the dedicated course help entry points in both languages.
 - [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 

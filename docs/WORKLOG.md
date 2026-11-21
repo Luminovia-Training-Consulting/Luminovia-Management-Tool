@@ -1,3 +1,13 @@
+# 21 November 2026 — Standalone LMS materials, reports and learner access
+
+Both academies now support scanned participant-chat attachments and scanned PDF attendance evidence. Native GoTrue, PostgREST, Deno, Storage and ClamAV verified the exact versions and stopped delivery when course authority changed during the real Storage read. The attendance register can also generate PDF and CSV for one selected session. Both editions passed native Chromium for staff downloads and rejected learners and unrelated company contacts. Existing evidence, messages and attendance history stay retained.
+
+A learner can review and confirm withdrawal before the existing seven-day deadline. Both editions passed desktop/mobile Chromium and the native byte-delivery boundary. After the confirmed response the former learner loses access to that course, chat and downloads. Other enrolments and retained staff access persist. Course managers can revise unallocated draft schedules without replacing unchanged session IDs and revise a published group size without displacing confirmed learners. PostgreSQL verified exact retries and competing writes in both editions. Draft editing and the subsequent publication journey passed built Chromium on both layouts in both editions.
+
+Course staff have the scoped preparation checklist, and course members can save a private revisioned notebook. PostgreSQL verified private-note separation and stale-write refusal. The branded help catalogue describes the local teaching workflow and provides the exact downloadable API. Four real desktop/mobile journeys exercised the academy administration route, creation of new local instructor and learner accounts, native sign-in and identity retention through suspension and reactivation.
+
+The hosted `0c5dc0b7` actual ten-service selfhost job passed all 59 native API suites and retained-data replay. Its separate system job stopped on GitHub runner Docker startup before testing. The desktop browser failure was traced to the old plural fixture for confirming one attendance import. The corrected browser case targets the actual accessible singular label. Hosted deployment remains pending.
+
 # 21 November 2026 — Standalone LMS people, timetable and protected exams
 
 The academy's own administration can create organisations and provision or invite local lecturers, learners and course managers. Local administrators can assign or withdraw management authority for a retained lecturer. Suspending and reactivating a local account preserves the Auth UUID and the learner's organisation membership and enrolment. Actual GoTrue, PostgREST and Deno verified both editions and captured invitations at an owned loopback SMTP recipient.
