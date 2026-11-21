@@ -97,8 +97,7 @@ is not a new verification, public profile link or legal signature. You decide wh
 
 ## Individual accounts, roles and organisation access
 
-Each person has an individual account, created directly by authorised administration or by invitation, and chooses their own password. Current roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company** and **Gast / Guest**. Guest grants no business access; the participant role is retired. Compatible roles may be combined; company and teaching/management functions require
-separate non-administrative accounts. Privileged account, publishing and financial operations require the corresponding server permission. This does not make administrators members of other people's private chats or reveal private calendar entries.
+Each person has an individual account, created directly by authorised administration or by invitation, and chooses their own password. The available roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company**, **Kursteilnehmer:in / Course participant** and **Gast / Guest**. An account may hold several roles. Company workflows require an organisation association. Participant workflows require enrolment in the relevant course. An explicit teaching role is required to personally accept an offer or submit a lecturer’s own invoice. The server checks permissions for protected operations, private chat membership and personal calendar ownership.
 
 Administration and Management may switch the header's **Navigation preview** between Management, Lecturer and Company. The preview uses fictional, in-memory summaries and role-shaped links only; it does not impersonate an account, call business APIs or change the actual role and permissions. Select **Live account** to return to the currently authenticated pages.
 
@@ -129,9 +128,7 @@ account/file deletion. Previously downloaded copies and backup retention are out
 At `/people`, search the permitted directory by name/text, declared label or topic. Open `/people/<id>` for the member's allowed biography, experience, languages, topics and upcoming/current/past teaching history. A verified topic is distinguished from a self-declared one. Private phone/email, contracts and financial terms are not part of these directory cards. **Nachricht schreiben / Message** opens the permitted direct-message workflow. Course links open `/courses?run=<id>` only when the
 current person may view that run.
 
-The former participant-enrolment workflow is retired from the current interface. Historical participation records remain protected; they do not grant access to staff commercial channels.
-
-The former participant review screen is retired from the current interface. Retained historical reviews remain scoped by current server permissions; no new participant account or enrolment can be created through this workflow.
+Participants open their enrolled courses from the learning area and see their own course reviews under **Kursbewertungen / Course reviews**. A company with Premium can invite a participant or request that an existing participant link their account. The company can enrol the participant in an eligible course after the required association is active.
 
 <a id="section-user-guide-personal-dashboard"></a>
 
