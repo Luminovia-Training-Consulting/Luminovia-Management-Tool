@@ -207,6 +207,8 @@ For self-hosted and dedicated hosted editions, normally **one primary customer b
 
 ## 9. Customer learning workflows independent of brokerage
 
+The current implementation priority is the standalone learning workflow. Branded desktop and mobile journeys already cover course drafts, direct instructor assignment, publication, confirmed enrolment and learner access in both editions. Course materials, student exam PDFs, versioned session registers, atomic CSV/XLSX imports and scoped notices have dedicated database or native transport evidence. The work log records the current verification and the remaining LMS tasks. Installation, customer branding and commercial release follow the LMS acceptance. See [the implementation plan](docs/IMPLEMENTATION_PLAN.md) and [work log](docs/WORKLOG.md).
+
 The white-label customer must be able to execute this entire workflow **without** Luminovia internal assignments, broker rates or a company-level Premium switch:
 
 1. Installation admin signs in through customer-branded account and configures academy settings.

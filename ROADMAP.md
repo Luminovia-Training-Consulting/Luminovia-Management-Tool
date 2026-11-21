@@ -130,6 +130,8 @@ The original roadmap also retains **formal assignment change requests/amendments
 
 ### R3 — Premium LMS foundation (`P1`, blocking any Premium customer activation)
 
+The current owner priority is to complete the independent LMS before the installer, customer-specific branding and distribution. The dedicated academy acceptance and work log are tracked in the [White-label roadmap](WHITELABEL_ROADMAP.md#9-customer-learning-workflows-independent-of-brokerage) and the [implementation plan](docs/IMPLEMENTATION_PLAN.md). The internal Premium acceptance matrix below still applies to the internal edition.
+
 - [ ] **LMS-01:** re-enable participant-only Auth/role, invitation, route and database permissions without exposing the operational lecturer/admin portal.
 - [ ] **LMS-02:** add human-readable IDs to all existing/future users; build secure multi-company participant relationship and verified association flow. Companies create/link only participant-only accounts.
 - [ ] **LMS-03:** add organisation Premium default-OFF flag, admin-only red/green accessible switch, explicit confirmation for ON/OFF, audited CAS transaction, required server-side enforcement. Management can see but cannot toggle.

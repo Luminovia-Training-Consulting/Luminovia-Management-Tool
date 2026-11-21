@@ -33,6 +33,10 @@
 - [x] Compare typed source template, job preview, file discovery and archive projections with the native API. Isolate PWA fixture actors from language changes performed by other application cases.
 - [x] Give both dedicated editions a scoped branded inbox. Verify chat, material, attendance and owned read-state operations in PostgreSQL, including active and grace access and forbidden cross-account writes.
 - [x] Expose the PWA install action when the browser offers it. Verify the built offline route boundaries and account data purging in desktop and mobile Chromium.
+- [x] Complete dedicated course publication and enrolled access with an assigned lecturer and transactional participant capacity. Both editions passed the real desktop/mobile browser journey and concurrent database checks.
+- [x] Enable revisioned quizzes, own feedback and evidence-backed completion in the standalone course. Dedicated PostgreSQL verifies answer privacy, current agreement, grace and revoked PDFs.
+- [x] Accept a new student paper from the assigned lecturer or scoped company through checked PDF intake. Real scan and exact-byte download passed for both dedicated editions.
+- [x] Confirm an exact CSV or XLSX attendance import atomically. PostgreSQL and real Chromium both editions passed stale and cross-scope boundaries.
 - [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 

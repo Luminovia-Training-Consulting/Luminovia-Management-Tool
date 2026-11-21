@@ -1,3 +1,11 @@
+# 21 November 2026 — Standalone LMS publication, learning and register imports
+
+Standalone LMS functionality now takes priority over installer and commercial white-label work. Course managers can confirm an unpublished course with an assigned instructor and a participant capacity. The server prevents premature enrolment and concurrent overbooking. Both editions passed built desktop and Pixel 7 Chromium through native GoTrue and PostgREST for draft creation, assignment, publication, enrolment and the separate learner view. PostgreSQL verified single-winner capacity, current assignment, exact publication retries and retention in grace.
+
+Current course staff can revise a quiz and review or revoke course completion records. Learners can submit a graded attempt, provide course feedback and obtain a completion record backed by enrolment and verified attendance. Both editions passed PostgreSQL checks for hidden answers, feedback privacy, exact attempt retries, completion eligibility and download permission before and after revocation.
+
+Both dedicated editions now accept the exact reviewed CSV or XLSX attendance rows as one transaction. Four native Chromium journeys covered preview, explicit confirmation and rejection of a stale mobile import with HTTP 409 before deliberate retry. Native GoTrue, PostgREST, Deno, Storage and ClamAV also verified new student exam PDFs from assigned lecturers and scoped company contacts, exact learner downloads, a refused foreign caller and retained bytes when the exam was disabled. The integrated source check passed 1,161 frontend cases with coverage, lint, formatting, TypeScript and production build. All seven API-surface database guards passed.
+
 # 21 November 2026 — Dedicated course inbox and native PWA
 
 The standalone academy now has a branded bell and inbox for scoped chat, course material and own attendance notices. PostgreSQL verified both editions, foreign-item refusal, bounded pages, server-side read state, licence grace reads and retention on profile closure. The standalone notices do not enter the internal email or push queues. Separate customer channels still require their own delivery acceptance.
