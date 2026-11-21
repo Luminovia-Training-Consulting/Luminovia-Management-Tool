@@ -1,38 +1,115 @@
-import { useState } from "react";
+/** Role-scoped course welcome editor, local preview and published content. */
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import type { CourseResource } from "./api";
+import "./i18n";
+import { DownloadButton } from "./resources";
+import {
+  type CourseWelcomePayload,
+  type CourseWelcomeRevision,
+  courseWelcomePayloadSchema,
+  courseWelcomeRevisionSchema,
+  welcomeAttachmentLimit,
+  welcomeHeadingLimit,
+  welcomeTextLimit,
+} from "./welcome-content-schema";
 
-const schema = z.object({
-  version: z.number().int().nonnegative(),
-  description: z.string(),
-  objectives: z.string(),
-  joining_instructions: z.string(),
-  published_at: z.string().nullable(),
-});
-type Revision = z.infer<typeof schema>;
+const welcomeFields = [
+  ["welcome_message", "welcomeCourseMessage"],
+  ["description", "welcomeCourseDescription"],
+  ["objectives", "welcomeCourseObjectives"],
+  ["schedule_information", "welcomeScheduleInformation"],
+  ["contact_instructions", "welcomeContactInstructions"],
+  ["joining_instructions", "welcomeJoiningInstructions"],
+] as const;
+type WelcomeTextField = (typeof welcomeFields)[number][0];
 
+/** The course file gateway retains resource authority and the exact file version. */
+function WelcomeContents({
+  content,
+  resources,
+  preview = false,
+}: {
+  content: CourseWelcomePayload;
+  resources: CourseResource[];
+  preview?: boolean;
+}) {
+  const { t } = useTranslation("learning");
+  const attachments = content.attachment_ids
+    .map((id) => resources.find((resource) => resource.id === id))
+    .filter((resource) => resource !== undefined);
+  const Heading = preview ? "h4" : "h3";
+  const FieldHeading = content.heading ? (preview ? "h5" : "h4") : Heading;
+  if (
+    !content.heading &&
+    !welcomeFields.some(([key]) => content[key]) &&
+    !attachments.length
+  )
+    return <p>{t("welcomeNoContent")}</p>;
+  return (
+    <div className="course-welcome-content">
+      {content.heading && <Heading>{content.heading}</Heading>}
+      {welcomeFields.map(
+        ([key, label]) =>
+          content[key] && (
+            <div key={key}>
+              <FieldHeading>{t(label)}</FieldHeading>
+              <p className="course-welcome-text">{content[key]}</p>
+            </div>
+          ),
+      )}
+      {attachments.length > 0 && (
+        <div>
+          <FieldHeading>{t("welcomeAttachments")}</FieldHeading>
+          <ul className="course-welcome-files">
+            {attachments.map((resource) => (
+              <li key={resource.id}>
+                <span>{resource.name}</span>
+                {!preview && (
+                  <DownloadButton
+                    kind="resource"
+                    id={resource.id}
+                    name={resource.name}
+                    label={t("welcomeDownload", { name: resource.name })}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Edit the current published revision without making the draft visible to learners. */
 export function CourseWelcomeContent({
   actor,
   courseId,
   zone,
   canEdit,
+  canProtect = false,
+  resources = [],
 }: {
   actor: string;
   courseId: string;
   zone: string;
   canEdit: boolean;
+  canProtect?: boolean;
+  resources?: CourseResource[];
 }) {
-  const { i18n } = useTranslation();
-  const de = i18n.language.startsWith("de");
+  const { t, i18n } = useTranslation("learning");
+  const id = useId();
   const online = useOnline();
   const cache = useQueryClient();
-  const [draft, setDraft] = useState<Revision | null>(null);
+  const [draft, setDraft] = useState<CourseWelcomeRevision | null>(null);
+  const [preview, setPreview] = useState(false);
   const queryKey = ["course-welcome", actor, courseId] as const;
   const query = useQuery({
     queryKey,
@@ -44,25 +121,28 @@ export function CourseWelcomeContent({
         .rpc("course_welcome_content", { p_run_id: courseId })
         .abortSignal(signal);
       if (error) throw error;
-      return schema.parse(data);
+      return courseWelcomeRevisionSchema.parse(data);
     },
   });
   const publish = useMutation({
-    mutationFn: async (revision: Revision) => {
+    mutationFn: async (revision: CourseWelcomeRevision) => {
       requireOnline();
+      const { version, published_at, ...content } = revision;
+      // Published time and revision number are server-owned.
+      void published_at;
+      const payload = courseWelcomePayloadSchema.parse(content);
       const { data, error } = await db().rpc("publish_course_welcome_content", {
         p_run_id: courseId,
-        p_description: revision.description,
-        p_objectives: revision.objectives,
-        p_joining_instructions: revision.joining_instructions,
-        p_expected_version: revision.version,
+        p_payload: payload,
+        p_expected_version: version,
       });
       if (error) throw error;
-      return schema.parse(data);
+      return courseWelcomeRevisionSchema.parse(data);
     },
     onSuccess: (revision) => {
       cache.setQueryData(queryKey, revision);
       setDraft(null);
+      setPreview(false);
       void query.refetch();
     },
     onError: () => void query.refetch(),
@@ -71,103 +151,201 @@ export function CourseWelcomeContent({
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
   const current = query.data;
-  const fields = [
-    ["description", de ? "Kursbeschreibung" : "Course description"],
-    ["objectives", de ? "Lernziele" : "Learning objectives"],
-    [
-      "joining_instructions",
-      de ? "Hinweise zur Teilnahme" : "Joining instructions",
-    ],
-  ] as const;
-  const title = de ? "Willkommen im Kurs" : "Welcome to the course";
   const stale = draft !== null && draft.version !== current.version;
+  const protectedFields = current.protect_instructions && !canProtect;
+  const eligibleResources = resources.filter(
+    (resource) =>
+      resource.category === "material" &&
+      (resource.audience === "all" || resource.audience === "participants"),
+  );
+
+  function editText(key: WelcomeTextField | "heading", value: string) {
+    setDraft((previous) => previous && { ...previous, [key]: value });
+  }
+
+  function selectAttachment(resourceId: string, selected: boolean) {
+    setDraft((previous) => {
+      if (!previous) return previous;
+      const ids = previous.attachment_ids.filter((id) => id !== resourceId);
+      if (selected && ids.length < welcomeAttachmentLimit) ids.push(resourceId);
+      return { ...previous, attachment_ids: ids };
+    });
+  }
+
   return (
-    <section className="panel learning-panel" aria-label={title}>
-      <h2>{title}</h2>
+    <section
+      className="panel learning-panel"
+      aria-label={t("welcomeCourseTitle")}
+    >
+      <h2>{t("welcomeCourseTitle")}</h2>
       {current.published_at && (
         <p className="muted">
-          {de ? "Veröffentlicht" : "Published"} ·{" "}
-          {dateTime(current.published_at, i18n.language, zone)}
+          {t("welcomePublished", {
+            date: dateTime(current.published_at, i18n.language, zone),
+            revision: current.version,
+          })}
         </p>
       )}
-      {fields.map(
-        ([key, label]) =>
-          current[key] && (
-            <div key={key}>
-              <h3>{label}</h3>
-              <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                {current[key]}
-              </p>
-            </div>
-          ),
+      {(!draft || !canEdit) && (
+        <WelcomeContents content={current} resources={eligibleResources} />
       )}
-      {!fields.some(([key]) => current[key]) && (
-        <p>
-          {de
-            ? "Noch kein Willkommenstext veröffentlicht."
-            : "No welcome content has been published."}
-        </p>
+      {canEdit && !draft && (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            publish.reset();
+            setDraft(current);
+          }}
+        >
+          {t("welcomeEdit")}
+        </Button>
       )}
-      {canEdit &&
-        (draft === null ? (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              publish.reset();
-              setDraft(current);
-            }}
-          >
-            {de ? "Willkommenstext bearbeiten" : "Edit welcome content"}
-          </Button>
-        ) : (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!stale) publish.mutate(draft);
-            }}
-          >
-            {fields.map(([key, label]) => (
-              <Field key={key} id={`course-welcome-${key}`} label={label}>
-                <textarea
-                  id={`course-welcome-${key}`}
-                  value={draft[key]}
-                  maxLength={4000}
-                  disabled={publish.isPending}
+      {canEdit && draft && (
+        <form
+          className="course-welcome-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!stale && preview && !publish.isPending) publish.mutate(draft);
+          }}
+        >
+          {preview ? (
+            <section
+              className="course-welcome-preview"
+              aria-label={t("welcomePreview")}
+            >
+              <h3>{t("welcomePreview")}</h3>
+              <p className="muted">{t("welcomePreviewHint")}</p>
+              <WelcomeContents
+                content={draft}
+                resources={eligibleResources}
+                preview
+              />
+            </section>
+          ) : (
+            <>
+              <Field id={id + "-heading"} label={t("welcomeHeading")}>
+                <input
+                  value={draft.heading}
+                  maxLength={welcomeHeadingLimit}
                   onChange={(event) =>
-                    setDraft({ ...draft, [key]: event.target.value })
+                    editText("heading", event.currentTarget.value)
                   }
                 />
               </Field>
-            ))}
-            {stale && (
-              <Notice kind="error">
-                {de
-                  ? "Eine andere Version wurde veröffentlicht. Kopiere deine Änderungen und lade den Entwurf erneut."
-                  : "Another version was published. Copy your changes and reopen the editor."}
-              </Notice>
-            )}
-            {!stale && publish.isError && (
-              <Notice kind="error">
-                {de
-                  ? "Veröffentlichung konnte nicht bestätigt werden."
-                  : "Publication could not be confirmed."}
-              </Notice>
-            )}
-            <div className="form-actions">
-              <Button type="submit" disabled={stale || publish.isPending}>
-                {de ? "Veröffentlichen" : "Publish"}
-              </Button>
+              {welcomeFields.map(([key, label]) => (
+                <Field key={key} id={id + "-" + key} label={t(label)}>
+                  <textarea
+                    value={draft[key]}
+                    maxLength={welcomeTextLimit}
+                    readOnly={
+                      protectedFields &&
+                      (key === "schedule_information" ||
+                        key === "contact_instructions" ||
+                        key === "joining_instructions")
+                    }
+                    onChange={(event) =>
+                      editText(key, event.currentTarget.value)
+                    }
+                  />
+                </Field>
+              ))}
+              {canProtect && (
+                <label className="course-welcome-check">
+                  <input
+                    type="checkbox"
+                    checked={draft.protect_instructions}
+                    onChange={(event) => {
+                      const checked = event.currentTarget.checked;
+                      setDraft(
+                        (previous) =>
+                          previous && {
+                            ...previous,
+                            protect_instructions: checked,
+                          },
+                      );
+                    }}
+                  />
+                  {t("welcomeProtectInstructions")}
+                </label>
+              )}
+              {protectedFields && (
+                <p className="muted">{t("welcomeInstructionsProtected")}</p>
+              )}
+              <fieldset className="course-welcome-attachments">
+                <legend>{t("welcomeAttachments")}</legend>
+                <p className="muted">
+                  {t("welcomeAttachmentHint", {
+                    limit: welcomeAttachmentLimit,
+                  })}
+                </p>
+                {eligibleResources.map((resource) => {
+                  const checked = draft.attachment_ids.includes(resource.id);
+                  return (
+                    <label key={resource.id} className="course-welcome-check">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={
+                          !checked &&
+                          draft.attachment_ids.length >= welcomeAttachmentLimit
+                        }
+                        onChange={(event) =>
+                          selectAttachment(
+                            resource.id,
+                            event.currentTarget.checked,
+                          )
+                        }
+                      />
+                      {resource.name}
+                    </label>
+                  );
+                })}
+              </fieldset>
+            </>
+          )}
+          {stale && <Notice kind="error">{t("welcomeVersionChanged")}</Notice>}
+          {!stale && publish.isError && (
+            <Notice kind="error">{t("welcomePublishError")}</Notice>
+          )}
+          <div className="form-actions">
+            {preview ? (
+              <>
+                <Button type="submit" disabled={stale || publish.isPending}>
+                  {t("welcomePublish")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={publish.isPending}
+                  onClick={() => setPreview(false)}
+                >
+                  {t("welcomeBackToDraft")}
+                </Button>
+              </>
+            ) : (
               <Button
                 type="button"
-                variant="secondary"
-                disabled={publish.isPending}
-                onClick={() => setDraft(null)}
+                disabled={stale}
+                onClick={() => setPreview(true)}
               >
-                {de ? "Abbrechen" : "Cancel"}
+                {t("welcomePreview")}
               </Button>
-            </div>
-          </form>
-        ))}
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={publish.isPending}
+              onClick={() => {
+                setDraft(null);
+                setPreview(false);
+                publish.reset();
+              }}
+            >
+              {t("welcomeCancel")}
+            </Button>
+          </div>
+        </form>
+      )}
     </section>
   );
 }

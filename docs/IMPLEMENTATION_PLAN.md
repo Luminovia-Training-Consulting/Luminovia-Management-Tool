@@ -16,6 +16,14 @@
 
 This pass covers source implementation and local tests. CI, deployment, production mail and hosting acceptance are tracked separately.
 
+## Open product work after the 21 November source review
+
+- Finish the company participant centre. The current centre lists active memberships and supports invitations and links. It still needs the consolidated per-participant course and attendance view, company reference numbers and a scoped invitation/action history.
+- Complete the learner, lecturer and company journeys across Premium OFF/ON and both dedicated editions, including native Realtime revocation, exact document delivery and physical PWA acceptance. Published welcome content, isolated permission checks and licence-grace checks are recorded in the work log.
+- Complete general platform gaps in exception invoice issuance, structured settlement and contract-specific instalment deadlines, and handle formal changes affecting shared schedules or retained course evidence.
+- Connect the public Website sender separately and complete notification delivery and the remaining typed API, browser and accessibility acceptance.
+- Coordinate White-Label branding, installer, provider delivery, signed webhooks and customer upgrade/restore with the separate operations task. Retain independent managed and self-hosted acceptance in the White-Label roadmap.
+
 ## Academy bootstrap, release packaging and restored CI verification
 
 - [x] Generate a private runtime for a dedicated academy with its own origin, key material and persistent namespaces. Resolve both runtime configurations through actual Compose and verify that only the explicit ingress profile publishes ports.

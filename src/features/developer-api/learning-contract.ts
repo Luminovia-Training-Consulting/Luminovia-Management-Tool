@@ -4,6 +4,22 @@
  */
 import { z } from "zod";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
+import {
+  courseWelcomePublishRequestSchema,
+  courseWelcomeRevisionSchema,
+} from "../learning/welcome-content-schema.ts";
+
+export const courseWelcomeResult = z.toJSONSchema(courseWelcomeRevisionSchema);
+export const courseWelcomePublishedResult = z.toJSONSchema(
+  courseWelcomeRevisionSchema.safeExtend({
+    version: z.int().positive(),
+    published_at: z.iso.datetime({ offset: true }),
+  }),
+);
+export const courseWelcomeWrite = {
+  ...z.toJSONSchema(courseWelcomePublishRequestSchema),
+  required: ["p_run_id", "p_expected_version"],
+};
 
 const text = { type: "string" };
 const boolean = { type: "boolean" };

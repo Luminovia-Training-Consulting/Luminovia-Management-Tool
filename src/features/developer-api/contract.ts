@@ -26,6 +26,9 @@ import {
 } from "./notifications-contract.ts";
 import {
   courseEnrolmentsResult,
+  courseWelcomePublishedResult,
+  courseWelcomeResult,
+  courseWelcomeWrite,
   enrolmentState,
   meetingLinkResult,
   meetingUrl,
@@ -95,7 +98,6 @@ const optionalUsername = {
   maxLength: 32,
   pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$",
 };
-const welcomeText = { type: "string", maxLength: 4000 };
 const nullableUuid = { type: ["string", "null"], format: "uuid" };
 const nullableDateTime = { type: ["string", "null"], format: "date-time" };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
@@ -1182,34 +1184,21 @@ const nativePaths = {
     "Read the published welcome revision",
     "Requires an available Premium workspace. Only the current published revision is returned.",
     course,
-    object({
-      version,
-      description: welcomeText,
-      objectives: welcomeText,
-      joining_instructions: welcomeText,
-      published_at: { type: ["null", "string"], format: "date-time" },
-    }),
+    courseWelcomeResult,
   ),
-  "/rest/v1/rpc/publish_course_welcome_content": rpc(
-    "publishCourseWelcomeContent",
-    "Courses",
-    "Publish a new welcome revision",
-    "Available to currently authorized teaching staff and company contacts. Submit the last read version to detect concurrent changes.",
-    {
-      ...course,
-      p_description: welcomeText,
-      p_objectives: welcomeText,
-      p_joining_instructions: welcomeText,
-      p_expected_version: version,
+  "/rest/v1/rpc/publish_course_welcome_content": {
+    post: {
+      ...rpc(
+        "publishCourseWelcomeContent",
+        "Courses",
+        "Publish a new welcome revision",
+        "Available to currently authorised teaching staff and company contacts. Submit the last-read version and the full p_payload. Select up to 12 existing learner-visible course materials. Authorised management or company contacts control instruction protection. Legacy named text arguments remain supported and preserve the extended fields.",
+        {},
+        courseWelcomePublishedResult,
+      ).post,
+      requestBody: { required: true, content: json(courseWelcomeWrite) },
     },
-    object({
-      version,
-      description: welcomeText,
-      objectives: welcomeText,
-      joining_instructions: welcomeText,
-      published_at: { type: "string", format: "date-time" },
-    }),
-  ),
+  },
   "/rest/v1/rpc/set_course_exam_required": rpc(
     "setCourseExamRequired",
     "Premium LMS",

@@ -18,6 +18,14 @@ Local administrators can create and revoke organisation-scoped signed course web
 
 Both academy editions passed PostgreSQL and local HTTP delivery with the real worker. Checks covered tenant scope, transactional rollback, identical event IDs on retry, revoked leases and administrator authority, licence grace, a replacement release, and scanned learner-facing materials. Chromium with native Auth and PostgREST covered subscription and confirmed revocation on English desktop and German mobile. The new exact academy catalogue contains 58 operations, and its verifier authenticated a signed predecessor archive. An external receiver has not been configured.
 
+# 21 November 2026 — Internal Premium and academy course welcome
+
+Course staff and authorised company contacts can publish a versioned heading, welcome message, description, objectives, schedule and contact and joining instructions. The editor previews changes privately and links at most twelve existing learner-visible scanned course materials. Managers and authorised company contacts may protect operational instructions from lecturer edits. The original text-only publication request still works and preserves the rich values. Both API catalogues describe the existing and richer named argument sets.
+
+Disposable PostgreSQL and PostgREST 16.5 verified both overloads, fresh authority, stale versions, protected edits, attachment limits and file revocation. Both dedicated editions read a published revision during licence grace and refused publication. The complete browser and system suites remain deferred until the end of implementation.
+
+The other active Luminovia task was asked to own White-Label branding, installation, licence/release operations, webhooks, upgrade/restore and provider delivery. This task owns the learner and lecturer workflows in internal Premium and dedicated LMS. Both tasks retain independent release evidence and record shared interface changes.
+
 # 21 November 2026 — Job discovery query and typed portal contracts
 
 Multiple isolated Docker jobs hit PostgreSQL statement timeouts during the authenticated 1,057-offer discovery fixture. A forward migration skips candidate-level monetary quotes when the filter and sort do not need them. Each returned item still uses the existing actor-scoped quote, and monetary candidates still use current price visibility and bounds. On the same native PostgREST 16.5 executable and local PostgreSQL host, median time for eleven newest pages dropped from 1.991 s to 1.080 s. Full paging, stale cursors, title and amount sorting, manager nulls, private views and role revocation passed. The new migration follows the separately published academy branding migration.

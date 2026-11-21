@@ -1075,11 +1075,13 @@ function CourseWorkspaceLayout({
               editor={course.access.manager || course.access.client}
             />
             <CourseWelcomeContent
-              key={course.id}
+              key={`${actor}:${course.id}`}
               actor={actor}
               courseId={course.id}
               zone={course.time_zone}
               canEdit={canEdit && editor}
+              canProtect={course.access.manager || course.access.client}
+              resources={course.resources}
             />
             {!academy && (
               <CourseDestinations

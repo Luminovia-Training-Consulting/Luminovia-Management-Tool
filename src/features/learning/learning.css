@@ -382,3 +382,46 @@
     scroll-margin-block-start: 4.5rem;
   }
 }
+.course-welcome-content,
+.course-welcome-form,
+.course-welcome-files {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+.course-welcome-content h3,
+.course-welcome-content h4,
+.course-welcome-content h5,
+.course-welcome-text {
+  overflow-wrap: anywhere;
+}
+
+.course-welcome-text {
+  white-space: pre-wrap;
+}
+
+.course-welcome-preview,
+.course-welcome-attachments {
+  min-inline-size: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+}
+
+.course-welcome-files li,
+.course-welcome-check {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.course-welcome-files li {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.course-welcome-check input {
+  flex: none;
+}

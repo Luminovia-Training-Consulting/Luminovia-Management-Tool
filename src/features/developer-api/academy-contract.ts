@@ -48,6 +48,9 @@ import {
   academyTimetableSchema,
 } from "../learning/academy-timetable-schema.ts";
 import {
+  courseWelcomePublishedResult,
+  courseWelcomeResult,
+  courseWelcomeWrite,
   meetingLinkResult,
   meetingUrl,
   myWorkspacesResult,
@@ -494,17 +497,9 @@ const academyActivityActions = new Set([
   "completion_issue",
   "completion_revoke",
 ]);
-const welcomeText = { ...string, maxLength: 4000 };
 const attendanceVersion = { type: "integer", minimum: 0 };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
 const academyRegister = z.toJSONSchema(academyAttendanceRegisterSchema);
-const welcome = {
-  version: expectedVersion,
-  description: welcomeText,
-  objectives: welcomeText,
-  joining_instructions: welcomeText,
-  published_at: nullable(dateTime),
-};
 const rooms = list(
   record({ id: uuid, title: nullable(string), can_post: boolean }),
 );
@@ -743,25 +738,15 @@ const coursePaths = {
     "A course without a published revision returns version zero, empty text and a null publication time.",
     "active-or-grace",
     record(run),
-    record(welcome),
+    courseWelcomeResult,
   ),
   "/rest/v1/rpc/publish_course_welcome_content": courseOperation(
     "publishAcademyCourseWelcome",
     "Publish a course welcome revision",
-    "Course managers, assigned instructors and authorised contacts of the exact company can publish. Submit the last-read version to detect concurrent changes.",
+    "Course managers, assigned instructors and authorised contacts of the exact company can publish. Submit the last-read version and the full p_payload. Select up to 12 existing learner-visible course materials. Authorised management or company contacts control instruction protection. Legacy named text arguments remain supported and preserve the extended fields.",
     "active",
-    record({
-      ...run,
-      p_description: welcomeText,
-      p_objectives: welcomeText,
-      p_joining_instructions: welcomeText,
-      p_expected_version: expectedVersion,
-    }),
-    record({
-      ...welcome,
-      version: { ...expectedVersion, minimum: 1 },
-      published_at: dateTime,
-    }),
+    courseWelcomeWrite,
+    courseWelcomePublishedResult,
     true,
   ),
   "/functions/v1/files": materialUpload,
@@ -985,7 +970,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.25.0",
+      version: "1.26.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

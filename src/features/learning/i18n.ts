@@ -24,6 +24,62 @@ const pairs: Record<string, [string, string]> = {
   "reportCompletion.issued": ["Ausgestellt", "Issued"],
   "reportCompletion.revoked": ["Widerrufen", "Revoked"],
   "reportCompletion.not_issued": ["Ausstehend", "Not issued"],
+  welcomeCourseTitle: ["Willkommen im Kurs", "Welcome to the course"],
+  welcomeHeading: ["Überschrift", "Heading"],
+  welcomeCourseMessage: ["Begrüßung", "Welcome message"],
+  welcomeCourseDescription: ["Kursbeschreibung", "Course description"],
+  welcomeCourseObjectives: ["Lernziele", "Learning objectives"],
+  welcomeScheduleInformation: ["Hinweise zum Zeitplan", "Schedule information"],
+  welcomeContactInstructions: [
+    "Hinweise zur Kontaktaufnahme",
+    "Contact instructions",
+  ],
+  welcomeJoiningInstructions: [
+    "Hinweise zur Teilnahme",
+    "Joining instructions",
+  ],
+  welcomeNoContent: [
+    "Noch kein Willkommenstext veröffentlicht.",
+    "No welcome content has been published.",
+  ],
+  welcomeEdit: ["Willkommenstext bearbeiten", "Edit welcome content"],
+  welcomePreview: ["Vorschau", "Preview"],
+  welcomePreviewHint: [
+    "Teilnehmende sehen diese Fassung erst nach der Veröffentlichung.",
+    "Learners see this revision once it is published.",
+  ],
+  welcomePublish: ["Veröffentlichen", "Publish"],
+  welcomeBackToDraft: ["Zurück zum Entwurf", "Back to draft"],
+  welcomeCancel: ["Abbrechen", "Cancel"],
+  welcomePublished: [
+    "Version {{revision}} · veröffentlicht am {{date}}",
+    "Revision {{revision}} · published {{date}}",
+  ],
+  welcomeProtectInstructions: [
+    "Zeitplan-, Kontakt- und Teilnahmehinweise vor Änderungen durch Dozierende schützen",
+    "Protect schedule, contact and joining instructions from lecturer edits",
+  ],
+  welcomeInstructionsProtected: [
+    "Verwaltung und zuständige Unternehmenskontakte bearbeiten die geschützten Hinweise.",
+    "Managers and authorised company contacts edit the protected instructions.",
+  ],
+  welcomeAttachments: [
+    "Anhänge aus der Kursbibliothek",
+    "Course library attachments",
+  ],
+  welcomeAttachmentHint: [
+    "Wähle bis zu {{limit}} Materialien, die bereits für Teilnehmende freigegeben sind.",
+    "Select up to {{limit}} materials already shared with learners.",
+  ],
+  welcomeDownload: ["{{name}} herunterladen", "Download {{name}}"],
+  welcomeVersionChanged: [
+    "Eine andere Version wurde veröffentlicht. Sichere deine Änderungen und öffne den aktuellen Entwurf.",
+    "Another version was published. Copy your changes and open a draft from the latest revision.",
+  ],
+  welcomePublishError: [
+    "Veröffentlichung konnte nicht bestätigt werden.",
+    "Publication could not be confirmed.",
+  ],
   companyInvitations: ["Unternehmenseinladungen", "Company invitations"],
   acceptCompanyInvitation: [
     "Einladung von {{name}} annehmen",

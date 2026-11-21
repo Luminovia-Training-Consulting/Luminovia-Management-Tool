@@ -53,7 +53,7 @@ it("shows only the published version to a learner", async () => {
   ]);
 });
 
-it("publishes the edited content using the revision the editor opened", async () => {
+it("previews the edited content privately before publishing the opened revision", async () => {
   let current = first;
   rpc.mockImplementation((name) => {
     if (name === "course_welcome_content") {
@@ -67,15 +67,55 @@ it("publishes the edited content using the revision the editor opened", async ()
   fireEvent.change(screen.getByLabelText("Course description"), {
     target: { value: "New description" },
   });
+  fireEvent.change(screen.getByLabelText("Heading"), {
+    target: { value: "Welcome to our workshop" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+  expect(await screen.findByText("Welcome to our workshop")).toBeVisible();
+  expect(
+    rpc.mock.calls.every(([name]) => name === "course_welcome_content"),
+  ).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "Publish" }));
   await screen.findByText("New description");
   await waitFor(() =>
     expect(rpc).toHaveBeenCalledWith("publish_course_welcome_content", {
       p_run_id: "course",
-      p_description: "New description",
-      p_objectives: "",
-      p_joining_instructions: "",
       p_expected_version: 2,
+      p_payload: {
+        heading: "Welcome to our workshop",
+        description: "New description",
+        objectives: "",
+        joining_instructions: "",
+        welcome_message: "",
+        schedule_information: "",
+        contact_instructions: "",
+        protect_instructions: false,
+        attachment_ids: [],
+      },
     }),
   );
+});
+
+it("keeps protected instructions read-only for an assigned instructor", async () => {
+  rpc.mockReturnValue({
+    abortSignal: async () => ({
+      data: {
+        ...first,
+        protect_instructions: true,
+        joining_instructions: "Existing company instructions",
+      },
+      error: null,
+    }),
+  });
+  await view(true);
+  fireEvent.click(screen.getByRole("button", { name: "Edit welcome content" }));
+  expect(screen.getByLabelText("Joining instructions")).toHaveAttribute(
+    "readonly",
+  );
+  expect(screen.getByLabelText("Course description")).not.toHaveAttribute(
+    "readonly",
+  );
+  expect(
+    screen.queryByRole("checkbox", { name: /protect schedule/i }),
+  ).not.toBeInTheDocument();
 });
