@@ -59,9 +59,6 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
     values (${q(early)}, now() + interval '8 days', now() + interval '8 days 1 hour'),
            (${q(early)}, now() + interval '9 days', now() + interval '9 days 1 hour'),
            (${q(late)}, now() + interval '6 days', now() + interval '6 days 1 hour');
-    insert into public.course_enrolments(course_run_id, user_id, enrolled_by)
-    values (${q(early)}, ${q(learner.id)}, ${q(manager.id)}),
-           (${q(late)}, ${q(learner.id)}, ${q(manager.id)});
     insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
     values (${q(job)}, ${q(early)}, 'Fictional integration assignment', 'Fictional integration company', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional immutable terms');
     insert into public.job_sessions(job_id, starts_at, ends_at)
@@ -101,6 +98,36 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         p_expected_version: pending[0].version,
         p_request_id: randomUUID(),
     }))).status, "accepted");
+
+    // Exercise the live course enrolment form and participant withdrawal gate
+    // over REST. Never seed these enrolments directly into PostgreSQL.
+    const earlyArgs = {p_course_run_id: early};
+    const candidates = {...earlyArgs, p_search: learnerId};
+    assert.equal((await outsider.client.rpc("course_enrolment_candidates", candidates)).error?.code, "42501");
+    assert.equal((await peer.client.rpc("course_enrolment_candidates", candidates)).error?.code, "42501");
+    assert.deepEqual(
+        (await checked(company.client.rpc("course_enrolment_candidates", candidates))).map(({user_id}) => user_id),
+        [learner.id],
+    );
+    for (const courseId of [early, late]) {
+        const response = await company.client.rpc("manage_course_enrolment", {
+            p_course_run_id: courseId,
+            p_user_id: learner.id,
+            p_status: "enrolled",
+        });
+        await checked(Promise.resolve(response));
+        assert.equal(response.status, 204);
+    }
+    assert.deepEqual(await checked(company.client.rpc("course_enrolment_candidates", candidates)), []);
+    assert.equal(
+        (await checked(learner.client.rpc("course_withdrawal_window", earlyArgs))).can_withdraw,
+        true,
+    );
+    assert.equal(
+        (await checked(learner.client.rpc("course_withdrawal_window", {p_course_run_id: late}))).can_withdraw,
+        false,
+    );
+    assert.equal((await peer.client.rpc("course_withdrawal_window", earlyArgs)).error?.code, "42501");
 
     // Real JWTs must not allow foreign organisations or another participant to act.
     assert.equal(
@@ -179,11 +206,10 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         ),
         "100.00",
     );
-    await checked(
-        learner.client.rpc("cancel_own_course_enrolment", {
-            p_course_run_id: early,
-        }),
-    );
+    const withdrawal = await learner.client.rpc("cancel_own_course_enrolment", earlyArgs);
+    await checked(Promise.resolve(withdrawal));
+    assert.equal(withdrawal.status, 204);
+    assert.equal((await learner.client.rpc("course_withdrawal_window", earlyArgs)).error?.code, "42501");
     assert.equal(
         await sql(
             `select status from public.course_enrolments where course_run_id=${q(early)} and user_id=${q(learner.id)}`,
