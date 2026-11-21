@@ -148,10 +148,18 @@ function ChangeForm({
   const sharedSchedule =
     original?.shared_schedule_only ?? candidate?.shared_schedule_only ?? false;
   const sessionCountEditable = !linkedCourse || sharedSchedule;
+  const confirmedSessions = original?.original.sessions ?? source?.sessions;
   const startedSessions = new Set(
     sharedSchedule
       ? (source?.sessions ?? []).flatMap((session, index) =>
-          Date.parse(session.starts_at) <= openedAt ? [index] : [],
+          Date.parse(session.starts_at) <= openedAt &&
+          confirmedSessions?.some(
+            (confirmed) =>
+              confirmed.starts_at === session.starts_at &&
+              confirmed.ends_at === session.ends_at,
+          )
+            ? [index]
+            : [],
         )
       : [],
   );

@@ -375,6 +375,51 @@ it("keeps the exact started session while editing the remaining shared schedule"
     ),
   );
 });
+it("allows an elapsed proposed time to be corrected when the confirmed session is still in the future", async () => {
+  const current = data[0];
+  current.shared_schedule_only = true;
+  current.schedule_editable = true;
+  current.original.course_run_id = "ed000000-0000-4000-8000-000000000013";
+  current.proposed.course_run_id = current.original.course_run_id;
+  current.proposed.sessions = [
+    { starts_at: "2001-01-01T08:00:00Z", ends_at: "2001-01-01T09:00:00Z" },
+  ];
+  await i18n.changeLanguage("en");
+  mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit draft" }));
+  expect(
+    screen.queryByText(/Sessions already started/),
+  ).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Start 1")).not.toHaveAttribute("readonly");
+  fireEvent.change(screen.getByLabelText("Start 1"), {
+    target: { value: "2045-01-01T09:15" },
+  });
+  fireEvent.change(screen.getByLabelText("Finish 1"), {
+    target: { value: "2045-01-01T10:15" },
+  });
+  await user.click(screen.getByRole("button", { name: "Save draft online" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.objectContaining({
+        p_id: id,
+        p_expected_version: 1,
+        p_payload: {
+          reason: current.reason,
+          changes: {
+            sessions: [
+              {
+                starts_at: "2045-01-01T08:15:00.000Z",
+                ends_at: "2045-01-01T09:15:00.000Z",
+              },
+            ],
+          },
+        },
+      }),
+    ),
+  );
+});
 it("displays group progress and waits for every required approval before offering application", async () => {
   data[0] = {
     ...data[0],
