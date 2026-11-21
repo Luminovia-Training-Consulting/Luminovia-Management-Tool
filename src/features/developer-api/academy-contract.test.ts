@@ -20,6 +20,7 @@ const writePaths = [
   "/rest/v1/rpc/send_course_chat_message",
   "/rest/v1/rpc/academy_course_material_action",
   "/rest/v1/rpc/save_course_session_attendance",
+  "/rest/v1/rpc/set_course_exam_required",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -82,6 +83,30 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("documents the active-only exam decision without exam file operations", () => {
+      const write = spec.paths[writePaths[6]].post;
+      expect(write["x-portal-licence"]).toBe("active");
+      expect(write.responses).toHaveProperty("409");
+      expect(
+        write.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_run_id", "p_required", "p_expected_version"],
+      });
+      expect(
+        spec.paths[readPaths[1]].post.responses["200"].content[
+          "application/json"
+        ].schema,
+      ).toMatchObject({
+        properties: { exams: { properties: { documents: { maxItems: 0 } } } },
+      });
+      expect(spec.paths).not.toHaveProperty(
+        "/rest/v1/rpc/share_course_exam_pdf",
+      );
+      expect(spec.paths).not.toHaveProperty(
+        "/rest/v1/rpc/remove_course_exam_pdf",
+      );
     });
 
     it("describes read-only grace, version conflicts and empty attendance attachments", () => {

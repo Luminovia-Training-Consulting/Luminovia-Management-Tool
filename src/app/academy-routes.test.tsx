@@ -26,6 +26,7 @@ const fake = vi.hoisted(() => ({
   foreignCourse: false,
   registerAvailable: false,
   attendanceVersion: 0,
+  examRequired: false,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -162,6 +163,7 @@ beforeEach(async () => {
   fake.foreignCourse = false;
   fake.registerAvailable = false;
   fake.attendanceVersion = 0;
+  fake.examRequired = false;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -188,7 +190,20 @@ beforeEach(async () => {
         if (fake.foreignCourse) error = { code: "42501" };
         data = fake.foreignCourse
           ? null
-          : { ...workspace, sessions: fake.registerAvailable ? [session] : [] };
+          : {
+              ...workspace,
+              sessions: fake.registerAvailable ? [session] : [],
+              access:
+                fake.actor === "fictional-learner"
+                  ? {
+                      ...workspace.access,
+                      manager: false,
+                      staff: false,
+                      learner: true,
+                    }
+                  : workspace.access,
+              exams: { ...workspace.exams, required: fake.examRequired },
+            };
         break;
       case "course_session_register":
         data = {
@@ -411,3 +426,27 @@ it("waits for authentication before restoring the signed-out visitor's course li
     "location",
   );
 });
+
+it.each([false, true])(
+  "shows the academy learner exam route only when required (%s)",
+  async (required) => {
+    fake.actor = "fictional-learner";
+    fake.examRequired = required;
+    open(`/courses/${id}/workspace#course-exam`);
+    expect(
+      await screen.findByRole("heading", { name: "Fictional course room" }),
+    ).toBeVisible();
+    const link = screen.queryByRole("link", { name: "Exam" });
+    if (required) {
+      expect(link).toHaveAttribute("aria-current", "location");
+      expect(screen.getByText("Exam required")).toBeVisible();
+    } else {
+      expect(link).toBeNull();
+      expect(screen.queryByRole("region", { name: "Course exam" })).toBeNull();
+    }
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(fake.rpc.mock.calls.flat()).not.toContain(
+      "set_course_exam_required",
+    );
+  },
+);

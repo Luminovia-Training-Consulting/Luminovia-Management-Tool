@@ -17,9 +17,11 @@ import "./exam-i18n";
 export function CourseExams({
   course,
   actor,
+  academy,
 }: {
   course: CourseWorkspace;
   actor: string;
+  academy?: "active" | "grace";
 }) {
   const { t } = useTranslation("learningExams");
   const online = useOnline();
@@ -29,20 +31,24 @@ export function CourseExams({
     "students",
   );
   const [file, setFile] = useState<File | null>(null);
+  const canEdit = course.exams.can_edit && academy !== "grace";
   const refresh = () =>
     queries.invalidateQueries({
       queryKey: courseWorkspaceKey(actor, course.id),
     });
   const setting = useMutation({
-    mutationFn: async () => {
-      if (course.exams.version === null)
+    mutationFn: async (choice: boolean) => {
+      const version = course.exams.version;
+      if (!online || !canEdit || version === null)
         throw new Error("exam_editor_required");
-      const { error } = await db().rpc("set_course_exam_required", {
+      const { data, error } = await db().rpc("set_course_exam_required", {
         p_run_id: course.id,
-        p_required: required,
-        p_expected_version: course.exams.version,
+        p_required: choice,
+        p_expected_version: version,
       });
       if (error) throw error;
+      if (data?.required !== choice || data.version !== version + 1)
+        throw new Error("unconfirmed");
     },
     onSuccess: refresh,
   });
@@ -82,19 +88,36 @@ export function CourseExams({
     mutationFn: async ({ id, name }: { id: string; name: string }) =>
       downloadCourseDocument("exam", id, name),
   });
+  const stale =
+    setting.isError &&
+    "code" in setting.error &&
+    setting.error.code === "PT409";
 
   // No exam area is rendered for a participant while this course's switch is OFF.
-  if (!course.exams.can_edit && !course.exams.required) return null;
+  if (
+    !canEdit &&
+    !course.exams.required &&
+    !(academy && (course.access.staff || course.access.client))
+  )
+    return null;
   return (
     <section className="panel learning-panel" aria-label={t("title")}>
       <h2>{t("title")}</h2>
-      {course.exams.can_edit && (
+      {academy && (
+        <p>{t(course.exams.required ? "required" : "notRequired")}</p>
+      )}
+      {canEdit && (
         <>
-          <p>{t("settingHelp")}</p>
+          {!academy && <p>{t("settingHelp")}</p>}
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              setting.mutate();
+              if (
+                !stale &&
+                !setting.isPending &&
+                required !== course.exams.required
+              )
+                setting.mutate(required);
             }}
           >
             <Field id="exam-required" label={t("title")}>
@@ -102,7 +125,7 @@ export function CourseExams({
                 id="exam-required"
                 value={required ? "yes" : "no"}
                 onChange={(event) => setRequired(event.target.value === "yes")}
-                disabled={!online || setting.isPending}
+                disabled={!online || setting.isPending || stale}
               >
                 <option value="yes">{t("required")}</option>
                 <option value="no">{t("notRequired")}</option>
@@ -112,50 +135,53 @@ export function CourseExams({
               disabled={
                 !online ||
                 setting.isPending ||
+                stale ||
                 required === course.exams.required
               }
             >
               {t("saveSetting")}
             </Button>
           </form>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              share.mutate();
-            }}
-          >
-            <Field id="exam-file" label={t("file")}>
-              <input
-                id="exam-file"
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                disabled={!online || share.isPending}
-              />
-            </Field>
-            <Field id="exam-audience" label={t("audience")}>
-              <select
-                id="exam-audience"
-                value={audience}
-                onChange={(event) =>
-                  setAudience(event.target.value as "students" | "exam_staff")
-                }
-                disabled={!online || share.isPending}
-              >
-                <option value="students">{t("students")}</option>
-                {course.access.staff && (
-                  <option value="exam_staff">{t("exam_staff")}</option>
-                )}
-              </select>
-            </Field>
-            <Button disabled={!online || share.isPending || !file}>
-              {t("upload")}
-            </Button>
-          </form>
+          {!academy && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                share.mutate();
+              }}
+            >
+              <Field id="exam-file" label={t("file")}>
+                <input
+                  id="exam-file"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  disabled={!online || share.isPending}
+                />
+              </Field>
+              <Field id="exam-audience" label={t("audience")}>
+                <select
+                  id="exam-audience"
+                  value={audience}
+                  onChange={(event) =>
+                    setAudience(event.target.value as "students" | "exam_staff")
+                  }
+                  disabled={!online || share.isPending}
+                >
+                  <option value="students">{t("students")}</option>
+                  {course.access.staff && (
+                    <option value="exam_staff">{t("exam_staff")}</option>
+                  )}
+                </select>
+              </Field>
+              <Button disabled={!online || share.isPending || !file}>
+                {t("upload")}
+              </Button>
+            </form>
+          )}
         </>
       )}
-      {!course.exams.documents.length && <p>{t("empty")}</p>}
-      {course.exams.documents.length > 0 && (
+      {!academy && !course.exams.documents.length && <p>{t("empty")}</p>}
+      {!academy && course.exams.documents.length > 0 && (
         <ul className="learning-resources">
           {course.exams.documents.map((document) => (
             <li key={document.id}>
@@ -174,7 +200,7 @@ export function CourseExams({
                 >
                   {t("download")}
                 </Button>
-                {course.exams.can_edit && (
+                {canEdit && (
                   <Button
                     variant="ghost"
                     disabled={!online || remove.isPending}
@@ -194,7 +220,14 @@ export function CourseExams({
       {(setting.isError ||
         share.isError ||
         remove.isError ||
-        download.isError) && <Notice kind="error">{t("error")}</Notice>}
+        download.isError) && (
+        <Notice kind="error">{t(stale ? "conflict" : "error")}</Notice>
+      )}
+      {stale && (
+        <Button variant="secondary" onClick={() => void refresh()}>
+          {t("refresh")}
+        </Button>
+      )}
     </section>
   );
 }

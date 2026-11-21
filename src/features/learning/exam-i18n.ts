@@ -26,6 +26,11 @@ const pairs: Record<string, [string, string]> = {
     "Die Änderung konnte nicht bestätigt werden. Prüfe den aktuellen Kursstand und versuche es erneut.",
     "The change could not be confirmed. Refresh the course and try again.",
   ],
+  conflict: [
+    "Die Prüfungseinstellung wurde inzwischen geändert. Lade den Kurs neu, bevor du sie erneut bearbeitest.",
+    "The exam setting has changed. Refresh the course before editing it again.",
+  ],
+  refresh: ["Kurs neu laden", "Refresh course"],
 };
 
 for (const [language, index] of [

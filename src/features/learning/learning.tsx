@@ -733,9 +733,8 @@ function CourseWorkspaceLayout({
   const editor = course.access.staff || course.access.client;
   const canEdit = academy !== "grace";
   const examVisible = Boolean(
-    !academy &&
     course.exams &&
-    (course.exams.required || course.exams.can_edit),
+    (course.exams.required || course.exams.can_edit || (academy && editor)),
   );
   const hasActivities = !academy && (learner || editor);
   const hasRegister = editor && course.sessions.length > 0;
@@ -913,6 +912,7 @@ function CourseWorkspaceLayout({
                 key={course.exams.version ?? course.exams.required.toString()}
                 course={course}
                 actor={actor}
+                academy={academy}
               />
             </div>
           )}

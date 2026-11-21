@@ -225,7 +225,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await assert.rejects(rpc(participant, "set_course_exam_required", [runA, true, 0]), /42501/);
             await assert.rejects(rpc(client, "share_course_exam_pdf", [runB, examPaperVersion, "students"]), /42501/);
             assert.deepEqual(await rpc(client, "set_course_exam_required", [runA, true, 0]), {required: true, version: 1});
-            await assert.rejects(rpc(admin, "set_course_exam_required", [runA, false, 0]), /40001/);
+            await assert.rejects(rpc(admin, "set_course_exam_required", [runA, false, 0]), /PT409/);
             const learnerExams = (await rpc(participant, "course_workspace", [runA])).exams;
             assert.deepEqual(learnerExams.documents.map((item) => item.id), [examPaperId]);
             assert.equal(learnerExams.version, null);

@@ -51,14 +51,14 @@ function course(
 }
 
 const clients: QueryClient[] = [];
-function show(value: CourseWorkspace) {
+function show(value: CourseWorkspace, academy?: "active" | "grace") {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
-      <CourseExams course={value} actor="learner" />
+      <CourseExams course={value} actor="learner" academy={academy} />
     </QueryClientProvider>,
   );
 }
@@ -125,4 +125,48 @@ it("publishes only the scanner-confirmed exact version through the editor RPC", 
       p_audience: "students",
     }),
   );
+});
+
+it("submits only the exact academy setting and never offers PDF actions", async () => {
+  const user = userEvent.setup();
+  show(course(false, true, false), "active");
+  expect(screen.queryByLabelText("Exam file (PDF)")).toBeNull();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Course exam" }),
+    "yes",
+  );
+  await user.click(screen.getByRole("button", { name: "Save exam setting" }));
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledExactlyOnceWith("set_course_exam_required", {
+    p_run_id: "fictional-course",
+    p_required: true,
+    p_expected_version: 0,
+  });
+  expect(fake.upload).not.toHaveBeenCalled();
+});
+
+it("shows the last exam decision without controls or PDF metadata in grace", () => {
+  show(course(true, true), "grace");
+  expect(screen.getByText("Exam required")).toBeVisible();
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Save exam setting" }),
+  ).toBeNull();
+  expect(screen.queryByText("Fictional exam.pdf")).toBeNull();
+});
+
+it("requires a fresh read after the academy exam version changes", async () => {
+  const user = userEvent.setup();
+  fake.rpc.mockResolvedValue({ data: null, error: { code: "PT409" } });
+  show(course(false, true), "active");
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Course exam" }),
+    "yes",
+  );
+  await user.click(screen.getByRole("button", { name: "Save exam setting" }));
+  expect(await screen.findByText(/exam setting has changed/i)).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Save exam setting" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Refresh course" })).toBeVisible();
 });

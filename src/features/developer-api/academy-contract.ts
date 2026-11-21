@@ -291,10 +291,17 @@ const coursePaths = {
   "/rest/v1/rpc/course_workspace": courseOperation(
     "readAcademyCourseWorkspace",
     "Read a course workspace and its online meeting link",
-    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. Grace sets its can_edit flag to false. The repeat_request field is always null in these editions.",
+    "Returns course details scoped to the caller’s current role. An ongoing online course may have a meeting link. The exam projection contains the recorded requirement and omits its version for learners. The exam documents array is always empty. Grace sets meeting and exam editing flags to false. The repeat_request field is always null in these editions.",
     "active-or-grace",
     record(run),
-    record({ ...workspaceResult.properties, repeat_request: nil }),
+    record({
+      ...workspaceResult.properties,
+      repeat_request: nil,
+      exams: record({
+        ...workspaceResult.properties.exams.properties,
+        documents: { ...list({}), maxItems: 0 },
+      }),
+    }),
   ),
   "/rest/v1/rpc/set_course_meeting_link": courseOperation(
     "setAcademyCourseMeetingLink",
@@ -372,6 +379,19 @@ const coursePaths = {
     }),
     true,
   ),
+  "/rest/v1/rpc/set_course_exam_required": courseOperation(
+    "setAcademyCourseExamRequirement",
+    "Set whether the course requires an exam",
+    "Current course managers, assigned instructors and authorised contacts of the exact company may update the requirement. Use the setting version from the course workspace. The operation records a new version and preserves any retained files and enrolments.",
+    "active",
+    record({
+      ...run,
+      p_required: boolean,
+      p_expected_version: expectedVersion,
+    }),
+    record({ required: boolean, version: { ...expectedVersion, minimum: 1 } }),
+    true,
+  ),
   "/rest/v1/rpc/academy_ensure_course_chat": courseOperation(
     "ensureAcademyCourseChat",
     "Open the course participant text room",
@@ -420,7 +440,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.4.0",
+      version: "1.5.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
