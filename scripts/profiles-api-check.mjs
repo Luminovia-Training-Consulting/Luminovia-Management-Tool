@@ -296,17 +296,27 @@ await withApiFixture(async (fixture) => {
             })
         ).error,
     );
-    assert.ok(
-        (
-            await student.client.rpc("submit_course_review", {
-                p_course_run_id: run,
-                p_lecturer_id: teacher.id,
-                p_rating: 1,
-                p_comment: "Stale",
-                p_version: 0,
-            })
-        ).error,
-    );
+    // Known application conflicts must return once through the pinned REST
+    // transport and preserve the accepted review.
+    const staleEdit = await student.client
+        .rpc("submit_course_review", {
+            p_course_run_id: run,
+            p_lecturer_id: teacher.id,
+            p_rating: 1,
+            p_comment: "Stale",
+            p_version: 0,
+        })
+        .abortSignal(AbortSignal.timeout(5000));
+    assert.equal(staleEdit.status, 409);
+    assert.equal(staleEdit.error?.code, "PT409");
+    const staleDelete = await student.client
+        .rpc("delete_course_review", {p_review_id: review, p_version: 0})
+        .abortSignal(AbortSignal.timeout(5000));
+    assert.equal(staleDelete.status, 409);
+    assert.equal(staleDelete.error?.code, "PT409");
+    const unchanged = await checked(student.client.rpc("reviewable_courses"));
+    assert.equal(unchanged[0].review.comment, text);
+    assert.equal(unchanged[0].review.version, 1);
     await checked(
         admin.client.rpc("moderate_course_review", {
             p_review_id: review,

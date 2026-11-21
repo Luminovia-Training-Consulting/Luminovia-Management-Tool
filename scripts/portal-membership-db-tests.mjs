@@ -168,8 +168,10 @@ await withTestDatabase("portal_membership", async ({sql, actor}) => {
     const learnerReview = await actor(participant,
         `select public.submit_course_review('${run}','${lecturer}',4,'Helpful practice',0)`);
     assert.equal((await reviewed())[0].review.id,learnerReview);
+    await assert.rejects(actor(participant, `select public.submit_course_review('${run}','${lecturer}',1,'Obsolete edit',0)`), /PT409/);
     await assert.rejects(actor(participant, `select public.delete_course_review('${review}',1)`), /42501/);
-    await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',null)`), /40001/);
+    await assert.rejects(actor(participant, `select public.delete_course_review('${learnerReview}',null)`), /PT409/);
+    assert.equal((await reviewed())[0].review.comment,"Helpful practice");
     await sql(`update private.company_premium_settings set enabled=false,version=2 where organisation_id='${org}'`);
     assert.deepEqual(await visibleAccounts(participant), ownParticipantAccount);
     assert.deepEqual(await reviewed(), []);
