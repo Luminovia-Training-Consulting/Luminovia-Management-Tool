@@ -24,6 +24,12 @@ import {
   type CourseRunJobDefaults,
   courseRunJobDefaultsQuery,
 } from "../operations/building-blocks-api";
+import {
+  courseOfferCurrencySchema,
+  courseOfferRateUnitSchema,
+  courseRecordId,
+  type CourseRunOfferPayload,
+} from "../operations/course-building-block-schema";
 import "./course-i18n";
 import "../jobs/lifecycle-i18n";
 import "../jobs/briefing-i18n";
@@ -54,13 +60,8 @@ const schema = z.object({
   time_zone: z.string().refine(validZone),
   amount: z.number().nonnegative().max(1000000),
   total_amount: z.number().nonnegative().max(1000000),
-  currency: z.enum(["EUR", "AUD"]),
-  rate_unit: z.enum([
-    "per_day",
-    "per_teaching_unit",
-    "per_hour",
-    "fixed_total",
-  ]),
+  currency: courseOfferCurrencySchema,
+  rate_unit: courseOfferRateUnitSchema,
   terms: z.string().min(1).max(10000),
   publish: z.boolean(),
   requires_contract: z.boolean(),
@@ -223,14 +224,14 @@ function JobForm({
         status: publish ? "published" : "draft",
       };
       if (courseRun) {
-        const payload = {
+        const payload: CourseRunOfferPayload = {
           source_revision: courseRun.source_revision,
           currency: values.currency,
           rate_unit: values.rate_unit,
           terms: values.terms,
           requires_contract: values.requires_contract,
           claim_deadline: deadline,
-          status: base.status,
+          status: publish ? "published" : "draft",
           ...(gross
             ? { gross_amount: amount, gross_total_amount: total_amount }
             : { amount, total_amount }),
@@ -244,7 +245,7 @@ function JobForm({
           p_client_id: retry.current.key,
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
-        return data as string;
+        return courseRecordId.parse(data);
       }
       const payload = gross
         ? { ...base, gross_amount: amount, gross_total_amount: total_amount }

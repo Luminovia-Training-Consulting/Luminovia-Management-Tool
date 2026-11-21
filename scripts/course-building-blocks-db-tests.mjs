@@ -4,6 +4,18 @@ import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 import {renderCatalogueSql} from "./course-catalogue.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
+import {z} from "zod";
+
+const wire = portalOpenApi("https://portal.example.invalid").paths;
+const reviewedArguments = {
+    save_course_template: ([p_id, p_payload]) => ({p_id, p_payload}),
+    course_run_job_defaults: ([p_course_run_id]) => ({p_course_run_id}),
+    create_course_run_job: ([p_course_run_id, p_payload, p_platform_percent, p_client_id]) =>
+        ({p_course_run_id, p_payload, p_platform_percent, p_client_id}),
+    job_building_block_reference: ([p_job_id]) => ({p_job_id}),
+};
 
 const catalogue = JSON.parse(
     readFileSync(new URL("../data/course-building-blocks.json", import.meta.url)),
@@ -36,9 +48,19 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             ids[who],
             ["client_requests", "commission_report"].includes(name)
                 ? `select coalesce(jsonb_agg(x),'[]'::jsonb) from ${invocation} x`
-                : `select ${invocation}`,
+                : Object.hasOwn(reviewedArguments, name)
+                    ? `select coalesce(to_jsonb(${invocation}), 'null'::jsonb)`
+                    : `select ${invocation}`,
             aal,
         );
+        if (Object.hasOwn(reviewedArguments, name)) {
+            const result = JSON.parse(value);
+            const schema = wire[`/rest/v1/rpc/${name}`].post.requestBody.content["application/json"].schema;
+            const parsed = z.fromJSONSchema(schema).safeParse(reviewedArguments[name](args));
+            assert.ok(parsed.success, `${name} successful request: ${parsed.error?.message}`);
+            assertLmsResponse(name, result);
+            return result;
+        }
         try {
             return JSON.parse(value);
         } catch {
@@ -584,6 +606,39 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 "0",
             );
+        },
+    );
+    await check(
+        "A plain unlinked preview has no catalogue or customer record and only its linked offer can be created",
+        async () => {
+            const plainTemplate = await rpc("admin", "save_course_template", [
+                null, {title: "Fictional ordinary template"},
+            ]);
+            const start = new Date(Date.now() + 160 * 86400000);
+            const plainRun = await rpc("admin", "save_course_run", [
+                null,
+                {template_id: plainTemplate, sessions: [{
+                    starts_at: start.toISOString(),
+                    ends_at: new Date(+start + 3600000).toISOString(),
+                }]},
+            ]);
+            const preview = await rpc("admin", "course_run_job_defaults", [plainRun]);
+            assert.equal(preview.organisation_id, null);
+            assert.equal(preview.customer_name, "");
+            assert.equal(preview.building_block_id, null);
+            assert.equal(preview.building_block_source_id, null);
+            await assert.rejects(
+                rpc("admin", "create_course_run_job", [
+                    plainRun, financial(preview.source_revision), null, randomUUID(),
+                ]),
+                /course_run_customer_required/,
+            );
+            const linkedRun = await createRun(plainTemplate, 65);
+            const current = await rpc("management", "course_run_job_defaults", [linkedRun]);
+            const linkedJob = await rpc("management", "create_course_run_job", [
+                linkedRun, financial(current.source_revision, false), null, randomUUID(),
+            ]);
+            assert.equal(await rpc("management", "job_building_block_reference", [linkedJob]), null);
         },
     );
     await check(

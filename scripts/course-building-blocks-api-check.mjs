@@ -7,6 +7,7 @@ import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
 import {enablePremiumAndLinkParticipant} from "./testing/company-participant.mjs";
+import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
 
 await withApiFixture(
     async ({service, actor, passwordOnly, sql, defer, checked}) => {
@@ -86,6 +87,16 @@ await withApiFixture(
         );
         await passwordOnly(admin.client);
         await passwordOnly(manager.client);
+        const templatePayload = {title: "Fictional ordinary authoring template", topic_ids: []};
+        const unauthorizedTemplate = await teacher.client.rpc("save_course_template", {
+            p_id: null, p_payload: templatePayload,
+        });
+        assert.equal(unauthorizedTemplate.status, 403);
+        const authored = await checked(admin.client.rpc("save_course_template", {
+            p_id: null, p_payload: templatePayload,
+        }));
+        templates.push(authored);
+        assertLmsResponse("save_course_template", authored);
         await checked(
             admin.client.rpc("save_lecturer_compensation", {
                 p_user_id: teacher.id,
@@ -183,6 +194,7 @@ await withApiFixture(
             p_payload: fee(before.source_revision),
             p_client_id: randomUUID(),
         });
+        assert.equal(stale.status, 400);
         assert.match(stale.error.message, /course_run_source_changed/);
         assert.equal(
             (
@@ -195,6 +207,7 @@ await withApiFixture(
         const preview = await checked(
             admin.client.rpc("course_run_job_defaults", {p_course_run_id: run}),
         );
+        assertLmsResponse("course_run_job_defaults", preview);
         assert.equal(preview.building_block_source_id, primary.id);
         assert.notEqual(before.source_revision, preview.source_revision);
         assert.ok(
@@ -224,6 +237,7 @@ await withApiFixture(
                 p_client_id: request,
             }),
         );
+        assertLmsResponse("create_course_run_job", job);
         assert.equal(
             await checked(
                 admin.client.rpc("create_course_run_job", {
@@ -268,6 +282,7 @@ await withApiFixture(
         const source = await checked(
             teacher.client.rpc("job_building_block_reference", {p_job_id: job}),
         );
+        assertLmsResponse("job_building_block_reference", source);
         assert.equal(source.source_id, primary.id);
         assert.ok(
             (

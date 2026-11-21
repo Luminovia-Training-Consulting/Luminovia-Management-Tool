@@ -51,15 +51,8 @@ import {
 } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
 
-/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
-const templateSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  description: z.string().max(12000),
-  syllabus: z.string().max(30000),
-  prerequisites: z.string().max(8000),
-  topic_ids: z.array(z.string()),
-  archived: z.boolean(),
-});
+import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
+
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const runSchema = z.object({
   template_id: z.uuid(),
