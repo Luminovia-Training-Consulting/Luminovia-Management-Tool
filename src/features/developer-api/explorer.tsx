@@ -148,7 +148,7 @@ function ExplorerSession({
               async () => (await db().auth.getSession()).data.session,
               brand,
             );
-            if (!permit.current) throw new Error("api_session_required");
+            if (permit.current !== approval) throw new Error("api_session_required");
             return permitted;
           }}
         />

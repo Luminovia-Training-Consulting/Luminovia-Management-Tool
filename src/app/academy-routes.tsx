@@ -10,6 +10,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
 import { Preferences } from "../components/preferences";
@@ -35,7 +36,13 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration|\/timetable|\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration|\/timetable|\/notifications|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+
+const AcademyApiExplorer = lazy(() =>
+  import("../features/developer-api/explorer").then(
+    ({ AcademyApiExplorer }) => ({ default: AcademyApiExplorer }),
+  ),
+);
 
 function AcademyLogin() {
   const { session } = useAuth();
@@ -209,6 +216,7 @@ export function AcademyRoutes() {
           />
           <Route path="/notifications" element={<AcademyInbox />} />
           <Route path="/timetable" element={<AcademyTimetableRoute />} />
+          <Route path="/api/docs" element={<AcademyApiExplorer />} />
           <Route
             path="/courses"
             element={<Navigate to="/learning" replace />}

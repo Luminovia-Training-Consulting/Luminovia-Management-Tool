@@ -217,18 +217,19 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
           </p>
           <div className="help-actions">
             <Button asChild variant="secondary">
-              {portalInternalEdition ? (
-                <Link to="/api/docs">
-                  {i18n.language.startsWith("de")
-                    ? "API-Dokumentation"
-                    : "API documentation"}
-                </Link>
-              ) : (
+              <Link to="/api/docs">
+                {i18n.language.startsWith("de")
+                  ? "API-Dokumentation"
+                  : "API documentation"}
+              </Link>
+            </Button>
+            {!portalInternalEdition && (
+              <Button asChild variant="ghost">
                 <a href="/api/openapi.json" download>
                   OpenAPI JSON
                 </a>
-              )}
-            </Button>
+              </Button>
+            )}
             {portalInternalEdition && (
               <Button asChild>
                 <Link to="/demo">
