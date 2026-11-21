@@ -476,7 +476,7 @@ it("opens the branded inbox from the bell and saves read state on the server", a
 it("reads the same branded inbox in grace without exposing write controls", async () => {
   fake.licence = "grace";
   open("/notifications");
-  const inbox = within(screen.getByRole("main"));
+  const inbox = within(await screen.findByRole("main"));
   expect(await inbox.findByText("Fictional course notice")).toBeVisible();
   expect(
     screen.queryByRole("button", {

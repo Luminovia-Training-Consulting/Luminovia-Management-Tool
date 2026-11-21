@@ -31,6 +31,9 @@
 - [x] Open dedicated course draft creation in the branded browser for current course managers. Native desktop and mobile checks verified both editions, local time interpretation, a persisted unpublished draft and no learner catalogue access. SQL confirms exact retries, rollback and template reuse.
 - [x] Enable versioned exam-required decisions and role-specific exam visibility in both dedicated editions. Verify the exact company and lecturer scope, retained enrolment and rejection of stale changes. Dedicated student PDF and staff answer-key transports remain under separate acceptance.
 - [x] Compare typed source template, job preview, file discovery and archive projections with the native API. Isolate PWA fixture actors from language changes performed by other application cases.
+- [x] Give both dedicated editions a scoped branded inbox. Verify chat, material, attendance and owned read-state operations in PostgreSQL, including active and grace access and forbidden cross-account writes.
+- [x] Expose the PWA install action when the browser offers it. Verify the built offline route boundaries and account data purging in desktop and mobile Chromium.
+- [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links

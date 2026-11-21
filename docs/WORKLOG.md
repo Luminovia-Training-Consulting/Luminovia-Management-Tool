@@ -1,3 +1,11 @@
+# 21 November 2026 — Dedicated course inbox and native PWA
+
+The standalone academy now has a branded bell and inbox for scoped chat, course material and own attendance notices. PostgreSQL verified both editions, foreign-item refusal, bounded pages, server-side read state, licence grace reads and retention on profile closure. The standalone notices do not enter the internal email or push queues. Separate customer channels still require their own delivery acceptance.
+
+Exam staff can publish an exact previously scanned student PDF with a versioned course action. Internal participants can persist their own language, theme and sidebar preferences. Dedicated draft and attendance controls were exercised at narrow Chromium widths with keyboard focus and touch targets. The focused frontend runs passed 156 cases. All four built PWA Chromium cases passed with the native Auth and REST fixtures, including offline separation of API routes, account changes and schedule purging. The native browser install action is covered by the install-event component tests.
+
+The isolated release checker now stages the reviewed application schemas used by the typed API contracts. The next white-label step is an independently configured customer runtime and a rehearsal of its signed release, first administrator and data-retaining upgrade. Hosted release work is pending.
+
 # 21 November 2026 — Branded course authoring and examined source contracts
 
 Course managers in both dedicated editions can create a draft from the branded course page. They can reuse a local template or create a new one in the same transaction, select an active local organisation, and confirm the intended IANA time zone and sessions. A retry with the same request and contents returns the existing draft. Changed requests conflict, and a rejected session leaves neither a new template nor a partial course. The resulting course stays unpublished with no marketplace job. Both built branded editions passed the complete desktop and mobile Chromium journeys with native GoTrue, PostgREST and the login handler. A learner cannot list the draft options or see the new course. The resulting offset-aware session instants were checked in PostgreSQL.
