@@ -14,6 +14,7 @@ const readPaths = [
   "/rest/v1/rpc/course_session_register",
   "/rest/v1/rpc/notification_inbox",
   "/rest/v1/rpc/academy_course_publication",
+  "/rest/v1/rpc/academy_timetable",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",

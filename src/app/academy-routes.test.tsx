@@ -315,6 +315,9 @@ beforeEach(async () => {
             }
           : null;
         break;
+      case "academy_timetable":
+        data = { rows: [], next: null };
+        break;
       case "academy_publish_course":
         fake.publicationAttempts++;
         if (fake.publicationAttempts === 1) error = { code: "PT409" };
@@ -520,6 +523,24 @@ it("creates an academy draft from the selected company and preserves its request
     },
   });
   expect(writes[1]).toEqual(writes[0]);
+});
+
+it("opens the dedicated timetable through its main navigation link", async () => {
+  open("/learning");
+  await userEvent.click(await screen.findByRole("link", { name: "Timetable" }));
+  expect(
+    await screen.findByRole("heading", { name: "Timetable" }),
+  ).toBeVisible();
+  expect(
+    await screen.findByText("There are no course sessions in this date range."),
+  ).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_timetable",
+    expect.objectContaining({
+      p_from: expect.any(String),
+      p_until: expect.any(String),
+    }),
+  );
 });
 
 it("opens local user administration only after the authority is confirmed", async () => {

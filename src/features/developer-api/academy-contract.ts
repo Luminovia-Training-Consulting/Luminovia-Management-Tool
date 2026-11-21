@@ -19,6 +19,10 @@ import {
 import { notificationPaths } from "./notifications-contract.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import {
+  academyTimetableRequestSchema,
+  academyTimetableSchema,
+} from "../learning/academy-timetable-schema.ts";
+import {
   meetingLinkResult,
   meetingUrl,
   myWorkspacesResult,
@@ -444,6 +448,17 @@ const coursePaths = {
     true,
   ),
   ...academyAdministrationPaths,
+  "/rest/v1/rpc/academy_timetable": courseOperation(
+    "readAcademyTimetable",
+    "List visible course sessions for a date range",
+    "Specify an inclusive range of up to 31 civil dates in each course’s time zone. Returns up to 100 sessions ordered by exact start and session ID. To continue, supply both values from the last response cursor. Includes only courses currently visible to the caller. Overnight sessions appear from their first visible date.",
+    "active-or-grace",
+    {
+      ...record({ p_from: string, p_until: string }, ["p_from", "p_until"]),
+      ...z.toJSONSchema(academyTimetableRequestSchema),
+    },
+    z.toJSONSchema(academyTimetableSchema),
+  ),
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
     "listAcademyCourseWorkspaces",
     "List my course workspaces",
@@ -687,7 +702,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.11.0",
+      version: "1.12.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

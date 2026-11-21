@@ -22,6 +22,7 @@ import { Login } from "../features/auth/login";
 import { Password } from "../features/auth/password";
 import { HelpCenter } from "../features/help/help";
 import { AcademyAdministrationPage } from "../features/learning/academy-administration";
+import { AcademyTimetable } from "../features/learning/academy-timetable";
 import { LearningHubPage } from "../features/learning/course-hub";
 import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
@@ -34,7 +35,7 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration|\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration|\/timetable|\/notifications|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 function AcademyLogin() {
   const { session } = useAuth();
@@ -93,6 +94,7 @@ function AcademyCourseProfile() {
               <span>{installationBrand.name}</span>
             </Link>
             <div className="academy-header-actions">
+              <AcademyTimetableLink />
               <AcademyAdministrationLink actor={session.user.id} />
               <NotificationsMenu
                 id={session.user.id}
@@ -140,6 +142,15 @@ function AcademyAdministrationLink({ actor }: { actor: string }) {
   );
 }
 
+function AcademyTimetableLink() {
+  const { t } = useTranslation("academyTimetable");
+  return (
+    <Button variant="secondary" asChild>
+      <Link to="/timetable">{t("title")}</Link>
+    </Button>
+  );
+}
+
 function AcademyNotFound() {
   const { t } = useTranslation();
   return (
@@ -169,6 +180,11 @@ function AcademyInbox() {
   return <NotificationsPage academy={access} />;
 }
 
+function AcademyTimetableRoute() {
+  const { session } = useAuth();
+  return session && <AcademyTimetable actor={session.user.id} />;
+}
+
 export function AcademyRoutes() {
   return (
     <Routes>
@@ -192,6 +208,7 @@ export function AcademyRoutes() {
             element={<AcademyAdministrationPage />}
           />
           <Route path="/notifications" element={<AcademyInbox />} />
+          <Route path="/timetable" element={<AcademyTimetableRoute />} />
           <Route
             path="/courses"
             element={<Navigate to="/learning" replace />}
