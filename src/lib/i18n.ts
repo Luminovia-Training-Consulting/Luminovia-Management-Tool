@@ -484,6 +484,10 @@ const pairs: Record<string, [string, string]> = {
     "Dein Passwort wurde gespeichert.",
     "Your password was saved.",
   ],
+  initialPasswordHint: [
+    "Lege ein eigenes Passwort fest, bevor du Kurse und weitere Portalbereiche öffnest. Verwende mindestens 8 Zeichen mit Groß- und Kleinbuchstaben, einer Zahl und einem Sonderzeichen.",
+    "Choose your own password before opening courses or other portal areas. Use at least 8 characters with upper and lower case letters, a number and a symbol.",
+  ],
   notifications: ["Benachrichtigungen", "Notifications"],
   noneNotifications: [
     "Alles auf dem aktuellen Stand.",

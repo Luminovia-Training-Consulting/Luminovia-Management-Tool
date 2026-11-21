@@ -35,7 +35,7 @@ function fixture(overrides: Partial<AccountDependencies> = {}) {
     sendInvitation: async (item, redirect) => {
       assert.equal(item.role, "participant");
       assert.equal(item.organisation_id, organisation);
-      assert.equal(redirect, origin + "/auth/callback?type=invite");
+      assert.equal(redirect, origin + "/auth/callback");
       calls.push("invite");
       return userId;
     },

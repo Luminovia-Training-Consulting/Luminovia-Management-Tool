@@ -299,14 +299,17 @@ function AccountForm({
                 {word("Einladung per E-Mail", "Email invitation")}
               </option>
               <option value="password">
-                {word("Mit Passwort anlegen", "Create with password")}
+                {word(
+                  "Mit Startpasswort anlegen",
+                  "Create with a temporary password",
+                )}
               </option>
             </select>
           </Field>
           {mode === "password" && (
             <Field
               id="academy-account-password"
-              label={word("Neues Passwort", "New password")}
+              label={word("Startpasswort", "Temporary password")}
               hint={word(
                 "Mindestens 8 Zeichen mit Großbuchstaben, Kleinbuchstaben, Ziffern und Sonderzeichen.",
                 "At least 8 characters with upper and lower case letters, numbers and symbols.",

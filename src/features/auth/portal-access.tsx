@@ -5,6 +5,7 @@ import { ErrorState, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { useAuth } from "./auth-context";
+import { Password } from "./password";
 import { useOnline } from "../../lib/online";
 import { OfflineSchedule } from "../calendar/offline";
 import { portalInternalEdition } from "../../lib/installation-brand";
@@ -20,6 +21,7 @@ export function PortalAccess({ children }: { children: ReactNode }) {
     enabled: online,
     queryFn: async () => {
       const { data, error } = await db().rpc("portal_access");
+      if (error?.code === "PT428") return "password-setup" as const;
       // The REST pre-request gate deliberately returns 42501 for retired roles.
       if (error?.code === "42501") return false;
       if (error) throw error;
@@ -38,6 +40,8 @@ export function PortalAccess({ children }: { children: ReactNode }) {
     );
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
+  if (access.data === "password-setup")
+    return <Password onSetupComplete={access.refetch} />;
   if (!access.data) {
     const de = i18n.language.startsWith("de");
     return (

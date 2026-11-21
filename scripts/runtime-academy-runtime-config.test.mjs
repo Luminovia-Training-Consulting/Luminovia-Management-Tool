@@ -265,8 +265,13 @@ test(
         "service_healthy",
       );
       assert.equal(Boolean(withCapture.services.mailpit.ports?.length), false);
-      assert.ok(
-        !Object.hasOwn(auth.environment, "GOTRUE_MAILER_TEMPLATES_INVITE"),
+      assert.equal(
+        withCapture.services.auth.environment.GOTRUE_MAILER_TEMPLATES_INVITE,
+        "",
+      );
+      assert.equal(
+        auth.environment.GOTRUE_MAILER_TEMPLATES_INVITE,
+        identity.portal_origin + "/mail-templates/invite.html",
       );
       assert.match(
         auth.environment.GOTRUE_MAILER_SUBJECTS_RECOVERY,

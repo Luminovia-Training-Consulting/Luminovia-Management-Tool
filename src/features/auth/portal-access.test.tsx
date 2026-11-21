@@ -1,6 +1,7 @@
 /** The private shell only mounts after an affirmative current server response. */
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { PortalAccess } from "./portal-access";
 import "../../lib/i18n";
@@ -29,9 +30,11 @@ function show(knownAccess?: boolean) {
     client.setQueryData(["portal-access", "fictional"], knownAccess);
   render(
     <QueryClientProvider client={client}>
-      <PortalAccess>
-        <p>Private workspace</p>
-      </PortalAccess>
+      <MemoryRouter>
+        <PortalAccess>
+          <p>Private workspace</p>
+        </PortalAccess>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -42,6 +45,13 @@ it("does not mount private content when a retained token receives REST permissio
   expect(
     await screen.findByText(/Dein Konto hat keinen Portalzugriff/),
   ).toBeInTheDocument();
+  expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
+});
+it("opens only the personal password form for a provisional session", async () => {
+  state.rpc.mockResolvedValue({ data: null, error: { code: "PT428" } });
+  show();
+  expect(await screen.findByLabelText("Neues Passwort")).toBeVisible();
+  expect(screen.getByText(/Lege ein eigenes Passwort fest/)).toBeVisible();
   expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
 });
 it("mounts private content after positive database membership confirmation", async () => {

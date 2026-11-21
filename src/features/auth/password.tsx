@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Field, Notice, PageHeading } from "../../components/common";
@@ -25,8 +26,13 @@ const schema = z.object({
 });
 
 /** Change the current session's password and confirm only the successful SDK response. */
-export function Password() {
+export function Password({
+  onSetupComplete,
+}: {
+  onSetupComplete?: () => Promise<unknown>;
+}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const online = useOnline();
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -37,7 +43,12 @@ export function Password() {
   } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
   return (
     <div className="narrow">
-      <PageHeading title={t("setPassword")} description={t("passwordHint")} />
+      <PageHeading
+        title={t("setPassword")}
+        description={t(
+          onSetupComplete ? "initialPasswordHint" : "passwordHint",
+        )}
+      />
       <form
         className="panel"
         onSubmit={handleSubmit(async (values) => {
@@ -46,6 +57,11 @@ export function Password() {
           setFailed(false);
           try {
             const { error } = await db().auth.updateUser(values);
+            if (!error && onSetupComplete) {
+              await onSetupComplete();
+              navigate("/", { replace: true });
+              return;
+            }
             setFailed(Boolean(error));
             setMessage(error ? "error" : "passwordSaved");
           } catch {
@@ -71,6 +87,11 @@ export function Password() {
         <Button disabled={!online || isSubmitting}>{t("setPassword")}</Button>
         {message && (
           <Notice kind={failed ? "error" : "success"}>{t(message)}</Notice>
+        )}
+        {message === "passwordSaved" && (
+          <Button asChild variant="secondary">
+            <Link to="/">{t("goHome")}</Link>
+          </Button>
         )}
       </form>
     </div>

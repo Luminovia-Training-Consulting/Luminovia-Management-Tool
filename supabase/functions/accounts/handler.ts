@@ -319,7 +319,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 if (record.status === "reserved") {
                     try {
                         const identity = mode === "invite"
-                            ? await deps.sendInvitation(invitation, `${deps.appOrigin}/auth/callback?type=invite`)
+                            ? await deps.sendInvitation(invitation, `${deps.appOrigin}/auth/callback`)
                             : await deps.createAccount!({...invitation, password: password as string});
                         if (!uuid(identity)) throw new Error("creation_failed");
                         createdId = identity;
@@ -756,7 +756,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 try {
                     const userId = await deps.sendInvitation(
                         reservedInvitation,
-                        `${deps.appOrigin}/auth/callback?type=invite`,
+                        `${deps.appOrigin}/auth/callback`,
                     );
                     await deps.completeInvitation(
                         delivery.invitation_id,

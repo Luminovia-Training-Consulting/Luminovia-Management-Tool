@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { installationBrand } from "../../lib/installation-brand";
 import { useOnline } from "../../lib/online";
+import { Password } from "./password";
 
 export function CustomerInstallationAccess({
   actor,
@@ -124,10 +125,13 @@ function OnlineAcademyCourseAccess({
     refetchOnMount: "always",
     refetchInterval: 10_000,
     retry: false,
-    queryFn: async ({ signal }): Promise<CourseAccess | null> => {
+    queryFn: async ({
+      signal,
+    }): Promise<CourseAccess | "password-setup" | null> => {
       const { data, error } = await db()
         .rpc("installation_capabilities")
         .abortSignal(signal);
+      if (error?.code === "PT428") return "password-setup";
       if (error) throw error;
       if (
         !data ||
@@ -144,6 +148,7 @@ function OnlineAcademyCourseAccess({
       // Dedicated PostgREST evaluates the caller and exact operator-selected
       // course release before this RPC can return true.
       const access = await db().rpc("portal_access").abortSignal(signal);
+      if (access.error?.code === "PT428") return "password-setup";
       if (access.error?.code === "42501") return null;
       if (access.error) throw access.error;
       return access.data === true ? data.licence_status : null;
@@ -152,6 +157,8 @@ function OnlineAcademyCourseAccess({
   if (query.isPending || (query.isFetching && !query.isFetchedAfterMount))
     return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+  if (query.data === "password-setup")
+    return <Password onSetupComplete={query.refetch} />;
   if (!query.data)
     return (
       <main className="auth-page">

@@ -8,11 +8,7 @@ services:
     profiles: ["mail-capture"]
     ports: !reset []
   auth:
-    # Default Auth templates are available before public ingress is opened.
-    # A customer sender/relay can be configured before enabling invitations.
     environment:
-      GOTRUE_MAILER_TEMPLATES_INVITE: !reset null
-      GOTRUE_MAILER_TEMPLATES_RECOVERY: !reset null
       GOTRUE_MAILER_SUBJECTS_INVITE: "Einladung zur Akademie / Academy invitation"
       GOTRUE_MAILER_SUBJECTS_RECOVERY: "Passwort zurücksetzen / Reset password"
   web:
@@ -31,6 +27,7 @@ services:
     volumes:
       - ../Caddyfile:/etc/caddy/Caddyfile:ro
       - ${PORTAL_WWW_DIR:?Set the academy browser directory}:/srv:ro
+      - ../../../supabase/templates:/mail-templates:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [backend]

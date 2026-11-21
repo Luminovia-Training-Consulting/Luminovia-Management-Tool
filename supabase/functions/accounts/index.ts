@@ -148,6 +148,7 @@ Deno.serve(
                 email: account.email,
                 password: account.password,
                 email_confirm: true,
+                app_metadata: {portal_temporary_password: true},
             });
             if (result.error || !result.data.user) throw new Error("creation_failed");
             return result.data.user.id;
@@ -165,9 +166,10 @@ Deno.serve(
             if (result.error) throw new Error("creation_cleanup_failed");
         },
         sendInvitation: async (invitation, redirectTo) => {
+            const username = "member-" + crypto.randomUUID().replaceAll("-", "").slice(0, 24);
             const result = await service.auth.admin.inviteUserByEmail(
                 invitation.email,
-                {redirectTo},
+                {redirectTo, data: {portal_invitation_username: username}},
             );
             if (result.error || !result.data.user) {
                 throw new Error("invitation_unavailable");
