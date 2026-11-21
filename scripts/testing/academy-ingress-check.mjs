@@ -8,6 +8,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { connect as connectTls } from "node:tls";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -36,6 +37,20 @@ const upstream = createServer((request, response) => {
     }),
   );
 });
+upstream.on("upgrade", (request, socket) => {
+  const key = request.headers["sec-websocket-key"];
+  if (request.url !== "/realtime/v1/websocket" || typeof key !== "string") {
+    socket.destroy();
+    return;
+  }
+  const accept = createHash("sha1")
+    .update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+    .digest("base64");
+  socket.write(
+    `HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+  );
+  socket.setTimeout(3500, () => socket.end());
+});
 const listening = once(upstream, "listening");
 upstream.listen(0, "127.0.0.1");
 await listening;
@@ -49,8 +64,8 @@ try {
   const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
   const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
   assert.ok(
-    allowance > 0 && allowance <= 1000,
-    "Use a staging licence with at most 1,000 requests per minute",
+    allowance >= 2 && allowance <= 1000,
+    "Use a staging licence with 2–1,000 requests per minute",
   );
   const envoyConfig = join(root, "envoy.yml");
   await writeFile(
@@ -106,6 +121,7 @@ try {
   exited = once(caddy, "close");
 
   const headersFile = join(root, "headers");
+  const trustRoot = join(root, "caddy/pki/authorities/local/root.crt");
   const request = async (route, status) => {
     const { stdout } = await exec(
       "curl",
@@ -116,7 +132,7 @@ try {
         "*",
         "--http1.1",
         "--cacert",
-        join(root, "caddy/pki/authorities/local/root.crt"),
+        trustRoot,
         "--resolve",
         hostname + ":" + localPort + ":127.0.0.1",
         "-H",
@@ -127,10 +143,10 @@ try {
       ],
       { timeout: 3000, encoding: "buffer", maxBuffer: 20 * 1024 * 1024 },
     );
-    const headers = (await readFile(headersFile, "utf8")).toLowerCase();
-    assert.match(headers, new RegExp("^http/1.1 " + status + " "));
-    assert.match(headers, /content-security-policy:/);
-    return { bytes: stdout, headers };
+    const received = (await readFile(headersFile, "utf8")).toLowerCase();
+    assert.match(received, new RegExp("^http/1.1 " + status + " "));
+    assert.match(received, /content-security-policy:/);
+    return { bytes: stdout, headers: received };
   };
 
   for (let attempt = 0; ; attempt++) {
@@ -181,8 +197,45 @@ try {
     referer: null,
   });
   assert.match(headers, /cache-control: no-store, private/);
+  const socket = connectTls({
+    host: "127.0.0.1",
+    port: Number(localPort),
+    servername: hostname,
+    ca: await readFile(trustRoot),
+  });
+  socket.setTimeout(3000, () =>
+    socket.destroy(new Error("WebSocket handshake timed out")),
+  );
+  try {
+    await once(socket, "secureConnect");
+    socket.write(
+      [
+        "GET /backend/realtime/v1/websocket HTTP/1.1",
+        "Host: " + hostname,
+        "Connection: Upgrade",
+        "Upgrade: websocket",
+        "Sec-WebSocket-Version: 13",
+        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
+        "",
+        "",
+      ].join("\r\n"),
+    );
+    let response = "";
+    for await (const chunk of socket) {
+      response += chunk.toString("ascii");
+      if (response.includes("\r\n\r\n")) break;
+    }
+    assert.match(response, /^HTTP\/1\.1 101 /);
+    assert.match(response, /upgrade: websocket/i);
+    assert.match(
+      response,
+      /sec-websocket-accept: s3pPLMBiTxaQ9kYGzzhZRbK\+xOo=/i,
+    );
+  } finally {
+    socket.destroy();
+  }
 
-  for (let consumed = 1; consumed < allowance; consumed++)
+  for (let consumed = 2; consumed < allowance; consumed++)
     await request("/backend/rest/v1/", 200);
   assert.match(
     (await request("/backend/rest/v1/", 429)).headers,

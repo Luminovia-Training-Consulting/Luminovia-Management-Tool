@@ -4,7 +4,7 @@ Both dedicated editions enforce signed seat limits across account reservation an
 
 The private Mailpit override points GoTrue invitation and recovery mail at the local capture mailbox. Both editions passed through the image-pinned GoTrue and Mailpit binaries with the rendered capture settings. Both fictional messages used that academy's own verification origin and path. Provider delivery, public DNS and full independent Compose deployment remain acceptance steps.
 
-Both built licence panels passed in Chromium at 1,440, Pixel 7 and 320 pixels with native Auth and REST. The browser verified active and grace status, current occupancy, a German dark layout and removal of the licence panel after an administrator lost authority. The signed 1.21 catalogue now has 44 scoped operations. The isolated E2E release package check accepted both editions and the 75-request TLS ingress test.
+Both built licence panels passed in Chromium at 1,440, Pixel 7 and 320 pixels with native Auth and REST. The browser verified active and grace status, current occupancy, a German dark layout and removal of the licence panel after an administrator lost authority. The signed 1.21 catalogue now has 44 scoped operations. Exact application revision `0a169f60` passed 1,235 frontend tests, 135 SQL suites, 133 Edge cases and 27 package/licence/runtime cases. Both editions passed the native Caddy/Envoy TLS test with 102 signed static files each, a Realtime WebSocket handshake and the exact 75-request allowance.
 
 # 21 November 2026 — Signed API allowance and private database target
 
