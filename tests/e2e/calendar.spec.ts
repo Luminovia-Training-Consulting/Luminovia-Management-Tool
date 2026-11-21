@@ -148,12 +148,14 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     expect(original.time_zone).toBe("Australia/Brisbane");
     expect(writes).toBe(1);
     const calendarEvent = page.locator(".fc-event").filter({hasText: title});
-    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^10(?::00| Uhr)$/);
+    const eventTime = calendarEvent.locator(".fc-event-time, .fc-list-event-time");
+    // The month grid shows the start. The mobile list shows the full interval.
+    await expect(eventTime).toHaveText(/^10(?::00| Uhr)(?:\s*[-–]\s*11:00)?$/);
     await displayZone.selectOption("UTC");
-    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^0{1,2}(?::00| Uhr)$/);
+    await expect(eventTime).toHaveText(/^0{1,2}(?::00| Uhr)(?:\s*[-–]\s*0?1:00)?$/);
     expect(writes, "Changing the display zone must not edit the event").toBe(1);
     await displayZone.selectOption("");
-    await expect(calendarEvent.locator(".fc-event-time")).toHaveText(/^10(?::00| Uhr)$/);
+    await expect(eventTime).toHaveText(/^10(?::00| Uhr)(?:\s*[-–]\s*11:00)?$/);
     await page.reload();
     dialog = await eventDialog(page, title);
     await expect(dialog.getByLabel("Beginn", {exact: true})).toHaveValue(
