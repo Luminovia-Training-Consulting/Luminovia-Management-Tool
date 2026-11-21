@@ -248,3 +248,51 @@ it("only shares checked lecturer amounts and clears them when the evidence chang
       ),
   ).toBe(true);
 });
+
+it("shows customer-funded non-teaching days separately and keeps customer amounts out of the note", async () => {
+  render(
+    <QueryClientProvider client={client}>
+      <InvoiceReviewQueue actor="fictional-manager" />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("Abrechnung berechnen"));
+  const write = (label: string, value: string) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  write("Zeitzone des Auftrags", "Europe/Berlin");
+  write("Datum der Leistung", "2030-10-29");
+  await user.selectOptions(screen.getByLabelText("Leistung"), "nonTeaching");
+  const outcome = screen.getByLabelText("Ergebnis der Prüfung");
+  expect(outcome).not.toHaveValue("delivered");
+  await user.selectOptions(outcome, "customerNonTeaching");
+  write("Vereinbartes Honorar je Einheit (EUR)", "200");
+  write("Vereinbartes Kundenhonorar für diese Einheit", "512.42");
+  write(
+    "Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag",
+    "256.21",
+  );
+  await user.click(screen.getByRole("button", { name: "Berechnen" }));
+  expect(
+    screen.getByText("Vergütung für unterrichtsfreie Tage").nextElementSibling,
+  ).toHaveTextContent(/100,00\s*€/);
+  await user.click(
+    screen.getByLabelText(
+      "Ich habe den Vertrag, die Leistungen und die zugeordneten Belege geprüft.",
+    ),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Beträge in die Prüfnotiz übernehmen" }),
+  );
+  const editor = screen.getByRole("textbox", { name: /Prüfnotiz/ });
+  fireEvent.change(editor, {
+    target: { value: "Zahlung und Einzeltag geprüft." },
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Prüfung dokumentieren" }),
+  );
+  const note = fake.rpc.mock.calls.find(
+    ([name]) => name === "resolve_invoice_review_request",
+  )?.[1]?.p_note;
+  expect(note).toMatch(/Vergütung für unterrichtsfreie Tage: 100,00\s*€/);
+  expect(note).not.toMatch(/512[.,]42|256[.,]21/);
+});

@@ -8,6 +8,7 @@ import { FrameworkPaymentDatesFields } from "./framework-payment-dates-fields";
 import {
   calculateInvoiceSettlement,
   maximumSettlementUnits,
+  nonTeachingSettlementReasons,
   settlementReasons,
   type SettlementUnit,
 } from "./invoice-settlement";
@@ -54,15 +55,25 @@ function UnitFields({
   const { t } = useTranslation("invoiceSettlement");
   const id = useId();
   const notice = unit.reason === "timely" || unit.reason === "shortNotice";
+  const nonTeaching = unit.kind === "nonTeaching";
+  const options = nonTeaching
+    ? nonTeachingSettlementReasons
+    : settlementReasons;
   const input = (
     name: InputName,
-    options?: { hint?: string; monetary?: "lecturer" | "customer" },
+    options?: {
+      hint?: string;
+      label?: string;
+      monetary?: "lecturer" | "customer";
+    },
   ) => (
     <Field
       key={name}
       id={`${id}-${name}`}
       label={
-        options?.monetary === "lecturer" ? `${t(name)} (${currency})` : t(name)
+        options?.monetary === "lecturer"
+          ? `${t(name)} (${currency})`
+          : (options?.label ?? t(name))
       }
       hint={options?.hint}
     >
@@ -85,11 +96,13 @@ function UnitFields({
             onChange={(event) =>
               onEdit({
                 kind: event.currentTarget.value as SettlementUnit["kind"],
+                reason: "",
               })
             }
           >
             <option value="teaching">{t("teaching")}</option>
             <option value="assessment">{t("assessment")}</option>
+            <option value="nonTeaching">{t("nonTeaching")}</option>
           </select>
         </Field>
         {input("day")}
@@ -104,7 +117,7 @@ function UnitFields({
             }
           >
             <option value="">{t("choose")}</option>
-            {settlementReasons.map((reason) => (
+            {options.map((reason) => (
               <option value={reason} key={reason}>
                 {t(reason)}
               </option>
@@ -123,12 +136,18 @@ function UnitFields({
             {input("receivedNotice", { hint: t("offsetHint") })}
           </>
         )}
-        {unit.reason === "customer" && (
+        {(unit.reason === "customer" ||
+          unit.reason === "customerNonTeaching") && (
           <>
             {input("originalCustomerFee", { monetary: "customer" })}
             {input("receivedCustomerCompensation", {
               monetary: "customer",
-              hint: t("customerHint"),
+              label: t(
+                nonTeaching
+                  ? "receivedNonTeachingCompensation"
+                  : "receivedCustomerCompensation",
+              ),
+              hint: t(nonTeaching ? "nonTeachingHint" : "customerHint"),
             })}
           </>
         )}
@@ -171,6 +190,9 @@ export function InvoiceSettlementWorksheet({
     ? [
         [t("deliveredTotal"), result.deliveredCents],
         [t("cancellationTotal"), result.cancellationCents],
+        ...(units.some((unit) => unit.kind === "nonTeaching")
+          ? [[t("nonTeachingTotal"), result.nonTeachingCents]]
+          : []),
         [t("creditTotal"), result.creditedCents],
         [t("openTotal"), result.openCents],
       ].map(([label, amount]) => [

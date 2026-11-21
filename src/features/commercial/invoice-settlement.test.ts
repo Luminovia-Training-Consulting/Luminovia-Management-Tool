@@ -31,6 +31,7 @@ describe("invoice exception settlement worksheet", () => {
       ok: true,
       deliveredCents: 0,
       cancellationCents: 0,
+      nonTeachingCents: 0,
       creditedCents: 0,
       openCents: 0,
     });
@@ -71,9 +72,79 @@ describe("invoice exception settlement worksheet", () => {
       ok: true,
       deliveredCents: 14238,
       cancellationCents: 7119,
+      nonTeachingCents: 0,
       creditedCents: 7380,
       openCents: 13977,
     });
+  });
+
+  it("pays only the documented share for a non-teaching day and excludes excused unfunded service", () => {
+    const holiday = teaching({
+      kind: "nonTeaching",
+      reason: "customerNonTeaching",
+      day: "2030-10-29",
+      agreedFee: "200",
+      originalCustomerFee: "400",
+      receivedCustomerCompensation: "300",
+      credited: "50",
+    });
+    const excused = teaching({ day: "2030-10-30", reason: "excused" });
+    expect(
+      calculateInvoiceSettlement([teaching(), holiday, excused], zone),
+    ).toEqual({
+      ok: true,
+      deliveredCents: 14238,
+      cancellationCents: 0,
+      nonTeachingCents: 15000,
+      creditedCents: 5000,
+      openCents: 24238,
+    });
+    expect(
+      calculateInvoiceSettlement(
+        [
+          {
+            ...holiday,
+            credited: "0",
+            originalCustomerFee: "",
+            receivedCustomerCompensation: "0",
+          },
+        ],
+        zone,
+      ),
+    ).toMatchObject({ ok: true, openCents: 0 });
+    expect(
+      calculateInvoiceSettlement(
+        [
+          {
+            ...holiday,
+            originalCustomerFee: "",
+          },
+        ],
+        zone,
+      ),
+    ).toEqual({ ok: false, error: "customerAmountsInvalid", row: 1 });
+  });
+
+  it("checks the recorded unit type and blocks double use of non-teaching dates", () => {
+    const holiday = teaching({
+      kind: "nonTeaching",
+      reason: "customerNonTeaching",
+    });
+    const cancellation = teaching({ reason: "customer" });
+    for (const rows of [
+      [cancellation, holiday],
+      [holiday, cancellation],
+      [holiday, holiday],
+    ]) {
+      expect(calculateInvoiceSettlement(rows, zone)).toEqual({
+        ok: false,
+        error: "duplicateUnit",
+        row: 2,
+      });
+    }
+    expect(
+      calculateInvoiceSettlement([{ ...holiday, reason: "delivered" }], zone),
+    ).toEqual({ ok: false, error: "manualRequired", row: 1 });
   });
 
   it("counts one teaching date and a separate agreed assessment but rejects duplicate entries", () => {

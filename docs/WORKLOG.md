@@ -1,3 +1,7 @@
+# 21 November 2026 — Additional framework settlement cases
+
+The finance worksheet distinguishes excused unfunded absence and received customer remuneration for an agreed non-teaching date. The latter uses the cumulative portion attributable to the date, deducts prior credited amounts and has its own total. A mixed service and non-teaching entry for one date requires individual review. Partial delivery of an individual unit is also an explicit manual classification. The browser fixture drives the real lecturer-to-finance review and checks that the lecturer sees only the verified totals and no new invoice.
+
 # 21 November 2026 — Accounting API contracts and invitation browser coverage
 
 Published eight accounting OpenAPI contracts in both internal API views, sharing invoice, payment, capability and snapshot validators with the application. A fresh PostgreSQL 17.12 replay with PostgREST 16.5 and fictional fixture JWTs validated all eight successful wire shapes and five denial/validation results. The real Auth/Storage/scanner integration now checks the same published schemas, partial payment, additive reversal, redacted customer totals, immutable export reads and revoked-role errors. The complete Docker fixture for these new assertions still needs acceptance.

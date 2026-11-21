@@ -17,8 +17,8 @@ const pairs: Record<string, [string, string]> = {
     "Last agreed service unit in the assignment",
   ],
   customerReceipt: [
-    "Eingang der Stornozahlung des Kunden",
-    "Customer cancellation payment received",
+    "Eingang der Kundenzahlung für Absage oder unterrichtsfreien Tag",
+    "Customer payment received for cancellation or a non-teaching day",
   ],
   correctInvoice: [
     "Eingang der korrekten Rechnung bei unberechtigter Kurzfristabsage",
@@ -31,8 +31,8 @@ const pairs: Record<string, [string, string]> = {
   deadline_final: ["Schlusszahlung bis", "Final payment by"],
   deadline_interim: ["Abschlagszahlung bis", "Interim payment by"],
   deadline_customer: [
-    "Kundenfinanzierte Stornozahlung bis",
-    "Customer-funded cancellation payment by",
+    "Kundenfinanzierte Vergütung bis",
+    "Customer-funded payment by",
   ],
   deadline_shortNotice: [
     "Entschädigung für Kurzfristabsage bis",
@@ -50,6 +50,10 @@ const pairs: Record<string, [string, string]> = {
     "Separat vereinbarte Prüfungsleistung",
     "Separately agreed assessment",
   ],
+  nonTeaching: [
+    "Vereinbarter unterrichtsfreier Kurstag",
+    "Agreed non-teaching course day",
+  ],
   day: ["Datum der Leistung", "Service date"],
   assessmentReference: [
     "Referenz der Prüfungsleistung",
@@ -57,7 +61,10 @@ const pairs: Record<string, [string, string]> = {
   ],
   reason: ["Ergebnis der Prüfung", "Reviewed outcome"],
   choose: ["Bitte auswählen", "Choose an outcome"],
-  delivered: ["Leistung erbracht", "Service delivered"],
+  delivered: [
+    "Vereinbarte Einheit vollständig erbracht",
+    "Agreed unit fully delivered",
+  ],
   timely: [
     "Wirksam und fristgerecht abgesagt",
     "Valid and timely cancellation",
@@ -70,9 +77,17 @@ const pairs: Record<string, [string, string]> = {
     "Eigenständige Absage des Kunden",
     "Independent customer cancellation",
   ],
+  customerNonTeaching: [
+    "Kundenvergütung für den unterrichtsfreien Tag prüfen",
+    "Review customer payment for the non-teaching day",
+  ],
+  excused: [
+    "Entschuldigter Ausfall ohne zugeordnete Kundenzahlung",
+    "Excused absence with no associated customer payment",
+  ],
   manual: [
-    "Individuelle Vereinbarung, Streitfall oder anderer Grund",
-    "Individual agreement, dispute or other reason",
+    "Teilweise erbrachte Einheit, Einzelvereinbarung oder Streitfall",
+    "Partly delivered unit, individual agreement or dispute",
   ],
   agreedFee: [
     "Vereinbartes Honorar je Einheit",
@@ -102,9 +117,17 @@ const pairs: Record<string, [string, string]> = {
     "Tatsächlich erhaltene Stornozahlung für diese Einheit",
     "Cancellation payment actually received for this unit",
   ],
+  receivedNonTeachingCompensation: [
+    "Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag",
+    "Customer payment actually received for the non-teaching day",
+  ],
   customerHint: [
-    "Gib den kumulierten Zahlungseingang für dieselbe ausgefallene Einheit in der Währung des vereinbarten Kundenhonorars an. Ziehe Unterrichtszahlungen und Kostenersatz ab.",
-    "Enter cumulative receipts for the same cancelled unit in the currency of the agreed customer fee. Exclude teaching payments and expense reimbursements.",
+    "Gib den kumulierten Zahlungseingang für dieselbe ausgefallene Einheit in der Währung des Kundenhonorars an. Ziehe Unterrichtszahlungen und Kostenersatz ab. Bei 0 Zahlungseingang kannst du das Kundenhonorar leer lassen.",
+    "Enter cumulative receipts for the same cancelled unit in the currency of the agreed customer fee. Exclude teaching payments and expense reimbursements. With a zero receipt, you may leave the agreed customer fee blank.",
+  ],
+  nonTeachingHint: [
+    "Erfasse den kumulierten Eingang für diesen Tag in der Währung des Kundenhonorars. Bei 0 Zahlungseingang kannst du das Kundenhonorar leer lassen. Unterricht, Prüfungen und bereits zugeordnete Stornozahlungen bleiben separat.",
+    "Enter cumulative receipts for this day in the currency of the agreed customer fee. With a zero receipt, you may leave the agreed customer fee blank. Keep teaching, assessment and previously allocated cancellation payments separate.",
   ],
   offsetHint: [
     "ISO-Format, etwa 2030-04-01T09:30:00+02:00",
@@ -156,6 +179,10 @@ const pairs: Record<string, [string, string]> = {
   ],
   deliveredTotal: ["Erbrachte Leistungen", "Delivered services"],
   cancellationTotal: ["Stornovergütung", "Cancellation compensation"],
+  nonTeachingTotal: [
+    "Vergütung für unterrichtsfreie Tage",
+    "Non-teaching day compensation",
+  ],
   creditTotal: ["Bereits berücksichtigt", "Already accounted for"],
   openTotal: [
     "Offener Betrag laut Berechnung",

@@ -136,6 +136,7 @@ async function acceptedJob(
     currency: "EUR" | "AUD",
     total: number,
     day: number,
+    requiresContract = true,
 ) {
     const id = randomUUID();
     const title = `QA ${currency} ${id.slice(0, 8)}`;
@@ -155,7 +156,7 @@ async function acceptedJob(
                 rate_unit: "fixed_total",
                 total_amount: total,
                 terms: "Fictional accepted terms.",
-                requires_contract: true,
+                requires_contract: requiresContract,
             })
         ).error,
     ).toBeNull();
@@ -514,4 +515,79 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     expect(record.due_on).toBe(issueDate.plus({days: 30}).toISODate());
     await a11y(adminPage);
     await adminContext.close();
+});
+
+test("settlement for a cancelled assignment shares only verified lecturer totals", async ({
+    page,
+    browser,
+}, testInfo) => {
+    test.setTimeout(90_000);
+    const lecturer = await account("lecturer", "Settlement lecturer");
+    const administrator = await account("admin", "Settlement finance");
+    const job = await acceptedJob(lecturer, "EUR", 200, 4, false);
+    const adminApi = await actor(administrator);
+    const cancelled = await adminApi.rpc("cancel_job_assignment", {
+        p_claim_id: job.claimId,
+        p_reason: "Fictional schedule change before delivery.",
+        p_request_id: randomUUID(),
+    });
+    expect(cancelled.error).toBeNull();
+
+    await login(page, lecturer);
+    await page.goto("/finance");
+    const lecturerCase = page.locator("article.invoice-review-row")
+        .filter({hasText: job.title});
+    await lecturerCase.getByRole("button", {name: "Prüfung anfordern", exact: true}).click();
+    await expect(lecturerCase.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
+
+    const adminContext = await browser.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        viewport: testInfo.project.use.viewport,
+        isMobile: testInfo.project.use.isMobile,
+        hasTouch: testInfo.project.use.hasTouch,
+        deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+    });
+    try {
+        const adminPage = await adminContext.newPage();
+        await login(adminPage, administrator);
+        await adminPage.goto("/finance");
+        const financeCase = adminPage.locator("article.invoice-review-row")
+            .filter({hasText: job.title});
+        await financeCase.getByText("Abrechnung berechnen", {exact: true}).click();
+        await financeCase.getByLabel("Zeitzone des Auftrags").fill("Europe/Berlin");
+        await financeCase.getByLabel("Datum der Leistung").fill("2035-05-04");
+        await financeCase.getByLabel("Ergebnis der Prüfung").selectOption("customer");
+        await financeCase.getByLabel("Vereinbartes Honorar je Einheit (EUR)").fill("200");
+        await financeCase.getByLabel("Vereinbartes Kundenhonorar für diese Einheit").fill("512.42");
+        await financeCase.getByLabel("Tatsächlich erhaltene Stornozahlung für diese Einheit").fill("256.21");
+        await financeCase.getByRole("button", {name: "Einheit hinzufügen", exact: true}).click();
+        const holiday = financeCase.getByRole("group", {name: "Vergütungseinheit 2"});
+        await holiday.getByLabel("Leistung", {exact: true}).selectOption("nonTeaching");
+        await holiday.getByLabel("Datum der Leistung").fill("2035-05-05");
+        await holiday.getByLabel("Ergebnis der Prüfung").selectOption("customerNonTeaching");
+        await holiday.getByLabel("Vereinbartes Honorar je Einheit (EUR)").fill("200");
+        await holiday.getByLabel("Vereinbartes Kundenhonorar für diese Einheit").fill("404.20");
+        await holiday.getByLabel("Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag").fill("101.05");
+        await financeCase.getByRole("button", {name: "Berechnen", exact: true}).click();
+        const attach = financeCase.getByRole("button", {name: "Beträge in die Prüfnotiz übernehmen"});
+        await expect(attach).toBeDisabled();
+        await financeCase.getByRole("checkbox", {name: "Ich habe den Vertrag, die Leistungen und die zugeordneten Belege geprüft."}).check();
+        await attach.click();
+        await financeCase.getByRole("textbox", {name: /Prüfnotiz/}).fill("Geprüfter fiktiver Zahlungseingang.");
+        await financeCase.getByRole("button", {name: "Prüfung dokumentieren"}).click();
+        await expect(financeCase).toHaveCount(0);
+    } finally {
+        await adminContext.close();
+    }
+
+    await page.reload();
+    const notice = lecturerCase.getByRole("status");
+    await expect(notice).toContainText(/Stornovergütung: 100,00\s*€/);
+    await expect(notice).toContainText(/Vergütung für unterrichtsfreie Tage: 50,00\s*€/);
+    await expect(notice).toContainText(/Offener Betrag laut Berechnung: 150,00\s*€/);
+    await expect(notice).not.toContainText(/512[.,]42|256[.,]21|404[.,]20|101[.,]05/);
+    const lecturerApi = await actor(lecturer);
+    const invoices = await lecturerApi.rpc("invoice_records", {p_all: false});
+    expect(invoices.error).toBeNull();
+    expect(invoices.data).toEqual([]);
 });

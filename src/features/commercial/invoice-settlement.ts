@@ -9,13 +9,20 @@ export const settlementReasons = [
   "timely",
   "shortNotice",
   "customer",
+  "excused",
+  "manual",
+] as const;
+export const nonTeachingSettlementReasons = [
+  "customerNonTeaching",
   "manual",
 ] as const;
 
-type SettlementReason = (typeof settlementReasons)[number];
+type SettlementReason =
+  | (typeof settlementReasons)[number]
+  | (typeof nonTeachingSettlementReasons)[number];
 
 export type SettlementUnit = {
-  kind: "teaching" | "assessment";
+  kind: "teaching" | "assessment" | "nonTeaching";
   day: string;
   assessmentReference: string;
   reason: SettlementReason | "";
@@ -66,6 +73,7 @@ type SettlementResult =
       ok: true;
       deliveredCents: number;
       cancellationCents: number;
+      nonTeachingCents: number;
       creditedCents: number;
       openCents: number;
     };
@@ -79,6 +87,8 @@ function customerShare(agreed: number, received: number, original: number) {
 /** Evaluate one paid service date or specifically agreed assessment per row. */
 function calculateUnit(unit: SettlementUnit, zone: string) {
   if (unit.reason === "manual" || unit.reason === "")
+    return { error: "manualRequired" } as const;
+  if ((unit.reason === "customerNonTeaching") !== (unit.kind === "nonTeaching"))
     return { error: "manualRequired" } as const;
   const agreed = cents(unit.agreedFee);
   const credit = cents(unit.credited);
@@ -99,12 +109,22 @@ function calculateUnit(unit: SettlementUnit, zone: string) {
     if (timely !== (unit.reason === "timely"))
       return { error: "noticeMismatch" } as const;
     if (timely) entitlement = 0;
-  } else if (unit.reason === "customer") {
+  } else if (
+    unit.reason === "customer" ||
+    unit.reason === "customerNonTeaching"
+  ) {
     const original = cents(unit.originalCustomerFee);
     const received = cents(unit.receivedCustomerCompensation);
-    if (!original || received === null || received > original)
+    if (
+      received === 0 &&
+      (original !== null || !unit.originalCustomerFee.trim())
+    )
+      entitlement = 0;
+    else if (!original || received === null || received > original)
       return { error: "customerAmountsInvalid" } as const;
-    entitlement = customerShare(agreed, received, original);
+    else entitlement = customerShare(agreed, received, original);
+  } else if (unit.reason === "excused") {
+    entitlement = 0;
   }
   if (credit > entitlement) return { error: "excessCredit" } as const;
   return { entitlement, credit };
@@ -119,8 +139,11 @@ export function calculateInvoiceSettlement(
   if (!units.length || units.length > maximumSettlementUnits)
     return { ok: false, error: "unitsInvalid" };
   const reviewed = new Set<string>();
+  const serviceDates = new Set<string>();
+  const nonTeachingDates = new Set<string>();
   let deliveredCents = 0;
   let cancellationCents = 0;
+  let nonTeachingCents = 0;
   let creditedCents = 0;
   for (const [index, unit] of units.entries()) {
     const row = index + 1;
@@ -131,17 +154,27 @@ export function calculateInvoiceSettlement(
       return { ok: false, error: "dayInvalid", row };
     const reference = unit.assessmentReference.trim().toLowerCase();
     const identity =
-      unit.kind === "teaching"
-        ? `teaching:${unit.day}`
-        : `assessment:${reference}`;
+      unit.kind === "assessment"
+        ? `assessment:${reference}`
+        : `${unit.kind}:${unit.day}`;
     if (unit.kind === "assessment" && !reference)
       return { ok: false, error: "manualRequired", row };
-    if (reviewed.has(identity))
+    // A date booked as non-teaching cannot also be used to calculate earned
+    // service or cancellation compensation for the same calendar date.
+    if (
+      reviewed.has(identity) ||
+      nonTeachingDates.has(unit.day) ||
+      (unit.kind === "nonTeaching" && serviceDates.has(unit.day))
+    )
       return { ok: false, error: "duplicateUnit", row };
     reviewed.add(identity);
+    if (unit.kind === "nonTeaching") nonTeachingDates.add(unit.day);
+    else serviceDates.add(unit.day);
     const result = calculateUnit(unit, zone);
     if (result.error) return { ok: false, error: result.error, row };
     if (unit.reason === "delivered") deliveredCents += result.entitlement;
+    else if (unit.reason === "customerNonTeaching")
+      nonTeachingCents += result.entitlement;
     else cancellationCents += result.entitlement;
     creditedCents += result.credit;
   }
@@ -149,7 +182,9 @@ export function calculateInvoiceSettlement(
     ok: true,
     deliveredCents,
     cancellationCents,
+    nonTeachingCents,
     creditedCents,
-    openCents: deliveredCents + cancellationCents - creditedCents,
+    openCents:
+      deliveredCents + cancellationCents + nonTeachingCents - creditedCents,
   };
 }
