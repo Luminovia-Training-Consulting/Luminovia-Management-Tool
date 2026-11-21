@@ -58,6 +58,9 @@ await withTestDatabase(
                 return result;
             }
         };
+        await rpc(admin, "set_company_premium", [
+            q(organisation), "true", "0", q(randomUUID()),
+        ]);
         await rpc(
             admin,
             "configure_compensation_policy",
@@ -454,8 +457,8 @@ await withTestDatabase(
                 );
                 assert.equal(
                     originalRooms.includes(room.id),
-                    room.kind === "participant_course",
-                    `${room.kind}: public projection retains only explicit membership`,
+                    false,
+                    `${room.kind}: a retained manual membership does not restore lost course authority`,
                 );
                 assert.equal(
                     losingRooms.includes(room.id),

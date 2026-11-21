@@ -162,17 +162,20 @@ for (const mode of modes) {
                 checks++;
                 console.log(`PASS ${mode}: ${name}`);
             };
-            const [manager, source, target, outsider, support] = Array.from(
-                {length: 5},
-                randomUUID,
-            );
+            const [manager, source, target, outsider, support, organisation] =
+                Array.from({length: 6}, randomUUID);
             await sql(`insert into auth.users(id,email)values${[manager, source, target, outsider, support].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
 insert into public.user_roles(user_id,role)values(${q(manager)},'admin'),(${q(source)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'lecturer'),(${q(support)},'senior_lecturer');
 insert into public.role_permissions(role,permission)values('senior_lecturer','support.manage');
+insert into public.organisations(id,name)values(${q(organisation)},'Fictional support replacement academy');
 update public.profiles set display_name='Fictional private access fixture',time_zone='UTC';`);
             /** Execute with the real SQL actor/assurance boundary, never fixture superuser rights. */
             const call = (who, expression, aal = "aal1") =>
                 actor(who, "select " + expression, aal);
+            await call(
+                manager,
+                `public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`,
+            );
             /** Parse a committed RPC projection without fabricating successful business state. */
             const json = async (...args) => JSON.parse(await call(...args));
             /** Create only fictional scanner-result rows; no Storage object is forged. */
@@ -342,6 +345,9 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
                 const run = await sql(
                     `select course_run_id from public.jobs where id=${q(job)}`,
                 );
+                await sql(
+                    `update public.course_runs set organisation_id=${q(organisation)} where id=${q(run)}`,
+                );
                 const lecturerRoom = await sql(
                     `select id from public.chat_rooms where job_id=${q(job)}and kind='lecturer_course'`,
                 );
@@ -356,10 +362,15 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
                     ),
                     "t",
                 );
-                // The room was created after the claim. Reconstruct its assignment-
-                // derived membership without inventing an independent manual grant.
-                await sql(`select private.participant_chat_assignment_grant(${q(participantRoom)},${q(source)});
-insert into public.chat_members(room_id,user_id)values(${q(participantRoom)},${q(source)})`);
+                // Creating the room after the claim auto-enrols the current
+                // lecturer with assignment-only access.
+                assert.equal(
+                    await sql(`select exists(select 1 from public.chat_members m
+                        join private.participant_chat_origins o using(room_id,user_id)
+                        where m.room_id=${q(participantRoom)} and m.user_id=${q(source)}
+                        and m.removed_at is null and o.assignment and not o.manual and not o.unknown)`),
+                    "t",
+                );
                 return {
                     job,
                     terms,
@@ -477,8 +488,20 @@ insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)va
                             source,
                             fixture.participantRoom,
                             materials[1],
-                            ["other_assignment", "enrolled", "completed"].includes(retention),
+                            retention === "other_assignment",
                         );
+                        if (retention === "enrolled" || retention === "completed") {
+                            // Historical mixed-role enrolments keep their rows.
+                            // A lecturer needs current staff scope for these bytes.
+                            assert.equal(
+                                await sql(`select exists(select 1 from public.course_enrolments e
+                                    join public.chat_members m on m.user_id=e.user_id
+                                    where e.course_run_id=${q(fixture.run)} and e.user_id=${q(source)}
+                                    and e.status=${q(retention)} and m.room_id=${q(fixture.participantRoom)}
+                                    and m.removed_at is null)`),
+                                "t",
+                            );
+                        }
                         await roomAccess(
                             target,
                             fixture.participantRoom,

@@ -236,6 +236,10 @@ await withTestDatabase("job_picker", async ({sql, actor}) => {
     await check(
         "Selected IDs connect to existing whole upload/channel actions without weakening participant commercial privacy",
         async () => {
+            await actor(
+                admin,
+                `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())})`,
+            );
             const selected = (
                 await picker(courseOnly, "participant_course", {search: "%_"})
             ).items[0];

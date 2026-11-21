@@ -247,6 +247,19 @@ await withTestDatabase("avatars_test", async ({sql, actor}) => {
         insert into public.client_organisation_memberships(user_id, organisation_id)
         values ('${client}', '${org}');`,
     );
+    await actor(
+        admin,
+        `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())})`,
+    );
+    const learnerId = await sql(
+        `update auth.users set email_confirmed_at=now() where id=${q(learner)};
+         select luminovia_user_id from public.profiles where id=${q(learner)};`,
+    );
+    await rpc(admin, "request_company_participant_link", [org, learnerId, randomUUID()]);
+    await actor(
+        learner,
+        `select public.accept_company_participant_invitation(${q(org)},1,${q(randomUUID())})`,
+    );
     await rpc(
         admin,
         "manage_course_enrolment",

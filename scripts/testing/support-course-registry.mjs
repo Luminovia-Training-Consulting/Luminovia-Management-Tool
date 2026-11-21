@@ -351,6 +351,21 @@ export async function runSupportCourseRegistryChecks(
         run = await sql(`select course_run_id
                          from public.jobs
                          where id = ${q(job)}`);
+        // The historical PR17 replay can predate Premium. Current real course
+        // resources require an explicitly entitled fictional organisation.
+        const hasPremium = await sql(
+            "select to_regprocedure('public.set_company_premium(uuid,boolean,integer,uuid)') is not null",
+        );
+        if (hasPremium === "t") {
+            const organisation = randomUUID();
+            await sql(`insert into public.organisations(id,name)
+                values(${q(organisation)},'Fictional registry academy');
+                update public.course_runs set organisation_id=${q(organisation)} where id=${q(run)};`);
+            await actor(
+                f.manager,
+                `select public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`,
+            );
+        }
     }
     /** Use installed public APIs when available; synthetic mode has no invented
      * public API and performs only labelled private registry contract writes.

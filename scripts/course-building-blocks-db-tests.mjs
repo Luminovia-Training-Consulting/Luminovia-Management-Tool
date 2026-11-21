@@ -61,6 +61,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
     await sql(
         `insert into public.organisations(id,name) values(${q(org)},'Fictional course building-block Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
     );
+    await rpc("admin", "set_company_premium", [org, true, 0, randomUUID()]);
     /** Plans a real course run from the referenced template rather than merely setting a screen state. */
     const createRun = async (templateId = template, offset = 0) => {
         const start = new Date(Date.now() + (100 + offset) * 86400000);
@@ -588,6 +589,12 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
     await check(
         "Participant accounts cannot access source blocks even when historical enrolment remains",
         async () => {
+            const participantId = await sql(
+                `update auth.users set email_confirmed_at=now() where id=${q(ids.participant)};
+                 select luminovia_user_id from public.profiles where id=${q(ids.participant)};`,
+            );
+            await rpc("admin", "request_company_participant_link", [org, participantId, randomUUID()]);
+            await rpc("participant", "accept_company_participant_invitation", [org, 1, randomUUID()]);
             await rpc(
                 "admin",
                 "manage_course_enrolment",
@@ -644,11 +651,13 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 "2",
             );
+            // The fixture configures a 31% lecturer share. Round the accepted
+            // full-block charge of 200.02 EUR once and persist that exact quote.
             assert.equal(
                 await sql(
                     `select gross_total_amount||','||lecturer_net_total_amount from private.claim_revenue_ledger where claim_id=${q(claim.claim_id)}`,
                 ),
-                "200.02,100.01",
+                "200.02,62.01",
             );
             await sql(
                 `update public.jobs set amount=7,total_amount=14 where id=${q(job)}`,
@@ -657,7 +666,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 await sql(
                     `select total_amount from public.job_claims where id=${q(claim.claim_id)}`,
                 ),
-                "100.01",
+                "62.01",
             );
             await assert.rejects(
                 rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal1"),
