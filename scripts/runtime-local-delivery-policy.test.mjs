@@ -10,6 +10,7 @@ import {join} from "node:path";
 import {runInNewContext} from "node:vm";
 import test from "node:test";
 import {parsers} from "prettier/plugins/yaml";
+import {renderGatewayRoutingListener} from "../deploy/hostinger/selfhost/gateway-check.mjs";
 
 /** Decode the pinned formatter's YAML AST without interpreting tags or aliases.
  * Keeping plain scalar strings also preserves the Actions key `on` exactly.
@@ -52,6 +53,28 @@ function yamlValue(node) {
     assert.ok(node.children.length <= 1);
     return yamlValue(node.children[0]);
 }
+
+test("the isolated Envoy fixture adds its route header to the real virtual host", () => {
+    const template = readFileSync(
+        new URL("../deploy/hostinger/selfhost/envoy/lds.template.yaml", import.meta.url),
+        "utf8",
+    );
+    const server = Object.fromEntries(
+        [...template.matchAll(/\$\{([A-Z_]+)\}/g)].map(([, key]) => [key, "fictional"]),
+    );
+    const rendered = renderGatewayRoutingListener(template, server);
+    // Only the virtual host is under test. Keep the embedded Lua script out of the parser.
+    const listener = rendered.split(/^ +http_filters:$/m)[0];
+    const [{filter_chains}] = yamlValue(parsers.yaml.parse(listener)).resources;
+    const [{filters}] = filter_chains;
+    const {route_config} = filters[0].typed_config;
+    const [host] = route_config.virtual_hosts;
+    assert.deepEqual(host.response_headers_to_add, [
+        {header: {key: "x-portal-test-route", value: "%ROUTE_NAME%"}},
+    ]);
+    assert.ok(host.request_headers_to_add.length);
+    assert.ok(host.routes.length);
+});
 
 /** Parse maintained workflows with the already-pinned Prettier YAML parser. */
 function workflow(name) {

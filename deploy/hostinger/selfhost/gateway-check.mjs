@@ -8,6 +8,26 @@ import {spawnSync} from "node:child_process";
 import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
 
+/** Render the configured listener and label the virtual host's chosen route for assertions. */
+export function renderGatewayRoutingListener(template, server) {
+    const routes = /^( +)routes:$/gm;
+    assert.equal([...template.matchAll(routes)].length, 1, "Expected one gateway virtual host routes block.");
+    return template
+        .replace(/\$\{([A-Z_]+)\}/g, (_, key) => {
+            assert(key in server, "Unexpected gateway configuration placeholder.");
+            return server[key];
+        })
+        .replace(routes, (_, indent) =>
+            [
+                "response_headers_to_add:",
+                "  - header:",
+                "      key: x-portal-test-route",
+                "      value: '%ROUTE_NAME%'",
+                "routes:",
+            ].map((line) => indent + line).join("\n"),
+        );
+}
+
 // Optional real Envoy routing check. Generated test-only keys, no backend or
 // external network; a random loopback-only host port reaches this isolated proxy.
 // Exercise real gateway requests against controlled upstreams and remove only owned resources.
@@ -29,15 +49,10 @@ export async function checkGatewayRouting({directory, here, image, server}) {
             );
         return result.stdout.trim();
     };
-    const template = readFileSync(join(here, "envoy/lds.template.yaml"), "utf8")
-        .replace(/\$\{([A-Z_]+)\}/g, (_, key) => {
-            assert(key in server, "Unexpected gateway configuration placeholder.");
-            return server[key];
-        })
-        .replace(
-            "            request_headers_to_add:\n",
-            "            response_headers_to_add:\n            - header:\n                key: x-portal-test-route\n                value: '%ROUTE_NAME%'\n            request_headers_to_add:\n",
-        );
+    const template = renderGatewayRoutingListener(
+        readFileSync(join(here, "envoy/lds.template.yaml"), "utf8"),
+        server,
+    );
     writeFileSync(join(configuration, "lds.yaml"), template, {mode: 0o600});
     // Every upstream is deliberately unavailable on this isolated loopback. A
     // selected allowlisted route returns503; the gateway's deny route returns404.
