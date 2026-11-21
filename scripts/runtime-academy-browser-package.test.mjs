@@ -29,6 +29,7 @@ import {
 } from "./academy-browser-package.mjs";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
+import { planAcademyStaging } from "./academy-staging-plan.mjs";
 
 const metadata = {
   sourceRevision: "a".repeat(40),
@@ -506,4 +507,309 @@ test("runs both operator commands and keeps trust files and detached output outs
   assert.equal(rejected.stdout, "");
   assert.match(rejected.stderr, /Academy browser release rejected/);
   assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
+});
+
+async function stagingFixture(t, now = Date.parse("2040-06-01T00:00:00.000Z")) {
+  const fixture = releaseFixture(t, now);
+  const key = "sb_publishable_FictionalStagingPublicKey8271";
+  const config = {
+    version: 1,
+    ...fixture.expected,
+    portal_origin: "https://academy.example.invalid",
+    api_base_url: metadata.backend,
+    compose_project: "academy-practice",
+    backend_network: "academy-practice-backend",
+    data_directory: "/srv/academy-practice/data",
+    backup_directory: "/srv/academy-practice/backups",
+    backup_retention_days: 27,
+    data_region: "staging-region",
+    time_zone: "Asia/Kathmandu",
+    tls: "operator-terminated",
+    smtp: {
+      mode: "capture",
+      sender_email: "course@academy.example.invalid",
+      sender_name: "Example & Practice Academy",
+    },
+  };
+  const publicConfig = {
+    VITE_SUPABASE_URL: metadata.backend,
+    VITE_SUPABASE_PUBLISHABLE_KEY: key,
+  };
+  fixture.file(runtimePath, "export const key = `" + key + "`;");
+  const manifest = await fixture.write();
+  const signature = await fixture.signRelease();
+  const inputs = {
+    ...fixture.inputs,
+    config,
+    publicConfig,
+    signature,
+    releasePublicKey: fixture.signer.publicKey,
+  };
+  return { ...fixture, key, manifest, inputs, config, publicConfig, signature };
+}
+
+test("derives a tenant-specific staging handoff for the exact active browser release", async (t) => {
+  const { manifest, key, inputs, terms, config } = await stagingFixture(t);
+  const plan = await planAcademyStaging(inputs);
+  assert.equal(plan.kind, "academy-staging-plan");
+  assert.equal(plan.state, "offline-preflight-verified");
+  assert.equal(plan.customer_ready, false);
+  assert.deepEqual(plan.release, {
+    installation_id: metadata.installationId,
+    edition: metadata.edition,
+    source_revision: metadata.sourceRevision,
+    package_lock_sha256: metadata.packageLockSha256,
+    archive_sha256: manifest.archive.sha256,
+    licence_state: "active",
+    browser_public_key_sha256: createHash("sha256").update(key).digest("hex"),
+  });
+  assert.deepEqual(plan.licensed_limits, terms.limits);
+  assert.equal(plan.infrastructure.compose_project, config.compose_project);
+  assert.equal(plan.infrastructure.backup_retention_days, 27);
+  assert.equal(plan.infrastructure.time_zone, "Asia/Kathmandu");
+  assert.equal(plan.environment.REGION, config.data_region);
+  assert.equal(plan.environment.PORTAL_DATA_DIR, config.data_directory);
+  assert.equal(plan.environment.PORTAL_BACKEND_NETWORK, config.backend_network);
+  assert.equal(plan.environment.PORTAL_INVITES_ENABLED, "false");
+  assert.equal(plan.environment.PORTAL_WEBSITE_ENQUIRIES_ENABLED, "false");
+  assert.equal(
+    plan.environment.API_EXTERNAL_URL,
+    config.api_base_url + "/auth/v1",
+  );
+  assert.equal(
+    plan.environment.MAILER_URLPATHS_INVITE,
+    "/backend/auth/v1/verify",
+  );
+  assert.equal(
+    plan.environment.MAILER_URLPATHS_RECOVERY,
+    "/backend/auth/v1/verify",
+  );
+  assert.deepEqual(plan.auth.allowed_origins, [config.portal_origin]);
+  assert.deepEqual(plan.auth.redirect_urls, [
+    config.portal_origin + "/auth/callback",
+    config.portal_origin + "/auth/password",
+  ]);
+  assert.deepEqual(plan.auth.mail_template_urls, [
+    config.portal_origin + "/mail-templates/invite.html",
+    config.portal_origin + "/mail-templates/recovery.html",
+  ]);
+  assert.equal(plan.browser.language, metadata.defaultLanguage);
+  assert.ok(
+    plan.pending.includes(
+      "independent encrypted backup, restore and retained-data upgrade",
+    ),
+  );
+  const serialized = JSON.stringify(plan);
+  for (const privateValue of [
+    key,
+    inputs.signature,
+    inputs.licence,
+    "SERVICE_ROLE_KEY",
+    "JWT_SECRET",
+    "cms.luminovia.org",
+  ])
+    assert.equal(serialized.includes(privateValue), false);
+  assert.deepEqual(await planAcademyStaging(inputs), plan);
+});
+
+test("rejects wrong release or target binding, damaged content and every inactive licence state", async (t) => {
+  const { output, inputs, publicConfig, config, terms } =
+    await stagingFixture(t);
+  for (const configOverride of [
+    { installation_id: "6ebd0e68-7e7d-42e3-b6ae-750ca2edade2" },
+    { release_commit: "f".repeat(40) },
+    { edition: "customer-self-hosted" },
+  ])
+    await assert.rejects(
+      planAcademyStaging({
+        ...inputs,
+        config: { ...config, ...configOverride },
+      }),
+      /academy_licence_binding/,
+    );
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      config: { ...config, api_base_url: "https://other.example.invalid/api" },
+      publicConfig: {
+        ...publicConfig,
+        VITE_SUPABASE_URL: "https://other.example.invalid/api",
+      },
+    }),
+    /academy_staging_signed_backend_mismatch/,
+  );
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      publicConfig: {
+        ...publicConfig,
+        VITE_SUPABASE_PUBLISHABLE_KEY:
+          "sb_publishable_LegitimateOtherInstallation",
+      },
+    }),
+    /academy_staging_browser_key_mismatch/,
+  );
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      publicConfig: {
+        ...publicConfig,
+        VITE_SUPABASE_PUBLISHABLE_KEY:
+          publicConfig.VITE_SUPABASE_PUBLISHABLE_KEY.slice(0, -1),
+      },
+    }),
+    /academy_staging_browser_key_mismatch/,
+  );
+  for (const now of [
+    Date.parse(terms.starts_at) - 1,
+    Date.parse(terms.expires_at),
+    Date.parse(terms.grace_until),
+  ])
+    await assert.rejects(
+      planAcademyStaging({ ...inputs, now }),
+      /academy_staging_inactive_licence/,
+    );
+  await assert.rejects(
+    planAcademyStaging({ ...inputs, signature: "C".repeat(86) }),
+    /academy_browser_release_signature/,
+  );
+  const archive = join(output, archiveName);
+  writeFileSync(
+    archive,
+    Buffer.concat([readFileSync(archive), Buffer.from("tampered")]),
+  );
+  await assert.rejects(planAcademyStaging(inputs), /archive checksum/);
+});
+
+test("validates separate staging namespaces and the existing secure mail transport settings", async (t) => {
+  const { inputs, config } = await stagingFixture(t);
+  for (const configOverride of [
+    { portal_origin: "https://academy.example.invalid/path" },
+    { portal_origin: "http://academy.example.invalid" },
+    { portal_origin: "https://cms.luminovia.org" },
+    { portal_origin: "https://academy.example.invalid" + "\n" },
+    { api_base_url: "https://academy.example.invalid/backend?key=secret" },
+    { api_base_url: config.portal_origin },
+    { api_base_url: "https://academy.example.invalid/a/../backend" },
+    { backup_directory: config.data_directory + "/backups" },
+    { data_directory: "/opt/luminovia-portal/data" },
+    { compose_project: "luminovia-supabase" },
+    { backend_network: "luminovia-portal-backend" },
+    { time_zone: "Fake/Region" },
+    { tls: "plain-http" },
+    { SMTP_PASSWORD: "never-a-plan-value" },
+  ])
+    await assert.rejects(
+      planAcademyStaging({
+        ...inputs,
+        config: { ...config, ...configOverride },
+      }),
+    );
+  const smtp = {
+    ...config.smtp,
+    mode: "provider",
+    host: "mail.example.com",
+    port: 465,
+    security: "implicit_tls",
+  };
+  const plan = await planAcademyStaging({
+    ...inputs,
+    config: { ...config, smtp },
+  });
+  assert.deepEqual(plan.infrastructure.smtp, smtp);
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      config: { ...config, smtp: { ...smtp, security: "starttls" } },
+    }),
+    /academy_staging_smtp_policy/,
+  );
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      config: { ...config, smtp: { ...smtp, host: "mail.example.invalid" } },
+    }),
+  );
+  await assert.rejects(
+    planAcademyStaging({
+      ...inputs,
+      config: { ...config, smtp: { ...smtp, password: "never-a-plan-value" } },
+    }),
+  );
+});
+
+test("offline CLI consumes only its closed public env file and emits no credentials", async (t) => {
+  const {
+    root,
+    output,
+    issuer,
+    signer,
+    config,
+    publicConfig,
+    key,
+    signature,
+    inputs: { licence },
+  } = await stagingFixture(t, Date.now());
+  const write = (name, contents) => {
+    const path = join(root, name);
+    writeFileSync(path, contents);
+    return path;
+  };
+  const target = write("target.json", JSON.stringify(config));
+  const publicEnv = write(
+    "authority.public.env",
+    Object.entries(publicConfig)
+      .map(([name, value]) => `${name}='${value}'`)
+      .join("\n") + "\n",
+  );
+  const sig = write("archive.sig", signature + "\n");
+  const envelope = write("academy.licence", licence + "\n");
+  const issuerFile = write(
+    "issuer.pub",
+    issuer.publicKey.export({ type: "spki", format: "pem" }),
+  );
+  const signerFile = write(
+    "signer.pub",
+    signer.publicKey.export({ type: "spki", format: "pem" }),
+  );
+  const cli = fileURLToPath(
+    new URL("./academy-staging-plan.mjs", import.meta.url),
+  );
+  const run = () =>
+    spawnSync(
+      process.execPath,
+      [cli, target, publicEnv, output, sig, envelope, issuerFile, signerFile],
+      {
+        encoding: "utf8",
+        env: { PATH: "" },
+      },
+    );
+  const valid = run();
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.equal(valid.stderr, "");
+  assert.equal(JSON.parse(valid.stdout).customer_ready, false);
+  assert.ok(!valid.stdout.includes(key));
+  assert.ok(!valid.stdout.includes(licence));
+
+  const fixtureSecret = "must-never-appear-in-operator-output";
+  writeFileSync(
+    publicEnv,
+    readFileSync(publicEnv, "utf8") + `SERVICE_ROLE_KEY='${fixtureSecret}'\n`,
+  );
+  const rejected = run();
+  assert.equal(rejected.status, 1);
+  assert.equal(rejected.stdout, "");
+  assert.match(rejected.stderr, /Academy staging plan rejected/);
+  assert.ok(!rejected.stderr.includes(fixtureSecret));
+
+  const redirected = write(
+    "outside.public.env",
+    "VITE_SUPABASE_URL=https://unused.example.invalid\n",
+  );
+  rmSync(publicEnv);
+  symlinkSync(redirected, publicEnv);
+  const symlink = run();
+  assert.equal(symlink.status, 1);
+  assert.equal(symlink.stdout, "");
+  assert.ok(!symlink.stderr.includes(redirected));
 });
