@@ -21,6 +21,7 @@ import {CourseDestinations} from "./destinations";
 import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
 import {AttendancePanel} from "./attendance";
+import {CourseEnrolmentsPanel, CourseWithdrawal} from "./enrolments";
 import {CourseChat} from "./course-chat";
 import {DownloadButton, Resources} from "./resources";
 
@@ -684,10 +685,12 @@ function CourseWorkspaceLayout({
     const examVisible = Boolean(course.exams && (course.exams.required || course.exams.can_edit));
     const hasActivities = learner || editor;
     const hasRegister = editor && course.sessions.length > 0;
+    const canManageEnrolments = course.access.manager || course.access.client;
     const sections = [
         {id: "course-overview", label: t("courseOverview")},
         {id: "course-materials", label: t("workspaceMaterials")},
         ...(examVisible ? [{id: "course-exam", label: t("workspaceExam")}] : []),
+        ...(canManageEnrolments ? [{id: "course-enrolments", label: t("workspaceParticipants")}] : []),
         ...(hasRegister ? [{id: "course-register", label: t("workspaceRegister")}] : []),
         {id: "course-chat", label: t("courseChat")},
         ...(hasActivities ? [{id: "course-learning", label: t("workspaceActivities")}] : []),
@@ -771,6 +774,7 @@ function CourseWorkspaceLayout({
                         <CourseDestinations actor={actor} courseId={course.id} learner={learner}/>
                         <CourseContact course={course} actor={actor}/>
                         {editor && <Preparation course={course} actor={actor}/>}
+                        {learner && <CourseWithdrawal course={course} actor={actor}/>}
                     </div>
                     <div className="course-room-section" id="course-materials">
                         <Resources course={course} actor={actor}/>
@@ -779,6 +783,11 @@ function CourseWorkspaceLayout({
                         <div className="course-room-section" id="course-exam">
                             <CourseExams key={course.exams.version ?? course.exams.required.toString()}
                                 course={course} actor={actor}/>
+                        </div>
+                    )}
+                    {canManageEnrolments && (
+                        <div className="course-room-section" id="course-enrolments">
+                            <CourseEnrolmentsPanel course={course} actor={actor}/>
                         </div>
                     )}
                     {hasRegister && (

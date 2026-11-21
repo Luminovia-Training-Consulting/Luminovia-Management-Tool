@@ -2,6 +2,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 
 test.skip(
@@ -108,6 +109,8 @@ async function fixture() {
         teacher,
         learner,
         client,
+        org,
+        adminClient,
         run,
         session,
         contact,
@@ -342,4 +345,67 @@ test("company reviews are current-membership scoped and participant accounts can
     } finally {
         await participantContext.close();
     }
+});
+
+/** Produce a real single-sheet workbook without attaching any existing learner data. */
+async function attendanceWorkbook(participantId: string) {
+    const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    const office = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    const rel = "http://schemas.openxmlformats.org/package/2006/relationships";
+    const row = (values: string[], number: number) => `<row r="${number}">${values.map((value, column) =>
+        `<c r="${String.fromCharCode(65 + column)}${number}" t="inlineStr"><is><t>${value}</t></is></c>`).join("")}</row>`;
+    const parts = {
+        "_rels/.rels": `<Relationships xmlns="${rel}"><Relationship Id="w" Type="${office}/officeDocument" Target="/xl/workbook.xml"/></Relationships>`,
+        "xl/workbook.xml": `<workbook xmlns="${ns}" xmlns:r="${office}"><sheets><sheet name="Attendance" sheetId="1" r:id="s"/></sheets></workbook>`,
+        "xl/_rels/workbook.xml.rels": `<Relationships xmlns="${rel}"><Relationship Id="s" Type="${office}/worksheet" Target="worksheets/sheet.xml"/></Relationships>`,
+        "xl/worksheets/sheet.xml": `<worksheet xmlns="${ns}"><sheetData>${row(
+            ["user_id","name","status","arrival_at","departure_at","note","reason"],1,
+        )}${row([participantId,"Fictional workbook label","present","","","Reviewed register","Attendance review"],2)}</sheetData></worksheet>`,
+    };
+    const writer = new ZipWriter(new Uint8ArrayWriter(), {useWebWorkers:false});
+    for (const [name, value] of Object.entries(parts)) {
+        await writer.add(name,new Uint8ArrayReader(new TextEncoder().encode(value)));
+    }
+    return Buffer.from(await writer.close());
+}
+
+test("consented participant enrolment and reviewed XLSX attendance use the native course workspace", async ({page}) => {
+    const f = await fixture();
+    const learner = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(learner.auth.signInWithPassword({email:f.learner.email,password:process.env.E2E_PASSWORD!}));
+    const profile = await checked(f.service.from("profiles").select("luminovia_user_id,display_name").eq("id",f.learner.id).single());
+    await checked(f.adminClient.rpc("request_company_participant_link", {
+        p_organisation_id:f.org,p_luminovia_user_id:profile.luminovia_user_id,p_request_id:randomUUID(),
+    }));
+    const invites = await checked(learner.rpc("my_company_participant_invitations"));
+    const invite = invites.find((entry) => entry.organisation_id === f.org);
+    expect(invite).toBeDefined();
+    await checked(learner.rpc("accept_company_participant_invitation", {
+        p_organisation_id:f.org,p_expected_version:invite.version,p_request_id:randomUUID(),
+    }));
+
+    await adminLogin(page,f.manager);
+    await page.goto(`/courses/${f.run}/workspace#course-enrolments`);
+    await page.getByLabel("Teilnehmende Person",{exact:true}).selectOption(f.learner.id);
+    await page.getByRole("button",{name:"Zum Kurs anmelden",exact:true}).click();
+    await page.getByRole("dialog").getByRole("button",{name:"Bestätigen",exact:true}).click();
+    await expect(page.getByText("Kursanmeldung aktualisiert.",{exact:true})).toBeVisible();
+
+    await page.getByText("Anwesenheit aus CSV oder XLSX übernehmen",{exact:true}).click();
+    await page.getByLabel("CSV- oder XLSX-Datei prüfen",{exact:true}).setInputFiles({
+        name:"attendance.xlsx",
+        mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        buffer:await attendanceWorkbook(f.learner.id),
+    });
+    await expect(page.getByText("Reviewed register",{exact:true})).toBeVisible();
+    await expect(page.getByText("Fictional workbook label",{exact:false})).toHaveCount(0);
+    const register = () => checked(f.adminClient.rpc("course_session_register",{
+        p_run_id:f.run,p_session_id:f.session,
+    }));
+    expect((await register()).rows[0].status).toBeNull();
+    await page.getByRole("button",{name:"1 Änderungen verbindlich speichern",exact:true}).click();
+    await expect(page.getByText("1 Änderungen gespeichert.",{exact:true})).toBeVisible();
+    expect((await register()).rows[0]).toMatchObject({
+        user_id:f.learner.id, status:"present", note:"Reviewed register",version:1,
+    });
 });

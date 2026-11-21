@@ -63,6 +63,7 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
         })
         .abortSignal(signal);
       if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("invalid_course_enrolments");
       return data as Enrolment[];
     },
     retry: false,
@@ -78,6 +79,7 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
         })
         .abortSignal(signal);
       if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("invalid_course_candidates");
       return data as Candidate[];
     },
     retry: false,

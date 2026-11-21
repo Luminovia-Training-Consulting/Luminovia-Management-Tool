@@ -84,7 +84,7 @@ beforeEach(async () => {
                     ? Promise.resolve({data: fake.workspace, error: fake.error}).then(
                         resolve,
                     )
-                    : name === "course_chat_rooms"
+                    : ["course_chat_rooms", "course_enrolments", "course_enrolment_candidates"].includes(name)
                         ? Promise.resolve({data: [], error: null}).then(resolve)
                     : Promise.resolve(fake.pending ?? {id: null, saved: true}).then(
                         (data) => resolve({data, error: fake.error}),

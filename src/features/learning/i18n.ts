@@ -39,6 +39,7 @@ const pairs: Record<string, [string, string]> = {
     workspaceNavigation: ["Bereiche im Kursraum", "Course workspace sections"],
     workspaceMaterials: ["Materialien", "Materials"],
     workspaceExam: ["Klausur", "Exam"],
+    workspaceParticipants: ["Teilnehmende", "Participants"],
     workspaceRegister: ["Anwesenheit", "Attendance"],
     workspaceActivities: ["Lernaktivitäten", "Learning activities"],
     workspaceNextSession: ["Nächster Termin", "Next session"],
