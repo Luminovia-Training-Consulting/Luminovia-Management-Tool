@@ -1,3 +1,11 @@
+# 21 November 2026 — Independent academy runtime and signed first install
+
+The dedicated installer creates an isolated academy runtime for its own HTTPS origin with a same-origin API, independent keys and namespaced Compose/network/storage. The private default topology exposes no host ports. Caddy ingress and the capture mailbox are separate profiles. Re-initialization preserves existing configuration and data.
+
+The offline plan and first-install command require the signed licence, the detached release signature, two independently selected trust roots, the reviewed target identity and the exact public gateway key. The first install stages precisely the authenticated browser bytes for Caddy in one rename. Signed historic nonempty catalogues remain verifiable using the reviewed archived catalogue fingerprints. The normal unsigned package validator and new release signer still require the supported current catalogue.
+
+The 25 package, licence and runtime tests passed, including actual Compose v5.8.0 resolution of both editions and concurrent first install. Both fresh packages built from `e4763f06` verified and installed via CLI. The image-pinned Caddy v2.11.9 served all 102 signed files of each edition over private local TLS. Integration checks covered deep links, PWA headers, blocked administrative URLs, the API proxy's private cache policy and the maintenance fence. Public DNS/ACME, provider mail, complete fresh dedicated Compose startup and a retained customer upgrade/restore remain acceptance gates.
+
 # 21 November 2026 — Standalone LMS accounts, installability and API documentation
 
 Academy users can edit their own login alias and persist language and appearance. Native GoTrue, Deno and both PostgREST versions confirmed that the alias and email authenticate the same account. Concurrent or duplicate names receive HTTP 409. Other accounts remain unchanged, and the grace-period settings are read-only.

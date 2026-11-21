@@ -3667,3 +3667,22 @@ node scripts/academy-browser-package.mjs verify-release /absolute/package \
 ```
 
 Customer operators obtain the two trusted Ed25519 public keys and the expected installation ID, edition and exact source commit independently of the incoming package. The verifier reads files without extracting or starting them. It reports the checked identity, archive digest and licence state. Exit status 0 means the signature and package verified with an active licence. Status 2 means the package authenticated but its licence is in grace, expired or not yet valid. Status 1 means verification failed. The signed artefact is still browser-only and intended for offline inspection or a controlled preview. Operational readiness requires the installation and transport acceptance gates.
+
+### Prepare a dedicated customer runtime
+
+The [dedicated academy installation runbook](deploy/academy/README.md) pairs a fresh private backend with a customer-specific signed browser build. It covers the target JSON, independent credentials and volumes, first-administrator setup, loopback TLS checks and the explicit ingress profile.
+
+For the database, the operator uses an explicit private libpq target. Run the following after applying the pinned migrations to an empty database. First provision and pin its licence, then through private GoTrue administration create the confirmed administrator and pass that Auth UUID to the second command.
+
+```sh
+PGSERVICE=academy-private node scripts/academy-installation.mjs \
+  "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit"
+
+PGSERVICE=academy-private node scripts/academy-installation.mjs \
+  "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit" \
+  --first-admin "$confirmed_auth_id"
+
+PGSERVICE=academy-private node scripts/academy-installation.mjs \
+  "$signed_licence" "$licence_public_key" "$installation_id" "$edition" "$source_commit" \
+  --course-access on
+```

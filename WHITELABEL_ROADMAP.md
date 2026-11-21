@@ -298,8 +298,8 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-05 — Self-hosted installation & update lifecycle (P0)
 
-- [ ] Customer-neutral installer/Compose/config/secret generation and health checks; no Hostinger fixed IP, CMS hard-coded origin or Luminovia keys in customer output.
-- [ ] Customer-specific signed/licensed release artifacts, independent install/reinstall/upgrade, retained-data migration rehearsal, complete backups and isolated restore drills.
+- [x] Customer-neutral runtime configuration and secret generation, independently scoped Compose and storage, explicit ingress and first-install staging of the exact signed licensed browser. Both built editions passed the isolated CLI and pinned Caddy TLS checks. [Installation runbook](deploy/academy/README.md)
+- [ ] Independent full-stack startup and health confirmation, issuer-to-operator onboarding, DNS and ACME, SMTP delivery, upgrade/reinstallation with retained data and complete encrypted backup/restore.
 - [ ] Version inventory, support diagnostics, security/maintenance policy, explicit rollbacks and recovery runbook.
 
 ### WL-06 — Licence sales & fulfilment operations (P1)

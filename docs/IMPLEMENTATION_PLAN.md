@@ -2,6 +2,10 @@
 
 ## Academy bootstrap, release packaging and restored CI verification
 
+- [x] Generate a private runtime for a dedicated academy with its own origin, key material and persistent namespaces. Resolve both runtime configurations through actual Compose and verify that only the explicit ingress profile publishes ports.
+- [x] Verify and atomically stage an active signed browser release for that runtime. Verify exact bytes for both compiled editions through pinned Caddy over local TLS. Preserve authentic signed historical catalogues for later recovery.
+- [ ] Boot each fresh dedicated target with all pinned services, apply migrations, pin its licence, confirm first-admin, and repeat course, SMTP, PWA and backup/restore acceptance on the explicit target.
+
 - [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.
 - [x] Enable active-licence meeting links with scoped editing and participant reads for the dedicated course-access profile. Verify read-only grace, expiry and retained data.
 - [x] Run the licensed profile switch through the operator CLI and create scoped course drafts. PostgreSQL confirms transaction rollback after invalid sessions and rejection when an operator closes the profile before a queued write. Verify full customer authoring and runtime separately.
