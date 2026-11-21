@@ -43,9 +43,9 @@ const courseReturnRoute =
   /^(?:\/administration|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
-  import("../features/developer-api/explorer").then(
-    ({ AcademyApiExplorer }) => ({ default: AcademyApiExplorer }),
-  ),
+  import("../features/developer-api/explorer").then((module) => ({
+    default: module.AcademyApiExplorer,
+  })),
 );
 
 function AcademyLogin() {

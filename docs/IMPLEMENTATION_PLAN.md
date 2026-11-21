@@ -1556,3 +1556,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Fix the SQL regression's locale-sensitive duplicate-tag tie-break with a forward-only `C`-collation update to `private.profile_labels`; preserve the exact `Linux` expectation as a deterministic regression.
 - [ ] Push this SQL correction directly to `main` and rerun every full CI gate on the latest exact head; the current system run failed before this new migration was present.
+
+- [x] Align the existing Academy API explorer lazy import with the production export scanner; nine integrity and 30 targeted component/route tests pass.
+- [ ] Verify the complete current-main CI and remaining White-Label LMS, browser, licensing and deployment gates before marking them complete.
