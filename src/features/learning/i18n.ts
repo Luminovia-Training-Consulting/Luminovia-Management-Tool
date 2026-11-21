@@ -147,10 +147,16 @@ const pairs: Record<string, [string, string]> = {
     chooseCourseFile: ["Datei auswählen", "Choose file"],
     uploadAndShare: ["Datei prüfen und freigeben", "Scan and share file"],
     uploadProgress: ["Datei wird geprüft: {{progress}} %", "Scanning file: {{progress}}%"],
+    courseFileConfirmingShare: ["Kursfreigabe wird bestätigt …", "Confirming course sharing…"],
+    courseFileRetryShare: ["Freigabe erneut versuchen", "Retry sharing"],
     courseFileShared: ["Geprüfte Dateifassung für den Kurs freigegeben.", "Reviewed file version shared with the course."],
     courseFileUploadError: [
-        "Upload oder Freigabe wurde nicht bestätigt. Die Datei ist nicht als Kursmaterial freigegeben; bitte Berechtigung und aktuellen Stand prüfen.",
-        "Upload or sharing was not confirmed. The file is not shared as course material; check your permission and current state.",
+        "Die Dateiprüfung wurde nicht bestätigt. Prüfe Dateityp, Größe und Verbindung.",
+        "The file scan was not confirmed. Check the file type, size and connection.",
+    ],
+    courseFileShareError: [
+        "Die Datei ist geprüft. Versuche die Kursfreigabe mit derselben Zielgruppe erneut.",
+        "The file passed scanning. Retry sharing it with the same audience.",
     ],
     resourceHelp: [
         "Jede Freigabe gilt für eine konkret geprüfte Dateifassung. Eine Bestätigung dokumentiert den Empfang dieser Fassung.",

@@ -31,12 +31,15 @@ export function Resources({course, actor}: {course: CourseWorkspace; actor: stri
     const {t} = useTranslation("learning");
     const online = useOnline();
     const client = useQueryClient();
-    const [file, setFile] = useState<File | null>(null);
+    const [file, setFile] = useState<{bytes: File; uploadId: string} | null>(null);
+    const [cleanVersion, setCleanVersion] = useState<string | null>(null);
     const [fileInputKey, setFileInputKey] = useState(0);
     const [progress, setProgress] = useState(0);
     const [version, setVersion] = useState("");
     const [audience, setAudience] = useState("all");
     const [category, setCategory] = useState("material");
+    const [reviewedAudience, setReviewedAudience] = useState("all");
+    const [reviewedCategory, setReviewedCategory] = useState("material");
     const refresh = () => client.invalidateQueries({queryKey: courseWorkspaceKey(actor, course.id)});
     const save = useMutation({
         mutationFn: ({action, payload}: {action: string; payload: Record<string, unknown>}) =>
@@ -45,16 +48,24 @@ export function Resources({course, actor}: {course: CourseWorkspace; actor: stri
     });
     const upload = useMutation({
         mutationFn: async () => {
-            if (!file || file.size < 1 || file.size > 10 * 1024 * 1024) throw new Error("file_size");
-            setProgress(0);
-            const document = await uploadDocument(file, {scope: "personal", kind: "material"}, setProgress);
-            if (!document.current_version_id) throw new Error("missing_clean_version");
+            let versionId = cleanVersion;
+            if (!versionId) {
+                if (!file || file.bytes.size < 1 || file.bytes.size > 10 * 1024 * 1024) throw new Error("file_size");
+                setProgress(0);
+                const document = await uploadDocument(
+                    file.bytes, {scope: "personal", kind: "material", clientId: file.uploadId}, setProgress,
+                );
+                if (document.status !== "clean" || !document.current_version_id) throw new Error("missing_clean_version");
+                versionId = document.current_version_id;
+                setCleanVersion(versionId);
+            }
             return courseAction(course.id, "resource_share", {
-                version_id: document.current_version_id, audience, category,
+                version_id: versionId, audience, category,
             });
         },
         onSuccess: () => {
             setFile(null);
+            setCleanVersion(null);
             setFileInputKey((value) => value + 1);
             void refresh();
         },
@@ -79,31 +90,50 @@ export function Resources({course, actor}: {course: CourseWorkspace; actor: stri
                 </div>
             </li>)}
         </ul>
-        {canUpload && <form onSubmit={(event) => {event.preventDefault(); upload.mutate();}}>
+        {canUpload && <form onSubmit={(event) => {
+            event.preventDefault();
+            if (online && file && !upload.isPending && !save.isPending) upload.mutate();
+        }}>
             <h3>{t("uploadCourseFile")}</h3>
             <p>{t("uploadCourseFileHelp")}</p>
             <Field id="course-file" label={t("chooseCourseFile")}>
                 <input key={fileInputKey} id="course-file" type="file" accept={acceptedFiles} required
-                       onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}/>
+                       disabled={upload.isPending}
+                       onChange={(event) => {
+                           const bytes = event.currentTarget.files?.[0];
+                           upload.reset();
+                           setCleanVersion(null);
+                           setFile(bytes ? {bytes, uploadId: crypto.randomUUID()} : null);
+                       }}/>
             </Field>
             <Field id="upload-resource-audience" label={t("audience")}>
-                <select id="upload-resource-audience" value={audience} onChange={(event) => setAudience(event.target.value)}>
+                <select id="upload-resource-audience" value={audience} disabled={upload.isPending || !!cleanVersion}
+                        onChange={(event) => setAudience(event.target.value)}>
                     {["all", "staff", "client", "participants"].map((value) => <option key={value} value={value}>{t(value)}</option>)}
                 </select>
             </Field>
             <Field id="upload-resource-category" label={t("category")}>
-                <select id="upload-resource-category" value={category} onChange={(event) => setCategory(event.target.value)}>
+                <select id="upload-resource-category" value={category} disabled={upload.isPending || !!cleanVersion}
+                        onChange={(event) => setCategory(event.target.value)}>
                     <option value="material">{t("material")}</option><option value="report">{t("report")}</option>
                 </select>
             </Field>
-            {upload.isPending && <p role="status">{t("uploadProgress", {progress})}</p>}
-            <Button disabled={!online || !file || upload.isPending || save.isPending}>{t("uploadAndShare")}</Button>
+            {upload.isPending && <p role="status">{cleanVersion
+                ? t("courseFileConfirmingShare")
+                : t("uploadProgress", {progress})}</p>}
+            <Button type="submit" disabled={!online || !file || upload.isPending || save.isPending}>
+                {t(cleanVersion ? "courseFileRetryShare" : "uploadAndShare")}
+            </Button>
             {upload.isSuccess && <Notice>{t("courseFileShared")}</Notice>}
-            {upload.isError && <Notice kind="error">{t("courseFileUploadError")}</Notice>}
+            {upload.isError && <Notice kind="error">
+                {t(cleanVersion ? "courseFileShareError" : "courseFileUploadError")}
+            </Notice>}
         </form>}
         {course.access.manager && <form onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({action: "resource_share", payload: {version_id: version, audience, category}});
+            save.mutate({action: "resource_share", payload: {
+                version_id: version, audience: reviewedAudience, category: reviewedCategory,
+            }});
         }}>
             <Field id="share-version" label={t("reviewedVersion")}>
                 <select id="share-version" value={version} required onChange={(event) => setVersion(event.target.value)}>
@@ -112,12 +142,12 @@ export function Resources({course, actor}: {course: CourseWorkspace; actor: stri
                 </select>
             </Field>
             <Field id="resource-audience" label={t("audience")}>
-                <select id="resource-audience" value={audience} onChange={(event) => setAudience(event.target.value)}>
+                <select id="resource-audience" value={reviewedAudience} onChange={(event) => setReviewedAudience(event.target.value)}>
                     {["all", "staff", "client", "participants"].map((value) => <option key={value} value={value}>{t(value)}</option>)}
                 </select>
             </Field>
             <Field id="resource-category" label={t("category")}>
-                <select id="resource-category" value={category} onChange={(event) => setCategory(event.target.value)}>
+                <select id="resource-category" value={reviewedCategory} onChange={(event) => setReviewedCategory(event.target.value)}>
                     <option value="material">{t("material")}</option><option value="report">{t("report")}</option>
                 </select>
             </Field>
