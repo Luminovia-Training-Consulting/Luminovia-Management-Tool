@@ -522,8 +522,8 @@ test("settlement for a cancelled assignment shares only verified lecturer totals
     browser,
 }, testInfo) => {
     test.setTimeout(90_000);
-    const lecturer = await account("lecturer", "Settlement lecturer");
-    const administrator = await account("admin", "Settlement finance");
+    const lecturer = await account("lecturer", "settlement-lecturer");
+    const administrator = await account("admin", "settlement-finance");
     const job = await acceptedJob(lecturer, "EUR", 200, 4, false);
     const adminApi = await actor(administrator);
     const cancelled = await adminApi.rpc("cancel_job_assignment", {
