@@ -28,6 +28,7 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
     users = [],
     organisations = [];
 const suffix = randomUUID().slice(0, 8);
+const directoryLabel = `API account ${suffix}`;
 
 /** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
@@ -55,7 +56,7 @@ async function fixture(name, role) {
     await checked(
         service
             .from("profiles")
-            .update({display_name: `API ${name} ${suffix}`})
+            .update({display_name: `${directoryLabel} ${name}`})
             .eq("id", data.user.id),
         "Name fixture",
     );
@@ -196,11 +197,15 @@ try {
     await passwordOnly(admin);
     const accounts = await request(
         admin,
-        `users?q=account-${suffix}&limit=100&offset=0`,
+        `users?q=${encodeURIComponent(directoryLabel)}&limit=100&offset=0`,
     );
     assert.equal(accounts.status, 200);
     assert.equal(accounts.body.total, 5);
     assert.equal(accounts.body.items.length, 5);
+    assert.deepEqual(
+        accounts.body.items.map((item) => item.id).sort(),
+        [admin, owner, teacher, peer, manager].map((item) => item.id).sort(),
+    );
     const listedIds = accounts.body.items.map((item) => item.luminovia_user_id);
     assert.equal(new Set(listedIds).size, accounts.body.items.length);
     assert.ok(
