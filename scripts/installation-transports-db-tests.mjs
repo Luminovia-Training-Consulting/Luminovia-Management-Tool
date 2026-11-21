@@ -7,13 +7,19 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
-const migration = await readFile(
-  new URL(
-    "../supabase/migrations/20261122007500_dormant_academy_transports.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const [transportMigration, meetingMigration, courseAccessMigration] =
+  await Promise.all(
+    [
+      "20261122007500_dormant_academy_transports.sql",
+      "20261122007600_course_meeting_link.sql",
+      "20261122007700_academy_course_access.sql",
+    ].map((name) =>
+      readFile(
+        new URL(`../supabase/migrations/${name}`, import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
 
 await withTestDatabase(
   "installation_transport",
@@ -34,7 +40,9 @@ await withTestDatabase(
       await sql(`alter table ${name} enable row level security;
       create policy fictional_control on ${name} for all to anon, authenticated using (true) with check (true);`);
     }
-    await sql(migration);
+    await sql(transportMigration);
+    await sql(meetingMigration);
+    await sql(courseAccessMigration);
     const markerSample = randomUUID();
     await sql(`insert into storage.buckets values ('fictional-private',false),('fictional-public',true);
     insert into realtime.messages values (${q(markerSample)});`);
@@ -63,6 +71,33 @@ await withTestDatabase(
     await assert.rejects(sql(pin), /55000.*every installed transport fence/);
     await sql("alter table realtime.messages enable row level security");
     await sql(pin);
+
+    const now = Date.now();
+    const day = (offset) => new Date(now + offset * 86400000).toISOString();
+    const release = "ab".repeat(20);
+    const terms = {
+      installation_id: id,
+      edition: "customer-managed",
+      release_commit: release,
+      issued_at: day(-2),
+      starts_at: day(-1),
+      expires_at: day(10),
+      grace_until: day(12),
+      modules: ["lms"],
+      limits: {
+        seat_count: 25,
+        storage_bytes: 1000000,
+        api_requests_per_minute: 60,
+      },
+    };
+    await sql(
+      `select private.apply_verified_installation_licence(${q(JSON.stringify(terms))}::jsonb)`,
+    );
+    const enableCourseAccess = `select private.configure_academy_course_access(${q(id)},${q(release)},true)`;
+    await sql("alter table realtime.messages disable row level security");
+    await assert.rejects(sql(enableCourseAccess), /55000.*transport fences/);
+    await sql("alter table realtime.messages enable row level security");
+    await sql(enableCourseAccess);
 
     // A trusted fixture can still present an object in a dedicated instance,
     // which ordinary runtime roles must neither enumerate nor mutate.
@@ -117,7 +152,7 @@ await withTestDatabase(
       where n.nspname='public' and c.relname in ('messages','message_reactions','chat_members','course_chat_activity')`),
     );
     console.log(
-      "PASS dedicated Storage empty/private provisioning, current-role restrictive RLS and private Realtime relation fences",
+      "PASS dedicated Storage provisioning, course access preflight and independent Storage and Realtime SQL fences",
     );
   },
   { migrationsThrough: "20261122007499" },
