@@ -114,7 +114,10 @@ function SettingsContent({
   const [description, setDescription] = useState(initial.description);
   const mutation = useMutation({
     onMutate: () => setPending(true),
-    onSettled: () => setPending(false),
+    onSettled: (_result, error) => {
+      setPending(false);
+      if (!error) setEditing(false);
+    },
     mutationFn: async () => {
       requireOnline();
       const { error } = await db().rpc("update_chat_group_settings", {
@@ -125,10 +128,7 @@ function SettingsContent({
       });
       if (error) throw error;
     },
-    onSuccess: async () => {
-      setEditing(false);
-      await invalidate();
-    },
+    onSuccess: invalidate,
   });
   if (!editing)
     return (
