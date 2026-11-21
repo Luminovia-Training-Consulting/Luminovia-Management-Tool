@@ -613,15 +613,40 @@ try {
     );
     const issued = new Date().toISOString().slice(0, 10),
         due = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const invoiceArgs = {
+        p_number: `NET-${suffix}`,
+        p_claim_ids: [claim],
+        p_document_version_id: invoiceDoc.current_version_id,
+        p_issued_on: issued,
+        p_due_on: due,
+        p_client_id: randomUUID(),
+    };
+    const earlyInvoice = await winner.client.rpc("submit_invoice", invoiceArgs);
+    assert.equal(earlyInvoice.error?.code, "22023");
+    assert.match(earlyInvoice.error?.message ?? "", /invoice_not_ready/);
+    const elapsed = {
+        starts_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+        ends_at: new Date(Date.now() - 11 * 3600000).toISOString(),
+    };
+    await checked(
+        service.from("job_sessions").update(elapsed).eq("job_id", job)
+            .select("id").single(),
+        "Move the exact fictional commissioned session into the past",
+    );
+    await checked(
+        service.from("assignment_sessions").update(elapsed).eq("claim_id", claim)
+            .eq("lecturer_id", winner.id).select("id").single(),
+        "Move the exact winning allocation into the past",
+    );
+    assert.deepEqual(
+        await checked(
+            winner.client.from("job_claims").select("*").eq("id", claim).single(),
+            "Verify session completion preserves the exact accepted deal",
+        ),
+        accepted,
+    );
     const invoice = await checked(
-        winner.client.rpc("submit_invoice", {
-            p_number: `NET-${suffix}`,
-            p_claim_ids: [claim],
-            p_document_version_id: invoiceDoc.current_version_id,
-            p_issued_on: issued,
-            p_due_on: due,
-            p_client_id: randomUUID(),
-        }),
+        winner.client.rpc("submit_invoice", invoiceArgs),
         "Actual scanned invoice uses net compensation",
     );
     let record = (
