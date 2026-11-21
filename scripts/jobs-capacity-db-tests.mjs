@@ -77,13 +77,6 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
             who,
             `select public.cancel_job_assignment('${claimId}','Fictional position cancellation','${randomUUID()}')`,
         );
-    /** Explicitly reopens a cancelled job; free positions alone must not permit a replacement claim. */
-    const reopen = async (job) =>
-        actor(
-            manager,
-            `select public.manage_job_offer('${job}','reopen',${(await meta(job)).version},'${randomUUID()}', '{"reason":"Fictional replacement position required"}')`,
-            "aal1",
-        );
     /** Counts and reports a case only after all of its assertions have completed successfully. */
     const check = async (name, run) => {
         await run();
@@ -313,12 +306,16 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
                 snapshot,
             );
             assert.equal((await meta(job)).confirmed_count, 2);
-            assert.equal((await meta(job)).open_positions, 0);
+            // A future release with eligible lecturers reopens immediately.
+            assert.equal((await meta(job)).open_positions, 1);
+            assert.equal(await sql(`select status from public.jobs where id='${job}'`), "published");
+            assert.equal(
+                await sql(`select count(*) from public.audit_events where action='job.reopened_after_assignment_release' and resource_id='${job}'`),
+                "1",
+            );
             total = await summary();
             assert.equal(Number(total.gross_assigned_amount), 200.02);
             assert.equal(Number(total.request_count), 1);
-            await reopen(job);
-            assert.equal((await meta(job)).open_positions, 1);
             assert.equal((await claim(job, teachers[4])).status, "confirmed");
             assert.equal((await meta(job)).confirmed_count, 3);
             total = await summary();
@@ -452,7 +449,12 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
                 ),
                 "t",
             );
-            await reopen(lastJob);
+            assert.equal(await sql(`select status from public.jobs where id='${lastJob}'`), "published");
+            assert.equal((await meta(lastJob)).open_positions, 3);
+            assert.equal(
+                await sql(`select count(*) from public.audit_events where action='job.reopened_after_assignment_release' and resource_id='${lastJob}'`),
+                "1",
+            );
             assert.equal((await claim(lastJob, teachers[9])).status, "confirmed");
             assert.equal(
                 await sql(
