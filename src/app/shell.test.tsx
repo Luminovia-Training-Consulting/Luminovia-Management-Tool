@@ -2,8 +2,10 @@
  * Regressions for navigation, search and confirmed or failed sign-out. SDK/DOM fixtures isolate
  * the shell; real Auth and permission acceptance remain separate.
  */
+import { lazy, type ReactNode, Suspense } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -83,6 +85,7 @@ vi.mock("@tanstack/react-query", async (original) => {
 afterEach(() => {
   cleanup();
   localStorage.removeItem("luminovia.sidebar-collapsed");
+  sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
   access.roles = [];
   vi.clearAllMocks();
@@ -126,7 +129,11 @@ it("keeps the selected language while the account preference is being saved", as
 });
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup(path = "/", initiallyCollapsed = true) {
+function setup(
+  path = "/",
+  initiallyCollapsed = true,
+  settings: ReactNode = <NavigationTarget />,
+) {
   if (initiallyCollapsed)
     localStorage.setItem("luminovia.sidebar-collapsed", "true");
   vi.stubGlobal(
@@ -142,23 +149,57 @@ function setup(path = "/", initiallyCollapsed = true) {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route element={<Shell />}>
-            <Route index element={<p>Private workspace</p>} />
-            <Route path="settings" element={<NavigationTarget />} />
-            <Route path="profile" element={<NavigationTarget />} />
-            <Route path="api/docs" element={<NavigationTarget />} />
-            <Route path="files" element={<NavigationTarget />} />
-            <Route path="courses" element={<p>Live courses route</p>} />
-            <Route path="search" element={<NavigationTarget />} />
-          </Route>
-          <Route path="/login" element={<p>Login screen</p>} />
-        </Routes>
+        <Suspense fallback={<p>Waiting for route</p>}>
+          <Routes>
+            <Route element={<Shell />}>
+              <Route index element={<p>Private workspace</p>} />
+              <Route path="settings" element={settings} />
+              <Route path="calendar" element={<NavigationTarget />} />
+              <Route path="profile" element={<NavigationTarget />} />
+              <Route path="api/docs" element={<NavigationTarget />} />
+              <Route path="files" element={<NavigationTarget />} />
+              <Route path="courses" element={<p>Live courses route</p>} />
+              <Route path="search" element={<NavigationTarget />} />
+            </Route>
+            <Route path="/login" element={<p>Login screen</p>} />
+          </Routes>
+        </Suspense>
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return { client, user: userEvent.setup() };
 }
+
+it("focuses the resume control after a lazy settings route loads on Escape", async () => {
+  access.roles = ["lecturer"];
+  sessionStorage.setItem(
+    "luminovia.tour.v1.actor",
+    JSON.stringify({ status: "active", step: "calendar" }),
+  );
+  type SettingsModule = { default: () => ReactNode };
+  let resolveSettings!: (module: SettingsModule) => void;
+  const settings = new Promise<SettingsModule>((resolve) => {
+    resolveSettings = resolve;
+  });
+  const loadSettings = vi.fn(() => settings);
+  const LazySettings = lazy(loadSettings);
+  const { user } = setup("/calendar", false, <LazySettings />);
+  const tour = () =>
+    within(screen.getByRole("region", { name: /Portal-Rundgang|Portal tour/ }));
+  expect(tour().getByRole("heading", { level: 2 })).toHaveFocus();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(loadSettings).toHaveBeenCalledOnce());
+  expect(
+    screen.queryByText("Fictional settings content"),
+  ).not.toBeInTheDocument();
+  await act(async () =>
+    resolveSettings({ default: () => <p>Fictional settings content</p> }),
+  );
+  expect(screen.getByText("Fictional settings content")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: /Rundgang fortsetzen|Resume tour/ }),
+  ).toHaveFocus();
+});
 
 describe("server-confirmed logout", () => {
   it.each(["returned", "rejected"])(
