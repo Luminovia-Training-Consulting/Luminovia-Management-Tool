@@ -109,6 +109,13 @@ import {
   qualificationHistoryPage,
   qualificationReviewSchema,
 } from "../qualifications/schema.ts";
+import {
+  adminAnnouncementPageSchema,
+  adminAnnouncementSchema,
+  announcementFormSchema,
+  announcementPageSchema,
+  announcementSchema,
+} from "../announcements/schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
   companyPremiumCommandSchema,
@@ -584,6 +591,45 @@ const taxonomyFields = {
   },
   description_de: { ...text, maxLength: 4000 },
   description_en: { ...text, maxLength: 4000 },
+};
+
+const chatMention = object({ user_id: uuid, display_name: text });
+const chatMemberHistory = {
+  p_before_at: { ...nullableDateTime, default: null },
+  p_before_id: { ...nullableUuid, default: null },
+};
+const commentResource = { p_kind: { enum: ["job", "template"] }, p_id: uuid };
+const announcementHistory = {
+  ...qualificationPage,
+  p_search: { ...text, maxLength: 160, default: "" },
+};
+const announcementAdminResponse = z.toJSONSchema(adminAnnouncementSchema);
+const announcementCommand = rpc(
+  "manageStaffAnnouncement",
+  "Announcements",
+  "Save, publish, archive or recover a staff announcement",
+  "Requires current announcement management authority. Submit a complete bilingual draft when saving. To create an announcement, use a null ID and version zero. Other operations require the current version and ID. Publishing requires a due and unexpired draft. Repeat the same values and request ID for a safe retry.",
+  {},
+  announcementAdminResponse,
+);
+const announcementCommandIdentity = {
+  p_expected_version: version,
+  ...idempotency,
+};
+
+const announcementDraftCommand = {
+  ...announcementCommandIdentity,
+  p_action: { const: "save" },
+  p_payload: z.toJSONSchema(
+    announcementFormSchema.strict().extend({
+      starts_at: z.iso.datetime({ offset: true }),
+      ends_at: z.iso.datetime({ offset: true }),
+      audience_roles: announcementFormSchema.shape.audience_roles.meta({
+        uniqueItems: true,
+      }),
+    }),
+    { io: "input" },
+  ),
 };
 
 const readinessVersion = { p_expected_version: version, ...idempotency };
@@ -1725,6 +1771,245 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/chat_group_settings": rpc(
+    "readChatGroupSettings",
+    "Chat",
+    "Read group title, description and settings version",
+    "Requires current membership of the exact topic or course group. The settings version is required to submit a change.",
+    { p_room_id: uuid },
+    object({
+      title: text,
+      description: { ...text, maxLength: 2000 },
+      version: { ...version, minimum: 1 },
+    }),
+  ),
+  "/rest/v1/rpc/chat_mention_candidates": rpc(
+    "readChatMentionCandidates",
+    "Chat",
+    "Read the people eligible for a mention in this room",
+    "Only current room members can request this projection. The server excludes the caller and checks each recipient's current eligibility.",
+    { p_room_id: uuid },
+    { type: "array", items: chatMention },
+  ),
+  "/rest/v1/rpc/chat_messages_with_mentions": rpc(
+    "readChatHistoryWithMentions",
+    "Chat",
+    "Read the current room's visible messages and mentions",
+    "Requires current room membership. Hidden messages are omitted. Deleted entries retain timestamps but expose no content, attached file or mentions. Pass the last timestamp and ID together to continue, keeping the same search. Fetch reply previews separately using each selected message's exact content version.",
+    {
+      p_room_id: uuid,
+      ...chatMemberHistory,
+      p_search: { type: ["string", "null"], maxLength: 200, default: "" },
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+    },
+    {
+      type: "array",
+      maxItems: 100,
+      items: object({
+        id: uuid,
+        room_id: uuid,
+        sender_id: uuid,
+        sender_name: text,
+        body: { ...text, maxLength: 8000 },
+        document_id: nullableUuid,
+        created_at: sessionInstant,
+        edited_at: nullableDateTime,
+        deleted_at: nullableDateTime,
+        reactions: {
+          type: "array",
+          items: object({
+            emoji: text,
+            count: { type: "integer", minimum: 1 },
+            mine: boolean,
+          }),
+        },
+        content_version: { ...version, minimum: 1 },
+        mentions: { type: "array", maxItems: 20, items: chatMention },
+        can_moderate: boolean,
+      }),
+    },
+    [...Object.keys(chatMemberHistory), "p_search", "p_limit"],
+  ),
+  "/rest/v1/rpc/chat_reply_previews": rpc(
+    "readChatReplyPreviews",
+    "Chat",
+    "Read reply previews for the current message versions",
+    "Requires current membership. Pass up to 40 message IDs and their versions in the same order. A changed message invalidates the entire request. The response maps replies by child message ID. A null preview indicates that the original message is no longer visible.",
+    {
+      p_room_id: uuid,
+      p_message_ids: { type: "array", maxItems: 40, items: uuid },
+      p_versions: {
+        type: "array",
+        maxItems: 40,
+        items: { ...version, minimum: 1 },
+      },
+    },
+    {
+      type: "object",
+      maxProperties: 40,
+      propertyNames: uuid,
+      additionalProperties: {
+        anyOf: [
+          object({
+            id: uuid,
+            sender_name: text,
+            body: { ...text, maxLength: 200 },
+          }),
+          { type: "null" },
+        ],
+      },
+    },
+  ),
+  "/rest/v1/rpc/chat_topic_pinned_messages": rpc(
+    "readChatTopicMessagePins",
+    "Chat",
+    "Read the currently visible pinned messages of a topic group",
+    "Requires a current member of the exact topic group. Deleted and personally hidden messages are omitted.",
+    { p_room_id: uuid },
+    {
+      type: "array",
+      maxItems: 50,
+      items: object({
+        id: uuid,
+        sender_name: text,
+        body: { ...text, maxLength: 8000 },
+        created_at: sessionInstant,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/edit_message_with_mentions": rpc(
+    "editOwnChatMessageWithMentions",
+    "Chat",
+    "Edit an authored message and its selected mentions",
+    "Requires the active author, current room membership and the last-read message version. The server rechecks mention eligibility. A textless edit requires the message to retain an attachment. Repeat the same payload with the original client ID.",
+    {
+      p_message_id: uuid,
+      p_body: { ...text, maxLength: 8000 },
+      p_expected_version: { ...version, minimum: 1 },
+      p_client_id: uuid,
+      p_mention_ids: {
+        type: "array",
+        maxItems: 20,
+        uniqueItems: true,
+        items: uuid,
+        default: [],
+      },
+    },
+    object({ id: uuid, version: { ...version, minimum: 1 } }),
+    ["p_mention_ids"],
+  ),
+  "/rest/v1/rpc/comment_context": rpc(
+    "readResourceCommentAccess",
+    "Comments",
+    "Check current staff discussion and moderation access",
+    "Requires current staff access to the specified job or course template. An archived resource cannot receive new comments.",
+    commentResource,
+    object({ can_post: boolean, can_moderate: boolean }),
+  ),
+  "/rest/v1/rpc/resource_comments": rpc(
+    "readResourceComments",
+    "Comments",
+    "Read the current staff discussion for a job or course template",
+    "Requires current staff access to the exact resource. Hidden comments and moderation reasons are visible only to their authors and authorised moderators. A withdrawn comment has an empty body. Send both cursor fields to continue.",
+    {
+      ...commentResource,
+      ...chatMemberHistory,
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 40 },
+    },
+    {
+      type: "array",
+      maxItems: 100,
+      items: object({
+        id: uuid,
+        author_id: uuid,
+        author_name: text,
+        body: { ...text, maxLength: 5000 },
+        version: { ...version, minimum: 1 },
+        hidden: boolean,
+        withdrawn: boolean,
+        moderation_reason: text,
+        created_at: sessionInstant,
+        updated_at: sessionInstant,
+        mine: boolean,
+      }),
+    },
+    [...Object.keys(chatMemberHistory), "p_limit"],
+  ),
+  "/rest/v1/rpc/announcement": rpc(
+    "readVisibleAnnouncement",
+    "Announcements",
+    "Read an announcement visible to the current actor",
+    "Requires an active account in the current publication's audience and display window. The acknowledgement is specific to the authenticated actor and exact revision.",
+    { p_revision_id: uuid },
+    z.toJSONSchema(announcementSchema),
+  ),
+  "/rest/v1/rpc/announcements": rpc(
+    "readVisibleAnnouncements",
+    "Announcements",
+    "List the current actor's announcements",
+    "Current audience and display window determine visibility. Filter by literal text or outstanding acknowledgement. Use both cursor fields from the result to continue.",
+    {
+      ...announcementHistory,
+      p_unacknowledged: { ...boolean, default: false },
+    },
+    z.toJSONSchema(announcementPageSchema),
+    [...Object.keys(announcementHistory), "p_unacknowledged"],
+  ),
+  "/rest/v1/rpc/admin_announcement": rpc(
+    "readStaffAnnouncementAdministration",
+    "Announcements",
+    "Read the draft and published announcement revisions",
+    "Requires current announcement management authority. Returns the retained draft, current publication and version needed for a change.",
+    { p_id: uuid },
+    announcementAdminResponse,
+  ),
+  "/rest/v1/rpc/admin_announcements": rpc(
+    "readStaffAnnouncementAdministrationList",
+    "Announcements",
+    "List announcements available for administration",
+    "Requires current announcement management authority. Search the stored draft and current publication. Filter by state and pass both cursor fields from the result to continue.",
+    {
+      ...announcementHistory,
+      p_state: { enum: ["", "draft", "published", "archived"], default: "" },
+    },
+    z.toJSONSchema(adminAnnouncementPageSchema),
+    [...Object.keys(announcementHistory), "p_state"],
+  ),
+  "/rest/v1/rpc/manage_announcement": {
+    post: {
+      ...announcementCommand.post,
+      requestBody: {
+        required: true,
+        content: json({
+          oneOf: [
+            object({
+              ...announcementDraftCommand,
+              p_id: { type: "null" },
+              p_expected_version: { const: 0 },
+            }),
+            object({
+              ...announcementDraftCommand,
+              p_id: uuid,
+              p_expected_version: { ...version, minimum: 1 },
+            }),
+            {
+              ...object({
+                ...announcementCommandIdentity,
+                p_id: uuid,
+                p_action: { enum: ["publish", "archive", "recover"] },
+                p_payload: { ...object({}), default: {} },
+              }),
+              required: [
+                ...Object.keys(announcementCommandIdentity),
+                "p_id",
+                "p_action",
+              ],
+            },
+          ],
+        }),
+      },
+    },
+  },
   "/rest/v1/rpc/qualification_review": rpc(
     "readLecturerQualificationReview",
     "Qualifications",

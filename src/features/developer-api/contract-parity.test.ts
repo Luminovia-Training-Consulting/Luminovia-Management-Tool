@@ -234,6 +234,57 @@ describe("installation and integration credential contracts", () => {
   });
 });
 
+describe("internal publication and discussion contracts", () => {
+  it("enforces the complete draft and versioned publication command shapes", () => {
+    const command = z.fromJSONSchema(
+      requestSchema(
+        "/rest/v1/rpc/manage_announcement",
+      ) as z.core.JSONSchema.JSONSchema,
+    );
+    const id = "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca";
+    const draft = {
+      p_id: null,
+      p_expected_version: 0,
+      p_request_id: id,
+      p_action: "save",
+      p_payload: {
+        title_de: "Fiktiv",
+        title_en: "Fictional",
+        body_de: "Fiktive Mitteilung",
+        body_en: "Fictional announcement",
+        starts_at: "2040-04-30T10:00:00Z",
+        ends_at: "2040-05-01T10:00:00Z",
+        time_zone: "UTC",
+        important: false,
+        audience_roles: ["lecturer"],
+      },
+    };
+    expect(command.safeParse(draft).success).toBe(true);
+    expect(command.safeParse({ ...draft, p_expected_version: 2 }).success).toBe(
+      false,
+    );
+    expect(
+      command.safeParse({
+        ...draft,
+        p_payload: {
+          ...draft.p_payload,
+          audience_roles: ["lecturer", "lecturer"],
+        },
+      }).success,
+    ).toBe(false);
+    const publish = {
+      p_id: id,
+      p_expected_version: 1,
+      p_request_id: id,
+      p_action: "publish",
+    };
+    expect(command.safeParse(publish).success).toBe(true);
+    expect(
+      command.safeParse({ ...publish, p_payload: draft.p_payload }).success,
+    ).toBe(false);
+  });
+});
+
 describe("private calendar contracts", () => {
   it("describes bounded private import and actor-owned export", () => {
     const prefix = "/rest/v1/rpc/";

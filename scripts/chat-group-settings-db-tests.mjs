@@ -1,12 +1,14 @@
 /** Chat permission and transaction tests on actual PostgreSQL, in a disposable DB.
  * Auth helpers are compatible stubs here; the separate chat-api-check uses real JWTs/realtime.
  */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import {spawn} from "node:child_process";
 import {readdir, readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
 import {withMigrationReplayLock} from "./testing/database.mjs";
 
+const settingsResponse = rpcResponse("chat_group_settings");
 const container =
     process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal";
 if (
@@ -120,7 +122,7 @@ try {
                 "2",
             );
             assert.deepEqual(
-                JSON.parse(await value(b, "chat_group_settings", [group])),
+                settingsResponse(await value(b, "chat_group_settings", [group])),
                 {title: "New title", description: "Private description", version: 2},
             );
             assert.equal(
@@ -168,7 +170,7 @@ try {
                 /Invalid/,
             );
             assert.deepEqual(
-                JSON.parse(await value(a, "chat_group_settings", [group])),
+                settingsResponse(await value(a, "chat_group_settings", [group])),
                 {title: "New title", description: "Private description", version: 2},
             );
         },

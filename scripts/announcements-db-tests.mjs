@@ -1,4 +1,5 @@
 /** Real immutable-publication, role, ACK, quiet-attention and rollback transactions. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -39,6 +40,11 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
         time_zone: "Europe/Berlin",
         ...extra,
     });
+    const operationResponse = rpcResponse("manage_announcement");
+    const adminResponse = rpcResponse("admin_announcement");
+    const readerListResponse = rpcResponse("announcements");
+    const readerResponse = rpcResponse("announcement");
+    const adminListResponse = rpcResponse("admin_announcements");
     const operate = async (
         id,
         action,
@@ -48,7 +54,7 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
         who = admin,
         aal = "aal1",
     ) =>
-        JSON.parse(
+        operationResponse(
             await actor(
                 who,
                 `select public.manage_announcement(${id ? q(id) : "null"},${q(action)},${version},${q(key)},${q(JSON.stringify(body))}::jsonb)`,
@@ -56,7 +62,7 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
             ),
         );
     const detail = async (id) =>
-        JSON.parse(
+        adminResponse(
             await actor(admin, `select public.admin_announcement(${q(id)})`, "aal1"),
         );
     const read = async (
@@ -66,7 +72,7 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
         cursor = null,
         limit = 20,
     ) =>
-        JSON.parse(
+        readerListResponse(
             await actor(
                 who,
                 `select public.announcements(${q(search)},${unack},${cursor ? q(cursor.at) : "null"},${cursor ? q(cursor.id) : "null"},${limit})`,
@@ -172,7 +178,7 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
             assert.equal(items.length, 1);
             assert.equal(items[0].id, published.published.id);
             assert.equal(items[0].body_de, payload().body_de);
-            const exact = JSON.parse(
+            const exact = readerResponse(
                 await actor(
                     teacher,
                     `select public.announcement(${q(published.published.id)})`,
@@ -528,7 +534,7 @@ await withTestDatabase("announcements", async ({sql, actor}) => {
             assert.equal(found.length, 5);
             assert.equal(new Set(found).size, 5);
             assert.equal((await read(teacher, "%")).items.length, 0);
-            const adminPage = JSON.parse(
+            const adminPage = adminListResponse(
                 await actor(
                     admin,
                     "select public.admin_announcements('Fictional page','published',null,null,2)",

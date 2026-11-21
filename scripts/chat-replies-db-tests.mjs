@@ -1,4 +1,5 @@
 /** Disposable PostgreSQL replay of actor-scoped, idempotent message replies. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {spawn} from "node:child_process";
@@ -36,8 +37,9 @@ await withTestDatabase(
         assert.equal(await reply(b, parent), id);
         await assert.rejects(reply(b, outsiderParent), /22023/);
         await assert.rejects(reply(b, outsiderParent, randomUUID()), /42501/);
+        const replyResponse = rpcResponse("chat_reply_previews");
         const preview = async (who) =>
-            JSON.parse(
+            replyResponse(
                 await v(
                     who,
                     `select public.chat_reply_previews(${q(room)},array[${q(id)}]::uuid[],array[1]::integer[])`,

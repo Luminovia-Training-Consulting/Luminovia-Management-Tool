@@ -1,4 +1,5 @@
 /** Real PostgreSQL mention/version/notification/ACL transactions in an owned UUID database. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -21,8 +22,11 @@ await withTestDatabase("chat_mentions", async ({sql, actor}) => {
         author,
         `select public.create_chat_group('Fictional mention team',array[${q(target)},${q(third)}]::uuid[],'topic')`,
     );
+    const messageResponse = rpcResponse("chat_messages_with_mentions");
+    const candidateResponse = rpcResponse("chat_mention_candidates");
+    const editResponse = rpcResponse("edit_message_with_mentions");
     const list = async (who = author, which = room) =>
-        JSON.parse(
+        messageResponse(
             await actor(
                 who,
                 `select coalesce(jsonb_agg(to_jsonb(m)), '[]')
@@ -30,7 +34,7 @@ await withTestDatabase("chat_mentions", async ({sql, actor}) => {
             ),
         );
     const candidates = async (who = author) =>
-        JSON.parse(
+        candidateResponse(
             await actor(who, `select public.chat_mention_candidates(${q(room)})`),
         );
     const send = (
@@ -52,7 +56,7 @@ await withTestDatabase("chat_mentions", async ({sql, actor}) => {
         key = randomUUID(),
         who = author,
     ) =>
-        JSON.parse(
+        editResponse(
             await actor(
                 who,
                 `select public.edit_message_with_mentions(${q(id)},${q(body)},${version},${q(key)},array[${targets.map(q).join(",")}]::uuid[])`,

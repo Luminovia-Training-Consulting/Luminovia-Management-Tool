@@ -2,6 +2,7 @@
  * PostgreSQL regression groups for resource-specific comments and reasoned moderation.
  * Real migrations define the contract; controlled role/permission claims exercise it independently of the UI.
  */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -32,6 +33,10 @@ await withTestDatabase("comments_test", async ({sql, actor}) => {
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,time_zone,status,amount,total_amount,currency,rate_unit,terms) values
  ('${job}','${run}','Fictional discussion','Fictional academy','online','Europe/Berlin','published',100,100,'EUR','fixed_total','Immutable net terms'),
  ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');`);
+    const commentResponses = new Map([
+        ["comment_context", rpcResponse("comment_context")],
+        ["resource_comments", rpcResponse("resource_comments")],
+    ]);
     /** Calls the business database API under the fixture's controlled identity/permission claims. */
     const rpc = (who, name, args = [], aal = "aal1") =>
         actor(
@@ -39,6 +44,8 @@ await withTestDatabase("comments_test", async ({sql, actor}) => {
             `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "number" || typeof value === "boolean" ? String(value) : q(value))).join(",")})`,
             aal,
         ).then((value) => {
+            const parse = commentResponses.get(name);
+            if (parse) return parse(value);
             try {
                 return JSON.parse(value);
             } catch {

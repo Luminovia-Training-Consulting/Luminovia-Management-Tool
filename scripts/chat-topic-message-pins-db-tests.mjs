@@ -1,4 +1,5 @@
 /** Real isolated PostgreSQL/RLS checks for topic-group message pins and deletion scopes. */
+import {rpcResponse} from "./testing/openapi-contract.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
@@ -21,9 +22,10 @@ await withTestDatabase("topic_message_pins", async ({sql, actor}) => {
         member,
         `select public.send_message(${q(room)},'Fictional pinned message',${q(randomUUID())})`,
     );
+    const pinResponse = rpcResponse("chat_topic_pinned_messages");
     const pins = (who, aal = "aal1") =>
         call(who, `select public.chat_topic_pinned_messages(${q(room)})`, aal).then(
-            JSON.parse,
+            pinResponse,
         );
     const change = (who, message, pin, aal = "aal1") =>
         call(
