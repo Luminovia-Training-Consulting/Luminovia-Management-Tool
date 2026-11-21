@@ -9,3 +9,10 @@ export function rpcResponse(name) {
     const schema = z.fromJSONSchema(operation.responses["200"].content["application/json"].schema);
     return (json) => schema.parse(JSON.parse(json));
 }
+
+/** Validate a request's plain JSON values against the published internal contract. */
+export function rpcRequest(name) {
+    const operation = paths[`/rest/v1/rpc/${name}`].post;
+    const schema = z.fromJSONSchema(operation.requestBody.content["application/json"].schema);
+    return (body) => schema.parse(body);
+}

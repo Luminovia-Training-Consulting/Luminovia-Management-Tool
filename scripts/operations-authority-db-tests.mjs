@@ -6,6 +6,12 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {spawn} from "node:child_process";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {rpcRequest, rpcResponse} from "./testing/openapi-contract.mjs";
+
+const organisationRequest = rpcRequest("save_organisation");
+const organisationId = rpcResponse("save_organisation");
+const contactRequest = rpcRequest("save_organisation_contact");
+const contactId = rpcResponse("save_organisation_contact");
 
 /** Keep one explicitly owned transaction open until its observed waiter exists. */
 async function hold(fixture, body) {
@@ -117,6 +123,41 @@ await withTestDatabase("operations_authority", async (fixture) => {
         checks++;
         console.log("PASS " + name);
     };
+    await check("Organisation and contact write contracts match scoped persisted IDs", async () => {
+        const organisation = organisationRequest({
+            p_id: null,
+            p_payload: {
+                name: "Fictional training studio",
+                time_zone: "Australia/Brisbane",
+                tags: ["Training"],
+                private_notes: "Private fictional memo",
+            },
+        });
+        const org = organisationId(await adminCall(
+            `to_jsonb(public.save_organisation(null,${q(JSON.stringify(organisation.p_payload))}::jsonb))`,
+        ));
+        const contact = contactRequest({
+            p_id: null,
+            p_organisation_id: org,
+            p_payload: {
+                name: "Fictional coordinator",
+                email: "coordinator@example.invalid",
+                notes: null,
+            },
+        });
+        const write = (id, target = org) =>
+            `to_jsonb(public.save_organisation_contact(${id ? q(id) : "null"},${q(target)},${q(JSON.stringify(contact.p_payload))}::jsonb))`;
+        const row = contactId(await adminCall(write(null)));
+        assert.equal(contactId(await adminCall(write(row))), row);
+        await assert.rejects(call(original, write(row)), /42501/);
+        const other = randomUUID();
+        await sql(`insert into public.organisations(id,name) values (${q(other)},'Fictional second studio')`);
+        await assert.rejects(adminCall(write(row, other)), /22023/);
+        assert.equal(
+            await sql(`select organisation_id from public.organisation_contacts where id=${q(row)}`),
+            org,
+        );
+    });
     const roles = (who, role) =>
         `public.set_account_roles(${q(who)},array[${q(role)}]::text[])`;
     const status = (who, active) => `public.set_user_active(${q(who)},${active})`;

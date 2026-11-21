@@ -2,6 +2,9 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {rpcResponse} from "./testing/openapi-contract.mjs";
+
+const auditPage = rpcResponse("admin_audit_events");
 
 await withTestDatabase("admin_audit", async ({sql, actor}) => {
     const roles = [
@@ -32,9 +35,7 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
     };
     /** Reads the business projection as a specific fixture identity to verify visibility and privacy. */
     const read = async (who = users.admin, args = "", aal = "aal1") =>
-        JSON.parse(
-            await actor(who, `select public.admin_audit_events(${args})`, aal),
-        );
+        auditPage(await actor(who, `select public.admin_audit_events(${args})`, aal));
     await check(
         "Current admin/owner permissions allow reads in password-only AAL1; every ordinary role and anonymous access is denied",
         async () => {

@@ -878,7 +878,111 @@ const jobViewMutation = (
   },
 });
 
+const organisationContactPayload = {
+  type: "object",
+  required: ["name"],
+  additionalProperties: false,
+  properties: {
+    name: { ...text, minLength: 1, maxLength: 120 },
+    position: { type: ["string", "null"], maxLength: 120 },
+    email: {
+      anyOf: [
+        { type: "null" },
+        { const: "" },
+        { ...text, format: "email", maxLength: 254 },
+      ],
+    },
+    phone: { type: ["string", "null"], maxLength: 50 },
+    notes: { type: ["string", "null"], maxLength: 4000 },
+    archived: { type: ["boolean", "null"], default: false },
+  },
+};
+
+const organisationPayload = {
+  type: "object",
+  required: ["name"],
+  additionalProperties: false,
+  properties: {
+    name: { ...text, minLength: 1, maxLength: 200 },
+    country: { type: ["string", "null"], maxLength: 100 },
+    time_zone: {
+      type: ["string", "null"],
+      default: "Europe/Berlin",
+      description: "Time zone name recognized by the server.",
+    },
+    industry: { type: ["string", "null"], maxLength: 120 },
+    city: { type: ["string", "null"], maxLength: 120 },
+    tags: { type: "array", maxItems: 20, items: { ...text, maxLength: 60 } },
+    private_notes: { type: ["string", "null"], maxLength: 8000 },
+    archived: { type: ["boolean", "null"], default: false },
+  },
+};
+
+const auditCursor = object({ at: { ...text, format: "date-time" }, id: uuid });
+
 const nativePaths = {
+  "/rest/v1/rpc/save_organisation": rpc(
+    "native_save_organisation",
+    "Organisations",
+    "Create, update or archive an organisation",
+    "Requires organisations.manage. Send a null ID to create an organisation. For an update, send the complete metadata to retain and the intended archived state. Private notes remain restricted to authorised staff. The response is the organisation ID.",
+    { p_id: nullableUuid, p_payload: organisationPayload },
+    uuid,
+  ),
+  "/rest/v1/rpc/save_organisation_contact": rpc(
+    "native_save_organisation_contact",
+    "Organisations",
+    "Create, update or archive an organisation contact",
+    "Requires organisations.manage. Send a null ID to create a contact. An existing contact must belong to the specified organisation. Contact data and notes stay private. The response is the contact ID.",
+    {
+      p_id: nullableUuid,
+      p_organisation_id: uuid,
+      p_payload: organisationContactPayload,
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/admin_audit_events": rpc(
+    "native_admin_audit_events",
+    "Administrative audit",
+    "Read the audited business-event projection",
+    "Requires current audit.read authority. The default window is the last 30 days and the server caps the window at 93 days and two hours to allow for local clock changes. Use a half-open time window and copy both cursor fields from next_cursor. Only the allowed action identifiers and reduced metadata are returned.",
+    {
+      p_from: nullableDateTime,
+      p_to: nullableDateTime,
+      p_action: { ...text, default: "" },
+      p_search: { ...text, maxLength: 160, default: "" },
+      p_before_at: nullableDateTime,
+      p_before_id: nullableUuid,
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 40 },
+    },
+    object({
+      items: {
+        type: "array",
+        maxItems: 100,
+        items: object({
+          id: uuid,
+          actor_name: text,
+          action: text,
+          resource_id: nullableUuid,
+          created_at: { ...text, format: "date-time" },
+        }),
+      },
+      has_more: boolean,
+      next_cursor: { anyOf: [auditCursor, { type: "null" }] },
+      from: { ...text, format: "date-time" },
+      to: { ...text, format: "date-time" },
+      actions: { type: "array", items: text },
+    }),
+    [
+      "p_from",
+      "p_to",
+      "p_action",
+      "p_search",
+      "p_before_at",
+      "p_before_id",
+      "p_limit",
+    ],
+  ),
   "/rest/v1/rpc/managed_profile": rpc(
     "native_managed_profile",
     "Accounts",
