@@ -1,0 +1,68 @@
+# Load after deploy/hostinger/selfhost/compose.yml. Relative bind paths are
+# resolved from that reviewed base file. Ingress is separately activated.
+name: ${COMPOSE_PROJECT_NAME:?Set the generated academy Compose name}
+services:
+  mail-relay:
+    ports: !reset []
+  mailpit:
+    profiles: ["mail-capture"]
+    ports: !reset []
+  auth:
+    # Default Auth templates are available before public ingress is opened.
+    # A customer sender/relay can be configured before enabling invitations.
+    environment:
+      GOTRUE_MAILER_TEMPLATES_INVITE: !reset null
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: !reset null
+      GOTRUE_MAILER_SUBJECTS_INVITE: "Einladung zur Akademie / Academy invitation"
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: "Passwort zurücksetzen / Reset password"
+  web:
+    image: caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    profiles: ["ingress"]
+    restart: unless-stopped
+    ports:
+      - ${ACADEMY_BIND_ADDRESS:?Set the academy IPv4 bind address}:80:80
+      - ${ACADEMY_BIND_ADDRESS:?Set the academy IPv4 bind address}:443:443
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the academy domain}
+    volumes:
+      - ../Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PORTAL_WWW_DIR:?Set the academy browser directory}:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [backend]
+    mem_limit: 128m
+    pids_limit: 100
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+  clamav:
+    image: clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3
+    restart: unless-stopped
+    environment:
+      CLAMD_STARTUP_TIMEOUT: "180"
+    volumes:
+      - clamav_signatures:/var/lib/clamav
+      - ../clamd.conf:/etc/clamav/clamd.conf:ro
+    networks: [backend]
+    mem_limit: 3g
+    pids_limit: 100
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD, clamdscan, --config-file=/etc/clamav/clamd.conf, --ping=1]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      start_interval: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+networks:
+  backend:
+    external: false
+    name: ${PORTAL_BACKEND_NETWORK:?Set the generated academy network}
+volumes:
+  caddy_data:
+  caddy_config:
+  clamav_signatures:

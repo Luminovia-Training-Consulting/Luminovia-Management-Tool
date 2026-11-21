@@ -7,6 +7,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -16,6 +17,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
+import { parseEnv } from "node:util";
 import {
   Uint8ArrayReader,
   Uint8ArrayWriter,
@@ -30,6 +32,8 @@ import {
 } from "./academy-browser-package.mjs";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
+import { installAcademyBrowser } from "./academy-install-browser.mjs";
+import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
 import { planAcademyStaging } from "./academy-staging-plan.mjs";
 
 const metadata = {
@@ -941,4 +945,139 @@ test("offline CLI consumes only its closed public env file and emits no credenti
   assert.equal(symlink.status, 1);
   assert.equal(symlink.stdout, "");
   assert.ok(!symlink.stderr.includes(redirected));
+});
+
+async function installFixture(t, now) {
+  const fixture = releaseFixture(t, now);
+  const root = join(fixture.root, "runtime");
+  const { browser_directory: browser, ...identity } = initializeAcademyRuntime({
+    root,
+    installationId: metadata.installationId,
+    edition: metadata.edition,
+    portalOrigin: new URL(metadata.backend).origin,
+    bindAddress: "127.0.0.1",
+  });
+  const key = parseEnv(
+    readFileSync(join(root, "runtime.env.public.env"), "utf8"),
+  ).VITE_SUPABASE_PUBLISHABLE_KEY;
+  fixture.file(runtimePath, "export const key = `" + key + "`;");
+  const archive = await fixture.write();
+  const signature = await fixture.signRelease();
+  const config = {
+    ...identity,
+    release_commit: metadata.sourceRevision,
+    backup_retention_days: 30,
+    data_region: "local",
+    time_zone: "Europe/Berlin",
+    tls: "acme",
+    smtp: {
+      mode: "capture",
+      sender_email: "course@academy.example.invalid",
+      sender_name: "Example & Practice Academy",
+    },
+  };
+  const inputs = {
+    ...fixture.inputs,
+    root,
+    config,
+    signature,
+    releasePublicKey: fixture.signer.publicKey,
+  };
+  return { ...fixture, root, browser, archive, inputs };
+}
+
+test("publishes exactly the verified bytes using the dedicated Caddy layout and preserves an installed release", async (t) => {
+  const { root, browser, archive, dist, inputs } = await installFixture(t);
+  const receipt = await installAcademyBrowser(inputs);
+  assert.equal(receipt.state, "browser-staged");
+  assert.equal(receipt.customer_ready, false);
+  assert.equal(receipt.release.archive_sha256, archive.archive.sha256);
+  assert.deepEqual(
+    JSON.parse(readFileSync(join(browser, "release.json"), "utf8")),
+    receipt,
+  );
+  for (const entry of archive.files) {
+    const path = entry.path.replace(/^browser\//, "");
+    const immutable = /^(?:assets\/|workbox-)/.test(path);
+    const actual = readFileSync(
+      join(browser, immutable ? path : "current/" + path),
+    );
+    assert.equal(sha256(actual), entry.sha256);
+    assert.deepEqual(actual, readFileSync(join(dist, path)));
+  }
+  await assert.rejects(
+    installAcademyBrowser(inputs),
+    /academy_install_runtime_already_staged/,
+  );
+  assert.ok(
+    !readdirSync(root).some((name) => name.startsWith(".browser-stage-")),
+  );
+});
+
+test("leaves the browser directory empty after a failed target, licence or gateway pairing", async (t) => {
+  const { root, browser, inputs, terms, issuer, signer } =
+    await installFixture(t);
+  await assert.rejects(
+    installAcademyBrowser({
+      ...inputs,
+      config: {
+        ...inputs.config,
+        portal_origin: "https://other.example.invalid",
+      },
+    }),
+    /academy_install_target_mismatch/,
+  );
+  await assert.rejects(
+    installAcademyBrowser({
+      ...inputs,
+      releasePublicKey: issuer.publicKey,
+    }),
+    /academy_browser_release_signature/,
+  );
+  await assert.rejects(
+    installAcademyBrowser({
+      ...inputs,
+      licencePublicKey: signer.publicKey,
+    }),
+    /academy_licence_signature/,
+  );
+  await assert.rejects(
+    installAcademyBrowser({
+      ...inputs,
+      now: Date.parse(terms.expires_at),
+    }),
+    /academy_staging_inactive_licence/,
+  );
+  const runtime = join(root, "runtime.env");
+  writeFileSync(
+    runtime,
+    readFileSync(runtime, "utf8").replace(
+      /^SUPABASE_PUBLISHABLE_KEY=.*$/m,
+      "SUPABASE_PUBLISHABLE_KEY='sb_publishable_WrongGatewayKey8271'",
+    ),
+  );
+  await assert.rejects(
+    installAcademyBrowser(inputs),
+    /academy_install_runtime_mismatch/,
+  );
+  assert.deepEqual(readdirSync(browser), []);
+});
+
+test("with concurrent first installers one exact release wins atomically", async (t) => {
+  const { root, browser, archive, inputs } = await installFixture(t);
+  const results = await Promise.allSettled([
+    installAcademyBrowser(inputs),
+    installAcademyBrowser(inputs),
+  ]);
+  assert.deepEqual(results.map(({ status }) => status).sort(), [
+    "fulfilled",
+    "rejected",
+  ]);
+  const installed = JSON.parse(
+    readFileSync(join(browser, "release.json"), "utf8"),
+  );
+  assert.equal(installed.release.archive_sha256, archive.archive.sha256);
+  assert.ok(
+    !readdirSync(root).some((name) => name.startsWith(".browser-stage-")),
+  );
 });

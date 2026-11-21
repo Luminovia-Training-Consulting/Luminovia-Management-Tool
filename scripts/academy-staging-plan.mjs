@@ -2,10 +2,9 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
-import { isAbsolute, join, posix, resolve } from "node:path";
+import { isAbsolute, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
-import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from "@zip.js/zip.js";
 import { z } from "zod";
 import { verifyAcademyBrowserRelease } from "./academy-browser-package.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
@@ -13,7 +12,6 @@ import { validatePublicConfig } from "./public-config.ts";
 
 const controlCharacters = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 const smallFileBytes = 16_384;
-const maxArchiveBytes = 65 * 1024 * 1024;
 const jsStringDelimiters = ['"', "'", "`"];
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const utf8 = new TextDecoder("utf-8", { fatal: true });
@@ -172,7 +170,7 @@ function infrastructurePlan(config) {
 }
 
 /** Do not follow symlinks or read unbounded input from a pipe or growing file. */
-async function readInput(path, limit) {
+export async function readAcademyOperatorInput(path, limit = smallFileBytes) {
   if (!isAbsolute(path ?? ""))
     throw new Error("academy_staging_absolute_input");
   const file = await open(
@@ -215,36 +213,18 @@ async function readInput(path, limit) {
 }
 
 /** Confirm the target's public key is in the signed browser chunks without returning it. */
-async function matchBrowserKey(directory, manifest, key) {
-  const bytes = await readInput(
-    join(directory, manifest.archive.name),
-    maxArchiveBytes,
-  );
-  if (sha256(bytes) !== manifest.archive.sha256)
-    throw new Error("academy_staging_archive_changed");
-  // The common verifier already validated the inventory, ZIP entries and their sizes.
-  const reader = new ZipReader(new Uint8ArrayReader(bytes), {
-    useWebWorkers: false,
-  });
-  try {
-    for await (const entry of reader.getEntriesGenerator()) {
-      if (
-        !entry.filename.startsWith("browser/assets/") ||
-        !entry.filename.endsWith(".js")
+function matchBrowserKey(files, key) {
+  for (const [path, bytes] of files) {
+    if (!path.startsWith("assets/") || !path.endsWith(".js")) continue;
+    const source = utf8.decode(bytes);
+    // Vite can emit a static template literal. The input schema excludes
+    // delimiters, escapes and interpolation characters in the key itself.
+    if (
+      jsStringDelimiters.some((delimiter) =>
+        source.includes(delimiter + key + delimiter),
       )
-        continue;
-      const source = utf8.decode(await entry.getData(new Uint8ArrayWriter()));
-      // Vite can emit a static template literal. The public-key input schema
-      // excludes backticks, escapes and interpolation characters.
-      if (
-        jsStringDelimiters.some((delimiter) =>
-          source.includes(delimiter + key + delimiter),
-        )
-      )
-        return;
-    }
-  } finally {
-    await reader.close();
+    )
+      return;
   }
   throw new Error("academy_staging_browser_key_mismatch");
 }
@@ -258,6 +238,7 @@ export async function planAcademyStaging({
   licencePublicKey,
   releasePublicKey,
   now,
+  includeFiles = false,
 }) {
   const target = configSchema.parse(config);
   const infra = infrastructurePlan(target);
@@ -271,7 +252,7 @@ export async function planAcademyStaging({
     release_commit: target.release_commit,
   };
   const verifiedAt = now ?? Date.now();
-  const { manifest, licenceState } = await verifyAcademyBrowserRelease({
+  const { manifest, licenceState, files } = await verifyAcademyBrowserRelease({
     directory,
     signature,
     licence,
@@ -279,16 +260,13 @@ export async function planAcademyStaging({
     releasePublicKey,
     expected,
     now: verifiedAt,
+    includeFiles: true,
   });
   if (licenceState !== "active")
     throw new Error("academy_staging_inactive_licence");
   if (manifest.backend !== infra.api)
     throw new Error("academy_staging_signed_backend_mismatch");
-  await matchBrowserKey(
-    directory,
-    manifest,
-    browser.VITE_SUPABASE_PUBLISHABLE_KEY,
-  );
+  matchBrowserKey(files, browser.VITE_SUPABASE_PUBLISHABLE_KEY);
   const { terms } = verifyAcademyLicence(
     licence,
     licencePublicKey,
@@ -296,7 +274,7 @@ export async function planAcademyStaging({
     verifiedAt,
   );
 
-  return {
+  const plan = {
     version: 1,
     kind: "academy-staging-plan",
     state: "offline-preflight-verified",
@@ -347,6 +325,7 @@ export async function planAcademyStaging({
       "independent encrypted backup, restore and retained-data upgrade",
     ],
   };
+  return includeFiles ? { plan, files } : plan;
 }
 
 if (
@@ -368,7 +347,7 @@ if (
     const [target, browser, detached, envelope, issuer, signer] =
       await Promise.all(
         [config, publicEnv, signature, licence, licenceKey, releaseKey].map(
-          (path) => readInput(path, smallFileBytes),
+          (path) => readAcademyOperatorInput(path),
         ),
       );
     const plan = await planAcademyStaging({
