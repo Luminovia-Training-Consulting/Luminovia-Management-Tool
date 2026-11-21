@@ -310,6 +310,7 @@ beforeEach(async () => {
         data = fake.administration
           ? {
               can_write: fake.licence === "active",
+              can_create_management: fake.licence === "active",
               organisations: [],
               accounts: [],
             }

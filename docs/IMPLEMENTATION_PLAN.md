@@ -37,6 +37,9 @@
 - [x] Enable revisioned quizzes, own feedback and evidence-backed completion in the standalone course. Dedicated PostgreSQL verifies answer privacy, current agreement, grace and revoked PDFs.
 - [x] Accept a new student paper from the assigned lecturer or scoped company through checked PDF intake. Real scan and exact-byte download passed for both dedicated editions.
 - [x] Confirm an exact CSV or XLSX attendance import atomically. PostgreSQL and real Chromium both editions passed stale and cross-scope boundaries.
+- [x] Let the dedicated academy provision organisations, lecturers, learners and its own course managers. Verify Auth identity retention through suspension and management delegation in both editions.
+- [x] Provide the dedicated role-scoped timetable with a bounded local date range. Verify English desktop, German mobile and the repeated local hour at daylight-saving change in both editions.
+- [x] Scan, publish and withdraw staff answer keys with exact-byte access. Verify current staff authority and exclude all key metadata from learner and company-only projections.
 - [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 

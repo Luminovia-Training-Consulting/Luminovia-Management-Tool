@@ -38,6 +38,8 @@ const attendanceImport = "/rest/v1/rpc/import_course_session_attendance";
 const administrationPaths = [
   "/rest/v1/rpc/academy_administration",
   "/rest/v1/rpc/academy_create_organisation",
+  "/rest/v1/rpc/academy_set_member_active",
+  "/rest/v1/rpc/academy_set_management",
   "/functions/v1/accounts/v1/academy/users",
 ] as const;
 const draftPaths = [

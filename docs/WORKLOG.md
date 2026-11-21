@@ -1,3 +1,11 @@
+# 21 November 2026 — Standalone LMS people, timetable and protected exams
+
+The academy's own administration can create organisations and provision or invite local lecturers, learners and course managers. Local administrators can assign or withdraw management authority for a retained lecturer. Suspending and reactivating a local account preserves the Auth UUID and the learner's organisation membership and enrolment. Actual GoTrue, PostgREST and Deno verified both editions and captured invitations at an owned loopback SMTP recipient.
+
+The timetable is available through the dedicated header and a protected direct link. Both editions passed real English desktop and German mobile journeys with course-scoped access, daylight-saving offsets and no horizontal overflow or measured axe issues. Native Chromium also exercised quiz authoring, learner attempts, attendance-backed completion, actual PDF download and staff revocation in both editions on desktop and mobile.
+
+Staff answer keys have their own scanner purpose and publication. Instructor assignment changes and withdrawal revoke the corresponding protected PDF access. Learners and company-only contacts see no key identifiers or filenames. Real GoTrue, PostgREST, Deno, Storage and ClamAV verified both editions with exact bytes, separate student and staff audiences, withdrawal and retained objects. Learners can also acknowledge the exact resource and receive scoped enrolment and completion receipts. The older hosted CI revision passed 127 SQL suites and both full browser/PWA legs before an outdated readiness conflict assertion stopped its native API run. The assertion and the matching Support fixture now verify actual HTTP 409.
+
 # 21 November 2026 — Standalone LMS publication, learning and register imports
 
 Standalone LMS functionality now takes priority over installer and commercial white-label work. Course managers can confirm an unpublished course with an assigned instructor and a participant capacity. The server prevents premature enrolment and concurrent overbooking. Both editions passed built desktop and Pixel 7 Chromium through native GoTrue and PostgREST for draft creation, assignment, publication, enrolment and the separate learner view. PostgreSQL verified single-winner capacity, current assignment, exact publication retries and retention in grace.
