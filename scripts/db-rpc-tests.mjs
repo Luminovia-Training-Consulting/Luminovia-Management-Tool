@@ -123,7 +123,7 @@ async function job(overrides = {}) {
 try {
     await sql(`create database ${database}`, "postgres");
     await sql(`create schema auth; create schema extensions;
- create table auth.users(id uuid primary key);
+ create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
  create function auth.uid() returns uuid language sql stable as $$ select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid $$;`);
     await sql(
         `create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$; grant usage on schema auth to authenticated,anon,service_role; grant execute on all functions in schema auth to authenticated,anon,service_role;`,
@@ -202,7 +202,7 @@ try {
         const r = await Promise.all([rpc(users[50], a), rpc(users[50], b)]);
         assert.deepEqual(r.map((x) => x.status).sort(), ["confirmed", "conflict"]);
     });
-    await test("Unverified expertise rejected", async () =>
+    await test("An undeclared required topic makes the lecturer ineligible", async () =>
         assert.equal(
             (await rpc(users[51], await job({topic_ids: [topic]}))).status,
             "not_eligible",
@@ -493,9 +493,9 @@ try {
             /permission denied/,
         );
         const invited = randomUUID();
-        await sql(`insert into auth.users(id) values('${invited}')`);
+        await sql(`insert into auth.users(id,email) values('${invited}','invite1@example.test')`);
         await sql(
-            `begin;set local role service_role;select public.complete_invitation('${r.invitation_id}','${invited}','Fictional invitee',true);commit;`,
+            `begin;set local role service_role;set local request.jwt.claims='{"role":"service_role"}';select public.complete_invitation('${r.invitation_id}','${invited}','Fictional invitee',true);commit;`,
         );
         assert.equal(
             await as(invited, "select role from public.user_roles"),
