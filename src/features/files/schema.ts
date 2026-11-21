@@ -42,7 +42,7 @@ const metadataFields = {
   deleted_at: instant.nullable(),
 };
 
-export const portalDocumentSchema = z.object({
+const portalDocumentSchema = z.object({
   ...metadataFields,
   personal_tags: personalFields.personal_tags.optional(),
   personal_folder: personalFields.personal_folder.optional(),
