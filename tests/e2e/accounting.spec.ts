@@ -53,11 +53,10 @@ async function fixtureSql(text: string) {
 }
 /** Inspect the actual browser-produced download without publishing real files. */
 async function contents(download: Download) {
-  const stream = await download.createReadStream();
-  if (!stream) throw new Error("Download bytes required");
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks);
+  expect(await download.failure()).toBeNull();
+  const path = await download.path();
+  if (!path) throw new Error("Download bytes required");
+  return readFileSync(path);
 }
 
 test("customer invoice PDF, exact payment totals and JSON/CSV stay private and bilingual", async ({
@@ -195,7 +194,7 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
       exact: true,
     })
     .check();
-  let downloadPromise = page.waitForEvent("download");
+  let downloadPromise = page.waitForEvent("download", { timeout: 20000 });
   await page
     .getByRole("button", { name: "JSON-Export erstellen", exact: true })
     .click();
@@ -210,7 +209,7 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
     currency: "AUD",
     tax: { status: "not_recorded", gross: null, vat_amount: null },
   });
-  downloadPromise = page.waitForEvent("download");
+  downloadPromise = page.waitForEvent("download", { timeout: 20000 });
   await page
     .getByRole("button", { name: "CSV-Export erstellen", exact: true })
     .click();
@@ -220,6 +219,7 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
   const context = await browser.newContext({
     viewport: page.viewportSize(),
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
+    acceptDownloads: true,
   });
   try {
     const clientPage = await context.newPage();
@@ -242,13 +242,40 @@ test("customer invoice PDF, exact payment totals and JSON/CSV stay private and b
     const clientCard = clientPage.locator("article.accounting-card").filter({
       has: clientPage.getByRole("heading", { name: number, exact: true }),
     });
-    const pdfPromise = clientPage.waitForEvent("download");
-    await clientCard
-      .getByRole("button", {
-        name: "Geprüfte Rechnungs-PDF herunterladen",
-        exact: true,
-      })
-      .click();
+    const document = json.invoices[0];
+    const pdfPromise = clientPage.waitForEvent("download", { timeout: 20000 });
+    // Keep a failed gateway request visible even if Chromium never emits a download.
+    void pdfPromise.catch(() => {});
+    const [response] = await Promise.all([
+      clientPage.waitForResponse(
+        (candidate) => {
+          const request = candidate.request();
+          if (
+            request.method() !== "POST" ||
+            !new URL(request.url()).pathname.endsWith("/functions/v1/files")
+          )
+            return false;
+          const payload = request.postDataJSON();
+          return (
+            payload?.action === "download" &&
+            payload.id === document.document_id &&
+            payload.version_id === document.document_version_id
+          );
+        },
+        { timeout: 20000 },
+      ),
+      clientCard
+        .getByRole("button", {
+          name: "Geprüfte Rechnungs-PDF herunterladen",
+          exact: true,
+        })
+        .click(),
+    ]);
+    expect(
+      response.status(),
+      "The scoped customer can download the exact retained version",
+    ).toBe(200);
+    expect(await response.body()).toEqual(bytes);
     expect(await contents(await pdfPromise)).toEqual(bytes);
     await clientPage.getByLabel("Sprache", { exact: true }).selectOption("en");
     await clientPage.getByLabel("Theme", { exact: true }).selectOption("dark");
