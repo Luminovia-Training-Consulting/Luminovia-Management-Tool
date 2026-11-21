@@ -1,3 +1,5 @@
+import { boundedJson } from "../_shared/bounded-json.ts";
+
 /** Credential exchange: only Supabase Auth verifies passwords and issues sessions. */
 export interface LoginDependencies {
   reserve: (hash: string) => Promise<boolean>;
@@ -15,30 +17,6 @@ const usernamePattern = /^[a-z][a-z0-9._-]{1,30}[a-z0-9]$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const failure = { error: "invalid_credentials" };
-
-async function boundedJson(request: Request): Promise<unknown> {
-  const reader = request.body?.getReader();
-  if (!reader) return null;
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const part = await reader.read();
-    if (part.done) break;
-    size += part.value.byteLength;
-    if (size > 1024) {
-      await reader.cancel();
-      throw new Error("invalid_request");
-    }
-    chunks.push(part.value);
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-}
 
 /** No email/UUID lookup endpoint exists; both identifier types share one generic failure. */
 export function createHumanLoginHandler(
@@ -69,7 +47,7 @@ export function createHumanLoginHandler(
     if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json")
       return json(415, { error: "json_required" });
     let body: unknown;
-    try { body = await boundedJson(request); }
+    try { body = await boundedJson(request, 1024); }
     catch { return json(400, { error: "invalid_request" }); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { error: "invalid_request" });
     const input = body as Record<string, unknown>;

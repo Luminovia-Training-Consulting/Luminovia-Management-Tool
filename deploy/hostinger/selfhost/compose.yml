@@ -351,6 +351,7 @@ services:
     volumes:
       - ./runtime:/home/deno/functions/main:ro
       - ../supabase/upstream/volumes/functions/deno.jsonc:/home/deno/functions/deno.jsonc:ro
+      - ../../../supabase/functions/_shared:/home/deno/functions/_shared:ro
       - ../../../supabase/functions/files:/home/deno/functions/files:ro
       - ../../../supabase/functions/mail-admin:/home/deno/functions/mail-admin:ro
       - ../../../supabase/functions/invite-lecturer:/home/deno/functions/invite-lecturer:ro

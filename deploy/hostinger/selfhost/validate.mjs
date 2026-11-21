@@ -261,7 +261,7 @@ try {
         "website-enquiries",
         "mail-admin",
     ];
-    for (const worker of workers) {
+    for (const worker of ["_shared", ...workers]) {
         const mount = compose.services.functions.volumes.find(
             (volume) => volume.target === "/home/deno/functions/" + worker,
         );
