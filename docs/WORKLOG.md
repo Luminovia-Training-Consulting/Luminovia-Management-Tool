@@ -3693,3 +3693,5 @@ Actions run `44890241359` failed code integrity because its export scanner did n
 # 21 November 2026 — CI formatting follow-up
 
 The exact-main Portal run `44892137237` reported an unformatted academy licence panel. Applied the repository formatter; the complete source formatting check and whitespace validation pass locally. Other long-running system, self-host and browser checks must finish on the new exact main revision.
+
+The same Portal run found that the branded package test still expected 43 API paths after the administrator licence receipt added the 44th. Updated the count and explicitly assert that receipt path; 22 focused package and contract tests pass locally. Full CI remains pending.

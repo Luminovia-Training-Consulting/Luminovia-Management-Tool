@@ -1569,3 +1569,4 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Format the academy licence panel flagged by Portal run `44892137237`; full source formatting passes locally.
 - [ ] Complete current-main system, security, native self-host and desktop/mobile browser CI before accepting the remaining core roadmap.
+- [x] Update the branded package contract test for the added licence receipt; 22 focused contract/package tests pass.
