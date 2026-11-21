@@ -19,8 +19,12 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     const companyA = randomUUID(), companyB = randomUUID(),
         template = randomUUID(), runA = randomUUID(), runB = randomUUID(),
         sessionA = randomUUID(), sessionB = randomUUID(),
+        jobA = randomUUID(), claimA = randomUUID(),
         roomA = randomUUID(), roomB = randomUUID(),
         membershipA = randomUUID(), membershipB = randomUUID();
+    const examPaperDocument = randomUUID(), examKeyDocument = randomUUID(),
+        examPaperVersion = randomUUID(), examKeyVersion = randomUUID();
+    let examPaperId, examKeyId;
     await sql(
         `insert into auth.users(id, email)
          values ${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
@@ -48,6 +52,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         insert into public.course_sessions(id, course_run_id, starts_at, ends_at)
         values (${q(sessionA)}, ${q(runA)}, now() + interval '2 days', now() + interval '2 days 1 hour'),
                (${q(sessionB)}, ${q(runB)}, now() + interval '3 days', now() + interval '3 days 1 hour');
+        insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+        values (${q(jobA)}, ${q(runA)}, 'Fictional Premium lecturer', 'Fictional customer', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional terms');
+        insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
+        values (${q(claimA)}, ${q(jobA)}, ${q(lecturer)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional terms', 1);
         insert into public.course_enrolments(course_run_id, user_id, status, enrolled_by)
         values (${q(runA)}, ${q(participant)}, 'enrolled', ${q(admin)}),
                (${q(runB)}, ${q(participant)}, 'enrolled', ${q(admin)});
@@ -79,7 +87,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                                 : q(typeof value === "object" ? JSON.stringify(value) : value),
                 )
                 .join(",")}))`,
-        ).then((value) => JSON.parse(value));
+        ).then((value) => JSON.parse(value || "null"));
     const toggle = (who, org, enabled, version, requestId = randomUUID()) =>
         rpc(who, "set_company_premium", [org, enabled, version, requestId]);
 
@@ -181,6 +189,59 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
+        "Exam PDF settings and exact clean files separate learners from course editors",
+        async () => {
+            await sql(`insert into public.documents(id, owner_id, uploaded_by, scope, kind, original_name, mime_type, size_bytes, status, client_id)
+                       values (${q(examPaperDocument)}, ${q(admin)}, ${q(admin)}, 'personal', 'material', 'Fictional exam.pdf', 'application/pdf', 20, 'clean', ${q(randomUUID())}),
+                              (${q(examKeyDocument)}, ${q(admin)}, ${q(admin)}, 'personal', 'material', 'Fictional answer key.pdf', 'application/pdf', 20, 'clean', ${q(randomUUID())});
+                       insert into public.document_versions(id, document_id, uploaded_by, client_id, version, object_path, original_name, mime_type, size_bytes, status, sha256)
+                       values (${q(examPaperVersion)}, ${q(examPaperDocument)}, ${q(admin)}, ${q(randomUUID())}, 1, 'fictional/exam.pdf', 'Fictional exam.pdf', 'application/pdf', 20, 'clean', ${q("a".repeat(64))}),
+                              (${q(examKeyVersion)}, ${q(examKeyDocument)}, ${q(admin)}, ${q(randomUUID())}, 1, 'fictional/key.pdf', 'Fictional answer key.pdf', 'application/pdf', 20, 'clean', ${q("b".repeat(64))});
+                       update public.documents set current_version_id=${q(examPaperVersion)} where id=${q(examPaperDocument)};
+                       update public.documents set current_version_id=${q(examKeyVersion)} where id=${q(examKeyDocument)};`);
+            assert.deepEqual((await rpc(participant, "course_workspace", [runA])).exams.documents, []);
+            await sql(`update public.document_versions set status='quarantined' where id=${q(examPaperVersion)}`);
+            await assert.rejects(rpc(admin, "share_course_exam_pdf", [runA, examPaperVersion, "students"]), /42501/);
+            await sql(`update public.document_versions set status='clean' where id=${q(examPaperVersion)}`);
+            examPaperId = await rpc(admin, "share_course_exam_pdf", [runA, examPaperVersion, "students"]);
+            examKeyId = await rpc(admin, "share_course_exam_pdf", [runA, examKeyVersion, "exam_staff"]);
+            await assert.rejects(rpc(client, "share_course_exam_pdf", [runA, examKeyVersion, "exam_staff"]), /42501/);
+            assert.deepEqual((await rpc(participant, "course_workspace", [runA])).exams.documents, []);
+            await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
+            await assert.rejects(rpc(participant, "course_document_access", ["exam", examKeyId]), /42501/);
+            await assert.rejects(rpc(participant, "set_course_exam_required", [runA, true, 0]), /42501/);
+            await assert.rejects(rpc(client, "share_course_exam_pdf", [runB, examPaperVersion, "students"]), /42501/);
+            assert.deepEqual(await rpc(client, "set_course_exam_required", [runA, true, 0]), {required: true, version: 1});
+            await assert.rejects(rpc(admin, "set_course_exam_required", [runA, false, 0]), /40001/);
+            const learnerExams = (await rpc(participant, "course_workspace", [runA])).exams;
+            assert.deepEqual(learnerExams.documents.map((item) => item.id), [examPaperId]);
+            assert.equal(learnerExams.version, null);
+            assert.deepEqual(
+                (await rpc(client, "course_workspace", [runA])).exams.documents.map((item) => item.id),
+                [examPaperId],
+            );
+            assert.equal((await rpc(participant, "course_document_access", ["exam", examPaperId])).id, examPaperVersion);
+            await assert.rejects(rpc(participant, "course_document_access", ["exam", examKeyId]), /42501/);
+            await assert.rejects(rpc(client, "course_document_access", ["exam", examKeyId]), /42501/);
+            await assert.rejects(rpc(client, "remove_course_exam_pdf", [runA, examKeyId]), /42501/);
+            assert.equal((await rpc(admin, "course_document_access", ["exam", examKeyId])).id, examKeyVersion);
+            await sql(`update public.document_versions set status='quarantined' where id=${q(examPaperVersion)}`);
+            assert.deepEqual((await rpc(participant, "course_workspace", [runA])).exams.documents, []);
+            assert.equal(await rpc(participant, "course_document_access", ["exam", examPaperId]), null);
+            await sql(`update public.document_versions set status='clean' where id=${q(examPaperVersion)}`);
+            await rpc(admin, "remove_course_exam_pdf", [runA, examKeyId]);
+            await assert.rejects(rpc(admin, "course_document_access", ["exam", examKeyId]), /42501/);
+            assert.equal(await rpc(admin, "share_course_exam_pdf", [runA, examKeyVersion, "exam_staff"]), examKeyId);
+            await rpc(client, "set_course_exam_required", [runA, false, 1]);
+            assert.deepEqual((await rpc(participant, "course_workspace", [runA])).exams.documents, []);
+            await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
+            await rpc(lecturer, "set_course_exam_required", [runA, true, 2]);
+            assert.deepEqual((await rpc(lecturer, "course_workspace", [runA])).exams.documents.map((item) => item.id), [examPaperId, examKeyId]);
+            await assert.rejects(rpc(lecturer, "set_course_exam_required", [runB, false, 0]), /42501/);
+        },
+    );
+
+    await check(
         "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
@@ -190,6 +251,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             const off = await toggle(admin, companyA, false, statusA.version);
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
+            await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
             await assert.rejects(
                 rpc(participant, "course_workspace_action", [runA, "quiz_submit", {answer: "fictional"}, 0]),
                 /42501/,

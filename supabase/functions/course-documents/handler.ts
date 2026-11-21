@@ -93,7 +93,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 // same snapshot label; the database still evaluates current expiry.
                 args = {p_locale: body.locale, p_as_of: new Date().toISOString()};
             } else if (
-                ["resource", "completion", "attendance"].includes(kind) &&
+                ["resource", "exam", "completion", "attendance"].includes(kind) &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
             ) {
@@ -146,6 +146,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 filename = `luminovia-${kind}.pdf`;
             if (
                 kind === "resource" ||
+                kind === "exam" ||
                 kind === "request_resource" ||
                 kind === "wiki_resource"
             ) {

@@ -19,6 +19,7 @@ import "./learning.css";
 import {CourseDestinations} from "./destinations";
 import {CompanyInvitations} from "./company-invitations";
 import {CourseWelcomeContent} from "./welcome-content";
+import {CourseExams} from "./exams";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 
@@ -640,6 +641,13 @@ export function CourseWorkspacePage() {
                     <Preparation course={course} actor={actor}/>
                 )}
                 <Resources course={course} actor={actor}/>
+                {course.exams && (
+                    <CourseExams
+                        key={course.exams.version ?? course.exams.required.toString()}
+                        course={course}
+                        actor={actor}
+                    />
+                )}
                 {course.access.client && course.ended && course.repeat_request && (
                     <RepeatBooking course={course} actor={actor}/>
                 )}

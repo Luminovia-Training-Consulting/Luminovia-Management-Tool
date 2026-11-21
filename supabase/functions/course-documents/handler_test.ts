@@ -197,6 +197,60 @@ Deno.test(
     },
 );
 Deno.test(
+    "exam PDF bytes require exact scanned version and a second current course authorization",
+    async () => {
+        const bytes = new TextEncoder().encode("%PDF-1.7 fictional exam");
+        const digest = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+            .map((value) => value.toString(16).padStart(2, "0")).join("");
+        let calls = 0;
+        const handler = createCourseDocumentHandler({
+            origins: [origin],
+            authenticate: async () => true,
+            rpc: async (_token, name, args) => {
+                assert(name === "course_document_access");
+                assert(args.p_kind === "exam" && args.p_id === id);
+                calls++;
+                return {
+                    data: {
+                        object_path: "clean/exam-version",
+                        name: "fictional-exam.pdf",
+                        mime_type: "application/pdf",
+                        sha256: digest,
+                    },
+                    error: null,
+                };
+            },
+            download: async () => bytes,
+            render: async () => { throw new Error("unexpected_render"); },
+        });
+        const response = await handler(request({kind: "exam", id}));
+        assert(response.status === 200);
+        assert((await response.text()) === "%PDF-1.7 fictional exam");
+        assert(calls === 2);
+
+        let revokedCalls = 0;
+        const revoked = createCourseDocumentHandler({
+            origins: [origin],
+            authenticate: async () => true,
+            rpc: async () => ({
+                data: ++revokedCalls === 1 ? {
+                    object_path: "clean/exam-version",
+                    name: "fictional-exam.pdf",
+                    mime_type: "application/pdf",
+                    sha256: digest,
+                } : null,
+                error: null,
+            }),
+            download: async () => bytes,
+            render: async () => { throw new Error("unexpected_render"); },
+        });
+        const denied = await revoked(request({kind: "exam", id}));
+        assert(denied.status === 403);
+        assert((await denied.json()).error === "document_changed_or_revoked");
+    },
+);
+
+Deno.test(
     "resource downloads bind exact clean bytes to hash and recheck current membership",
     async () => {
         const bytes = new TextEncoder().encode("fictional reviewed bytes");
