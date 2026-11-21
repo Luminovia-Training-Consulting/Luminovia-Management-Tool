@@ -62,6 +62,10 @@ Deno.serve(
         invitationsEnabled:
             Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
             origins.includes(appOrigin),
+        authenticateAcademy: async (token) => {
+            const user = await caller(token).auth.getUser(token);
+            return !user.error && Boolean(user.data.user);
+        },
         authenticate: async (token) => {
             const client = caller(token);
             const user = await client.auth.getUser(token);

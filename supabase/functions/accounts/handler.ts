@@ -15,6 +15,7 @@ export const roles = [
 ] as const;
 // Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
+type ProvisionedRole = AccountRole | "participant";
 
 // Validated invitation request with a durable retry key and optional organization binding.
 export interface Invitation<Role = AccountRole> {
@@ -37,6 +38,7 @@ export interface AccountDependencies {
     appOrigin: string;
     invitationsEnabled: boolean;
     authenticate: (token: string) => Promise<boolean>;
+    authenticateAcademy?: (token: string) => Promise<boolean>;
     rpc: (
         token: string,
         name: string,
@@ -47,11 +49,11 @@ export interface AccountDependencies {
         args?: Record<string, unknown>,
     ) => Promise<RpcResult>;
     sendInvitation: (
-        invitation: Invitation<AccountRole | "participant">,
+        invitation: Invitation<ProvisionedRole>,
         redirect: string,
     ) => Promise<string>;
     createAccount?: (
-        account: Invitation & { password: string },
+        account: Invitation<ProvisionedRole> & { password: string },
     ) => Promise<string>;
     completeAccount?: (
         id: string,
@@ -82,6 +84,13 @@ const uuid = (value: unknown): value is string =>
 // Accept only JSON objects as payloads; arrays and null do not satisfy the field contract.
 function object(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function validAccountPassword(value: unknown): value is string {
+    return typeof value === "string" &&
+        value.length >= 8 && value.length <= 128 &&
+        /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value) &&
+        /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/.test(value) && !/[\x00-\x1f\x7f]/.test(value);
 }
 
 // Normalize the allowed invitation payload and bind client accounts to one valid organization.
@@ -252,6 +261,88 @@ export function createAccountHandler(deps: AccountDependencies) {
         )?.[1];
         if (!token) return response(401, {error: "authentication_required"});
         try {
+            if (path === "/v1/academy/users") {
+                if (request.method !== "POST") return response(405, {error: "method_not_allowed"});
+                if (!(await deps.authenticateAcademy?.(token)))
+                    return response(401, {error: "authentication_required"});
+                const input = await body(request);
+                if (!object(input)) return response(400, {error: "invalid_request"});
+                const {mode, password, role, organisation_id, ...metadata} = input;
+                const base = parseInvitation(metadata);
+                if (!base?.display_name ||
+                    (role !== "lecturer" && role !== "participant") ||
+                    (role === "participant" ? !uuid(organisation_id) : organisation_id !== null) ||
+                    (mode !== "password" && mode !== "invite") ||
+                    (mode === "password" ? !validAccountPassword(password) : password !== undefined))
+                    return response(400, {error: "invalid_request"});
+                if (!deps.privilegedRpc || !deps.removeCreatedAccount ||
+                    (mode === "password" ? !deps.createAccount : !deps.invitationsEnabled))
+                    return response(503, {error: mode === "invite" ? "invitations_disabled" : "creation_disabled"});
+                const invitation: Invitation<ProvisionedRole> = {
+                    ...base, role, organisation_id: role === "participant" ? organisation_id as string : null,
+                };
+                const reservation = await deps.rpc(token, "reserve_academy_account", {
+                    p_request_id: invitation.idempotency_key,
+                    p_email: invitation.email,
+                    p_display_name: invitation.display_name,
+                    p_role: invitation.role,
+                    p_organisation_id: invitation.organisation_id,
+                    p_mode: mode,
+                });
+                const reservationError = reservation.error?.code;
+                if (reservationError === "42501") return response(403, {error: "permission_required"});
+                if (reservationError === "PT409") return response(409, {error: "creation_conflict"});
+                if (reservationError === "PT429") return response(429, {error: "creation_rate_limited"});
+                if (reservationError === "22023") return response(400, {error: "invalid_request"});
+                if (reservation.error || !object(reservation.data) || !uuid(reservation.data.creation_id))
+                    return response(503, {error: "creation_unavailable"});
+
+                const record = reservation.data;
+                const creationId = record.creation_id;
+                const receipt = (status: number, userId: string) =>
+                    response(status, {status: "created", user_id: userId});
+                if (record.status === "created" && uuid(record.user_id)) return receipt(200, record.user_id);
+                if (record.status === "in_progress") return response(202, {status: "in_progress"});
+                if (record.status !== "reserved" && record.status !== "cleanup")
+                    return response(409, {error: "creation_conflict"});
+
+                const finish = (decision: "complete" | "cleanup" | "discard", id: string | null) =>
+                    deps.privilegedRpc!("finish_academy_account", {
+                        p_creation_id: creationId, p_user_id: id, p_decision: decision,
+                    });
+                let createdId: string | null = null;
+                let completionCode: string | undefined;
+                if (record.status === "reserved") {
+                    try {
+                        const identity = mode === "invite"
+                            ? await deps.sendInvitation(invitation, `${deps.appOrigin}/auth/callback?type=invite`)
+                            : await deps.createAccount!({...invitation, password: password as string});
+                        if (!uuid(identity)) throw new Error("creation_failed");
+                        createdId = identity;
+                        const completed = await finish("complete", identity);
+                        completionCode = completed.error?.code;
+                        if (!completed.error && object(completed.data) &&
+                            completed.data.status === "created" && completed.data.user_id === identity)
+                            return receipt(201, identity);
+                    } catch {
+                        // Auth or PostgREST may have committed before the transport failed.
+                    }
+                }
+                const cleanup = await finish("cleanup", createdId);
+                if (cleanup.error || !object(cleanup.data)) return response(502, {error: "creation_failed"});
+                if (cleanup.data.status === "created" && uuid(cleanup.data.user_id))
+                    return receipt(200, cleanup.data.user_id);
+                if (cleanup.data.status === "cleanup" && uuid(cleanup.data.user_id)) {
+                    const id = cleanup.data.user_id;
+                    await deps.removeCreatedAccount(id);
+                    const discarded = await finish("discard", id);
+                    if (discarded.error || !object(discarded.data) || discarded.data.status !== "failed")
+                        return response(502, {error: "creation_failed"});
+                }
+                return completionCode === "42501"
+                    ? response(403, {error: "permission_required"})
+                    : response(502, {error: "creation_failed"});
+            }
             if (!(await deps.authenticate(token))) {
                 return response(401, {error: "authentication_required"});
             }
@@ -447,17 +538,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 )
                     return response(503, {error: "creation_disabled"});
                 const payload = await body(request);
-                if (
-                    !object(payload) ||
-                    typeof payload.password !== "string" ||
-                    payload.password.length < 8 ||
-                    payload.password.length > 128 ||
-                    !/[A-Z]/.test(payload.password) ||
-                    !/[a-z]/.test(payload.password) ||
-                    !/[0-9]/.test(payload.password) ||
-                    !/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/.test(payload.password) ||
-                    /[\x00-\x1f\x7f]/.test(payload.password)
-                )
+                if (!object(payload) || !validAccountPassword(payload.password))
                     return response(400, {error: "invalid_request"});
                 const {password, ...metadata} = payload;
                 const creation = parseInvitation(metadata);
