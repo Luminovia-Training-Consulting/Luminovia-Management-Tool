@@ -33,7 +33,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     edition,
   });
   const responseSchemas = new Map(
-    // The separately tested material, attendance and exam transports have their own fixtures.
+    // Authoring, material, attendance and exam transports have their own fixtures.
     Object.entries(paths)
       .filter(
         ([path]) =>
@@ -43,6 +43,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/course_session_register",
             "/rest/v1/rpc/save_course_session_attendance",
             "/rest/v1/rpc/set_course_exam_required",
+            "/rest/v1/rpc/academy_course_draft_options",
+            "/rest/v1/rpc/academy_create_course_draft",
           ].includes(path),
       )
       .map(([path, operations]) => {

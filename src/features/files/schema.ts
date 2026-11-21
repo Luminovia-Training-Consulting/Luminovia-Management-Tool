@@ -42,13 +42,8 @@ const metadataFields = {
   deleted_at: instant.nullable(),
 };
 
-const portalDocumentSchema = z.object({
-  ...metadataFields,
-  personal_tags: personalFields.personal_tags.optional(),
-  personal_folder: personalFields.personal_folder.optional(),
-  personal_version: personalFields.personal_version.optional(),
-});
-export type PortalDocument = z.infer<typeof portalDocumentSchema>;
+export type PortalDocument = z.infer<z.ZodObject<typeof metadataFields>> &
+  Partial<z.infer<z.ZodObject<typeof personalFields>>>;
 
 export const documentCursorSchema = z.object({ at: instant, id });
 const discoveryRows = z.array(
