@@ -8,6 +8,7 @@ const actors = [
   { name: "management", primary: "management" },
   { name: "company", primary: "client", landing: "/client" },
   { name: "participant", primary: "participant", landing: "/learning" },
+  { name: "guest", primary: "guest", landing: "/profile" },
   { name: "lecturer", primary: "lecturer", teaches: true },
   { name: "senior lecturer", primary: "senior_lecturer", teaches: true },
   {
@@ -100,7 +101,9 @@ for (const role of actors) {
       await login(
         page,
         profile.email,
-        role.primary === "participant" ? destination : /\/$/,
+        role.primary === "participant" || role.primary === "guest"
+          ? destination
+          : /\/$/,
       );
       await expect(page.locator("html")).toHaveAttribute("lang", language);
       const sidebarLink = (href: string) =>
@@ -146,8 +149,11 @@ for (const role of actors) {
         await expect(dialog).toHaveCount(0);
       }
 
-      if (role.primary !== "participant") {
-        await page.goto("/files");
+      await page.goto("/files");
+      if (role.primary === "guest" || role.primary === "participant") {
+        await expect(page).toHaveURL(destination);
+        await expect(sidebarLink("/files")).toHaveCount(0);
+      } else {
         await page
           .getByRole("button", { name: /^(Datei hochladen|Upload file)$/i })
           .click();
@@ -157,6 +163,12 @@ for (const role of actors) {
         await expect(
           page.getByRole("option", { name: /^(Rechnung|Invoice)$/i }),
         ).toHaveCount(teaching ? 1 : 0);
+      }
+
+      if (role.primary === "guest") {
+        await page.goto("/notifications");
+        await expect(page).toHaveURL(destination);
+        await expect(sidebarLink("/notifications")).toHaveCount(0);
       }
 
       if ("additional" in role) {

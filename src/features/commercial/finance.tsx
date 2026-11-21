@@ -52,6 +52,7 @@ import {
   invoiceDueState,
   invoicesDueFirst,
   invoicesQuery,
+  invoiceSeriesRecordsQuery,
   paymentsQuery,
 } from "./api";
 import type { EarningRecord, InvoicePayment, InvoiceRecord } from "./types";
@@ -62,6 +63,12 @@ import {
   MyInvoiceExceptions,
 } from "./invoice-exception";
 import type { InvoiceException } from "./invoice-exception-schema";
+import type { InvoiceSeriesRecord } from "./invoice-series-schema";
+import {
+  InvoiceSeriesSummary,
+  ManageInvoiceSeries,
+  MyInvoiceSeries,
+} from "./invoice-series";
 import { FinanceTrendChart } from "./finance-trend";
 import { InvoiceLabels } from "./invoice-labels";
 import { RevenuePanel } from "./revenue";
@@ -92,12 +99,14 @@ function SubmitInvoice({
   zone,
   initialClaimId,
   exception,
+  seriesClaims,
   onDone,
 }: {
   actor: string;
   zone: string;
   initialClaimId?: string;
-  exception?: InvoiceException;
+  exception?: InvoiceException | InvoiceSeriesRecord;
+  seriesClaims: ReadonlySet<string>;
   onDone: () => void;
 }) {
   const { t, i18n } = useTranslation("commercial");
@@ -107,6 +116,7 @@ function SubmitInvoice({
     ...earningsQuery(actor, false),
     enabled: !exception,
   });
+  const series = exception && "kind" in exception ? exception : null;
   const [selection, setSelection] = useState<string[] | null>(null);
   const [document, setDocument] = useState<PortalDocument | null>(null);
   const [invalidDate, setInvalidDate] = useState(false);
@@ -125,7 +135,10 @@ function SubmitInvoice({
   const defaultDue = resolveInvoiceDueDate(issued, "");
   const ownCandidates =
     earnings.data?.filter(
-      (row) => !row.invoice_id && row.lecturer_id === actor,
+      (row) =>
+        !row.invoice_id &&
+        row.lecturer_id === actor &&
+        !seriesClaims.has(row.claim_id),
     ) ?? [];
   const eligible = ownCandidates.filter(
     (row) =>
@@ -180,14 +193,20 @@ function SubmitInvoice({
         p_document_version_id: document.current_version_id,
         p_issued_on: values.issued,
       };
-      const routing = exception
-        ? { p_exception_id: exception.id }
-        : { p_claim_ids: selected, p_due_on: due };
+      const routing = series
+        ? { p_approval_id: series.id }
+        : exception
+          ? { p_exception_id: exception.id }
+          : { p_claim_ids: selected, p_due_on: due };
       const signature = JSON.stringify({ ...payload, ...routing });
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
       const { data, error } = await db().rpc(
-        exception ? "submit_exception_invoice" : "submit_invoice",
+        series
+          ? "submit_invoice_series_entry"
+          : exception
+            ? "submit_exception_invoice"
+            : "submit_invoice",
         { ...payload, ...routing, p_client_id: retry.current.key },
       );
       if (error || !data) throw error ?? new Error("unconfirmed");
@@ -207,7 +226,9 @@ function SubmitInvoice({
           : "";
       setSubmissionError(
         exception && error && "code" in error && error.code === "PT409"
-          ? "invoiceExceptionConflict"
+          ? series
+            ? "invoiceSeriesStale"
+            : "invoiceExceptionConflict"
           : message.includes("invoice_review_required")
             ? "invoiceReviewRequired"
             : message.includes("invoice_not_ready")
@@ -365,13 +386,17 @@ function SubmitInvoice({
           ))}
         </fieldset>
       )}
-      {currency && (
-        <p className="commercial-selected-total">
-          {exception
-            ? t("invoiceExceptionAmount", { currency })
-            : t("selectedTotal")}
-          <strong>{money(total, currency, i18n.language)}</strong>
-        </p>
+      {series ? (
+        <InvoiceSeriesSummary entry={series} />
+      ) : (
+        currency && (
+          <p className="commercial-selected-total">
+            {exception
+              ? t("invoiceExceptionAmount", { currency })
+              : t("selectedTotal")}
+            <strong>{money(total, currency, i18n.language)}</strong>
+          </p>
+        )
       )}
       {!exception && (
         <p className="commercial-small muted">{t("invoiceBasis")}</p>
@@ -456,7 +481,15 @@ function VoidPayment({
           {t("voidPayment")}
         </Button>
       </div>
-      {save.isError && <Notice kind="error">{t("failed")}</Notice>}
+      {save.isError && (
+        <Notice kind="error">
+          {t(
+            "code" in save.error && save.error.code === "PT409"
+              ? "invoiceSeriesCorrectionLocked"
+              : "failed",
+          )}
+        </Notice>
+      )}
     </form>
   );
 }
@@ -750,11 +783,13 @@ function InvoiceCard({
   invoice,
   manager,
   zone,
+  series,
 }: {
   actor: string;
   invoice: InvoiceRecord;
   manager: boolean;
   zone: string;
+  series?: InvoiceSeriesRecord;
 }) {
   const { t, i18n } = useTranslation("commercial");
   const online = useOnline();
@@ -765,6 +800,8 @@ function InvoiceCard({
   const [failed, setFailed] = useState(false);
   const today = DateTime.now().setZone(zone).toISODate()!;
   const dueState = invoiceDueState(invoice, today);
+  const fullyCredited =
+    series && invoice.status === "paid" && Number(invoice.total_amount) === 0;
   const dueStateText = {
     early: "invoiceEarly",
     half_term: "invoiceHalfTerm",
@@ -801,7 +838,7 @@ function InvoiceCard({
           {manager && <p>{invoice.user_name}</p>}
         </div>
         <span className={`badge commercial-status-${invoice.status}`}>
-          {t(invoice.status)}
+          {t(fullyCredited ? "invoiceSeriesFullyCredited" : invoice.status)}
         </span>
       </div>
       <dl className="commercial-facts">
@@ -824,7 +861,7 @@ function InvoiceCard({
           {money(Number(invoice.paid_amount), invoice.currency, i18n.language)}
         </dd>
       </dl>
-      {dueState !== "inactive" && (
+      {dueState !== "inactive" && !fullyCredited && (
         <p
           className={`invoice-due-status invoice-due-${dueState}`}
           role="status"
@@ -839,6 +876,7 @@ function InvoiceCard({
           )}
         </p>
       )}
+      {series && <InvoiceSeriesSummary entry={series} />}
       {invoice.note && <p className="commercial-note">{invoice.note}</p>}
       <InvoiceLabels
         actor={actor}
@@ -868,21 +906,25 @@ function InvoiceCard({
           <Download size={16} />
           {t("download")}
         </Button>
-        {manager && invoice.status !== "paid" && (
-          <Button
-            variant="secondary"
-            disabled={!online}
-            onClick={() => setReviewing(true)}
-          >
-            {t("review")}
-          </Button>
-        )}
-        {manager && invoice.status === "approved" && (
-          <Button disabled={!online} onClick={() => setPaying(true)}>
-            <Banknote size={16} />
-            {t("payment")}
-          </Button>
-        )}
+        {manager &&
+          (invoice.status !== "paid" ||
+            (series && Number(invoice.total_amount) === 0)) && (
+            <Button
+              variant="secondary"
+              disabled={!online}
+              onClick={() => setReviewing(true)}
+            >
+              {t("review")}
+            </Button>
+          )}
+        {manager &&
+          invoice.status === "approved" &&
+          Number(invoice.total_amount) > 0 && (
+            <Button disabled={!online} onClick={() => setPaying(true)}>
+              <Banknote size={16} />
+              {t("payment")}
+            </Button>
+          )}
         <Button
           variant="ghost"
           onClick={() => setShowHistory((current) => !current)}
@@ -938,10 +980,12 @@ function EarningsTable({
   rows,
   manager,
   zone,
+  manageSeries,
 }: {
   rows: EarningRecord[];
   manager: boolean;
   zone: string;
+  manageSeries?: (row: EarningRecord) => void;
 }) {
   const { t, i18n } = useTranslation("commercial");
   return (
@@ -967,6 +1011,16 @@ function EarningsTable({
               <td>
                 <strong>{row.title}</strong>
                 <small>{row.customer_name}</small>
+                {manageSeries && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    type="button"
+                    onClick={() => manageSeries(row)}
+                  >
+                    {t("invoiceSeriesManage")}
+                  </Button>
+                )}
               </td>
               {manager && <td>{row.lecturer_name}</td>}
               <td>
@@ -1020,8 +1074,21 @@ export function FinancePage() {
     enabled: !access.isPending,
   });
   const [openedInvoiceForm, setSubmitting] = useState(false);
-  const [selectedException, setSelectedException] =
-    useState<InvoiceException | null>(null);
+  const [selectedException, setSelectedException] = useState<
+    InvoiceException | InvoiceSeriesRecord | null
+  >(null);
+  const [manageSeries, setManageSeries] = useState<EarningRecord | null>(null);
+  const seriesRecords = useQuery({
+    ...invoiceSeriesRecordsQuery(actor, effectiveAll),
+    enabled: online && (effectiveAll || canSubmit),
+  });
+  const seriesEntries = seriesRecords.data ?? [];
+  const seriesClaims = new Set(seriesEntries.map((entry) => entry.claim_id));
+  const seriesByInvoice = new Map(
+    seriesEntries.map((entry) => [entry.invoice_id, entry]),
+  );
+  const selectedSeries =
+    selectedException && "kind" in selectedException ? selectedException : null;
   const submitting = Boolean(
     canSubmit && (openedInvoiceForm || requestedClaimId),
   );
@@ -1083,6 +1150,18 @@ export function FinancePage() {
             setSubmitting(true);
           }}
         />
+      )}
+      {canSubmit && !effectiveAll && (
+        <MyInvoiceSeries
+          entries={seriesEntries}
+          onSubmit={(entry) => {
+            setSelectedException(entry);
+            setSubmitting(true);
+          }}
+        />
+      )}
+      {seriesRecords.isError && (
+        <ErrorState retry={() => void seriesRecords.refetch()} />
       )}
       {manager && (
         <>
@@ -1198,6 +1277,7 @@ export function FinancePage() {
                 rows={earnings.data}
                 manager={effectiveAll}
                 zone={zone}
+                manageSeries={manager ? setManageSeries : undefined}
               />
             ) : (
               <p className="muted">{t("noEarnings")}</p>
@@ -1233,7 +1313,13 @@ export function FinancePage() {
                       row.total_amount,
                       row.paid_amount,
                       row.currency,
-                      t(row.status),
+                      t(
+                        seriesByInvoice.has(row.id) &&
+                          row.status === "paid" &&
+                          Number(row.total_amount) === 0
+                          ? "invoiceSeriesFullyCredited"
+                          : row.status,
+                      ),
                       (row.labels ?? []).join(" | "),
                     ]),
                   ])
@@ -1316,6 +1402,7 @@ export function FinancePage() {
                     invoice={invoice}
                     manager={manager}
                     zone={zone}
+                    series={seriesByInvoice.get(invoice.id)}
                   />
                 ))}
               </div>
@@ -1327,6 +1414,14 @@ export function FinancePage() {
             )}
           </section>
         </>
+      )}
+      {manageSeries && (
+        <ManageInvoiceSeries
+          actor={actor}
+          claimId={manageSeries.claim_id}
+          title={manageSeries.title}
+          close={() => setManageSeries(null)}
+        />
       )}
       <Dialog
         open={submitting}
@@ -1340,10 +1435,20 @@ export function FinancePage() {
           }
         }}
         title={t(
-          selectedException ? "submitInvoiceException" : "createInvoice",
+          selectedSeries
+            ? selectedSeries.kind === "interim"
+              ? "invoiceSeriesSubmitInterim"
+              : "invoiceSeriesSubmitFinal"
+            : selectedException
+              ? "submitInvoiceException"
+              : "createInvoice",
         )}
         description={t(
-          selectedException ? "invoiceExceptionPdfHelp" : "invoiceHint",
+          selectedSeries
+            ? "invoiceSeriesPdfHelp"
+            : selectedException
+              ? "invoiceExceptionPdfHelp"
+              : "invoiceHint",
         )}
       >
         {submitting && (
@@ -1353,6 +1458,7 @@ export function FinancePage() {
             zone={zone}
             initialClaimId={requestedClaimId}
             exception={selectedException ?? undefined}
+            seriesClaims={seriesClaims}
             onDone={() => {
               setSubmitting(false);
               setSelectedException(null);

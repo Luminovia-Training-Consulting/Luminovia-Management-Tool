@@ -75,6 +75,34 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     partial,
     randomUUID(),
   ]);
+  const inbox = async (who, kind) =>
+    (await rpc(who, "notification_inbox")).items.filter(
+      (item) => item.kind === kind,
+    );
+  const financeReviewKind = "invoice_review_requested";
+  assert.equal((await inbox(finance, financeReviewKind)).length, 2);
+  assert.deepEqual(await inbox(lecturer, financeReviewKind), []);
+  const repeatedCancellationReview = await rpc(
+    lecturer,
+    "request_invoice_review",
+    [cancelled, randomUUID()],
+  );
+  assert.equal(repeatedCancellationReview, cancellationReview);
+  assert.equal((await inbox(finance, financeReviewKind)).length, 2);
+  await sql(`delete from public.user_roles where user_id='${finance}' and role='management';
+             insert into public.user_roles(user_id,role) values ('${finance}','lecturer');`);
+  assert.deepEqual(await inbox(finance, financeReviewKind), []);
+  assert.equal(
+    await actor(
+      finance,
+      "select count(*) from public.notifications where kind='invoice_review_requested'",
+    ),
+    "0",
+  );
+  await sql(
+    `insert into public.user_roles(user_id,role) values ('${finance}','management')`,
+  );
+
   const payDue = "2026-10-22",
     issue = "2026-11-22";
   const note =
@@ -138,6 +166,15 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     [{ request_id: cancellationReview, title: "Cancelled fixture" }],
   );
 
+  const availableKind = "invoice_exception_available",
+    revokedKind = "invoice_exception_revoked";
+  assert.equal((await inbox(finance, financeReviewKind)).length, 1);
+  const lecturerApprovals = await inbox(lecturer, availableKind);
+  assert.equal(lecturerApprovals.length, 1);
+  assert.equal(lecturerApprovals[0].href, "/finance");
+  assert.equal(lecturerApprovals[0].title, "");
+  assert.deepEqual(await inbox(other, availableKind), []);
+  assert.deepEqual(await inbox(finance, availableKind), []);
   assert.equal(await sql("select count(*) from public.invoices"), "0");
   assert.equal(await sql("select count(*) from public.payment_records"), "0");
   const available = await rpc(lecturer, "my_invoice_exceptions");
@@ -222,6 +259,7 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     /22023/,
   );
   assert.deepEqual(await waiting(), []);
+  assert.deepEqual(await inbox(lecturer, availableKind), []);
   await assert.rejects(
     rpc(finance, "revoke_invoice_exception", [
       cancelApproval,
@@ -296,6 +334,10 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     "Updated assignment evidence has to be reviewed.",
   ]);
   assert.deepEqual(await waiting(), []);
+  assert.equal((await inbox(finance, financeReviewKind)).length, 1);
+  assert.deepEqual(await inbox(lecturer, availableKind), []);
+  assert.equal((await inbox(lecturer, revokedKind)).length, 1);
+  assert.deepEqual(await inbox(other, revokedKind), []);
   const partialApproval = await approve(partialReview, alternate, 160.5);
   const first = await rpc(lecturer, "submit_exception_invoice", [
     partialApproval,

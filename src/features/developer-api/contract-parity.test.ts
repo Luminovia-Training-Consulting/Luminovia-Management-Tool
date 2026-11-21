@@ -39,7 +39,7 @@ describe("shared amendments and internal exceptional invoices", () => {
             anyOf: expect.arrayContaining([
               expect.objectContaining({
                 properties: {
-                  required: { type: "integer", minimum: 2, maximum: 20 },
+                  required: { type: "integer", minimum: 1, maximum: 20 },
                   accepted: { type: "integer", minimum: 0, maximum: 20 },
                   state: {
                     type: "string",
@@ -108,6 +108,71 @@ describe("shared amendments and internal exceptional invoices", () => {
         },
       },
     });
+  });
+});
+
+describe("contractual invoice series", () => {
+  const prefix = "/rest/v1/rpc/";
+  it("documents review before submission and the exact credited payment identities", () => {
+    expect(
+      requestSchema(prefix + "approve_invoice_series_entry"),
+    ).toMatchObject({
+      additionalProperties: false,
+      required: [
+        "p_claim_id",
+        "p_contract_id",
+        "p_kind",
+        "p_amount",
+        "p_due_on",
+        "p_note",
+        "p_client_id",
+      ],
+      properties: {
+        p_kind: { enum: ["interim", "final"] },
+        p_amount: { exclusiveMinimum: 0, multipleOf: 0.01 },
+      },
+    });
+    expect(
+      requestSchema(prefix + "submit_invoice_series_entry").required,
+    ).toEqual([
+      "p_approval_id",
+      "p_number",
+      "p_document_version_id",
+      "p_issued_on",
+      "p_client_id",
+    ]);
+    expect(
+      paths[prefix + "invoice_series_records"].post.responses["200"],
+    ).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                gross_amount: { type: "number" },
+                credit_amount: { type: "number" },
+                amount: { minimum: 0 },
+                credits: {
+                  items: {
+                    required: [
+                      "payment_id",
+                      "invoice_id",
+                      "invoice_number",
+                      "amount",
+                      "paid_at",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      paths[prefix + "revoke_invoice_series_entry"].post.responses,
+    ).toHaveProperty("204");
   });
 });
 
@@ -577,6 +642,10 @@ describe("documented Premium course and spending operations", () => {
     expect(requestSchema(prefix + "save_assignment_change")).not.toHaveProperty(
       "properties.p_payload.properties.changes.properties.currency",
     );
+    for (const rpc of ["save_assignment_change", "assignment_change_action"]) {
+      expect(paths[prefix + rpc].post.responses).toHaveProperty("422");
+      expect(paths[prefix + rpc].post.responses).toHaveProperty("423");
+    }
     expect(requestSchema(prefix + "assignment_change_action")).toMatchObject({
       properties: {
         p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },

@@ -26,7 +26,7 @@ const snapshotSchema = z.object({
   sessions: z.array(z.object({ starts_at: instant, ends_at: instant })),
 });
 export const sharedScheduleSchema = z.object({
-  required: z.number().int().min(2).max(20),
+  required: z.number().int().min(1).max(20),
   accepted: z.number().int().min(0).max(20),
   state: z.enum(["awaiting_consent", "ready", "blocked", "applied"]),
 });

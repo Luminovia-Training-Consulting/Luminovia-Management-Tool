@@ -1,3 +1,11 @@
+# 22 November 2026 — Invoice series, shared session counts and native browser acceptance
+
+The internal finance workflow supports sequential contract-backed instalment invoices and a final settlement. The final approval binds the exact earlier payment references and credits. A zero balance closes as fully credited after invoice review. Finance review requests, invoice approvals and revocations appear in the authorised in-app inbox. The receipt carries no amount or note and approval notices disappear when the permission or current settlement changes.
+
+Shared future amendments can add or retire slots and handle remaining vacancies. Everyone currently assigned consents independently. A newly confirmed position or altered offer invalidates the group. Unchanged attendance-backed sessions retain their exact records and retired sessions remain represented in history. The accepted fee, applicable billing units and learner and offer deadlines continue to govern the transaction.
+
+Both Chromium projects passed the four existing and exceptional commercial journeys against native Auth, PostgreSQL, PostgREST, Storage and ClamAV, including byte-identical download and a denied foreign lecturer. Both projects also passed two interim PDFs, recorded payments, final credit reconciliation and final submission. Native browser tests passed the shared amendment and all eight individual roles plus a combined account. PostgreSQL covered the four series groups, 16 shared and historical amendment groups, seven API surface checks and an upgrade retaining data across 247 migrations. The built internal, self-hosted and managed editions keep their separate API catalogues.
+
 # 21 November 2026 — Outstanding exceptional approvals and browser acceptance
 
 Finance can find awaiting-submission approvals after the original review leaves its queue. A fresh desktop or mobile browser session can revoke an approval and reopen the original review. The lecturer sees the updated eligibility. Tests use fictional contract document metadata for this browser workflow. A complete exceptional PDF upload and scanner workflow remains pending in Chromium, with the scanned-version requirement checked in PostgreSQL.

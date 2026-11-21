@@ -291,6 +291,76 @@ const pairs: Record<string, [string, string]> = {
     "Lade die Schlussrechnung als PDF hoch. Betrag und Fälligkeit werden aus der Freigabe übernommen.",
     "Upload the final invoice PDF. The amount and due date come from the approval.",
   ],
+  invoiceSeriesManage: ["Rechnungsserie öffnen", "Open invoice series"],
+  invoiceSeriesInterim: ["Abschlagsrechnung", "Interim invoice"],
+  invoiceSeriesFinal: [
+    "Schlussrechnung mit Verrechnung",
+    "Final invoice with credits",
+  ],
+  invoiceSeriesInterimHelp: [
+    "Prüfe die bereits erbrachte Leistung, die Vertragsfassung und die vereinbarte Fälligkeit des Abschlags.",
+    "Review the delivered work, contract version and agreed interim due date.",
+  ],
+  invoiceSeriesFinalHelp: [
+    "Gib den gesamten geprüften Anspruch ein. Erfasste Abschlagszahlungen werden abgezogen. Bei einem Restbetrag von null schließt die PDF den Vorgang nach der Rechnungsprüfung ab.",
+    "Enter the full reviewed entitlement. Recorded interim payments are applied as credits. If the balance is zero, the PDF closes the series after invoice review.",
+  ],
+  invoiceSeriesDue: ["Fällig am {{date}}", "Due {{date}}"],
+  invoiceSeriesPayable: [
+    "Rechnungsbetrag: {{amount}}",
+    "Invoice amount: {{amount}}",
+  ],
+  invoiceSeriesReconciled: [
+    "Verrechnete Abschlagszahlungen: {{amount}}",
+    "Credited interim payments: {{amount}}",
+  ],
+  invoiceSeriesGross: [
+    "Geprüfter Gesamtanspruch: {{amount}}",
+    "Reviewed total entitlement: {{amount}}",
+  ],
+  invoiceSeriesGrossField: [
+    "Geprüfter Gesamtanspruch ({{currency}})",
+    "Reviewed total entitlement ({{currency}})",
+  ],
+  invoiceSeriesReceived: [
+    "Erfasste Abschlagszahlungen: {{amount}}",
+    "Recorded interim payments: {{amount}}",
+  ],
+  invoiceSeriesFullyCredited: ["Vollständig verrechnet", "Fully credited"],
+  invoiceSeriesWaiting: [
+    "Rechnungsserien zur Einreichung",
+    "Invoices in a series awaiting submission",
+  ],
+  invoiceSeriesNeedsReview: [
+    "Erneute Prüfung erforderlich",
+    "Further review required",
+  ],
+  invoiceSeriesRevoked: ["Freigabe widerrufen", "Approval revoked"],
+  invoiceSeriesStale: [
+    "Die Abrechnungsgrundlage hat sich geändert. Die Finanzverwaltung muss die Rechnungsserie erneut prüfen.",
+    "The settlement basis changed. Finance must review the invoice series again.",
+  ],
+  invoiceSeriesApprove: ["Einreichung freigeben", "Allow invoice submission"],
+  invoiceSeriesUnavailable: [
+    "Zurzeit kann keine weitere Rechnung freigegeben werden. Prüfe den Auftragsstand, offene Freigaben und die erfassten Zahlungen.",
+    "Another invoice is currently unavailable. Check the assignment, outstanding approvals and recorded payments.",
+  ],
+  invoiceSeriesSubmitInterim: [
+    "Abschlagsrechnung einreichen",
+    "Submit interim invoice",
+  ],
+  invoiceSeriesSubmitFinal: [
+    "Schlussrechnung mit Verrechnung einreichen",
+    "Submit final invoice with credits",
+  ],
+  invoiceSeriesPdfHelp: [
+    "Lade die Rechnung als PDF hoch. Fälligkeit und Rechnungsbetrag stammen aus der Freigabe.",
+    "Upload the invoice PDF. Its due date and amount come from the approval.",
+  ],
+  invoiceSeriesCorrectionLocked: [
+    "Diese Zahlung wurde in einer Schlussrechnung verrechnet. Storniere zuerst die Schlussrechnung und erfasse dann die Korrektur.",
+    "This payment was credited on a final invoice. Cancel the final invoice before recording the correction.",
+  ],
   invoiceNotReady: [
     "Der letzte geplante Unterrichtstermin hat noch nicht geendet.",
     "The last scheduled session has not ended yet.",

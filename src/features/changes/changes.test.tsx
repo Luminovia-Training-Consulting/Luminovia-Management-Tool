@@ -282,9 +282,7 @@ it("submits only the shared dates and explains the independent consent in both l
   expect(
     screen.queryByLabelText("Vollständigen Auftrag stornieren"),
   ).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: "Termin hinzufügen" }),
-  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Termin hinzufügen" }));
   await user.type(
     screen.getByLabelText("Begründung"),
     "Fictional shared reason",
@@ -295,6 +293,12 @@ it("submits only the shared dates and explains the independent consent in both l
   ).toBeVisible();
   fireEvent.change(screen.getByLabelText("Start 1"), {
     target: { value: "2045-01-01T09:15" },
+  });
+  fireEvent.change(screen.getByLabelText("Start 2"), {
+    target: { value: "2045-01-01T11:15" },
+  });
+  fireEvent.change(screen.getByLabelText("Finish 2"), {
+    target: { value: "2045-01-01T12:00" },
   });
   await user.click(screen.getByRole("button", { name: "Save draft online" }));
   await waitFor(() =>
@@ -308,6 +312,10 @@ it("submits only the shared dates and explains the independent consent in both l
               {
                 starts_at: "2045-01-01T08:15:00.000Z",
                 ends_at: "2045-01-01T09:00:00Z",
+              },
+              {
+                starts_at: "2045-01-01T10:15:00.000Z",
+                ends_at: "2045-01-01T11:00:00.000Z",
               },
             ],
           },

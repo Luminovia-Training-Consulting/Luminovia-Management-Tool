@@ -14,7 +14,11 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
@@ -22,6 +26,7 @@ import { FinancePage } from "./finance";
 import { commercialKeys } from "./api";
 import type { CommercialAccess, EarningRecord, InvoiceRecord } from "./types";
 import type { InvoiceException } from "./invoice-exception-schema";
+import type { InvoiceSeriesRecord } from "./invoice-series-schema";
 
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -42,6 +47,7 @@ const clients: QueryClient[] = [];
 let earnings: EarningRecord[];
 let reviewCandidates: Record<string, unknown>[];
 let exceptionalApprovals: InvoiceException[];
+let seriesEntries: InvoiceSeriesRecord[];
 let invoices: InvoiceRecord[];
 let access: CommercialAccess;
 
@@ -95,6 +101,7 @@ function invoice(): InvoiceRecord {
 
 beforeEach(async () => {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  onlineManager.setOnline(true);
   await i18n.changeLanguage("de");
   access = {
     can_submit_invoice: true,
@@ -104,6 +111,7 @@ beforeEach(async () => {
   earnings = [earning("eur-a"), earning("aud-a", "AUD")];
   reviewCandidates = [];
   exceptionalApprovals = [];
+  seriesEntries = [];
   invoices = [invoice()];
   state.rpc.mockReset();
   state.mutate
@@ -142,6 +150,8 @@ beforeEach(async () => {
       return Promise.resolve({ data: [], error: null });
     if (name === "invoice_records")
       return Promise.resolve({ data: invoices, error: null });
+    if (name === "invoice_series_records")
+      return Promise.resolve({ data: seriesEntries, error: null });
     if (name === "invoice_payments" || name === "company_invoice_reviews")
       return Promise.resolve({ data: [], error: null });
     return state.mutate(name, payload);
@@ -707,4 +717,175 @@ describe("finance capability and connection boundaries", () => {
     await userEvent.click(submit);
     expect(calls("submit_invoice")).toHaveLength(0);
   });
+});
+
+const seriesClaim = "531235a0-4151-41c6-9dba-97dea50db84a";
+const seriesContract = "9fd92d26-da89-4a09-b851-16cdddabd58d";
+const seriesEntryId = "8fb55554-e132-4b96-90ae-b298cb3dfdd5";
+const invoiceId = "09210f3f-bcd6-4eea-9f14-0ed6dd823624";
+
+function seriesEntry(): InvoiceSeriesRecord {
+  return {
+    id: seriesEntryId,
+    claim_id: seriesClaim,
+    title: "Fictional invoice series",
+    currency: "EUR",
+    kind: "final",
+    contract_version: 2,
+    gross_amount: 120,
+    credit_amount: 50,
+    amount: 70,
+    due_on: "2030-06-01",
+    approved_at: "2030-05-20T10:00:00Z",
+    note: "Fictional reviewed reconciliation.",
+    state: "ready",
+    invoice_id: null,
+    invoice_number: null,
+    credits: [
+      {
+        payment_id: "303a180d-a489-414b-a1dd-bd61d03c4f97",
+        invoice_id: "2567b478-32e8-4744-8cca-c7d937d9db93",
+        invoice_number: "FICT-INTERIM",
+        amount: 50,
+        paid_at: "2030-05-06T00:00:00Z",
+      },
+    ],
+  };
+}
+
+it("opens the reviewed final amount with its earlier PDF due date and exact interim receipt", async () => {
+  await i18n.changeLanguage("en");
+  seriesEntries = [seriesEntry()];
+  view();
+  const open = await screen.findByRole("button", {
+    name: "Submit final invoice with credits",
+  });
+  await userEvent.click(open);
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Submit final invoice with credits" }),
+  );
+  expect(dialog.getByText(/^Invoice amount: €70.00$/)).toBeVisible();
+  await userEvent.click(dialog.getByText("Credited interim payments: €50.00"));
+  expect(dialog.getByText(/FICT-INTERIM/)).toBeVisible();
+  expect(dialog.getByLabelText("Due date")).toHaveValue("2030-06-01");
+  expect(dialog.getByLabelText("Due date")).toHaveAttribute("readonly");
+  await userEvent.type(
+    dialog.getByLabelText("Invoice number"),
+    "FICTIONAL-FINAL",
+  );
+  fireEvent.change(dialog.getByLabelText("Issue date"), {
+    target: { value: "2030-06-10" },
+  });
+  const submit = dialog.getByRole("button", { name: "Submit invoice" });
+  expect(submit).toBeDisabled();
+  await userEvent.upload(
+    dialog.getByLabelText("Invoice PDF"),
+    new File(["%PDF-1.7"], "fictional.pdf", { type: "application/pdf" }),
+  );
+  await waitFor(() => expect(submit).toBeEnabled());
+  await userEvent.click(submit);
+  await waitFor(() =>
+    expect(calls("submit_invoice_series_entry")).toHaveLength(1),
+  );
+  expect(calls("submit_invoice_series_entry")[0][1]).toEqual({
+    p_approval_id: seriesEntryId,
+    p_number: "FICTIONAL-FINAL",
+    p_issued_on: "2030-06-10",
+    p_document_version_id: "uploaded-immutable-version",
+    p_client_id: expect.any(String),
+  });
+  expect(calls("submit_invoice")).toHaveLength(0);
+});
+
+it("lets finance approve the agreement, gross final amount, and actual deadline", async () => {
+  earnings = [earning(seriesClaim)];
+  state.mutate.mockImplementation((name) =>
+    Promise.resolve({
+      data:
+        name === "invoice_series_options"
+          ? {
+              claim_id: seriesClaim,
+              currency: "EUR",
+              ceiling: 120,
+              credited: 50,
+              contracts: [
+                {
+                  id: seriesContract,
+                  kind: "master",
+                  version: 2,
+                  effective_from: "2030-01-01T00:00:00Z",
+                },
+              ],
+              can_interim: false,
+              can_final: true,
+              approvals: [],
+            }
+          : seriesEntryId,
+      error: null,
+    }),
+  );
+  view();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Rechnungsserie öffnen" }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Rechnungsserie öffnen" }),
+  );
+  const amount = await dialog.findByLabelText("Geprüfter Gesamtanspruch (EUR)");
+  await userEvent.type(amount, "40");
+  fireEvent.change(dialog.getByLabelText("Vereinbarte Fälligkeit"), {
+    target: { value: "2030-05-01" },
+  });
+  await userEvent.type(
+    dialog.getByLabelText(/Prüfnotiz/),
+    "Fiktive Belege geprüft und abgeglichen.",
+  );
+  const approve = dialog.getByRole("button", { name: "Einreichung freigeben" });
+  expect(approve).toBeDisabled();
+  await userEvent.clear(amount);
+  await userEvent.type(amount, "80,25");
+  expect(dialog.getByText(/^Rechnungsbetrag: 30,25\s€$/)).toBeVisible();
+  await userEvent.click(approve);
+  await waitFor(() =>
+    expect(calls("approve_invoice_series_entry")).toHaveLength(1),
+  );
+  expect(calls("approve_invoice_series_entry")[0][1]).toEqual({
+    p_claim_id: seriesClaim,
+    p_contract_id: seriesContract,
+    p_kind: "final",
+    p_amount: 80.25,
+    p_due_on: "2030-05-01",
+    p_note: "Fiktive Belege geprüft und abgeglichen.",
+    p_client_id: expect.any(String),
+  });
+});
+
+it("labels a zero-balance close as fully credited and offers no payment action", async () => {
+  invoices = [
+    {
+      ...invoice(),
+      id: invoiceId,
+      status: "paid",
+      total_amount: 0,
+      paid_amount: 0,
+    },
+  ];
+  seriesEntries = [
+    {
+      ...seriesEntry(),
+      invoice_id: invoiceId,
+      invoice_number: invoices[0].number,
+      state: "paid",
+      amount: 0,
+      gross_amount: 50,
+    },
+  ];
+  view();
+  expect(await screen.findAllByText("Vollständig verrechnet")).not.toHaveLength(
+    0,
+  );
+  expect(
+    screen.queryByRole("button", { name: "Zahlung eintragen" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rechnung prüfen" })).toBeVisible();
 });
