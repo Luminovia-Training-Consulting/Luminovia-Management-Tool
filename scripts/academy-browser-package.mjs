@@ -30,6 +30,7 @@ import {
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import {
   Uint8ArrayReader,
   Uint8ArrayWriter,
@@ -219,12 +220,79 @@ function hasPrivateMaterial(source) {
   return false;
 }
 
+// Reviewed full-document fingerprints from tracked releases before catalogue
+// 1.20. Some revisions shipped distinct operations under the same version.
+const reviewedHistoricCatalogueDigests = new Set([
+  "193ee8fbcd27ef61541dbc590ad4ae49c7e1170413843779ba72aadeb314cc19", // 1.2.0 at 9fc7124b
+  "53dc4e16854b8da09dfa47ca7b3b0882bf844916eeb5a82fd54a919e73019f2a", // 1.3.0 at a14b2bf1
+  "9cc7a71d028c715080c16f3fc9828ec5eb20a29ec19ecf3a9ac77508f39dbb95", // 1.4.0 at 731f644a
+  "ba24dc961d0fa4420504a30cc7ca95ef4f61194224af8388fc555038a4ca35a9", // 1.5.0 at 3e3b813e
+  "e19599cb547f487c1f35d853070fe8781ec4b06f545b6ba6dcaa0859def6d8a6", // 1.6.0 at 0463b0e9
+  "5f307b8f9fc211356c01cca2914027239dd13d0871c5ab65fc7c1fc2cd82a28e", // 1.7.0 at c9f7b5cb
+  "44d2a909c86d8c6f916bb37233524550f62b9acc5f374795edf280663fa53f1b", // 1.8.0 at 77967930
+  "341d6a96873640dd27a134ef41e588d58a04ea0b7904a0da4e7ccee44b30e726", // 1.9.0 at 804eef6f
+  "f75ff4c7c483ad495a9f922b79b9b5af30373e2ec3d4b3d075bd42dba7b5d421", // 1.10.0 at 110c0fc7
+  "77a6e204bad3611ee62dadd3adcb4117a188d26ca66b28488a6ec743f92a57b1", // 1.10.0 at e4de7f5c
+  "1da01bcd83818c8a2b5ef3870dfd834ae83cc835a8ae49f7852365aeaddd2eca", // 1.10.0 at 6559dda0
+  "1be1659610492cdf09549ada6b1bc911c3078835ca57eb0b99d56c21f8b83b34", // 1.11.0 at 47a1a01a
+  "c211b4b4d39554279e5c6aa244664425712721f1514f3157c3c6c1b50a183db8", // 1.11.0 at 0598f02f
+  "4dfabdf95e002ecc600a89d7e5fb514ddeabac25c93d9674d22a7b2cc26ce802", // 1.12.0 at f3566df4
+  "06f3245a20e1e37b10bfc24555e305b76634058b02a9dcbf67bcf55a0f760706", // 1.13.0 at 29cb416b
+  "38baff0f6c0645806c171f34ce6315ecb80c90648f25cc545e5eabb7b01595c1", // 1.13.0 at eb70d4c1
+  "347d199d9d7ae5910b073edb59d81cf3a13102e8c16b935628d95a85ed59ab15", // 1.14.0 at 0c5dc0b7
+  "c0fbb7602238e0415aabf411d87c36243d20a4c05cedf9a081bce7ff16bf4068", // 1.15.0 at 8c0ffb25
+  "e93e0540d0b71fa919ab4229601ad83966c635fb4a4a42713870b201b4af4559", // 1.16.0 at f52a291d
+  "0a55af348cc077552579ea62e8601ac9314264c3a218ce4dabeb3037a9f12d45", // 1.16.0 at 81dabb85
+  "f36a3b5c5baa0793ac6974f9ecac555ebbb284cd327e7684398f34f78676991c", // 1.17.0 at 35fd7b04
+  "1ccca68d725f9e1963262f0d681c3e10e3408de9dcf57d247e460987940f3d55", // 1.17.0 at 1b039ae5
+  "3af7271f0bcc77ce87e56fdbaee4f706486f108097d77a7978de73c1e9c78b32", // 1.18.0 at 325f1736
+  "7a684096aec80074d984d307cc6629d11e8a84feda7385878b032003b38c024c", // 1.18.0 at b86c6927
+  "36db1a6eee90c837ab19872cc24297543be6bba398d5669c3a0c97f233120792", // 1.19.0 at bda967fa
+]);
+
+/** Check the template identity before removing only its installation-specific values. */
+function historicCatalogueDigest(api, brand, backend) {
+  const normalized = structuredClone(api);
+  const identity = normalized["x-portal-installation"];
+  const capabilities =
+    normalized.paths?.["/rest/v1/rpc/installation_capabilities"]?.get
+      ?.responses?.["200"]?.content?.["application/json"]?.schema?.properties;
+  if (
+    normalized.info?.title !== `${brand.name} API` ||
+    !isDeepStrictEqual(normalized.servers, [{ url: backend }]) ||
+    !isDeepStrictEqual(capabilities?.installation_id, {
+      const: brand.installationId,
+    }) ||
+    !isDeepStrictEqual(capabilities?.edition, { const: brand.edition })
+  )
+    return null;
+
+  // The outer API identity is matched by the caller before this fallback.
+  normalized.info.title = null;
+  normalized.servers[0].url = null;
+  identity.installation_id = null;
+  identity.edition = null;
+  capabilities.installation_id.const = null;
+  capabilities.edition.const = null;
+  return sha256(
+    JSON.stringify(normalized, (_key, value) =>
+      value && typeof value === "object" && !Array.isArray(value)
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, value[key]]),
+          )
+        : value,
+    ),
+  );
+}
+
 /** Associate every render surface and its dormant public contract with the same customer build. */
 function validateBrowserOutput(
   files,
   brand,
   approvedBrandAssets,
-  allowHistoricApi = false,
+  apiHistory = "none",
 ) {
   for (const name of fixedFiles)
     if (!files.has(name))
@@ -303,9 +371,9 @@ function validateBrowserOutput(
   );
   const apiBackend = backendUrl(brand.backend);
   const expectedApi = academyOpenApi(apiBackend, brand);
-  // The previous release catalogue was intentionally empty. An older signed
-  // archive remains verifiable while this source only packages the current one.
-  if (allowHistoricApi && api.info?.version === "1.1.0") {
+  // Keep the original empty-catalogue exception exact. Nonempty catalogue
+  // history requires a verified release signature in addition to its digest.
+  if (apiHistory !== "none" && api.info?.version === "1.1.0") {
     deepStrictEqual(
       api,
       {
@@ -321,12 +389,16 @@ function validateBrowserOutput(
       },
       "Historic customer API differs from the original catalogue.",
     );
-  } else {
-    deepStrictEqual(
-      api,
-      expectedApi,
-      "Customer API differs from the reviewed course profile.",
-    );
+  } else if (
+    !isDeepStrictEqual(api, expectedApi) &&
+    !(
+      apiHistory === "verified-release" &&
+      reviewedHistoricCatalogueDigests.has(
+        historicCatalogueDigest(api, brand, apiBackend),
+      )
+    )
+  ) {
+    throw new Error("Customer API differs from the reviewed course profile.");
   }
   if (
     !worker.includes("brand/academy-logo.png") ||
@@ -427,7 +499,11 @@ function readAcademyManifest(directory) {
 }
 
 /** Verify the archive against the previously read manifest without extracting any file. */
-async function verifyAcademyArchive(directory, manifest) {
+async function verifyAcademyArchive(
+  directory,
+  manifest,
+  apiHistory = "legacy-empty",
+) {
   const archive = readRegular(join(directory, packageName), maxArchiveBytes);
   if (sha256(archive) !== manifest.archive.sha256)
     throw new Error("Customer browser archive checksum does not match.");
@@ -488,7 +564,8 @@ async function verifyAcademyArchive(directory, manifest) {
     manifest.files,
     "Customer browser inventory does not match.",
   );
-  validateBrowserOutput(files, manifest, undefined, true);
+  validateBrowserOutput(files, manifest, undefined, apiHistory);
+  return files;
 }
 
 /** Verify the package contents against its inventory. This checks integrity against the supplied manifest. */
@@ -550,6 +627,8 @@ export async function signAcademyBrowserRelease({
  * Check the release signature and independently selected installation, edition
  * and revision before inspecting the archive. Report licence status separately
  * so historical bytes remain verifiable during grace and after expiry.
+ * Installers can request the verified, prefix-relative bytes without reopening
+ * the archive. They still decide whether the returned licence state permits use.
  */
 export async function verifyAcademyBrowserRelease({
   directory,
@@ -559,6 +638,7 @@ export async function verifyAcademyBrowserRelease({
   signature,
   expected,
   now,
+  includeFiles = false,
 }) {
   const { manifest, bytes } = readAcademyManifest(directory);
   const { state, terms } = verifyAcademyLicence(
@@ -586,8 +666,16 @@ export async function verifyAcademyBrowserRelease({
     )
   )
     throw new Error("academy_browser_release_signature");
-  await verifyAcademyArchive(directory, manifest);
-  return { manifest, licenceState: state };
+  const files = await verifyAcademyArchive(
+    directory,
+    manifest,
+    "verified-release",
+  );
+  return {
+    manifest,
+    licenceState: state,
+    ...(includeFiles === true ? { files } : {}),
+  };
 }
 
 /** Compile the exact tracked Git checkout in a private source staging directory. */

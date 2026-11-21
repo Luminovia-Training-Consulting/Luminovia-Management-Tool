@@ -1,7 +1,7 @@
 /** Customer artefact regressions using owned temporary static files and fictional public identifiers. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createHash, generateKeyPairSync } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   linkSync,
   mkdirSync,
@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 import {
   Uint8ArrayReader,
   Uint8ArrayWriter,
@@ -169,6 +170,32 @@ function releaseFixture(t, now = Date.parse("2040-06-01T00:00:00.000Z")) {
   };
 }
 
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+/** Rewrite only the catalogue in a fixture and recalculate its archive inventory. */
+async function rewriteCatalogue({ dist, output }, original, api) {
+  const records = structuredClone(original);
+  const writer = new ZipWriter(new Uint8ArrayWriter(), {
+    level: 0,
+    unixMode: 0o100644,
+    useWebWorkers: false,
+  });
+  for (const entry of records.files) {
+    const bytes =
+      entry.path === "api/openapi.json"
+        ? Buffer.from(JSON.stringify(api))
+        : readFileSync(join(dist, entry.path));
+    await writer.add(`browser/${entry.path}`, new Uint8ArrayReader(bytes));
+    entry.bytes = bytes.length;
+    entry.sha256 = sha256(bytes);
+  }
+  const archive = await writer.close();
+  records.archive.sha256 = sha256(archive);
+  writeFileSync(join(output, archiveName), archive);
+  writeFileSync(join(output, "manifest.json"), JSON.stringify(records));
+  return records;
+}
+
 test("creates a deterministic ZIP inventory of exactly the verified customer browser bytes", async (t) => {
   const { root, dist, output, write } = fixture(t);
   const second = join(root, "second");
@@ -234,26 +261,128 @@ test("verifies the exact historic empty catalogue as an existing archive", async
   file("api/openapi.json", historicApi);
   await assert.rejects(write(), /differs from the reviewed course profile/);
   file("api/openapi.json", api);
-  const manifest = await write();
-  const writer = new ZipWriter(new Uint8ArrayWriter(), {
-    level: 0,
-    useWebWorkers: false,
-  });
-  const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
-  for (const entry of manifest.files) {
-    const bytes =
-      entry.path === "api/openapi.json"
-        ? Buffer.from(JSON.stringify(historicApi))
-        : readFileSync(join(dist, entry.path));
-    await writer.add(`browser/${entry.path}`, new Uint8ArrayReader(bytes));
-    entry.bytes = bytes.length;
-    entry.sha256 = sha256(bytes);
-  }
-  const historicArchive = await writer.close();
-  manifest.archive.sha256 = sha256(historicArchive);
-  writeFileSync(join(output, archiveName), historicArchive);
-  writeFileSync(join(output, "manifest.json"), JSON.stringify(manifest));
+  const manifest = await rewriteCatalogue(
+    { dist, output },
+    await write(),
+    historicApi,
+  );
   assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
+});
+
+test("accepts an exact nonempty historical catalogue only after signature authentication", async (t) => {
+  const files = releaseFixture(t);
+  const {
+    output,
+    dist,
+    file,
+    write,
+    signer,
+    inputs,
+    signRelease,
+    verifyRelease,
+  } = files;
+  const current = await write();
+  // Raw OpenAPI from a production build of tracked 9fc7124b (catalogue 1.2.0).
+  const catalogue = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          "./testing/fixtures/academy-openapi-1.2.0.json.gz",
+          import.meta.url,
+        ),
+      ),
+    ),
+  );
+  assert.equal(catalogue.info.version, "1.2.0");
+  const installation = "x-portal-installation";
+  const identity = (api) =>
+    api.paths["/rest/v1/rpc/installation_capabilities"].get.responses["200"]
+      .content["application/json"].schema.properties;
+  const historical = structuredClone(catalogue);
+  historical.info.title = `${metadata.name} API`;
+  historical.servers[0].url = metadata.backend;
+  historical[installation].installation_id = metadata.installationId;
+  identity(historical).installation_id.const = metadata.installationId;
+  const seal = () =>
+    sign(
+      null,
+      Buffer.from(
+        "Luminovia Academy Browser Release v1\n" +
+          sha256(readFileSync(join(output, "manifest.json"))) +
+          "\n" +
+          sha256(inputs.licence),
+      ),
+      signer.privateKey,
+    ).toString("base64url");
+
+  const manifest = await rewriteCatalogue(files, current, historical);
+  const signature = seal();
+  assert.deepEqual(await verifyRelease(signature), {
+    manifest,
+    licenceState: "active",
+  });
+  const expanded = await verifyRelease(signature, { includeFiles: true });
+  assert.deepEqual(expanded.manifest, manifest);
+  assert.equal(expanded.licenceState, "active");
+  assert.ok(expanded.files instanceof Map);
+  assert.deepEqual(
+    [...expanded.files.keys()].sort(),
+    manifest.files.map(({ path }) => path),
+  );
+  assert.deepEqual(
+    expanded.files.get("api/openapi.json"),
+    Buffer.from(JSON.stringify(historical)),
+  );
+  assert.deepEqual(
+    expanded.files.get(runtimePath),
+    readFileSync(join(dist, runtimePath)),
+  );
+  await assert.rejects(
+    verifyAcademyBrowserPackage(output),
+    /Customer API differs/,
+  );
+  await assert.rejects(signRelease(), /Customer API differs/);
+  file("api/openapi.json", historical);
+  await assert.rejects(
+    write(join(files.root, "historical-build")),
+    /Customer API differs/,
+  );
+
+  for (const alter of [
+    (catalogue) => {
+      catalogue.info.title = "Other academy API";
+    },
+    (catalogue) => {
+      catalogue.servers[0].url = "https://other.example.invalid";
+    },
+    (catalogue) => {
+      identity(catalogue).installation_id.const =
+        "e4986da7-2b62-4de2-9c55-a8ab6435d2bb";
+    },
+    (catalogue) => {
+      identity(catalogue).edition.const = "customer-self-hosted";
+    },
+    (catalogue) => {
+      catalogue.paths["/rest/v1/rpc/fictional_unreviewed_operation"] = {
+        post: {},
+      };
+    },
+    (catalogue) => {
+      catalogue.info.version = "1.19.0";
+    },
+  ]) {
+    const changed = structuredClone(historical);
+    alter(changed);
+    await rewriteCatalogue(files, current, changed);
+    await assert.rejects(
+      verifyRelease(signature, { includeFiles: true }),
+      /academy_browser_release_signature/,
+    );
+    await assert.rejects(
+      verifyRelease(seal(), { includeFiles: true }),
+      /Customer API differs/,
+    );
+  }
 });
 
 test("rejects hidden, runtime, vendor and private build paths", async (t) => {
