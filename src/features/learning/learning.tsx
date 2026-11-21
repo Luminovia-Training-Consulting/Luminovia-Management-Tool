@@ -84,12 +84,13 @@ function Result({ error, success }: { error: boolean; success?: boolean }) {
 }
 
 /** Shows client-visible shared preparation and server-confirmed staff checklist changes. */
-function Preparation({ course, actor }: WorkProps) {
+function Preparation({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const save = useAction(course.id, actor);
+  const save = useAction(course.id, actor, Boolean(academy));
   const [label, setLabel] = useState("");
   const [visible, setVisible] = useState(true);
+  const request = useRef<{ fingerprint: string; id: string }>(undefined);
   return (
     <section className="panel learning-panel" aria-label={t("preparation")}>
       <h2>{t("preparation")}</h2>
@@ -107,7 +108,12 @@ function Preparation({ course, actor }: WorkProps) {
               <input
                 type="checkbox"
                 checked={item.done}
-                disabled={!online || !course.access.staff || save.isPending}
+                disabled={
+                  !online ||
+                  academy === "grace" ||
+                  !course.access.staff ||
+                  save.isPending
+                }
                 onChange={(event) =>
                   save.mutate({
                     action: "preparation_toggle",
@@ -121,16 +127,28 @@ function Preparation({ course, actor }: WorkProps) {
           </li>
         ))}
       </ul>
-      {course.access.manager && (
+      {course.access.manager && academy !== "grace" && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            const values = { label: label.trim(), client_visible: visible };
+            const fingerprint = JSON.stringify(values);
+            if (academy && request.current?.fingerprint !== fingerprint) {
+              request.current = { fingerprint, id: crypto.randomUUID() };
+            }
             save.mutate(
               {
                 action: "preparation_create",
-                payload: { label, client_visible: visible },
+                payload: academy
+                  ? { ...values, request_id: request.current?.id }
+                  : values,
               },
-              { onSuccess: () => setLabel("") },
+              {
+                onSuccess: () => {
+                  setLabel("");
+                  request.current = undefined;
+                },
+              },
             );
           }}
         >
@@ -157,6 +175,53 @@ function Preparation({ course, actor }: WorkProps) {
         </form>
       )}
       <Result error={save.isError} />
+    </section>
+  );
+}
+
+/** Save only the current caller's course notebook. The server owns its revision. */
+function AcademyNotebook({ course, actor, academy }: ActivityProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const note = course.notebook;
+  const [body, setBody] = useState(note?.body ?? "");
+  const save = useAction(course.id, actor, true);
+  return (
+    <section className="panel learning-panel" aria-label={t("notebook")}>
+      <h2>{t("notebook")}</h2>
+      <p>{t("notebookHelp")}</p>
+      {academy === "grace" ? (
+        <p className="learning-pre">
+          {note?.body || t("academyNotebookEmpty")}
+        </p>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate({
+              action: "notebook",
+              payload: { body },
+              version: note?.version ?? 0,
+            });
+          }}
+        >
+          <Field id="academy-notebook-body" label={t("academyNotebookBody")}>
+            <textarea
+              rows={5}
+              maxLength={12000}
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+            />
+          </Field>
+          <Button
+            type="submit"
+            disabled={!online || save.isPending || body === (note?.body ?? "")}
+          >
+            {t("academySaveNotebook")}
+          </Button>
+          <Result error={save.isError} success={save.isSuccess} />
+        </form>
+      )}
     </section>
   );
 }
@@ -1031,8 +1096,8 @@ function CourseWorkspaceLayout({
               canEditContact={!academy && course.access.manager}
               canEditMeeting={canEdit && course.meeting_link?.can_edit === true}
             />
-            {!academy && editor && (
-              <Preparation course={course} actor={actor} />
+            {editor && (
+              <Preparation course={course} actor={actor} academy={academy} />
             )}
             {!academy && learner && (
               <CourseWithdrawal course={course} actor={actor} />
@@ -1083,6 +1148,14 @@ function CourseWorkspaceLayout({
           />
           {hasActivities && (
             <div className="course-room-section" id="course-learning">
+              {academy && (learner || course.access.staff) && (
+                <AcademyNotebook
+                  key={`${course.id}:${course.notebook?.version ?? 0}`}
+                  course={course}
+                  actor={actor}
+                  academy={academy}
+                />
+              )}
               <Feedback
                 key={`${course.id}:${course.feedback?.version ?? 0}`}
                 course={course}

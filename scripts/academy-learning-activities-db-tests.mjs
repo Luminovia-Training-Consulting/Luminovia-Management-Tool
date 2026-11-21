@@ -107,6 +107,68 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         "manage_course_enrolment",
         `${q(course)},${q(candidate)},'enrolled'`,
       );
+    const preparation = {
+      request_id: randomUUID(),
+      label: "Fictional staff checklist item",
+      client_visible: false,
+    };
+    await assert.rejects(
+      payload(teacher, "preparation_create", preparation),
+      /42501/,
+    );
+    const prepared = await payload(manager, "preparation_create", preparation);
+    assert.deepEqual(
+      await payload(manager, "preparation_create", preparation),
+      prepared,
+    );
+    await assert.rejects(
+      payload(manager, "preparation_create", {
+        ...preparation,
+        label: "Changed checklist item",
+      }),
+      /PT409/,
+    );
+    assert.deepEqual((await workspace(learner)).preparation, []);
+    const item = (await workspace(teacher)).preparation[0];
+    assert.equal(item.id, prepared.id);
+    await assert.rejects(
+      payload(
+        learner,
+        "preparation_toggle",
+        { id: item.id, done: true },
+        item.version,
+      ),
+      /42501/,
+    );
+    await payload(
+      teacher,
+      "preparation_toggle",
+      { id: item.id, done: true },
+      item.version,
+    );
+    assert.equal((await workspace(manager)).preparation[0].done, true);
+    await assert.rejects(
+      payload(
+        teacher,
+        "preparation_toggle",
+        { id: item.id, done: false },
+        item.version,
+      ),
+      /PT409/,
+    );
+    await payload(learner, "notebook", {
+      body: "Private fictional learning note",
+    });
+    assert.equal(
+      (await workspace(learner)).notebook.body,
+      "Private fictional learning note",
+    );
+    assert.equal((await workspace(peer)).notebook.body, "");
+    assert.equal((await workspace(manager)).notebook.body, "");
+    await assert.rejects(
+      payload(learner, "notebook", { body: "Stale text" }),
+      /PT409/,
+    );
     const settings = {
       questions: [
         {
@@ -220,6 +282,14 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, issued_at: date(-5), starts_at: date(-4), expires_at: date(-1) }))})`,
     );
     assert.deepEqual(await download(learner, record.id), facts);
+    assert.equal(
+      (await workspace(learner)).notebook.body,
+      "Private fictional learning note",
+    );
+    await assert.rejects(
+      payload(learner, "notebook", { body: "Denied grace note" }, 1),
+      /42501/,
+    );
     await assert.rejects(payload(learner, "completion_issue"), /42501/);
     await sql(
       `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, issued_at: date(-3), starts_at: date(-2) }))})`,

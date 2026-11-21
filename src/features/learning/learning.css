@@ -166,6 +166,11 @@
   white-space: pre-wrap;
 }
 
+.learning-pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 #course-chat textarea {
   width: 100%;
   min-height: 6rem;

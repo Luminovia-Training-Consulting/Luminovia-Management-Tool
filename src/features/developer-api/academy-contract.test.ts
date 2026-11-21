@@ -255,16 +255,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         report.requestBody.content["application/json"].schema,
       ).toMatchObject({
         oneOf: expect.arrayContaining([
-          {
+          expect.objectContaining({
             type: "object",
             additionalProperties: false,
             required: ["kind", "id"],
             properties: {
               kind: { const: "attendance" },
-              id: { format: "uuid" },
+              id: { type: "string", format: "uuid" },
               format: { enum: ["pdf", "csv"], default: "pdf" },
             },
-          },
+          }),
         ]),
       });
       expect(Object.keys(report.responses["200"].content)).toEqual(

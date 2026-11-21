@@ -210,12 +210,19 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         );
       }
     }
-    for (const gated of [
-      "remove_course_exam_pdf",
-      "course_workspace_action",
-    ]) {
-      await assert.rejects(actor(teacher, gate(gated)), /42501/);
-    }
+    await assert.rejects(
+      actor(teacher, gate("course_workspace_action")),
+      /42501/,
+    );
+    await actor(teacher, gate("remove_course_exam_pdf"));
+    await assert.rejects(
+      actor(
+        learner,
+        gate("remove_course_exam_pdf") +
+          `select public.remove_course_exam_pdf(${q(run)},${q(answerShare)})`,
+      ),
+      /42501/,
+    );
     const attempts = await Promise.allSettled([
       set(teacher, false, 1),
       set(client, true, 1),

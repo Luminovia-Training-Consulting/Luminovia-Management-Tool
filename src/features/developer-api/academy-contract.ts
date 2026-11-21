@@ -338,7 +338,10 @@ const courseDocumentDownload = {
       required: true,
       content: content({
         oneOf: [
-          record({ kind: { enum: ["resource", "exam", "completion"] }, id: uuid }),
+          record({
+            kind: { enum: ["resource", "exam", "completion"] },
+            id: uuid,
+          }),
           record({
             kind: { const: "course_chat_attachment" },
             id: uuid,
@@ -357,7 +360,8 @@ const courseDocumentDownload = {
     },
     responses: {
       "200": {
-        description: "Private course document, chat attachment or attendance report",
+        description:
+          "Private course document, chat attachment or attendance report",
         headers: {
           "Cache-Control": { schema: string },
           "Content-Disposition": { schema: string },
@@ -400,6 +404,9 @@ const courseDocumentDownload = {
 const expectedVersion = { type: "integer", minimum: 0 };
 const academyActivityActions = new Set([
   "resource_acknowledge",
+  "preparation_create",
+  "preparation_toggle",
+  "notebook",
   "feedback",
   "quiz_config",
   "quiz_attempt",
@@ -769,7 +776,7 @@ const coursePaths = {
   "/rest/v1/rpc/academy_learning_action": courseOperation(
     "saveAcademyLearningActivity",
     "Acknowledge material or save a learning activity",
-    "Acknowledge an exact currently visible course resource. Course staff author revisioned quizzes and can revoke a completion record. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
+    "Acknowledge an exact visible resource or save an own private notebook. Course managers create preparation items with an idempotent request ID. Course staff update the checklist, author revisioned quizzes and revoke completion records. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
     "active",
     {
       ...record(
@@ -781,11 +788,28 @@ const coursePaths = {
         },
         ["p_run_id", "p_action", "p_payload"],
       ),
-      oneOf: workspaceActionRequest.oneOf.filter(({ properties }) =>
-        academyActivityActions.has(
-          (properties.p_action as { const: string }).const,
+      oneOf: [
+        ...workspaceActionRequest.oneOf.filter(({ properties }) => {
+          const action = (properties.p_action as { const: string }).const;
+          return (
+            action !== "preparation_create" &&
+            academyActivityActions.has(action)
+          );
+        }),
+        record(
+          {
+            ...run,
+            p_action: { const: "preparation_create" },
+            p_payload: record({
+              request_id: uuid,
+              label: { ...string, minLength: 1, maxLength: 300 },
+              client_visible: boolean,
+            }),
+            p_expected_version: { const: 0, default: 0 },
+          },
+          ["p_run_id", "p_action", "p_payload"],
         ),
-      ),
+      ],
     },
     workspaceActionResult,
     true,
@@ -852,7 +876,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.17.0",
+      version: "1.18.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

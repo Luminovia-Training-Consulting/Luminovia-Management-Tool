@@ -457,6 +457,12 @@ const pairs: Record<string, [string, string]> = {
     "Revoke completion document for {{name}}",
   ],
   notebook: ["Mein privates Kursnotizbuch", "My private course notebook"],
+  academyNotebookEmpty: [
+    "Du hast noch keine Kursnotizen.",
+    "You have no notes for this course yet.",
+  ],
+  academyNotebookBody: ["Private Kursnotizen", "Private course notes"],
+  academySaveNotebook: ["Kursnotizen speichern", "Save course notes"],
   notebookHelp: [
     "Diese Notizen sieht ausschließlich dein Konto. Lehrteam und Auftraggeber erhalten keinen allgemeinen Zugriff.",
     "Only your account can read these notes. Teaching staff and clients have no general access.",
