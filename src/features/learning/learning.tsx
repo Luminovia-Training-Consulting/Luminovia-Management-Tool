@@ -1156,6 +1156,7 @@ function CourseWorkspaceLayout({
             run={course.id}
             actor={actor}
             canCreate={academy === "active" && course.access.manager}
+            showProtection={course.access.client || course.access.manager}
             readOnly={!canEdit}
           />
           {hasActivities && (

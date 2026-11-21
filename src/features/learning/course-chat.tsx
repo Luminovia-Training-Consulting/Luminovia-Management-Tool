@@ -17,6 +17,7 @@ import {
   type CourseChatFile,
 } from "./course-chat-attachment";
 import { useCourseChatLive } from "./course-chat-live";
+import { CourseChatProtection } from "./course-chat-protection";
 import "./course-chat-i18n";
 
 type Room = { id: string; title: string | null; can_post: boolean };
@@ -36,11 +37,13 @@ export function CourseChat({
   run,
   actor,
   canCreate = false,
+  showProtection = false,
   readOnly = false,
 }: {
   run: string;
   actor: string;
   canCreate?: boolean;
+  showProtection?: boolean;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation("courseChat");
@@ -86,6 +89,9 @@ export function CourseChat({
       aria-label={t("title")}
     >
       <h2>{t("title")}</h2>
+      {showProtection && (
+        <CourseChatProtection key={`${actor}:${run}`} actor={actor} run={run} />
+      )}
       {!online || rooms.isError ? (
         <Notice kind="error">{t("unavailable")}</Notice>
       ) : rooms.isPending ? (
@@ -434,7 +440,18 @@ function CourseChatThread({
             >
               {t("send")}
             </Button>
-            {send.isError && <Notice kind="error">{t("failed")}</Notice>}
+            {send.isError && (
+              <Notice kind="error">
+                {t(
+                  send.error &&
+                    typeof send.error === "object" &&
+                    "code" in send.error &&
+                    send.error.code === "PT429"
+                    ? "protectionRateLimit"
+                    : "failed",
+                )}
+              </Notice>
+            )}
           </form>
         )
       )}

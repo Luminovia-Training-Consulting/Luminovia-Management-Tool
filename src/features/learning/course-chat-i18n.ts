@@ -30,6 +30,31 @@ const pairs: Record<string, [string, string]> = {
     "Die Nachricht wurde nicht bestätigt. Bitte erneut versuchen.",
     "The message was not confirmed. Please retry.",
   ],
+  protectionTitle: [
+    "Spam-Schutz für Kurs-Chats",
+    "Course chat spam protection",
+  ],
+  protectionHint: [
+    "Mit Spam-Schutz kann jede Person in den Kurs-Chats eines Unternehmens acht Nachrichten pro Minute senden.",
+    "With spam protection, each person can send eight messages per minute across a company's course chats.",
+  ],
+  protectionGlobal: ["Für alle Unternehmen", "For all companies"],
+  protectionCompany: ["Für dieses Unternehmen", "For this company"],
+  protectionOn: ["An", "On"],
+  protectionOff: ["Aus", "Off"],
+  protectionGlobalEnforced: [
+    "Der Spam-Schutz gilt für alle Unternehmen.",
+    "Spam protection applies to all companies.",
+  ],
+  protectionSaved: ["Spam-Schutz gespeichert.", "Spam protection saved."],
+  protectionFailed: [
+    "Die Einstellung konnte nicht gespeichert werden. Prüfe den aktuellen Wert und versuche es erneut.",
+    "The setting could not be saved. Check its current value and try again.",
+  ],
+  protectionRateLimit: [
+    "Zu viele Kurs-Chat-Nachrichten. Dein Entwurf bleibt erhalten. Versuche es in einer Minute erneut.",
+    "Too many course chat messages. Your draft is still here. Try again in a minute.",
+  ],
   attach: ["Datei anhängen", "Attach file"],
   singleAttachment: [
     "Bitte nur eine Datei anhängen.",

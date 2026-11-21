@@ -175,6 +175,33 @@ it("shows only current course-room text and posts without attachment arguments",
   ]);
 });
 
+it("keeps the draft and matching request key when the course rate limit rejects a send", async () => {
+  const setup = fake.rpc.getMockImplementation();
+  let limited = true;
+  fake.rpc.mockImplementation((name, args) =>
+    name === "send_course_chat_message" && limited
+      ? Promise.resolve({ data: null, error: { code: "PT429" } })
+      : setup?.(name, args),
+  );
+  show();
+  const user = userEvent.setup();
+  const field = await screen.findByLabelText("Message");
+  await user.type(field, "My retained draft");
+  await user.click(screen.getByRole("button", { name: "Send message" }));
+  expect(
+    await screen.findByText(/too many course chat messages/i),
+  ).toBeVisible();
+  expect(field).toHaveValue("My retained draft");
+  limited = false;
+  await user.click(screen.getByRole("button", { name: "Send message" }));
+  await waitFor(() => expect(field).toHaveValue(""));
+  const attempts = fake.rpc.mock.calls.filter(
+    ([name]) => name === "send_course_chat_message",
+  );
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toEqual(attempts[1]);
+});
+
 it("hides retained messages when a fresh course-room check revokes access", async () => {
   show();
   expect(await screen.findByText("Fictional course question")).toBeTruthy();
