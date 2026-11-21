@@ -299,6 +299,7 @@ test("language changes preserve input, themes render accessibly, offline mutatio
                                                                                                               page,
                                                                                                               context,
                                                                                                           }, testInfo) => {
+    await page.emulateMedia({reducedMotion: "reduce"});
     await login(page);
     await page.goto("/profile");
     const draft = `Ungespeicherter Sprachtest ${randomUUID().slice(0, 8)}`;

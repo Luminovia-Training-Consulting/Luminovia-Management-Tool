@@ -5,7 +5,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import {
+  createPath,
+  MemoryRouter,
+  Router,
+  useLocation,
+} from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { PortalTour } from "./tour";
 import {
@@ -49,6 +54,43 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("live portal guidance", () => {
+  it("returns focus to the resume control when settings navigation commits after pause", async () => {
+    const user = userEvent.setup();
+    const navigator = {
+      createHref: (path: Parameters<typeof createPath>[0] | string) =>
+        typeof path === "string" ? path : createPath(path),
+      push: vi.fn(),
+      replace: vi.fn(),
+      go: vi.fn(),
+    };
+    const tree = (location: string) => (
+      <Router location={location} navigator={navigator}>
+        <PortalTour
+          actor="fictional"
+          roles={["lecturer"]}
+          permissions={[]}
+          ready
+        />
+      </Router>
+    );
+    const view = render(tree("/settings"));
+    await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
+    view.rerender(tree("/calendar"));
+    screen.getByRole("combobox", { name: "Bereich auswählen" }).focus();
+    await user.keyboard("{Escape}");
+
+    expect(navigator.push.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({ pathname: "/settings" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Rundgang fortsetzen" }),
+    ).not.toBeInTheDocument();
+    view.rerender(tree("/settings"));
+    expect(
+      screen.getByRole("button", { name: "Rundgang fortsetzen" }),
+    ).toHaveFocus();
+  });
+
   it("navigates only after explicit choices, pauses and resumes after remount per actor", async () => {
     const user = userEvent.setup();
     const page = mount();

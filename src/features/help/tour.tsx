@@ -87,8 +87,8 @@ export function PortalTour({
   const [state, setState] = useState<TourState>(() => readTour(actor));
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
-  // Restore focus only after an explicit retry; background capability refresh
-  // must leave the user's current control untouched.
+  // Restore focus after an explicit retry, pause or completion.
+  // The launcher may mount on a later render when navigation commits.
   const retryRequested = useRef(false);
   // Recompute visible stops from current capabilities; stored progress never grants a destination.
   const modules = permittedTourModules(roles, permissions);
@@ -112,9 +112,12 @@ export function PortalTour({
     navigate(next.path);
   };
   useEffect(() => {
-    if (active) heading.current?.focus();
-    else if (ready && retryRequested.current) launcher.current?.focus();
-    if (ready) retryRequested.current = false;
+    if (active) {
+      heading.current?.focus();
+    } else if (ready && retryRequested.current && launcher.current) {
+      launcher.current.focus();
+      retryRequested.current = false;
+    }
   }, [active, ready, state.step, location.pathname]);
   useEffect(() => {
     if (!active) return;
