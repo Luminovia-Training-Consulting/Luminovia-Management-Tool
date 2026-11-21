@@ -398,6 +398,13 @@ test("automatic CMS publication requires current main and both exact successful 
     assert.equal(gate.id, "gate");
     assert.match(job.steps[1].uses, /^actions\/checkout@/);
     assert.equal(job.steps[1].if, "steps.gate.outputs.publish == 'true'");
+    assert.equal(job.steps[1].with.ref, "refs/heads/main");
+    assert.equal(job.steps[1].with["persist-credentials"], "false");
+    const source = job.steps[2];
+    assert.equal(source.id, "source");
+    assert.equal(source.if, job.steps[1].if);
+    for (const step of job.steps.slice(3))
+        assert.equal(step.if, "steps.source.outputs.verified == 'true'");
     const dir = mkdtempSync(join(tmpdir(), "cms-gate-"));
     try {
         const gh = join(dir, "gh");
@@ -406,6 +413,9 @@ test("automatic CMS publication requires current main and both exact successful 
             '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; elif [[ "$*" == *"/ci.yml/runs"* ]]; then printf "%s\\n" "$FAKE_CI"; elif [[ "$*" == *"/security.yml/runs"* ]]; then printf "%s\\n" "$FAKE_SECURITY"; else exit 7; fi\n',
         );
         chmodSync(gh, 0o700);
+        const git = join(dir, "git");
+        writeFileSync(git, '#!/usr/bin/env bash\ntest "$*" = "rev-parse HEAD" || exit 7\nprintf "%s\\n" "$FAKE_CHECKOUT"\n');
+        chmodSync(git, 0o700);
         const sha = "a".repeat(40);
         const output = join(dir, "output");
         for (const [changes, allowed] of [
@@ -442,6 +452,22 @@ test("automatic CMS publication requires current main and both exact successful 
                 `publish=${allowed}`,
                 JSON.stringify(changes),
             );
+        }
+        for (const checkout of [sha, "b".repeat(40)]) {
+            writeFileSync(output, "");
+            const result = spawnSync("bash", ["-e", "-c", source.run], {
+                env: {
+                    PATH: `${dir}:${process.env.PATH}`,
+                    TARGET_SHA: sha,
+                    GITHUB_OUTPUT: output,
+                    FAKE_CHECKOUT: checkout,
+                },
+                encoding: "utf8",
+                timeout: 1000,
+            });
+            assert.ifError(result.error);
+            assert.equal(result.status, 0, result.stderr);
+            assert.equal(readFileSync(output, "utf8"), checkout === sha ? "verified=true\n" : "");
         }
         const rejected = spawnSync(
             "bash",

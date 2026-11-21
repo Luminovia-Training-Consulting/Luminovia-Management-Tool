@@ -34,6 +34,8 @@ An additional migration adds role-scoped inbox notices for the correction propos
 
 The broader isolated SQL run passed all 157 earlier database suites with the patched Teaching Day fixture and the real Vault and safeupdate libraries. The new correction-notice suite and the existing notification and invoice-series suites passed on the additional migration. The latest authored changes received focused tests in both languages.
 
+The release workflow now checks out `refs/heads/main` and compares the checkout to the approved revision before dependency installation. The release-policy test exercises both a matching checkout and a newer commit arriving after the gate. Validation workflows run with CMS publication disabled.
+
 # 22 November 2026 — Customer credit-note evidence and reviewed export dates
 
 Gross-finance staff can register an already-issued credit note against its original customer invoice. The record retains the clean PDF version and digest, external reference, original currency and reviewed amount. Duplicate requests have one receipt and concurrent amounts are capped against the original invoice. Authorised staff can download the exact version after reopening the dialog. The source invoice's balances, accepted charges, payment records and existing accounting/1 export remain unchanged.

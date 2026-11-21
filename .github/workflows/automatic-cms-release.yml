@@ -53,17 +53,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.publish == 'true'
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: refs/heads/main
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Verify the trusted checkout before running repository code
+        id: source
         if: steps.gate.outputs.publish == 'true'
+        env:
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if test "$(git rev-parse HEAD)" != "$TARGET_SHA"; then
+            echo 'Main advanced after verification. The newer revision has its own release checks.'
+            exit 0
+          fi
+          echo 'verified=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.source.outputs.verified == 'true'
         with:
           node-version-file: ".node-version"
           cache: npm
-      - if: steps.gate.outputs.publish == 'true'
+      - if: steps.source.outputs.verified == 'true'
         run: npm ci
       - name: Build verified development release
-        if: steps.gate.outputs.publish == 'true'
+        if: steps.source.outputs.verified == 'true'
         env:
           TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
           VITE_SUPABASE_URL: ${{ vars.CMS_SUPABASE_URL }}
@@ -76,7 +88,7 @@ jobs:
           npx vite build
           node deploy/hostinger/updates/package.mjs --commit "$TARGET_SHA" --output "$RUNNER_TEMP/cms-release"
       - name: Publish immutable release for still-current main
-        if: steps.gate.outputs.publish == 'true'
+        if: steps.source.outputs.verified == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
