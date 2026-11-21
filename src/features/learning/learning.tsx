@@ -20,6 +20,7 @@ import {CourseDestinations} from "./destinations";
 import {CompanyInvitations} from "./company-invitations";
 import {CourseWelcomeContent} from "./welcome-content";
 import {CourseExams} from "./exams";
+import {AttendancePanel} from "./attendance";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 
@@ -980,6 +981,7 @@ export function CourseWorkspacePage() {
                     <Quiz course={course} actor={actor}/>
                 )}
                 {course.access.learner && <Completion course={course} actor={actor}/>}
+                <AttendancePanel course={course} actor={actor}/>
                 {course.access.client && course.ended && course.repeat_request && (
                     <RepeatBooking course={course} actor={actor}/>
                 )}
