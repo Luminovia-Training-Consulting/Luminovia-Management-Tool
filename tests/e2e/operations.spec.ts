@@ -5,7 +5,7 @@
 import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {assertPointerReady} from "./helpers/pointer-readiness";
-import {assertPasswordOnly} from "./helpers/accounts-support";
+import {actor, assertPasswordOnly} from "./helpers/accounts-support";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {DateTime} from "luxon";
@@ -26,7 +26,7 @@ function api(key: string) {
 }
 
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
-async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
+async function login(page: Page, email: string) {
     await page.goto("/login");
     await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
     await page
@@ -56,7 +56,8 @@ async function a11y(page: Page) {
 test("readonly operations catalogue is accessible and private client directory is denied", async ({
                                                                                                       page,
                                                                                                   }, testInfo) => {
-    await login(page);
+    const lecturer = await actor("Fictional operations catalogue lecturer", "lecturer");
+    await login(page, lecturer.email);
     await page.goto("/courses");
     await expect(
         page.getByRole("heading", {name: "Kurse", exact: true}),

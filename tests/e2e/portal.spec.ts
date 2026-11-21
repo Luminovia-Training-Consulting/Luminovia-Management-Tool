@@ -6,7 +6,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {assertPasswordOnly} from "./helpers/accounts-support";
+import {actor, assertPasswordOnly} from "./helpers/accounts-support";
 
 const configured = Boolean(
     process.env.SUPABASE_URL &&
@@ -320,7 +320,9 @@ test("language changes preserve input, themes render accessibly, offline mutatio
                                                                                                               context,
                                                                                                           }, testInfo) => {
     await page.emulateMedia({reducedMotion: "reduce"});
-    await login(page);
+    // This journey persists language and theme. Keep those writes off the shared lecturer.
+    const lecturer = await actor("Fictional language and theme lecturer", "lecturer");
+    await login(page, lecturer.email);
     await page.goto("/profile");
     const draft = `Ungespeicherter Sprachtest ${randomUUID().slice(0, 8)}`;
     await page.getByLabel("Über mich", {exact: true}).fill(draft);
