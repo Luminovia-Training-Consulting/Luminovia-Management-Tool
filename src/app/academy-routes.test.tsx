@@ -35,6 +35,8 @@ const fake = vi.hoisted(() => ({
   publicationAttempts: 0,
   administration: false,
   draftScheduleRevision: 1,
+  withdrawalAvailable: false,
+  withdrawn: false,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -179,6 +181,8 @@ beforeEach(async () => {
   fake.publicationAttempts = 0;
   fake.administration = false;
   fake.draftScheduleRevision = 1;
+  fake.withdrawalAvailable = false;
+  fake.withdrawn = false;
   fake.rpc.mockImplementation(
     (name: string, input?: { p_capacity?: number }) => {
       let data: unknown;
@@ -200,26 +204,41 @@ beforeEach(async () => {
           data = fake.profile;
           break;
         case "my_course_workspaces":
-          data = [{ ...workspace, starts_at: null, ends_at: null }];
+          data = fake.withdrawn
+            ? []
+            : [{ ...workspace, starts_at: null, ends_at: null }];
           break;
         case "course_workspace":
-          if (fake.foreignCourse) error = { code: "42501" };
-          data = fake.foreignCourse
-            ? null
-            : {
-                ...workspace,
-                sessions: fake.registerAvailable ? [session] : [],
-                access:
-                  fake.actor === "fictional-learner"
-                    ? {
-                        ...workspace.access,
-                        manager: false,
-                        staff: false,
-                        learner: true,
-                      }
-                    : workspace.access,
-                exams: { ...workspace.exams, required: fake.examRequired },
-              };
+          if (fake.foreignCourse || fake.withdrawn) error = { code: "42501" };
+          data =
+            fake.foreignCourse || fake.withdrawn
+              ? null
+              : {
+                  ...workspace,
+                  sessions: fake.registerAvailable ? [session] : [],
+                  access:
+                    fake.actor === "fictional-learner"
+                      ? {
+                          ...workspace.access,
+                          manager: false,
+                          staff: false,
+                          learner: true,
+                        }
+                      : workspace.access,
+                  exams: { ...workspace.exams, required: fake.examRequired },
+                };
+          break;
+        case "course_withdrawal_window":
+          data = {
+            deadline_at: fake.withdrawalAvailable
+              ? "2039-11-20T09:00:00Z"
+              : null,
+            can_withdraw: fake.withdrawalAvailable,
+          };
+          break;
+        case "cancel_own_course_enrolment":
+          fake.withdrawn = true;
+          data = null;
           break;
         case "course_session_register":
           data = {
@@ -389,7 +408,7 @@ it("opens the branded register deep link and reloads the exact server-confirmed 
       p_expected_version: 0,
     }),
   );
-  expect(screen.queryByLabelText(/attendance.*PDF/i)).toBeNull();
+  expect(screen.getByLabelText("Choose scanned PDF evidence")).toBeVisible();
   expect(screen.getByText("Import attendance from CSV or XLSX")).toBeVisible();
 });
 
@@ -865,6 +884,27 @@ it("waits for authentication before restoring the signed-out visitor's course li
     "aria-current",
     "location",
   );
+});
+
+it("offers only the active learner a confirmed withdrawal and removes the selected course workspace", async () => {
+  fake.actor = "fictional-learner";
+  fake.withdrawalAvailable = true;
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Withdraw from course" }),
+  );
+  expect(fake.withdrawn).toBe(false);
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm" }),
+  );
+  expect(
+    await screen.findByText(/No course workspaces are available/),
+  ).toBeVisible();
+  expect(screen.queryByText("Scanned workbook.pdf")).toBeNull();
+  expect(fake.rpc).toHaveBeenCalledWith("cancel_own_course_enrolment", {
+    p_course_run_id: id,
+  });
 });
 
 it.each([false, true])(

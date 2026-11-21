@@ -1099,8 +1099,13 @@ function CourseWorkspaceLayout({
             {editor && (
               <Preparation course={course} actor={actor} academy={academy} />
             )}
-            {!academy && learner && (
-              <CourseWithdrawal course={course} actor={actor} />
+            {learner && (
+              <CourseWithdrawal
+                key={academy ?? "internal"}
+                course={course}
+                actor={actor}
+                academy={academy}
+              />
             )}
           </div>
           <div className="course-room-section" id="course-materials">

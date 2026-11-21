@@ -9,6 +9,7 @@ import { Field, Loading, Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { dateTime } from "../../lib/dates";
+import { notificationKeys } from "../notifications/api";
 import {
   courseHubQuery,
   courseWorkspaceKey,
@@ -16,13 +17,13 @@ import {
   type CourseWorkspace,
 } from "./api";
 import { attendanceRegistersKey } from "./attendance-api";
+import { courseWithdrawalWindowSchema } from "./course-withdrawal-schema";
 import "./enrolment-i18n";
 import "./enrolments.css";
 
 type Props = { course: CourseWorkspace; actor: string };
 type Status = "enrolled" | "completed" | "removed";
 type Enrolment = { user_id: string; display_name: string; status: Status };
-type WithdrawalWindow = { deadline_at: string | null; can_withdraw: boolean };
 type Candidate = Omit<Enrolment, "status"> & { luminovia_user_id: string };
 type Change = {
   participant: Pick<Enrolment, "user_id" | "display_name">;
@@ -316,15 +317,20 @@ export function CourseEnrolmentsPanel({
 }
 
 /** Present the server's current withdrawal window and wait for the guarded write. */
-export function CourseWithdrawal({ course, actor }: Props) {
+export function CourseWithdrawal({
+  course,
+  actor,
+  academy,
+}: Props & { academy?: "active" | "grace" }) {
   const { t, i18n } = useTranslation("learning");
   const online = useOnline();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const allowed = course.lms_enabled && course.access.learner && !course.ended;
+  const windowKey = ["course-withdrawal-window", actor, course.id] as const;
   const availability = useQuery({
-    queryKey: ["course-withdrawal-window", actor, course.id],
+    queryKey: windowKey,
     enabled: online && allowed,
     queryFn: async ({ signal }) => {
       const { data, error } = await db()
@@ -333,7 +339,7 @@ export function CourseWithdrawal({ course, actor }: Props) {
         })
         .abortSignal(signal);
       if (error) throw error;
-      return data as WithdrawalWindow;
+      return courseWithdrawalWindowSchema.parse(data);
     },
     retry: false,
     refetchInterval: 60_000,
@@ -346,29 +352,40 @@ export function CourseWithdrawal({ course, actor }: Props) {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setConfirming(false);
       const hubKey = courseHubQuery(actor).queryKey;
+      await queryClient.cancelQueries({ queryKey: hubKey });
       queryClient.setQueryData<CourseOverview[]>(hubKey, (courses) =>
         courses?.filter(({ id }) => id !== course.id),
       );
       void navigate("/learning", { replace: true });
-      queryClient.removeQueries({
-        queryKey: courseWorkspaceKey(actor, course.id),
-      });
-      queryClient.removeQueries({
-        queryKey: ["course-chat-rooms", actor, course.id],
-      });
-      queryClient.removeQueries({
-        queryKey: ["course-chat-messages", actor, course.id],
-      });
+      for (const queryKey of [
+        windowKey,
+        courseWorkspaceKey(actor, course.id),
+        ["course-workspace-entitlement", actor, course.id],
+        ["course-welcome", actor, course.id],
+        ["course-chat-rooms", actor, course.id],
+        ["course-chat-messages", actor, course.id],
+      ])
+        queryClient.removeQueries({ queryKey });
+      if (academy) {
+        queryClient.removeQueries({ queryKey: ["academy-timetable", actor] });
+        void queryClient.resetQueries({
+          queryKey: notificationKeys.all(actor),
+        });
+      }
       void queryClient.invalidateQueries({ queryKey: hubKey });
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: windowKey }),
   });
   if (!allowed) return null;
   const deadline = availability.data?.deadline_at;
   const canWithdraw = Boolean(
-    online && availability.isSuccess && availability.data.can_withdraw,
+    online &&
+    academy !== "grace" &&
+    availability.isSuccess &&
+    availability.data.can_withdraw,
   );
   return (
     <div className="course-withdrawal">
@@ -397,7 +414,7 @@ export function CourseWithdrawal({ course, actor }: Props) {
       )}
       <Dialog
         title={t("withdrawalOpen")}
-        open={confirming}
+        open={confirming && academy !== "grace"}
         description={t("withdrawalConfirm", { course: course.title })}
         onOpenChange={(open) => {
           if (!open && !withdrawal.isPending) setConfirming(false);

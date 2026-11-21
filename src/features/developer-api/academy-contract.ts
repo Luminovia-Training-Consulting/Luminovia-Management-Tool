@@ -19,6 +19,7 @@ import {
   maxAttendanceImportRows,
 } from "../learning/attendance-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
+import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
 import {
   academyTimetableRequestSchema,
@@ -320,6 +321,26 @@ const examWithdrawal = {
       "400": withdrawalOperation.responses["400"],
       "401": withdrawalOperation.responses["401"],
       "403": withdrawalOperation.responses["403"],
+    },
+  },
+};
+
+const learnerWithdrawalOperation = courseOperation(
+  "withdrawFromAcademyCourse",
+  "Withdraw from the caller’s complete course enrolment",
+  "Only the enrolled participant can withdraw. Confirm the entire withdrawal before sending this request. The first course session must be at least seven days away at the time of the write. A successful withdrawal preserves enrolment and course history and ends access to that course and its chat and shared materials.",
+  "active",
+  record({ p_course_run_id: uuid }),
+  nil,
+).post;
+const learnerWithdrawal = {
+  post: {
+    ...learnerWithdrawalOperation,
+    responses: {
+      "204": { description: "Course enrolment withdrawn" },
+      "400": learnerWithdrawalOperation.responses["400"],
+      "401": learnerWithdrawalOperation.responses["401"],
+      "403": learnerWithdrawalOperation.responses["403"],
     },
   },
 };
@@ -641,6 +662,15 @@ const coursePaths = {
       }),
     }),
   ),
+  "/rest/v1/rpc/course_withdrawal_window": courseOperation(
+    "readAcademyCourseWithdrawalWindow",
+    "Read the caller’s course withdrawal deadline",
+    "The current enrolled or completed participant receives their own deadline. Grace, completed enrolments, missing schedules and passed deadlines never permit withdrawal.",
+    "active-or-grace",
+    record({ p_course_run_id: uuid }),
+    z.toJSONSchema(courseWithdrawalWindowSchema),
+  ),
+  "/rest/v1/rpc/cancel_own_course_enrolment": learnerWithdrawal,
   "/rest/v1/rpc/set_course_meeting_link": courseOperation(
     "setAcademyCourseMeetingLink",
     "Set or clear an online course meeting link",
@@ -890,7 +920,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.18.0",
+      version: "1.19.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

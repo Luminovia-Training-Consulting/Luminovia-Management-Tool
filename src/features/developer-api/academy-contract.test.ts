@@ -38,6 +38,8 @@ const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
 const examDownload = "/functions/v1/course-documents";
 const attendanceImport = "/rest/v1/rpc/import_course_session_attendance";
+const withdrawalWindow = "/rest/v1/rpc/course_withdrawal_window";
+const withdraw = "/rest/v1/rpc/cancel_own_course_enrolment";
 const administrationPaths = [
   "/rest/v1/rpc/academy_administration",
   "/rest/v1/rpc/academy_create_organisation",
@@ -81,6 +83,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           examDownload,
           ...administrationPaths,
           attendanceImport,
+          withdrawalWindow,
+          withdraw,
           ...readPaths,
           ...writePaths,
           ...draftPaths,
@@ -119,6 +123,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("documents the learner's scoped deadline read and active-only 204 withdrawal", () => {
+      const read = spec.paths[withdrawalWindow].post;
+      const write = spec.paths[withdraw].post;
+      expect(read["x-portal-licence"]).toBe("active-or-grace");
+      expect(write["x-portal-licence"]).toBe("active");
+      expect(
+        read.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        required: ["deadline_at", "can_withdraw"],
+        additionalProperties: false,
+      });
+      expect(
+        write.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_course_run_id"],
+        additionalProperties: false,
+      });
+      expect(write.responses).toHaveProperty("204");
+      expect(write.responses).not.toHaveProperty("200");
     });
 
     it("documents active manager options and a closed single-template draft request", () => {

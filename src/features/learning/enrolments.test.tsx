@@ -39,10 +39,12 @@ function reply(data: unknown, error?: unknown) {
 }
 
 /** Mount the actual role-specific workspace controls and withdrawal destination. */
-function view(component: ReactNode) {
-  const client = new QueryClient({
+function view(
+  component: ReactNode,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/courses/course-a/workspace"]}>
@@ -235,5 +237,120 @@ describe("Premium participant withdrawal", () => {
     expect(rpc).toHaveBeenCalledWith("cancel_own_course_enrolment", {
       p_course_run_id: course.id,
     });
+  });
+});
+
+describe("Standalone learner withdrawal", () => {
+  const window = {
+    deadline_at: "2039-10-24T13:00:00+02:00",
+    can_withdraw: true,
+  };
+
+  it("keeps the deadline visible during grace and hides the write control", async () => {
+    rpc.mockReturnValue(reply(window));
+    view(
+      <CourseWithdrawal
+        course={learnerCourse}
+        actor="learner"
+        academy="grace"
+      />,
+    );
+    expect(await screen.findByText(/Withdraw by/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Withdraw from course" }),
+    ).toBeNull();
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("course_withdrawal_window", {
+      p_course_run_id: course.id,
+    });
+  });
+
+  it("purges only confirmed course access and its actor's timetable", async () => {
+    const cache = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const privateKeys = [
+      ["course-workspace", "learner", course.id],
+      ["course-workspace-entitlement", "learner", course.id],
+      ["course-welcome", "learner", course.id],
+      ["course-chat-messages", "learner", course.id, "room"],
+      ["academy-timetable", "learner", "2039-10-27", "2039-11-02"],
+    ];
+    for (const key of privateKeys)
+      cache.setQueryData(key, ["Fictional protected data"]);
+    const otherCourse = ["course-workspace", "learner", "other-course"];
+    cache.setQueryData(otherCourse, ["Fictional accessible data"]);
+    cache.setQueryData(
+      ["course-workspaces", "learner"],
+      [{ id: course.id }, { id: "other-course" }],
+    );
+    let confirm!: (value: { data: null; error: null }) => void;
+    const pending = new Promise<{ data: null; error: null }>((resolve) => {
+      confirm = resolve;
+    });
+    rpc.mockImplementation((name: string) =>
+      name === "course_withdrawal_window" ? reply(window) : pending,
+    );
+    const user = userEvent.setup();
+    view(
+      <CourseWithdrawal
+        course={learnerCourse}
+        actor="learner"
+        academy="active"
+      />,
+      cache,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Withdraw from course" }),
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Confirm",
+      }),
+    );
+    expect(screen.queryByRole("heading", { name: "My courses" })).toBeNull();
+    for (const key of privateKeys)
+      expect(cache.getQueryData(key)).toBeDefined();
+    confirm({ data: null, error: null });
+    expect(
+      await screen.findByRole("heading", { name: "My courses" }),
+    ).toBeVisible();
+    for (const key of privateKeys)
+      expect(cache.getQueryData(key)).toBeUndefined();
+    expect(cache.getQueryData(otherCourse)).toEqual([
+      "Fictional accessible data",
+    ]);
+    expect(cache.getQueryData(["course-workspaces", "learner"])).toEqual([
+      { id: "other-course" },
+    ]);
+  });
+
+  it("keeps the workspace after deadline refusal and refreshes the confirmed window", async () => {
+    let expired = false;
+    rpc.mockImplementation((name: string) => {
+      if (name === "course_withdrawal_window")
+        return reply({ ...window, can_withdraw: !expired });
+      expired = true;
+      return reply(null, { code: "22023" });
+    });
+    view(
+      <CourseWithdrawal
+        course={learnerCourse}
+        actor="learner"
+        academy="active"
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Withdraw from course" }),
+    );
+    const confirm = within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Confirm",
+    });
+    await user.click(confirm);
+    expect(
+      await screen.findByText(/withdrawal was not confirmed/),
+    ).toBeVisible();
+    expect(confirm).toBeDisabled();
+    expect(screen.queryByRole("heading", { name: "My courses" })).toBeNull();
   });
 });
