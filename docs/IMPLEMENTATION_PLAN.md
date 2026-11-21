@@ -1511,3 +1511,7 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Diagnose the next exact-head failures on `d6556022`: the account fixture's search token did not occur in its generated email, and the Envoy route check depended on an in-container Bash probe. Correct the fixture and run route checks over a loopback-only port on an internal Docker network; replace the production shell healthcheck with Envoy's native config validation command.
 - [ ] Require the complete system, desktop/mobile browser, native self-host, security and publication-gate results on the updated exact `main` head before any Hostinger update.
 - [ ] Repeat full native `./portal test` locally when Docker is available. This workstation run stopped before startup because the Docker daemon socket is unavailable; no database/API acceptance is inferred from it.
+
+- [x] On exact main `1e444a5c`, rerun `./portal check`; all fast checks, 1,063 coverage tests and the production build pass locally. Actions fast gates and Security also pass.
+- [x] Correct the native self-host chat-mention assertion to match the existing live inbox visibility rule while verifying that the retained source notification is not deleted.
+- [ ] Push this exact-main fix and finish system, self-host, desktop/mobile browser, Security and trusted publication gates on its resulting commit. Deploy only after all required exact-head gates pass.

@@ -345,14 +345,18 @@ await withApiFixture(async ({actor, passwordOnly, sql, defer, checked}) => {
                 .select("*")
         ).error,
     );
-    const redacted = (await inbox()).items.find(
+    // The live inbox filters resources the recipient can no longer open; the stored notice remains auditably retained.
+    const staleNotice = (await inbox()).items.find(
         (item) => item.id === firstNotice.id,
     );
-    assert.ok(redacted);
-    assert.equal(redacted.href, null);
-    assert.equal(redacted.title, "");
+    assert.equal(staleNotice, undefined);
+    assert.equal(
+        await sql(`select count(*) from public.notifications where id='${firstNotice.id}'`),
+        "1",
+        "The source notice remains retained while its removed chat target is hidden",
+    );
     pass(
-        "visible moderation metadata agrees with the real delete policy and private mention history stays inaccessible",
+        "removed chat notices are hidden without deleting retained rows; private mention history stays inaccessible",
     );
     console.log(
         `${checks} actual Auth/password-only authentication/REST structured mention groups passed.`,
