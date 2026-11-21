@@ -494,6 +494,19 @@ const coursePaths = {
     z.toJSONSchema(academyPublishedCourse),
     true,
   ),
+  "/rest/v1/rpc/academy_set_course_capacity": courseOperation(
+    "setAcademyCourseCapacity",
+    "Review and change a published course’s group size",
+    "Requires current course management and the previously confirmed capacity. An identical retry returns the current capacity. A stale change or a capacity below existing enrolments returns 409. Existing confirmed places are retained.",
+    "active",
+    record({
+      p_course_id: uuid,
+      p_expected_capacity: z.toJSONSchema(academyCourseCapacity),
+      p_capacity: z.toJSONSchema(academyCourseCapacity),
+    }),
+    z.toJSONSchema(academyPublishedCourse),
+    true,
+  ),
   ...academyAdministrationPaths,
   "/rest/v1/rpc/academy_timetable": courseOperation(
     "readAcademyTimetable",
@@ -752,7 +765,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.15.0",
+      version: "1.16.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

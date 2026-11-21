@@ -179,179 +179,189 @@ beforeEach(async () => {
   fake.publicationAttempts = 0;
   fake.administration = false;
   fake.draftScheduleRevision = 1;
-  fake.rpc.mockImplementation((name: string) => {
-    let data: unknown;
-    let error = null;
-    switch (name) {
-      case "installation_capabilities":
-        data = {
-          installation_id: fake.returnedInstallation,
-          edition: "customer-managed",
-          licence_status: fake.licence,
-          customer_ready: false,
-          lms_available: false,
-          marketplace_available: false,
-          company_premium_switch_available: false,
-        };
-        break;
-      case "portal_access":
-        if (!fake.profile) error = { code: "42501" };
-        data = fake.profile;
-        break;
-      case "my_course_workspaces":
-        data = [{ ...workspace, starts_at: null, ends_at: null }];
-        break;
-      case "course_workspace":
-        if (fake.foreignCourse) error = { code: "42501" };
-        data = fake.foreignCourse
-          ? null
-          : {
-              ...workspace,
-              sessions: fake.registerAvailable ? [session] : [],
-              access:
-                fake.actor === "fictional-learner"
-                  ? {
-                      ...workspace.access,
-                      manager: false,
-                      staff: false,
-                      learner: true,
-                    }
-                  : workspace.access,
-              exams: { ...workspace.exams, required: fake.examRequired },
-            };
-        break;
-      case "course_session_register":
-        data = {
-          session_id: sessionId,
-          starts_at: start,
-          ends_at: end,
-          time_zone: workspace.time_zone,
-          evidence: [],
-          history: [],
-          rows: [
-            {
-              user_id: learnerId,
-              name: "Fictional register entry",
-              status: fake.attendanceVersion ? "present" : null,
-              arrival_at: null,
-              departure_at: null,
-              note: "",
-              version: fake.attendanceVersion,
-            },
-          ],
-        };
-        break;
-      case "save_course_session_attendance":
-        fake.attendanceVersion++;
-        data = {
-          status: "present",
-          version: fake.attendanceVersion,
-          minutes: 60,
-        };
-        break;
-      case "import_course_session_attendance":
-        fake.attendanceVersion++;
-        data = { saved: 1 };
-        break;
-      case "course_welcome_content":
-        data = {
-          version: 1,
-          description: "Fictional welcome",
-          objectives: "",
-          joining_instructions: "",
-          published_at: null,
-        };
-        break;
-      case "course_chat_rooms":
-        data = [{ id: "room-a", title: "Fictional text chat", can_post: true }];
-        break;
-      case "course_chat_messages":
-      case "course_enrolments":
-      case "course_enrolment_candidates":
-      case "academy_course_instructor_candidates":
-        data = [];
-        break;
-      case "academy_course_draft_options":
-        data = fake.canCreateDraft
-          ? {
-              organisations: [{ id: learnerId, name: "Fictional Training" }],
-              templates: [{ id: sessionId, title: "Fictional template" }],
-            }
-          : null;
-        break;
-      case "notification_inbox":
-        data = {
-          items: [
-            {
-              id: learnerId,
-              kind: "chat_message",
-              title: "Fictional course notice",
-              created_at: start,
-              read_at: fake.notificationRead ? end : null,
-              href: `/courses/${id}/workspace#course-chat`,
-            },
-          ],
-          unread_count: fake.notificationRead ? 0 : 1,
-          as_of: end,
-          quiet_active: false,
-        };
-        break;
-      case "mark_notifications":
-        fake.notificationRead = true;
-        data = 1;
-        break;
-      case "academy_create_course_draft":
-        fake.draftAttempts++;
-        if (fake.draftAttempts === 1) error = { code: "unavailable" };
-        else data = { course_run_id: id, template_id: sessionId };
-        break;
-      case "academy_course_publication":
-        data = fake.publication;
-        break;
-      case "academy_administration":
-        data = fake.administration
-          ? {
-              can_write: fake.licence === "active",
-              can_create_management: fake.licence === "active",
-              organisations: [],
-              accounts: [],
-            }
-          : null;
-        break;
-      case "academy_timetable":
-        data = { rows: [], next: null };
-        break;
-      case "academy_save_draft_schedule":
-        fake.draftScheduleRevision++;
-        // The receipt retains the previously confirmed session ID.
-        data = {
-          revision: fake.draftScheduleRevision,
-          time_zone: "Australia/Brisbane",
-          delivery_type: "online",
-          venue: "Fictional venue update",
-          sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
-        };
-        break;
-      case "academy_draft_schedule":
-        data = {
-          revision: fake.draftScheduleRevision,
-          time_zone: "Australia/Brisbane",
-          delivery_type: "online",
-          venue: "",
-          sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
-        };
-        break;
-      case "academy_publish_course":
-        fake.publicationAttempts++;
-        if (fake.publicationAttempts === 1) error = { code: "PT409" };
-        else data = fake.publication = { published: true, capacity: 3 };
-        break;
-      default:
-        throw new Error("Unexpected RPC: " + name);
-    }
-    const result = Promise.resolve({ data, error });
-    return Object.assign(result, { abortSignal: () => result });
-  });
+  fake.rpc.mockImplementation(
+    (name: string, input?: { p_capacity?: number }) => {
+      let data: unknown;
+      let error = null;
+      switch (name) {
+        case "installation_capabilities":
+          data = {
+            installation_id: fake.returnedInstallation,
+            edition: "customer-managed",
+            licence_status: fake.licence,
+            customer_ready: false,
+            lms_available: false,
+            marketplace_available: false,
+            company_premium_switch_available: false,
+          };
+          break;
+        case "portal_access":
+          if (!fake.profile) error = { code: "42501" };
+          data = fake.profile;
+          break;
+        case "my_course_workspaces":
+          data = [{ ...workspace, starts_at: null, ends_at: null }];
+          break;
+        case "course_workspace":
+          if (fake.foreignCourse) error = { code: "42501" };
+          data = fake.foreignCourse
+            ? null
+            : {
+                ...workspace,
+                sessions: fake.registerAvailable ? [session] : [],
+                access:
+                  fake.actor === "fictional-learner"
+                    ? {
+                        ...workspace.access,
+                        manager: false,
+                        staff: false,
+                        learner: true,
+                      }
+                    : workspace.access,
+                exams: { ...workspace.exams, required: fake.examRequired },
+              };
+          break;
+        case "course_session_register":
+          data = {
+            session_id: sessionId,
+            starts_at: start,
+            ends_at: end,
+            time_zone: workspace.time_zone,
+            evidence: [],
+            history: [],
+            rows: [
+              {
+                user_id: learnerId,
+                name: "Fictional register entry",
+                status: fake.attendanceVersion ? "present" : null,
+                arrival_at: null,
+                departure_at: null,
+                note: "",
+                version: fake.attendanceVersion,
+              },
+            ],
+          };
+          break;
+        case "save_course_session_attendance":
+          fake.attendanceVersion++;
+          data = {
+            status: "present",
+            version: fake.attendanceVersion,
+            minutes: 60,
+          };
+          break;
+        case "import_course_session_attendance":
+          fake.attendanceVersion++;
+          data = { saved: 1 };
+          break;
+        case "course_welcome_content":
+          data = {
+            version: 1,
+            description: "Fictional welcome",
+            objectives: "",
+            joining_instructions: "",
+            published_at: null,
+          };
+          break;
+        case "course_chat_rooms":
+          data = [
+            { id: "room-a", title: "Fictional text chat", can_post: true },
+          ];
+          break;
+        case "course_chat_messages":
+        case "course_enrolments":
+        case "course_enrolment_candidates":
+        case "academy_course_instructor_candidates":
+          data = [];
+          break;
+        case "academy_course_draft_options":
+          data = fake.canCreateDraft
+            ? {
+                organisations: [{ id: learnerId, name: "Fictional Training" }],
+                templates: [{ id: sessionId, title: "Fictional template" }],
+              }
+            : null;
+          break;
+        case "notification_inbox":
+          data = {
+            items: [
+              {
+                id: learnerId,
+                kind: "chat_message",
+                title: "Fictional course notice",
+                created_at: start,
+                read_at: fake.notificationRead ? end : null,
+                href: `/courses/${id}/workspace#course-chat`,
+              },
+            ],
+            unread_count: fake.notificationRead ? 0 : 1,
+            as_of: end,
+            quiet_active: false,
+          };
+          break;
+        case "mark_notifications":
+          fake.notificationRead = true;
+          data = 1;
+          break;
+        case "academy_create_course_draft":
+          fake.draftAttempts++;
+          if (fake.draftAttempts === 1) error = { code: "unavailable" };
+          else data = { course_run_id: id, template_id: sessionId };
+          break;
+        case "academy_course_publication":
+          data = fake.publication;
+          break;
+        case "academy_administration":
+          data = fake.administration
+            ? {
+                can_write: fake.licence === "active",
+                can_create_management: fake.licence === "active",
+                organisations: [],
+                accounts: [],
+              }
+            : null;
+          break;
+        case "academy_timetable":
+          data = { rows: [], next: null };
+          break;
+        case "academy_save_draft_schedule":
+          fake.draftScheduleRevision++;
+          // The receipt retains the previously confirmed session ID.
+          data = {
+            revision: fake.draftScheduleRevision,
+            time_zone: "Australia/Brisbane",
+            delivery_type: "online",
+            venue: "Fictional venue update",
+            sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+          };
+          break;
+        case "academy_draft_schedule":
+          data = {
+            revision: fake.draftScheduleRevision,
+            time_zone: "Australia/Brisbane",
+            delivery_type: "online",
+            venue: "",
+            sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+          };
+          break;
+        case "academy_publish_course":
+          fake.publicationAttempts++;
+          if (fake.publicationAttempts === 1) error = { code: "PT409" };
+          else data = fake.publication = { published: true, capacity: 3 };
+          break;
+        case "academy_set_course_capacity":
+          data = fake.publication = {
+            published: true,
+            capacity: input?.p_capacity ?? null,
+          };
+          break;
+        default:
+          throw new Error("Unexpected RPC: " + name);
+      }
+      const result = Promise.resolve({ data, error });
+      return Object.assign(result, { abortSignal: () => result });
+    },
+  );
 });
 
 afterEach(() => {
@@ -647,6 +657,37 @@ it("confirms course publication online and retries the reviewed capacity", async
     ["academy_publish_course", { p_course_id: id, p_capacity: 3 }],
     ["academy_publish_course", { p_course_id: id, p_capacity: 3 }],
   ]);
+});
+
+it("reviews a revised capacity against the current confirmed group size", async () => {
+  fake.publication = { published: true, capacity: 3 };
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  const capacity = await screen.findByRole("spinbutton", {
+    name: "Maximum group size",
+  });
+  await user.clear(capacity);
+  await user.type(capacity, "5");
+  await user.click(screen.getByRole("button", { name: "Change group size" }));
+  expect(
+    fake.rpc.mock.calls.some(
+      ([name]) => name === "academy_set_course_capacity",
+    ),
+  ).toBe(false);
+  await user.click(
+    within(screen.getByRole("dialog", { name: "Change group size" })).getByRole(
+      "button",
+      { name: "Confirm" },
+    ),
+  );
+  expect(
+    await screen.findByText("Course published. Maximum group size 5."),
+  ).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("academy_set_course_capacity", {
+    p_course_id: id,
+    p_expected_capacity: 3,
+    p_capacity: 5,
+  });
 });
 
 it("keeps publication read-only in licence grace", async () => {

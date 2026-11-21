@@ -59,6 +59,15 @@ const pairs: Record<string, [string, string]> = {
   ],
   academyCourseCapacity: ["Maximale Gruppengröße", "Maximum group size"],
   academyPublishCourse: ["Kurs freigeben", "Publish course"],
+  academyChangeCapacity: ["Gruppengröße ändern", "Change group size"],
+  academyConfirmCapacity: [
+    "Die maximale Gruppengröße auf {{count}} ändern?",
+    "Change the maximum group size to {{count}}?",
+  ],
+  academyCapacityFailed: [
+    "Die Gruppengröße wurde nicht bestätigt. Prüfe die aktuellen Anmeldungen und die Gruppengröße.",
+    "The group size was not confirmed. Check the current enrolments and group size.",
+  ],
   academyConfirmPublishCourse: [
     "Diesen Kurs für Anmeldungen freigeben? Die maximale Gruppengröße beträgt {{count}}.",
     "Open this course for enrolment? The maximum group size is {{count}}.",

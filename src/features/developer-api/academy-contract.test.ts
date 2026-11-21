@@ -28,6 +28,7 @@ const writePaths = [
   "/rest/v1/rpc/share_course_exam_pdf",
   "/rest/v1/rpc/mark_notifications",
   "/rest/v1/rpc/academy_publish_course",
+  "/rest/v1/rpc/academy_set_course_capacity",
   "/rest/v1/rpc/academy_learning_action",
   "/rest/v1/rpc/remove_course_exam_pdf",
 ] as const;

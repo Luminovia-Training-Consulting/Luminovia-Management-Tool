@@ -29,7 +29,10 @@ export function AcademyCoursePublication({
   const online = useOnline();
   const cache = useQueryClient();
   const field = useId();
-  const [reviewedCapacity, setReviewedCapacity] = useState<number>();
+  const [reviewed, setReviewed] = useState<{
+    capacity: number;
+    previous: number | null;
+  }>();
   const key = ["academy-course-publication", actor, courseId];
   const publication = useQuery({
     queryKey: key,
@@ -44,24 +47,36 @@ export function AcademyCoursePublication({
     },
   });
   const publish = useMutation({
-    mutationFn: async (capacity: number) => {
+    mutationFn: async ({
+      capacity,
+      previous,
+    }: {
+      capacity: number;
+      previous: number | null;
+    }) => {
       requireOnline();
-      const { data, error } = await db().rpc("academy_publish_course", {
-        p_course_id: courseId,
-        p_capacity: capacity,
-      });
+      const args = { p_course_id: courseId, p_capacity: capacity };
+      const { data, error } =
+        previous === null
+          ? await db().rpc("academy_publish_course", args)
+          : await db().rpc("academy_set_course_capacity", {
+              ...args,
+              p_expected_capacity: previous,
+            });
       if (error) throw error;
       return academyPublishedCourse.parse(data);
     },
     onSuccess: async (receipt) => {
-      setReviewedCapacity(undefined);
+      setReviewed(undefined);
       cache.setQueryData(key, receipt);
       await cache.invalidateQueries({
         queryKey: courseHubQuery(actor).queryKey,
       });
     },
   });
-  if (!online || publication.data === null) return null;
+  const update = reviewed?.previous != null;
+  const current = publication.data;
+  if (!online || current === null) return null;
   return (
     <section
       className="panel learning-panel"
@@ -72,65 +87,80 @@ export function AcademyCoursePublication({
       {publication.isError && (
         <ErrorState retry={() => void publication.refetch()} />
       )}
-      {publication.data?.published && (
+      {current?.published && (
         <p role="status">
-          {t("academyPublishedCapacity", { count: publication.data.capacity })}
+          {t("academyPublishedCapacity", { count: current.capacity })}
         </p>
       )}
-      {publication.data?.published === false && (
-        <>
-          <p>{t("academyUnpublishedCourse")}</p>
-          {!readOnly && (
-            <AcademyDraftSchedule courseId={courseId} actor={actor} />
-          )}
-          {!readOnly && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                const capacity = academyCourseCapacity.safeParse(
-                  Number(form.get("capacity")),
-                );
-                if (capacity.success) {
-                  publish.reset();
-                  setReviewedCapacity(capacity.data);
-                }
-              }}
-            >
-              <Field id={field} label={t("academyCourseCapacity")}>
-                <input
-                  name="capacity"
-                  type="number"
-                  min="1"
-                  max="10000"
-                  step="1"
-                  required
-                />
-              </Field>
-              <Button type="submit">{t("academyPublishCourse")}</Button>
-            </form>
-          )}
-        </>
+      {current?.published === false && <p>{t("academyUnpublishedCourse")}</p>}
+      {current?.published === false && !readOnly && (
+        <AcademyDraftSchedule courseId={courseId} actor={actor} />
+      )}
+      {current && !readOnly && (
+        <form
+          key={current.capacity ?? "draft"}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            const capacity = academyCourseCapacity.safeParse(
+              Number(form.get("capacity")),
+            );
+            if (capacity.success && capacity.data !== current.capacity) {
+              publish.reset();
+              setReviewed({
+                capacity: capacity.data,
+                previous: current.capacity,
+              });
+            }
+          }}
+        >
+          <Field id={field} label={t("academyCourseCapacity")}>
+            <input
+              name="capacity"
+              type="number"
+              min="1"
+              max="10000"
+              step="1"
+              defaultValue={current.capacity ?? undefined}
+              required
+            />
+          </Field>
+          <Button type="submit">
+            {t(
+              current.published
+                ? "academyChangeCapacity"
+                : "academyPublishCourse",
+            )}
+          </Button>
+        </form>
       )}
       <Dialog
-        open={!readOnly && reviewedCapacity !== undefined}
+        open={!readOnly && reviewed !== undefined}
         onOpenChange={(open) => {
-          if (!open && !publish.isPending) setReviewedCapacity(undefined);
+          if (!open && !publish.isPending) setReviewed(undefined);
         }}
-        title={t("academyPublishCourse")}
-        description={t("academyConfirmPublishCourse", {
-          count: reviewedCapacity,
-        })}
+        title={t(update ? "academyChangeCapacity" : "academyPublishCourse")}
+        description={t(
+          update ? "academyConfirmCapacity" : "academyConfirmPublishCourse",
+          {
+            count: reviewed?.capacity,
+          },
+        )}
       >
         {publish.isError && (
-          <Notice kind="error">{t("academyPublishFailed")}</Notice>
+          <Notice kind="error">
+            {t(update ? "academyCapacityFailed" : "academyPublishFailed")}
+          </Notice>
         )}
         <div className="form-actions">
           <Button
             type="button"
             variant="secondary"
             disabled={publish.isPending}
-            onClick={() => setReviewedCapacity(undefined)}
+            onClick={() => {
+              setReviewed(undefined);
+              if (publish.isError) void publication.refetch();
+            }}
           >
             {t("enrolmentCancel")}
           </Button>
@@ -138,8 +168,7 @@ export function AcademyCoursePublication({
             type="button"
             disabled={publish.isPending}
             onClick={() => {
-              if (reviewedCapacity !== undefined)
-                publish.mutate(reviewedCapacity);
+              if (reviewed) publish.mutate(reviewed);
             }}
           >
             {t("enrolmentConfirm")}

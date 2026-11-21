@@ -178,11 +178,39 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(open(winner), /42501/);
     assert.equal((await open(waiting)).access.learner, true);
 
+    const resize = (who, expected, capacity) =>
+      rpc(
+        who,
+        "academy_set_course_capacity",
+        `${q(course)},${expected},${capacity}`,
+      ).then((result) => checked("academy_set_course_capacity", result));
+    await assert.rejects(resize(teacher, 1, 2), /42501/);
+    assert.deepEqual(await resize(manager, 1, 2), {
+      published: true,
+      capacity: 2,
+    });
+    assert.deepEqual(await resize(manager, 1, 2), {
+      published: true,
+      capacity: 2,
+    });
+    await assert.rejects(resize(manager, 1, 3), /PT409/);
+    await enrol(winner);
+    await assert.rejects(resize(manager, 2, 1), /PT409/);
+    await enrol(winner, "removed");
+    assert.deepEqual(await resize(manager, 2, 1), published);
+    assert.equal(
+      await sql(
+        `select count(*) from public.audit_events where action='academy.course.capacity_updated' and resource_id=${q(course)}`,
+      ),
+      "2",
+    );
+
     await sql(
       `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, issued_at: time(-5), starts_at: time(-4), expires_at: time(-1) }))})`,
     );
     assert.deepEqual(await state(), published);
     await assert.rejects(publish(manager, 1), /42501/);
+    await assert.rejects(resize(manager, 1, 2), /42501/);
     await assert.rejects(enrol(waiting, "removed"), /42501/);
     await configure(false);
     await assert.rejects(state(), /42501/);

@@ -59,6 +59,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_save_draft_schedule",
             "/rest/v1/rpc/academy_course_publication",
             "/rest/v1/rpc/academy_publish_course",
+            "/rest/v1/rpc/academy_set_course_capacity",
             "/rest/v1/rpc/academy_learning_action",
             "/rest/v1/rpc/academy_timetable",
             "/rest/v1/rpc/notification_inbox",
