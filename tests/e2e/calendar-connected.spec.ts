@@ -168,8 +168,8 @@ test("calendar secret links and explicit minimal offline schedule survive reload
             expect(group).not.toBeNull();
             expect(calendar).not.toBeNull();
             expect(panels).toHaveLength(4);
-            expect(group!.bottom).toBeLessThanOrEqual(calendar!.y + 1);
-            expect(group!.right).toBeLessThanOrEqual(width + 1);
+            expect(group!.y + group!.height).toBeLessThanOrEqual(calendar!.y + 1);
+            expect(group!.x + group!.width).toBeLessThanOrEqual(width + 1);
             for (const [index, panel] of panels.entries()) {
                 expect(panel.x).toBeGreaterThanOrEqual(0);
                 expect(panel.right).toBeLessThanOrEqual(width + 1);
