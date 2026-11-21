@@ -1,11 +1,8 @@
+import { z } from "zod";
 import { db } from "../../lib/supabase";
+import { calendarColorsSchema } from "./schema";
 
-export type CalendarColors = {
-  personal_event_color: string;
-  assignment_event_color: string;
-  customer_event_color: string;
-  version: number;
-};
+export type CalendarColors = z.infer<typeof calendarColorsSchema>;
 
 /** Match the SQL getter's untouched-account defaults until the private read finishes. */
 export const defaultCalendarColors: CalendarColors = {
@@ -21,6 +18,6 @@ export const calendarColorsQuery = (actor: string) => ({
   queryFn: async () => {
     const { data, error } = await db().rpc("get_my_calendar_color_preferences");
     if (error) throw error;
-    return data as CalendarColors;
+    return calendarColorsSchema.parse(data);
   },
 });

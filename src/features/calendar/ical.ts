@@ -1,19 +1,8 @@
 import { DateTime } from "luxon";
 import { z } from "zod";
-import { validZone } from "../../lib/dates";
+import { calendarExportSchema } from "./schema";
 
-export const calendarExportSchema = z
-  .array(
-    z.object({
-      id: z.string().uuid(),
-      kind: z.enum(["assignment", "private"]),
-      title: z.string(),
-      starts_at: z.string().datetime({ offset: true }),
-      ends_at: z.string().datetime({ offset: true }),
-      time_zone: z.string().refine(validZone),
-    }),
-  )
-  .max(500);
+export { calendarExportSchema } from "./schema";
 export type CalendarExportEvent = z.infer<typeof calendarExportSchema>[number];
 
 function text(value: string) {

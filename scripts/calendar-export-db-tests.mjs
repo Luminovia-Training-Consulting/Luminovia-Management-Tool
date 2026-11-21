@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("calendar_export", async ({sql, actor}) => {
     const [teacher, peer, admin] = Array.from({length: 3}, randomUUID);
@@ -11,13 +12,16 @@ await withTestDatabase("calendar_export", async ({sql, actor}) => {
         ends = "2026-10-25T01:30:00Z";
     const from = "2026-10-01T00:00:00Z",
         until = "2026-11-01T00:00:00Z";
-    const exportFor = async (who, include = false, start = from, end = until) =>
-        JSON.parse(
+    const exportFor = async (who, include = false, start = from, end = until) => {
+        const result = JSON.parse(
             await actor(
                 who,
                 `select public.export_my_calendar(${q(start)},${q(end)},${include})`,
             ),
         );
+        assertRpcResponse("export_my_calendar", result);
+        return result;
+    };
 
     async function assignment(who, {cancelled = false, released = false} = {}) {
         const job = randomUUID(),

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 let checks = 0;
 
@@ -37,6 +38,7 @@ await withTestDatabase("calendar_colors_test", async ({sql, actor}) => {
         "Color defaults are per actor and saving is versioned with a fixed light palette",
         async () => {
             const firstDefaults = await rpc(first, "get_my_calendar_color_preferences");
+            assertRpcResponse("get_my_calendar_color_preferences", firstDefaults);
             assert.deepEqual(firstDefaults, {
                 personal_event_color: "#E1EDDA",
                 assignment_event_color: "#DCE9F8",
@@ -49,6 +51,7 @@ await withTestDatabase("calendar_colors_test", async ({sql, actor}) => {
                 assigned,
                 customer,
             ]);
+            assertRpcResponse("save_my_calendar_color_preferences", saved);
             assert.deepEqual(saved, {
                 personal_event_color: personal,
                 assignment_event_color: assigned,
@@ -78,7 +81,7 @@ await withTestDatabase("calendar_colors_test", async ({sql, actor}) => {
                     assigned,
                     customer,
                 ]),
-                /40001/,
+                /PT409/,
             );
             await assert.rejects(
                 rpc(first, "save_my_calendar_color_preferences", [

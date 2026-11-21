@@ -24,7 +24,7 @@ function isConflict(error: unknown) {
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    error.code === "40001"
+    (error.code === "PT409" || error.code === "40001")
   );
 }
 

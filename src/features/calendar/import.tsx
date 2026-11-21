@@ -4,13 +4,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { Upload } from "lucide-react";
-import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
 import { type ImportedAppointment, parseCalendarImport } from "./import-ical";
+import { calendarImportReceipt } from "./schema";
 import "./import-i18n";
 import "./import.css";
 
@@ -43,12 +43,7 @@ export function CalendarImport({
         p_events: preview,
       });
       if (error) throw error;
-      return z
-        .object({
-          created: z.number().int().nonnegative(),
-          skipped: z.number().int().nonnegative(),
-        })
-        .parse(data);
+      return calendarImportReceipt.parse(data);
     },
     onSuccess: async () => {
       setPreview(null);

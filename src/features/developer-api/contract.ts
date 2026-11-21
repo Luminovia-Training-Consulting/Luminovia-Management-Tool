@@ -18,6 +18,13 @@ import {
   workspaceResult,
 } from "./learning-contract.ts";
 import { z } from "zod";
+import {
+  calendarColorsSchema,
+  calendarExportSchema,
+  calendarImportReceipt,
+  calendarSubscriptionSchema,
+  calendarSwatchSchema,
+} from "../calendar/schema.ts";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import {
@@ -371,8 +378,108 @@ const readinessRun = { p_course_run_id: uuid };
 const readinessVersion = { p_expected_version: version, ...idempotency };
 const readinessReceipt = z.toJSONSchema(readinessReceiptSchema);
 
+const calendarInstant = { ...text, format: "date-time" };
+const calendarColors = z.toJSONSchema(calendarColorsSchema);
+const calendarSwatch = z.toJSONSchema(calendarSwatchSchema);
+const calendarSubscription = z.toJSONSchema(calendarSubscriptionSchema);
+const calendarSubscriptionToken = {
+  ...text,
+  format: "password",
+  pattern: "^[a-f0-9]{64}$",
+};
+const saveCalendarSubscription = rpc(
+  "saveCalendarSubscription",
+  "Calendar",
+  "Create or rotate my private calendar subscription",
+  "The current actor owns the subscription. Generate a random 256-bit token, submit its lowercase hexadecimal representation and keep it private. Send a null ID and version zero to create. On rotation send the current ID and version. A retry needs the same version, payload, token and request ID. Each actor can have up to 20 retained subscriptions. A stale version requires a fresh read.",
+  {
+    p_id: nullableUuid,
+    p_label: { ...text, minLength: 1, maxLength: 80 },
+    p_include_private: boolean,
+    p_token: calendarSubscriptionToken,
+    p_expected_version: version,
+    p_client_id: uuid,
+  },
+  calendarSubscription,
+);
+
 const nativePaths = {
   ...enquiriesSupportPaths,
+  "/rest/v1/rpc/export_my_calendar": rpc(
+    "exportMyCalendar",
+    "Calendar",
+    "Export my calendar snapshot",
+    "The caller can read only their own current confirmed assignments and may opt in to their own private events. Use a period of at most 93 days and shorten it if it contains more than 500 events.",
+    {
+      p_from: calendarInstant,
+      p_until: calendarInstant,
+      p_include_private: { ...boolean, default: false },
+    },
+    z.toJSONSchema(calendarExportSchema),
+    ["p_include_private"],
+  ),
+  "/rest/v1/rpc/import_my_calendar": rpc(
+    "importMyCalendar",
+    "Calendar",
+    "Import reviewed private appointments",
+    "The current session owns all imported appointments. Review the list first. Supply finite instants with offsets, a valid IANA zone and a stable event UID. Existing UIDs for the same account are skipped. Invalid or conflicting rows roll back the entire batch.",
+    {
+      p_events: {
+        type: "array",
+        minItems: 1,
+        maxItems: 500,
+        items: {
+          ...object({
+            uid: { ...text, minLength: 1, maxLength: 1024 },
+            title: { ...text, minLength: 1, maxLength: 200 },
+            description: { type: ["string", "null"], maxLength: 10000 },
+            starts_at: calendarInstant,
+            ends_at: calendarInstant,
+            time_zone: text,
+          }),
+          required: ["uid", "title", "starts_at", "ends_at", "time_zone"],
+        },
+      },
+    },
+    z.toJSONSchema(calendarImportReceipt),
+  ),
+  "/rest/v1/rpc/get_my_calendar_color_preferences": rpc(
+    "readMyCalendarColours",
+    "Calendar",
+    "Read my private calendar colours",
+    "Returns the caller's saved light palette or version-zero defaults.",
+    {},
+    calendarColors,
+  ),
+  "/rest/v1/rpc/save_my_calendar_color_preferences": rpc(
+    "saveMyCalendarColours",
+    "Calendar",
+    "Save my private calendar colours",
+    "Send the caller's current version and three reviewed light swatches. A stale version requires a fresh read.",
+    {
+      p_expected_version: version,
+      p_personal_event_color: calendarSwatch,
+      p_assignment_event_color: calendarSwatch,
+      p_customer_event_color: calendarSwatch,
+    },
+    calendarColors,
+  ),
+  "/rest/v1/rpc/my_calendar_subscriptions": rpc(
+    "listMyCalendarSubscriptions",
+    "Calendar",
+    "List my private calendar subscriptions",
+    "Only the caller's metadata is returned. Tokens and token hashes are kept out of this response.",
+    {},
+    z.toJSONSchema(z.array(calendarSubscriptionSchema).max(20)),
+  ),
+  "/rest/v1/rpc/revoke_calendar_subscription": rpc(
+    "revokeMyCalendarSubscription",
+    "Calendar",
+    "Revoke my private calendar subscription",
+    "Only the current owner can revoke a subscription using its current version. A subsequent request for the old feed is denied.",
+    { p_id: uuid, p_expected_version: { type: "integer", minimum: 1 } },
+    { const: true },
+  ),
   "/rest/v1/rpc/save_course_run": rpc(
     "saveCourseRun",
     "Courses",
@@ -1278,6 +1385,43 @@ const integrationPath = {
 };
 
 const credentialPaths = {
+  "/rest/v1/rpc/save_calendar_subscription": {
+    post: {
+      ...nativeDownloadPaths["/rest/v1/rpc/save_calendar_subscription"].post,
+      ...saveCalendarSubscription.post,
+      responses: { ...saveCalendarSubscription.post.responses, "500": error },
+    },
+  },
+  "/functions/v1/calendar-feed": {
+    get: {
+      operationId: "fetchPrivateCalendarFeed",
+      tags: ["Calendar"],
+      summary: "Fetch a private iCalendar subscription",
+      description:
+        "Configure a calendar client with the private feed URL. Treat the opaque token as a password. Expired, revoked and invalid links receive the same response.",
+      security: [],
+      parameters: [
+        {
+          name: "token",
+          in: "query",
+          required: true,
+          schema: calendarSubscriptionToken,
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Private iCalendar feed",
+          content: { "text/calendar": { schema: text } },
+        },
+        "404": {
+          description: "Calendar unavailable",
+          content: {
+            "text/plain": { schema: { const: "calendar_unavailable" } },
+          },
+        },
+      },
+    },
+  },
   "/functions/v1/human-login": {
     post: {
       operationId: "humanLogin",

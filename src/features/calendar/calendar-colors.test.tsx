@@ -38,9 +38,9 @@ beforeEach(async () => {
     async (
       name: string,
       args?: {
-        p_personal_event_color: string;
-        p_assignment_event_color: string;
-        p_customer_event_color: string;
+        p_personal_event_color: CalendarColors["personal_event_color"];
+        p_assignment_event_color: CalendarColors["assignment_event_color"];
+        p_customer_event_color: CalendarColors["customer_event_color"];
       },
     ) => {
       if (name === "get_my_calendar_color_preferences")

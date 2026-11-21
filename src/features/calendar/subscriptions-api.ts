@@ -4,17 +4,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import { calendarSubscriptionSchema } from "./schema";
 
-const item = z.object({
-  id: z.string().uuid(),
-  label: z.string(),
-  include_private: z.boolean(),
-  expires_at: z.string().datetime({ offset: true }),
-  revoked_at: z.string().datetime({ offset: true }).nullable(),
-  version: z.number().int().positive(),
-  created_at: z.string().datetime({ offset: true }),
-});
-export type CalendarSubscription = z.infer<typeof item>;
+export type CalendarSubscription = z.infer<typeof calendarSubscriptionSchema>;
 export const subscriptionKey = (actor: string) => [
   "calendar-subscriptions",
   actor,
@@ -27,7 +19,7 @@ export const subscriptionsQuery = (actor: string) =>
         .rpc("my_calendar_subscriptions")
         .abortSignal(signal);
       if (error) throw error;
-      return z.array(item).parse(data);
+      return z.array(calendarSubscriptionSchema).parse(data);
     },
     staleTime: 15000,
   });
@@ -71,7 +63,7 @@ export async function saveSubscription(
     .abortSignal(signal);
   if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
   if (error) throw error;
-  return item.parse(data);
+  return calendarSubscriptionSchema.parse(data);
 }
 
 export async function revokeSubscription(id: string, version: number) {

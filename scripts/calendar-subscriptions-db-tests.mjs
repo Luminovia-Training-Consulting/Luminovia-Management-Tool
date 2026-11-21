@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {createHash, randomBytes, randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("calendar_subscription_test", async ({sql, actor}) => {
     const [owner, peer, admin] = Array.from({length: 3}, randomUUID);
@@ -36,6 +37,8 @@ await withTestDatabase("calendar_subscription_test", async ({sql, actor}) => {
         q(request),
     ];
     const created = await own(owner, "save_calendar_subscription", createArgs);
+    assertRpcResponse("save_calendar_subscription", created);
+    assertRpcResponse("my_calendar_subscriptions", await own(owner, "my_calendar_subscriptions"));
     assert.equal(created.include_private, false);
     assert.deepEqual(await own(peer, "my_calendar_subscriptions"), []);
     assert.deepEqual(await own(admin, "my_calendar_subscriptions"), []);
@@ -125,7 +128,7 @@ await withTestDatabase("calendar_subscription_test", async ({sql, actor}) => {
             1,
             q(randomUUID()),
         ]),
-        /40001/,
+        /PT409/,
     );
     assert.equal(
         await own(owner, "revoke_calendar_subscription", [
@@ -133,6 +136,10 @@ await withTestDatabase("calendar_subscription_test", async ({sql, actor}) => {
             renewed.version,
         ]),
         true,
+    );
+    await assert.rejects(
+        own(owner, "revoke_calendar_subscription", [q(created.id), renewed.version]),
+        /PT409/,
     );
     assert.equal(
         await service("recheck_calendar_subscription", [q(hash(renewedSecret))]),

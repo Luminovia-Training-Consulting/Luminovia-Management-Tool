@@ -104,6 +104,71 @@ describe("installation and integration credential contracts", () => {
   });
 });
 
+describe("private calendar contracts", () => {
+  it("describes bounded private import and actor-owned export", () => {
+    const prefix = "/rest/v1/rpc/";
+    expect(requestSchema(prefix + "export_my_calendar")).toMatchObject({
+      required: ["p_from", "p_until"],
+    });
+    expect(requestSchema(prefix + "import_my_calendar")).toMatchObject({
+      properties: { p_events: { minItems: 1, maxItems: 500 } },
+    });
+    expect(
+      paths[prefix + "export_my_calendar"].post.responses["200"],
+    ).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            maxItems: 500,
+            items: {
+              additionalProperties: false,
+              required: [
+                "id",
+                "kind",
+                "title",
+                "starts_at",
+                "ends_at",
+                "time_zone",
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("keeps a private feed and token issuance out of the interactive explorer", () => {
+    const feed = "/functions/v1/calendar-feed";
+    const subscription = "/rest/v1/rpc/save_calendar_subscription";
+    for (const path of [feed, subscription])
+      expect(paths).not.toHaveProperty(path);
+    const download = portalOpenApi(backend, true).paths;
+    expect(download[feed].get).toMatchObject({
+      security: [],
+      parameters: [
+        {
+          name: "token",
+          in: "query",
+          required: true,
+          schema: { format: "password" },
+        },
+      ],
+    });
+    expect(download[subscription].post).toMatchObject({
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              properties: { p_token: { format: "password" } },
+            },
+          },
+        },
+      },
+      responses: { "409": { description: expect.any(String) } },
+    });
+  });
+});
+
 describe("documented Premium course and spending operations", () => {
   it("documents course creation, bounded offset-aware sessions and the visibility response", () => {
     expect(requestSchema("/rest/v1/rpc/save_course_run")).toMatchObject({

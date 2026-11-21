@@ -7,17 +7,13 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import {
+  calendarColorsSchema,
+  calendarSwatchSchema,
+  calendarSwatches,
+} from "./schema";
 import "./filter-i18n";
 
-const palette = [
-  { value: "#DCE9F8", key: "calendarColorBlue" },
-  { value: "#E1EDDA", key: "calendarColorMint" },
-  { value: "#FFF0C5", key: "calendarColorYellow" },
-  { value: "#F8E2D3", key: "calendarColorPeach" },
-  { value: "#E6E0F0", key: "calendarColorLilac" },
-  { value: "#F5DDE7", key: "calendarColorPink" },
-  { value: "#DFE6EA", key: "calendarColorSlate" },
-] as const;
 /** Persist private-event, assignment and light customer-event colors independently for this actor. */
 export function CalendarColorPreferences({ actor }: { actor: string }) {
   const { t } = useTranslation("calendarFilter");
@@ -44,7 +40,7 @@ export function CalendarColorPreferences({ actor }: { actor: string }) {
         },
       );
       if (error) throw error;
-      return data as CalendarColors;
+      return calendarColorsSchema.parse(data);
     },
     onSuccess: (value) => {
       cache.setQueryData(options.queryKey, value);
@@ -56,7 +52,7 @@ export function CalendarColorPreferences({ actor }: { actor: string }) {
         error &&
           typeof error === "object" &&
           "code" in error &&
-          error.code === "40001"
+          (error.code === "PT409" || error.code === "40001")
           ? "conflict"
           : "failed",
       ),
@@ -89,14 +85,16 @@ export function CalendarColorPreferences({ actor }: { actor: string }) {
               <select
                 value={draft[key]}
                 onChange={(event) => {
-                  const value = event.currentTarget.value;
+                  const value = calendarSwatchSchema.parse(
+                    event.currentTarget.value,
+                  );
                   setNotice(null);
                   setDraft({ ...draft, [key]: value });
                 }}
               >
-                {palette.map((color) => (
-                  <option key={color.value} value={color.value}>
-                    {t(color.key)}
+                {Object.entries(calendarSwatches).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {t(label)}
                   </option>
                 ))}
               </select>

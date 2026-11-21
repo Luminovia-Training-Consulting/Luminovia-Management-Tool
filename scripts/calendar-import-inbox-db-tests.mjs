@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
+import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
     const owner = randomUUID(),
@@ -23,11 +24,15 @@ await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
             who,
             `select public.import_my_calendar(${q(JSON.stringify(events))}::jsonb)`,
         );
-    assert.deepEqual(JSON.parse(await call(owner, [appointment])), {
+    const first = JSON.parse(await call(owner, [appointment]));
+    const retried = JSON.parse(await call(owner, [appointment]));
+    assertRpcResponse("import_my_calendar", first);
+    assertRpcResponse("import_my_calendar", retried);
+    assert.deepEqual(first, {
         created: 1,
         skipped: 0,
     });
-    assert.deepEqual(JSON.parse(await call(owner, [appointment])), {
+    assert.deepEqual(retried, {
         created: 0,
         skipped: 1,
     });
