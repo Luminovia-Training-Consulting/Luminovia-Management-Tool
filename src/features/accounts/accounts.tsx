@@ -67,8 +67,7 @@ function AccountsDirectory({
   });
   const assignableRoles =
     catalog.data?.filter(
-      (entry) =>
-        entry.assignable && !["participant", "owner"].includes(entry.role),
+      (entry) => entry.assignable && entry.role !== "owner",
     ) ?? [];
   const organisations = useQuery({
     queryKey: ["account-organisations", actorId],
@@ -249,7 +248,7 @@ function AccountsDirectory({
       >
         <p>{t("roleHint")}</p>
         {selected?.roles.some((role) =>
-          ["lecturer", "senior_lecturer", "admin", "owner"].includes(role),
+          ["lecturer", "senior_lecturer"].includes(role),
         ) && <LecturerCompensation userId={selected.id} />}
         <fieldset className="account-roles">
           <legend>{t("role")}</legend>
@@ -271,6 +270,16 @@ function AccountsDirectory({
             </label>
           ))}
         </fieldset>
+        {roles.length > 0 && (
+          <dl>
+            {roles.map((role) => (
+              <div key={role}>
+                <dt>{t(role)}</dt>
+                <dd>{t(`roleScope.${role}`)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <Button
           disabled={
             !online ||

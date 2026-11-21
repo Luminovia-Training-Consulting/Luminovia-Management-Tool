@@ -7,6 +7,8 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
+import { hasTeachingRole } from "../auth/internal-capabilities";
+import { userRolesQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
 import { dateTime, money } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
@@ -139,7 +141,13 @@ export function MyJobWaitlist() {
   );
 }
 
-function SubstituteOffer({ offer }: { offer: Substitution }) {
+function SubstituteOffer({
+  offer,
+  teaching,
+}: {
+  offer: Substitution;
+  teaching: boolean;
+}) {
   const { t, i18n } = useTranslation("jobExtra");
   const common = useTranslation().t;
   // Consent belongs to the exact recipient quote currently displayed, not to
@@ -158,7 +166,7 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
     offer.proposer_name,
     offer.target_name,
     offer.status,
-    offer.can_accept,
+    teaching && offer.can_accept,
   ]);
   const [reviewedSnapshot, setReviewedSnapshot] = useState<string | null>(null);
   if (reviewedSnapshot !== null && reviewedSnapshot !== snapshot)
@@ -169,7 +177,7 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
     keyFor = useRequestKey();
   const action = useMutation({
     mutationFn: (kind: "accept" | "decline" | "withdraw") => {
-      if (kind === "accept" && !consent)
+      if (kind === "accept" && (!consent || !teaching || !offer.can_accept))
         throw new Error("substitution_review_required");
       return respondSubstitution(
         offer,
@@ -253,7 +261,7 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
           </li>
         ))}
       </ol>
-      {offer.can_accept && (
+      {teaching && offer.can_accept && (
         <>
           <label className="notification-preference">
             <input
@@ -311,6 +319,8 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
 export function SubstitutionOffers({ jobId }: { jobId?: string }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("jobExtra");
+  const roles = useQuery(userRolesQuery(actor));
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const query = useQuery(substitutionsQuery(actor, jobId));
   if (query.isPending) return null;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
@@ -319,7 +329,7 @@ export function SubstitutionOffers({ jobId }: { jobId?: string }) {
     <section aria-label={t(jobId ? "history" : "inbox")}>
       <h2>{t(jobId ? "history" : "inbox")}</h2>
       {query.data.map((offer) => (
-        <SubstituteOffer key={offer.id} offer={offer} />
+        <SubstituteOffer key={offer.id} offer={offer} teaching={teaching} />
       ))}
       <Button
         variant="ghost"

@@ -158,7 +158,7 @@ async function headers(actor) {
 }
 
 /** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
-async function upload(actor, bytes, kind, owner, replace) {
+async function upload(actor, bytes, kind, owner, replace, expectedStatus = 200) {
     const form = new FormData();
     form.set(
         "file",
@@ -178,9 +178,10 @@ async function upload(actor, bytes, kind, owner, replace) {
     const body = await response.json();
     assert.equal(
         response.status,
-        200,
+        expectedStatus,
         `Actual scanned ${kind} upload: ${body.error ?? "unexpected response"}`,
     );
+    if (expectedStatus !== 200) return;
     assert.equal(body.document.status, "clean");
     return body.document;
 }
@@ -191,6 +192,7 @@ try {
         management = await fixture("management", "management"),
         client = await fixture("clientA", "client"),
         other = await fixture("clientB", "client"),
+        participant = await fixture("participant", "participant"),
         lecturer = await fixture("lecturer", "lecturer"),
         senior = await fixture("senior", "senior_lecturer");
     const administratorCommissionReport = await checked(
@@ -698,6 +700,34 @@ try {
         "Owner creates actual AUD commissioned offer",
     );
     jobs.push(ownJob);
+    const claimOffer = (actor) =>
+        actor.client.rpc("claim_job", {
+            p_job_id: ownJob,
+            p_idempotency_key: randomUUID(),
+            p_terms_version: 1,
+        });
+    const roleBoundaryPdf = pdf("Fictional role boundary invoice");
+    for (const [role, actor] of [
+        ["owner", owner],
+        ["admin", admin],
+        ["management", management],
+        ["client", client],
+    ]) {
+        const access = await checked(
+            actor.client.rpc("commercial_access"),
+            `${role}-only invoice permission`,
+        );
+        assert.equal(access.can_submit_invoice, false, role);
+        const claim = await checked(claimOffer(actor), `${role}-only claim eligibility`);
+        assert.equal(claim.status, "not_eligible", role);
+        await upload(actor, roleBoundaryPdf, "invoice", null, null, 403);
+    }
+    assert.equal((await claimOffer(participant)).error?.code, "42501");
+    await upload(participant, roleBoundaryPdf, "invoice", null, null, 403);
+    await checked(
+        service.from("user_roles").insert({user_id: owner.id, role: "lecturer"}),
+        "Grant the owner an explicit lecturer role",
+    );
     const ownOffer = (
         await checked(
             owner.client.rpc("job_offers"),
@@ -712,7 +742,7 @@ try {
                     p_idempotency_key: randomUUID(),
                     p_terms_version: ownOffer.terms_version,
                 }),
-                "Owner acts as lecturer without extra role",
+                "Owner with a lecturer role claims their own offer",
             )
         ).status,
         "confirmed",
@@ -726,6 +756,16 @@ try {
         ).can_submit_invoice,
         true,
     );
+    await upload(owner, roleBoundaryPdf, "invoice");
+    await checked(
+        service
+            .from("user_roles")
+            .delete()
+            .eq("user_id", owner.id)
+            .eq("role", "lecturer"),
+        "Revoke the active lecturer role from the owner account",
+    );
+    await upload(owner, roleBoundaryPdf, "invoice", null, null, 403);
     const currencies = await checked(
         client.client.rpc("client_spend_summary"),
         "Separate original-currency spend",
@@ -777,7 +817,7 @@ try {
         [],
     );
     console.log(
-        "PASS: actual Auth/password-only authentication/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
+        "PASS: actual Auth/password-only authentication/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, explicit lecturer role for claims and uploads, immediate role revocation and private-calendar boundary.",
     );
 } finally {
     for (const client of clients) await client.removeAllChannels();

@@ -9,7 +9,14 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AccountsPage } from "./accounts";
 import { accountRoles } from "./api";
@@ -186,8 +193,8 @@ describe("Account administration", () => {
     expect(screen.getByRole("checkbox", { name: "Gast" })).toBeVisible();
 
     expect(
-      screen.queryByRole("checkbox", { name: "Kursteilnehmer:in" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("checkbox", { name: "Kursteilnehmer:in" }),
+    ).toBeVisible();
     expect(
       screen.queryByRole("checkbox", { name: "Management" }),
     ).not.toBeInTheDocument();
@@ -216,6 +223,42 @@ describe("Account administration", () => {
         name: "Inhaberin / Plattformleitung",
       }),
     ).not.toBeInTheDocument();
+  });
+  it("adds management and learner capabilities while preserving the existing lecturer role", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    fake.adminCatalog = true;
+    page();
+    const edit = await screen.findByRole("button", {
+      name: "Rollen bearbeiten",
+    });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    expect(screen.getByRole("checkbox", { name: "Dozent:in" })).toBeChecked();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Management" }));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Kursteilnehmer:in" }),
+    );
+    expect(
+      screen.getByText(/An eingeschriebenen Kursen teilnehmen/),
+    ).toBeVisible();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Rollen speichern" }),
+    );
+    const confirmation = await screen.findByRole("dialog", {
+      name: "Rollen für Anna ändern?",
+    });
+    await userEvent.click(
+      within(confirmation).getByRole("button", { name: "Rollen speichern" }),
+    );
+    await waitFor(() =>
+      expect(fake.invoke).toHaveBeenCalledWith(
+        "accounts/v1/users/teacher-id/roles",
+        {
+          method: "PUT",
+          body: { roles: ["lecturer", "management", "participant"] },
+        },
+      ),
+    );
   });
   it("requires an authorised organisation before converting a lecturer to a company", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];

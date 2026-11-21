@@ -163,6 +163,10 @@ function setup(
               <Route path="api/docs" element={<NavigationTarget />} />
               <Route path="files" element={<NavigationTarget />} />
               <Route path="courses" element={<p>Live courses route</p>} />
+              <Route path="client" element={<p>Live company route</p>} />
+              <Route path="jobs/:id" element={<p>Live job detail route</p>} />
+              <Route path="finance" element={<p>Live finance route</p>} />
+              <Route path="learning" element={<p>Live learning route</p>} />
               <Route path="search" element={<NavigationTarget />} />
             </Route>
             <Route path="/login" element={<p>Login screen</p>} />
@@ -497,4 +501,34 @@ it("allows a participant's signed-in API explorer route", () => {
   expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
     "/api/docs",
   );
+});
+
+it.each(["/jobs/fictional-offer", "/finance?claim=fictional-claim"])(
+  "routes company-only requests for %s back to the company workspace",
+  async (path) => {
+    access.roles = ["client"];
+    setup(path, false);
+    expect(await screen.findByText("Live company route")).toBeVisible();
+    expect(screen.queryByText("Live job detail route")).not.toBeInTheDocument();
+    expect(screen.queryByText("Live finance route")).not.toBeInTheDocument();
+  },
+);
+
+it("combines enterprise, participant and teaching navigation on one account", () => {
+  access.roles = ["client", "participant", "lecturer"];
+  setup("/finance", false);
+  const sidebar = screen.getByRole("complementary", { name: "Menü" });
+  expect(
+    within(sidebar).getByRole("link", { name: "Stellenbörse" }),
+  ).toHaveAttribute("href", "/jobs");
+  expect(
+    within(sidebar).getByRole("link", { name: "Auftraggeber" }),
+  ).toHaveAttribute("href", "/client");
+  expect(
+    within(sidebar).getByRole("link", { name: "Lernbereich" }),
+  ).toHaveAttribute("href", "/learning");
+  expect(
+    within(sidebar).getByRole("link", { name: "Kursbewertungen" }),
+  ).toHaveAttribute("href", "/my-reviews");
+  expect(screen.getByText("Live finance route")).toBeVisible();
 });

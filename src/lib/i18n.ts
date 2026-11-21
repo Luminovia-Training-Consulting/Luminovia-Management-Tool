@@ -29,6 +29,7 @@ const pairs: Record<string, [string, string]> = {
   topics: ["Themen & Tools", "Topics & tools"],
   requestCourses: ["Kurse beauftragen", "Commission courses"],
   myCourses: ["Meine Kurse", "My courses"],
+  learningWorkspace: ["Lernbereich", "Learning workspace"],
   accounts: ["Konten", "Accounts"],
   staffDirectory: ["Dozierende", "Lecturers"],
   clientPortal: ["Auftraggeber", "Client portal"],

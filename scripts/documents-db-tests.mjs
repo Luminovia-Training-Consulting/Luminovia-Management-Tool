@@ -253,7 +253,7 @@ try {
             );
             await assert.rejects(
                 reserve(owner, {subject: otherOwner}),
-                /Subject upload permission required/,
+                /Current lecturer invoice upload authority required/,
             );
             const delegated = await reserve(manager, {subject: otherOwner}, "aal1");
             assert.equal(

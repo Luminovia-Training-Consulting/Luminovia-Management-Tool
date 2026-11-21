@@ -22,6 +22,7 @@ import {
   permissionsQuery,
   profileQuery,
   topicsQuery,
+  userRolesQuery,
 } from "../../lib/queries";
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -29,6 +30,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, CheckCircle2, MapPin } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
 import { dateTime, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -61,6 +63,9 @@ export function JobDetail() {
   // later receives a fresh identity for a genuine reopening.
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
+  const roles = useQuery(userRolesQuery(session!.user.id));
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
+  if (!teaching && accepted !== null) setAccepted(null);
   const jobs = useQuery(jobDetailQuery(session!.user.id, id ?? ""));
   const topics = useQuery(topicsQuery);
   const claims = useQuery(claimsQuery(session!.user.id));
@@ -103,6 +108,7 @@ export function JobDetail() {
       requireOnline();
       if (
         !job ||
+        !teaching ||
         accepted !== consent ||
         assignmentConflict ||
         !claims.isSuccess
@@ -150,7 +156,7 @@ export function JobDetail() {
               : "claim_unavailable",
           )}
         </Notice>
-        {id && <JobWaitlist jobId={id} />}
+        {id && teaching && <JobWaitlist jobId={id} />}
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
@@ -186,9 +192,9 @@ export function JobDetail() {
       <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
       <JobLifecyclePanel job={job} />
       <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
-      <JobWaitlist jobId={job.id} />
+      {teaching && <JobWaitlist jobId={job.id} />}
       <JobSubstitutionPanel jobId={job.id} />
-      {ownClaim?.status === "confirmed" && (
+      {teaching && ownClaim?.status === "confirmed" && (
         <div className="form-actions">
           <Button asChild variant="secondary">
             <Link to={`/finance?claim=${encodeURIComponent(ownClaim.id)}`}>
@@ -306,7 +312,7 @@ export function JobDetail() {
               <CheckCircle2 size={20} />
               {t("confirmed")}
             </Notice>
-          ) : (
+          ) : teaching ? (
             <>
               <p>{t("claimHelp")}</p>
               {assignmentConflict && (
@@ -339,7 +345,7 @@ export function JobDetail() {
                 {t(claim.isPending ? "claiming" : "claim")}
               </Button>
             </>
-          )}
+          ) : null}
           {claim.isError && <Notice kind="error">{t("error")}</Notice>}
           {result && result !== "confirmed" && (
             <Notice kind="error">

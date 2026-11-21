@@ -8,8 +8,10 @@ import {
   academyAdministration,
   academyInvitationReceipt,
   academyManagedAccount,
+  academyMemberRoles,
   academyOrganisation,
   type AcademyManagedAccount,
+  type AcademyRoleAssignment,
 } from "./academy-schema";
 
 export const academyAdministrationQuery = (actor: string) =>
@@ -27,6 +29,42 @@ export const academyAdministrationQuery = (actor: string) =>
       return academyAdministration.nullable().parse(data);
     },
   });
+
+/** Read the live scope for one account when a local admin opens its role editor. */
+export const academyMemberRolesQuery = (actor: string, accountId: string) =>
+  queryOptions({
+    queryKey: ["academy-member-roles", actor, accountId],
+    enabled: Boolean(actor),
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: "always",
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("academy_member_roles", { p_user_id: accountId })
+        .abortSignal(signal);
+      if (error) throw error;
+      return academyMemberRoles.parse(data);
+    },
+  });
+
+/** Change one reviewed role and exact scope without replacing unrelated grants. */
+export async function setAcademyMemberRole(
+  accountId: string,
+  assignment: Pick<AcademyRoleAssignment, "role" | "organisation_id">,
+  enabled: boolean,
+  revision: string,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("academy_set_member_role", {
+    p_user_id: accountId,
+    p_role: assignment.role,
+    p_organisation_id: assignment.organisation_id,
+    p_enabled: enabled,
+    p_expected_revision: revision,
+  });
+  if (error) throw error;
+  return academyMemberRoles.parse(data);
+}
 
 export async function createAcademyOrganisation(
   requestId: string,

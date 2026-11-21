@@ -11,11 +11,12 @@ export const roles = [
     "senior_lecturer",
     "lecturer",
     "client",
+    "participant",
     "guest",
 ] as const;
 // Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
-type ProvisionedRole = AccountRole | "participant";
+type ProvisionedRole = AccountRole;
 
 // Validated invitation request with a durable retry key and optional organization binding.
 export interface Invitation<Role = AccountRole> {
@@ -567,7 +568,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 )
                     return response(503, {error: "creation_disabled"});
                 const payload = await body(request);
-                if (!object(payload) || !validAccountPassword(payload.password))
+                if (!object(payload) || typeof payload.role !== "string" || !validAccountPassword(payload.password))
                     return response(400, {error: "invalid_request"});
                 const {password, ...metadata} = payload;
                 const creation = parseInvitation(metadata);

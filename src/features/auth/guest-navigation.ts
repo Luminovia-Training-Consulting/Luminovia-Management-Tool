@@ -14,5 +14,8 @@ export function guestRouteAllowed(pathname: string): boolean {
 export function isParticipantOnly(
   roles: readonly string[] | undefined,
 ): boolean {
-  return roles?.length === 1 && roles[0] === "participant";
+  return Boolean(
+    roles?.includes("participant") &&
+    roles.every((role) => role === "participant" || role === "guest"),
+  );
 }

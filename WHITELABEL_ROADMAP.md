@@ -82,6 +82,8 @@ Release gates still cover the complete target installation, public domain/TLS, S
 
 Implement role/capability checks at both **installation AND resource** scope. In a dedicated single-customer instance an academy admin can manage its installed academy; it does not mean global access across other customers or to unrelated private direct messages. Preserve the current distinction between course-group administrative oversight and private DMs/notes.
 
+An installation administrator can assign management, lecturer, participant and organisation-specific company access to one local account. Each granted role uses the same account and licence seat. Organisations, lecturer assignments and course enrolments still govern each resource. Removing one role preserves the other grants and historical course records.
+
 ### Admin-permission examples
 
 | Operation                                            | Vendor admin                             | Customer installation admin | Customer course manager      | Lecturer          | Participant |

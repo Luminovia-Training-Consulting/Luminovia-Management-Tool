@@ -56,9 +56,25 @@ const de = {
   participant: "Kursteilnehmer:in",
   guest: "Gast",
   role: "Kontorolle",
+  chooseRole: "Rolle auswählen",
+  roleScope: {
+    owner: "Plattform verwalten und berechtigte Konten administrieren.",
+    admin: "Konten und Portal verwalten und freigegebene Vorgänge prüfen.",
+    management:
+      "Kurse und Aufträge organisieren und berechtigte Vorgänge bearbeiten.",
+    lecturer:
+      "Berechtigte Lehraufträge übernehmen, eigene Kurse betreuen und eigene Rechnungen einreichen.",
+    senior_lecturer:
+      "Lehraufträge und eigene Rechnungen verwalten sowie freigegebene Aufgaben für Senior-Dozierende übernehmen.",
+    client:
+      "Kursanfragen und Teilnehmende der zugeordneten Organisation verwalten.",
+    participant:
+      "An eingeschriebenen Kursen teilnehmen und die eigenen Lerninhalte nutzen.",
+    guest: "Das eigene Profil und persönliche Einstellungen öffnen.",
+  },
   organisation: "Auftraggeber-Organisation",
   organisationHint:
-    "Dieser Zugang sieht nur Daten seiner zugeordneten Organisation.",
+    "Die Unternehmensrolle gilt für die zugeordneten Organisationen.",
   organisationAdmin:
     "Die Administration ordnet diesem Konto anschließend eine Organisation zu.",
   choose: "Organisation wählen",
@@ -72,7 +88,7 @@ const de = {
   next: "Weiter",
   count: "{{count}} Konten",
   roleHint:
-    "Du kannst die für dein Konto freigegebenen Rollen vergeben. Administration kann weitere Administrationskonten anlegen und verwalten; die Plattformleitung und der eigene Zugang bleiben geschützt. Private Chats und persönliche Termine behalten ihre Zugriffsgrenzen.",
+    "Wähle alle Rollen aus, die dieses Konto benötigt. Organisationszugriff und Kurseinschreibungen werden separat vergeben.",
   protected:
     "Dieser Zugang ist vor Rollenänderungen durch dein Konto geschützt.",
   api: "API-Referenz",
@@ -132,9 +148,22 @@ const en: typeof de = {
   participant: "Course participant",
   guest: "Guest",
   role: "Account role",
+  chooseRole: "Select a role",
+  roleScope: {
+    owner: "Manage the platform and administer eligible accounts.",
+    admin: "Manage accounts and the portal, and review authorized work.",
+    management: "Organize courses and assignments, and handle authorized work.",
+    lecturer:
+      "Accept eligible teaching assignments, run your own courses and submit your own invoices.",
+    senior_lecturer:
+      "Manage teaching assignments and your own invoices, and carry out authorized senior lecturer duties.",
+    client: "Manage course requests and participants for linked organisations.",
+    participant:
+      "Take part in courses you are enrolled in and use your own learning materials.",
+    guest: "Open your own profile and personal settings.",
+  },
   organisation: "Client organisation",
-  organisationHint:
-    "This account only sees records belonging to its assigned organisation.",
+  organisationHint: "The company role applies to linked organisations.",
   organisationAdmin:
     "Administration will assign an organisation to this account afterwards.",
   choose: "Choose organisation",
@@ -148,7 +177,7 @@ const en: typeof de = {
   next: "Next",
   count: "{{count}} accounts",
   roleHint:
-    "You can assign the roles permitted for your account. Administrators can create and manage other administrative accounts; platform ownership and your own account remain protected. Private chats and personal events retain their resource access boundaries.",
+    "Select each role this account needs. Organisation access and course enrolment are granted separately.",
   protected: "This account is protected from role changes by your account.",
   api: "API reference",
   apiHint:

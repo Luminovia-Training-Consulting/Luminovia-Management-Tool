@@ -177,8 +177,9 @@ the [current pricing contract](API_REFERENCE.md#recent-settings-and-action-contr
 
 ## Identity and administrative authority
 
-Every person has a separate Supabase Auth identity. Roles are trusted database records, never editable user metadata. `owner` represents the platform lead/Carina; `admin` and `owner` have full business administration and can themselves teach or enrol when the ordinary course/qualification/contract rules are satisfied. Management retains explicitly granted operational capabilities. An installation operator can stage and require native authenticator pairing for administrators and owners. Protected account, contract, financial and enrolment mutations require current database
-roles, active status and resource scope.
+Each person has one Supabase Auth identity. Authorised administrators can assign several roles to the same account. The application offers the functions of each assigned role. PostgreSQL checks the current role, active account and the relevant organisation, assignment or course membership on protected requests. A company role needs an organisation association. A participant role needs a course enrolment for access to that course.
+
+Owner and administrator roles cover business administration. Management coordinates assignments and courses under its operational permissions. The lecturer or senior lecturer role is required to accept a teaching offer personally or submit a lecturer’s own invoice. The existing authorised finance workflow for submitting an invoice on behalf of a lecturer continues to require an active lecturer as the invoice owner. An installation operator can stage and require native authenticator pairing for administrators and owners.
 
 Private DM membership and private calendar ownership are retained. Full administrative functionality does not fabricate attendance, rewrite accepted work, grant a private DM membership or bypass financial transaction safeguards. Last/self-administrator protections serialize activation and role changes under the same database lock.
 
@@ -194,7 +195,7 @@ explicit insert-only seed is run; startup never reseeds a populated instance aut
 | Lecturer / senior lecturer | Offered and accepted **own lecturer compensation**, expected/completed/invoiced/paid amounts, own uploaded invoice PDFs and tracked payments. No customer gross or platform commission field is returned.   |
 | Client                     | Their own organisation's requests, full customer offer, commissioned/assigned spend in original currency and assigned lecturer identity. No other organisation or private lecturer invoice/contract access. |
 | Management                 | Explicit operational functions and authorised lecturer invoice/payment administration. Gross/platform reporting needs the separate capability reserved to admin/owner.                                      |
-| Admin / owner              | Full customer gross, agreed lecturer net compensation and platform margin, original-currency reporting, operational administration and own lecturer functions.                                              |
+| Admin / owner              | Full customer gross, agreed lecturer net compensation and platform margin, original-currency reporting and operational administration.                                              |
 | Learner                    | Explicitly enrolled course data and its lecturer; eligible own course feedback. No business financial data.                                                                                                 |
 
 Gross and platform data live in an unexposed private schema. Commissioned offers use zero sentinels in raw `jobs.amount/total_amount`; applications use `job_offers()` for the current lecturer's individual quote. Lecturers receive only their own applicable fee; Management receives null for protected compensation. Accepted claims and lecturer invoices retain immutable lecturer-compensation semantics. Compensation rounds to cents first and the platform receives the exact remainder, with no hidden

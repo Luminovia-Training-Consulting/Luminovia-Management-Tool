@@ -104,8 +104,7 @@ export function InviteForm({
   });
   const availableRoles =
     catalog.data?.filter(
-      (entry) =>
-        entry.assignable && !["participant", "owner"].includes(entry.role),
+      (entry) => entry.assignable && entry.role !== "owner",
     ) ?? [];
   const accountText = useTranslation("accounts").t;
   const organisations = useQuery({
@@ -133,7 +132,7 @@ export function InviteForm({
     defaultValues: {
       email: "",
       display_name: "",
-      role: "lecturer",
+      role: allRoles ? undefined : "lecturer",
       organisation_id: "",
     },
   });
@@ -239,6 +238,9 @@ export function InviteForm({
                 invitation.isPending || catalog.isPending || catalog.isError
               }
             >
+              <option value="" disabled>
+                {accountText("chooseRole")}
+              </option>
               {availableRoles.map(({ role }) => (
                 <option value={role} key={role}>
                   {accountText(role)}

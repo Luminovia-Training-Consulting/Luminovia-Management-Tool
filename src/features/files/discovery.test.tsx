@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   reads: vi.fn(),
   exact: vi.fn(),
   online: true,
+  roles: ["lecturer"],
 }));
 vi.mock("../../lib/online", () => ({
   useOnline: () => state.online,
@@ -45,7 +46,7 @@ vi.mock("../../lib/queries", () => ({
   jobsQuery: { queryKey: ["jobs"], queryFn: async () => [] },
   userRolesQuery: () => ({
     queryKey: ["user-roles"],
-    queryFn: async () => ["lecturer"],
+    queryFn: async () => state.roles,
   }),
 }));
 vi.mock("../../lib/supabase", () => ({
@@ -90,6 +91,7 @@ const documents = Array.from({ length: 1001 }, (_, n) => ({
 const clients: QueryClient[] = [];
 beforeEach(async () => {
   state.online = true;
+  state.roles = ["lecturer"];
   state.reads.mockReset();
   state.exact.mockReset();
   state.exact.mockImplementation((id: string) =>
@@ -137,6 +139,23 @@ function mount(view = <FilesPage />) {
     ),
   };
 }
+
+it("shows the invoice document kind only while the actor has a teaching role", async () => {
+  state.roles = ["client"];
+  state.rpc.mockReturnValue(
+    response({ items: [], has_more: false, next_cursor: null }),
+  );
+  const { client } = mount();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Datei hochladen" }));
+  expect(
+    screen.queryByRole("option", { name: "Rechnung" }),
+  ).not.toBeInTheDocument();
+  await act(async () =>
+    client.setQueryData(["user-roles"], ["client", "lecturer"]),
+  );
+  expect(await screen.findByRole("option", { name: "Rechnung" })).toBeVisible();
+});
 
 it("finds an authorized old file beyond the actual 1000-row list-response contract through its q deep link", async () => {
   window.history.replaceState({}, "", "/files?q=Older-needle");

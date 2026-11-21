@@ -146,7 +146,7 @@ afterEach(() => {
 });
 
 /** Mount real commercial queries with a fresh actor-scoped cache per test. */
-function view(initialEntries = ["/"]) {
+function view(initialEntries = ["/"], roles = ["lecturer"]) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity, gcTime: 0 },
@@ -155,6 +155,7 @@ function view(initialEntries = ["/"]) {
   });
   clients.push(client);
   client.setQueryData(["profile", actor], { time_zone: "Europe/Berlin" });
+  client.setQueryData(["user-roles", actor], roles);
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
@@ -189,6 +190,19 @@ it("opens the invoice form from an accepted-course deep link and keeps future cl
     within(dialog).queryByRole("checkbox", { name: /future-claim/ }),
   ).not.toBeInTheDocument();
 });
+
+it.each(["management", "client", "participant", "admin", "owner"])(
+  "does not open the invoice upload from a direct claim link for %s without a teaching role",
+  async (role) => {
+    view(["/finance?claim=eur-a"], [role]);
+    await screen.findByRole("heading", { name: "FICTIONAL-001" });
+    expect(
+      screen.queryByRole("button", { name: "Rechnung einreichen" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(state.upload).not.toHaveBeenCalled();
+  },
+);
 
 /** Prepare an owned scanned-PDF fixture and one real claim selection. */
 async function invoiceForm({ open = true } = {}) {

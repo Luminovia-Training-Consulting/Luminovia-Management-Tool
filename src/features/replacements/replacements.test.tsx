@@ -52,6 +52,7 @@ function setup(
     status: "confirmed",
     claim_id: id,
   },
+  roles = ["lecturer"],
 ) {
   const offer = makeOffer();
   state.rpc.mockImplementation((name: string) => {
@@ -67,6 +68,8 @@ function setup(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  client.setQueryDefaults(["user-roles", "actor"], { staleTime: Infinity });
+  client.setQueryData(["user-roles", "actor"], roles);
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
@@ -84,6 +87,16 @@ afterEach(async () => {
   state.online = true;
   vi.clearAllMocks();
   await i18n.changeLanguage("de");
+});
+it("keeps staff replacement controls without offering a replacement to a manager personally", async () => {
+  setup(undefined, ["management"]);
+  expect(
+    await screen.findByRole("heading", { name: "Fictional replacement" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Gesamten Block übernehmen" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("Fictional agreed terms")).not.toBeInTheDocument();
 });
 it("requires fresh consent after any quote/session changes and confirms only server success", async () => {
   const user = userEvent.setup(),

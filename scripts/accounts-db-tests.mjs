@@ -229,10 +229,17 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
                 "lecturer",
                 "senior_lecturer",
             ]);
-            await assert.rejects(
-                rpc(admin, "set_account_roles", [peer, "{participant}"], "aal1"),
-                /42501/,
+            await rpc(
+                admin,
+                "set_account_roles",
+                [peer, "{lecturer,participant,senior_lecturer}"],
+                "aal1",
             );
+            assert.deepEqual((await rpc(peer, "account_me")).roles, [
+                "lecturer",
+                "participant",
+                "senior_lecturer",
+            ]);
             await assert.rejects(
                 rpc(admin, "set_account_roles", [peer, "{fake_role}"], "aal1"),
                 /Invalid roles/,
@@ -254,7 +261,7 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
                 await sql(
                     `select count(*) from public.audit_events where action='account.roles_changed' and resource_id='${peer}'`,
                 ),
-                "1",
+                "2",
             );
         },
     );

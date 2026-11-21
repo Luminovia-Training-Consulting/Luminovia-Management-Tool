@@ -20,7 +20,6 @@ import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
-import { isParticipantOnly } from "../auth/guest-navigation";
 import { courseHubQuery, type CourseOverview } from "./api";
 import { CompanyInvitations } from "./company-invitations";
 import { AcademyCourseDraft } from "./academy-draft";
@@ -123,7 +122,7 @@ export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
       ) : (
         <>
           {academy === "active" && <AcademyCourseDraft actor={actor} />}
-          {!academy && isParticipantOnly(roles.data) && (
+          {!academy && roles.data?.includes("participant") && (
             <CompanyInvitations actor={actor} />
           )}
           {query.isPending ||

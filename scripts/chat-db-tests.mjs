@@ -452,13 +452,18 @@ try {
         },
     );
     await check(
-        "General room accepts lecturers and functional admins, excludes participants and is singleton",
+        "General room accepts explicit teaching roles, excludes other accounts and is singleton",
         async () => {
             const ids = await Promise.all([
                 value(a, "ensure_general_chat"),
                 value(b, "ensure_general_chat"),
             ]);
             assert.equal(ids[0], ids[1]);
+            await assert.rejects(
+                value(admin, "ensure_general_chat", [], "aal1"),
+                /Lecturer role required/,
+            );
+            await sql(`insert into public.user_roles(user_id,role) values('${admin}','lecturer')`);
             assert.equal(
                 await value(admin, "ensure_general_chat", [], "aal1"),
                 ids[0],

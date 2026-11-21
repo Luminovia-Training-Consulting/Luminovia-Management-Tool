@@ -1,0 +1,28 @@
+/* Keep company names readable alongside concise, touch-sized row actions. */
+.academy-role-editor {
+  margin-block: 0.5rem;
+}
+
+.academy-role-editor-assignments {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin-block: 0.75rem;
+  list-style: none;
+}
+
+.academy-role-editor-assignments > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.academy-role-editor-assignments > li > span {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.academy-role-editor-assignments > li > button {
+  flex: none;
+}

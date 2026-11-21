@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../auth/internal-capabilities";
+import {
   expertiseQuery,
   profileQuery,
   userRolesQuery,
@@ -36,21 +40,16 @@ export function Dashboard() {
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
-  const staff =
-    roles.data?.some((role) =>
-      ["owner", "admin", "management", "lecturer", "senior_lecturer"].includes(
-        role,
-      ),
-    ) ?? false;
-  const clientAccount = Boolean(roles.data?.includes("client")) && !staff;
-  const destination = staff ? "/jobs" : clientAccount ? "/client" : "/courses";
+  const staff = hasJobStaffRole(roles.data);
+  const teaching = hasTeachingRole(roles.data);
+  const clientAccount = Boolean(roles.data?.includes("client"));
   const jobs = useQuery({
     ...jobDashboardQuery(session!.user.id),
     enabled: staff,
   });
   const expertise = useQuery({
     ...expertiseQuery(session!.user.id),
-    enabled: staff,
+    enabled: teaching,
   });
   if (roles.isPending || (staff && jobs.isPending)) return <Loading />;
   if (roles.isError || (staff && jobs.isError))
@@ -64,7 +63,7 @@ export function Dashboard() {
     );
   // Counts are authoritative aggregates, not the length of a truncated preview.
   const availableJobs = jobs.data?.suggestions ?? [];
-  const matching = jobs.data?.matching ?? false;
+  const matching = teaching && jobs.data?.matching;
   const suggested = availableJobs;
   const next = jobs.data?.next_assignments ?? [];
   const zone =
@@ -112,69 +111,74 @@ export function Dashboard() {
               color: "lilac",
               to: "/profile",
             },
-          ].map(({ label, number, icon: Icon, color, to }) => (
-            <Link
-              key={label}
-              className={`dashboard-metric dashboard-metric--${color}`}
-              to={to}
-            >
-              <span>{t(label)}</span>
-              <strong>{number}</strong>
-              <Icon size={22} aria-hidden="true" />
-              <ArrowUpRight
-                size={16}
-                className="dashboard-metric-arrow"
-                aria-hidden="true"
-              />
-            </Link>
-          ))}
+          ]
+            .filter(({ label }) => teaching || label === "openJobs")
+            .map(({ label, number, icon: Icon, color, to }) => (
+              <Link
+                key={label}
+                className={`dashboard-metric dashboard-metric--${color}`}
+                to={to}
+              >
+                <span>{t(label)}</span>
+                <strong>{number}</strong>
+                <Icon size={22} aria-hidden="true" />
+                <ArrowUpRight
+                  size={16}
+                  className="dashboard-metric-arrow"
+                  aria-hidden="true"
+                />
+              </Link>
+            ))}
         </div>
       )}
       {staff ? (
         <div className="dashboard-overview">
-          <section
-            className="panel dashboard-assignments"
-            aria-label={dashboard("nextAssignments")}
-          >
-            <div className="section-heading">
-              <h2>{dashboard("nextAssignments")}</h2>
-              <CalendarDays size={22} aria-hidden="true" />
-            </div>
-            {next.length ? (
-              <ol className="dashboard-preview-list">
-                {next.slice(0, 3).map((assignment) => (
-                  <li key={assignment.id}>
-                    <Link
-                      to={
-                        assignment.job
-                          ? `/jobs/${assignment.job.id}`
-                          : "/calendar"
-                      }
-                    >
-                      {assignment.job?.title ?? dashboard("assignment")}
-                    </Link>
-                    <small>
-                      {dateTime(assignment.starts_at, i18n.language, zone)}
-                    </small>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="muted">{dashboard("noConfirmedAssignments")}</p>
-            )}
-            <TextLink to="/calendar">{dashboard("openCalendar")}</TextLink>
-          </section>
+          {teaching && (
+            <section
+              className="panel dashboard-assignments"
+              aria-label={dashboard("nextAssignments")}
+            >
+              <div className="section-heading">
+                <h2>{dashboard("nextAssignments")}</h2>
+                <CalendarDays size={22} aria-hidden="true" />
+              </div>
+              {next.length ? (
+                <ol className="dashboard-preview-list">
+                  {next.slice(0, 3).map((assignment) => (
+                    <li key={assignment.id}>
+                      <Link
+                        to={
+                          assignment.job
+                            ? `/jobs/${assignment.job.id}`
+                            : "/calendar"
+                        }
+                      >
+                        {assignment.job?.title ?? dashboard("assignment")}
+                      </Link>
+                      <small>
+                        {dateTime(assignment.starts_at, i18n.language, zone)}
+                      </small>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="muted">{dashboard("noConfirmedAssignments")}</p>
+              )}
+              <TextLink to="/calendar">{dashboard("openCalendar")}</TextLink>
+            </section>
+          )}
           <DashboardReadinessWidget actor={session!.user.id} />
           <DashboardCalendarPreview
             actor={session!.user.id}
             zone={zone}
-            assignments={next}
+            assignments={teaching ? next : []}
           />
         </div>
-      ) : (
+      ) : null}
+      {(!staff || clientAccount) && (
         <section className="panel dashboard-account-destination">
           <h2>{t(clientAccount ? "clientPortal" : "myCourses")}</h2>
-          <TextLink to={destination}>
+          <TextLink to={clientAccount ? "/client" : "/courses"}>
             {t(clientAccount ? "requestCourses" : "courses")}
           </TextLink>
           {clientAccount && (
@@ -193,6 +197,7 @@ export function Dashboard() {
         actor={session!.user.id}
         zone={zone}
         staff={staff}
+        teaching={teaching}
         clientAccount={clientAccount}
         jobCounts={jobs.data?.management ?? undefined}
       />

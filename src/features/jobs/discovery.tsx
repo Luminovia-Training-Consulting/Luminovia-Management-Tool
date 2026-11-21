@@ -13,6 +13,10 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
+import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../auth/internal-capabilities";
 import { topicsQuery, userRolesQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -486,12 +490,8 @@ export function JobDiscovery() {
     common = useTranslation().t,
     actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
-  const staff =
-    roles.data?.some((role) =>
-      ["owner", "admin", "management", "senior_lecturer", "lecturer"].includes(
-        role,
-      ),
-    ) ?? false;
+  const staff = roles.isSuccess && hasJobStaffRole(roles.data);
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const [params, setParams] = useSearchParams();
   const parsed = filtersFromParams(params),
     filters = parsed.success ? parsed.data : null;
@@ -524,7 +524,7 @@ export function JobDiscovery() {
     <>
       <PageHeading title={t("title")} description={t("help")} />
       <SubstitutionOffers />
-      <MyJobWaitlist />
+      {teaching && <MyJobWaitlist />}
       <details className="panel discovery-filter-disclosure" open={!filters}>
         <summary>{t("filterOptions")}</summary>
         <div className="discovery-filter-content">

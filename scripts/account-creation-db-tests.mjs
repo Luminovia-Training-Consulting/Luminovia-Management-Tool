@@ -37,6 +37,7 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
         "lecturer",
         "guest",
         "client",
+        "participant",
     ]) {
         const email = "created-" + randomUUID() + "@example.invalid",
             key = randomUUID(),
@@ -73,7 +74,6 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
     }
     await assert.rejects(reserve(manager, "admin"), /42501/);
     await assert.rejects(reserve(admin, "owner"), /42501/);
-    await assert.rejects(reserve(admin, "participant"), /42501/);
     await assert.rejects(reserve(admin, "client"), /22023/);
     await assert.rejects(
         actor(
@@ -208,6 +208,6 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
         /42501/,
     );
     console.log(
-        "PASS six account roles/company binding/idempotency/current-authority revocation; admin peer role changes with self/owner protected; guest own-only profile and strict REST business denial, participants retired",
+        "PASS seven explicitly assigned account roles, company binding, idempotency and current authority; admin peer role changes with self and owner protected, guest own-only profile and unconfirmed participant denial",
     );
 });

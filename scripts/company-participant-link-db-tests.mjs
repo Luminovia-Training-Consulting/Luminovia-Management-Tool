@@ -223,4 +223,76 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
   console.log(
     "PASS company link request, privacy, current authority, idempotent retry and participant consent",
   );
+
+  await call(
+    admin,
+    `public.set_company_premium(${q(foreign)},true,0,${q(randomUUID())})`,
+  );
+  await actor(
+    admin,
+    `select public.set_account_roles_with_organisation(${q(learner)},array['participant','lecturer','client'],${q(foreign)})`,
+  );
+  const mixed = await call(learner, "public.account_me()");
+  assert.deepEqual(mixed.roles, ["client", "lecturer", "participant"]);
+  assert.equal(
+    (await call(learner, `public.course_workspace(${q(foreignRun)})`)).access
+      .client,
+    true,
+  );
+  await assert.rejects(
+    call(learner, `public.course_workspace(${q(run)})`),
+    /42501/,
+  );
+  assert.deepEqual(await request(company, learnerId, randomUUID()), expected);
+  const mixedInvites = await call(
+    learner,
+    "public.my_company_participant_invitations()",
+  );
+  assert.equal(mixedInvites.length, 1);
+  assert.equal(mixedInvites[0].organisation_id, org);
+  await accept(learner, mixedInvites[0].version, randomUUID());
+  await assert.rejects(
+    call(learner, `public.course_workspace(${q(run)})`),
+    /42501/,
+  );
+  await actor(
+    company,
+    `select public.manage_course_enrolment(${q(run)},${q(learner)},'enrolled')`,
+  );
+  const mixedCourse = (
+    await call(learner, `public.course_workspace(${q(run)})`)
+  ).access;
+  assert.equal(mixedCourse.learner, true);
+  assert.equal(mixedCourse.client, false);
+  assert.equal(mixedCourse.teacher, false);
+  assert.equal(
+    (await call(learner, `public.course_withdrawal_window(${q(run)})`))
+      .can_withdraw,
+    true,
+  );
+  await actor(learner, `select public.cancel_own_course_enrolment(${q(run)})`);
+  await assert.rejects(
+    call(learner, `public.course_workspace(${q(run)})`),
+    /42501/,
+  );
+  assert.equal(
+    (await call(learner, `public.course_workspace(${q(foreignRun)})`)).access
+      .client,
+    true,
+  );
+  await actor(
+    admin,
+    `select public.set_account_roles(${q(learner)},array['lecturer','participant'])`,
+  );
+  await assert.rejects(
+    call(learner, `public.course_workspace(${q(foreignRun)})`),
+    /42501/,
+  );
+  assert.equal(
+    (await call(learner, "public.account_me()")).roles.includes("lecturer"),
+    true,
+  );
+  console.log(
+    "PASS one account combines explicit company, lecturer and learner duties with independent company consent, enrolment and revocation",
+  );
 });

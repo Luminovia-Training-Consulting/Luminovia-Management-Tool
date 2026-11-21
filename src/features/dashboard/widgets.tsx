@@ -318,12 +318,14 @@ export function DashboardWidgets({
   actor,
   zone,
   staff,
+  teaching,
   clientAccount,
   jobCounts,
 }: {
   actor: string;
   zone: string;
   staff: boolean;
+  teaching: boolean;
   clientAccount: boolean;
   jobCounts?: { drafts: number; expired: number; upcoming: number };
 }) {
@@ -336,14 +338,14 @@ export function DashboardWidgets({
       <PersonalizedWidgets
         actor={actor}
         widgets={{
-          teaching_day: staff ? (
+          teaching_day: teaching ? (
             <details className="dashboard-teaching-details">
               <summary>{t("teachingDay")}</summary>
               <TeachingDayWidget actor={actor} />
             </details>
           ) : null,
           activity: <Activity actor={actor} zone={zone} />,
-          contracts: staff ? (
+          contracts: teaching ? (
             <PendingContracts actor={actor} zone={zone} />
           ) : null,
           files: <RecentDocuments actor={actor} zone={zone} />,
@@ -377,6 +379,7 @@ export function DashboardWidgets({
         <Link to={staff ? "/jobs" : clientAccount ? "/client" : "/courses"}>
           {t(staff ? "jobs" : clientAccount ? "client" : "courses")}
         </Link>
+        {staff && clientAccount && <Link to="/client">{t("client")}</Link>}
         <Link to="/profile">{t("profile")}</Link>
         <Link to="/notifications">{t("notifications")}</Link>
         <Link to="/settings">{t("settings")}</Link>

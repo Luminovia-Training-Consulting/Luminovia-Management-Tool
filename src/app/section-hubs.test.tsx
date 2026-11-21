@@ -6,12 +6,14 @@ import { MemoryRouter, useSearchParams } from "react-router-dom";
 import { SectionHub } from "./section-hubs";
 import "../lib/i18n";
 
+const state = vi.hoisted(() => ({ roles: ["lecturer"] }));
+
 vi.mock("../features/auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "company" } } }),
 }));
 vi.mock("@tanstack/react-query", async (original) => ({
   ...(await original<typeof import("@tanstack/react-query")>()),
-  useQuery: () => ({ data: ["client"] }),
+  useQuery: () => ({ data: state.roles }),
 }));
 vi.mock("../features/operations/courses", () => ({
   CoursesPage: () => <p>Course catalogue</p>,
@@ -38,7 +40,10 @@ vi.mock("../features/help/help", () => ({
     );
   },
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  state.roles = ["lecturer"];
+});
 it("keeps replacement discovery within the course catalogue", async () => {
   render(
     <MemoryRouter>
@@ -53,6 +58,18 @@ it("keeps replacement discovery within the course catalogue", async () => {
     screen.getByText(/Vertretung für einen Kurs|Find or claim a course/),
   );
   expect(await screen.findByText("Available replacements")).toBeVisible();
+});
+it("keeps a company account in its course catalogue without offering to take a replacement", async () => {
+  state.roles = ["client"];
+  render(
+    <MemoryRouter>
+      <SectionHub kind="courses" />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("Course catalogue")).toBeVisible();
+  expect(
+    screen.queryByText(/Vertretung für einen Kurs|Find or claim a course/),
+  ).not.toBeInTheDocument();
 });
 it("embeds help without losing the active knowledge section on topic navigation", async () => {
   render(

@@ -246,6 +246,7 @@ function setup(onlyWidgets = false, sharedObserver = false) {
             actor={fake.actor}
             zone="Europe/Berlin"
             staff={fake.roles.includes("lecturer")}
+            teaching={fake.roles.includes("lecturer")}
             clientAccount={fake.roles.includes("client")}
             jobCounts={
               (

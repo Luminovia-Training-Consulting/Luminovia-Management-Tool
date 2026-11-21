@@ -78,6 +78,7 @@ function setup(
   route = "/jobs/job-a",
   list = false,
   overrides: Partial<Job> = {},
+  roles = ["lecturer"],
 ) {
   const offer = { ...job, ...overrides };
   const client = new QueryClient({
@@ -92,7 +93,7 @@ function setup(
     can_duplicate: false,
     claims: [],
   });
-  client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
+  client.setQueryData(["user-roles", "lecturer-a"], roles);
   client.setQueryData(["saved-job-views", "lecturer-a"], []);
   client.setQueryData(["job-substitutions", "lecturer-a", "inbox"], []);
   client.setQueryData(["my-job-waitlist", "lecturer-a"], []);
@@ -138,6 +139,70 @@ function setup(
 }
 
 describe("safe marketplace interactions", () => {
+  it.each(["management", "client", "participant", "admin", "owner"])(
+    "withholds personal teaching actions from %s, even with a retained claim",
+    async (role) => {
+      const client = setup("/jobs/job-a", false, {}, [role]);
+      expect(
+        await screen.findByRole("heading", { name: "Python Block" }),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: "Auftrag übernehmen" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("checkbox", { name: "Konditionen akzeptieren" }),
+      ).not.toBeInTheDocument();
+      await act(async () =>
+        client.setQueryData(
+          ["claims", "lecturer-a"],
+          [
+            {
+              ...job,
+              id: "retained-claim",
+              job_id: job.id,
+              status: "confirmed",
+              assignment_sessions: [],
+            },
+          ],
+        ),
+      );
+      expect(
+        screen.queryByRole("link", { name: "Rechnung einreichen" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("gives a mixed management and lecturer account teaching actions while its teaching role remains assigned", async () => {
+    const client = setup("/jobs/job-a", false, {}, ["management", "lecturer"]);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeEnabled();
+    await act(async () =>
+      client.setQueryData(["user-roles", "lecturer-a"], ["management"]),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Auftrag übernehmen" }),
+      ).not.toBeInTheDocument(),
+    );
+    await act(async () =>
+      client.setQueryData(
+        ["user-roles", "lecturer-a"],
+        ["management", "lecturer"],
+      ),
+    );
+    expect(
+      await screen.findByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeDisabled();
+  });
+
   it("disables a conflicting offer from confirmed assignment instants before consent", async () => {
     const user = userEvent.setup();
     const client = setup();
@@ -345,6 +410,7 @@ async function setupFailedDetail(
     return request;
   });
   client.setQueryData(["permissions", "lecturer-a"], []);
+  client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
   client.setQueryData(["topics"], []);
   client.setQueryData(["claims", "lecturer-a"], []);
   client.setQueryData(["profile", "lecturer-a"], {

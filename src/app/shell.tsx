@@ -47,6 +47,10 @@ import {
   isGuestOnly,
   isParticipantOnly,
 } from "../features/auth/guest-navigation";
+import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../features/auth/internal-capabilities";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
@@ -197,12 +201,16 @@ export function Shell() {
   useEffect(() => {
     if (profileDenied) void clearOfflineSchedule().catch(() => {});
   }, [profileDenied, actor]);
-  const teaching =
-    roles.data?.some((role) =>
-      ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
-    ) ?? false;
-  const staff = teaching || Boolean(roles.data?.includes("management"));
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
+  const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const clientPortalAccess = roles.data?.includes("client") ?? false;
+  const learnerAccess = roles.data?.includes("participant") ?? false;
+  const financeAccess =
+    teaching ||
+    Boolean(
+      permissions.data?.includes("finance.manage") ||
+      permissions.data?.includes("finance.gross.read"),
+    );
   const manage = Boolean(
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
@@ -240,6 +248,16 @@ export function Shell() {
                 ? "clientCourses"
                 : "myCourses",
           },
+          ...(learnerAccess
+            ? [
+                {
+                  to: "/learning",
+                  icon: GraduationCap,
+                  label: "learningWorkspace",
+                },
+                { to: "/my-reviews", icon: FileCheck2, label: "myReviews" },
+              ]
+            : []),
           ...(permissions.data?.includes("organisations.manage")
             ? [{ to: "/clients", icon: Building2, label: "clients" }]
             : []),
@@ -249,7 +267,7 @@ export function Shell() {
           ...(teaching || permissions.data?.includes("contracts.read")
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
             : []),
-          ...(teaching || permissions.data?.includes("finance.manage")
+          ...(financeAccess
             ? [{ to: "/finance", icon: Wallet, label: "finance" }]
             : []),
           ...(teaching ||
@@ -315,7 +333,6 @@ export function Shell() {
       { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
       { to: "/chats", icon: MessagesSquare, label: "chats" },
       { to: "/files", icon: FolderOpen, label: "files" },
-      { to: "/finance", icon: Wallet, label: "finance" },
       { to: "/settings", icon: Settings2, label: "settings" },
       { to: "/profile", icon: UserRound, label: "profile" },
     ],
@@ -367,6 +384,20 @@ export function Shell() {
     )
   )
     return <Navigate to="/learning" replace />;
+  if (online && !profileDenied && !profile.isError && !limitedAccount) {
+    if (
+      !staff &&
+      /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
+    )
+      return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
+    if (!teaching && /^\/finance\/?$/.test(location.pathname)) {
+      if (permissions.isPending) return <Loading />;
+      if (permissions.isError)
+        return <ErrorState retry={() => void permissions.refetch()} />;
+      if (!financeAccess)
+        return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
+    }
+  }
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
       <a className="skip-link" href="#main">

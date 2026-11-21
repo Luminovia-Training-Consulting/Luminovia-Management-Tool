@@ -35,9 +35,11 @@ const role = {
         "senior_lecturer",
         "lecturer",
         "client",
+        "participant",
         "guest",
     ],
 };
+const storedRole = { ...role, enum: ["owner", ...role.enum] };
 export const accountOpenApi = {
     openapi: "3.1.0",
     info: {
@@ -201,7 +203,7 @@ export const accountOpenApi = {
             post: {
                 summary: "Create an individual account without sending email",
                 description:
-                    "Requires current account/role administration. Company accounts require an organisation. Owner and retired participant roles cannot be assigned. Passwords must contain 8–128 characters, including uppercase and lowercase letters, a digit and one of the symbols configured by Supabase Auth. The password is transient and is never returned or stored in the creation request.",
+                    "Requires current account and role administration. A company contact requires an organisation. Initial learner access grants the participant role without enrolment. The operator's owner role is protected. Passwords must contain 8–128 characters, including uppercase and lowercase letters, a digit and one of the symbols configured by Supabase Auth. The password is transient and is never returned or stored in the creation request.",
                 requestBody: jsonBody({
                     type: "object",
                     additionalProperties: false,
@@ -307,7 +309,7 @@ export const accountOpenApi = {
                                         created_at: {type: "string", format: "date-time"},
                                         can_assign_roles: {type: "boolean"},
                                         can_change_active: {type: "boolean"},
-                                        roles: {type: "array", items: role},
+                                        roles: {type: "array", items: storedRole},
                                     },
                                 },
                             },
@@ -334,6 +336,7 @@ export const accountOpenApi = {
             put: {
                 operationId: "setAccountRoles",
                 summary: "Audited role assignment; self/last-admin protection",
+                description: "Save the explicit roles for this account. Multiple roles contribute their own permissions. Organisation membership and participant enrolment are independently scoped.",
                 parameters: userId,
                 requestBody: jsonBody({
                     type: "object",

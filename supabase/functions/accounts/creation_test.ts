@@ -79,11 +79,11 @@ Deno.test(
     },
 );
 Deno.test(
-    "invalid or retired roles, missing company and weak/injected creation are rejected before Auth",
+    "invalid roles, missing explicit role or company, and weak or injected creation are rejected before Auth",
     async () => {
         for (const data of [
             {...payload, role: "owner"},
-            {...payload, role: "participant"},
+            {...payload, role: undefined},
             {...payload, role: "client"},
             {...payload, password: "short"},
             {...payload, password: "Aa1!aaa"},
@@ -98,6 +98,19 @@ Deno.test(
         }
     },
 );
+Deno.test("standalone participant creation reserves exactly the selected learner role", async () => {
+    const f = fixture({
+        rpc: async (_token, name, args) => {
+            assert.equal(name, "reserve_account_creation");
+            assert.equal(args?.p_role, "participant");
+            assert.equal(args?.p_organisation_id, null);
+            return {data: {status: "reserved", creation_id: id}};
+        },
+    });
+    const result = await f.request({...payload, role: "participant"});
+    assert.equal(result.status, 201);
+    assert.deepEqual(f.calls, ["create", "complete"]);
+});
 Deno.test(
     "permission denial and settled idempotent retries never create another Auth identity",
     async () => {

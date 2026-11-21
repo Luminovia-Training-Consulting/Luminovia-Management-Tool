@@ -1,3 +1,9 @@
+# 21 November 2026 — Explicit account roles and scope
+
+The internal portal and both dedicated academies support assigning multiple roles to one account. Organisation membership, lecturer assignments and learner enrolment are separate grants. The interface and database require an explicit lecturer or senior lecturer role to accept an internal teaching assignment or submit an own lecturer invoice. Management can coordinate assignments. Company actions use the exact company membership. Participants use their own enrolled courses.
+
+Isolated PostgreSQL tested the role grants, scope changes, existing course history and independent revocation. Chromium checked the internal role matrix in English desktop and German mobile, and both academy editors with native Auth and PostgREST. The native Files endpoint exercised ClamAV scanning and Storage publication, including role revocation during upload and an idempotent retry after the role was restored. Live deployment remains pending.
+
 # 21 November 2026 — Additional framework settlement cases
 
 The finance worksheet distinguishes excused unfunded absence and received customer remuneration for an agreed non-teaching date. The latter uses the cumulative portion attributable to the date, deducts prior credited amounts and has its own total. A mixed service and non-teaching entry for one date requires individual review. Partial delivery of an individual unit is also an explicit manual classification. The browser fixture drives the real lecturer-to-finance review and checks that the lecturer sees only the verified totals and no new invoice.

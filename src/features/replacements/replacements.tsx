@@ -12,6 +12,11 @@ import {
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../auth/auth-context";
+import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../auth/internal-capabilities";
+import { userRolesQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
 import { dateTime, money } from "../../lib/dates";
 import { peopleDirectoryQuery } from "../people/api";
@@ -41,9 +46,11 @@ function useRequestKey() {
 function ReplacementCard({
   offer,
   refresh,
+  teaching,
 }: {
   offer: ReplacementOffer;
   refresh: () => Promise<void>;
+  teaching: boolean;
 }) {
   const { t, i18n } = useTranslation("replacements");
   const online = useOnline();
@@ -62,6 +69,7 @@ function ReplacementCard({
         await cancelReplacement(offer, key);
         return "cancelled";
       }
+      if (!teaching || !offer.can_claim) throw new Error("not_eligible");
       const result = await claimReplacement(offer, key);
       if (result.status !== "confirmed") throw new Error(result.status);
       return "confirmed";
@@ -104,7 +112,7 @@ function ReplacementCard({
           {t("reason")}: {offer.reason}
         </p>
       )}
-      {offer.can_claim && offer.quote && (
+      {teaching && offer.can_claim && offer.quote && (
         <>
           <dl>
             <dt>{t("total")}</dt>
@@ -319,7 +327,13 @@ export function ReplacementMarketplacePage() {
   const { t } = useTranslation("replacements");
   const client = useQueryClient();
   const online = useOnline();
-  const offers = useQuery({ ...replacementQuery(actor), enabled: online });
+  const roles = useQuery(userRolesQuery(actor));
+  const staff = roles.isSuccess && hasJobStaffRole(roles.data);
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
+  const offers = useQuery({
+    ...replacementQuery(actor),
+    enabled: online && staff,
+  });
   const refresh = async () => {
     await Promise.all([
       refreshJobState(client),
@@ -328,6 +342,9 @@ export function ReplacementMarketplacePage() {
       client.invalidateQueries({ queryKey: ["readiness"] }),
     ]);
   };
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  if (!staff) return null;
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
@@ -349,7 +366,12 @@ export function ReplacementMarketplacePage() {
       ) : offers.data.length ? (
         <div className="replacement-grid">
           {offers.data.map((offer) => (
-            <ReplacementCard key={offer.id} offer={offer} refresh={refresh} />
+            <ReplacementCard
+              key={offer.id}
+              offer={offer}
+              refresh={refresh}
+              teaching={teaching}
+            />
           ))}
         </div>
       ) : (

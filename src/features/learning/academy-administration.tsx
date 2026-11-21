@@ -24,6 +24,7 @@ import type {
 } from "../accounts/academy-schema";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
+import { AcademyRoleEditor } from "./academy-role-editor";
 
 type Localize = (de: string, en: string) => string;
 type Result = { kind: "ok" | "error"; message: string };
@@ -354,11 +355,17 @@ function AccountForm({
 }
 
 function MemberRow({
+  actor,
   account,
+  organisations,
+  canManageRoles,
   word,
   changed,
 }: {
+  actor: string;
   account: AcademyManagedAccount;
+  organisations: AcademyAdministration["organisations"];
+  canManageRoles: boolean;
   word: Localize;
   changed: () => Promise<unknown>;
 }) {
@@ -427,6 +434,17 @@ function MemberRow({
           {managementAction}
         </Button>
       )}
+      {canManageRoles && (
+        <AcademyRoleEditor
+          actor={actor}
+          accountId={account.id}
+          organisations={organisations}
+          word={word}
+          roleLabel={(role) => roleLabels[role]}
+          explainError={(error) => failure(error, word)}
+          changed={changed}
+        />
+      )}
       {result && (
         <Notice kind={result.kind === "error" ? "error" : undefined}>
           {result.message}
@@ -478,6 +496,7 @@ export function AcademyAdministrationPage() {
       cache.invalidateQueries({
         queryKey: academyLicenceQuery(actor).queryKey,
       }),
+      cache.invalidateQueries({ queryKey: ["academy-member-roles", actor] }),
     ]);
 
   return (
@@ -538,7 +557,10 @@ export function AcademyAdministrationPage() {
             {accounts.map((account) => (
               <MemberRow
                 key={account.id}
+                actor={actor}
                 account={account}
+                organisations={organisations}
+                canManageRoles={can_create_management}
                 word={word}
                 changed={changed}
               />

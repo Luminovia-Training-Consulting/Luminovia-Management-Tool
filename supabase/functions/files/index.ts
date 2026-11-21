@@ -127,6 +127,7 @@ Deno.serve(async (request: Request) => {
             if (!uuid(clientId)) return json(400, {error: 'invalid_request'});
             const scope = String(form.get('scope') ?? 'personal');
             const kind = String(form.get('kind') ?? (scope === 'room' ? 'chat' : 'material'));
+            if (kind === 'invoice' && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             if (kind === 'avatar') await validateAvatar(bytes);
             const roomId = chatRoom ?? (form.get('room_id') || null);
             const jobId = form.get('job_id') || null;
@@ -261,6 +262,10 @@ Deno.serve(async (request: Request) => {
                     return json(422, {error: 'scan_rejected', document_id: doc.id});
                 }
                 await currentDocument(); // Membership can change while an upload is being scanned.
+                if (doc.kind === 'invoice') {
+                    const permission = await user.rpc('can_finalize_invoice_upload', {p_document_id: doc.id, p_version_id: reservation.version_id});
+                    if (permission.error || permission.data !== true) throw new Error('access_denied');
+                }
                 // Recheck access after the long scan and promote exactly the stored bytes that were scanned.
                 const cleanExisting = await service.storage.from('portal-clean').info(reservation.object_path);
                 if (cleanExisting.error) {
@@ -276,6 +281,15 @@ Deno.serve(async (request: Request) => {
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
                 if (protectedUpload) await academyScan('clean', lease, digest, verdict.version);
+                else if (doc.kind === 'invoice') {
+                    const completed = await service.rpc('complete_invoice_upload', {
+                        p_document_id: doc.id, p_version_id: reservation.version_id, p_lease_id: lease,
+                        p_sha256: digest, p_scanner_version: verdict.version,
+                    });
+                    if (completed.error?.code === '42501') throw new Error('access_denied');
+                    if (completed.error?.code === 'PT409') return json(409, {error: 'version_superseded'});
+                    if (completed.error) return json(503, {error: 'upload_failed'});
+                }
                 else {
                     const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
                     const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();

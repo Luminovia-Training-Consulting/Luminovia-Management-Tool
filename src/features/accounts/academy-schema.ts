@@ -1,5 +1,28 @@
 import { z } from "zod";
 
+export const academyAccountRole = z.enum([
+  "lecturer",
+  "participant",
+  "management",
+  "client",
+]);
+export type AcademyAccountRole = z.infer<typeof academyAccountRole>;
+
+// The legacy directory keeps its scalar role. The local role editor reads the
+// actual grants, including their independent company scope where applicable.
+export const academyRoleAssignment = z.strictObject({
+  role: academyAccountRole,
+  organisation_id: z.uuid().nullable(),
+  organisation_name: z.string().nullable(),
+});
+export type AcademyRoleAssignment = z.infer<typeof academyRoleAssignment>;
+export const academyMemberRoles = z.strictObject({
+  roles: z.array(academyRoleAssignment).min(1),
+  revision: z.string().regex(/^[0-9a-f]{32}$/),
+  can_write: z.boolean(),
+  can_grant: z.boolean(),
+});
+
 export const academyOrganisation = z.strictObject({
   id: z.uuid(),
   name: z.string(),
@@ -9,7 +32,7 @@ export const academyManagedAccount = z.strictObject({
   id: z.uuid(),
   display_name: z.string(),
   active: z.boolean(),
-  role: z.enum(["lecturer", "participant", "management", "client"]),
+  role: academyAccountRole,
   confirmed: z.boolean(),
   management_delegated: z.boolean(),
   management_version: z.number().int().nonnegative(),

@@ -51,6 +51,8 @@ await withTestDatabase("passport", async ({sql, actor}) => {
     console.log(
         "PASS Exact current states, honest legacy unknown provenance, stable facts/hash and no contact/storage leakage",
     );
+    await assert.rejects(passport(admin), /42501/);
+    await sql(`insert into public.user_roles(user_id,role) values (${q(admin)},'lecturer')`);
     for (const who of [peer, admin])
         assert.deepEqual(
             (await passport(who, "en", stamp, "aal1")).data.qualifications,
@@ -70,7 +72,7 @@ await withTestDatabase("passport", async ({sql, actor}) => {
         "f",
     );
     console.log(
-        "PASS Peer and permission administrator export only themselves; participant, anonymous and service-role invocation denied",
+        "PASS Explicit lecturers export only themselves; permission administrator alone, participant, anonymous and service role denied",
     );
     const bound = JSON.parse(
         await actor(

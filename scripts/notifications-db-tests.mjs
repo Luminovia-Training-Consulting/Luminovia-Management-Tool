@@ -427,6 +427,7 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
                     "Initial deferred publication still fans out using final requirements",
                 );
                 await sql("update public.test_matching_attempts set n=0");
+                await sql(`insert into public.user_roles(user_id,role) values (${q(matchingOwner)},'lecturer')`);
                 const confirmed = await rpc(matchingOwner, "claim_job", [
                     q(job),
                     q(randomUUID()),

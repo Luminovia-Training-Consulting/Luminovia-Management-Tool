@@ -26,6 +26,7 @@ import { ArchivedPersonalMaterials } from "./archived-personal";
 import { deletionAccessQuery } from "../deletions/api";
 import { PermanentDeleteAction } from "../deletions/deletions";
 import { useAuth } from "../auth/auth-context";
+import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
 import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { dateTime } from "../../lib/dates";
@@ -934,6 +935,7 @@ export function FilesPage() {
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const canViewContracts = Boolean(
     permissions.data?.includes("contracts.read") ||
     permissions.data?.includes("contracts.manage") ||
@@ -945,6 +947,14 @@ export function FilesPage() {
   );
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("material");
+  const allowedKinds = [
+    "material",
+    "cv",
+    "certificate",
+    "contract",
+    ...(teaching ? ["invoice"] : []),
+  ];
+  const uploadKind = allowedKinds.includes(kind) ? kind : "";
   const [scope, setScope] = useState<UploadContext["scope"]>("personal");
   const [job, setJob] = useState("");
   return (
@@ -1004,25 +1014,30 @@ export function FilesPage() {
           <Field id="upload-kind" label={t("kind")}>
             <select
               id="upload-kind"
-              value={kind}
+              value={uploadKind}
               onChange={(e) => setKind(e.target.value)}
             >
-              {["material", "cv", "certificate", "contract", "invoice"].map(
-                (k) => (
-                  <option key={k} value={k}>
-                    {t(k)}
-                  </option>
-                ),
+              {!uploadKind && (
+                <option value="" disabled>
+                  —
+                </option>
               )}
+              {allowedKinds.map((k) => (
+                <option key={k} value={k}>
+                  {t(k)}
+                </option>
+              ))}
             </select>
           </Field>
         ) : null}
         {scope === "personal" ? (
-          <FileUpload
-            key={`${scope}:${kind}`}
-            context={{ scope, kind }}
-            onDone={() => setOpen(false)}
-          />
+          uploadKind && (
+            <FileUpload
+              key={`${scope}:${uploadKind}`}
+              context={{ scope, kind: uploadKind }}
+              onDone={() => setOpen(false)}
+            />
+          )
         ) : permissions.data?.includes("jobs.manage") ? (
           <JobPicker
             key={`${session!.user.id}:${scope}`}

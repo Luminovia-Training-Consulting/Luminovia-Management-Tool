@@ -1,19 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import type { AcademyAdministration } from "../accounts/academy-schema";
 import { AcademyAdministrationPage } from "./academy-administration";
 
-const { read, createAccount, createOrganisation, setActive, setManagement } =
-  vi.hoisted(() => ({
-    read: vi.fn<() => Promise<AcademyAdministration | null>>(),
-    createAccount: vi.fn(),
-    createOrganisation: vi.fn(),
-    setActive: vi.fn(),
-    setManagement: vi.fn(),
-  }));
+const {
+  read,
+  createAccount,
+  createOrganisation,
+  setActive,
+  setManagement,
+  readRoles,
+  setRole,
+} = vi.hoisted(() => ({
+  read: vi.fn<() => Promise<AcademyAdministration | null>>(),
+  createAccount: vi.fn(),
+  createOrganisation: vi.fn(),
+  setActive: vi.fn(),
+  setManagement: vi.fn(),
+  readRoles: vi.fn(),
+  setRole: vi.fn(),
+}));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "current-academy-actor" } } }),
 }));
@@ -27,6 +36,11 @@ vi.mock("../accounts/academy-api", () => ({
   createAcademyOrganisation: createOrganisation,
   setAcademyMemberActive: setActive,
   setAcademyManagement: setManagement,
+  academyMemberRolesQuery: (actor: string, account: string) => ({
+    queryKey: ["academy-member-roles", actor, account],
+    queryFn: () => readRoles(actor, account),
+  }),
+  setAcademyMemberRole: setRole,
 }));
 
 const org = {
@@ -55,10 +69,9 @@ afterEach(async () => {
   await i18n.changeLanguage("de");
 });
 
-function setup() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function setup(
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   render(
     <QueryClientProvider client={client}>
       <AcademyAdministrationPage />
@@ -208,6 +221,122 @@ it("lets an admin delegate to a current instructor and suspend the same retained
   expect(
     screen.getByText(/Fictional instructor.*Course manager.*Inactive/),
   ).toBeVisible();
+});
+
+it("adds an organisation-scoped company role to an existing lecturer and preserves the lecturer grant", async () => {
+  read.mockResolvedValue({
+    can_write: true,
+    can_create_management: true,
+    organisations: [org],
+    accounts: [{ ...member, confirmed: true, role: "lecturer" }],
+  });
+  const first = {
+    roles: [
+      { role: "lecturer", organisation_id: null, organisation_name: null },
+    ],
+    revision: "a".repeat(32),
+    can_write: true,
+    can_grant: true,
+  };
+  const confirmed = {
+    ...first,
+    roles: [
+      ...first.roles,
+      { role: "client", organisation_id: org.id, organisation_name: org.name },
+    ],
+    revision: "b".repeat(32),
+  };
+  readRoles.mockResolvedValue(first);
+  setRole.mockImplementation(async () => {
+    readRoles.mockResolvedValue(confirmed);
+    return confirmed;
+  });
+  const user = setup();
+  await user.click(await screen.findByText("Manage roles"));
+  expect(readRoles).toHaveBeenCalledWith("current-academy-actor", member.id);
+  expect(
+    screen.queryByRole("button", { name: /Revoke · Instructor/ }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(
+    await screen.findByLabelText("Additional role"),
+    "client",
+  );
+  expect(screen.getByRole("button", { name: "Add role" })).toBeDisabled();
+  await user.selectOptions(
+    screen.getByLabelText("Associated organisation"),
+    org.id,
+  );
+  await user.click(screen.getByRole("button", { name: "Add role" }));
+  expect(setRole).toHaveBeenCalledWith(
+    member.id,
+    { role: "client", organisation_id: org.id },
+    true,
+    first.revision,
+  );
+  expect(
+    await screen.findByRole("button", {
+      name: `Revoke · Company contact · ${org.name}`,
+    }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Revoke · Instructor" }),
+  ).toBeVisible();
+});
+
+it("confirms learner scope removal against the reviewed revision", async () => {
+  read.mockResolvedValue({
+    can_write: true,
+    can_create_management: true,
+    organisations: [org],
+    accounts: [{ ...member, confirmed: true }],
+  });
+  const learner = {
+    role: "participant",
+    organisation_id: org.id,
+    organisation_name: org.name,
+  };
+  const instructor = {
+    role: "lecturer",
+    organisation_id: null,
+    organisation_name: null,
+  };
+  const reviewed = {
+    roles: [learner, instructor],
+    revision: "a".repeat(32),
+    can_write: true,
+    can_grant: true,
+  };
+  readRoles.mockResolvedValue(reviewed);
+  setRole.mockResolvedValue({
+    ...reviewed,
+    roles: [instructor],
+    revision: "c".repeat(32),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const user = setup(client);
+  await user.click(await screen.findByText("Manage roles"));
+  await user.click(
+    await screen.findByRole("button", {
+      name: `Revoke · Learner · ${org.name}`,
+    }),
+  );
+  expect(await screen.findByRole("dialog")).toBeVisible();
+  expect(setRole).not.toHaveBeenCalled();
+  await act(async () => {
+    client.setQueryData(
+      ["academy-member-roles", "current-academy-actor", member.id],
+      { ...reviewed, revision: "b".repeat(32) },
+    );
+  });
+  await user.click(screen.getByRole("button", { name: "Revoke learner role" }));
+  expect(setRole).toHaveBeenCalledWith(
+    member.id,
+    learner,
+    false,
+    reviewed.revision,
+  );
 });
 
 it("reports seat exhaustion for account creation and server-confirmed reactivation", async () => {

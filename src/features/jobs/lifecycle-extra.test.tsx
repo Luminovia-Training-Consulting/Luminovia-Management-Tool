@@ -65,6 +65,10 @@ const offer = () => ({
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryDefaults(["user-roles", "replacement"], {
+    staleTime: Infinity,
+  });
+  client.setQueryData(["user-roles", "replacement"], ["lecturer"]);
   fake.responses = {
     job_waitlist: {
       job_id: job,

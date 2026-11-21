@@ -28,8 +28,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { hasTeachingRole } from "../auth/internal-capabilities";
 import { type PortalDocument, saveDownload } from "../files/api";
-import { profileQuery } from "../../lib/queries";
+import { profileQuery, userRolesQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import { dateTime, money, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -960,6 +961,12 @@ export function FinancePage() {
   const actor = session!.user.id;
   const online = useOnline();
   const access = useQuery(commercialAccessQuery(actor));
+  const roles = useQuery(userRolesQuery(actor));
+  const canSubmit =
+    roles.isSuccess &&
+    hasTeachingRole(roles.data) &&
+    access.isSuccess &&
+    access.data.can_submit_invoice;
   const profile = useQuery(profileQuery(actor));
   const manager = access.data?.can_manage_finance ?? false;
   const [all, setAll] = useState(false);
@@ -974,7 +981,7 @@ export function FinancePage() {
   });
   const [openedInvoiceForm, setSubmitting] = useState(false);
   const submitting = Boolean(
-    access.data?.can_submit_invoice && (openedInvoiceForm || requestedClaimId),
+    canSubmit && (openedInvoiceForm || requestedClaimId),
   );
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatus, setInvoiceStatus] = useState("");
@@ -995,15 +1002,14 @@ export function FinancePage() {
         .includes(invoiceSearch.toLocaleLowerCase(i18n.language)),
   );
   const summaries = groupedEarnings(earnings.data ?? []);
-  const trendSource =
-    manager || access.data?.can_submit_invoice ? "earnings" : "invoices";
+  const trendSource = manager || canSubmit ? "earnings" : "invoices";
   return (
     <>
       <PageHeading
         title={t("finance")}
         description={t("financeIntro")}
         action={
-          access.data?.can_submit_invoice && (
+          canSubmit && (
             <Button disabled={!online} onClick={() => setSubmitting(true)}>
               <Plus size={17} />
               {t("createInvoice")}
@@ -1020,9 +1026,7 @@ export function FinancePage() {
           zone={zone}
         />
       )}
-      {access.data?.can_submit_invoice && (
-        <MyInvoiceReviewRequests actor={actor} zone={zone} />
-      )}
+      {canSubmit && <MyInvoiceReviewRequests actor={actor} zone={zone} />}
       {manager && <InvoiceReviewQueue actor={actor} />}
       {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
       {manager && (
@@ -1275,7 +1279,7 @@ export function FinancePage() {
         title={t("createInvoice")}
         description={t("invoiceHint")}
       >
-        {submitting && access.data?.can_submit_invoice && (
+        {submitting && (
           <SubmitInvoice
             key={requestedClaimId ?? "manual"}
             actor={actor}

@@ -27,7 +27,7 @@ export function CreateAccountForm({
   const available = roles.filter(
     (entry) =>
       entry.assignable &&
-      !["owner", "participant"].includes(entry.role) &&
+      entry.role !== "owner" &&
       (entry.role !== "client" || canLinkOrganisations),
   );
   const [email, setEmail] = useState("");
@@ -40,7 +40,7 @@ export function CreateAccountForm({
     /[a-z]/.test(password) &&
     /[0-9]/.test(password) &&
     /[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/.test(password);
-  const [role, setRole] = useState("lecturer");
+  const [role, setRole] = useState("");
   const [organisation, setOrganisation] = useState("");
   const request = useRef({ signature: "", id: "" });
   const organisations = useQuery({
@@ -94,7 +94,12 @@ export function CreateAccountForm({
       onSubmit={(event) => {
         event.preventDefault();
         // Prevent a forged submit event from sending an invalid credential to the Edge handler.
-        if (!validInitialPassword) return;
+        if (
+          !validInitialPassword ||
+          !available.some((entry) => entry.role === role) ||
+          (role === "client" && !organisation)
+        )
+          return;
         create.mutate();
       }}
     >
@@ -129,6 +134,7 @@ export function CreateAccountForm({
       <Field id="create-account-role" label={t("role")}>
         <select
           id="create-account-role"
+          required
           value={role}
           onChange={(event) => {
             setRole(event.target.value);
@@ -136,6 +142,9 @@ export function CreateAccountForm({
             create.reset();
           }}
         >
+          <option value="" disabled>
+            {t("chooseRole")}
+          </option>
           {available.map((entry) => (
             <option key={entry.role} value={entry.role}>
               {t(entry.role)}

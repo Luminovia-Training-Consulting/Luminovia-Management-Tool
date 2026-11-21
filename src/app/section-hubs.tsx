@@ -6,6 +6,10 @@ import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../features/auth/auth-context";
 import { isGuestOnly } from "../features/auth/guest-navigation";
+import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../features/auth/internal-capabilities";
 import { knowledgeAccessQuery } from "../features/knowledge/api";
 import { userRolesQuery } from "../lib/queries";
 
@@ -81,11 +85,8 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
     ...knowledgeAccessQuery(actor),
     enabled: kind === "knowledge" || kind === "updates",
   });
-  const staff = roles.data?.some((role) =>
-    ["owner", "admin", "management", "lecturer", "senior_lecturer"].includes(
-      role,
-    ),
-  );
+  const staff = hasJobStaffRole(roles.data);
+  const teaching = hasTeachingRole(roles.data);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const items = sections[kind].filter((item) => {
@@ -130,12 +131,16 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
         ) : (
           <Page />
         )}
-        {kind === "courses" && selected[0] === "catalogue" && (
+        {kind === "courses" && selected[0] === "catalogue" && staff && (
           <details className="panel replacement-discovery">
             <summary>
-              {i18n.language.startsWith("de")
-                ? "Vertretung für einen Kurs finden oder übernehmen"
-                : "Find or claim a course replacement"}
+              {teaching
+                ? i18n.language.startsWith("de")
+                  ? "Vertretung für einen Kurs finden oder übernehmen"
+                  : "Find or claim a course replacement"
+                : i18n.language.startsWith("de")
+                  ? "Vertretung für einen Kurs finden"
+                  : "Find a course replacement"}
             </summary>
             <Replacements />
           </details>

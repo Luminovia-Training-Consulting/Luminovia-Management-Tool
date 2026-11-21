@@ -582,14 +582,20 @@ try {
         },
     );
     await check(
-        "Admin and owner can claim their own eligible offers and invoice net without an extra lecturer role",
+        "Admin and owner can claim eligible offers and invoice their net after an explicit lecturer grant",
         async () => {
             for (const [index, who] of [admin, owner].entries()) {
+                const id = await commissionJob(4 + index, 400);
+                assert.equal(
+                    JSON.parse(await value(who, "commercial_access")).can_submit_invoice,
+                    false,
+                );
+                assert.equal((await claim(who, id)).status, "not_eligible");
+                await sql(`insert into public.user_roles(user_id,role) values (${quote(who)},'lecturer')`);
                 assert.equal(
                     JSON.parse(await value(who, "commercial_access")).can_submit_invoice,
                     true,
                 );
-                const id = await commissionJob(4 + index, 400);
                 const result = await claim(who, id);
                 assert.equal(result.status, "confirmed");
                 assert.ok(

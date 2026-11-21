@@ -59,11 +59,12 @@ it("creates a company with an explicit organisation and accepts the eight-charac
   fake.request.mockResolvedValue({ status: "created", user_id: "new-user" });
   mount();
   expect(
-    screen.queryByRole("option", { name: "Kursteilnehmer:in" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("option", { name: "Kursteilnehmer:in" }),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole("option", { name: "Inhaberin / Plattformleitung" }),
   ).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Kontorolle")).toHaveValue("");
   await userEvent.type(
     screen.getByLabelText("Anzeigename"),
     "Fictional account",
@@ -113,6 +114,10 @@ it("rejects a seven-character initial password before requesting account creatio
     "short-password@example.invalid",
   );
   const password = screen.getByLabelText(/Startpasswort/);
+  await userEvent.selectOptions(
+    screen.getByLabelText("Kontorolle"),
+    "lecturer",
+  );
   expect(password).toHaveAttribute("minLength", "8");
   await userEvent.type(password, "Aa1!aaa");
   await userEvent.click(
