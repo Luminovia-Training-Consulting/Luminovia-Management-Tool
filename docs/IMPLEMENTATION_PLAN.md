@@ -45,6 +45,9 @@
 - [x] Extend the dedicated course room from text to scan-confirmed attachments. Verify the real storage digest, message-scoped authorisation and revocation during delivery.
 - [x] Edit unallocated draft schedules with stable session IDs and adjust published group size against existing enrolments. Reject stale or unsafe changes in the database and verify the ordinary desktop/mobile draft journey.
 - [x] Enable preparation for course staff and private learner notes, with source-level and database role, version and content boundaries. Publish the dedicated course help entry points in both languages.
+- [x] Provide an academy user's own versioned username and persistent language/theme preferences. Both editions passed real alias and email login with the same Auth identity.
+- [x] Mount the exact branded API catalogue and the protected Swagger RPC profile. Verify real same-backend learner calls, opt-out and desktop/mobile geometry in both editions.
+- [x] Exercise native branded PWA installability diagnostics, offline API refusal, account cleanup and read-state persistence in both editions. Physical device installation remains pending.
 - [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 

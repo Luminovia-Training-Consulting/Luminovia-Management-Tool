@@ -16,6 +16,10 @@ import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { Button } from "../components/ui/button";
 import { academyAdministrationQuery } from "../features/accounts/academy-api";
+import {
+  AcademyAppearancePreferences,
+  AcademyPersonalSettingsPage,
+} from "../features/accounts/academy-personal-settings";
 import { useAuth } from "../features/auth/auth-context";
 import { AuthCallback } from "../features/auth/callback";
 import { AcademyCourseAccess } from "../features/auth/installation-access";
@@ -36,7 +40,7 @@ import "./academy-routes.css";
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration|\/timetable|\/notifications|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/explorer").then(
@@ -108,7 +112,13 @@ function AcademyCourseProfile() {
                 zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
                 academy={access}
               />
-              <Preferences />
+              <Button asChild variant="secondary">
+                <Link to="/settings">{t("academySettings")}</Link>
+              </Button>
+              <AcademyAppearancePreferences
+                actor={session.user.id}
+                access={access}
+              />
               <Button
                 variant="secondary"
                 onClick={() => void db().auth.signOut()}
@@ -216,6 +226,7 @@ export function AcademyRoutes() {
           />
           <Route path="/notifications" element={<AcademyInbox />} />
           <Route path="/timetable" element={<AcademyTimetableRoute />} />
+          <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
           <Route path="/api/docs" element={<AcademyApiExplorer />} />
           <Route
             path="/courses"

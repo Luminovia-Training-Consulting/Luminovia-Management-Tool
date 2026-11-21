@@ -21,6 +21,7 @@ import {
 import { notificationPaths } from "./notifications-contract.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
+import { academyPersonalSettingsPaths } from "./academy-personal-settings-contract.ts";
 import {
   academyTimetableRequestSchema,
   academyTimetableSchema,
@@ -615,6 +616,7 @@ const coursePaths = {
     true,
   ),
   ...academyAdministrationPaths,
+  ...academyPersonalSettingsPaths,
   "/rest/v1/rpc/academy_timetable": courseOperation(
     "readAcademyTimetable",
     "List visible course sessions for a date range",
@@ -920,7 +922,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.19.0",
+      version: "1.20.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

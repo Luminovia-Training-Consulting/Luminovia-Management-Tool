@@ -47,6 +47,11 @@ const administrationPaths = [
   "/rest/v1/rpc/academy_set_management",
   "/functions/v1/accounts/v1/academy/users",
 ] as const;
+const personalPaths = [
+  "/rest/v1/rpc/academy_personal_settings",
+  "/rest/v1/rpc/academy_save_username",
+  "/rest/v1/rpc/academy_save_appearance",
+] as const;
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
   "/rest/v1/rpc/academy_create_course_draft",
@@ -82,6 +87,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           upload,
           examDownload,
           ...administrationPaths,
+          ...personalPaths,
           attendanceImport,
           withdrawalWindow,
           withdraw,

@@ -67,7 +67,17 @@ vi.mock("../lib/supabase", () => ({
   db: () => ({
     rpc: fake.rpc,
     from: fake.from,
-    auth: { signOut: fake.signOut },
+    auth: {
+      signOut: fake.signOut,
+      getSession: async () => ({
+        error: null,
+        data: {
+          session: fake.actor
+            ? { user: { id: fake.actor }, access_token: "fictional-session" }
+            : null,
+        },
+      }),
+    },
   }),
 }));
 
@@ -340,6 +350,12 @@ beforeEach(async () => {
               }
             : null;
           break;
+        case "academy_personal_settings":
+          data = {
+            username: { username: "practice-learner", version: 1 },
+            appearance: { language: "en", theme: "system", version: 0 },
+          };
+          break;
         case "academy_timetable":
           data = { rows: [], next: null };
           break;
@@ -378,7 +394,10 @@ beforeEach(async () => {
           throw new Error("Unexpected RPC: " + name);
       }
       const result = Promise.resolve({ data, error });
-      return Object.assign(result, { abortSignal: () => result });
+      const request = { abortSignal: () => result };
+      return Object.assign(result, request, {
+        setHeader: () => Object.assign(result, request),
+      });
     },
   );
 });
@@ -616,6 +635,18 @@ it("opens the dedicated timetable through its main navigation link", async () =>
       p_until: expect.any(String),
     }),
   );
+});
+
+it("opens the current learner's settings from its academy navigation", async () => {
+  fake.actor = "fictional-learner";
+  open("/learning");
+  await userEvent.click(
+    await screen.findByRole("link", { name: "Account settings" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "My settings" }),
+  ).toBeVisible();
+  expect(screen.getByDisplayValue("practice-learner")).toBeVisible();
 });
 
 it("opens local user administration only after the authority is confirmed", async () => {

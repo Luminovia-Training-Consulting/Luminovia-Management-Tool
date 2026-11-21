@@ -1,3 +1,11 @@
+# 21 November 2026 — Standalone LMS accounts, installability and API documentation
+
+Academy users can edit their own login alias and persist language and appearance. Native GoTrue, Deno and both PostgREST versions confirmed that the alias and email authenticate the same account. Concurrent or duplicate names receive HTTP 409. Other accounts remain unchanged, and the grace-period settings are read-only.
+
+The protected Swagger viewer is reachable from academy help. Both editions passed real authorized learner requests in desktop, Pixel 7 and 320-pixel Chromium. Opt-out removes the displayed response and invalidates any pending authorization. No external requests were observed. The full 43-operation branded OpenAPI document remains a separate download.
+
+On the dedicated PWA, all four Chromium installability probes returned zero errors. The real service worker served the branded shell offline, with no protected response fallback. The native test confirmed purge of a deliberately seeded previous-account browser snapshot across sign-out and sign-in. Both editions passed current own inbox receipts and confirmed read state, including grace reads and refusal of writes. Installation on physical devices remains untested.
+
 # 21 November 2026 — Standalone LMS materials, reports and learner access
 
 Both academies now support scanned participant-chat attachments and scanned PDF attendance evidence. Native GoTrue, PostgREST, Deno, Storage and ClamAV verified the exact versions and stopped delivery when course authority changed during the real Storage read. The attendance register can also generate PDF and CSV for one selected session. Both editions passed native Chromium for staff downloads and rejected learners and unrelated company contacts. Existing evidence, messages and attendance history stay retained.
