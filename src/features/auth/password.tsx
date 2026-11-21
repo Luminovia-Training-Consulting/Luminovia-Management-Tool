@@ -3,6 +3,7 @@
  * confirm saving only after a successful Auth response.
  */
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,8 +12,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
-import { Field, Notice, PageHeading } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  Notice,
+  PageHeading,
+} from "../../components/common";
 import { useOnline } from "../../lib/online";
+import { useAuth } from "./auth-context";
+import { AuthenticatorGate } from "./authenticator";
+import { sessionCacheBoundary } from "./session-cache-boundary";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
@@ -25,6 +35,35 @@ const schema = z.object({
     .regex(/[0-9]/)
     .regex(/[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/),
 });
+
+/** Auth recovery can still require the enrolled factor before updating a password. */
+export function PasswordRecovery() {
+  const { session } = useAuth();
+  const { t } = useTranslation();
+  const online = useOnline();
+  const actor = session?.user.id ?? "";
+  const boundary = sessionCacheBoundary(session?.access_token);
+  const assurance = useQuery({
+    queryKey: ["password-recovery-assurance", actor, boundary],
+    enabled: Boolean(actor) && online,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const { data, error } =
+        await db().auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error) throw error;
+      return data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+    },
+  });
+  if (!online) return <Notice>{t("authenticatorOnline")}</Notice>;
+  if (assurance.isPending) return <Loading />;
+  if (assurance.isError)
+    return <ErrorState retry={() => void assurance.refetch()} />;
+  if (assurance.data)
+    return <AuthenticatorGate actor={actor} onVerified={assurance.refetch} />;
+  return <Password />;
+}
 
 /** Change the current session's password and confirm only the successful SDK response. */
 export function Password({

@@ -11,7 +11,7 @@ import { useAuth } from "../features/auth/auth-context";
 import { PortalAccess } from "../features/auth/portal-access";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
-import { Password } from "../features/auth/password";
+import { PasswordRecovery } from "../features/auth/password";
 import { AdminNavigation } from "../features/admin/navigation";
 import { Preferences, Shell } from "./shell";
 import { ErrorState, Loading, Notice } from "../components/common";
@@ -368,7 +368,7 @@ export function App() {
                 path="security"
                 element={<Navigate to="/settings" replace />}
               />
-              <Route path="auth/password" element={<Password />} />
+              <Route path="auth/password" element={<PasswordRecovery />} />
               <Route path="admin" element={<AdminNavigation />}>
                 <Route index element={<AdminPage />} />
                 <Route path="people" element={<PeopleAdminPage />} />

@@ -24,7 +24,7 @@ import { useAuth } from "../features/auth/auth-context";
 import { AuthCallback } from "../features/auth/callback";
 import { AcademyCourseAccess } from "../features/auth/installation-access";
 import { Login } from "../features/auth/login";
-import { Password } from "../features/auth/password";
+import { PasswordRecovery } from "../features/auth/password";
 import { HelpCenter } from "../features/help/help";
 import { AcademyAdministrationPage } from "../features/learning/academy-administration";
 import { AcademyTimetable } from "../features/learning/academy-timetable";
@@ -222,9 +222,9 @@ export function AcademyRoutes() {
         <Route
           path="/auth/password"
           element={
-            <main className="academy-main">
-              <Password />
-            </main>
+            <div className="academy-main">
+              <PasswordRecovery />
+            </div>
           }
         />
         <Route element={<AcademyCourseProfile />}>

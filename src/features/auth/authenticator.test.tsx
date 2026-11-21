@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { AuthenticatorGate, AuthenticatorSettings } from "./authenticator";
+import { PasswordRecovery } from "./password";
 
 const api = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -12,6 +14,10 @@ const api = vi.hoisted(() => ({
   enroll: vi.fn(),
   unenroll: vi.fn(),
   challengeAndVerify: vi.fn(),
+  getAuthenticatorAssuranceLevel: vi.fn(),
+}));
+vi.mock("./auth-context", () => ({
+  useAuth: () => ({ session: { user: { id: "fictional-privileged-user" } } }),
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({ rpc: api.rpc, auth: { mfa: api, signOut: api.signOut } }),
@@ -21,7 +27,7 @@ vi.mock("../../components/preferences", () => ({ Preferences: () => null }));
 function renderAuthenticator(page: React.ReactNode) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      {page}
+      <MemoryRouter>{page}</MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -129,4 +135,27 @@ it("does not query or offer factors when the current account has no settings gra
   renderAuthenticator(<AuthenticatorSettings actor={actor} />);
   expect(screen.queryByText("Authenticator app")).not.toBeInTheDocument();
   expect(api.listFactors).not.toHaveBeenCalled();
+});
+
+it("keeps the password reset form behind the native authenticator requirement", async () => {
+  api.getAuthenticatorAssuranceLevel
+    .mockResolvedValueOnce({
+      data: { currentLevel: "aal1", nextLevel: "aal2" },
+      error: null,
+    })
+    .mockResolvedValue({
+      data: { currentLevel: "aal2", nextLevel: "aal2" },
+      error: null,
+    });
+  api.listFactors.mockResolvedValue({
+    data: { all: [verified], totp: [verified] },
+    error: null,
+  });
+  api.challengeAndVerify.mockResolvedValue({ error: null });
+  const user = userEvent.setup();
+  renderAuthenticator(<PasswordRecovery />);
+  await user.type(await screen.findByLabelText("6-digit code"), "012345");
+  expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Verify" }));
+  expect(await screen.findByLabelText("New password")).toBeVisible();
 });
