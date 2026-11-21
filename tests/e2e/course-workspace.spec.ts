@@ -10,7 +10,7 @@ test.skip(
     "Course workspace fixtures require canonical disposable services.",
 );
 
-async function fixture() {
+async function fixture({ upcoming = false } = {}) {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
         manager = await actor("Fictional course workspace manager", "admin"),
         teacher = await actor("Fictional course workspace teacher", "lecturer"),
@@ -56,12 +56,13 @@ async function fixture() {
             venue: "https://example.invalid/class",
         }),
     );
+    const sessionEnd = Date.now() + (upcoming ? 2 : -2) * 86400000;
     await checked(
         service.from("course_sessions").insert({
             id: session,
             course_run_id: run,
-            starts_at: new Date(Date.now() - 2 * 86400000 - 3600000).toISOString(),
-            ends_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+            starts_at: new Date(sessionEnd - 3600000).toISOString(),
+            ends_at: new Date(sessionEnd).toISOString(),
         }),
     );
     await checked(
@@ -344,6 +345,65 @@ test("company reviews are current-membership scoped and an unassociated particip
         ).toHaveCount(0);
     } finally {
         await participantContext.close();
+    }
+});
+
+test("current instructor publishes a meeting link for a consented participant", async ({page, browser}) => {
+    const f = await fixture({upcoming: true});
+    const learner = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(learner.auth.signInWithPassword({
+        email: f.learner.email, password: process.env.E2E_PASSWORD!,
+    }));
+    const profile = await checked(f.service.from("profiles").select("luminovia_user_id")
+        .eq("id", f.learner.id).single());
+    await checked(f.adminClient.rpc("request_company_participant_link", {
+        p_organisation_id: f.org, p_luminovia_user_id: profile.luminovia_user_id, p_request_id: randomUUID(),
+    }));
+    const invitations = await checked(learner.rpc("my_company_participant_invitations"));
+    const invitation = invitations.find((entry) => entry.organisation_id === f.org);
+    expect(invitation).toBeDefined();
+    await checked(learner.rpc("accept_company_participant_invitation", {
+        p_organisation_id: f.org, p_expected_version: invitation.version, p_request_id: randomUUID(),
+    }));
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+
+    const classroom = "https://classroom.example.invalid/Join%20Now?pwd=fictional#class";
+    const workspace = `/courses/${f.run}/workspace`;
+    await login(page, f.teacher.email);
+    await page.goto(workspace);
+    await page.getByRole("button", {name: "Meetinglink bearbeiten", exact: true}).click();
+    const input = page.getByRole("textbox", {name: "Meetinglink (HTTPS)", exact: true});
+    const publish = page.getByRole("button", {name: "Meetinglink veröffentlichen", exact: true});
+    await input.fill("http://classroom.example.invalid/");
+    await expect(publish).toBeDisabled();
+    await input.fill(classroom);
+    const response = page.waitForResponse((item) =>
+        item.url().endsWith("/rpc/set_course_meeting_link") && item.request().method() === "POST" && item.ok());
+    await publish.click();
+    expect(await (await response).json()).toEqual({url: classroom, version: 1, can_edit: true});
+    await expect(page.getByRole("link", {name: "Unterrichtslink öffnen", exact: true})).toHaveAttribute("href", classroom);
+
+    const context = await browser.newContext();
+    try {
+        const participant = await context.newPage();
+        await login(participant, f.learner.email, /\/learning$/);
+        await participant.goto(workspace);
+        const join = participant.getByRole("link", {name: "Virtuellen Kursraum öffnen", exact: true});
+        await expect(join).toHaveAttribute("href", classroom);
+        await expect(participant.getByRole("button", {name: "Meetinglink bearbeiten", exact: true})).toHaveCount(0);
+
+        await page.getByRole("button", {name: "Meetinglink bearbeiten", exact: true}).click();
+        await expect(input).toHaveValue(classroom);
+        await input.clear();
+        await publish.click();
+        await expect(page.getByRole("link", {name: "Unterrichtslink öffnen", exact: true}))
+            .toHaveAttribute("href", "https://example.invalid/class");
+        await participant.getByRole("button", {name: "Kurs aktualisieren", exact: true}).click();
+        await expect(join).toHaveAttribute("href", "https://example.invalid/class");
+    } finally {
+        await context.close();
     }
 });
 
