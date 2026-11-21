@@ -212,7 +212,7 @@ await withApiFixture(
             update(manager.client, "assign", {user_id: manager.id}, 5),
         ]);
         assert.equal(race.filter((r) => !r.error).length, 1);
-        assert.equal(race.filter((r) => r.error?.code === "40001").length, 1);
+        assert.equal(race.filter((r) => r.status === 409 && r.error?.code === "PT409").length, 1);
         let version = 6;
         for (const status of [
             "in_progress",

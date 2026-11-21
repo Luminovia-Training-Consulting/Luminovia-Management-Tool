@@ -348,26 +348,20 @@ await withApiFixture(
             ).complete,
             false,
         );
-        assert.equal(
-            (
-                await teacher.client.rpc("acknowledge_course_instructions", {
-                    p_course_run_id: run,
-                    p_instruction_version: state.settings.instruction_version,
-                    p_request_id: randomUUID(),
-                })
-            ).error?.code,
-            "40001",
-        );
-        assert.equal(
-            (
-                await admin.client.rpc("save_readiness_settings", {
-                    ...settingsArgs,
-                    p_expected_version: old,
-                    p_request_id: randomUUID(),
-                })
-            ).error?.code,
-            "40001",
-        );
+        const staleAcknowledgement = await teacher.client.rpc("acknowledge_course_instructions", {
+            p_course_run_id: run,
+            p_instruction_version: state.settings.instruction_version,
+            p_request_id: randomUUID(),
+        });
+        assert.equal(staleAcknowledgement.status, 409);
+        assert.equal(staleAcknowledgement.error?.code, "PT409");
+        const staleSettings = await admin.client.rpc("save_readiness_settings", {
+            ...settingsArgs,
+            p_expected_version: old,
+            p_request_id: randomUUID(),
+        });
+        assert.equal(staleSettings.status, 409);
+        assert.equal(staleSettings.error?.code, "PT409");
         await checked(
             admin.client.rpc("set_user_active", {
                 p_user_id: teacher.id,
