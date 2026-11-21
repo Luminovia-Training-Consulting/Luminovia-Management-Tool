@@ -48,6 +48,8 @@ Both dedicated editions use validated customer branding in the shell, PWA assets
 
 Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped attendance and participation reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
 
+The current dedicated OpenAPI 1.28 catalogue documents 82 paths with domain schemas. Both editions use the same published course-index scope and a separate subscription signing secret. The [signed webhook receiver](scripts/examples/README.md#signed-course-webhook-receiver) stores accepted events durably and handles retries. The [installation runbook](deploy/academy/README.md) distinguishes the locally tested setup from customer handoff.
+
 Release gates still cover the complete target installation, public domain/TLS, SMTP and dedicated delivery, migration and recovery of retained customer data, operational handoff and commercial fulfilment. The acceptance matrix below tracks those separately.
 
 ## 1. Product editions and packaging
@@ -190,7 +192,7 @@ For self-hosted and dedicated hosted editions, normally **one primary customer b
 
 ### 8.2 API contract, documentation and developer experience
 
-- Retain the existing account OpenAPI 3.1 foundation and [`API_REFERENCE.md`](API_REFERENCE.md). Adopt a complete versioned product contract (illustrative routes: `/api/v1/*`, `/api/docs` for **Swagger UI** and `/api/openapi.json` or YAML). These route names are _proposed_, not already implemented.
+- The running Academy exposes **Swagger UI** at `/api/docs` and the edition-specific OpenAPI 3.1 document at `/api/openapi.json`. Calls use the backend URL in that document. The [API reference](API_REFERENCE.md) describes the shared platform contracts. The complete mapping of Academy UI actions to its published API remains an acceptance requirement.
 - The running installation's Swagger UI must show **its exact product edition and installed API version**, precise request/response/error schemas, HTTP methods, fields, pagination, file upload flow, permissions, authentication, relevant DE/EN descriptions and safe fictional examples.
 - Swagger's Authorize function can obtain or use a short-lived user token, but must never embed human passwords, persistent admin tokens, private instance keys or demo credentials in generated static files. Test interactive calls against a sandbox; require real permission for production try-it-out calls.
 - Provide human-readable developer portal: getting started, how to obtain token, token/key rotation, rate limit policies, schemas, error codes, response examples, client generation/download, Python/TypeScript/curl snippets, sandbox seed/reference, changelog and compatibility/deprecation policy.

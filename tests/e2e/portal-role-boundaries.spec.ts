@@ -125,12 +125,11 @@ for (const role of actors) {
       for (const width of [320, 390, 768, 1440, 1920]) {
         await page.setViewportSize({ width, height: viewport.height });
         await expect
-          .poll(() =>
-            page.evaluate(
-              () => document.documentElement.scrollWidth <= innerWidth,
-            ),
+          .poll(
+            () => page.evaluate(() => document.documentElement.scrollWidth),
+            { message: `${role.name} dashboard at ${width}px` },
           )
-          .toBe(true);
+          .toBeLessThanOrEqual(width);
       }
       await page.setViewportSize(viewport);
       const sidebarLink = (href: string) =>
