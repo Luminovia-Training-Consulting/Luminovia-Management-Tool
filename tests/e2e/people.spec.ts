@@ -59,6 +59,14 @@ test("authored staff profiles connect real course history, company reviews and a
             .from("organisations")
             .insert({id: org, name: "Fictional Review Academy"}),
     );
+    const adminClient = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(adminClient.auth.signInWithPassword({
+        email: admin.email, password: process.env.E2E_PASSWORD!,
+    }), {requireData: true});
+    // Course history and submitted company reviews are Premium projections.
+    await checked(adminClient.rpc("set_company_premium", {
+        p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
+    }));
     await checked(
         service
             .from("client_organisation_memberships")

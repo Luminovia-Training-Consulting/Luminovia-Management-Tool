@@ -68,14 +68,16 @@ test("manual unread survives reload and is personal to each member", async ({
         const otherRow = other.locator(".chat-room-row").filter({hasText: title});
         await expect(
             otherRow.getByRole("button", {
-                name: `${title} als ungelesen markieren`,
+                name: `${title} als gelesen markieren`,
             }),
         ).toBeVisible();
+        // The member sees new messages, but not the owner's explicit unread marker.
         await expect(otherRow.getByLabel("Als ungelesen markiert")).toHaveCount(0);
         // Reopen the marked room to exercise the actual clear transition.
+        await page.bringToFront();
         const cleared = page.waitForResponse(
             (response) =>
-                response.url().includes("/rpc/clear_chat_manual_unread") &&
+                response.url().includes("/rpc/mark_chat_read") &&
                 response.ok(),
         );
         await row.locator(".chat-room-button").click();

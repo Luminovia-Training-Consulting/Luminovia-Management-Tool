@@ -40,15 +40,32 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
         kind: ["claim_confirmed", "claim_cancelled", "contract_available"][i],
         resource_id: randomUUID(),
     }));
+    // Ordinary chat notifications must point to current messages in an
+    // accessible room; fabricated IDs are intentionally hidden by the inbox.
+    const room = randomUUID();
+    const messages = Array.from({length: 17}, () => ({
+        id: randomUUID(), room_id: room, sender_id: peer.id,
+        client_id: randomUUID(), request_hash: "fictional-notification-fixture",
+        body: "Fictional chat update",
+    }));
+    await checked(service.from("chat_rooms").insert({
+        id: room, title: "Fictional quiet-hour room", kind: "topic", owner_id: peer.id,
+    }));
+    await checked(service.from("chat_members").insert([
+        {room_id: room, user_id: owner.id}, {room_id: room, user_id: peer.id},
+    ]));
+    await checked(service.from("messages").insert(messages));
+    const inactiveNotice = randomUUID();
     await checked(
         service.from("notifications").insert([
-            ...Array.from({length: 17}, () => ({
+            ...messages.map(({id}) => ({
                 id: randomUUID(),
                 user_id: owner.id,
                 kind: "chat_message",
-                resource_id: randomUUID(),
+                resource_id: id,
             })),
             ...critical,
+            {id: inactiveNotice, user_id: owner.id, kind: "chat_message", resource_id: randomUUID()},
             {
                 id: randomUUID(),
                 user_id: peer.id,
@@ -57,6 +74,9 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
             },
         ]),
     );
+    const completeInbox = await checked(ownerApi.rpc("notification_inbox", {p_limit: 40}), {requireData: true});
+    expect(completeInbox.unread_count).toBe(20);
+    expect(completeInbox.items.map((item: {id: string}) => item.id)).not.toContain(inactiveNotice);
     try {
         await login(page, owner.email);
         await page.goto("/settings");

@@ -75,6 +75,7 @@ test("personal cards and teaching preparation persist in the real account across
                                                                                                               }, testInfo) => {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const teacher = await actor("Fictional teaching day UI lecturer", "lecturer");
+    const administrator = await actor("Fictional teaching day UI admin", "admin");
     const job = randomUUID(),
         claim = randomUUID(),
         session = randomUUID(),
@@ -95,6 +96,14 @@ test("personal cards and teaching preparation persist in the real account across
             .from("organisations")
             .insert({id: org, name: "Fictional course contact academy"}),
     );
+    const admin = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(admin.auth.signInWithPassword({
+        email: administrator.email, password: process.env.E2E_PASSWORD!,
+    }), {requireData: true});
+    // The current course resource projection requires real company Premium access.
+    await checked(admin.rpc("set_company_premium", {
+        p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
+    }));
     await checked(
         service.from("organisation_contacts").insert({
             id: contact,

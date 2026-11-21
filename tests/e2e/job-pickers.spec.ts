@@ -49,6 +49,14 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
         await checked(
             service.from("organisations").insert({id: org, name: prefix}),
         );
+        const adminClient = api(process.env.SUPABASE_ANON_KEY!);
+        await checked(adminClient.auth.signInWithPassword({
+            email: admin.email, password: process.env.E2E_PASSWORD!,
+        }), {requireData: true});
+        // Course-chat creation enforces the owning company's current entitlement.
+        await checked(adminClient.rpc("set_company_premium", {
+            p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
+        }));
         await checked(
             service.from("course_templates").insert([
                 {id: template, title: `${prefix} general course`},

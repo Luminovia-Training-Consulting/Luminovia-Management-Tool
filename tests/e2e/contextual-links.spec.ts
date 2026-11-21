@@ -47,14 +47,11 @@ test("Chats and Knowledge & Help reach the same Forum and outsiders cannot open 
         ).toBeVisible();
         expect(forumRequests.every((url) => /\/rest\/v1\/rpc\/forum_/.test(url))).toBe(true);
 
-        await login(guestPage, outsider.email);
+        await login(guestPage, outsider.email, /\/profile$/);
         await guestPage.goto(`/forum?thread=${randomUUID()}`);
-        await expect(
-            guestPage.getByText(
-                "Für diesen Wissensbereich fehlt dir die Berechtigung.",
-                {exact: true},
-            ),
-        ).toBeVisible();
+        // The account shell rejects the deep link before mounting the Forum.
+        await expect(guestPage).toHaveURL(/\/profile$/);
+        await expect(guestPage.getByRole("heading", {name: "Forum", exact: true})).toHaveCount(0);
         expect(guestForumRequests).toEqual([]);
     } finally {
         await guestContext.close();

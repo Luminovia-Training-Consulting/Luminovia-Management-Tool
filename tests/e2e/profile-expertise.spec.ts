@@ -33,7 +33,8 @@ test("lecturers can add expertise without attestation and find it after reload",
         const option = page.locator(".expertise-option").filter({hasText: label}),
             checkbox = option.getByRole("checkbox");
         await expect(checkbox).not.toBeChecked();
-        await checkbox.check();
+        // This controlled input changes only after the server confirms the save.
+        await checkbox.click();
         await expect(checkbox).toBeChecked();
         await expect(option).toContainText(
             /Als Expertise angegeben|Declared expertise/,

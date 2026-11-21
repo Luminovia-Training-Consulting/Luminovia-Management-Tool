@@ -198,9 +198,11 @@ test("bounded server discovery, saved-view persistence and private actor boundar
                 )
                     forbiddenRequests.push(r.url());
             });
-            await login(learnerPage, learner.email);
+            await login(learnerPage, learner.email, /\/learning$/);
             await learnerPage.goto("/jobs");
-            await expect(learnerPage.getByRole("alert")).toBeVisible();
+            // The participant shell redirects before requesting operational jobs.
+            await expect(learnerPage).toHaveURL(/\/learning$/);
+            await expect(learnerPage.getByText(rows[0].title, {exact: true})).toHaveCount(0);
             expect(forbiddenRequests).toEqual([]);
         } finally {
             await learnerContext.close();

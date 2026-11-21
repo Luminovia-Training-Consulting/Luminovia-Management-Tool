@@ -13,6 +13,8 @@ test("calendar secret links and explicit minimal offline schedule survive reload
         service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const job = randomUUID(),
         organisation = randomUUID(),
+        template = randomUUID(),
+        run = randomUUID(),
         claim = randomUUID(),
         assignment = randomUUID(),
         privateEvent = randomUUID();
@@ -25,10 +27,17 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                 name: "Fictional calendar customer",
             }),
         );
+        // Customer provenance is attached to the actual course run.
+        await checked(service.from("course_templates").insert({
+            id: template, title: "Fictional calendar curriculum",
+        }));
+        await checked(service.from("course_runs").insert({
+            id: run, template_id: template, organisation_id: organisation,
+        }));
         await checked(
             service.from("jobs").insert({
                 id: job,
-                organisation_id: organisation,
+                course_run_id: run,
                 title: "Fictional offline teaching",
                 customer_name: "PRIVATE CUSTOMER",
                 delivery_type: "online",
@@ -251,6 +260,8 @@ test("calendar secret links and explicit minimal offline schedule survive reload
         );
         await checked(service.from("job_claims").delete().eq("id", claim));
         await checked(service.from("jobs").delete().eq("id", job));
+        await checked(service.from("course_runs").delete().eq("id", run));
+        await checked(service.from("course_templates").delete().eq("id", template));
         await checked(
             service.from("organisations").delete().eq("id", organisation),
         );
