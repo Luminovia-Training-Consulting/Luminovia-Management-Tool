@@ -31,6 +31,8 @@ const fake = vi.hoisted(() => ({
   canCreateDraft: false,
   draftAttempts: 0,
   notificationRead: false,
+  publication: null as { published: boolean; capacity: number | null } | null,
+  publicationAttempts: 0,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -171,6 +173,8 @@ beforeEach(async () => {
   fake.canCreateDraft = false;
   fake.draftAttempts = 0;
   fake.notificationRead = false;
+  fake.publication = null;
+  fake.publicationAttempts = 0;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -292,6 +296,14 @@ beforeEach(async () => {
         fake.draftAttempts++;
         if (fake.draftAttempts === 1) error = { code: "unavailable" };
         else data = { course_run_id: id, template_id: sessionId };
+        break;
+      case "academy_course_publication":
+        data = fake.publication;
+        break;
+      case "academy_publish_course":
+        fake.publicationAttempts++;
+        if (fake.publicationAttempts === 1) error = { code: "PT409" };
+        else data = fake.publication = { published: true, capacity: 3 };
         break;
       default:
         throw new Error("Unexpected RPC: " + name);
@@ -446,6 +458,46 @@ it("creates an academy draft from the selected company and preserves its request
     },
   });
   expect(writes[1]).toEqual(writes[0]);
+});
+
+it("confirms course publication online and retries the reviewed capacity", async () => {
+  fake.publication = { published: false, capacity: null };
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  const capacity = await screen.findByRole("spinbutton", {
+    name: "Maximum group size",
+  });
+  await user.type(capacity, "3");
+  await user.click(screen.getByRole("button", { name: "Publish course" }));
+  expect(fake.publicationAttempts).toBe(0);
+  const review = within(screen.getByRole("dialog", { name: "Publish course" }));
+  const confirm = () =>
+    user.click(review.getByRole("button", { name: "Confirm" }));
+  await confirm();
+  expect(
+    await review.findByText(/Publication was not confirmed/),
+  ).toBeVisible();
+  expect(screen.queryByText(/Course published/)).not.toBeInTheDocument();
+  await confirm();
+  expect(
+    await screen.findByText("Course published. Maximum group size 3."),
+  ).toBeVisible();
+  expect(
+    fake.rpc.mock.calls.filter(([name]) => name === "academy_publish_course"),
+  ).toEqual([
+    ["academy_publish_course", { p_course_id: id, p_capacity: 3 }],
+    ["academy_publish_course", { p_course_id: id, p_capacity: 3 }],
+  ]);
+});
+
+it("keeps publication read-only in licence grace", async () => {
+  fake.licence = "grace";
+  fake.publication = { published: false, capacity: null };
+  open(`/courses/${id}/workspace`);
+  expect(await screen.findByText(/This course is a draft/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Publish course" }),
+  ).not.toBeInTheDocument();
 });
 
 it("opens the branded inbox from the bell and saves read state on the server", async () => {

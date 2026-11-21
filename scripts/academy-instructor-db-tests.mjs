@@ -48,6 +48,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/share_course_exam_pdf",
             "/rest/v1/rpc/academy_course_draft_options",
             "/rest/v1/rpc/academy_create_course_draft",
+            "/rest/v1/rpc/academy_course_publication",
+            "/rest/v1/rpc/academy_publish_course",
             "/rest/v1/rpc/notification_inbox",
             "/rest/v1/rpc/mark_notifications",
           ].includes(path),

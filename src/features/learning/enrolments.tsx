@@ -41,7 +41,11 @@ const confirmation = {
 };
 
 /** The company scope is resolved from the course on the server; no organisation is sent by this component. */
-export function CourseEnrolmentsPanel({ course, actor }: Props) {
+export function CourseEnrolmentsPanel({
+  course,
+  actor,
+  academy,
+}: Props & { academy?: boolean }) {
   const { t } = useTranslation("learning");
   const queryClient = useQueryClient();
   const online = useOnline();
@@ -114,6 +118,13 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
   const participant = candidates.data?.find(
     (candidate) => candidate.user_id === selection,
   );
+  const enrolmentError = save.error as { details?: string } | null;
+  const errorMessage =
+    enrolmentError?.details === "academy_course_unpublished"
+      ? "academyEnrolmentUnpublished"
+      : enrolmentError?.details === "academy_course_capacity_reached"
+        ? "academyEnrolmentFull"
+        : "enrolmentFailed";
 
   /** Reset the prior mutation result whenever a different command is reviewed. */
   const review = (intent: Change) => {
@@ -139,7 +150,10 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
               setSearch(searchInput.trim());
             }}
           >
-            <Field id={`${fieldId}-search`} label={t("enrolmentSearch")}>
+            <Field
+              id={`${fieldId}-search`}
+              label={t(academy ? "academyEnrolmentSearch" : "enrolmentSearch")}
+            >
               <input
                 id={`${fieldId}-search`}
                 type="search"
@@ -158,7 +172,13 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
           {candidates.isPending || enrolments.isPending ? <Loading /> : null}
           {candidates.isSuccess &&
             (candidates.data.length === 0 ? (
-              <p className="muted">{t("enrolmentNoCandidates")}</p>
+              <p className="muted">
+                {t(
+                  academy
+                    ? "academyEnrolmentNoCandidates"
+                    : "enrolmentNoCandidates",
+                )}
+              </p>
             ) : (
               <div className="course-enrolment-actions">
                 <Field
@@ -270,9 +290,7 @@ export function CourseEnrolmentsPanel({ course, actor }: Props) {
       >
         {change && (
           <>
-            {save.isError && (
-              <Notice kind="error">{t("enrolmentFailed")}</Notice>
-            )}
+            {save.isError && <Notice kind="error">{t(errorMessage)}</Notice>}
             <div className="course-enrolment-actions">
               <Button
                 type="button"

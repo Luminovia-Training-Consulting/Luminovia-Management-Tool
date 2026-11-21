@@ -7,6 +7,12 @@ const strings = {
     enrolmentCurrent: "Anmeldungen",
     enrolmentEmpty: "Für diesen Kurs liegen keine Anmeldungen vor.",
     enrolmentSearch: "Nach Name oder Luminovia User ID suchen",
+    academyEnrolmentSearch: "Nach Name oder Benutzer-ID suchen",
+    academyEnrolmentNoCandidates:
+      "Keine aktiven Teilnehmenden für diese Suche gefunden.",
+    academyEnrolmentUnpublished:
+      "Gib den Kurs frei, bevor du Teilnehmende anmeldest.",
+    academyEnrolmentFull: "Alle Plätze sind belegt.",
     enrolmentSearchButton: "Suchen",
     enrolmentCandidate: "Teilnehmende Person",
     enrolmentCandidatePlaceholder: "Person auswählen",
@@ -49,6 +55,11 @@ const strings = {
     enrolmentCurrent: "Enrolments",
     enrolmentEmpty: "This course has no enrolments.",
     enrolmentSearch: "Search by name or Luminovia User ID",
+    academyEnrolmentSearch: "Search by name or user ID",
+    academyEnrolmentNoCandidates: "No active participants match this search.",
+    academyEnrolmentUnpublished:
+      "Publish the course before enrolling participants.",
+    academyEnrolmentFull: "All places are filled.",
     enrolmentSearchButton: "Search",
     enrolmentCandidate: "Participant",
     enrolmentCandidatePlaceholder: "Select a participant",

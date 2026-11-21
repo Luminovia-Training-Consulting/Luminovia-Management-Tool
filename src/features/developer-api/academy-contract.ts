@@ -6,6 +6,11 @@ import {
   academyDraftReceipt,
 } from "../learning/academy-draft-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
+import {
+  academyCourseCapacity,
+  academyCoursePublication,
+  academyPublishedCourse,
+} from "../learning/academy-publication-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import {
   meetingLinkResult,
@@ -394,6 +399,26 @@ const coursePaths = {
     z.toJSONSchema(academyDraftReceipt),
     true,
   ),
+  "/rest/v1/rpc/academy_course_publication": courseOperation(
+    "readAcademyCoursePublication",
+    "Read the draft or published course state",
+    "Requires current course management. Returns null for older courses outside the dedicated draft workflow.",
+    "active-or-grace",
+    record({ p_course_id: uuid }),
+    z.toJSONSchema(academyCoursePublication),
+  ),
+  "/rest/v1/rpc/academy_publish_course": courseOperation(
+    "publishAcademyCourse",
+    "Open a scheduled course for enrolment",
+    "Requires current course management, scheduled sessions and an active assigned instructor. Locks the course and records the participant capacity. An identical retry returns the existing publication. A conflicting or premature publication returns 409.",
+    "active",
+    record({
+      p_course_id: uuid,
+      p_capacity: z.toJSONSchema(academyCourseCapacity),
+    }),
+    z.toJSONSchema(academyPublishedCourse),
+    true,
+  ),
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
     "listAcademyCourseWorkspaces",
     "List my course workspaces",
@@ -596,7 +621,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.8.0",
+      version: "1.9.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

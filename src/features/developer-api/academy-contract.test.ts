@@ -13,6 +13,7 @@ const readPaths = [
   "/rest/v1/rpc/course_chat_messages",
   "/rest/v1/rpc/course_session_register",
   "/rest/v1/rpc/notification_inbox",
+  "/rest/v1/rpc/academy_course_publication",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -25,6 +26,7 @@ const writePaths = [
   "/rest/v1/rpc/academy_student_exam_pdf_options",
   "/rest/v1/rpc/share_course_exam_pdf",
   "/rest/v1/rpc/mark_notifications",
+  "/rest/v1/rpc/academy_publish_course",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

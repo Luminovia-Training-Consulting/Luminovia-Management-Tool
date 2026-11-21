@@ -43,6 +43,7 @@ import { courseClassroom } from "./meeting-url";
 import { CourseExams } from "./exams";
 import { AttendancePanel } from "./attendance";
 import { AcademyInstructors } from "./academy-instructors";
+import { AcademyCoursePublication } from "./academy-publication";
 import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { DownloadButton, Resources } from "./resources";
@@ -884,6 +885,13 @@ function CourseWorkspaceLayout({
             {academy === "active" && course.access.manager && (
               <AcademyInstructors courseId={course.id} actor={actor} />
             )}
+            {academy && course.access.manager && (
+              <AcademyCoursePublication
+                courseId={course.id}
+                actor={actor}
+                readOnly={academy === "grace"}
+              />
+            )}
             <CourseContact
               course={course}
               actor={actor}
@@ -918,7 +926,11 @@ function CourseWorkspaceLayout({
           )}
           {canManageEnrolments && (
             <div className="course-room-section" id="course-enrolments">
-              <CourseEnrolmentsPanel course={course} actor={actor} />
+              <CourseEnrolmentsPanel
+                course={course}
+                actor={actor}
+                academy={Boolean(academy)}
+              />
             </div>
           )}
           {hasRegister && (

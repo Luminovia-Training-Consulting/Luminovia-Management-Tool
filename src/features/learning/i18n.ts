@@ -48,6 +48,25 @@ const pairs: Record<string, [string, string]> = {
   academyInstructors: ["Lehrteam zuweisen", "Assign instructors"],
   academyInstructorSearch: ["Lehrkraft suchen", "Find an instructor"],
   academySearch: ["Suchen", "Search"],
+  academyPublication: ["Kursfreigabe", "Course publication"],
+  academyUnpublishedCourse: [
+    "Der Kurs ist ein Entwurf. Weise eine Lehrperson zu, bevor du den Kurs für Anmeldungen freigibst.",
+    "This course is a draft. Assign an instructor before opening enrolment.",
+  ],
+  academyPublishedCapacity: [
+    "Kurs freigegeben. Maximale Gruppengröße {{count}}.",
+    "Course published. Maximum group size {{count}}.",
+  ],
+  academyCourseCapacity: ["Maximale Gruppengröße", "Maximum group size"],
+  academyPublishCourse: ["Kurs freigeben", "Publish course"],
+  academyConfirmPublishCourse: [
+    "Diesen Kurs für Anmeldungen freigeben? Die maximale Gruppengröße beträgt {{count}}.",
+    "Open this course for enrolment? The maximum group size is {{count}}.",
+  ],
+  academyPublishFailed: [
+    "Die Freigabe wurde nicht bestätigt. Prüfe Terminplan, Lehrperson und aktuellen Kursstatus.",
+    "Publication was not confirmed. Check the schedule, instructor, and current course status.",
+  ],
   academyInstructor: ["Lehrkraft", "Instructor"],
   academyChooseInstructor: ["Lehrkraft auswählen", "Select an instructor"],
   academyAssigned: ["Zugewiesen", "Assigned"],
