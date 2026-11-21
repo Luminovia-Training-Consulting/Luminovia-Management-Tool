@@ -80,7 +80,7 @@ function courseOperation(
   summary: string,
   description: string,
   licence: "active" | "active-or-grace",
-  request: object & { required?: string[] },
+  request: object & { required?: string[]; oneOf?: object[] },
   response: object,
   staleVersion = false,
 ) {
