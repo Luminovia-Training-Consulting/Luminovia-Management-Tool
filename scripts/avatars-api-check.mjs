@@ -7,7 +7,7 @@ import {createHash, randomUUID} from "node:crypto";
 import sharp from "sharp";
 import {withApiFixture} from "./testing/api.mjs";
 
-await withApiFixture(async ({service, actor, passwordOnly, defer, checked, url}) => {
+await withApiFixture(async ({service, actor, passwordOnly, defer, checked, sql, url}) => {
     const origin = new URL(process.env.E2E_BASE_URL).origin;
     const users = [];
     const org = randomUUID(),
@@ -135,6 +135,7 @@ await withApiFixture(async ({service, actor, passwordOnly, defer, checked, url})
                     .eq("organisation_id", org),
                 "Clean client scope",
             );
+            await sql(`delete from private.company_premium_audit where organisation_id='${org}'`);
             await checked(
                 service.from("organisations").delete().eq("id", org),
                 "Clean org",
@@ -310,14 +311,25 @@ await withApiFixture(async ({service, actor, passwordOnly, defer, checked, url})
         }),
         "Scoped accepted assignment",
     );
-    await checked(
-        admin.client.rpc("manage_course_enrolment", {
-            p_course_run_id: run,
-            p_user_id: learner.id,
-            p_status: "completed",
+    const completedEnrolment = {
+        p_course_run_id: run,
+        p_user_id: learner.id,
+        p_status: "completed",
+    };
+    const deniedWhileOff = await admin.client.rpc("manage_course_enrolment", completedEnrolment);
+    assert.equal(deniedWhileOff.error?.code, "42501");
+    assert.match(deniedWhileOff.error?.message ?? "", /Company Premium LMS is OFF/);
+    const premium = await checked(
+        admin.client.rpc("set_company_premium", {
+            p_organisation_id: org,
+            p_enabled: true,
+            p_expected_version: 0,
+            p_request_id: randomUUID(),
         }),
-        "Explicit completed enrolment",
+        "Enable Premium for the fictional organisation only",
     );
+    assert.equal(premium.enabled, true);
+
     await checked(
         admin.client.rpc("manage_client_organisation", {
             p_user_id: customer.id,
@@ -325,6 +337,42 @@ await withApiFixture(async ({service, actor, passwordOnly, defer, checked, url})
             p_remove: false,
         }),
         "Explicit client org",
+    );
+    assert.equal(
+        (await admin.client.rpc("manage_course_enrolment", completedEnrolment)).error?.code,
+        "42501",
+        "Premium does not replace participant consent",
+    );
+    const learnerProfile = await checked(
+        service.from("profiles").select("luminovia_user_id").eq("id", learner.id).single(),
+        "Read only the fictional learner's public identifier",
+    );
+    await checked(
+        customer.client.rpc("request_company_participant_link", {
+            p_organisation_id: org,
+            p_luminovia_user_id: learnerProfile.luminovia_user_id,
+            p_request_id: randomUUID(),
+        }),
+        "Request the company-scoped participant link",
+    );
+    const invitations = await checked(
+        learner.client.rpc("my_company_participant_invitations"),
+        "Read the invited participant's own pending link",
+    );
+    const invitation = invitations.find(({organisation_id}) => organisation_id === org);
+    assert.ok(invitation);
+    const accepted = await checked(
+        learner.client.rpc("accept_company_participant_invitation", {
+            p_organisation_id: org,
+            p_expected_version: invitation.version,
+            p_request_id: randomUUID(),
+        }),
+        "Accept the exact organisation invitation as the participant",
+    );
+    assert.equal(accepted.status, "accepted");
+    await checked(
+        admin.client.rpc("manage_course_enrolment", completedEnrolment),
+        "Record completed enrolment after the verified participant link",
     );
     assert.equal(
         (await request(learner, {action: "avatar", user_id: teacher.id})).status,
