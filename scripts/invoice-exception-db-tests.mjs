@@ -2,6 +2,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
+import {
+  accountingExportSchema,
+  accountingPageSchema,
+} from "../src/features/accounting/schema.ts";
 
 await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
   const lecturer = randomUUID(),
@@ -273,6 +277,20 @@ await withTestDatabase("invoice_exception", async ({ sql, actor }) => {
     ),
     "90.25|EUR|2026-10-22",
   );
+  const projection = accountingPageSchema.parse(
+    await rpc(lecturer, "accounting_invoices"),
+  );
+  assert.equal(
+    projection.items.find(({ id }) => id === invoice)?.due_on,
+    payDue,
+  );
+  const exported = await actor(
+    lecturer,
+    `select public.create_accounting_export('own', array['${invoice}']::uuid[], '${randomUUID()}')`,
+  );
+  const archive = accountingExportSchema.parse(JSON.parse(exported));
+  assert.equal(archive.invoices[0].due_on, payDue);
+  assert.equal(archive.invoices[0].issued_on, issue);
   assert.equal(
     await sql(
       `select total_amount from public.job_claims where id='${cancelled}'`,
