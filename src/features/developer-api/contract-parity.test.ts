@@ -23,6 +23,81 @@ const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("documented Premium course and spending operations", () => {
+  it("publishes migrated scalar, table and defaulted signatures across business areas", () => {
+    expect(Object.keys(paths).length).toBeGreaterThan(250);
+    expect(requestSchema("/rest/v1/rpc/job_discovery")).toMatchObject({
+      required: [],
+      properties: {
+        p_filters: { "x-postgresql-type": "jsonb" },
+        p_cursor: { "x-postgresql-type": "jsonb" },
+        p_limit: { type: ["integer", "null"] },
+      },
+    });
+    expect(requestSchema("/rest/v1/rpc/claim_job").required).toEqual([
+      "p_job_id",
+      "p_idempotency_key",
+      "p_terms_version",
+    ]);
+    expect(paths["/rest/v1/rpc/portal_access"].post).toMatchObject({
+      responses: {
+        "200": {
+          content: {
+            "application/json": { schema: { type: ["boolean", "null"] } },
+          },
+        },
+      },
+    });
+    expect(paths["/rest/v1/rpc/my_course_workspaces"].post).toMatchObject({
+      "x-luminovia-rest-gate": {
+        postgresRole: "authenticated",
+        participantSession: true,
+        guestSession: false,
+      },
+    });
+    expect(paths["/rest/v1/rpc/client_requests"].post).toMatchObject({
+      "x-luminovia-rest-gate": {
+        participantSession: false,
+        guestSession: false,
+      },
+      responses: {
+        "200": {
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: { properties: { id: { format: "uuid" } } },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(paths["/rest/v1/rpc/cancel_client_request"].post).toMatchObject({
+      responses: { "204": { description: expect.any(String) } },
+    });
+    expect(
+      isDocumentedRequest(
+        backend + "/rest/v1/rpc/client_requests",
+        "POST",
+        backend,
+      ),
+    ).toBe(true);
+  });
+
+  it("describes secret-bearing RPCs only in the noninteractive download", () => {
+    const download = portalOpenApi(backend);
+    for (const name of [
+      "save_calendar_subscription",
+      "save_mail_configuration",
+      "issue_company_integration_key",
+    ]) {
+      const path = "/rest/v1/rpc/" + name;
+      expect(download.paths[path].post).toBeDefined();
+      expect(paths).not.toHaveProperty(path);
+      expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
+    }
+  });
+
   it.each([
     [
       "set_course_exam_required",
@@ -263,7 +338,20 @@ describe("documented Premium course and spending operations", () => {
       requestBody: {
         content: {
           "multipart/form-data": {
-            schema: { required: ["file", "scope", "kind", "client_id"] },
+            schema: {
+              required: ["file", "client_id"],
+              properties: { message_only: { const: "true" } },
+            },
+          },
+          "application/json": {
+            schema: {
+              oneOf: expect.arrayContaining([
+                expect.objectContaining({
+                  required: ["action", "evidence_id"],
+                }),
+                expect.objectContaining({ required: ["action", "id"] }),
+              ]),
+            },
           },
         },
       },

@@ -377,13 +377,19 @@ export function scanFrontendRpcReferences(root) {
     for (const {node, source} of calls) {
         const index = argumentIndex(node);
         const argument = index === undefined ? null : node.arguments[index];
-        if (
-            argument &&
-            (ts.isStringLiteral(argument) ||
-                ts.isNoSubstitutionTemplateLiteral(argument))
-        )
+        if (!argument || forwardingFunction(argument)) continue;
+        const type = checker.getTypeAtLocation(argument);
+        const choices = type.isUnion() ? type.types : [type];
+        // Follow finite typed dispatch choices without labeling a dynamic string
+        // as a real API. The wrapper call site remains the owning source.
+        const names = ts.isStringLiteralLike(argument)
+            ? [argument.text]
+            : choices.every((choice) => choice.isStringLiteral())
+                ? choices.map((choice) => choice.value)
+                : [];
+        for (const name of names)
             references.push({
-                name: argument.text,
+                name,
                 file: relative(root, source.fileName),
                 line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
             });

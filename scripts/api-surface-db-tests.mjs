@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {scanFrontendRpcReferences} from "./code-integrity.mjs";
+import {assertNativeRpcCatalogue} from "./native-rpc-catalogue.mjs";
 import {withTestDatabase} from "./testing/database.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -33,8 +34,10 @@ await withTestDatabase("api_surface", async ({sql}) => {
             `${reference.file}:${reference.line} calls an unavailable public authenticated RPC ${reference.name}`,
         );
     console.log(
-        `PASS All ${references.length} literal delivered frontend RPC references resolve to executable migrated APIs`,
+        `PASS All ${references.length} finite delivered frontend RPC references resolve to executable migrated APIs`,
     );
+    await assertNativeRpcCatalogue(sql, references);
+    console.log("PASS Native OpenAPI requests, responses and REST role gates match the migration replay");
     assert.ok(endpoints.length > 50);
     assert.equal(
         endpoints.filter((endpoint) => endpoint.definer).length,
@@ -87,6 +90,6 @@ await withTestDatabase("api_surface", async ({sql}) => {
         "PASS Every privileged application implementation has an explicitly empty search path",
     );
     console.log(
-        "\n6 API-surface PostgreSQL checks passed (source binding, invoker boundary, public/private RLS, anonymous grants and definer search paths).",
+        "\n7 API-surface PostgreSQL checks passed (source binding, OpenAPI catalogue, invoker boundary, public/private RLS, anonymous grants and definer search paths).",
     );
 });

@@ -1,4 +1,5 @@
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
+import { nativeDownloadPaths, nativeExplorerPaths } from "./native-contract.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -163,51 +164,117 @@ const courseDocuments = {
   },
 };
 
-const courseMaterialUpload = {
+/** Document the actual file gateway and its scoped, scanned byte paths. */
+const fileGateway = {
   post: {
+    // Preserve the existing operation ID for generated API clients.
     operationId: "uploadCourseMaterial",
-    tags: ["Premium LMS"],
-    summary: "Upload and scan personal course material",
+    tags: ["Files"],
+    summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Upload an allowed material file to the caller's personal documents. Share its returned clean current_version_id with course_workspace_action resource_share. Upload alone does not make it visible to a course. The gateway validates bytes, scope and current permissions.",
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status.",
     requestBody: {
       required: true,
       content: {
         "multipart/form-data": {
-          schema: object({
-            file: { type: "string", format: "binary" },
-            scope: { const: "personal" },
-            kind: { const: "material" },
-            client_id: uuid,
-          }),
+          schema: {
+            type: "object",
+            required: ["file", "client_id"],
+            properties: {
+              file: { type: "string", format: "binary" },
+              client_id: uuid,
+              scope: {
+                enum: ["personal", "room", "job_before", "job_after"],
+                default: "personal",
+              },
+              kind: {
+                enum: [
+                  "material",
+                  "chat",
+                  "cv",
+                  "certificate",
+                  "contract",
+                  "invoice",
+                  "avatar",
+                ],
+                description:
+                  "Defaults to chat for a room or material otherwise.",
+              },
+              room_id: { ...uuid, description: "Required for room uploads." },
+              job_id: { ...uuid, description: "Required for job attachments." },
+              replace_id: {
+                ...uuid,
+                description: "Existing authorized document to version.",
+              },
+              owner_id: {
+                ...uuid,
+                description:
+                  "For an authorized upload on behalf of another user.",
+              },
+              message_only: {
+                const: "true",
+                description:
+                  "Restricts a chat upload to an authorized room message. Requires room scope, chat kind and room_id. Omit job_id, replace_id and owner_id.",
+              },
+            },
+            additionalProperties: false,
+          },
         },
+        ...json({
+          oneOf: [
+            {
+              ...object({
+                action: { const: "download" },
+                id: uuid,
+                version_id: nullableUuid,
+              }),
+              required: ["action", "id"],
+            },
+            object({ action: { const: "avatar" }, user_id: uuid }),
+            object({
+              action: { const: "qualification_evidence_download" },
+              evidence_id: uuid,
+            }),
+          ],
+        }),
       },
     },
     responses: {
       "200": {
-        description: "Clean, authorized personal document",
-        content: json({
-          type: "object",
-          required: ["document"],
-          properties: {
-            document: {
-              type: "object",
-              required: ["id", "status", "current_version_id"],
-              properties: {
-                id: uuid,
-                status: { const: "clean" },
-                current_version_id: uuid,
+        description:
+          "Clean document metadata after upload or authorized bytes for a download.",
+        content: {
+          ...json({
+            type: "object",
+            required: ["document"],
+            properties: {
+              document: {
+                type: "object",
+                required: ["id", "status", "current_version_id"],
+                properties: {
+                  id: uuid,
+                  status: { const: "clean" },
+                  current_version_id: uuid,
+                },
+                additionalProperties: true,
               },
-              additionalProperties: true,
             },
+            additionalProperties: false,
+          }),
+          "application/octet-stream": {
+            schema: { type: "string", format: "binary" },
           },
-          additionalProperties: false,
-        }),
+          "image/png": { schema: { type: "string", format: "binary" } },
+          "application/pdf": { schema: { type: "string", format: "binary" } },
+        },
       },
       "400": { description: "Invalid file or request" },
       "401": { description: "Authentication required" },
       "403": { description: "Upload not allowed" },
+      "404": { description: "File unavailable" },
       "409": { description: "Conflicting retry or replacement" },
+      "413": { description: "File size limit exceeded" },
+      "415": { description: "Unsupported file type" },
       "422": { description: "Malware scan rejected" },
       "503": { description: "Scanner or upload unavailable" },
     },
@@ -215,6 +282,18 @@ const courseMaterialUpload = {
 };
 
 const nativePaths = {
+  "/rest/v1/rpc/claim_job": rpc(
+    "claimJob",
+    "Jobs",
+    "Claim a complete teaching block",
+    "Submit the current reviewed terms version and keep the same request UUID and payload on retry. Only a confirmed result with a claim ID confirms a complete allocation. Eligibility, schedule conflicts, capacity and immutable financial terms are decided in the database.",
+    { p_job_id: uuid, p_idempotency_key: uuid, p_terms_version: version },
+    {
+      type: "object",
+      required: ["status"],
+      properties: { status: text, claim_id: uuid },
+    },
+  ),
   "/rest/v1/rpc/account_username": rpc(
     "accountUsername",
     "Accounts",
@@ -482,7 +561,7 @@ const nativePaths = {
     object({ id: uuid, resource_id: uuid, version_id: uuid }),
   ),
   "/functions/v1/course-documents": courseDocuments,
-  "/functions/v1/files": courseMaterialUpload,
+  "/functions/v1/files": fileGateway,
   "/rest/v1/rpc/company_monthly_accepted_spending": rpc(
     "companyMonthlyAcceptedSpending",
     "Company spending",
@@ -567,6 +646,7 @@ const nativePaths = {
 };
 
 const paths: Record<string, Record<string, unknown>> = {
+  ...nativeExplorerPaths,
   ...Object.fromEntries(
     Object.entries(accountOpenApi.paths).map(([path, methods]) => [
       "/functions/v1/accounts" + path,
@@ -703,6 +783,7 @@ const credentialPaths = {
 export function portalOpenApi(backend: string, includeNonInteractive = true) {
   const documentedPaths: typeof paths = includeNonInteractive
     ? {
+        ...nativeDownloadPaths,
         ...paths,
         ...credentialPaths,
         "/functions/v1/company-integration": integrationPath,
@@ -712,9 +793,9 @@ export function portalOpenApi(backend: string, includeNonInteractive = true) {
     ...accountOpenApi,
     info: {
       title: "Luminovia Portal API",
-      version: "1.0.0",
+      version: "1.1.0",
       description:
-        "Interactive contract for accounts and the listed business operations. Current database permissions, company scope and entitlements still apply. Consult the repository API reference for the wider native RPC inventory.",
+        "Account and business contracts with native RPC schemas derived from the migrated database. Current permissions, company scope and entitlements still apply. The repository API reference describes feature-specific JSON payloads and integration flows.",
     },
     servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
     components: {
@@ -755,10 +836,13 @@ export function isDocumentedRequest(
   )
     return false;
   const prefix = base.pathname.replace(/\/+$/, "");
+  if (!target.pathname.startsWith(prefix + "/")) return false;
+  const route = target.pathname.slice(prefix.length);
+  if (Object.hasOwn(paths, route)) return Object.hasOwn(paths[route], verb);
   return Object.entries(paths).some(([path, operations]) => {
-    if (!Object.hasOwn(operations, verb)) return false;
-    const segments = (prefix + path).split("/");
-    const candidate = target.pathname.split("/");
+    if (!path.includes("{") || !Object.hasOwn(operations, verb)) return false;
+    const segments = path.split("/");
+    const candidate = route.split("/");
     return (
       segments.length === candidate.length &&
       segments.every((part, index) =>

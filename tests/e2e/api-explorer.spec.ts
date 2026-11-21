@@ -15,7 +15,12 @@ test("the API explorer executes a documented read only after authorization", asy
   expect(staticContract.ok()).toBe(true);
   expect(await staticContract.json()).toMatchObject({
     openapi: "3.1.0",
-    paths: { "/functions/v1/accounts/v1/me": { get: {} } },
+    paths: {
+      "/functions/v1/accounts/v1/me": { get: {} },
+      "/rest/v1/rpc/portal_access": {
+        post: { operationId: "native_portal_access" },
+      },
+    },
   });
 
   await page.goto("/api/docs");
@@ -48,6 +53,25 @@ test("the API explorer executes a documented read only after authorization", asy
   await expect(
     page.getByRole("button", { name: "Execute", exact: true }),
   ).toHaveCount(0);
+
+  // Follow a generated operation to the existing authenticated RPC through the
+  // same browser interceptor. The disposable lecturer can read its access flag.
+  await page
+    .getByRole("button", { name: "Mit meinem Konto autorisieren" })
+    .click();
+  await page
+    .getByRole("button", { name: /POST.*\/rest\/v1\/rpc\/portal_access/ })
+    .click();
+  await page.getByRole("button", { name: "Try it out", exact: true }).click();
+  const nativeRead = page.waitForResponse(
+    (item) =>
+      item.request().method() === "POST" &&
+      new URL(item.url()).pathname.endsWith("/rpc/portal_access"),
+  );
+  await page.getByRole("button", { name: "Execute", exact: true }).click();
+  const nativeResult = await nativeRead;
+  expect(nativeResult.status()).toBe(200);
+  expect(await nativeResult.json()).toBe(true);
 });
 
 test("an authenticated participant can run an own-account RPC through the API explorer", async ({

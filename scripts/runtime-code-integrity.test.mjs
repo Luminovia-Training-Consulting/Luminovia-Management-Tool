@@ -121,6 +121,10 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
       byActor('actor', 'comment_context');
       declare const client: any;
       client.rpc('get_my_permissions');
+      declare const ready: boolean;
+      forward(ready ? 'accept_action' : 'decline_action');
+      declare const runtimeInput: string;
+      client.rpc(runtimeInput);
       const authored = "client.rpc('not_an_endpoint')";
       // client.rpc('not_an_endpoint_either');
     `,
@@ -145,7 +149,9 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
                 .map(({name}) => name)
                 .sort(),
             [
+                "accept_action",
                 "comment_context",
+                "decline_action",
                 "get_my_permissions",
                 "people_directory",
                 "profile_courses",

@@ -1,5 +1,6 @@
 import { isDocumentedRequest } from "./contract";
 
+/** Swagger request fields used by the exact-backend session boundary. */
 export type ExplorerRequest = {
   url: string;
   method: string;
@@ -8,6 +9,7 @@ export type ExplorerRequest = {
   redirect?: RequestRedirect;
 };
 
+/** Apply the current caller's session only to a documented operation. */
 export async function authorizeExplorerRequest(
   request: ExplorerRequest,
   backend: string,
@@ -27,7 +29,13 @@ export async function authorizeExplorerRequest(
   const headers = Object.fromEntries(
     Object.entries(request.headers ?? {}).filter(
       ([key]) =>
-        !["apikey", "authorization", "cookie"].includes(key.toLowerCase()),
+        ![
+          "apikey",
+          "authorization",
+          "cookie",
+          "accept-profile",
+          "content-profile",
+        ].includes(key.toLowerCase()),
     ),
   );
   return {

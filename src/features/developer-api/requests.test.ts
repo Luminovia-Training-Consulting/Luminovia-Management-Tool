@@ -46,7 +46,13 @@ describe("API explorer public document and session boundary", () => {
     const request = await authorizeExplorerRequest(
       {
         ...readMe,
-        headers: { cookie: "test", authorization: "stale", apikey: "other" },
+        headers: {
+          cookie: "test",
+          authorization: "stale",
+          apikey: "other",
+          "Accept-Profile": "unapproved",
+          "CONTENT-PROFILE": "unapproved",
+        },
       },
       backend,
       "publishable",
@@ -72,6 +78,15 @@ describe("API explorer public document and session boundary", () => {
     {
       ...readMe,
       url: backend + "/rest/v1/rpc/claim_company_participant_invitation",
+      method: "POST",
+    },
+    {
+      ...readMe,
+      url: backend + "/rest/v1/profiles",
+    },
+    {
+      ...readMe,
+      url: backend + "/rest/v1/rpc/save_mail_configuration",
       method: "POST",
     },
     { ...readMe, method: "DELETE" },
