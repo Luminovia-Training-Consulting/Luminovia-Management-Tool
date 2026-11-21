@@ -106,6 +106,19 @@ export function uploadAcademyCourseChatAttachment(
   );
 }
 
+/** Upload protected attendance evidence for one exact academy session. */
+export function uploadAcademyAttendancePdf(
+  file: File,
+  session: string,
+  clientId: string,
+) {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("academy_session_id", session);
+  form.set("client_id", clientId);
+  return transferUpload(form, endpoint() + "?mode=academy-attendance");
+}
+
 /** Upload a student paper into its course-only exam reservation. */
 export function uploadAcademyStudentExamPdf(
   file: File,

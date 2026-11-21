@@ -2,6 +2,7 @@
 export const academyMaterialQuery = "?mode=academy-material";
 export const academyStudentExamQuery = "?mode=academy-student-exam";
 export const academyCourseChatQuery = "?mode=academy-course-chat";
+export const academyAttendanceQuery = "?mode=academy-attendance";
 export const academyAnswerKeyQuery = "?mode=academy-answer-key";
 export const academyMaterialMaxBytes = 10 * 1024 * 1024;
 
@@ -13,7 +14,11 @@ export function academyChatRoom(form: FormData, intake: boolean): string | null 
     return scopedTarget(form, intake, "academy_room_id");
 }
 
-function scopedTarget(form: FormData, intake: boolean, field: "academy_course_id" | "academy_room_id") {
+export function academyAttendanceSession(form: FormData, intake: boolean): string | null {
+    return scopedTarget(form, intake, "academy_session_id");
+}
+
+function scopedTarget(form: FormData, intake: boolean, field: "academy_course_id" | "academy_room_id" | "academy_session_id") {
     const course = form.get(field);
     if (!intake && course === null) return null;
     if (

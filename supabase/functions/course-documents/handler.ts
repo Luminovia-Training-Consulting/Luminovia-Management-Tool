@@ -102,7 +102,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 name = "course_document_access";
                 args = {p_kind: kind, p_id: body.id};
             } else if (
-                ["resource", "exam", "completion"].includes(kind) &&
+                ["resource", "exam", "completion", "attendance_evidence"].includes(kind) &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
             ) {
@@ -174,7 +174,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 mime = "application/pdf",
                 filename = `luminovia-${kind}.pdf`;
             if (
-                kind === "resource" ||
+                kind === "resource" || kind === "attendance_evidence" ||
                 kind === "exam" ||
                 kind === "request_resource" ||
                 kind === "wiki_resource" ||

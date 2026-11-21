@@ -102,6 +102,14 @@ const attendanceRowSchema = z.strictObject({
   version,
 });
 
+const attendanceEvidence = z.strictObject({
+  id: uuid,
+  resource_id: uuid,
+  version_id: uuid,
+  name: z.string(),
+  attached_at: instant,
+});
+
 /** The register covers one exact session, so history identifies the correction actor. */
 export const attendanceRegisterSchema = z.strictObject({
   session_id: uuid,
@@ -109,21 +117,19 @@ export const attendanceRegisterSchema = z.strictObject({
   ends_at: instant,
   time_zone: z.string(),
   rows: z.array(attendanceRowSchema),
-  evidence: z.array(
-    z.strictObject({
-      id: uuid,
-      resource_id: uuid,
-      version_id: uuid,
-      name: z.string(),
-      attached_at: instant,
-    }),
-  ),
+  evidence: z.array(attendanceEvidence),
   history: z.array(z.strictObject({ ...attendanceAudit, actor_id: uuid })),
+});
+
+export const academyAttendanceRegisterSchema = attendanceRegisterSchema.extend({
+  evidence: z.array(attendanceEvidence.extend({ resource_id: z.null() })),
 });
 
 export type AttendanceStatus = z.infer<typeof status>;
 export type AttendanceRow = z.infer<typeof attendanceRowSchema>;
-export type AttendanceRegister = z.infer<typeof attendanceRegisterSchema>;
+export type AttendanceRegister =
+  | z.infer<typeof attendanceRegisterSchema>
+  | z.infer<typeof academyAttendanceRegisterSchema>;
 export type WorkspaceAttendanceHistory = z.infer<
   typeof workspaceAttendanceHistorySchema
 >;

@@ -15,7 +15,7 @@ import {
 import {
   attendanceImportReceiptSchema,
   attendanceImportRowSchema,
-  attendanceRegisterSchema,
+  academyAttendanceRegisterSchema,
   maxAttendanceImportRows,
 } from "../learning/attendance-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
@@ -200,8 +200,8 @@ const materialUpload = {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
     summary:
-      "Upload and scan course material, an exam PDF or a course-chat attachment",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message.`,
+      "Upload and scan course files, assessments, attendance evidence or chat attachments",
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -216,6 +216,7 @@ const materialUpload = {
             "academy-student-exam",
             "academy-answer-key",
             "academy-course-chat",
+            "academy-attendance",
           ],
         },
       },
@@ -236,6 +237,7 @@ const materialUpload = {
               {
                 academy_course_id: uuid,
                 academy_room_id: uuid,
+                academy_session_id: uuid,
                 client_id: uuid,
                 file: {
                   ...string,
@@ -255,6 +257,11 @@ const materialUpload = {
                 type: "object",
                 properties: { academy_room_id: uuid },
                 required: ["academy_room_id"],
+              },
+              {
+                type: "object",
+                properties: { academy_session_id: uuid },
+                required: ["academy_session_id"],
               },
             ],
           },
@@ -323,7 +330,7 @@ const courseDocumentDownload = {
     tags: ["Licensed course profile"],
     summary:
       "Download a protected learning document, attachment or attendance report",
-    description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. The caller’s authority and facts are checked again before delivery.`,
+    description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. To download scanned evidence, use attendance_evidence and the evidence ID from that register. The caller’s authority and facts are checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [
@@ -342,6 +349,7 @@ const courseDocumentDownload = {
             kind: { enum: ["resource", "exam", "completion"] },
             id: uuid,
           }),
+          record({ kind: { const: "attendance_evidence" }, id: uuid }),
           record({
             kind: { const: "course_chat_attachment" },
             id: uuid,
@@ -416,9 +424,7 @@ const academyActivityActions = new Set([
 const welcomeText = { ...string, maxLength: 4000 };
 const attendanceVersion = { type: "integer", minimum: 0 };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
-const academyRegister = z.toJSONSchema(
-  attendanceRegisterSchema.extend({ evidence: z.array(z.unknown()).length(0) }),
-);
+const academyRegister = z.toJSONSchema(academyAttendanceRegisterSchema);
 const welcome = {
   version: expectedVersion,
   description: welcomeText,
@@ -683,10 +689,18 @@ const coursePaths = {
   "/rest/v1/rpc/course_session_register": courseOperation(
     "readAcademyCourseAttendanceRegister",
     "Read the attendance register for an exact course session",
-    "Current course managers, assigned instructors and authorised contacts of the exact company can read enrolled or completed participants and correction history. A learner can see their own attendance in the course workspace. PDF evidence is unavailable through this register.",
+    "Current course managers, assigned instructors and authorised contacts of the exact company can read enrolled or completed participants, correction history and scanned evidence for the selected session. A learner can see their own attendance in the course workspace.",
     "active-or-grace",
     record({ ...run, p_session_id: uuid }),
     academyRegister,
+  ),
+  "/rest/v1/rpc/attach_course_session_evidence": courseOperation(
+    "attachAcademyAttendanceEvidence",
+    "Attach an exact scanned PDF to a course register",
+    "Submit the selected course and session with the caller’s own scanner-confirmed version from academy-attendance. Repeating the exact attachment returns the same evidence ID. The report remains in the protected register. For download use attendance_evidence and the evidence ID.",
+    "active",
+    record({ ...run, p_session_id: uuid, p_version_id: uuid }),
+    record({ id: uuid, resource_id: nil, version_id: uuid }),
   ),
   "/rest/v1/rpc/save_course_session_attendance": courseOperation(
     "saveAcademyCourseSessionAttendance",

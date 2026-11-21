@@ -32,6 +32,7 @@ const writePaths = [
   "/rest/v1/rpc/academy_learning_action",
   "/rest/v1/rpc/remove_course_exam_pdf",
   "/rest/v1/rpc/send_course_chat_attachment",
+  "/rest/v1/rpc/attach_course_session_evidence",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -230,13 +231,26 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
     });
 
-    it("describes read-only grace, version conflicts and empty attendance attachments", () => {
+    it("describes read-only grace, version conflicts, scanned evidence and report exports", () => {
       const read = spec.paths[readPaths[5]].post;
       expect(read["x-portal-licence"]).toBe("active-or-grace");
       expect(
         read.responses["200"].content["application/json"].schema,
       ).toMatchObject({
-        properties: { evidence: { maxItems: 0 } },
+        properties: {
+          evidence: {
+            items: {
+              required: [
+                "id",
+                "resource_id",
+                "version_id",
+                "name",
+                "attached_at",
+              ],
+              properties: { resource_id: { type: "null" } },
+            },
+          },
+        },
       });
       const save = spec.paths[writePaths[5]].post;
       expect(save["x-portal-licence"]).toBe("active");
@@ -246,10 +260,35 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           required: expect.arrayContaining(["p_expected_version"]),
         },
       );
-      expect(spec.paths).not.toHaveProperty(
-        "/rest/v1/rpc/attach_course_session_evidence",
-      );
+      const evidence =
+        spec.paths["/rest/v1/rpc/attach_course_session_evidence"].post;
+      expect(evidence["x-portal-licence"]).toBe("active");
+      expect(
+        evidence.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_run_id", "p_session_id", "p_version_id"],
+      });
+      expect(
+        evidence.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        properties: { resource_id: { type: "null" } },
+      });
       const report = spec.paths[examDownload].post;
+      expect(
+        report.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        oneOf: expect.arrayContaining([
+          {
+            type: "object",
+            required: ["kind", "id"],
+            additionalProperties: false,
+            properties: {
+              kind: { const: "attendance_evidence" },
+              id: { type: "string", format: "uuid" },
+            },
+          },
+        ]),
+      });
       expect(report["x-portal-licence"]).toBe("active-or-grace");
       expect(
         report.requestBody.content["application/json"].schema,
@@ -289,6 +328,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-student-exam",
                 "academy-answer-key",
                 "academy-course-chat",
+                "academy-attendance",
               ],
             },
           },
@@ -302,6 +342,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 oneOf: [
                   { required: ["academy_course_id"] },
                   { required: ["academy_room_id"] },
+                  { required: ["academy_session_id"] },
                 ],
                 properties: { file: { format: "binary" } },
               },
@@ -339,6 +380,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         "/rest/v1/rpc/reserve_academy_student_exam_pdf",
         "/rest/v1/rpc/reserve_academy_answer_key_pdf",
         "/rest/v1/rpc/reserve_academy_course_chat_file",
+        "/rest/v1/rpc/reserve_academy_attendance_pdf",
+        "/rest/v1/rpc/academy_attendance_upload_status",
         "/rest/v1/rpc/course_chat_upload_status",
         "/rest/v1/rpc/course_chat_attachment_access",
         "/rest/v1/rpc/reserve_academy_course_material",

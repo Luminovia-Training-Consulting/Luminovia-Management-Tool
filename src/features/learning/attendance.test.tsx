@@ -17,6 +17,7 @@ const fake = vi.hoisted(() => ({
   save: vi.fn(),
   attach: vi.fn(),
   upload: vi.fn(),
+  uploadAcademy: vi.fn(),
   download: vi.fn(),
   export: vi.fn(),
   register: {
@@ -35,7 +36,13 @@ const fake = vi.hoisted(() => ({
         version: 0,
       },
     ],
-    evidence: [],
+    evidence: [] as {
+      id: string;
+      resource_id: string | null;
+      version_id: string;
+      name: string;
+      attached_at: string;
+    }[],
     history: [],
   },
 }));
@@ -44,14 +51,17 @@ vi.mock("./attendance-api", () => ({
     "attendance-register",
     ...parts,
   ],
-  attendanceRegisterQuery: (...parts: string[]) => ({
-    queryKey: ["attendance-register", ...parts],
+  attendanceRegisterQuery: (actor: string, run: string, session: string) => ({
+    queryKey: ["attendance-register", actor, run, session],
     queryFn: async () => fake.register,
   }),
   saveAttendance: fake.save,
   attachAttendancePdf: fake.attach,
 }));
-vi.mock("../files/api", () => ({ uploadDocument: fake.upload }));
+vi.mock("../files/api", () => ({
+  uploadDocument: fake.upload,
+  uploadAcademyAttendancePdf: fake.uploadAcademy,
+}));
 vi.mock("./api", () => ({
   downloadCourseDocument: fake.download,
   downloadPortalDocument: fake.export,
@@ -101,6 +111,7 @@ beforeEach(() => {
   fake.register.rows[0].status = null;
   fake.register.rows[0].note = "";
   fake.register.rows[0].version = 0;
+  fake.register.evidence = [];
   fake.save
     .mockReset()
     .mockResolvedValue({ status: "present", version: 1, minutes: 60 });
@@ -110,6 +121,9 @@ beforeEach(() => {
     version_id: "version",
   });
   fake.upload
+    .mockReset()
+    .mockResolvedValue({ status: "clean", current_version_id: "version" });
+  fake.uploadAcademy
     .mockReset()
     .mockResolvedValue({ status: "clean", current_version_id: "version" });
   fake.download.mockReset().mockResolvedValue(undefined);
@@ -186,7 +200,7 @@ it("allows only confirmed manual academy edits and blocks repeat submissions aft
   fake.save.mockRejectedValue({ code: "PT409", message: "Attendance changed" });
   view(course, "active");
   expect(await screen.findByText("Fictional Learner")).toBeVisible();
-  expect(screen.queryByLabelText("attendancePdfLabel")).toBeNull();
+  expect(screen.getByLabelText("attendancePdfLabel")).toBeVisible();
   expect(screen.getByText("attendanceImport")).toBeVisible();
   await userEvent.click(
     screen.getByRole("button", { name: "attendancepresent" }),
@@ -316,4 +330,57 @@ it("requires an unambiguous local attendance time on a daylight saving transitio
     expect(await screen.findByText("attendanceInvalidTime")).toBeVisible();
   }
   expect(fake.save).not.toHaveBeenCalled();
+});
+
+it("retries attaching the scanner-confirmed academy PDF to its exact session without reupload", async () => {
+  const user = userEvent.setup();
+  fake.attach
+    .mockRejectedValueOnce(new Error("temporary"))
+    .mockResolvedValueOnce({
+      id: "attendance-evidence",
+      resource_id: null,
+      version_id: "version",
+    });
+  view(course, "active");
+  const pdf = new File(["%PDF-1.7 fictional"], "Fictional roll call.pdf", {
+    type: "application/pdf",
+  });
+  await user.upload(await screen.findByLabelText("attendancePdfLabel"), pdf);
+  await user.click(screen.getByRole("button", { name: "attendanceAttachPdf" }));
+  expect(await screen.findByText("attendancePdfFailed")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "attendanceAttachPdf" }));
+  await waitFor(() =>
+    expect(fake.attach.mock.calls).toEqual([
+      ["run", "session", "version"],
+      ["run", "session", "version"],
+    ]),
+  );
+  expect(fake.uploadAcademy).toHaveBeenCalledExactlyOnceWith(
+    pdf,
+    "session",
+    expect.any(String),
+  );
+  expect(fake.upload).not.toHaveBeenCalled();
+});
+
+it("reads exact academy evidence in grace without offering file writes", async () => {
+  const user = userEvent.setup();
+  fake.register.evidence = [
+    {
+      id: "attendance-evidence",
+      resource_id: null,
+      version_id: "version",
+      name: "Scanned roll call.pdf",
+      attached_at: "2026-11-20T09:00:00Z",
+    },
+  ];
+  view(course, "grace");
+  expect(await screen.findByText(/Scanned roll call.pdf/)).toBeVisible();
+  expect(screen.queryByLabelText("attendancePdfLabel")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "download" }));
+  expect(fake.export).toHaveBeenCalledExactlyOnceWith(
+    { kind: "attendance_evidence", id: "attendance-evidence" },
+    "Scanned roll call.pdf",
+  );
+  expect(fake.download).not.toHaveBeenCalled();
 });

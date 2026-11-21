@@ -10,6 +10,7 @@ import {
   saveQualificationEvidence,
   uploadAcademyAnswerKeyPdf,
   uploadAcademyCourseMaterial,
+  uploadAcademyAttendancePdf,
   uploadAcademyCourseChatAttachment,
   uploadAcademyStudentExamPdf,
   uploadDocument,
@@ -147,6 +148,33 @@ describe("online, authenticated document transfers", () => {
     });
     await expect(promise).resolves.toMatchObject({
       current_version_id: "reviewed-version",
+    });
+  });
+
+  it("sends academy evidence only to the exact session PDF transport", async () => {
+    const promise = uploadAcademyAttendancePdf(
+      file(),
+      "exact-session",
+      "request",
+    );
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect(request.open).toHaveBeenCalledWith(
+      "POST",
+      "https://fictional.example.invalid/backend/functions/v1/files?mode=academy-attendance",
+    );
+    expect([...request.form!.keys()].sort()).toEqual([
+      "academy_session_id",
+      "client_id",
+      "file",
+    ]);
+    expect(request.form!.get("academy_session_id")).toBe("exact-session");
+    expect(request.form!.get("client_id")).toBe("request");
+    request.respond(200, {
+      document: { status: "clean", current_version_id: "scanned-version" },
+    });
+    await expect(promise).resolves.toMatchObject({
+      current_version_id: "scanned-version",
     });
   });
 

@@ -10,7 +10,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
-import {academyAnswerKeyQuery, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
+import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -93,7 +93,8 @@ Deno.serve(async (request: Request) => {
         const examReservation = query === academyStudentExamQuery ? 'reserve_academy_student_exam_pdf'
             : query === academyAnswerKeyQuery ? 'reserve_academy_answer_key_pdf' : null;
         const academyChat = query === academyCourseChatQuery;
-        const academyIntake = academyChat || examReservation !== null || query === academyMaterialQuery;
+        const academyAttendance = query === academyAttendanceQuery;
+        const academyIntake = academyChat || academyAttendance || examReservation !== null || query === academyMaterialQuery;
         const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
         if (academyIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (academyIntake) {
@@ -109,9 +110,10 @@ Deno.serve(async (request: Request) => {
         if (multipart) {
             const raw = await bounded(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
-            const materialRun = academyMaterialCourse(form, academyIntake && !academyChat);
+            const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
-            const protectedUpload = Boolean(materialRun || chatRoom);
+            const attendanceSession = academyAttendanceSession(form, academyAttendance);
+            const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession);
             const file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
@@ -119,7 +121,7 @@ Deno.serve(async (request: Request) => {
             const bytes = new Uint8Array(await file.arrayBuffer());
             if (protectedUpload && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
             const mime = await validateFile(bytes, name, file.type);
-            if (examReservation && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
+            if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
             const clientId = form.get('client_id');
             if (!uuid(clientId)) return json(400, {error: 'invalid_request'});
@@ -136,7 +138,9 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = chatRoom
+            const reserved = attendanceSession
+                ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                : chatRoom
                 ? await user.rpc('reserve_academy_course_chat_file', {p_room_id: chatRoom, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : materialRun && examReservation
                 ? await user.rpc(examReservation, {p_run_id: materialRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
@@ -155,8 +159,11 @@ Deno.serve(async (request: Request) => {
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
             const courseStatus = async () => {
-                const target = materialRun ? {p_run_id: materialRun} : {p_room_id: roomId};
-                const status = await user.rpc(materialRun ? 'academy_course_material_status' : 'course_chat_upload_status', {
+                const target = attendanceSession ? {p_session_id: attendanceSession}
+                    : materialRun ? {p_run_id: materialRun} : {p_room_id: roomId};
+                const endpoint = attendanceSession ? 'academy_attendance_upload_status'
+                    : materialRun ? 'academy_course_material_status' : 'course_chat_upload_status';
+                const status = await user.rpc(endpoint, {
                     ...target,
                     p_document_id: reservation.document_id,
                     p_version_id: reservation.version_id,

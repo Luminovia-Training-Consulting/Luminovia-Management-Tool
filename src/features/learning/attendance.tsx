@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
-import { uploadDocument } from "../files/api";
+import { uploadAcademyAttendancePdf, uploadDocument } from "../files/api";
 import {
   downloadCourseDocument,
   downloadPortalDocument,
@@ -265,6 +265,137 @@ function AttendanceFields({
 }
 
 /** This panel is not mounted for participant-only course access. The RPC enforces the same boundary. */
+/** Attach the exact confirmation to the selected register. */
+function AttendanceEvidence({
+  data,
+  courseId,
+  academy,
+  canUpload,
+  refresh,
+}: {
+  data: AttendanceRegister;
+  courseId: string;
+  academy: boolean;
+  canUpload: boolean;
+  refresh: () => Promise<unknown>;
+}) {
+  const { t, i18n } = useTranslation("learning");
+  const online = useOnline();
+  const input = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
+  const stage = useRef<{ clientId: string; version?: string } | null>(null);
+  const upload = useMutation({
+    mutationFn: async () => {
+      if (
+        !canUpload ||
+        !online ||
+        !file ||
+        !stage.current ||
+        (!academy && file.type !== "application/pdf") ||
+        !file.name.toLowerCase().endsWith(".pdf")
+      )
+        throw new Error("attendancePdfRequired");
+      if (!stage.current.version) {
+        const document = academy
+          ? await uploadAcademyAttendancePdf(
+              file,
+              data.session_id,
+              stage.current.clientId,
+            )
+          : await uploadDocument(file, { scope: "personal", kind: "material" });
+        if (document.status !== "clean" || !document.current_version_id)
+          throw new Error("attendancePdfRequired");
+        stage.current.version = document.current_version_id;
+      }
+      const version = stage.current.version;
+      const receipt = await attachAttendancePdf(
+        courseId,
+        data.session_id,
+        version,
+      );
+      if (!receipt?.id || receipt.version_id !== version)
+        throw new Error("attendancePdfRequired");
+    },
+    onSuccess: async () => {
+      stage.current = null;
+      setFile(null);
+      if (input.current) input.current.value = "";
+      await refresh();
+    },
+  });
+  if (!canUpload && !data.evidence.length) return null;
+  return (
+    <>
+      <h3>{t("attendanceEvidence")}</h3>
+      {canUpload && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (file && !upload.isPending) upload.mutate();
+          }}
+        >
+          <Field id="attendance-pdf" label={t("attendancePdfLabel")}>
+            <input
+              ref={input}
+              id="attendance-pdf"
+              type="file"
+              accept="application/pdf,.pdf"
+              disabled={!online || upload.isPending}
+              onChange={(event) => {
+                const selected = event.target.files?.[0] ?? null;
+                stage.current = selected
+                  ? { clientId: crypto.randomUUID() }
+                  : null;
+                setFile(selected);
+                upload.reset();
+              }}
+            />
+          </Field>
+          <Button disabled={!online || upload.isPending || !file}>
+            {t("attendanceAttachPdf")}
+          </Button>
+        </form>
+      )}
+      {data.evidence.length > 0 && (
+        <ul>
+          {data.evidence.map((item) => (
+            <li key={item.id}>
+              {item.name} ·{" "}
+              {dateTime(item.attached_at, i18n.language, data.time_zone)}{" "}
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!online}
+                onClick={() => {
+                  setDownloadError(false);
+                  const download =
+                    item.resource_id === null
+                      ? downloadPortalDocument(
+                          { kind: "attendance_evidence", id: item.id },
+                          item.name,
+                        )
+                      : downloadCourseDocument(
+                          "resource",
+                          item.resource_id,
+                          item.name,
+                        );
+                  void download.catch(() => setDownloadError(true));
+                }}
+              >
+                {t("download")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(upload.isError || downloadError) && (
+        <Notice kind="error">{t("attendancePdfFailed")}</Notice>
+      )}
+    </>
+  );
+}
+
 export function AttendancePanel({
   course,
   actor,
@@ -278,42 +409,13 @@ export function AttendancePanel({
   const online = useOnline();
   const client = useQueryClient();
   const [session, setSession] = useState(course.sessions[0]?.id ?? "");
-  const [file, setFile] = useState<File | null>(null);
-  const [downloadError, setDownloadError] = useState(false);
   const allowed =
     course.lms_enabled &&
     (course.access.manager || course.access.teacher || course.access.client);
   const query = useQuery({
-    ...attendanceRegisterQuery(actor, course.id, session),
+    ...attendanceRegisterQuery(actor, course.id, session, Boolean(academy)),
     enabled: allowed && Boolean(session) && (!academy || online),
     ...(academy && { refetchInterval: 10_000, refetchOnMount: "always" }),
-  });
-  const upload = useMutation({
-    mutationFn: async () => {
-      if (
-        !file ||
-        file.type !== "application/pdf" ||
-        !file.name.toLowerCase().endsWith(".pdf")
-      )
-        throw new Error("attendancePdfRequired");
-      const document = await uploadDocument(file, {
-        scope: "personal",
-        kind: "material",
-      });
-      if (document.status !== "clean" || !document.current_version_id)
-        throw new Error("attendancePdfRequired");
-      return attachAttendancePdf(
-        course.id,
-        session,
-        document.current_version_id,
-      );
-    },
-    onSuccess: async () => {
-      setFile(null);
-      await client.invalidateQueries({
-        queryKey: attendanceRegisterKey(actor, course.id, session),
-      });
-    },
   });
   if (!allowed || !course.sessions.length) return null;
   const canEdit =
@@ -334,8 +436,6 @@ export function AttendancePanel({
           value={session}
           onChange={(event) => {
             setSession(event.target.value);
-            setFile(null);
-            setDownloadError(false);
           }}
         >
           {course.sessions.map((item, index) => (
@@ -423,64 +523,18 @@ export function AttendancePanel({
               }
             />
           )}
-          {!academy && (
-            <>
-              <h3>{t("attendanceEvidence")}</h3>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  upload.mutate();
-                }}
-              >
-                <Field id="attendance-pdf" label={t("attendancePdfLabel")}>
-                  <input
-                    id="attendance-pdf"
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    onChange={(event) =>
-                      setFile(event.target.files?.[0] ?? null)
-                    }
-                  />
-                </Field>
-                <Button disabled={!online || upload.isPending || !file}>
-                  {t("attendanceAttachPdf")}
-                </Button>
-              </form>
-              {upload.isError && (
-                <Notice kind="error">{t("attendancePdfFailed")}</Notice>
-              )}
-              <ul>
-                {query.data.evidence.map((item) => (
-                  <li key={item.id}>
-                    {item.name} ·{" "}
-                    {dateTime(
-                      item.attached_at,
-                      i18n.language,
-                      course.time_zone,
-                    )}{" "}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={!online}
-                      onClick={() => {
-                        setDownloadError(false);
-                        void downloadCourseDocument(
-                          "resource",
-                          item.resource_id,
-                          item.name,
-                        ).catch(() => setDownloadError(true));
-                      }}
-                    >
-                      {t("download")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-              {downloadError && (
-                <Notice kind="error">{t("attendancePdfFailed")}</Notice>
-              )}
-            </>
-          )}
+          <AttendanceEvidence
+            key={`${actor}:${course.id}:${session}`}
+            data={query.data}
+            courseId={course.id}
+            academy={Boolean(academy)}
+            canUpload={academy !== "grace"}
+            refresh={() =>
+              client.invalidateQueries({
+                queryKey: attendanceRegisterKey(actor, course.id, session),
+              })
+            }
+          />
           <h3>{t("attendanceCorrections")}</h3>
           <ul>
             {query.data.history.map((item) => (

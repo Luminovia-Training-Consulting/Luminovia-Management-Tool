@@ -1,6 +1,6 @@
 /** Verify the exact leased academy register and learner privacy for both editions. */
 import assert from "node:assert/strict";
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
@@ -216,12 +216,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       importRows(teacher, [importedEntry(learner, 0)]),
       /42501/,
     );
-    for (const blocked of [
-      "course_workspace_action",
-      "attach_course_session_evidence",
-    ]) {
-      await assert.rejects(actor(manager, gate(blocked)), /42501/);
-    }
+    await assert.rejects(
+      actor(manager, gate("course_workspace_action")),
+      /42501/,
+    );
+    await assert.rejects(
+      actor(manager, gate("attach_course_session_evidence", "GET")),
+      /42501/,
+    );
     await assert.rejects(actor(teacher, gate(write, "GET")), /42501/);
     await assert.rejects(actor(teacher, gate(write, "HEAD")), /42501/);
     await assert.rejects(actor(teacher, gate(importWrite, "GET")), /42501/);
@@ -244,6 +246,134 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       insert into private.course_attendance_evidence(session_id,resource_id,version_id,attached_by)
       values(${q(session)},${q(share)},${q(version)},${q(teacher)});`);
     assert.deepEqual((await register(teacher)).evidence, []);
+    const payload = "%PDF-1.7 Fictional scanned attendance evidence";
+    const sha = createHash("sha256").update(payload).digest("hex");
+    const reservation = (
+      who,
+      target = session,
+      clientId = randomUUID(),
+      digest = sha,
+    ) =>
+      actor(
+        who,
+        gate("reserve_academy_attendance_pdf") +
+          `select public.reserve_academy_attendance_pdf(${q(target)},'Scanned sign-in sheet.pdf',${payload.length},${q(clientId)},${q(digest)})`,
+      ).then(JSON.parse);
+    const uploadStatus = (
+      who,
+      file,
+      target = session,
+      endpoint = "academy_attendance_upload_status",
+    ) =>
+      actor(
+        who,
+        gate(endpoint) +
+          `select public.${endpoint}(${q(target)},${q(file.document_id)},${q(file.version_id)})`,
+      ).then((value) => (value ? JSON.parse(value) : null));
+    const scan = (file, action, lease = null, digest = null, scanner = null) =>
+      sql(
+        "begin;set local role service_role;" +
+          gate("academy_course_material_scan") +
+          `select public.academy_course_material_scan(${[file.document_id, file.version_id, action, lease, digest, scanner].map((item) => (item === null ? "null" : q(item))).join(",")}); commit;`,
+      );
+    const attach = (who, selected, target = session, course = run) =>
+      actor(
+        who,
+        gate("attach_course_session_evidence") +
+          `select public.attach_course_session_evidence(${q(course)},${q(target)},${q(selected)})`,
+      )
+        .then(JSON.parse)
+        .then((value) => response("attach_course_session_evidence", value));
+    const downloadEvidence = (who, id, kind = "attendance_evidence") =>
+      actor(
+        who,
+        gate("course_document_access") +
+          `select public.course_document_access(${q(kind)},${q(id)})`,
+      ).then(JSON.parse);
+    for (const who of [learner, foreignClient, outside])
+      await assert.rejects(reservation(who), /42501/);
+    await assert.rejects(reservation(client, foreignSession), /42501/);
+    await assert.rejects(attach(teacher, version), /42501/);
+    const requestId = randomUUID();
+    const staged = await reservation(teacher, session, requestId);
+    assert.deepEqual(await reservation(teacher, session, requestId), staged);
+    await assert.rejects(reservation(teacher, future, requestId), /PT409/);
+    await assert.rejects(
+      reservation(teacher, session, requestId, "c".repeat(64)),
+      /PT409/,
+    );
+    assert.equal(await uploadStatus(teacher, staged, future), null);
+    assert.equal(
+      await uploadStatus(
+        teacher,
+        staged,
+        run,
+        "academy_course_material_status",
+      ),
+      null,
+    );
+    assert.equal(await uploadStatus(manager, staged), null);
+    await assert.rejects(attach(teacher, staged.version_id), /42501/);
+    const draftFromCompany = await reservation(client);
+    const companyLease = await scan(draftFromCompany, "begin", null, sha);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    assert.equal(await uploadStatus(client, draftFromCompany), null);
+    await assert.rejects(
+      scan(draftFromCompany, "clean", companyLease, sha, "ClamAV fixture"),
+      /42501/,
+    );
+    await scan(draftFromCompany, "end", companyLease);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    assert.equal((await reservation(manager)).status, "quarantined");
+    await assert.rejects(scan(staged, "begin", null, "d".repeat(64)), /42501/);
+    const lease = await scan(staged, "begin", null, sha);
+    await scan(staged, "clean", lease, sha, "ClamAV fixture");
+    await scan(staged, "end", lease);
+    await assert.rejects(attach(teacher, staged.version_id, future), /42501/);
+    await assert.rejects(attach(client, staged.version_id), /42501/);
+    await assert.rejects(
+      actor(
+        teacher,
+        gate("academy_course_material_action") +
+          `select public.academy_course_material_action(${q(run)},'resource_share',${q(staged.version_id)},'participants','material')`,
+      ),
+      /42501/,
+    );
+    const proof = await attach(teacher, staged.version_id);
+    assert.deepEqual(await attach(teacher, staged.version_id), proof);
+    assert.equal(proof.resource_id, null);
+    assert.equal(
+      (await register(client)).evidence[0].version_id,
+      staged.version_id,
+    );
+    assert.deepEqual((await register(teacher, future)).evidence, []);
+    for (const who of [client, manager, teacher])
+      assert.equal((await downloadEvidence(who, proof.id)).sha256, sha);
+    for (const who of [learner, foreignClient, outside])
+      await assert.rejects(downloadEvidence(who, proof.id), /42501/);
+    await assert.rejects(
+      downloadEvidence(client, proof.id, "resource"),
+      /42501/,
+    );
+    await assert.rejects(downloadEvidence(client, staged.version_id), /42501/);
+    assert.equal(await uploadStatus(learner, staged), null);
+    assert.equal(
+      await sql(
+        `select count(*) from private.course_resources where version_id=${q(staged.version_id)}`,
+      ),
+      "0",
+    );
+    await assert.rejects(
+      sql(
+        `update public.documents set deleted_at=now() where id=${q(staged.document_id)}`,
+      ),
+      /23503/,
+    );
+
     await assert.rejects(
       save(teacher, "present", 0, { target: outside }),
       /42501/,
@@ -405,6 +535,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     await assert.rejects(register(client), /42501/);
     await assert.rejects(report(client), /42501/);
+    await assert.rejects(downloadEvidence(client, proof.id), /42501/);
     await assert.rejects(importRows(client, batch), /42501/);
     await assert.rejects(
       save(client, "excused", 2, { reason: "Revoked contact" }),
@@ -417,6 +548,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     await assert.rejects(register(teacher), /42501/);
     await assert.rejects(report(teacher), /42501/);
+    await assert.rejects(downloadEvidence(teacher, proof.id), /42501/);
     await assert.rejects(importRows(teacher, batch), /42501/);
     await assert.rejects(
       save(teacher, "present", 2, { reason: "Released teacher" }),
@@ -434,6 +566,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     assert.deepEqual(await register(manager), retainedRegister);
     assert.deepEqual(await report(manager), retainedReport);
+    assert.equal(
+      (await downloadEvidence(manager, proof.id)).id,
+      staged.version_id,
+    );
+    await assert.rejects(reservation(manager), /42501/);
+    await assert.rejects(attach(manager, staged.version_id), /42501/);
     await assert.rejects(report(learner), /42501/);
     await assert.rejects(importRows(manager, batch), /42501/);
     await assert.rejects(
@@ -456,6 +594,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     await assert.rejects(register(manager), /42501/);
     await assert.rejects(report(manager), /42501/);
+    await assert.rejects(downloadEvidence(manager, proof.id), /42501/);
     await assert.rejects(importRows(manager, batch), /42501/);
     await assert.rejects(
       save(manager, "present", 2, { reason: "Licence expired" }),
@@ -468,7 +607,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "4",
     );
     console.log(
-      `PASS ${edition} exact register roles, private learner, single winning correction, atomic import, licence grace and retained audits`,
+      `PASS ${edition} exact register roles, private learner, single winning correction, atomic import, scanned evidence, licence grace and retained audits`,
     );
   });
 }

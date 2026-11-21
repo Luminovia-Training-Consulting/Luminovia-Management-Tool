@@ -4,6 +4,7 @@ import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
 import {
+  academyAttendanceRegisterSchema,
   attendanceRegisterSchema,
   type AttendanceRow,
   type AttendanceStatus,
@@ -28,6 +29,7 @@ export const attendanceRegisterQuery = (
   actor: string,
   run: string,
   session: string,
+  academy = false,
 ) =>
   queryOptions({
     queryKey: attendanceRegisterKey(actor, run, session),
@@ -39,7 +41,9 @@ export const attendanceRegisterQuery = (
         })
         .abortSignal(signal);
       if (error) throw error;
-      return attendanceRegisterSchema.parse(data);
+      return (
+        academy ? academyAttendanceRegisterSchema : attendanceRegisterSchema
+      ).parse(data);
     },
     enabled: Boolean(session),
     staleTime: 0,
@@ -84,5 +88,5 @@ export async function attachAttendancePdf(
     p_version_id: version,
   });
   if (error) throw error;
-  return data as { id: string; resource_id: string; version_id: string };
+  return data as { id: string; resource_id: string | null; version_id: string };
 }

@@ -275,6 +275,7 @@ export type PortalDocumentRequest =
         | "assignment_confirmation";
       id: string;
     }
+  | { kind: "attendance_evidence"; id: string }
   | { kind: "attendance"; id: string; format?: "pdf" | "csv" }
   | { kind: "request_resource"; id: string; request_id: string }
   | {
