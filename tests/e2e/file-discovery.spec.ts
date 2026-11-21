@@ -113,7 +113,8 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
         if (mobile) {
             await switchLanguage();
             await file().getByRole("button", {name: `Organise for me: ${name}`, exact: true}).click();
-            await expect(editor.getByLabel("Your tags", {exact: true})).toHaveValue(`${tag}\nLinux`);
+            // Persisted tags use the database's case-insensitive alphabetical order.
+            await expect(editor.getByLabel("Your tags", {exact: true})).toHaveValue(`Linux\n${tag}`);
             await page.keyboard.press("Escape");
             await expect(editor).not.toBeVisible();
         }

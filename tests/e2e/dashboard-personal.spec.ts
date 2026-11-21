@@ -269,7 +269,11 @@ test("personal cards and teaching preparation persist in the real account across
     ).toBeDisabled();
     await context.setOffline(false);
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+    // Inspect the dark layout with the supported reduced-motion preference.
+    // Waiting for every animation can hang on a paused mobile animation.
+    await page.emulateMedia({reducedMotion: "reduce"});
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     const english = page.getByRole("region", {
         name: "My teaching day",
         exact: true,
@@ -287,16 +291,6 @@ test("personal cards and teaching preparation persist in the real account across
         }),
     ).toBeEnabled();
     await page.evaluate(() => document.fonts.ready);
-    await page.evaluate(async () => {
-        await Promise.all(
-            document
-                .getAnimations()
-                .filter(
-                    (animation) => animation.effect?.getTiming().iterations !== Infinity,
-                )
-                .map((animation) => animation.finished.catch(() => undefined)),
-        );
-    });
     expect(
         await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
