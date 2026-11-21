@@ -1,3 +1,9 @@
+# 21 November 2026 — Standalone Premium LMS without brokerage or accounting
+
+The two dedicated browser packages compile the local LMS, administration, help and API explorer. The build excludes internal marketplace, commercial records, finance and accounting modules as well as their Workbox cache entries. Old business bookmarks lead to the local not-found view. German and English Academy administration labels identify internal instructors and training coordinators. The scoped course index and protected Academy branding upload remain available.
+
+Dedicated teacher assignment and release use the existing calendar and course-chat data with neutral schedule records. They no longer invoke the lecturer quote, contract prerequisite, invoice cancellation or marketplace notification workflow. Both licensed editions and an exact retry of a release recorded before the upgrade passed native PostgreSQL. Fourteen internal commercial checks and all seven API-surface checks passed. TypeScript, focused ESLint and all 1,368 Vitest cases passed on the integrated tree. The historical retention rehearsal passed with all 240 migrations.
+
 # 21 November 2026 — Participant activity, dedicated API and release recovery
 
 The internal Premium participant centre now shows scoped invitations, confirmed and removed associations, reference updates and new enrolment changes. The log records the company at the event and keeps submitted IDs, addresses and dispatch outcomes private. PostgreSQL and PostgREST 16.5 passed the scope, privacy and pagination checks, with 36 focused frontend cases, 16 documentation and runtime checks and seven API surface cases.

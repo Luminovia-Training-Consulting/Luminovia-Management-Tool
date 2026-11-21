@@ -814,7 +814,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "0",
   );
   assert.equal(
-    await sql("select count(*) from public.chat_rooms where kind='lecturer_course'"),
+    await sql(
+      "select count(*) from public.chat_rooms where kind='lecturer_course'",
+    ),
     "0",
   );
   assert.equal(
@@ -852,11 +854,15 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "1",
   );
   assert.equal(
-    await sql(`select count(*) from private.job_lifecycle_requests where result=${q(result.claim_id)}`),
+    await sql(
+      `select count(*) from private.job_lifecycle_requests where result=${q(result.claim_id)}`,
+    ),
     "0",
   );
   assert.equal(
-    await sql(`select count(*) from public.claim_events where claim_id=${q(result.claim_id)}`),
+    await sql(
+      `select count(*) from public.claim_events where claim_id=${q(result.claim_id)}`,
+    ),
     "0",
   );
   assert.equal(
@@ -866,8 +872,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     "0",
   );
   assert.deepEqual(
-    JSON.parse(await sql(`select jsonb_agg(action order by action) from public.audit_events
-      where resource_id=${q(result.claim_id)}`)),
+    JSON.parse(
+      await sql(`select jsonb_agg(action order by action) from public.audit_events
+      where resource_id=${q(result.claim_id)}`),
+    ),
     ["academy.instructor.assigned", "academy.instructor.released"],
   );
   assert.equal(
@@ -1067,7 +1075,8 @@ await withTestDatabase(
   async ({ sql, actor }) => {
     const [installation, organisation, template, course, admin, teacher] =
       Array.from({ length: 6 }, randomUUID);
-    const date = (days) => new Date(Date.now() + days * 86_400_000).toISOString();
+    const date = (days) =>
+      new Date(Date.now() + days * 86_400_000).toISOString();
     const terms = {
       installation_id: installation,
       edition: "customer-self-hosted",
@@ -1121,7 +1130,9 @@ await withTestDatabase(
       claim_id: previous.claim_id,
     });
     assert.equal(
-      await sql(`select count(*) from private.job_lifecycle_requests where request_id=${q(releaseKey)}`),
+      await sql(
+        `select count(*) from private.job_lifecycle_requests where request_id=${q(releaseKey)}`,
+      ),
       "1",
     );
     const retained = () =>
