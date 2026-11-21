@@ -1,13 +1,16 @@
 /** Real PostgreSQL impact/worker tests for explicit owned account and organisation cascades. */
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
-import {withTestDatabase} from "./testing/database.mjs";
+import { randomUUID } from "node:crypto";
+import { withTestDatabase } from "./testing/database.mjs";
 
-await withTestDatabase("owned_cascade", async ({sql, actor}) => {
+await withTestDatabase("owned_cascade", async ({ sql, actor }) => {
     const scopeDefinition = await sql(
         `select pg_catalog.pg_get_functiondef('private.deletion_scope_before_wiki_course_templates(text,uuid)'::regprocedure)`,
     );
-    assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*array\[\]::oid\[\]/);
+    assert.match(
+        scopeDefinition,
+        /processed oid\[\]\s*:=\s*array\[\]::oid\[\]/,
+    );
     console.log(
         "PASS owned-cascade visited-constraint array is explicitly typed",
     );
@@ -57,7 +60,9 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
         `begin;set local role service_role;select public._deletion_apply('${op.operation_id}','${permit.permit_id}');commit;`,
     );
     assert.equal(
-        await sql(`select count(*) from public.documents where id='${privateDoc}'`),
+        await sql(
+            `select count(*) from public.documents where id='${privateDoc}'`,
+        ),
         "0",
     );
     assert.equal(
@@ -67,7 +72,9 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
         "0",
     );
     assert.equal(
-        await sql(`select count(*) from public.contracts where id='${contract}'`),
+        await sql(
+            `select count(*) from public.contracts where id='${contract}'`,
+        ),
         "0",
     );
     assert.equal(
@@ -115,6 +122,11 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
     const companyContractDoc = randomUUID(),
         companyContractVersion = randomUUID(),
         companyContract = randomUUID();
+    const courseClass = randomUUID();
+    await sql(`
+        insert into private.course_chat_protection_settings(organisation_id,enabled) values('${org}',true);
+        insert into private.course_classes(id,organisation_id,name) values('${courseClass}','${org}','Fictional class');
+        insert into private.course_class_assignments(course_id,organisation_id,class_id,version) values('${run}','${org}','${courseClass}',1);`);
     await sql(
         `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${companyContractDoc}','${peer}','${peer}','personal','contract','Fictional org-specific contract.pdf','application/pdf',100,'clean','${randomUUID()}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256) values('${companyContractVersion}','${companyContractDoc}','${peer}','${randomUUID()}',1,'fictional-cascade-org-contract','Fictional org-specific contract.pdf','application/pdf',100,'clean',repeat('c',64));update public.documents set current_version_id='${companyContractVersion}' where id='${companyContractDoc}';insert into public.contracts(id,user_id,status,effective_from,version,document_version_id,document_sha256) values('${companyContract}','${peer}','active',now()-interval '1 day',1,'${companyContractVersion}',repeat('c',64));`,
     );
@@ -132,6 +144,12 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
     );
     console.log("ORG BLOCKERS", JSON.stringify(orgPreview.blockers));
     assert.equal(orgPreview.can_confirm, true);
+    assert.equal(
+        orgPreview.counts["private.course_chat_protection_settings"],
+        1,
+    );
+    assert.equal(orgPreview.counts["private.course_classes"], 1);
+    assert.equal(orgPreview.counts["private.course_class_assignments"], 1);
     await sql(
         `insert into public.course_sessions(course_run_id,starts_at,ends_at) values('${run}',now()-interval '5 day',now()-interval '4 day')`,
     );
@@ -172,8 +190,22 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
         "0",
     );
     assert.equal(
-        await sql(`select count(*) from public.organisations where id='${org}'`),
+        await sql(
+            `select count(*) from public.organisations where id='${org}'`,
+        ),
         "0",
+    );
+    assert.equal(
+        await sql(
+            `select count(*) from private.course_classes where id='${courseClass}'`,
+        ),
+        "0",
+    );
+    assert.equal(
+        await sql(
+            `select count(*) from private.course_chat_protection_settings where organisation_id is null`,
+        ),
+        "1",
     );
     assert.equal(
         await sql(
@@ -186,7 +218,9 @@ await withTestDatabase("owned_cascade", async ({sql, actor}) => {
         "1",
     );
     assert.equal(
-        await sql(`select count(*) from public.documents where id='${companyDoc}'`),
+        await sql(
+            `select count(*) from public.documents where id='${companyDoc}'`,
+        ),
         "0",
     );
     assert.equal(

@@ -117,7 +117,13 @@ begin
   if cardinality(string_to_array(source, anchor)) <> 2 then
     raise exception 'Expected first-time academy reservation';
   end if;
-  execute replace(source, anchor, $guard$  if p_mode = 'invite' and (
+  execute replace(source, anchor, $guard$  if exists (
+    select 1 from private.academy_account_requests
+    where email = email_value and status in ('reserved', 'cleanup')
+  ) then
+    raise exception 'Account unavailable' using errcode = 'PT409';
+  end if;
+  if p_mode = 'invite' and (
     (select count(*) from private.academy_account_requests
      where mode = 'invite' and created_at > statement_timestamp() - interval '15 minutes'
        and installation_id = (select installation_id from private.installation_identity where singleton)) >= 20

@@ -389,6 +389,26 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       status: "failed",
     });
 
+    const invite = (email) =>
+      reserve(admin, randomUUID(), email, "lecturer", null, "invite");
+    for (let index = 1; index <= 4; index++) {
+      const address = `budget-${index}@example.invalid`;
+      assert.equal((await invite(address)).status, "reserved");
+      await sql(
+        `update private.academy_account_requests set status='failed' where email=${q(address)}`,
+      );
+      if (index === 1) await assert.rejects(invite(address), /PT429/);
+    }
+    await assert.rejects(invite("over-actor-budget@example.invalid"), /PT429/);
+    await sql(`update private.academy_account_requests set created_at=now()-interval '16 minutes' where mode='invite';
+      insert into private.academy_account_requests(installation_id,actor_id,request_id,email,display_name,role,mode,status)
+      select ${q(terms.installation_id)},gen_random_uuid(),gen_random_uuid(),'budget-peer-'||number||'@example.invalid',
+        'Fictional previous invitation','lecturer','invite','failed' from generate_series(1,20) number;`);
+    await assert.rejects(
+      invite("over-installation-budget@example.invalid"),
+      /PT429/,
+    );
+
     const grace = {
       ...terms,
       issued_at: date(-1.9),

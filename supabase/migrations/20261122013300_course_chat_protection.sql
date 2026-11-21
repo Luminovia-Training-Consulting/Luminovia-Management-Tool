@@ -3,6 +3,7 @@ begin;
 -- A null organisation is the installation-wide switch. The organisation
 -- switch can add protection, never override the installation's protection.
 create table private.course_chat_protection_settings (
+  id bigint generated always as identity primary key,
   organisation_id uuid references public.organisations(id) on delete cascade,
   enabled boolean not null default false,
   version integer not null default 0 check (version >= 0),
