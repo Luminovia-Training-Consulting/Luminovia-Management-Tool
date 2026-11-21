@@ -47,7 +47,6 @@ const customerSchema = z.strictObject({
 const sharedAssets = [
   "brand/space-grotesk-latin-wght-normal.woff2",
   "brand/space-grotesk-OFL.txt",
-  "push-sw.js",
 ];
 
 /** Open only bounded regular files. A symlink may otherwise import an unintended host file. */
@@ -188,6 +187,16 @@ export function loadAcademyBrand(
     }
     for (const path of sharedAssets)
       assets.set(path, readFileSync(join(publicRoot, path)));
+    // Like its icons, the notification title belongs to the signed browser build.
+    assets.set(
+      "push-sw.js",
+      Buffer.concat([
+        Buffer.from(
+          `const PORTAL_PUSH_TITLE = ${JSON.stringify(settings.shortName)};\n`,
+        ),
+        readFileSync(join(publicRoot, "push-sw.js")),
+      ]),
+    );
     return {
       brand: {
         ...settings,

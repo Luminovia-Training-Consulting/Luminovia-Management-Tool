@@ -93,6 +93,19 @@ it("requires an explicit customer boolean to publish the academy demo", () => {
   expect(load).toThrow(/^Invalid academy brand file or image assets/);
 });
 
+it.each(["customer-managed", "customer-self-hosted"])(
+  "prepares the signed notification title for the %s worker",
+  (edition) => {
+    const shortName = 'Example "A" & Co';
+    writeFileSync(config, JSON.stringify({ ...settings, edition, shortName }));
+    const worker = load().assets.get("push-sw.js")?.toString("utf8");
+    expect(worker?.split("\n")[0]).toBe(
+      `const PORTAL_PUSH_TITLE = ${JSON.stringify(shortName)};`,
+    );
+    expect(worker).toContain("showNotification(notificationTitle,");
+  },
+);
+
 it("packages the exact approved customer assets and its scoped licensed API", () => {
   const { brand, assets } = load();
   expect(brand).toMatchObject({

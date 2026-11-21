@@ -1,6 +1,8 @@
-/* global self, indexedDB, URL */
+/* global self, indexedDB, URL, PORTAL_PUSH_TITLE */
 // Notification data is deliberately generic. No API response/private file cache.
 const bindingDatabase = "luminovia-push-binding";
+const notificationTitle =
+    typeof PORTAL_PUSH_TITLE === "string" ? PORTAL_PUSH_TITLE : "Luminovia";
 
 function binding() {
     return new Promise((resolve) => {
@@ -44,7 +46,7 @@ self.addEventListener("push", (event) => {
             )
                 return;
             const german = payload.locale === "de";
-            await self.registration.showNotification("Luminovia", {
+            await self.registration.showNotification(notificationTitle, {
                 body: german
                     ? "Es gibt eine neue Meldung im Portal."
                     : "There is a new update in the portal.",

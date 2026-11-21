@@ -312,9 +312,11 @@ test("service worker requires current binding and opens fixed portal path", asyn
         token: row.device_token,
         locale: "de",
         url: "https://evil.invalid",
+        title: "PRIVATE",
         body: "PRIVATE",
     });
     assert.equal(shown.length, 1);
+    assert.equal(shown[0][0], "Luminovia");
     assert.ok(!JSON.stringify(shown).includes("PRIVATE"));
     current = null;
     await push({id: row.id, token: row.device_token, locale: "de"});
@@ -331,4 +333,15 @@ test("service worker requires current binding and opens fixed portal path", asyn
     });
     await pending;
     assert.deepEqual(opened, ["https://cms.example.invalid/notifications"]);
+
+    // The same worker in a signed Academy package uses its published short name.
+    const shortName = 'Example "A" & Co';
+    const customerWorker =
+        `const PORTAL_PUSH_TITLE = ${JSON.stringify(shortName)};\n` + code;
+    vm.runInNewContext(customerWorker, {...context});
+    current = {token: row.device_token};
+    await push({id: row.id, token: row.device_token, locale: "en", title: "PRIVATE"});
+    assert.equal(shown.length, 2);
+    assert.equal(shown[1][0], shortName);
+    assert.equal(shown[1][1].icon, "/icons/icon-192.png");
 });
