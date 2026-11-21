@@ -1,3 +1,4 @@
+/** Covers local CSV parsing and the validation used for both spreadsheet inputs. */
 import { describe, expect, it } from "vitest";
 import {
   attendanceCsvHeader,
@@ -83,6 +84,6 @@ describe("attendance import preview", () => {
   ])("does not produce an import preview for invalid input", (rows) => {
     expect(() =>
       parseAttendanceCsv(attendanceCsvHeader + "\n" + rows, roster),
-    ).toThrow("invalid_attendance_csv");
+    ).toThrow("invalid_attendance_import");
   });
 });

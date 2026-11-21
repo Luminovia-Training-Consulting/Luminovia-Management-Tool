@@ -1,3 +1,4 @@
+/** Shows and commits the same register preview for CSV and XLSX worksheet inputs. */
 import { useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -7,11 +8,12 @@ import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import type { AttendanceRow } from "./attendance-api";
 import {
-  AttendanceCsvError,
+  AttendanceImportError,
   attendanceCsvTemplate,
   readAttendanceCsv,
 } from "./attendance-import";
 
+/** Keep workbook bytes local and submit only confirmed, versioned register rows online. */
 export function AttendanceImportPanel({
   run,
   session,
@@ -52,6 +54,7 @@ export function AttendanceImportPanel({
     },
   });
 
+  /** Defer the archive reader until someone selects XLSX. */
   async function prepare(file: File | undefined) {
     setPreview(undefined);
     setInvalidRow(undefined);
@@ -59,9 +62,14 @@ export function AttendanceImportPanel({
     if (!file) return;
     setReading(true);
     try {
-      setPreview(await readAttendanceCsv(file, rows));
+      if (file.name.toLowerCase().endsWith(".xlsx")) {
+        const workbook = await import("./attendance-xlsx");
+        setPreview(await workbook.readAttendanceXlsx(file, rows));
+      } else {
+        setPreview(await readAttendanceCsv(file, rows));
+      }
     } catch (error) {
-      setInvalidRow(error instanceof AttendanceCsvError ? error.row : 1);
+      setInvalidRow(error instanceof AttendanceImportError ? error.row : 1);
     } finally {
       setReading(false);
     }
@@ -84,7 +92,7 @@ export function AttendanceImportPanel({
         <input
           id={id}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           disabled={!online || reading || save.isPending}
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];

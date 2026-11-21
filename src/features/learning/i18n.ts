@@ -158,14 +158,14 @@ const pairs: Record<string, [string, string]> = {
     attendanceCorrectionReason: ["Begründung der Korrektur", "Reason for correction"],
     workspaceOffline: ["Verbinde dich mit dem Internet, um den aktuellen Zugriff auf den Kursarbeitsbereich zu prüfen.", "Connect to the internet to check current access to the course workspace."],
     attendanceInvalidTime: ["Diese Uhrzeit existiert nicht oder ist wegen der Zeitumstellung doppelt. Wähle eine eindeutige Uhrzeit in der Kurszeitzone.", "This time is skipped or repeated during a clock change. Choose an unambiguous time in the course’s time zone."],
-    attendanceImport: ["Anwesenheit aus CSV übernehmen", "Import attendance from CSV"],
+    attendanceImport: ["Anwesenheit aus CSV oder XLSX übernehmen", "Import attendance from CSV or XLSX"],
     attendanceImportHelp: [
-        "Nutze die CSV-Vorlage für diesen Termin. Trage present, absent oder excused ein. Leere Statuszeilen bleiben unverändert. Optionale Zeitangaben benötigen einen UTC-Offset. Korrekturen brauchen einen Grund.",
-        "Use this session’s CSV template. Enter present, absent or excused. Blank status rows remain unchanged. Optional times require a UTC offset. Corrections require a reason."
+        "Nutze die CSV-Vorlage für diesen Termin. Du kannst sie auch als XLSX mit einem Tabellenblatt speichern. Trage present, absent oder excused ein. Lass Status und Zusatzfelder leer, wenn ein Eintrag unverändert bleiben soll. Gib Zeiten als Text mit UTC-Offset ein, etwa 2026-11-20T09:20+01:00. Korrekturen brauchen einen Grund. Verwende feste Zellwerte.",
+        "Use this session’s CSV template. You can also save it as XLSX with one worksheet. Enter present, absent or excused. Leave status and optional fields blank for unchanged entries. Enter times as text with a UTC offset, such as 2026-11-20T09:20+01:00. Corrections require a reason. Use literal cell values."
     ],
     attendanceImportTemplate: ["CSV-Vorlage laden", "Download CSV template"],
-    attendanceImportFile: ["CSV-Inhalt prüfen", "Review CSV file"],
-    attendanceImportInvalid: ["CSV-Inhalt in Zeile {{row}} prüfen. Die gesamte Datei muss gültig sein.", "Check CSV row {{row}}. The full file must be valid."],
+    attendanceImportFile: ["CSV- oder XLSX-Datei prüfen", "Review CSV or XLSX file"],
+    attendanceImportInvalid: ["Prüfe Zeile {{row}} und das Dateiformat. Die gesamte Datei muss gültig sein.", "Check row {{row}} and the file format. The full file must be valid."],
     attendanceImportConfirm: ["{{count}} Änderungen verbindlich speichern", "Confirm and save {{count}} changes"],
     attendanceImportSaved: ["{{count}} Änderungen gespeichert.", "Saved {{count}} changes."],
     attendanceImportFailed: ["Änderungen konnten nicht bestätigt werden. Lade das Register neu und prüfe den Stand vor einem weiteren Import.", "The changes could not be confirmed. Reload the register and verify its state before another import."],
