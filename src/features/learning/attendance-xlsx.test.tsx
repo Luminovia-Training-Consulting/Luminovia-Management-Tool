@@ -1,5 +1,9 @@
 /** Exercises real OOXML archive parsing and the register's explicit confirmation boundary. */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
@@ -94,6 +98,7 @@ async function workbook(
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   rpc.mockReset();
 });
 
@@ -153,6 +158,14 @@ it.each([
 });
 
 it("reviews the XLSX without uploading it, then submits only current versioned rows on confirmation", async () => {
+  // Exercise a click before the mutation observer receives the preview render's
+  // options in its passive effect. The committed button owns the reviewed rows.
+  const setOptions = MutationObserver.prototype.setOptions;
+  vi.spyOn(MutationObserver.prototype, "setOptions").mockImplementation(
+    function (this: MutationObserver, options) {
+      if (!this.options) setOptions.call(this, options);
+    },
+  );
   const onSaved = vi.fn(async () => {});
   rpc.mockResolvedValue({ data: { saved: 1 }, error: null });
   const client = new QueryClient();

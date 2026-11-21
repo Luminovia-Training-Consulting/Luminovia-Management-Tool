@@ -13,6 +13,13 @@ import {
   readAttendanceCsv,
 } from "./attendance-import";
 
+/** Bind the confirmed preview to the selected course and session in one request. */
+type AttendanceImportRequest = {
+  p_run_id: string;
+  p_session_id: string;
+  p_rows: Awaited<ReturnType<typeof readAttendanceCsv>>;
+};
+
 /** Keep workbook bytes local and submit only confirmed, versioned register rows online. */
 export function AttendanceImportPanel({
   run,
@@ -28,23 +35,18 @@ export function AttendanceImportPanel({
   const { t } = useTranslation("learning");
   const id = useId();
   const online = useOnline();
-  const [preview, setPreview] =
-    useState<Awaited<ReturnType<typeof readAttendanceCsv>>>();
+  const [preview, setPreview] = useState<AttendanceImportRequest["p_rows"]>();
   const [invalidRow, setInvalidRow] = useState<number>();
   const [reading, setReading] = useState(false);
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (confirmed: AttendanceImportRequest) => {
       requireOnline();
-      if (!preview?.length) throw new Error("attendance_import_empty");
+      if (!confirmed.p_rows.length) throw new Error("attendance_import_empty");
       const { data, error } = await db().rpc(
         "import_course_session_attendance",
-        {
-          p_run_id: run,
-          p_session_id: session,
-          p_rows: preview,
-        },
+        confirmed,
       );
-      if (error || data?.saved !== preview.length)
+      if (error || data?.saved !== confirmed.p_rows.length)
         throw new Error("attendance_import_unconfirmed");
       return Number(data.saved);
     },
@@ -125,7 +127,13 @@ export function AttendanceImportPanel({
           <Button
             type="button"
             disabled={!online || save.isPending || save.isError}
-            onClick={() => save.mutate()}
+            onClick={() =>
+              save.mutate({
+                p_run_id: run,
+                p_session_id: session,
+                p_rows: preview,
+              })
+            }
           >
             {t("attendanceImportConfirm", { count: preview.length })}
           </Button>
