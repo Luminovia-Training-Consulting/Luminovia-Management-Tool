@@ -30,6 +30,7 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
       delete from public.course_runs where id=${q(run)};
       delete from public.course_templates where id=${q(template)};
       delete from public.organisation_contacts where organisation_id=${q(org)};
+      delete from private.company_premium_audit where organisation_id=${q(org)};
       delete from public.organisations where id=${q(org)};
       update public.documents set current_version_id=null where id=${q(doc)};
       delete from public.document_versions where document_id=${q(doc)};
@@ -81,6 +82,16 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
     await sql(
         `insert into private.course_workspace_settings(run_id,contact_id)values(${q(run)},${q(contact)});insert into private.course_preparation_items(run_id,label,done)values(${q(run)},'Shared checklist complete',true),(${q(run)},'Shared checklist pending',false);insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)values(${q(doc)},${q(peer.id)},${q(peer.id)},'personal','material','Agreed V1.pdf','application/pdf',10,'clean',${q(randomUUID())});insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)values(${q(version)},${q(doc)},${q(peer.id)},${q(randomUUID())},1,${q("fictional/" + version)},'Agreed V1.pdf','application/pdf',10,'clean',${q("a".repeat(64))});update public.documents set current_version_id=${q(version)} where id=${q(doc)};insert into private.course_resources(id,run_id,version_id,audience,category,created_by)values(${q(resource)},${q(run)},${q(version)},'staff','material',${q(peer.id)});`,
     );
+    const withoutPremium = await checked(owner.client.rpc("teaching_day"));
+    assert.equal(withoutPremium.sessions.length, 1);
+    assert.equal(withoutPremium.sessions[0].id, session);
+    assert.deepEqual(withoutPremium.sessions[0].course_resources, []);
+    await checked(admin.client.rpc("set_company_premium", {
+        p_organisation_id: org,
+        p_enabled: true,
+        p_expected_version: 0,
+        p_request_id: randomUUID(),
+    }), "Enable materials for the exact fictional company");
     const today = await checked(owner.client.rpc("teaching_day"));
     assert.equal(today.sessions.length, 1);
     assert.equal(today.sessions[0].course_run_id, run);

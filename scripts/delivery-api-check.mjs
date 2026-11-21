@@ -147,7 +147,10 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         p_session_id: session,
     });
     assert.equal(history.submissions.length, 2);
-    assert.equal(history.submissions[1].actual_end, "2001-01-01T09:30:00+00:00");
+    assert.equal(
+        Date.parse(history.submissions[1].actual_end),
+        Date.parse(args.p_payload.actual_end),
+    );
     assert.ok(history.events.some((e) => e.action === "customer_confirmed"));
     assert.equal(
         (await customer.client.rpc("delivery_history", {p_session_id: session}))
