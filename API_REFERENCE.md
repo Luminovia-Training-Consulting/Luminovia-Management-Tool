@@ -8,6 +8,14 @@ deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance
 
 ## Base URLs and authentication
 
+Open `/api/docs` while signed in to browse the current interactive OpenAPI contract.
+The explorer starts with requests disabled. Authorizing it uses the signed-in account's
+current short-lived access token and the configured publishable key in request headers.
+Copyable Swagger commands leave out the injected credentials. Download the contract
+from `/api/openapi.json`. The document covers the account facade and the named Premium
+LMS operations. The broader catalogue below remains the reference for native RPCs that
+do not yet have a typed OpenAPI contract.
+
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses `http://127.0.0.1:54321`; a selfhost gateway can expose the API beneath `/backend`. Read `VITE_SUPABASE_URL` from the approved environment rather than hard-coding a deployment hostname.
 
 Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA is disabled. Authenticated API requests carry the public `apikey` and `Authorization: Bearer <user-access-token>`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.

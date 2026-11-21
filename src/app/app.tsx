@@ -59,6 +59,11 @@ const AdminMailPage = lazy(() =>
         default: module.AdminMailPage,
     })),
 );
+const ApiExplorer = lazy(() =>
+    import("../features/developer-api/explorer").then((module) => ({
+        default: module.ApiExplorer,
+    })),
+);
 const DemoPage = lazy(() =>
     import("../features/demo/demo").then((module) => ({
         default: module.DemoPage,
@@ -308,6 +313,7 @@ export function App() {
                             <Route path="notifications" element={<NotificationsPage/>}/>
                             <Route path="announcements" element={<AnnouncementsPage/>}/>
                             <Route path="settings" element={<SettingsPage/>}/>
+                            <Route path="api/docs" element={<ApiExplorer/>}/>
                             <Route path="topics" element={<TaxonomyPage/>}/>
                             <Route
                                 path="availability"

@@ -177,6 +177,11 @@ export function HelpCenter({embedded = false}: { embedded?: boolean }) {
                     <h1 id="help-title">{text(labels.title)}</h1>
                     <p>{text(labels.subtitle)}</p>
                     <div className="help-actions">
+                        <Button asChild variant="secondary">
+                            <Link to="/api/docs">
+                                {i18n.language.startsWith("de") ? "API-Dokumentation" : "API documentation"}
+                            </Link>
+                        </Button>
                         <Button asChild>
                             <Link to="/demo">
                                 {text(labels.demo)}

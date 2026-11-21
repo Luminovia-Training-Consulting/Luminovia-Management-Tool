@@ -1,3 +1,7 @@
+# 21 November 2026 — requested roadmap implementation
+
+Started from `main` at `e6a47f1b`. The API documentation block adds a signed-in Swagger explorer and an OpenAPI 3.1 download served by the development server and included in the production build. It reuses the account facade contract and adds the scoped participant directory, participant-link request, company entitlement and course entitlement RPCs. Broader typed business coverage, integration credentials and webhooks remain open. Eight focused contract/session tests passed and the production build completed. The native browser journey is part of the existing Playwright suite. Local Docker could not start because its IPv4 NAT setup failed, so end-to-end tests against the full Supabase stack are pending.
+
 # 18 November 2026 — direct-main CI continuation
 
 Merged the verified calendar recurrence-window and exact existing-deadline fixes from `codex/bug-hunt-current-main-20261117` directly into `main` as merge commit `427de191`; retained the newer `main` worklog/plan during the documentation conflict. The focused calendar, lifecycle and date suites passed 27/27. A second stale remote bug-hunt branch had no additional source changes beyond that calendar fix, so it was not merged wholesale.
