@@ -24,6 +24,7 @@ const resultSchema = z.object({
   kind: z.enum(searchKinds),
   title: z.string(),
   detail: z.string(),
+  // eslint-disable-next-line no-control-regex -- Reject control characters in server-generated navigation targets.
   url: z.string().regex(/^\/(?!\/)[^\u0000-\u0020\u007f\\]*$/),
 });
 export const unifiedSearchPageSchema = z
