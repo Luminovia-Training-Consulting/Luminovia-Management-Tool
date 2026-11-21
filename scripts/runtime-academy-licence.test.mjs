@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import test from "node:test";
+import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import {
   signAcademyLicence,
   verifyAcademyLicence,
@@ -85,4 +86,42 @@ test("expiry and grace return states and never mutate the signed limits", () => 
       verifyAcademyLicence(envelope, vendor.publicKey, terms, time),
       { state, terms },
     );
+});
+
+test("first administrator setup requires a UUID and the exact database receipt", async () => {
+  const administrator = randomUUID();
+  const options = {
+    envelope: signAcademyLicence(terms, vendor.privateKey),
+    publicKey: vendor.publicKey,
+    expected: terms,
+    now: Date.parse(terms.starts_at),
+  };
+  const dbState = {
+    installation_id: terms.installation_id,
+    edition: terms.edition,
+    licence_status: "active",
+    customer_ready: false,
+  };
+  const prepare = (firstAdministrator, executeSql) =>
+    prepareAcademyInstallation({ ...options, firstAdministrator }, executeSql);
+  await assert.rejects(
+    prepare("not an Auth UUID", () =>
+      assert.fail("invalid inputs must not reach the database"),
+    ),
+    /administrator_id_invalid/,
+  );
+  await assert.rejects(
+    prepare(administrator, () => JSON.stringify(dbState)),
+    /confirmation_failed/,
+  );
+  const expected = { ...dbState, first_administrator: administrator };
+  assert.deepEqual(
+    await prepare(administrator.toUpperCase(), (sql) => {
+      assert.match(sql, /private\.bootstrap_academy_first_administrator/);
+      assert.ok(sql.includes(administrator));
+      assert.ok(sql.includes(terms.release_commit));
+      return JSON.stringify(expected);
+    }),
+    expected,
+  );
 });
