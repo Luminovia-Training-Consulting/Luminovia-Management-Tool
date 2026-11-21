@@ -6,8 +6,9 @@ test.skip(
   "Use the isolated portal stack.",
 );
 
-/** Bind the Swagger expand control to its method and unbroken documented path. */
-function operation(page: Page, method: "get" | "post", path: string) {
+/** Filter before selecting so Swagger renders the requested virtualized row. */
+async function operation(page: Page, method: "get" | "post", path: string) {
+  await page.getByPlaceholder("Filter by tag or path").fill(path);
   return page.locator(`.opblock-${method} .opblock-summary-control`).filter({
     has: page.locator(`[data-path="${path}"]`),
   });
@@ -37,15 +38,15 @@ test("the API explorer executes a documented read only after authorization", asy
   await expect(
     page.getByRole("heading", { name: "API-Dokumentation" }),
   ).toBeVisible();
-  const readOperation = operation(page, "get", "/functions/v1/accounts/v1/me");
-  await readOperation.click();
+  const accountPath = "/functions/v1/accounts/v1/me";
+  await (await operation(page, "get", accountPath)).click();
   await expect(
     page.getByRole("button", { name: "Try it out", exact: true }),
   ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
-  await readOperation.click();
+  await (await operation(page, "get", accountPath)).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const response = page.waitForResponse(
     (item) =>
@@ -64,7 +65,7 @@ test("the API explorer executes a documented read only after authorization", asy
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
-  await operation(page, "post", "/rest/v1/rpc/portal_access").click();
+  await (await operation(page, "post", "/rest/v1/rpc/portal_access")).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const nativeRead = page.waitForResponse(
     (item) =>
@@ -92,7 +93,7 @@ test("an authenticated participant can run an own-account RPC through the API ex
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
-  await operation(page, "post", "/rest/v1/rpc/account_username").click();
+  await (await operation(page, "post", "/rest/v1/rpc/account_username")).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const response = page.waitForResponse(
     (item) =>
