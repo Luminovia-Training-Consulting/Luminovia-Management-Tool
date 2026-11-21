@@ -1,3 +1,9 @@
+# 21 November 2026 — Signed API allowance and private database target
+
+The dedicated ingress profile translates the signed per-installation API allowance into a local Envoy bucket. Browser files and internal health, Auth and database communication remain outside that public quota. The image-pinned Caddy 2.11.9 and Envoy 1.40.2 accepted the same check for both exact compiled `74f23362` browser releases. All 102 static files per edition matched their signed SHA-256. With a 75-request fictional licence the next public API request returned HTTP 429 and `Retry-After`, while the browser shell and maintenance fence stayed reachable.
+
+The database operator command targets the staged installation's own private Compose database by its reviewed identity and exact release. The command boundary plus real PostgreSQL verified both editions, including refusal before the Auth actor exists, creation of exactly one administrator and reversible course profile activation. The PostgreSQL witness replaced Docker transport with the owned local database runner. The full fresh Compose service startup is still pending. Local source checks passed 1,229 unit tests, lint, formatting, TypeScript, coverage and production build. The personal settings read guard passed both dedicated SQL suites and strict schema checks without findings.
+
 # 21 November 2026 — Independent academy runtime and signed first install
 
 The dedicated installer creates an isolated academy runtime for its own HTTPS origin with a same-origin API, independent keys and namespaced Compose/network/storage. The private default topology exposes no host ports. Caddy ingress and the capture mailbox are separate profiles. Re-initialization preserves existing configuration and data.

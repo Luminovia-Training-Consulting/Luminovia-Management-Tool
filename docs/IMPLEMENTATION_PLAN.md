@@ -52,7 +52,8 @@
 - [x] Provide an academy user's own versioned username and persistent language/theme preferences. Both editions passed real alias and email login with the same Auth identity.
 - [x] Mount the exact branded API catalogue and the protected Swagger RPC profile. Verify real same-backend learner calls, opt-out and desktop/mobile geometry in both editions.
 - [x] Exercise native branded PWA installability diagnostics, offline API refusal, account cleanup and read-state persistence in both editions. Physical device installation remains pending.
-- [ ] Pair an independently generated customer runtime with the exact signed release, then exercise first-admin setup, TLS/domain, delivery and an upgrade with retained data in disposable infrastructure.
+- [x] Pair two independently generated academy runtimes with their exact signed releases. Verify staging, first-admin SQL, local TLS and the signed public API allowance.
+- [ ] Exercise full isolated Compose boot, provider TLS/domain, customer mail and a complete upgrade with retained data on the dedicated target.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Lecturer materials and classroom links

@@ -42,13 +42,13 @@ The product must be **customer branded end to end**, use an authentic course/par
 **Audit evidence / implementation starting points:** [`README.md`](README.md), [`ROADMAP.md`](ROADMAP.md), [`PRODUCT.md`](PRODUCT.md), [`API_REFERENCE.md`](API_REFERENCE.md), [`AGENTS.md`](AGENTS.md), [`src/app/shell.tsx`](src/app/shell.tsx), [`src/app/app.tsx`](src/app/app.tsx), [`src/features/learning/`](src/features/learning/), [`supabase/functions/accounts/openapi.ts`](supabase/functions/accounts/openapi.ts), [`vite.config.ts`](vite.config.ts), [
 `deploy/hostinger/selfhost/generate-env.mjs`](deploy/hostinger/selfhost/generate-env.mjs), [`deploy/hostinger/updates/package.mjs`](deploy/hostinger/updates/package.mjs), [`deploy/hostinger/updates/updater.py`](deploy/hostinger/updates/updater.py), [`deploy/hostinger/backups/README.md`](deploy/hostinger/backups/README.md), [`LICENSE`](LICENSE).
 
-**Observed concrete hard-codings requiring review:** the current shell uses Luminovia imagery/name; the Vite PWA manifest has Luminovia-specific names/icons; self-host development instance metadata is tied to `cms.luminovia.org`; and the current release builder validates a CMS-specific API URL. These are expected to change or gain installation-specific configuration for commercial builds. Their presence does **not** imply white-label source is already implemented.
+### Current white-label implementation
 
-### Current White-Label source checkpoint
+Both dedicated editions use validated customer branding in the shell, PWA assets and API documentation. A server-verified identity and signed licence bind the browser, database and enrolled customer to the exact release. The installer gives each academy its own domain, keys, database, storage, mail configuration and network. The internal edition continues to use its original packaging and commercial workflows. [Installation runbook](deploy/academy/README.md)
 
-The customer build consumes operator-provided, validated brand assets and verifies installation capability claims before rendering protected routes. The dedicated identity and signed licence are bound to the same installation and exact release. The offline operator command prepares only an empty dedicated database or retries the same installation. Local instructor allocation and release reuse the scheduling and course-access records. The browser archive carries a verified static inventory. The customer runtime remains gated pending the complete release workflow and transport acceptance. [Current results](docs/WORKLOG.md)
+Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
 
-The dedicated editions have a release-bound course-access profile for acceptance. An operator command enables it for the exact installation and active licence. It covers scoped course reads, branded course draft creation with scheduled sessions and a reused or new local template, direct instructor assignment, participant enrolment, versioned course welcome content and meeting-link editing. Grace permits reads and expiry denies course access. The operator can bootstrap the first confirmed Auth administrator on the licensed installation. Branded browser releases have offline signature verification for the exact archive, manifest and installation licence. The licensed profile also supports course text chat and exact scanned course material downloads, with native PostgreSQL and HTTP evidence. A pinned native WebSocket verifies current room marker delivery and revocation. The branded browser opens the verified course profile through the normal sign-in page. An assigned lecturer can upload a course material and publish the exact clean version for a selected course audience. Both editions passed that journey with pinned Storage and ClamAV and denied further access after the profile was closed. Both editions have a limited manual attendance register and a versioned exam-required decision, with role-scoped Chromium or native HTTP evidence. The branded API catalogue includes the draft, upload, publication, register and exam-decision commands. Full academy administration, exam documents, chat attachments and customer operations remain in acceptance. The remaining commercial workflows are listed in Sections 4–10 and 13–15.
+Release gates still cover the complete target installation, public domain/TLS, SMTP and dedicated delivery, migration and recovery of retained customer data, operational handoff and commercial fulfilment. The acceptance matrix below tracks those separately.
 
 ## 1. Product editions and packaging
 
@@ -274,14 +274,14 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-01 — Edition & capabilities foundation (P0 for white-label)
 
-- [ ] Add trusted installation identity and customer edition/license capabilities. Internal per-company Premium switch remains internal; white-label LMS always included.
+- [x] Add trusted installation identity and customer edition/license capabilities. Internal per-company Premium switch remains internal; white-label LMS always included.
 - [ ] Introduce immutable resource/role/business edition gates across UI, RPC, Edge, Storage, search, Realtime and notifications; independent data/finance boundaries.
 - [ ] Convert existing internal marketplace/contract/commission dependencies into optional edition modules; preserve original internal behaviour.
 
 ### WL-02 — Customer admin and normal academy workflow (P0)
 
-- [ ] Customer installation administrator and delegated manager, teacher, participant role model; first admin invite/create safely.
-- [ ] Make course creation, own lecturer assignment, participant enrolment and LMS operation completely independent from Luminovia intermediary marketplace and accepted-pay contracts.
+- [x] Customer installation administrator and delegated manager, teacher and participant roles. The signed operator path binds a confirmed first administrator in the dedicated database.
+- [x] Course creation, scheduling, own lecturer assignment, participant enrolment and daily LMS operations run through the dedicated academy without a marketplace or intermediary contract.
 - [ ] Provide optional customer-owned instructor payment module that can be switched off without breaking courses.
 
 ### WL-03 — Branding, domains & welcome (P0)
@@ -292,13 +292,13 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-04 — Full API, username login and Swagger (P0)
 
-- [ ] Implement username OR verified email + password login under one Auth identity; 8-character minimum and safe token flow.
+- [x] Username or verified email with password sign-in resolves to the same Auth identity. Both editions passed native sign-in, alias edits and private account settings.
 - [ ] Complete supported API operation catalogue, versioning, precise OpenAPI, Swagger UI, file/realtime/notification integration and safe developer sandbox.
 - [ ] Provide local integration identities, scoped keys, rotation/revocation, signed webhooks and replay/idempotency management.
 
 ### WL-05 — Self-hosted installation & update lifecycle (P0)
 
-- [x] Customer-neutral runtime configuration and secret generation, independently scoped Compose and storage, explicit ingress and first-install staging of the exact signed licensed browser. Both built editions passed the isolated CLI and pinned Caddy TLS checks. [Installation runbook](deploy/academy/README.md)
+- [x] Customer-neutral runtime configuration and secret generation, independently scoped Compose and storage, explicit ingress and first-install staging of the exact signed licensed browser. Both built editions passed the isolated CLI, pinned Caddy/Envoy TLS and signed API allowance checks. [Installation runbook](deploy/academy/README.md)
 - [ ] Independent full-stack startup and health confirmation, issuer-to-operator onboarding, DNS and ACME, SMTP delivery, upgrade/reinstallation with retained data and complete encrypted backup/restore.
 - [ ] Version inventory, support diagnostics, security/maintenance policy, explicit rollbacks and recovery runbook.
 
