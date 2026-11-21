@@ -44,6 +44,7 @@ const REQUIRED_FILES = [
     "deploy/hostinger/backups/extension-recovery.json",
 ];
 const OPTIONAL_FILES = [
+    "deploy/hostinger/reset-live.py",
     PG_PROOF,
     "deploy/hostinger/backups/luminovia-complete-backup.service",
     "deploy/hostinger/backups/luminovia-complete-backup.timer",

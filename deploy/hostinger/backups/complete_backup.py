@@ -302,7 +302,11 @@ class CompleteBackup:
             names = run(["docker", "ps", "-a", "--filter", "label=com.docker.compose.project=" + project, "--format", "{{.Names}}"]).decode().splitlines()
             rows = json.loads(run(["docker", "inspect", *names])) if names else []
             actual = {row["Config"]["Labels"]["com.docker.compose.service"] for row in rows}
-            if actual != expected:
+            if project == "luminovia-supabase" and "mail-relay" in actual:
+                config = self.root / "source/deploy/hostinger/selfhost/compose.yml"
+                if config.is_file() and not config.is_symlink() and re.search(r"(?m)^  mail-relay:\s*$", config.read_text()):
+                    expected = {*expected, "mail-relay"}
+            if actual != expected or len(rows) != len(expected):
                 raise BackupError("unreviewed_service_inventory")
             containers.extend(rows)
         self.containers = containers
@@ -447,7 +451,7 @@ class CompleteBackup:
         failures = []
         # Scanner/mail before Auth; all were running before the backup. Start
         # batches by dependency order and wait for existing healthcheck contracts.
-        order = ["clamav", "mailpit", "auth", "rest", "realtime", "storage", "api-gw", "functions", "web"]
+        order = ["clamav", "mailpit", "mail-relay", "auth", "rest", "realtime", "storage", "api-gw", "functions", "web"]
         for service in order:
             name = next((n for n in self.stopped if n.endswith("-" + service + "-1")), None)
             if name:

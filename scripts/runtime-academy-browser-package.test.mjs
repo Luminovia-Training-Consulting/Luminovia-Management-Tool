@@ -1141,6 +1141,98 @@ test("with concurrent first installers one exact release wins atomically", async
   );
 });
 
+test("an explicit signed replacement retains previous browser bytes and never writes runtime data", async (t) => {
+  const { root, browser, dist, inputs, issuer, signer, terms, file } =
+    await installFixture(t);
+  const originalReceipt = await installAcademyBrowser(inputs);
+  const originalAsset = readFileSync(join(browser, runtimePath));
+  const serverEnv = join(root, "runtime.env");
+  const originalEnv = readFileSync(serverEnv);
+  const databaseWitness = join(root, "data", "fixture-data");
+  writeFileSync(databaseWitness, "retained academy records");
+  const revision = "c".repeat(40);
+  const candidate = join(dirname(dist), "candidate");
+  file(runtimePath, originalAsset.toString() + "\n// second signed release");
+  await writeAcademyBrowserPackage({
+    dist,
+    output: candidate,
+    metadata: { ...metadata, sourceRevision: revision },
+  });
+  const nextLicence = signAcademyLicence(
+    {
+      ...terms,
+      release_commit: revision,
+      issued_at: new Date(inputs.now - 86_400_001).toISOString(),
+    },
+    issuer.privateKey,
+  );
+  const signature = await signAcademyBrowserRelease({
+    directory: candidate,
+    licence: nextLicence,
+    licencePublicKey: issuer.publicKey,
+    releasePrivateKey: signer.privateKey,
+    now: inputs.now,
+  });
+  const replacement = {
+    ...inputs,
+    directory: candidate,
+    signature,
+    licence: nextLicence,
+    config: { ...inputs.config, release_commit: revision },
+    replaceRevision: metadata.sourceRevision,
+  };
+  const stillRunning = () => {
+    throw new Error("ingress running");
+  };
+  await assert.rejects(
+    installAcademyBrowser(replacement, stillRunning),
+    /ingress running/,
+  );
+  await assert.rejects(
+    installAcademyBrowser(
+      {
+        ...replacement,
+        replaceRevision: "f".repeat(40),
+      },
+      () => assert.fail("stale revisions cannot reach the ingress check"),
+    ),
+    /academy_install_replacement_revision/,
+  );
+  assert.deepEqual(readFileSync(join(browser, runtimePath)), originalAsset);
+  const check = (actualRoot, project) => {
+    assert.equal(actualRoot, root);
+    assert.equal(project, inputs.config.compose_project);
+  };
+  const receipt = await installAcademyBrowser(replacement, check);
+  assert.equal(receipt.release.source_revision, revision);
+  assert.equal(receipt.customer_ready, false);
+  assert.match(
+    readFileSync(join(browser, runtimePath), "utf8"),
+    /second signed release/,
+  );
+  assert.deepEqual(readFileSync(serverEnv), originalEnv);
+  assert.equal(
+    readFileSync(databaseWitness, "utf8"),
+    "retained academy records",
+  );
+  const previous = readdirSync(root).filter((name) =>
+    name.startsWith(".browser-previous-"),
+  );
+  assert.equal(previous.length, 1);
+  assert.deepEqual(
+    readFileSync(join(root, previous[0], runtimePath)),
+    originalAsset,
+  );
+  assert.deepEqual(
+    JSON.parse(readFileSync(join(root, previous[0], "release.json"))),
+    originalReceipt,
+  );
+  await assert.rejects(
+    installAcademyBrowser(replacement, check),
+    /academy_install_replacement_revision/,
+  );
+});
+
 test("points database bootstrap only at the matching private staged Compose project", async (t) => {
   const { root, inputs, expected } = await installFixture(t);
   await assert.rejects(academyDatabaseComposeArguments(root, expected), {

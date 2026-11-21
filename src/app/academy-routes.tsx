@@ -32,7 +32,8 @@ import { LearningHubPage } from "../features/learning/course-hub";
 import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
-import { installationBrand } from "../lib/installation-brand";
+import { AcademyBrandProvider } from "../features/branding/academy-brand-provider";
+import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
 import { db, isConfigured } from "../lib/supabase";
 import "./academy-routes.css";
@@ -94,6 +95,7 @@ function AcademySession() {
 }
 
 function AcademyCourseProfile() {
+  const brand = useAcademyBrand();
   const { session } = useAuth();
   const { t, i18n } = useTranslation();
   if (!session) return null;
@@ -106,8 +108,8 @@ function AcademyCourseProfile() {
           </a>
           <header className="academy-header">
             <Link to="/learning" className="academy-brand">
-              <img src={installationBrand.mark} alt="" />
-              <span>{installationBrand.name}</span>
+              <img src={brand.mark} alt="" />
+              <span>{brand.name}</span>
             </Link>
             <div className="academy-header-actions">
               <AcademyTimetableLink />
@@ -214,42 +216,47 @@ function AcademyTimetableRoute() {
 
 export function AcademyRoutes() {
   return (
-    <Routes>
-      <Route path="/login" element={<AcademyLogin />} />
-      <Route path="/help" element={<HelpCenter />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route element={<AcademySession />}>
-        <Route
-          path="/auth/password"
-          element={
-            <div className="academy-main">
-              <PasswordRecovery />
-            </div>
-          }
-        />
-        <Route element={<AcademyCourseProfile />}>
-          <Route index element={<Navigate to="/learning" replace />} />
-          <Route path="/learning" element={<AcademyCourseHub />} />
+    <AcademyBrandProvider>
+      <Routes>
+        <Route path="/login" element={<AcademyLogin />} />
+        <Route path="/help" element={<HelpCenter />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route element={<AcademySession />}>
           <Route
-            path="/administration"
-            element={<AcademyAdministrationPage />}
+            path="/auth/password"
+            element={
+              <div className="academy-main">
+                <PasswordRecovery />
+              </div>
+            }
           />
-          <Route
-            path="/administration/mail"
-            element={<AcademyMailSettings />}
-          />
-          <Route path="/notifications" element={<AcademyInbox />} />
-          <Route path="/timetable" element={<AcademyTimetableRoute />} />
-          <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
-          <Route path="/api/docs" element={<AcademyApiExplorer />} />
-          <Route
-            path="/courses"
-            element={<Navigate to="/learning" replace />}
-          />
-          <Route path="/courses/:id/workspace" element={<AcademyWorkspace />} />
+          <Route element={<AcademyCourseProfile />}>
+            <Route index element={<Navigate to="/learning" replace />} />
+            <Route path="/learning" element={<AcademyCourseHub />} />
+            <Route
+              path="/administration"
+              element={<AcademyAdministrationPage />}
+            />
+            <Route
+              path="/administration/mail"
+              element={<AcademyMailSettings />}
+            />
+            <Route path="/notifications" element={<AcademyInbox />} />
+            <Route path="/timetable" element={<AcademyTimetableRoute />} />
+            <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
+            <Route path="/api/docs" element={<AcademyApiExplorer />} />
+            <Route
+              path="/courses"
+              element={<Navigate to="/learning" replace />}
+            />
+            <Route
+              path="/courses/:id/workspace"
+              element={<AcademyWorkspace />}
+            />
+          </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<AcademyNotFound />} />
-    </Routes>
+        <Route path="*" element={<AcademyNotFound />} />
+      </Routes>
+    </AcademyBrandProvider>
   );
 }

@@ -1,3 +1,9 @@
+# 21 November 2026 — Installation release and recovery work
+
+The active Hostinger CMS had 18 applied migrations. All 18 matched the current migration source bytes. The deployment controller now accepts the exact mail-relay source path and reconciles the stateless relay on promotion and rollback. The complete-backup controller recognises the relay and restores it before Auth. A migrated CMS with private capture enabled sends Auth messages to Mailpit until an administrator enables a saved external SMTP configuration. The VPS verified the Hostinger SMTP peer certificate over TLS.
+
+The CMS reset command requires host root, a fresh native administrator TOTP session, interactive site confirmation and a verified encrypted backup. Disposable tests exercise all three data directories, clean startup, rollback and unsafe mount denial. The live data has not been reset. An independent academy recovery exercise restored the original learner sign-in, enrolment and exact Storage bytes from an encrypted backup into a separate PostgreSQL and Storage runtime.
+
 # 21 November 2026 — Explicit account roles and scope
 
 The internal portal and both dedicated academies support assigning multiple roles to one account. Organisation membership, lecturer assignments and learner enrolment are separate grants. The interface and database require an explicit lecturer or senior lecturer role to accept an internal teaching assignment or submit an own lecturer invoice. Management can coordinate assignments. Company actions use the exact company membership. Participants use their own enrolled courses.

@@ -202,6 +202,15 @@ class ArchiveTests(unittest.TestCase):
             with self.assertRaisesRegex(u.UpdateError, "archive_hash"):
                 u.unpack_verified(archive, bad, Path(directory) / "archive-out")
 
+    def test_package_binds_only_the_known_external_relay_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            extra = {"scripts/mail-relay.py": b"print('fictional relay fixture')"}
+            archive, manifest, _ = fixture(directory, extra=extra)
+            output = Path(directory) / "verified"
+            u.unpack_verified(archive, manifest, output)
+            self.assertEqual((output / "scripts/mail-relay.py").read_bytes(), extra["scripts/mail-relay.py"])
+            self.assertFalse(u.allowed_path("scripts/another-relay.py"))
+
     def test_wrong_build_key_and_postgres_major_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             _, manifest, _ = fixture(directory)

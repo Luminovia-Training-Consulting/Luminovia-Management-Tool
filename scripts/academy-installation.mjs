@@ -8,7 +8,13 @@ import { lstatSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseEnv } from "node:util";
+import { requireStoppedAcademyIngress } from "./academy-install-browser.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
+import {
+  academyMigrationsScript,
+  loadAcademyMigrations,
+} from "./academy-migrations.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 
 const sqlText = (value) => "'" + String(value).replaceAll("'", "''") + "'";
@@ -112,12 +118,18 @@ export async function academyDatabaseComposeArguments(root, expected) {
   const browser = join(root, "browser");
   if (realpathSync(browser) !== browser)
     throw new Error("academy_database_runtime_path");
-  const [identity, receipt] = await Promise.all(
-    [join(root, "installation.json"), join(browser, "release.json")].map(
-      async (path) =>
-        JSON.parse((await readAcademyOperatorInput(path)).toString("utf8")),
+  const [identityText, receiptText, environmentText] = await Promise.all(
+    [
+      join(root, "installation.json"),
+      join(browser, "release.json"),
+      join(root, "runtime.env"),
+    ].map(async (path) =>
+      (await readAcademyOperatorInput(path)).toString("utf8"),
     ),
   );
+  const identity = JSON.parse(identityText);
+  const receipt = JSON.parse(receiptText);
+  const environment = parseEnv(environmentText);
   const project = "academy-" + expected.installation_id.replaceAll("-", "");
   if (
     identity.version !== 1 ||
@@ -125,6 +137,14 @@ export async function academyDatabaseComposeArguments(root, expected) {
     identity.edition !== expected.edition ||
     identity.compose_project !== project ||
     identity.browser_directory !== browser ||
+    identity.data_directory !== join(root, "data") ||
+    environment.COMPOSE_PROJECT_NAME !== project ||
+    environment.ACADEMY_INSTALLATION_ID !== expected.installation_id ||
+    environment.ACADEMY_EDITION !== expected.edition ||
+    environment.PORTAL_BACKEND_NETWORK !== project + "-backend" ||
+    environment.PORTAL_DATA_DIR !== identity.data_directory ||
+    environment.PORTAL_WWW_DIR !== identity.browser_directory ||
+    environment.POSTGRES_DB !== "postgres" ||
     receipt.version !== 1 ||
     receipt.state !== "browser-staged" ||
     receipt.release?.installation_id !== expected.installation_id ||
@@ -159,7 +179,7 @@ export async function academyDatabaseComposeArguments(root, expected) {
 }
 
 /** Always use an explicit private libpq target or the staged Compose project. */
-async function operatorSql(expected) {
+async function operatorSql(expected, timeout = 30000) {
   const root = process.env.PORTAL_ACADEMY_RUNTIME_ROOT;
   const privateLibpq =
     process.env.PGSERVICE || (process.env.PGHOST && process.env.PGDATABASE);
@@ -176,8 +196,8 @@ async function operatorSql(expected) {
       {
         input: sql,
         encoding: "utf8",
-        timeout: 30000,
-        maxBuffer: 65536,
+        timeout,
+        maxBuffer: 4 * 1024 * 1024,
         env: root ? { PATH: process.env.PATH } : process.env,
       },
     );
@@ -185,6 +205,62 @@ async function operatorSql(expected) {
       throw new Error("academy_installation_database_rejected");
     return result.stdout;
   };
+}
+
+async function migrateAcademyInstallation(input) {
+  if (!process.env.PORTAL_ACADEMY_RUNTIME_ROOT)
+    throw new Error("academy_migration_requires_private_compose_runtime");
+  const { state, terms } = verifyAcademyLicence(
+    input.envelope,
+    input.publicKey,
+    input.expected,
+  );
+  if (state !== "active") throw new Error("academy_licence_is_not_active");
+  const checkout = fileURLToPath(new URL("../", import.meta.url));
+  const git = (args) => {
+    const result = spawnSync("git", ["-C", checkout, ...args], {
+      encoding: "utf8",
+      timeout: 10000,
+      env: { PATH: process.env.PATH },
+    });
+    if (result.status !== 0) throw new Error("academy_migration_checkout");
+    return result.stdout.trim();
+  };
+  if (
+    git(["rev-parse", "HEAD"]) !== terms.release_commit ||
+    git([
+      "status",
+      "--porcelain",
+      "--untracked-files=all",
+      "--",
+      "supabase/migrations",
+      "deploy/academy",
+      "deploy/hostinger/selfhost",
+      "scripts/academy-installation.mjs",
+      "scripts/academy-migrations.mjs",
+    ])
+  )
+    throw new Error("academy_migration_release_checkout");
+  const migrations = await loadAcademyMigrations();
+  const executeSql = await operatorSql(input.expected, 10 * 60 * 1000);
+  requireStoppedAcademyIngress(
+    process.env.PORTAL_ACADEMY_RUNTIME_ROOT,
+    "academy-" + terms.installation_id.replaceAll("-", ""),
+  );
+  const output = executeSql(
+    academyMigrationsScript({
+      installationId: terms.installation_id,
+      edition: terms.edition,
+      migrations,
+    }),
+  );
+  const receipt = JSON.parse(output.trim().split("\n").at(-1));
+  if (
+    receipt.migration_count !== migrations.length ||
+    receipt.last_version !== migrations.at(-1).version
+  )
+    throw new Error("academy_migration_receipt");
+  return receipt;
 }
 
 if (
@@ -196,6 +272,7 @@ if (
       process.argv.slice(2);
     const [option, value] = extra;
     const courseAccess = option === "--course-access";
+    const migrations = option === "--migrate" && extra.length === 1;
     if (
       !licence ||
       !key ||
@@ -203,6 +280,7 @@ if (
       !edition ||
       !release ||
       (extra.length > 0 &&
+        !migrations &&
         (extra.length !== 2 ||
           (courseAccess
             ? !["on", "off"].includes(value)
@@ -222,20 +300,33 @@ if (
         release_commit: release,
       },
     };
-    const executeSql = await operatorSql(input.expected);
-    const result = courseAccess
-      ? await configureAcademyCourseAccess(
-          { ...input, enabled: value === "on" },
-          executeSql,
-        )
-      : await prepareAcademyInstallation(
-          { ...input, firstAdministrator: value },
-          executeSql,
-        );
+    let result;
+    if (migrations) {
+      result = await migrateAcademyInstallation(input);
+    } else {
+      const executeSql = await operatorSql(input.expected);
+      result = courseAccess
+        ? await configureAcademyCourseAccess(
+            { ...input, enabled: value === "on" },
+            executeSql,
+          )
+        : await prepareAcademyInstallation(
+            { ...input, firstAdministrator: value },
+            executeSql,
+          );
+    }
     console.log(JSON.stringify(result));
-  } catch {
+  } catch (error) {
+    const reason =
+      /^(?:academy_migration_[a-z_]+|academy_install_ingress_must_be_stopped)$/.test(
+        error?.message,
+      )
+        ? ` (${error.message})`
+        : "";
     console.error(
-      "Academy database preparation was not confirmed. Check the trusted licence, target connection and dedicated database.",
+      "Academy database preparation was not confirmed" +
+        reason +
+        ". Check the trusted licence, target connection and dedicated database.",
     );
     process.exitCode = 1;
   }

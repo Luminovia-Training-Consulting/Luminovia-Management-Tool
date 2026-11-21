@@ -24,6 +24,7 @@ import type {
 } from "../accounts/academy-schema";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
+import { AcademyBrandEditor } from "../branding/academy-brand-editor";
 import { AcademyRoleEditor } from "./academy-role-editor";
 
 type Localize = (de: string, en: string) => string;
@@ -505,6 +506,7 @@ export function AcademyAdministrationPage() {
         title={word("Akademie verwalten", "Academy administration")}
       />
       <AcademyLicencePanel actor={actor} />
+      {can_create_management && <AcademyBrandEditor />}
       {can_write ? (
         <>
           <OrganisationForm word={word} changed={changed} />

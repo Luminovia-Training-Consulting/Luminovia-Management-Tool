@@ -907,12 +907,14 @@ it("withdraws private details after the current workspace's live scope is revoke
   expect(screen.queryByText("Protected course briefing")).toBeNull();
 });
 
-it("rejects internal paths in the dedicated app without touching the backend", async () => {
+it("rejects internal paths in the dedicated app without making protected backend requests", async () => {
   open("/admin/people");
   expect(await screen.findByRole("heading")).toHaveTextContent(
     /could not be found/i,
   );
-  expect(fake.rpc).not.toHaveBeenCalled();
+  expect(fake.rpc.mock.calls).toEqual([
+    ["academy_public_branding", {}, { get: true }],
+  ]);
   expect(fake.from).not.toHaveBeenCalled();
 });
 
@@ -922,7 +924,9 @@ it("waits for authentication before restoring the signed-out visitor's course li
   expect(
     await screen.findByRole("heading", { name: "Fictional Academy" }),
   ).toBeVisible();
-  expect(fake.rpc).not.toHaveBeenCalled();
+  expect(fake.rpc.mock.calls).toEqual([
+    ["academy_public_branding", {}, { get: true }],
+  ]);
   fake.actor = "fictional-learner";
   page.rerender();
   expect(await screen.findByText("Scanned workbook.pdf")).toBeVisible();

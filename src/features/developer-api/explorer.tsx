@@ -1,3 +1,4 @@
+import { useAcademyBrand } from "../branding/academy-branding";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SwaggerUI from "swagger-ui-react";
@@ -6,7 +7,6 @@ import "./explorer.css";
 import { Button } from "../../components/ui/button";
 import { PageHeading } from "../../components/common";
 import {
-  installationBrand,
   internalInstallationBrand,
   type InstallationBrand,
 } from "../../lib/installation-brand";
@@ -21,7 +21,8 @@ export function ApiExplorer() {
 
 /** Installed academy API operations, with session credentials confined to local RPCs. */
 export function AcademyApiExplorer() {
-  return <Explorer brand={installationBrand} />;
+  const brand = useAcademyBrand();
+  return <Explorer brand={brand} />;
 }
 
 function Explorer({ brand }: { brand: InstallationBrand }) {

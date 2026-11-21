@@ -126,7 +126,7 @@ def allowed_path(name):
         return False
     if name.startswith("site/"):
         return not any(part.startswith(".env") for part in path.parts)
-    return name.startswith(("supabase/functions/", "supabase/migrations/", "deploy/hostinger/"))
+    return name == "scripts/mail-relay.py" or name.startswith(("supabase/functions/", "supabase/migrations/", "deploy/hostinger/"))
 
 
 # Validate the release contract: commit, file sizes, checksums and pinned runtime.
@@ -447,6 +447,11 @@ class Updater:
         directory = tree / "deploy/hostinger" / ("selfhost" if kind == "backend" else "")
         env = self.private / ("selfhost.env" if kind == "backend" else "web.env")
         return self.command(["docker", "compose", "--project-directory", str(directory), "--env-file", str(env), "-f", str(directory / "compose.yml"), *arguments], timeout=600)
+
+    def mail_relay(self, tree=None):
+        """Read the optional stateless relay from trusted Compose source."""
+        path = Path(tree or self.source) / "deploy/hostinger/selfhost/compose.yml"
+        return ["mail-relay"] if path.is_file() and re.search(r"(?m)^  mail-relay:\s*$", path.read_text()) else []
 
     # Pull runtime images before mutation; only this early failure qualifies for a network retry.
     def pull_runtime_images(self, tree):
@@ -1048,7 +1053,7 @@ class Updater:
 
     # Check container state, public JWKS and exact index bytes; use only the owned private gateway during maintenance.
     def health(self, env, expected_index=None, *, private_api=False):
-        for project, services in (("luminovia-supabase", (*WRITERS, "db", "mailpit")), ("luminovia-portal", ("web", "clamav"))):
+        for project, services in (("luminovia-supabase", (*WRITERS, *self.mail_relay(), "db", "mailpit")), ("luminovia-portal", ("web", "clamav"))):
             for service in services:
                 state = json.loads(self.command(["docker", "inspect", "--format", "{{json .State}}", project + "-" + service + "-1"]))
                 if state.get("Running") is not True or state.get("Paused") is True or state.get("OOMKilled") is True or (service != "web" and state.get("Health", {}).get("Status") != "healthy"):
@@ -1114,6 +1119,7 @@ class Updater:
         mode = "validation"
         changed = set()
         reviewed = None
+        previous_relay = self.mail_relay()
         old_target = os.readlink(self.www / "current") if (self.www / "current").is_symlink() else None
         if old_target and (PurePosixPath(old_target).is_absolute() or ".." in PurePosixPath(old_target).parts or not old_target.startswith("releases/")):
             raise UpdateError("unsafe_previous_release_target")
@@ -1139,7 +1145,7 @@ class Updater:
                 self.maintenance.write_text("Development update in progress.\n", encoding="utf-8")
                 self.maintenance.chmod(0o644)
                 stopped = True
-                self.compose("backend", ["stop", *WRITERS])
+                self.compose("backend", ["stop", *WRITERS, *previous_relay])
                 backup = self.backup(commit)
                 self.state["lastBackup"] = str(backup)
                 atomic_json(self.state_file, self.state)
@@ -1170,7 +1176,7 @@ class Updater:
                 for version, name, source in pending:
                     self.sql(migration_sql(source, version, name, operator_reviewed=reviewed is not None))
                 self.sql("NOTIFY pgrst, 'reload schema';")
-                self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
+                self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *self.mail_relay(), *WRITERS])
                 self.activate_web(changed)
             self.promote("releases/" + commit)
             promoted = True
@@ -1201,12 +1207,14 @@ class Updater:
                     recovered = False
             if stopped and checkpoint is not None and not public_unblocked:
                 try:
+                    if runtime_mutated and not previous_relay and self.mail_relay():
+                        self.compose("backend", ["rm", "--force", "--stop", "mail-relay"])
                     self.rollback_runtime(original, rollback)
 
                     # Restore the previous runtime in dependency order while public writers remain fenced.
                     def restart_old_runtime():
                         self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "db", "mailpit"])
-                        self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
+                        self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *self.mail_relay(), *WRITERS])
                         self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
 
                     self.restore_checkpoint(stage, checkpoint, public_unblocked=False, restart_old_runtime=restart_old_runtime, verify_health=lambda: self.health(env, private_api=True))
@@ -1222,7 +1230,7 @@ class Updater:
                     # stopped or the web/scanner paused, even before copying
                     # source. Reconcile these before restarting API writers.
                     self.compose("backend", ["up", "-d", "--wait", "db", "mailpit"])
-                    self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
+                    self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *self.mail_relay(), *WRITERS])
                     self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
                     self.health(env, private_api=True)
                     self.maintenance.unlink(missing_ok=True)

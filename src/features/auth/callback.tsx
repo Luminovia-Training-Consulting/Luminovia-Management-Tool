@@ -2,10 +2,8 @@
  * Public return route for invitations and recovery. Process actual Auth state or the invitation
  * token and navigate only after confirmed completion.
  */
-import {
-  installationBrand,
-  portalInternalEdition,
-} from "../../lib/installation-brand";
+import { portalInternalEdition } from "../../lib/installation-brand";
+import { useAcademyBrand } from "../branding/academy-branding";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -17,6 +15,7 @@ import { Loading, Notice } from "../../components/common";
 
 /** Complete the native invitation/recovery callback and leave a retryable state on failure. */
 export function AuthCallback() {
+  const brand = useAcademyBrand();
   const { t } = useTranslation();
   const { session, loading, error } = useAuth();
   const navigate = useNavigate();
@@ -61,17 +60,17 @@ export function AuthCallback() {
     <main className="callback-layout">
       <section className="panel">
         <img
-          src={installationBrand.logo}
+          src={brand.logo}
           alt={
             portalInternalEdition
               ? "Luminovia Training & Consulting"
-              : installationBrand.name
+              : brand.name
           }
         />
         <h1>{t("acceptInvite")}</h1>
         <p>
           {t("inviteWelcome", {
-            name: portalInternalEdition ? "Luminovia" : installationBrand.name,
+            name: portalInternalEdition ? "Luminovia" : brand.name,
           })}
         </p>
         {invite ? (

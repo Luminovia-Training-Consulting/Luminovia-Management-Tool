@@ -3,6 +3,10 @@
 # Check Node before startup; exec forwards signals and exit status to the CLI.
 set -euo pipefail
 cd "$(dirname "$0")"
+if [[ "${1:-}" == "reset-live" ]]; then
+  shift
+  exec python3 -I deploy/hostinger/reset-live.py "$@"
+fi
 if ! command -v node >/dev/null 2>&1; then
   echo 'Node.js >=22.12 and Docker are required. See README.md.' >&2
   exit 1

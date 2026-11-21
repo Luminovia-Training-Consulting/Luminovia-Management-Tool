@@ -96,6 +96,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(Object.keys(spec.paths).sort()).toEqual(
         [
           bootstrap,
+          "/rest/v1/rpc/academy_public_branding",
+          "/rest/v1/rpc/save_academy_public_branding",
           upload,
           examDownload,
           ...mailPaths,

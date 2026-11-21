@@ -70,6 +70,7 @@ class RelayConfig:
     control_port: int = 8080
     connect_timeout: float = 8.0
     command_timeout: float = 90.0
+    capture_auth_while_unconfigured: bool = False
 
     @classmethod
     def from_environment(cls) -> "RelayConfig":
@@ -88,7 +89,8 @@ class RelayConfig:
             raise RuntimeError("Incomplete mail relay configuration")
         if not MAILBOX_PATTERN.fullmatch(values["username"]):
             raise RuntimeError("Invalid internal SMTP username")
-        return cls(api_url=api_url, **values)
+        return cls(api_url=api_url, **values,
+                   capture_auth_while_unconfigured=os.environ.get("PORTAL_MAIL_RELAY_CAPTURE_PENDING") == "true")
 
 
 def valid_external_host(host: str) -> bool:
@@ -364,11 +366,28 @@ class MailRelay:
                 except (OSError, imaplib.IMAP4.error):
                     pass
 
-    def deliver(self, raw_message: bytes, recipient: str) -> None:
+    def deliver_auth(self, raw_message: bytes, recipient: str) -> None:
+        """Keep explicitly configured development Auth on private capture until its sender is enabled."""
+        if not self.config.capture_auth_while_unconfigured:
+            return self.deliver(raw_message, recipient)
+        settings = self.rpc("get_mail_delivery_transport", {})
+        if not isinstance(settings, dict) or settings.get("enabled") is not False:
+            return self.deliver(raw_message, recipient, settings=self.check_transport(settings))
+        if len(raw_message) > MAX_MESSAGE_BYTES or not MAILBOX_PATTERN.fullmatch(recipient):
+            raise RelayFailure("protocol_failed")
+        try:
+            with smtplib.SMTP("mailpit", 1025, timeout=self.config.connect_timeout) as capture:
+                capture.sendmail("no-reply@example.invalid", [recipient], raw_message)
+        except (TimeoutError, smtplib.SMTPServerDisconnected):
+            raise DeliveryUncertain() from None
+        except (OSError, smtplib.SMTPException):
+            raise RelayFailure("connect_failed") from None
+
+    def deliver(self, raw_message: bytes, recipient: str, *, settings: dict | None = None) -> None:
         """Replace the envelope/header sender and submit one recipient only to the current provider."""
         if len(raw_message) > MAX_MESSAGE_BYTES or not MAILBOX_PATTERN.fullmatch(recipient):
             raise RelayFailure("protocol_failed")
-        settings = self.current_transport()
+        settings = self.current_transport() if settings is None else settings
         sender = settings.get("sender_email")
         sender_name = settings.get("sender_name")
         host, port, security = settings.get("host"), settings.get("port"), settings.get("security")
@@ -436,7 +455,7 @@ class MailRelay:
             if connection is not None:
                 connection.close()
 
-    async def handle_smtp(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def handle_smtp(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, *, auth_listener=False) -> None:
         """Run a small SMTP subset; never log commands, credentials, headers or message bodies."""
         greeted = False
         authenticated = False
@@ -600,7 +619,7 @@ class MailRelay:
                         return
                     try:
                         await asyncio.wait_for(
-                            asyncio.to_thread(self.deliver, bytes(data), recipient),
+                            asyncio.to_thread(self.deliver_auth if auth_listener else self.deliver, bytes(data), recipient),
                             timeout=self.config.command_timeout,
                         )
                     except DeliveryUncertain:
@@ -701,8 +720,11 @@ class ThreadedControlServer(http.server.ThreadingHTTPServer):
 async def serve(config: RelayConfig) -> None:
     """Start internal SMTP listeners and an unexposed relay-control listener."""
     relay = MailRelay(config)
+    async def handle_auth(reader, writer):
+        await relay.handle_smtp(reader, writer, auth_listener=True)
+
     smtp_internal = await asyncio.start_server(
-        relay.handle_smtp,
+        handle_auth,
         host="0.0.0.0",
         port=config.smtp_port,
         limit=MAX_COMMAND_BYTES + 2,

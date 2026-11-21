@@ -18,6 +18,10 @@ import {
   academyAttendanceRegisterSchema,
   maxAttendanceImportRows,
 } from "../learning/attendance-schema.ts";
+import {
+  academyBrandingRequest,
+  academyBrandingSettings,
+} from "../branding/academy-branding-schema.ts";
 import { notificationPaths } from "./notifications-contract.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
@@ -945,7 +949,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.22.0",
+      version: "1.23.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -982,6 +986,43 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
                 company_premium_switch_available: { const: false },
               }),
             ),
+          },
+        },
+      },
+      "/rest/v1/rpc/academy_public_branding": {
+        get: {
+          operationId: "readAcademyPublicBranding",
+          tags: ["Installation"],
+          summary: "Read the public academy presentation",
+          description:
+            "The current public browser name, short name and accent colour. Null values select the signed release defaults.",
+          security: [{ apiKey: [] }],
+          responses: {
+            "200": ok(z.toJSONSchema(academyBrandingSettings)),
+          },
+        },
+      },
+      "/rest/v1/rpc/save_academy_public_branding": {
+        post: {
+          operationId: "saveAcademyPublicBranding",
+          tags: ["Installation"],
+          summary: "Save the local academy presentation",
+          description:
+            "Requires the current confirmed installation administrator and an active licence. Supply the last read version. Sending all three presentation fields as null restores the package values.",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(z.toJSONSchema(academyBrandingRequest)),
+          },
+          responses: {
+            "200": ok(z.toJSONSchema(academyBrandingSettings)),
+            "400": error("Invalid presentation values"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Presentation changed since the last read"),
           },
         },
       },

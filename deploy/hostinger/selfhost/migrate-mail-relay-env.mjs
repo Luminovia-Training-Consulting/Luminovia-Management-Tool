@@ -134,10 +134,14 @@ export function migrateMailRelayEnvironment(envFile, {apply = false, requireRoot
     assert(relay.PORTAL_MAIL_RELAY_CONTROL_TOKEN.length >= 40);
     const serverUpdates = {
         ...relay,
-        SMTP_HOST: "mail-relay",
-        SMTP_PORT: "2525",
-        SMTP_USER: relay.MAIL_RELAY_USERNAME,
-        SMTP_PASS: relay.MAIL_RELAY_PASSWORD,
+        PORTAL_MAIL_RELAY_CAPTURE_PENDING:
+            existing.PORTAL_MAIL_RELAY_CAPTURE_PENDING ??
+            String(existing.SITE_URL === "https://cms.luminovia.org" && existing.SMTP_HOST === "mailpit"),
+        PORTAL_AUTH_SMTP_HOST: "mail-relay",
+        PORTAL_AUTH_SMTP_PORT: "2525",
+        PORTAL_AUTH_SMTP_USER: relay.MAIL_RELAY_USERNAME,
+        PORTAL_AUTH_SMTP_PASS: relay.MAIL_RELAY_PASSWORD,
+        PORTAL_MAIL_RELAY_URL: "http://mail-relay:8080",
         SMTP_ADMIN_EMAIL: existing.SMTP_ADMIN_EMAIL || "no-reply@example.invalid",
     };
     const serverChanges = Object.entries(serverUpdates).filter(

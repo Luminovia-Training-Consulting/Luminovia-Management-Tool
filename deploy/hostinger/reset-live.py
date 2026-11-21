@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""Reset the single owned CMS instance after live administrator confirmation."""
+import argparse
+import base64
+import getpass
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import secrets
+import shutil
+import stat
+import sys
+import urllib.request
+from uuid import UUID
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "updates"))
+from updater import SHA, UpdateError, Updater, atomic_json, migration_sql, now, read_environment
+
+ROOT = Path("/opt/luminovia-portal")
+ORIGIN = "https://cms.luminovia.org"
+MOUNTS = {
+    "postgres": ("db", "/var/lib/postgresql/data"),
+    "storage": ("storage", "/var/lib/storage"),
+    "mailpit": ("mailpit", "/data"),
+}
+NETWORK = "luminovia-portal-backend"
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        raise UpdateError("unexpected_auth_redirect")
+
+
+def require(condition, reason):
+    if not condition:
+        raise UpdateError(reason)
+
+
+def trusted_directory(path):
+    info = path.lstat()
+    require(stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022,
+            "unsafe_installation_directory")
+
+
+def check_mounts(data, mountinfo):
+    # Reject mounted descendants before renaming or recursively removing data.
+    for line in mountinfo.splitlines():
+        name = line.split()[4]
+        name = re.sub(r"\\([0-7]{3})", lambda match: chr(int(match[1], 8)), name)
+        mount = Path(name)
+        require(mount != data and not mount.is_relative_to(data), "separate_data_mount")
+    require({entry.name for entry in data.iterdir()} == set(MOUNTS), "unknown_data_entries")
+    for name in MOUNTS:
+        target = data / name
+        require(stat.S_ISDIR(target.lstat().st_mode) and target.stat().st_dev == data.stat().st_dev,
+                "unsafe_data_path")
+
+
+def private_gateway(updater):
+    networks = json.loads(updater.command(["docker", "inspect", "--format",
+                                           "{{json .NetworkSettings.Networks}}",
+                                           "luminovia-supabase-api-gw-1"]))
+    address = ipaddress.ip_address(networks[NETWORK]["IPAddress"])
+    require(address.version == 4 and address.is_private and not address.is_loopback,
+            "unsafe_private_gateway_address")
+    return f"http://{address}:8000/auth/v1"
+
+
+def auth_request(gateway, key, route, body=None, token=None):
+    request = urllib.request.Request(gateway + route,
+        data=None if body is None else json.dumps(body).encode(),
+        headers={"apikey": key, "Content-Type": "application/json",
+                 **({"Authorization": "Bearer " + token} if token else {})})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    try:
+        with opener.open(request, timeout=15) as response:
+            data = response.read(256 * 1024 + 1)
+            require(len(data) <= 256 * 1024, "oversized_auth_response")
+            return json.loads(data)
+    except (OSError, ValueError) as error:
+        raise UpdateError("auth_request_failed") from error
+
+
+def assert_current_admin(updater, user, session):
+    allowed = updater.sql(f"""
+      select exists (
+        select 1 from public.user_roles r
+        join public.profiles p on p.id=r.user_id and p.active
+        join auth.users u on u.id=r.user_id and u.email_confirmed_at is not null
+        join auth.sessions s on s.user_id=u.id and s.id='{session}'::uuid
+        join auth.mfa_factors f on f.id=s.factor_id and f.user_id=u.id
+        where u.id='{user}'::uuid and r.role in ('admin','owner')
+          and s.aal='aal2' and s.created_at > statement_timestamp() - interval '5 minutes'
+          and (s.not_after is null or s.not_after > statement_timestamp())
+          and f.factor_type='totp' and f.status='verified'
+      );""")
+    require(allowed == "t", "current_administrator_with_totp_required")
+
+
+def authenticate(updater, env, email, password):
+    gateway, key = private_gateway(updater), env["SUPABASE_PUBLISHABLE_KEY"]
+    signed_in = auth_request(gateway, key, "/token?grant_type=password",
+                             {"email": email, "password": password})
+    token = signed_in["access_token"]
+    factors = [factor for factor in signed_in["user"].get("factors", [])
+               if factor["factor_type"] == "totp" and factor["status"] == "verified"]
+    require(factors, "verified_authenticator_required")
+    for number, factor in enumerate(factors, 1):
+        print(f"Authenticator {number}: {factor.get('friendly_name') or 'TOTP'}")
+    option = int(input("Authenticator number: ")) if len(factors) > 1 else 1
+    require(1 <= option <= len(factors), "invalid_authenticator")
+    route = "/factors/" + str(UUID(factors[option - 1]["id"]))
+    challenge = auth_request(gateway, key, route + "/challenge", {}, token)
+    code = getpass.getpass("Authenticator code: ")
+    require(re.fullmatch(r"[0-9]{6}", code), "invalid_authenticator_code")
+    verified = auth_request(gateway, key, route + "/verify",
+                            {"challenge_id": challenge["id"], "code": code}, token)
+    token = verified["access_token"]
+    identity = auth_request(gateway, key, "/user", token=token)
+    segment = token.split(".")[1]
+    claims = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+    user = UUID(identity["id"])
+    require(claims.get("aal") == "aal2" and UUID(claims["sub"]) == user,
+            "authenticator_verification_required")
+    session = UUID(claims["session_id"])
+    assert_current_admin(updater, user, session)
+    return user, session
+
+
+def installed_migrations(updater):
+    history = updater.current_history()
+    directory = updater.source / "supabase/migrations"
+    trusted_directory(directory)
+    found = {}
+    for file in sorted(directory.glob("*.sql")):
+        match = re.fullmatch(r"([0-9]{14})_([a-z0-9_]+)\.sql", file.name)
+        require(match and not file.is_symlink() and file.is_file(), "invalid_migration_path")
+        version, name = match.groups()
+        require(version not in found, "duplicate_migration_version")
+        source = file.read_bytes().decode("utf-8")
+        require(history.get(version) == source, "installed_migration_source_mismatch")
+        found[version] = migration_sql(source, version, name, operator_reviewed=True)
+    require(found and found.keys() == history.keys(), "installed_migration_inventory_mismatch")
+    return [found[version] for version in sorted(found)]
+
+
+def preflight(updater):
+    require(os.geteuid() == 0, "host_root_required")
+    for path in (ROOT, ROOT / "source", ROOT / "private", ROOT / "data", ROOT / "www"):
+        trusted_directory(path)
+    require(not updater.maintenance.exists() and not updater.maintenance.is_symlink()
+            and not updater.state.get("manualRecoveryRequired"), "existing_maintenance_or_recovery")
+    env_path = updater.private / "selfhost.env"
+    info = env_path.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1
+            and not info.st_mode & 0o077, "unsafe_private_environment")
+    env = read_environment(env_path)
+    data = ROOT / "data"
+    require(env.get("PORTAL_APP_ORIGIN") == ORIGIN and env.get("SUPABASE_PUBLIC_URL") == ORIGIN + "/backend"
+            and env.get("PORTAL_DATA_DIR") == str(data), "unexpected_portal_instance")
+    active = updater.state.get("currentCommit", "")
+    require(SHA.fullmatch(active) and (updater.www / "current").readlink() == Path("releases") / active,
+            "active_release_mismatch")
+    check_mounts(data, Path("/proc/self/mountinfo").read_text())
+    for name, (service, destination) in MOUNTS.items():
+        mounts = json.loads(updater.command(["docker", "inspect", "--format", "{{json .Mounts}}",
+                                              f"luminovia-supabase-{service}-1"]))
+        matches = [item for item in mounts if item["Destination"] == destination]
+        require(len(matches) == 1 and matches[0]["Type"] == "bind"
+                and matches[0]["Source"] == str(data / name), "docker_data_mount_mismatch")
+    updater.require_fresh_complete_backup(updater.source)
+    return env, data, active, installed_migrations(updater)
+
+
+def start_backend(updater):
+    updater.compose("backend", ["up", "-d", "--wait", "--force-recreate"])
+    updater.sql("NOTIFY pgrst, 'reload schema';")
+
+
+def recreate(updater, env, migrations, email, password):
+    # Start the full backend so Auth, Storage and Realtime apply their own migrations.
+    start_backend(updater)
+    updater.sql("""CREATE SCHEMA IF NOT EXISTS supabase_migrations;
+      CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations
+      (version text PRIMARY KEY, statements text[], name text);""")
+    for migration in migrations:
+        updater.sql(migration)
+    updater.sql("""UPDATE private.document_storage_limits SET
+      total_quota_bytes=10737418240, owner_quota_bytes=1073741824 WHERE singleton;
+      NOTIFY pgrst, 'reload schema';""")
+    gateway = private_gateway(updater)
+    key = env["SERVICE_ROLE_KEY"]
+    owner = auth_request(gateway, key, "/admin/users", {
+        "email": email, "password": password, "email_confirm": True,
+        "user_metadata": {"display_name": "Portal Owner"},
+    }, key)
+    user = UUID(owner["id"])
+    updater.sql(f"""INSERT INTO public.user_roles(user_id,role) VALUES ('{user}'::uuid,'owner')
+      ON CONFLICT DO NOTHING;""")
+    require(updater.sql("""SELECT (SELECT count(*) FROM auth.users)=1
+      AND (SELECT count(*) FROM storage.objects)=0
+      AND (SELECT count(*) FROM public.organisations)=0
+      AND (SELECT count(*) FROM public.user_roles)=1;""") == "t", "reset_database_not_clean")
+    login = auth_request(gateway, env["SUPABASE_PUBLISHABLE_KEY"], "/token?grant_type=password",
+                         {"email": email, "password": password})
+    require(UUID(login["user"]["id"]) == user, "new_owner_login_failed")
+
+
+def reset(updater, env, data, migrations, actor, email, password):
+    journal = updater.private / "reset-state.json"
+    if journal.exists():
+        require(json.loads(journal.read_text()).get("status") in {"complete", "rolled_back"},
+                "unresolved_previous_reset")
+    assert_current_admin(updater, *actor)
+    quarantine = data.parent / (".reset-data-" + secrets.token_hex(12))
+    quarantine.mkdir(mode=0o700)
+    moved = []
+    result = {"instance": ORIGIN, "release": updater.state["currentCommit"],
+              "actor": str(actor[0]), "startedAt": now(), "quarantine": quarantine.name}
+    atomic_json(journal, {**result, "status": "starting"})
+    with updater.maintenance.open("x", encoding="ascii") as flag:
+        flag.write("Portal data reset in progress.\n")
+    try:
+        updater.compose("backend", ["stop"])
+        check_mounts(data, Path("/proc/self/mountinfo").read_text())
+        for name in MOUNTS:
+            (data / name).rename(quarantine / name)
+            moved.append(name)
+            (data / name).mkdir(mode=0o755)
+        recreate(updater, env, migrations, email, password)
+        updater.health(env, private_api=True)
+    except Exception:
+        try:
+            updater.compose("backend", ["stop"])
+            for name in reversed(moved):
+                replacement = data / name
+                if replacement.exists():
+                    require(not replacement.is_symlink(), "unsafe_new_data_path")
+                    shutil.rmtree(replacement)
+                (quarantine / name).rename(replacement)
+            quarantine.rmdir()
+            start_backend(updater)
+            updater.health(env, private_api=True)
+            atomic_json(journal, {**result, "status": "rolled_back"})
+            updater.maintenance.unlink()
+        except Exception as error:
+            atomic_json(journal, {**result, "status": "manual_recovery_required"})
+            raise UpdateError("reset_rollback_requires_operator") from error
+        raise
+    # After successful private verification, never roll back partially erased data.
+    atomic_json(journal, {**result, "status": "removing_previous_data"})
+    shutil.rmtree(quarantine)
+    updater.maintenance.unlink()
+    try:
+        updater.health(env)
+    except Exception:
+        with updater.maintenance.open("x", encoding="ascii") as flag:
+            flag.write("Portal reset needs a health check.\n")
+        atomic_json(journal, {**result, "status": "manual_recovery_required"})
+        raise
+    atomic_json(journal, {**result, "status": "complete", "finishedAt": now()})
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument("--plan", action="store_true", help="Inspect the verified live reset target.")
+    modes.add_argument("--apply", action="store_true", help="Interactively reset the verified live target.")
+    args = parser.parse_args()
+    try:
+        require(os.geteuid() == 0, "host_root_required")
+        updater = Updater(ROOT)
+        with updater.reviewed_host_lock():
+            env, data, release, migrations = preflight(updater)
+            print(f"Verified reset target: {ORIGIN}, release {release}.")
+            print("Reset deletes database records, accounts, sessions, uploaded files and captured mail.")
+            print("A fresh owner is created. Deployment settings and encrypted backups are retained.")
+            if args.plan:
+                return 0
+            require(sys.stdin.isatty() and sys.stderr.isatty(), "interactive_tty_required")
+            email = input("Current administrator email: ").strip()
+            current_password = getpass.getpass("Current administrator password: ")
+            password = getpass.getpass("New owner password: ")
+            require(len(password) >= 16 and password != current_password
+                    and password == getpass.getpass("Repeat new password: "), "new_password_confirmation_failed")
+            signature = "RESET " + ORIGIN + " " + secrets.token_hex(4)
+            require(input(f"Type {signature} to irreversibly replace all active data: ") == signature,
+                    "reset_confirmation_failed")
+            actor = authenticate(updater, env, email, current_password)
+            reset(updater, env, data, migrations, actor, email, password)
+            print("Verified fresh portal and new owner. Reset complete.")
+            return 0
+    except (UpdateError, OSError, ValueError, KeyError, RuntimeError) as error:
+        message = str(error) if isinstance(error, UpdateError) else "reset_aborted_inspect_private_reset_state"
+        print(message, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

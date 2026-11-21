@@ -1,6 +1,7 @@
 """Loopback-only tests for relay authentication, SMTP behavior, DNS safety and test status mapping."""
 
 import asyncio
+from dataclasses import replace
 import http.client
 import importlib.util
 import json
@@ -80,6 +81,29 @@ class RelayConfigTests(unittest.TestCase):
             with self.assertRaises(relay_module.RelayFailure) as failure:
                 relay_module.resolve_public_addresses("smtp.example.com", 465)
         self.assertEqual(failure.exception.code, "connect_failed")
+
+
+class DevelopmentCaptureTests(unittest.TestCase):
+    def test_only_explicit_auth_pending_route_uses_private_capture(self):
+        relay = relay_module.MailRelay(replace(CONFIG, capture_auth_while_unconfigured=True))
+        message = b"From: sender@example.invalid\r\n\r\nFictional test"
+        with patch.object(relay, "rpc", return_value={"enabled": False}), \
+             patch.object(relay_module.smtplib, "SMTP") as smtp:
+            relay.deliver_auth(message, "recipient@example.invalid")
+            smtp.assert_called_once_with("mailpit", 1025, timeout=CONFIG.connect_timeout)
+            smtp.return_value.__enter__.return_value.sendmail.assert_called_once_with(
+                "no-reply@example.invalid", ["recipient@example.invalid"], message)
+            with self.assertRaises(relay_module.RelayFailure):
+                relay.deliver(message, "recipient@example.invalid")
+
+    def test_enabled_transport_is_selected_without_contacting_capture(self):
+        relay = relay_module.MailRelay(replace(CONFIG, capture_auth_while_unconfigured=True))
+        settings = {"enabled": True, "host": "smtp.hostinger.com", "username": "sender@example.com",
+                    "password": "fictional-secret"}
+        with patch.object(relay, "rpc", return_value=settings), \
+             patch.object(relay, "deliver") as delivery:
+            relay.deliver_auth(b"message", "recipient@example.invalid")
+            delivery.assert_called_once_with(b"message", "recipient@example.invalid", settings=settings)
 
 
 class RelaySmtpTests(unittest.TestCase):

@@ -2,10 +2,8 @@
  * Human password sign-in and recovery requests. Validation/online notices support the UI; only
  * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
  */
-import {
-  installationBrand,
-  portalInternalEdition,
-} from "../../lib/installation-brand";
+import { portalInternalEdition } from "../../lib/installation-brand";
+import { useAcademyBrand } from "../branding/academy-branding";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,6 +27,7 @@ const schema = z.object({
 
 /** Use native sign-in and recovery requests with separate form states. */
 export function Login() {
+  const brand = useAcademyBrand();
   const { t } = useTranslation();
   const { session, loading } = useAuth();
   const online = useOnline();
@@ -99,16 +98,14 @@ export function Login() {
       <section className="login-story">
         <img
           className="brand-full"
-          src={installationBrand.logo}
+          src={brand.logo}
           alt={portalInternalEdition ? "Luminovia Training & Consulting" : ""}
         />
         <div>
           {portalInternalEdition && (
-            <span className="eyebrow">{installationBrand.name}</span>
+            <span className="eyebrow">{brand.name}</span>
           )}
-          <h1>
-            {portalInternalEdition ? t("safeLogin") : installationBrand.name}
-          </h1>
+          <h1>{portalInternalEdition ? t("safeLogin") : brand.name}</h1>
           {portalInternalEdition && <p>{t("loginStory")}</p>}
         </div>
         <div className="login-illustration" aria-hidden="true">

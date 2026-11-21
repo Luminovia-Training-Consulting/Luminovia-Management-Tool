@@ -70,7 +70,17 @@ academy_compose -f deploy/academy/mail-capture.override.yml \
 
 The mail relay, invitation routes and notification delivery each have separate activation controls. After the confirmed local administrator can sign in, open Administration → Email transport. Store the chosen provider and sender there and run a connection check. The check verifies TLS and credentials without sending a message. The relay uses the stored sender for both Auth invitation and recovery mail. Enable `PORTAL_INVITES_ENABLED=true` in the private runtime environment and recreate the `functions` service only when the operator has approved invitation delivery. Activating invitations and activating separate scheduled notifications are independent controls.
 
-Wait for the Auth user table, Storage bucket/object tables and Realtime publication. Follow the [existing migration order](../hostinger/selfhost/README.md#migration-and-readiness-order) for the pinned backend and record the applied source versions. Set `PORTAL_ACADEMY_RUNTIME_ROOT` to the absolute initialized root when calling the [signed database preparation command](../../DEVELOPMENT.md#white-label-browser-build). The operator command checks the staged release identity and connects to PostgreSQL inside that Compose project without publishing a database port. An explicit private libpq service is also supported. Prepare the empty academy before creating its first confirmed Auth identity. Then bind that identity with `--first-admin` and explicitly enable the verified course profile with `--course-access on`. Use the same UUID, edition, licence and source revision that were used to stage the browser.
+Wait for the Auth user table, Storage bucket and object tables, and Realtime publication. Apply the migrations from the clean Git checkout matching the licence and staged browser receipt.
+
+```sh
+export PORTAL_ACADEMY_RUNTIME_ROOT="$runtime_root"
+node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit" --migrate
+node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit"
+```
+
+The migration command requires stopped ingress and the dedicated Compose target. It records each exact source with its transaction and verifies the entire applied prefix before running pending SQL. A retry skips the committed prefix. Prepare the empty academy before creating its first confirmed Auth identity. Then bind that identity with `--first-admin` and explicitly enable the verified course profile with `--course-access on`. Use the same UUID, edition, licence and source revision that were used to stage the browser.
 
 ## Verify before opening ingress
 
@@ -87,3 +97,22 @@ Use the Caddy and Envoy binaries from the images pinned in `compose.override.yml
 The dedicated public API has one shared allowance per Envoy instance. The signed amount is the burst size and the bucket refills each minute. Requests for static files and private service-to-service calls stay outside this allowance. Review occupancy, storage and mail limits alongside ingress when renewing a licence or planning an upgrade.
 
 Verify the private first administrator, dedicated edition, licence limits, normal account sign-in, author/publish/enrol and learner journeys, protected objects, ClamAV, Realtime, current email routes and the encrypted backup/recovery target. When the customer's DNS and firewall are authorised and verified, the `ingress` profile starts Caddy on the generated address. Review certificate issuance and the browser edition, hostname and protected API against that particular environment. A fresh-install receipt is separate from approval of any data migration, upgrade, commercial handover or public deployment.
+
+## Upgrade an existing academy
+
+Use a newer signed licence issued for the same installation and edition and the new source revision. Record the current receipt and actual backend image digests. Rehearse the recovery set and upgrade in an independently provisioned copy before maintaining an installation that holds customer records. Quiesce application writers before taking the recovery set. Include PostgreSQL databases and roles, the physical Storage mount, private runtime and signing/encryption configuration, and the persistent configuration volumes. Keep the encrypted recovery set and independent decryption key on different storage. Record the source revision and migration inventory with the set.
+
+Stop the reviewed project's ingress services. Switch the course profile off with the old licence before staging the new package. Linux with Python 3 and a filesystem supporting atomic directory exchange is needed for the browser replacement.
+
+```sh
+academy_compose --profile ingress stop web api-ingress
+node scripts/academy-installation.mjs "$old_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$old_release_commit" --course-access off
+node scripts/academy-install-browser.mjs "$runtime_root" "$new_target_json" \
+  "$new_package_directory" "$new_release_signature" "$new_licence" \
+  "$licence_public_key" "$release_public_key" --replace-revision "$old_release_commit"
+```
+
+The replacement compares the currently installed revision, verifies the signed candidate and exchanges the browser directories without modifying database or Storage data. The old signed browser stays in a private `.browser-previous-*` directory inside the same runtime. A Docker or filesystem error stops the upgrade. If the previous browser directory is ambiguous after interrupted maintenance, inspect each `release.json` before resuming.
+
+From the new checkout, run `--migrate` and prepare the new licence using the same commands as above. Use the same existing database. Enable the new course profile, recreate the ingress containers to use the new private bind mounts, and verify the licensed rate limit, retained accounts and courses, real protected file bytes and the exact release before reopening customer traffic. After accepting new writes, recover forward or perform a separately authorised recovery. A previous browser copy alone cannot rewind the database or the verified licence.

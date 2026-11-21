@@ -45,12 +45,16 @@ test("dry-run writes nothing, and apply preserves old SMTP credentials in a priv
             worker = readFileSync(`${envFile}.notification.env`, "utf8"),
             backup = readFileSync(`${envFile}.pre-mail-relay`, "utf8");
         assert.equal(backup, original);
-        assert(updated.includes("SMTP_HOST='mail-relay'"));
-        assert(updated.includes("SMTP_PORT='2525'"));
+        assert(updated.includes("PORTAL_AUTH_SMTP_HOST='mail-relay'"));
+        assert(updated.includes("PORTAL_AUTH_SMTP_PORT='2525'"));
         assert(updated.includes("SMTP_ADMIN_EMAIL='no-reply@example.invalid'"));
-        assert(updated.includes("SMTP_USER='" + /MAIL_RELAY_USERNAME='([^']+)'/.exec(updated)[1] + "'"));
-        assert(updated.includes("SMTP_PASS='" + /MAIL_RELAY_PASSWORD='([^']+)'/.exec(updated)[1] + "'"));
+        assert(updated.includes("PORTAL_AUTH_SMTP_USER='" + /MAIL_RELAY_USERNAME='([^']+)'/.exec(updated)[1] + "'"));
+        assert(updated.includes("PORTAL_AUTH_SMTP_PASS='" + /MAIL_RELAY_PASSWORD='([^']+)'/.exec(updated)[1] + "'"));
         assert(backup.includes("fictional-legacy-provider-secret"));
+        assert(updated.includes("SMTP_HOST='smtp.legacy.example.invalid'"));
+        assert(updated.includes("SMTP_PORT='465'"));
+        assert(updated.includes("PORTAL_MAIL_RELAY_URL='http://mail-relay:8080'"));
+
         assert(worker.includes("PORTAL_NOTIFICATION_MAIL_ENABLED='false'"));
         assert(worker.includes("PORTAL_NOTIFICATION_SERVICE_KEY='fictional-service-role-key'"));
         assert(worker.includes("PORTAL_NOTIFICATION_SMTP_PORT='2526'"));

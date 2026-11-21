@@ -699,6 +699,12 @@ promotion or history change aborts before reviewed SQL.
 
 The reviewed SQL still requires one explicit `BEGIN;`/`COMMIT;` transaction with the established own-line delimiters. Nested top-level transaction control, parser string-mode changes, `ALTER SYSTEM` and `COPY … PROGRAM` are rejected. SQL inside function/DO bodies remains inside PostgreSQL's enclosing transaction. The exact source history is inserted before the same commit, under the migration advisory lock.
 
+### Full reset of the existing CMS installation
+
+On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's verified authenticator and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
+
+The reset stops the backend under the shared maintenance lock. It recreates PostgreSQL with the current installed schema and replaces local Storage bytes and private captured mail. The old data stays in a private quarantine until the fresh owner can sign in and the private runtime is healthy. An early failure attempts to restore the original data paths. Inspect `private/reset-state.json` before recovering an interrupted reset. The command keeps the deployed application, server configuration and separately managed encrypted backup sets. It does not access the public Website or third-party storage.
+
 <a id="section-reviewed-migration-plans-prepare-concrete-release-and-history-evidence"></a>
 
 ## Prepare concrete release and history evidence
