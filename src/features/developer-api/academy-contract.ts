@@ -1,5 +1,10 @@
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
 import { z } from "zod";
+import {
+  academyDraftOptions,
+  academyDraftPayload,
+  academyDraftReceipt,
+} from "../learning/academy-draft-schema.ts";
 import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
 import {
   meetingLinkResult,
@@ -57,7 +62,7 @@ function courseOperation(
   summary: string,
   description: string,
   licence: "active" | "active-or-grace",
-  request: ReturnType<typeof record>,
+  request: ReturnType<typeof record> & { oneOf?: object[] },
   response: object,
   staleVersion = false,
 ) {
@@ -273,6 +278,46 @@ const messagePage = {
 // Advertise a closed subset of the migrated academy gate. An advertised RPC
 // still runs the installation, licence, role and resource checks in Postgres.
 const coursePaths = {
+  "/rest/v1/rpc/academy_course_draft_options": courseOperation(
+    "readAcademyDraftOptions",
+    "Find organisations and templates for a new course draft",
+    "A current course manager may search the active local catalogue by literal name or title. Each list is limited to 50. Eligible course members without management authority receive null.",
+    "active",
+    record(
+      {
+        p_organisation_query: { ...string, maxLength: 100, default: "" },
+        p_template_query: { ...string, maxLength: 100, default: "" },
+      },
+      [],
+    ),
+    z.toJSONSchema(academyDraftOptions),
+  ),
+  "/rest/v1/rpc/academy_create_course_draft": courseOperation(
+    "createAcademyCourseDraft",
+    "Create a course draft and its scheduled sessions",
+    "Requires current course management and an active local organisation. Provide one existing template ID or a new template title and an exact IANA time zone with offset-aware sessions. No course publishes automatically. A retry with the same request ID and contents returns the original draft. A changed request or archived draft returns 409.",
+    "active",
+    {
+      ...record({
+        p_request_id: uuid,
+        p_organisation_id: uuid,
+        p_template_id: nullable(uuid),
+        p_template_title: nullable({ ...string, minLength: 1, maxLength: 200 }),
+        p_payload: z.toJSONSchema(academyDraftPayload),
+      }),
+      oneOf: [
+        { properties: { p_template_id: uuid, p_template_title: nil } },
+        {
+          properties: {
+            p_template_id: nil,
+            p_template_title: { ...string, minLength: 1, maxLength: 200 },
+          },
+        },
+      ],
+    },
+    z.toJSONSchema(academyDraftReceipt),
+    true,
+  ),
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
     "listAcademyCourseWorkspaces",
     "List my course workspaces",
@@ -440,7 +485,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.5.0",
+      version: "1.6.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

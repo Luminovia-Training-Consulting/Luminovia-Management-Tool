@@ -27,6 +27,8 @@ const fake = vi.hoisted(() => ({
   registerAvailable: false,
   attendanceVersion: 0,
   examRequired: false,
+  canCreateDraft: false,
+  draftAttempts: 0,
 }));
 vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
@@ -164,6 +166,8 @@ beforeEach(async () => {
   fake.registerAvailable = false;
   fake.attendanceVersion = 0;
   fake.examRequired = false;
+  fake.canCreateDraft = false;
+  fake.draftAttempts = 0;
   fake.rpc.mockImplementation((name: string) => {
     let data: unknown;
     let error = null;
@@ -252,6 +256,19 @@ beforeEach(async () => {
       case "academy_course_instructor_candidates":
         data = [];
         break;
+      case "academy_course_draft_options":
+        data = fake.canCreateDraft
+          ? {
+              organisations: [{ id: learnerId, name: "Fictional Training" }],
+              templates: [{ id: sessionId, title: "Fictional template" }],
+            }
+          : null;
+        break;
+      case "academy_create_course_draft":
+        fake.draftAttempts++;
+        if (fake.draftAttempts === 1) error = { code: "unavailable" };
+        else data = { course_run_id: id, template_id: sessionId };
+        break;
       default:
         throw new Error("Unexpected RPC: " + name);
     }
@@ -318,11 +335,69 @@ it("opens the course hub without activating the full edition and reuses scoped a
   ).toBeNull();
   expect(document.querySelector('input[type="file"]')).toBeNull();
   expect(fake.from).not.toHaveBeenCalled();
-  expect(fake.rpc.mock.calls.slice(0, 3).map(([name]) => name)).toEqual([
-    "installation_capabilities",
-    "portal_access",
-    "my_course_workspaces",
-  ]);
+  expect(fake.rpc.mock.calls.map(([name]) => name)).toEqual(
+    expect.arrayContaining([
+      "installation_capabilities",
+      "portal_access",
+      "my_course_workspaces",
+      "academy_course_draft_options",
+    ]),
+  );
+});
+
+it("creates an academy draft from the selected company and preserves its request on a failed reply", async () => {
+  fake.canCreateDraft = true;
+  open("/learning");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Create course draft", { exact: true }),
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Organisation", { exact: true }),
+    learnerId,
+  );
+  await user.click(screen.getByLabelText("Create a new course template"));
+  await user.type(
+    screen.getByLabelText("Course template title"),
+    "Course from local academy",
+  );
+  fireEvent.change(screen.getByLabelText("Course time zone (IANA)"), {
+    target: { value: "Australia/Brisbane" },
+  });
+  fireEvent.change(screen.getByLabelText("Start", { exact: true }), {
+    target: { value: "2039-01-02T09:00" },
+  });
+  fireEvent.change(screen.getByLabelText("End", { exact: true }), {
+    target: { value: "2039-01-02T10:00" },
+  });
+  await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
+  expect(
+    await screen.findByText(/The course draft could not be confirmed/),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
+  expect(
+    await screen.findByRole("heading", { name: "Fictional course room" }),
+  ).toBeVisible();
+  const writes = fake.rpc.mock.calls
+    .filter(([name]) => name === "academy_create_course_draft")
+    .map(([, data]) => data);
+  expect(writes).toHaveLength(2);
+  expect(writes[0]).toMatchObject({
+    p_request_id: expect.any(String),
+    p_organisation_id: learnerId,
+    p_template_id: null,
+    p_template_title: "Course from local academy",
+    p_payload: {
+      time_zone: "Australia/Brisbane",
+      sessions: [
+        {
+          starts_at: "2039-01-01T23:00:00.000Z",
+          ends_at: "2039-01-02T00:00:00.000Z",
+        },
+      ],
+    },
+  });
+  expect(writes[1]).toEqual(writes[0]);
 });
 
 it("renders the direct course link read-only in German even if individual resources are marked editable", async () => {

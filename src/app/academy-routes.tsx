@@ -131,6 +131,11 @@ function AcademyWorkspace() {
   return <CourseWorkspacePage key={id} academy={access} />;
 }
 
+function AcademyCourseHub() {
+  const access = useOutletContext<"active" | "grace">();
+  return <LearningHubPage academy={access} />;
+}
+
 export function AcademyRoutes() {
   return (
     <Routes>
@@ -148,7 +153,7 @@ export function AcademyRoutes() {
         />
         <Route element={<AcademyCourseProfile />}>
           <Route index element={<Navigate to="/learning" replace />} />
-          <Route path="/learning" element={<LearningHubPage academy />} />
+          <Route path="/learning" element={<AcademyCourseHub />} />
           <Route
             path="/courses"
             element={<Navigate to="/learning" replace />}

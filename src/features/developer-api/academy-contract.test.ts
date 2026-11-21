@@ -24,6 +24,10 @@ const writePaths = [
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
+const draftPaths = [
+  "/rest/v1/rpc/academy_course_draft_options",
+  "/rest/v1/rpc/academy_create_course_draft",
+] as const;
 
 for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
   describe(`${edition} branded OpenAPI catalogue`, () => {
@@ -48,7 +52,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         customer_ready: false,
       });
       expect(Object.keys(spec.paths).sort()).toEqual(
-        [bootstrap, upload, ...readPaths, ...writePaths].sort(),
+        [bootstrap, upload, ...readPaths, ...writePaths, ...draftPaths].sort(),
       );
       expect(spec).not.toHaveProperty("webhooks");
       expect(Object.keys(spec.components.securitySchemes).sort()).toEqual([
@@ -83,6 +87,34 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           company_premium_switch_available: { const: false },
         },
       });
+    });
+
+    it("documents active manager options and a closed single-template draft request", () => {
+      const [choices, command] = draftPaths.map(
+        (path) => spec.paths[path].post,
+      );
+      expect(choices["x-portal-licence"]).toBe("active");
+      expect(choices.requestBody.required).toBe(false);
+      expect(command["x-portal-licence"]).toBe("active");
+      expect(
+        command.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: [
+          "p_request_id",
+          "p_organisation_id",
+          "p_template_id",
+          "p_template_title",
+          "p_payload",
+        ],
+        oneOf: expect.any(Array),
+        properties: {
+          p_payload: {
+            additionalProperties: false,
+            properties: { sessions: { maxItems: 60 } },
+          },
+        },
+      });
+      expect(command.responses).toHaveProperty("409");
     });
 
     it("documents the active-only exam decision without exam file operations", () => {

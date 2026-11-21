@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { setTimeout as wait } from "node:timers/promises";
+import { z } from "zod";
+import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -10,6 +12,8 @@ const gate = (path, method = "POST") =>
   `set local request.path=${q(path)}; set local request.method=${q(method)};
     select public.require_portal_access();`;
 const makePath = "/rpc/save_course_run";
+const choicesPath = "/rpc/academy_course_draft_options";
+const draftPath = "/rpc/academy_create_course_draft";
 
 /** Wait for the configuration holder to reach its database barrier before submitting the write. */
 async function waitForTransaction(sql, tag) {
@@ -106,8 +110,21 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       sql(
         `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, ...changes }))}::jsonb)`,
       );
+    const choices = (who, orgSearch = "", templateSearch = "") =>
+      actor(who, `${gate(choicesPath)} select coalesce(public.academy_course_draft_options(${q(orgSearch)},${q(templateSearch)})::text,'null')`).then(JSON.parse);
+    const draftPayload = {
+      time_zone: payload.time_zone,
+      delivery_type: payload.delivery_type,
+      venue: payload.venue,
+      sessions,
+    };
+    const draftRequest = randomUUID();
+    const draft = (who, { id = draftRequest, company = org, chosen = null, title = "Fictional reusable workshop", body = draftPayload } = {}) =>
+      actor(who, `${gate(draftPath)} select public.academy_create_course_draft(${q(id)},${q(company)},${chosen === null ? "null" : q(chosen)},${title === null ? "null" : q(title)},${q(JSON.stringify(body))}::jsonb)`).then(JSON.parse);
 
     await assert.rejects(save(manager), /42501/);
+    await assert.rejects(choices(manager), /42501/);
+    await assert.rejects(draft(manager), /42501/);
     await assert.rejects(actor(manager, saveSql()), /42501/);
     await sql(configure(true));
     await assert.rejects(save(teacher), /42501/);
@@ -235,6 +252,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await renew({ release_commit: nextRelease, issued_at: date(-7) });
     await assert.rejects(save(manager), /42501/);
     await assert.rejects(actor(manager, saveSql()), /42501/);
+    await assert.rejects(choices(manager), /42501/);
+    await assert.rejects(draft(manager), /42501/);
     await sql(configure(true, nextRelease));
     assert.equal((await workspace(manager)).id, run);
     await renew({
@@ -255,8 +274,45 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(workspace(manager), /42501/);
     assert.equal(await sql("select count(*) from public.course_runs"), "1");
     assert.equal(await sql("select count(*) from public.course_sessions"), "2");
+
+    await renew({ release_commit: nextRelease, issued_at: date(-4), starts_at: date(-3) });
+    const specification = academyOpenApi("https://academy.example.invalid", { name: "Fictional Academy", installationId: installation, edition });
+    const validateResponse = (path, data) => {
+      const schema = specification.paths["/rest/v1" + path].post.responses["200"].content["application/json"].schema;
+      assert.equal(z.fromJSONSchema(schema).safeParse(data).success, true);
+    };
+    const catalogue = await choices(manager, "academy", "workshop");
+    assert.deepEqual(catalogue, {
+      organisations: [{ id: org, name: "Fictional Academy" }],
+      templates: [{ id: template, title: "Fictional Workshop" }],
+    });
+    validateResponse(choicesPath, catalogue);
+    assert.deepEqual(await choices(manager, "%", "%"), { organisations: [], templates: [] });
+    for (const user of [learner, teacher]) {
+      assert.equal(await choices(user), null);
+      await assert.rejects(draft(user), /42501/);
+    }
+    await assert.rejects(actor(manager, gate(choicesPath, "GET")), /42501/);
+    await assert.rejects(draft(manager, { company: archivedOrg }), /22023/);
+    await assert.rejects(draft(manager, { chosen: template }), /22023/);
+    await assert.rejects(draft(manager, { chosen: archivedTemplate, title: null }), /22023/);
+    await assert.rejects(draft(manager, { body: { ...draftPayload, sessions: [sessions[0], sessions[0]] } }), /22023/);
+    assert.equal(await sql("select count(*) from public.course_templates where title='Fictional reusable workshop'"), "0");
+    assert.equal(await sql("select count(*) from private.academy_course_draft_requests"), "0");
+    const [first, repeat] = await Promise.all([draft(manager), draft(manager)]);
+    assert.deepEqual(repeat, first);
+    validateResponse(draftPath, first);
+    assert.equal(await sql("select count(*) from public.course_templates where title='Fictional reusable workshop'"), "1");
+    assert.equal(await sql(`select count(*) from public.course_sessions where course_run_id=${q(first.course_run_id)}`), "2");
+    await assert.rejects(draft(manager, { title: "Changed request title" }), /PT409/);
+    const fromExisting = await draft(manager, { id: randomUUID(), chosen: first.template_id, title: null });
+    assert.notEqual(fromExisting.course_run_id, first.course_run_id);
+    assert.equal(fromExisting.template_id, first.template_id);
+    await sql(`update public.course_runs set archived_at=now() where id=${q(first.course_run_id)}`);
+    await assert.rejects(draft(manager), /PT409/);
+    assert.equal(await sql("select count(*) from public.jobs"), "0");
     console.log(
-      `PASS ${edition} plain course and atomic sessions, manager scope, locked release closure, grace and expiry`,
+      `PASS ${edition} course and atomic draft sessions, template reuse, exact retry and scope, locked release, grace and expiry`,
     );
   });
 }

@@ -23,6 +23,7 @@ import { useAuth } from "../auth/auth-context";
 import { isParticipantOnly } from "../auth/guest-navigation";
 import { courseHubQuery, type CourseOverview } from "./api";
 import { CompanyInvitations } from "./company-invitations";
+import { AcademyCourseDraft } from "./academy-draft";
 import "./i18n";
 import "./learning.css";
 
@@ -88,7 +89,7 @@ function CourseCard({ course }: { course: CourseOverview }) {
 }
 
 /** Refresh the authorised list before displaying retained query data on a new visit. */
-export function LearningHubPage({ academy = false }: { academy?: boolean }) {
+export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -109,6 +110,7 @@ export function LearningHubPage({ academy = false }: { academy?: boolean }) {
         <Notice>{t("workspaceOffline")}</Notice>
       ) : (
         <>
+          {academy === "active" && <AcademyCourseDraft actor={actor} />}
           {!academy && isParticipantOnly(roles.data) && (
             <CompanyInvitations actor={actor} />
           )}
