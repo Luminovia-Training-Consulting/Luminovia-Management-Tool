@@ -24,9 +24,9 @@ Source baseline: `main` at `e6a47f1b`. “Present” means the owning implementa
 | FC-41, FC-42, FC-43, FC-44 | Participant account invitations, verified association, course membership and scoped workspace are present. | Complete native Auth, multi-company lifecycle, roster, learner route and online change tests. |
 | FC-45, FC-46 | Course groups and scanned version gateway exist. | Complete participant chat/posts, scoped audit view and live removal/revocation checks. |
 | FC-47 | The new course workspace welcome section stores append-only revisions and checks Premium on read and write. | Verify live publication across editors and enrolled participants in the browser. |
-| FC-48, FC-49 | Implementation in progress. | Exam flag/version, public exam PDF and separate private evidence require exact-byte acceptance. |
+| FC-48, FC-49 | Optional exam flag with versioning and exact clean PDFs for learners. Staff keys retain separate access. | Verify browser upload and full scanner/Storage acceptance. |
 | FC-50, FC-51 | Earlier attendance verification is present. Staff daily register and evidence work is in progress. | Complete role/browser and retained-data checks. |
-| FC-54 | Existing coursework, quizzes and completion APIs require a current Premium integration check. | Confirm learner access, paid-company scope and staff data separation across all flows. |
+| FC-54 | Existing quiz, feedback and completion flows are connected to the Premium workspace. | Verify native learner browser, issuance and cross-company/retained-data cases. |
 | FC-55, FC-56, FC-57, FC-58 | Local verification and release runners exist. | Run final combined checks, retained-data restore and operational acceptance before proceeding with a real-user release. |
 | G7.1, G7.2 | Human username/email session exchange and own username management implemented. | Run native Auth and browser verification. Username-based recovery and integration credential management remain open. |
 | G7.3–G7.6 | Swagger route and OpenAPI download implemented for the account facade and selected Premium RPCs. | Complete typed contracts, compatibility, scoped keys, webhooks and the full API acceptance matrix. |

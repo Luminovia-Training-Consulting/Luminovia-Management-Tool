@@ -25,8 +25,8 @@ Deno.serve(
             const user = caller(token);
             const result = await user.auth.getUser(token);
             if (result.error || !result.data.user) return false;
-            const active = await user.rpc("account_me");
-            return !active.error;
+            const active = await user.rpc("portal_access");
+            return !active.error && active.data === true;
         },
         rpc: async (token, name, args) => {
             const {data, error} = await caller(token).rpc(name, args);

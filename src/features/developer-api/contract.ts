@@ -6,6 +6,14 @@ const version = { type: "integer", minimum: 0 };
 const text = { type: "string" };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
+const course = { p_run_id: uuid };
+const optionalUsername = {
+  type: ["null", "string"],
+  minLength: 3,
+  maxLength: 32,
+  pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$",
+};
+const welcomeText = { type: "string", maxLength: 4000 };
 const object = (properties: Record<string, unknown>) => ({
   type: "object",
   properties,
@@ -54,6 +62,76 @@ const rpc = (
 });
 
 const nativePaths = {
+  "/rest/v1/rpc/account_username": rpc(
+    "accountUsername",
+    "Accounts",
+    "Read your login username",
+    "Returns the current actor's username and version. An unset username is null.",
+    {},
+    object({ username: optionalUsername, version }),
+  ),
+  "/rest/v1/rpc/save_account_username": rpc(
+    "saveAccountUsername",
+    "Accounts",
+    "Change or clear your login username",
+    "The username is normalized to lowercase. Clearing an alias does not change the account email, password, roles or UUID.",
+    { p_username: optionalUsername, p_expected_version: version },
+    object({ username: optionalUsername, version }),
+  ),
+  "/rest/v1/rpc/course_welcome_content": rpc(
+    "courseWelcomeContent",
+    "Courses",
+    "Read the published welcome revision",
+    "Requires an available Premium workspace. Only the current published revision is returned.",
+    course,
+    object({
+      version,
+      description: welcomeText,
+      objectives: welcomeText,
+      joining_instructions: welcomeText,
+      published_at: { type: ["null", "string"], format: "date-time" },
+    }),
+  ),
+  "/rest/v1/rpc/publish_course_welcome_content": rpc(
+    "publishCourseWelcomeContent",
+    "Courses",
+    "Publish a new welcome revision",
+    "Available to currently authorized teaching staff and company contacts. Submit the last read version to detect concurrent changes.",
+    {
+      ...course,
+      p_description: welcomeText,
+      p_objectives: welcomeText,
+      p_joining_instructions: welcomeText,
+      p_expected_version: version,
+    },
+    object({
+      version,
+      description: welcomeText,
+      objectives: welcomeText,
+      joining_instructions: welcomeText,
+      published_at: { type: "string", format: "date-time" },
+    }),
+  ),
+  "/rest/v1/rpc/set_course_exam_required": rpc(
+    "setCourseExamRequired",
+    "Premium LMS",
+    "Set whether the course requires an exam",
+    "Available to authorized editors. Disabling the exam hides the learner exam paper and retains the uploaded versions.",
+    { ...course, p_required: boolean, p_expected_version: version },
+    object({ required: boolean, version }),
+  ),
+  "/rest/v1/rpc/share_course_exam_pdf": rpc(
+    "shareCourseExamPdf",
+    "Premium LMS",
+    "Share an exact clean exam PDF version",
+    "A share needs a previously verified clean PDF version. Only the teaching team can share an answer key.",
+    {
+      ...course,
+      p_version_id: uuid,
+      p_audience: { enum: ["students", "exam_staff"] },
+    },
+    uuid,
+  ),
   "/rest/v1/rpc/company_participant_access": rpc(
     "companyParticipantAccess",
     "Premium LMS",

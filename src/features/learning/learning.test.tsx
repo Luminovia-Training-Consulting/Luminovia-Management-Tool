@@ -55,6 +55,7 @@ function fixture(): CourseWorkspace {
         roster: [],
         attendance_history: [],
         repeat_request: null,
+        exams: {required: false, version: null, can_edit: false, documents: []},
     };
 }
 
@@ -111,6 +112,34 @@ function setup() {
 }
 
 describe("connected course workspace", () => {
+    it("connects learner quiz, feedback and completion without staff controls", async () => {
+        fake.workspace.access = {
+            manager: false, learner: true, teacher: false, client: false,
+            staff: false, lms_enabled: true,
+        };
+        fake.workspace.quiz = {
+            version: 4, published: true, attempts: 0, max_attempts: 2,
+            pass_percent: 75, questions: [{prompt: "Fictional quiz?", options: ["Yes", "No"]}],
+            last_score: null, passed: false,
+        };
+        const user = userEvent.setup();
+        setup();
+        expect(await screen.findByRole("heading", {name: "Mini-Quiz"})).toBeVisible();
+        expect(screen.getByRole("link", {name: "Alle Kurse"})).toHaveAttribute("href", "/learning");
+        expect(screen.queryByRole("link", {name: "Kurs verwalten"})).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", {name: "Neue Quizfassung speichern"})).not.toBeInTheDocument();
+        expect(screen.getByRole("button", {name: "Kursfeedback speichern"})).toBeVisible();
+        expect(screen.getByRole("heading", {name: "Mein Abschlussdokument"})).toBeVisible();
+        await user.click(screen.getByRole("radio", {name: "Yes"}));
+        await user.click(screen.getByRole("button", {name: "Antworten verbindlich abgeben"}));
+        await waitFor(() => expect(fake.rpc).toHaveBeenCalledWith(
+            "course_workspace_action", expect.objectContaining({
+                p_action: "quiz_attempt", p_expected_version: 4,
+                p_payload: expect.objectContaining({answers: [0]}),
+            }),
+        ));
+    });
+
     it("shows operational course details without retired learner and delivery workflows", async () => {
         setup();
         expect(

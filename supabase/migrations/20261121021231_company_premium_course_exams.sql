@@ -21,6 +21,8 @@ create table private.course_exam_documents (
   unique (run_id, version_id)
 );
 create index course_exam_documents_run on private.course_exam_documents(run_id, audience, created_at);
+alter table private.course_exam_settings enable row level security;
+alter table private.course_exam_documents enable row level security;
 revoke all on private.course_exam_settings, private.course_exam_documents
   from public, anon, authenticated, service_role;
 

@@ -25,6 +25,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     const examPaperDocument = randomUUID(), examKeyDocument = randomUUID(),
         examPaperVersion = randomUUID(), examKeyVersion = randomUUID();
     let examPaperId, examKeyId;
+    const learnerResource = randomUUID(), learnerCompletion = randomUUID();
     await sql(
         `insert into auth.users(id, email)
          values ${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
@@ -238,6 +239,21 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await rpc(lecturer, "set_course_exam_required", [runA, true, 2]);
             assert.deepEqual((await rpc(lecturer, "course_workspace", [runA])).exams.documents.map((item) => item.id), [examPaperId, examKeyId]);
             await assert.rejects(rpc(lecturer, "set_course_exam_required", [runB, false, 0]), /42501/);
+            // Reuse the fixture's scanned-byte metadata to exercise the legacy
+            // learner dispatcher without sharing the exam's actual attachment.
+            const document = randomUUID(), version = randomUUID();
+            await sql(`insert into public.documents(id, owner_id, uploaded_by, scope, kind, original_name, mime_type, size_bytes, status, client_id)
+              values (${q(document)},${q(admin)},${q(admin)},'personal','material','Fictional handout.pdf','application/pdf',20,'clean',${q(randomUUID())});
+              insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+              values (${q(version)},${q(document)},${q(admin)},${q(randomUUID())},1,'fictional/handout.pdf','Fictional handout.pdf','application/pdf',20,'clean',${q("c".repeat(64))});
+              update public.documents set current_version_id=${q(version)} where id=${q(document)};
+              insert into private.course_resources(id,run_id,version_id,audience,category,created_by)
+              values (${q(learnerResource)},${q(runA)},${q(version)},'participants','material',${q(admin)});
+              insert into private.course_completion_records(id,run_id,user_id,snapshot)
+              values (${q(learnerCompletion)},${q(runA)},${q(participant)},'{"course":"Fictional course"}');`);
+            assert.equal((await rpc(participant, "course_document_access", ["resource", learnerResource])).id, version);
+            assert.equal((await rpc(participant, "course_document_access", ["completion", learnerCompletion])).id, learnerCompletion);
+            await assert.rejects(rpc(participant, "course_document_access", ["attendance", runA]), /42501/);
         },
     );
 
@@ -252,6 +268,8 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
+            await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
+            await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);
             await assert.rejects(
                 rpc(participant, "course_workspace_action", [runA, "quiz_submit", {answer: "fictional"}, 0]),
                 /42501/,

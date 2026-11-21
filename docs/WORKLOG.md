@@ -6,6 +6,8 @@ Published course welcome revisions through the current Premium and course author
 
 Added username and email password sign-in against the same Auth UUID and an account screen for changing the alias. The canonical HTTP test uses fictional identities to check that both credentials yield native Auth tokens for the same account. The disposable SQL alias suite, 15 focused login/account tests, four Edge handler tests, TypeScript, and seven documentation checks passed locally. Native Auth exchange and browser acceptance still require a running complete local stack.
 
+Added optional course exam PDFs, separated learner copies from staff answer keys and connected the existing quiz, feedback and completion flows to current Premium workspaces. The document gateway now recognizes active participant identities and still checks the precise resource and clean bytes. Enabled row security on the internal ledgers and tightened private function grants. All seven Premium database groups, six API surface groups, 11 course-document Edge tests and 18 learning component tests passed. Fixed source lint failures in invoice fixtures, role preview, mail and calendar settings. The 40 focused component tests and repository ESLint/typecheck passed.
+
 # 18 November 2026 — direct-main CI continuation
 
 Merged the verified calendar recurrence-window and exact existing-deadline fixes from `codex/bug-hunt-current-main-20261117` directly into `main` as merge commit `427de191`; retained the newer `main` worklog/plan during the documentation conflict. The focused calendar, lifecycle and date suites passed 27/27. A second stale remote bug-hunt branch had no additional source changes beyond that calendar fix, so it was not merged wholesale.

@@ -3,7 +3,7 @@ import {useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {BookOpen, Download} from "lucide-react";
+import {BookOpen, CheckCircle2, Download, Plus} from "lucide-react";
 import {DateTime} from "luxon";
 import {useAuth} from "../auth/auth-context";
 import {useOnline} from "../../lib/online";
@@ -13,7 +13,7 @@ import {Button} from "../../components/ui/button";
 import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {contactEmailLink, contactPhoneLink} from "../profile/contact-api";
 import {teachingLink} from "../dashboard/personal-api";
-import {courseAction, courseHubQuery, type CourseWorkspace, courseWorkspaceKey, courseWorkspaceQuery, downloadCourseDocument, repeatCourse,} from "./api";
+import {courseAction, courseHubQuery, type CourseWorkspace, type QuizQuestion, courseWorkspaceKey, courseWorkspaceQuery, downloadCourseDocument, repeatCourse,} from "./api";
 import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";
@@ -446,6 +446,331 @@ function Resources({course, actor}: WorkProps) {
     );
 }
 
+/** Discloses server-held identity and the minimum-three aggregate policy accurately. */
+function Feedback({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const save = useAction(course.id, actor);
+  const [rating, setRating] = useState(String(course.feedback?.rating ?? 5));
+  const [comment, setComment] = useState(course.feedback?.comment ?? "");
+  return (
+    <section className="panel learning-panel" aria-label={t("feedback")}>
+      <h2>{t("feedback")}</h2>
+      <p>{t("feedbackPolicy")}</p>
+      {(course.access.learner || course.access.client) && course.ended && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate({
+              action: "feedback",
+              payload: { rating: Number(rating), comment },
+              version: course.feedback?.version ?? 0,
+            });
+          }}
+        >
+          <Field id="course-feedback-rating" label={t("rating")}>
+            <select
+              id="course-feedback-rating"
+              value={rating}
+              onChange={(event) => setRating(event.target.value)}
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option value={n} key={n}>
+                  {n}/5
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="course-feedback-comment" label={t("comment")}>
+            <textarea
+              id="course-feedback-comment"
+              maxLength={2000}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+            />
+          </Field>
+          <Button disabled={!online || save.isPending}>
+            {t("saveFeedback")}
+          </Button>
+          <Result error={save.isError} success={save.isSuccess} />
+        </form>
+      )}
+      {course.feedback_summary && (
+        <>
+          <p>{t("feedbackCount", { count: course.feedback_summary.count })}</p>
+          {course.feedback_summary.average === null ? (
+            <p>{t("feedbackThreshold")}</p>
+          ) : (
+            <>
+              <strong>{course.feedback_summary.average}/5</strong>
+              <ul>
+                {course.feedback_summary.comments?.map((text, index) => (
+                  <li key={index}>{text}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+/** Publishes immutable quiz revisions rather than editing already accepted learner attempts. */
+function QuizEditor({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const save = useAction(course.id, actor);
+  const [questions, setQuestions] = useState<QuizQuestion[]>(
+    course.quiz?.questions ?? [{ prompt: "", options: ["", ""], correct: 0 }],
+  );
+  const [pass, setPass] = useState(course.quiz?.pass_percent ?? 80);
+  const [attempts, setAttempts] = useState(course.quiz?.max_attempts ?? 3);
+  const [published, setPublished] = useState(course.quiz?.published ?? false);
+  function update(index: number, patch: Partial<QuizQuestion>) {
+    setQuestions((items) =>
+      items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
+  }
+  return (
+    <form
+      className="learning-quiz-editor"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save.mutate({
+          action: "quiz_config",
+          payload: {
+            questions,
+            pass_percent: pass,
+            max_attempts: attempts,
+            published,
+          },
+          version: course.quiz?.version ?? 0,
+        });
+      }}
+    >
+      {questions.map((question, index) => (
+        <fieldset key={index}>
+          <legend>{t("quizQuestion", { number: index + 1 })}</legend>
+          <label>
+            {t("prompt")}
+            <input
+              required
+              maxLength={500}
+              value={question.prompt}
+              onChange={(event) =>
+                update(index, { prompt: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            {t("options")}
+            <textarea
+              required
+              value={question.options.join("\n")}
+              onChange={(event) =>
+                update(index, { options: event.target.value.split("\n") })
+              }
+            />
+          </label>
+          <label>
+            {t("correctAnswer")}
+            <select
+              value={question.correct ?? 0}
+              onChange={(event) =>
+                update(index, { correct: Number(event.target.value) })
+              }
+            >
+              {question.options.map((option, i) => (
+                <option value={i} key={i}>
+                  {i + 1}. {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          {questions.length > 1 && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() =>
+                setQuestions((items) => items.filter((_, i) => i !== index))
+              }
+            >
+              {t("removeQuestion")}
+            </Button>
+          )}
+        </fieldset>
+      ))}
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={questions.length >= 20}
+        onClick={() =>
+          setQuestions((items) => [
+            ...items,
+            { prompt: "", options: ["", ""], correct: 0 },
+          ])
+        }
+      >
+        <Plus size={16} />
+        {t("addQuestion")}
+      </Button>
+      <label>
+        {t("passPercent")}
+        <input
+          type="number"
+          min={50}
+          max={100}
+          value={pass}
+          onChange={(event) => setPass(Number(event.target.value))}
+        />
+      </label>
+      <label>
+        {t("maxAttempts")}
+        <input
+          type="number"
+          min={1}
+          max={10}
+          value={attempts}
+          onChange={(event) => setAttempts(Number(event.target.value))}
+        />
+      </label>
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={published}
+          onChange={(event) => setPublished(event.target.checked)}
+        />
+        {t("publishQuiz")}
+      </label>
+      <Button disabled={!online || save.isPending}>{t("saveQuiz")}</Button>
+      <Result error={save.isError} success={save.isSuccess} />
+    </form>
+  );
+}
+/** Submits an eligible attempt with a stable retry ID; correct answers remain server-private. */
+function QuizAttempt({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const save = useAction(course.id, actor);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [request] = useState(() => crypto.randomUUID());
+  const quiz = course.quiz!;
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        save.mutate({
+          action: "quiz_attempt",
+          payload: { answers, request_id: request },
+          version: quiz.version,
+        });
+      }}
+    >
+      {quiz.questions.map((question, index) => (
+        <fieldset key={index}>
+          <legend>{question.prompt}</legend>
+          {question.options.map((option, n) => (
+            <label className="checkbox-label" key={n}>
+              <input
+                type="radio"
+                required
+                name={`quiz-question-${index}`}
+                checked={answers[index] === n}
+                onChange={() =>
+                  setAnswers((items) => {
+                    const next = [...items];
+                    next[index] = n;
+                    return next;
+                  })
+                }
+              />
+              {option}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      <p>
+        {t("quizLimits", {
+          attempts: quiz.attempts,
+          max: quiz.max_attempts,
+          pass: quiz.pass_percent,
+        })}
+      </p>
+      {quiz.last_score !== null && (
+        <p>
+          {t("score", { score: quiz.last_score })} ·{" "}
+          {t(quiz.passed ? "passed" : "notPassed")}
+        </p>
+      )}
+      <Button
+        disabled={
+          !online ||
+          save.isPending ||
+          quiz.attempts >= quiz.max_attempts ||
+          quiz.passed
+        }
+      >
+        {t("submitQuiz")}
+      </Button>
+      <Result error={save.isError} />
+    </form>
+  );
+}
+/** Chooses authoring or attempt controls from the authorized course DTO. */
+function Quiz({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  return (
+    <section className="panel learning-panel" aria-label={t("quiz")}>
+      <h2>{t("quiz")}</h2>
+      {course.access.staff ? (
+        <QuizEditor
+          key={course.quiz?.version ?? 0}
+          course={course}
+          actor={actor}
+        />
+      ) : course.quiz?.published && course.access.learner ? (
+        <QuizAttempt
+          key={`${course.quiz.version}:${course.quiz.attempts}`}
+          course={course}
+          actor={actor}
+        />
+      ) : (
+        <p>{t("noQuiz")}</p>
+      )}
+    </section>
+  );
+}
+/** Requests completion only after server attendance and current-quiz eligibility checks. */
+function Completion({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const save = useAction(course.id, actor);
+  return (
+    <section className="panel learning-panel" aria-label={t("completion")}>
+      <h2>{t("completion")}</h2>
+      <p>{t("completionHelp")}</p>
+      {course.completion ? (
+        <>
+          <CheckCircle2 aria-hidden="true" />
+          <DownloadButton
+            kind="completion"
+            id={course.completion.id}
+            name="course-completion.pdf"
+          />
+        </>
+      ) : (
+        <Button
+          disabled={!online || save.isPending || !course.ended}
+          onClick={() => save.mutate({ action: "completion_issue" })}
+        >
+          {t("issueCompletion")}
+        </Button>
+      )}
+      <Result error={save.isError} />
+    </section>
+  );
+}
+
 /** Creates a new future request from the client’s delivered course without copying private learner data. */
 function RepeatBooking({course}: WorkProps) {
     const {t} = useTranslation("learning");
@@ -602,7 +927,7 @@ export function CourseWorkspacePage() {
             <PageHeading title={course.title} description={t("workspaceHelp")}/>
             <div className="page-actions">
                 <Button asChild variant="ghost">
-                    <Link to="/courses">{t("back")}</Link>
+                    <Link to={course.access.learner ? "/learning" : "/courses"}>{t("back")}</Link>
                 </Button>
                 <Button
                     variant="secondary"
@@ -612,7 +937,7 @@ export function CourseWorkspacePage() {
                     {t("refresh")}
                 </Button>
             </div>
-            <div className="page-actions">
+            {!course.access.learner && <div className="page-actions">
                 <Button asChild variant="secondary">
                     <Link to={`/courses?run=${course.id}`}>
                         {i18n.language.startsWith("de")
@@ -627,7 +952,7 @@ export function CourseWorkspacePage() {
                             : "Course readiness"}
                     </Link>
                 </Button>
-            </div>
+            </div>}
             <div className="learning-workspace course-operations-workspace">
                 <CourseBasics course={course}/>
                 {course.lms_enabled && (
@@ -648,6 +973,13 @@ export function CourseWorkspacePage() {
                         actor={actor}
                     />
                 )}
+                {(course.access.learner || course.access.client || course.access.staff) && (
+                    <Feedback key={`${course.id}:${course.feedback?.version ?? 0}`} course={course} actor={actor}/>
+                )}
+                {(course.access.staff || (course.access.learner && course.quiz?.published)) && (
+                    <Quiz course={course} actor={actor}/>
+                )}
+                {course.access.learner && <Completion course={course} actor={actor}/>}
                 {course.access.client && course.ended && course.repeat_request && (
                     <RepeatBooking course={course} actor={actor}/>
                 )}
