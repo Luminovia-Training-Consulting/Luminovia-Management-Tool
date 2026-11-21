@@ -1566,3 +1566,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Align the existing Academy API explorer lazy import with the production export scanner; nine integrity and 30 targeted component/route tests pass.
 - [ ] Verify the complete current-main CI and remaining White-Label LMS, browser, licensing and deployment gates before marking them complete.
+
+- [x] Format the academy licence panel flagged by Portal run `44892137237`; full source formatting passes locally.
+- [ ] Complete current-main system, security, native self-host and desktop/mobile browser CI before accepting the remaining core roadmap.

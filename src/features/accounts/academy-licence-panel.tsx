@@ -68,7 +68,9 @@ export function AcademyLicencePanel({ actor }: { actor: string }) {
       <dl>
         <dt>{word("Lizenzierte Sitze", "Licensed seats")}</dt>
         <dd>{integer.format(receipt.seats.limit)}</dd>
-        <dt>{word("Belegte und reservierte Sitze", "Occupied and reserved seats")}</dt>
+        <dt>
+          {word("Belegte und reservierte Sitze", "Occupied and reserved seats")}
+        </dt>
         <dd>{integer.format(receipt.seats.occupied)}</dd>
         <dt>{word("Verfügbare Sitze", "Available seats")}</dt>
         <dd>{integer.format(receipt.seats.available)}</dd>

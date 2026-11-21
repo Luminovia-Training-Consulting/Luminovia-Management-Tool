@@ -3689,3 +3689,7 @@ The system job for the same run exposed a collation-dependent fixture expectatio
 # 21 November 2026 — Academy API route CI repair
 
 Actions run `44890241359` failed code integrity because its export scanner did not recognize the destructured dynamic import of the already-registered Academy API explorer. The route now uses the existing module-property lazy import convention. All nine integrity tests, 30 targeted Academy route and explorer tests, and TypeScript typecheck passed locally. Full current-main CI, native browser and self-host acceptance remain pending.
+
+# 21 November 2026 — CI formatting follow-up
+
+The exact-main Portal run `44892137237` reported an unformatted academy licence panel. Applied the repository formatter; the complete source formatting check and whitespace validation pass locally. Other long-running system, self-host and browser checks must finish on the new exact main revision.
