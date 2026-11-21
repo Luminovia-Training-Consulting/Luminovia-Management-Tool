@@ -27,6 +27,7 @@ const writePaths = [
   "/rest/v1/rpc/share_course_exam_pdf",
   "/rest/v1/rpc/mark_notifications",
   "/rest/v1/rpc/academy_publish_course",
+  "/rest/v1/rpc/academy_learning_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

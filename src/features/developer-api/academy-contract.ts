@@ -16,6 +16,8 @@ import {
   meetingLinkResult,
   meetingUrl,
   myWorkspacesResult,
+  workspaceActionRequest,
+  workspaceActionResult,
   workspaceResult,
 } from "./learning-contract.ts";
 
@@ -234,12 +236,12 @@ const examFileError = (description: string, codes: string[]) => ({
   description,
   content: content(record({ error: { enum: codes } })),
 });
-const studentExamDownload = {
+const courseDocumentDownload = {
   post: {
-    operationId: "downloadAcademyStudentExamPdf",
+    operationId: "downloadAcademyCourseDocument",
     tags: ["Licensed course profile"],
-    summary: "Download the exact scanned student exam paper",
-    description: `${readAccess} Send an approved Origin and the student paper ID from the course workspace. The course must still require an exam and the caller must retain course access. The exact stored SHA-256 and current permissions are checked before any bytes are returned.`,
+    summary: "Download a student exam paper or completion record",
+    description: `${readAccess} Send an approved Origin and the document ID from the course workspace. Student exam papers return the exact scan-confirmed bytes while the exam is required. Completion records are rendered from the retained verified facts. The caller's authority is checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [
@@ -252,11 +254,13 @@ const studentExamDownload = {
     ],
     requestBody: {
       required: true,
-      content: content(record({ kind: { const: "exam" }, id: uuid })),
+      content: content(
+        record({ kind: { enum: ["exam", "completion"] }, id: uuid }),
+      ),
     },
     responses: {
       "200": {
-        description: "Private exact PDF",
+        description: "Private PDF",
         headers: {
           "Cache-Control": { schema: string },
           "Content-Disposition": { schema: string },
@@ -277,7 +281,10 @@ const studentExamDownload = {
           "document_changed_or_revoked",
         ],
       ),
-      "503": examFileError("Exact PDF unavailable", [
+      "422": examFileError("PDF font cannot represent a retained character", [
+        "unsupported_glyph",
+      ]),
+      "503": examFileError("PDF unavailable", [
         "document_unavailable",
         "document_integrity_failed",
       ]),
@@ -285,6 +292,13 @@ const studentExamDownload = {
   },
 };
 const expectedVersion = { type: "integer", minimum: 0 };
+const academyActivityActions = new Set([
+  "feedback",
+  "quiz_config",
+  "quiz_attempt",
+  "completion_issue",
+  "completion_revoke",
+]);
 const welcomeText = { ...string, maxLength: 4000 };
 const attendanceVersion = { type: "integer", minimum: 0 };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
@@ -572,7 +586,31 @@ const coursePaths = {
     record({ ...run, p_version_id: uuid, p_audience: { const: "students" } }),
     uuid,
   ),
-  "/functions/v1/course-documents": studentExamDownload,
+  "/functions/v1/course-documents": courseDocumentDownload,
+  "/rest/v1/rpc/academy_learning_action": courseOperation(
+    "saveAcademyLearningActivity",
+    "Save feedback, a quiz or a completion action",
+    "Course staff author revisioned quizzes and can revoke a completion record. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
+    "active",
+    {
+      ...record(
+        {
+          ...run,
+          p_action: { enum: [...academyActivityActions] },
+          p_payload: { type: "object" },
+          p_expected_version: { ...expectedVersion, default: 0 },
+        },
+        ["p_run_id", "p_action", "p_payload"],
+      ),
+      oneOf: workspaceActionRequest.oneOf.filter(({ properties }) =>
+        academyActivityActions.has(
+          (properties.p_action as { const: string }).const,
+        ),
+      ),
+    },
+    workspaceActionResult,
+    true,
+  ),
   "/rest/v1/rpc/academy_ensure_course_chat": courseOperation(
     "ensureAcademyCourseChat",
     "Open the course participant text room",
@@ -621,7 +659,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.9.0",
+      version: "1.10.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

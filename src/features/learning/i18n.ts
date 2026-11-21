@@ -388,6 +388,18 @@ const pairs: Record<string, [string, string]> = {
     "Abschlussdokument widerrufen",
     "Revoke completion document",
   ],
+  courseCompletionDocuments: [
+    "Abschlussdokumente des Kurses",
+    "Course completion documents",
+  ],
+  downloadCompletionFor: [
+    "Abschlussdokument für {{name}} herunterladen",
+    "Download completion document for {{name}}",
+  ],
+  revokeCompletionFor: [
+    "Abschlussdokument für {{name}} widerrufen",
+    "Revoke completion document for {{name}}",
+  ],
   notebook: ["Mein privates Kursnotizbuch", "My private course notebook"],
   notebookHelp: [
     "Diese Notizen sieht ausschließlich dein Konto. Lehrteam und Auftraggeber erhalten keinen allgemeinen Zugriff.",

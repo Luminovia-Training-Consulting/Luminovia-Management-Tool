@@ -24,10 +24,12 @@ export function DownloadButton({
   kind,
   id,
   name,
+  label,
 }: {
   kind: "resource" | "attendance" | "completion";
   id: string;
   name: string;
+  label?: string;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -38,6 +40,7 @@ export function DownloadButton({
     <>
       <Button
         variant="secondary"
+        aria-label={label}
         disabled={!online || download.isPending}
         onClick={() => download.mutate()}
       >

@@ -18,6 +18,7 @@ import { useOnline } from "../../lib/online";
 import { userRolesQuery } from "../../lib/queries";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import {
   ErrorState,
   Field,
@@ -49,9 +50,10 @@ import { CourseChat } from "./course-chat";
 import { DownloadButton, Resources } from "./resources";
 
 type WorkProps = { course: CourseWorkspace; actor: string };
+type ActivityProps = WorkProps & { academy?: "active" | "grace" };
 
 /** Confirms an authorized course mutation before invalidating only this account’s workspace. */
-function useAction(course: string, actor: string) {
+function useAction(course: string, actor: string, academy = false) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -62,7 +64,10 @@ function useAction(course: string, actor: string) {
       action: string;
       payload?: Record<string, unknown>;
       version?: number;
-    }) => courseAction(course, action, payload, version),
+    }) =>
+      academy
+        ? courseAction(course, action, payload, version, true)
+        : courseAction(course, action, payload, version),
     onSuccess: () =>
       client.invalidateQueries({ queryKey: courseWorkspaceKey(actor, course) }),
   });
@@ -277,54 +282,62 @@ function CourseContact({
 }
 
 /** Discloses server-held identity and the minimum-three aggregate policy accurately. */
-function Feedback({ course, actor }: WorkProps) {
+function Feedback({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const save = useAction(course.id, actor);
+  const save = useAction(course.id, actor, Boolean(academy));
   const [rating, setRating] = useState(String(course.feedback?.rating ?? 5));
   const [comment, setComment] = useState(course.feedback?.comment ?? "");
   return (
     <section className="panel learning-panel" aria-label={t("feedback")}>
       <h2>{t("feedback")}</h2>
       <p>{t("feedbackPolicy")}</p>
-      {(course.access.learner || course.access.client) && course.ended && (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate({
-              action: "feedback",
-              payload: { rating: Number(rating), comment },
-              version: course.feedback?.version ?? 0,
-            });
-          }}
-        >
-          <Field id="course-feedback-rating" label={t("rating")}>
-            <select
-              id="course-feedback-rating"
-              value={rating}
-              onChange={(event) => setRating(event.target.value)}
-            >
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option value={n} key={n}>
-                  {n}/5
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="course-feedback-comment" label={t("comment")}>
-            <textarea
-              id="course-feedback-comment"
-              maxLength={2000}
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </Field>
-          <Button disabled={!online || save.isPending}>
-            {t("saveFeedback")}
-          </Button>
-          <Result error={save.isError} success={save.isSuccess} />
-        </form>
+      {academy === "grace" && course.feedback && (
+        <>
+          <p>{course.feedback.rating}/5</p>
+          <p>{course.feedback.comment}</p>
+        </>
       )}
+      {academy !== "grace" &&
+        (course.access.learner || course.access.client) &&
+        course.ended && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              save.mutate({
+                action: "feedback",
+                payload: { rating: Number(rating), comment },
+                version: course.feedback?.version ?? 0,
+              });
+            }}
+          >
+            <Field id="course-feedback-rating" label={t("rating")}>
+              <select
+                id="course-feedback-rating"
+                value={rating}
+                onChange={(event) => setRating(event.target.value)}
+              >
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option value={n} key={n}>
+                    {n}/5
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="course-feedback-comment" label={t("comment")}>
+              <textarea
+                id="course-feedback-comment"
+                maxLength={2000}
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+              />
+            </Field>
+            <Button disabled={!online || save.isPending}>
+              {t("saveFeedback")}
+            </Button>
+            <Result error={save.isError} success={save.isSuccess} />
+          </form>
+        )}
       {course.feedback_summary && (
         <>
           <p>{t("feedbackCount", { count: course.feedback_summary.count })}</p>
@@ -346,10 +359,10 @@ function Feedback({ course, actor }: WorkProps) {
   );
 }
 /** Publishes immutable quiz revisions rather than editing already accepted learner attempts. */
-function QuizEditor({ course, actor }: WorkProps) {
+function QuizEditor({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const save = useAction(course.id, actor);
+  const save = useAction(course.id, actor, Boolean(academy));
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     course.quiz?.questions ?? [{ prompt: "", options: ["", ""], correct: 0 }],
   );
@@ -478,10 +491,10 @@ function QuizEditor({ course, actor }: WorkProps) {
   );
 }
 /** Submits an eligible attempt with a stable retry ID; correct answers remain server-private. */
-function QuizAttempt({ course, actor }: WorkProps) {
+function QuizAttempt({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const save = useAction(course.id, actor);
+  const save = useAction(course.id, actor, Boolean(academy));
   const [answers, setAnswers] = useState<number[]>([]);
   const [request] = useState(() => crypto.randomUUID());
   const quiz = course.quiz!;
@@ -547,22 +560,39 @@ function QuizAttempt({ course, actor }: WorkProps) {
   );
 }
 /** Chooses authoring or attempt controls from the authorized course DTO. */
-function Quiz({ course, actor }: WorkProps) {
+function Quiz({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   return (
     <section className="panel learning-panel" aria-label={t("quiz")}>
       <h2>{t("quiz")}</h2>
-      {course.access.staff ? (
+      {academy === "grace" ? (
+        course.quiz ? (
+          <div>
+            <ol>
+              {course.quiz.questions.map((question, index) => (
+                <li key={index}>{question.prompt}</li>
+              ))}
+            </ol>
+            {course.quiz.last_score !== null && (
+              <p>{t("score", { score: course.quiz.last_score })}</p>
+            )}
+          </div>
+        ) : (
+          <p>{t("noQuiz")}</p>
+        )
+      ) : course.access.staff ? (
         <QuizEditor
           key={course.quiz?.version ?? 0}
           course={course}
           actor={actor}
+          academy={academy}
         />
       ) : course.quiz?.published && course.access.learner ? (
         <QuizAttempt
           key={`${course.quiz.version}:${course.quiz.attempts}`}
           course={course}
           actor={actor}
+          academy={academy}
         />
       ) : (
         <p>{t("noQuiz")}</p>
@@ -571,10 +601,10 @@ function Quiz({ course, actor }: WorkProps) {
   );
 }
 /** Requests completion only after server attendance and current-quiz eligibility checks. */
-function Completion({ course, actor }: WorkProps) {
+function Completion({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const save = useAction(course.id, actor);
+  const save = useAction(course.id, actor, Boolean(academy));
   return (
     <section className="panel learning-panel" aria-label={t("completion")}>
       <h2>{t("completion")}</h2>
@@ -588,15 +618,117 @@ function Completion({ course, actor }: WorkProps) {
             name="course-completion.pdf"
           />
         </>
-      ) : (
+      ) : academy !== "grace" ? (
         <Button
           disabled={!online || save.isPending || !course.ended}
           onClick={() => save.mutate({ action: "completion_issue" })}
         >
           {t("issueCompletion")}
         </Button>
-      )}
+      ) : null}
       <Result error={save.isError} />
+    </section>
+  );
+}
+
+/** List the course's issued completion documents and confirm an authorised revocation. */
+function AcademyCompletionRegister({ course, actor, academy }: ActivityProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const save = useAction(course.id, actor, true);
+  const [selected, setSelected] = useState<{ id: string; name: string }>();
+  const [reason, setReason] = useState("");
+  const issued = course.roster.flatMap(({ user_id, name, completion_id }) =>
+    completion_id ? [{ user_id, name, id: completion_id }] : [],
+  );
+  if (!issued.length && !selected) return null;
+  return (
+    <section
+      className="panel learning-panel"
+      aria-label={t("courseCompletionDocuments")}
+    >
+      <h2>{t("courseCompletionDocuments")}</h2>
+      <ul className="course-enrolment-roster">
+        {issued.map(({ user_id, name, id }) => (
+          <li key={user_id}>
+            <strong>{name}</strong>
+            <div className="course-enrolment-actions">
+              <DownloadButton
+                kind="completion"
+                id={id}
+                name="course-completion.pdf"
+                label={t("downloadCompletionFor", { name })}
+              />
+              {academy === "active" && course.access.staff && (
+                <Button
+                  variant="secondary"
+                  disabled={!online || save.isPending}
+                  aria-label={t("revokeCompletionFor", { name })}
+                  onClick={() => {
+                    setSelected({ id, name });
+                    setReason("");
+                    save.reset();
+                  }}
+                >
+                  {t("revokeCompletion")}
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <Dialog
+        open={academy === "active" && Boolean(selected)}
+        title={t("revokeCompletion")}
+        description={t("revokeCompletionFor", { name: selected?.name })}
+        onOpenChange={(open) =>
+          !open && !save.isPending && setSelected(undefined)
+        }
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!selected || reason.trim().length < 3) return;
+            save.mutate(
+              {
+                action: "completion_revoke",
+                payload: { id: selected.id, reason: reason.trim() },
+              },
+              {
+                onSuccess: () => setSelected(undefined),
+              },
+            );
+          }}
+        >
+          <Field id="academy-completion-reason" label={t("revocationReason")}>
+            <textarea
+              value={reason}
+              required
+              minLength={3}
+              maxLength={500}
+              disabled={save.isPending}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </Field>
+          <Result error={save.isError} />
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={save.isPending}
+              onClick={() => setSelected(undefined)}
+            >
+              {t("enrolmentCancel")}
+            </Button>
+            <Button
+              type="submit"
+              disabled={!online || save.isPending || reason.trim().length < 3}
+            >
+              {t("enrolmentConfirm")}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </section>
   );
 }
@@ -737,7 +869,7 @@ function CourseWorkspaceLayout({
     course.exams &&
     (course.exams.required || course.exams.can_edit || (academy && editor)),
   );
-  const hasActivities = !academy && (learner || editor);
+  const hasActivities = learner || editor;
   const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
@@ -954,12 +1086,24 @@ function CourseWorkspaceLayout({
                 key={`${course.id}:${course.feedback?.version ?? 0}`}
                 course={course}
                 actor={actor}
+                academy={academy}
               />
               {(course.access.staff || (learner && course.quiz?.published)) && (
-                <Quiz course={course} actor={actor} />
+                <Quiz course={course} actor={actor} academy={academy} />
               )}
-              {learner && <Completion course={course} actor={actor} />}
-              {course.access.client &&
+              {learner && (
+                <Completion course={course} actor={actor} academy={academy} />
+              )}
+              {academy && editor && (
+                <AcademyCompletionRegister
+                  key={course.id}
+                  course={course}
+                  actor={actor}
+                  academy={academy}
+                />
+              )}
+              {!academy &&
+                course.access.client &&
                 course.ended &&
                 course.repeat_request && (
                   <RepeatBooking course={course} actor={actor} />

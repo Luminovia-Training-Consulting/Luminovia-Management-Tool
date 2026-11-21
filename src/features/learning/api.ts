@@ -196,14 +196,18 @@ export async function courseAction(
   action: string,
   payload: Record<string, unknown>,
   version = 0,
+  academy = false,
 ) {
   requireOnline();
-  const { data, error } = await db().rpc("course_workspace_action", {
-    p_run_id: run,
-    p_action: action,
-    p_payload: payload,
-    p_expected_version: version,
-  });
+  const { data, error } = await db().rpc(
+    academy ? "academy_learning_action" : "course_workspace_action",
+    {
+      p_run_id: run,
+      p_action: action,
+      p_payload: payload,
+      p_expected_version: version,
+    },
+  );
   if (error) throw error;
   return data as {
     id: string | null;
