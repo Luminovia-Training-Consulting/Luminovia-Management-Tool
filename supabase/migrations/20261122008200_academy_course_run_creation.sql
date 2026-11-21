@@ -55,6 +55,9 @@ begin
   if (select edition from private.installation_identity) is distinct from 'internal' then
     -- Serialize with licence renewal and closure of the exact-release profile.
     perform private.lock_academy_course_access();
+    -- Keep account suspension from overtaking the confirmed creation.
+    perform 1 from public.profiles where id = auth.uid() and active for share;
+    if not found then raise insufficient_privilege; end if;
     if p_id is not null then
       raise exception 'Academy course profile allows creation only' using errcode = '42501';
     end if;

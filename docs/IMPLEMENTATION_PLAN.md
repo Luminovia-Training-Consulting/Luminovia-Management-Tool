@@ -4,6 +4,7 @@
 
 - [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.
 - [x] Enable active-licence meeting links with scoped editing and participant reads for the dedicated course-access profile. Verify read-only grace, expiry and retained data.
+- [x] Run the licensed profile switch through the operator CLI and create scoped course drafts. PostgreSQL confirms transaction rollback after invalid sessions and rejection when an operator closes the profile before a queued write. Verify full customer authoring and runtime separately.
 - [x] Sign and verify fictional browser packages for both dedicated editions with independent Ed25519 keys, exact release hashes and the signed licence.
 - [x] Add typed assignment amendment requests and responses using the same redacted snapshot schema as the browser.
 - [x] Synchronize participant course-chat membership after ordinary successful lecturer claims and include the Realtime marker in the reviewed course-chat deletion scope.
