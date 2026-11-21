@@ -7,7 +7,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import type { CourseWorkspace } from "./api";
+import { AttendancePanel } from "./attendance";
 import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
+import "./i18n";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
@@ -63,10 +65,35 @@ beforeEach(async () => {
 describe("Premium course enrolment management", () => {
   it("searches accepted associations and waits for a confirmed enrolment", async () => {
     let roster: Record<string, string>[] = [];
+    const session = {
+      id: "session-a",
+      starts_at: "2050-01-02T09:00:00Z",
+      ends_at: "2050-01-02T11:00:00Z",
+      attendance: null,
+      minutes: null,
+      version: 0,
+      can_check_in: false,
+      can_verify: false,
+    };
+    const scheduledCourse = { ...course, sessions: [session] };
     rpc.mockImplementation((name: string) => {
       if (name === "course_enrolments") return reply(roster);
       if (name === "course_enrolment_candidates")
         return reply(roster.length ? [] : [participant]);
+      if (name === "course_session_register")
+        return reply({
+          rows: roster.map(({ user_id, display_name }) => ({
+            user_id,
+            name: display_name,
+            status: null,
+            note: "",
+            arrival_at: null,
+            departure_at: null,
+            version: 0,
+          })),
+          evidence: [],
+          history: [],
+        });
       if (name === "manage_course_enrolment") {
         roster = [
           {
@@ -79,7 +106,13 @@ describe("Premium course enrolment management", () => {
       }
       throw new Error("Unexpected RPC " + name);
     });
-    view(<CourseEnrolmentsPanel course={course} actor="company" />);
+    view(
+      <>
+        <CourseEnrolmentsPanel course={scheduledCourse} actor="company" />
+        <AttendancePanel course={scheduledCourse} actor="company" />
+      </>,
+    );
+    expect(await screen.findByText("No enrolled participants.")).toBeVisible();
     const user = userEvent.setup();
     await user.type(screen.getByRole("searchbox"), "Fictional");
     await user.click(screen.getByRole("button", { name: "Search" }));
@@ -88,7 +121,9 @@ describe("Premium course enrolment management", () => {
       p_search: "Fictional",
     });
     await user.selectOptions(
-      await screen.findByRole("combobox"),
+      await within(
+        screen.getByRole("region", { name: "Manage course enrolments" }),
+      ).findByRole("combobox"),
       participant.user_id,
     );
     await user.click(
@@ -102,6 +137,9 @@ describe("Premium course enrolment management", () => {
     );
     await user.click(within(dialog).getByRole("button", { name: "Confirm" }));
     expect(await screen.findByText("Enrolled")).toBeVisible();
+    expect(
+      await screen.findByText("Import attendance from CSV or XLSX"),
+    ).toBeVisible();
     expect(rpc).toHaveBeenCalledWith("manage_course_enrolment", {
       p_course_run_id: course.id,
       p_user_id: participant.user_id,
