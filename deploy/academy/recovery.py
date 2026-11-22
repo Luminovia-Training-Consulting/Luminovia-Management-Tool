@@ -2,7 +2,7 @@
 """Create and restore a cold, age-encrypted recovery set for one dedicated academy."""
 
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import fcntl
 import hashlib
 import io
@@ -351,6 +351,10 @@ def pack(root, output, recipient, metadata, volumes, optional_inputs):
                 age.stdin.close()
             except BaseException:
                 age.kill()
+                # Closing the buffered pipe after stopping age can raise again.
+                # Preserve the archive validation error that caused the abort.
+                with suppress(BrokenPipeError):
+                    age.stdin.close()
                 raise
             if age.wait() != 0:
                 fail("recovery encryption failed")

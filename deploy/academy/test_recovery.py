@@ -317,6 +317,25 @@ class RecoveryRoundTrip(unittest.TestCase):
 
 
 class RecoveryArchiveTypes(unittest.TestCase):
+    def test_closed_encryptor_pipe_preserves_the_archive_validation_error(self):
+        with tempfile.TemporaryDirectory(prefix="academy-recovery-pipe-") as directory:
+            root = Path(directory)
+            read_end, write_end = os.pipe()
+            os.close(read_end)
+            with os.fdopen(write_end, "wb") as pipe:
+                pipe.write(b"fictional buffered archive bytes")
+                with (patch.object(recovery.subprocess, "Popen") as spawn,
+                      patch.object(recovery.tarfile, "open",
+                                   side_effect=recovery.RecoveryError("forbidden archive member"))):
+                    process = spawn.return_value
+                    process.__enter__.return_value = process
+                    process.__exit__.side_effect = lambda *_: pipe.close()
+                    process.stdin = pipe
+                    with self.assertRaisesRegex(recovery.RecoveryError, "forbidden archive member"):
+                        recovery.pack(root, root / "archive.age", "fictional", {}, {}, {})
+                    process.kill.assert_called_once_with()
+                    self.assertTrue(pipe.closed)
+
     def test_sticky_bit_is_allowed_only_for_caddy_directories(self):
         caddy = "volumes/caddy_data/caddy"
         for path, kind, mode in (
