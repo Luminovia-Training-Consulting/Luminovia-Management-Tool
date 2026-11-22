@@ -9,8 +9,12 @@ import {resolve} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
 import {networkName} from "./runtime-network.mjs";
 
-const image =
-    "clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3";
+// Use the same digest updated by self-host maintenance for disposable acceptance.
+const composePath = new URL("../deploy/hostinger/compose.yml", import.meta.url);
+const image = /^  clamav:\r?\n    image: (clamav\/clamav@sha256:[a-f0-9]{64})\r?$/m.exec(
+    readFileSync(composePath, "utf8"),
+)?.[1];
+if (!image) throw new Error("The self-host ClamAV image must be digest-pinned.");
 // Version the owned container configuration so fixes also reach an existing local stack.
 const configVersion = "5";
 const configLabel = "org.luminovia.portal.scanner-config";

@@ -52,6 +52,12 @@ if (operation === "inspect" && container === "supabase_db_${project}") {
             encoding: "utf8",
         });
     assert.match(run(), /ClamAV is ready/);
+    const [{Config: {Image: scannerImage}}] = JSON.parse(
+        readFileSync(join(checkout, "bin/scanner.json"), "utf8"),
+    );
+    assert.match(scannerImage, /^clamav\/clamav@sha256:[a-f0-9]{64}$/);
+    const selfHost = readFileSync(new URL("../deploy/hostinger/compose.yml", import.meta.url), "utf8");
+    assert.ok(selfHost.includes(`  clamav:\n    image: ${scannerImage}\n`));
     const scanner = `PORTAL_CLAMAV_HOST=portal_scanner_${project}\nPORTAL_CLAMAV_PORT=3310\n`;
     assert.equal(readFileSync(file, "utf8"), scanner);
     const configuration = join(runtime, "clamd.conf");
