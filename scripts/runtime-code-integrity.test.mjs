@@ -61,6 +61,45 @@ test("dead recursive groups do not count as used and live recursion still works"
     }
 });
 
+test("awaited import destructuring resolves runtime exports without rooting unused functions", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-lazy-symbols-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(join(fixture, "src/main.ts"), `
+            async function download() {
+                const { template, spreadsheet: workbook } = await import('./workbook');
+                return [template(), workbook()];
+            }
+            export async function disconnected() {
+                const { unused } = await import('./workbook');
+                return unused();
+            }
+            void download();
+        `);
+        writeFileSync(join(fixture, "src/workbook.ts"), `
+            function xml() { return '<workbook/>'; }
+            export function template() { return xml(); }
+            export function spreadsheet() { return xml(); }
+            export function unused() {}
+            export function untouched() {}
+        `);
+        const entries = new Map(
+            scanRuntimeDeclarations(fixture).map((entry) => [entry.name, entry]),
+        );
+        for (const name of ["template", "spreadsheet"]) {
+            assert.equal(entries.get(name).external, 1, name);
+            assert.equal(entries.get(name).reachable, true, name);
+        }
+        assert.equal(entries.get("xml").reachable, true);
+        assert.equal(entries.get("unused").external, 1);
+        assert.equal(entries.get("unused").reachable, false);
+        assert.equal(entries.get("untouched").external, 0);
+        assert.equal(entries.get("untouched").reachable, false);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
+});
+
 test("both edition routes count as used through the production alias", () => {
     const fixture = mkdtempSync(join(tmpdir(), "luminovia-edition-entrypoints-"));
     try {

@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## CI runtime reachability
+
+- Resolve destructured runtime properties to their TypeScript source symbols so lazy exports are checked through their real callers. Keep unused exports and disconnected callers detectable.
+
 ## Personal chat deletion
 
 - Allow members to clear an entire conversation from their own chat directory after confirmation. Hide existing history using the personal message visibility rules, preserve shared rooms and show the chat again when it receives a visible message.

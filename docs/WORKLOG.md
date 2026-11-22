@@ -1,3 +1,7 @@
+# 23 November 2026 — Runtime reachability for lazy XLSX imports
+
+The TypeScript reachability analyser follows object binding properties to their source symbols, including named exports read via awaited imports. The XLSX template downloads remain lazy. The exact CI code-quality command reports no unused runtime exports or unreachable functions. The regression checks direct and renamed bindings, reachable helper calls and unused exports. The analyser, documentation and XLSX tests and targeted lint passed.
+
 # 23 November 2026 — Local reset leaves the portal stopped
 
 The local CLI reset and the confirmed administrator reset erase the selected runtime without bootstrapping it again. The browser acknowledges the request before its server stops and terminal status reports the outcome. The isolated Docker and Chromium run denied the lecturer and the wrong password, then erased the volumes containing the seeded Auth user, organisation and uploaded file. The final inventory found no project containers, networks, volumes or generated credentials. The portal, API and local mail endpoints were offline. Nine focused reset tests, TypeScript, lint and the production build passed.

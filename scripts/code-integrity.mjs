@@ -294,8 +294,16 @@ function scanEditionDeclarations(root, edition) {
     const roots = new Set();
 
     function symbol(node) {
-        const value = ts.isShorthandPropertyAssignment(node.parent)
-            ? checker.getShorthandAssignmentValueSymbol(node.parent)
+        const parent = node.parent;
+        let value;
+        if (ts.isBindingElement(parent) && ts.isObjectBindingPattern(parent.parent)
+            && !parent.dotDotDotToken && node === (parent.propertyName ?? parent.name)) {
+            // A binding name has a local symbol. The runtime read also uses
+            // the source property, including a named export of a lazy import.
+            value = checker.getPropertyOfType(checker.getTypeAtLocation(parent.parent), node.text);
+        }
+        value ??= ts.isShorthandPropertyAssignment(parent)
+            ? checker.getShorthandAssignmentValueSymbol(parent)
             : checker.getSymbolAtLocation(node);
         return value && value.flags & ts.SymbolFlags.Alias
             ? checker.getAliasedSymbol(value)
