@@ -484,7 +484,7 @@ mutation is neither queued nor confirmed.
 
 Installing on a shared device means consciously choosing whether this minimal snapshot should be stored there; remove it when no longer needed. Real installed desktop/mobile/browser behavior requires its own acceptance. Other authenticated API responses and private file bytes are not broadly cached by the service worker. See [Calendar connections](GUIDE.md#section-calendar-connections).
 
-Use `/help` and the responsible administrator for account or access problems, supplying the visible error and non-sensitive record reference. Do not send passwords, tokens, private calendar URLs, contracts or unrelated people's data as troubleshooting material. For operational tickets use `/support`; course preparation is reached through the course workspace. The former `/delivery` path redirects to `/courses`; `/readiness` remains a separate route under its current permissions.
+Use `/help` and the responsible administrator for account or access problems, supplying the visible error and non-sensitive record reference. Do not send passwords, tokens, private calendar URLs, contracts or unrelated people's data as troubleshooting material. Open `/support` for operational tickets, the course workspace for preparation, and `/delivery` for teaching evidence and corrections. `/readiness` remains available to authorised users.
 See [Support](GUIDE.md#section-support-desk), [readiness](GUIDE.md#section-course-readiness) and [delivery](GUIDE.md#section-teaching-delivery).
 
 <a id="section-user-guide-course-building-blocks-profile-pictures-and-comments"></a>
@@ -1667,14 +1667,12 @@ Select the file to preview the changes. The file stays in the browser and the na
 
 ## Teaching delivery record
 
-The workflow is present in accepted main's published migration `20261116121600_attendance_delivery.sql`, with its frontend, actual API fixtures and desktop/mobile journeys. Focused evidence below describes its original source checkpoint; current complete execution is recorded in the relevant pull request checks under the [functional acceptance contract](DEVELOPMENT.md#section-functional-acceptance). Main38 retains this application and its SQL unchanged within the 69-file released history; the
-current quality integration still needs its own complete gates. Source merge does not establish hosted installation or production acceptance.
+The teaching evidence workflow uses the retained records from `20261116121600_attendance_delivery.sql`. The current interface is available through **Leistungsnachweise und Korrekturen / Delivery evidence and corrections** from assignment changes and through notification links. The [functional acceptance contract](DEVELOPMENT.md#section-functional-acceptance) explains the isolated checks for the workflow.
 
 <a id="section-teaching-delivery-daily-workflow"></a>
 
 ## Daily workflow
 
-Historical delivery workflow: `/delivery` now redirects to `/courses`, so the following editor instructions describe an earlier interface, not a current page. The retained delivery records and API contracts remain subject to their database permissions.
 At `/delivery`, a lecturer opens an assigned session, records actual start/finish instants in its intended IANA time zone, selects complete, partial, cancelled or interrupted delivery and saves a draft. Partial delivery, cancellation and interruption require explanatory notes. A cancelled session has no delivered interval. Actual intervals must be finite, ordered and no longer than 24 hours. The frontend rejects ambiguous/nonexistent DST wall times; the database requires explicit offsets and
 retains the intended zone.
 

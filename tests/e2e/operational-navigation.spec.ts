@@ -1,9 +1,9 @@
-/** Native operational navigation retains sensible destinations for retired module links. */
+/** Native operational navigation covers retained links and restored teaching evidence. */
 import {expect, test} from "@playwright/test";
 import {withApiFixture} from "../../scripts/testing/api.mjs";
 import {login} from "./helpers/accounts-support";
 
-test("retired module links reach current operational pages and header search works with a collapsed rail", async ({
+test("legacy links redirect, teaching evidence opens directly, and collapsed header search works", async ({
                                                                                                                       page,
                                                                                                                   }) => {
     await withApiFixture(async ({actor}) => {
@@ -11,7 +11,6 @@ test("retired module links reach current operational pages and header search wor
         await login(page, teacher.email);
         for (const [retired, destination] of [
             ["/availability", "/calendar"],
-            ["/delivery", "/courses"],
             ["/timesheets", "/finance"],
             ["/workbench", "/"],
         ]) {
@@ -21,6 +20,12 @@ test("retired module links reach current operational pages and header search wor
             );
             await expect(page.locator("main h1").first()).toBeVisible();
         }
+        await page.goto("/delivery");
+        await expect(page).toHaveURL(/\/delivery$/);
+        await expect(page.getByRole("heading", {
+            name: /^(Leistungsnachweise|Delivery evidence)$/,
+            level: 1,
+        })).toBeVisible();
         const collapse = page.getByRole("button", {
             name: /Navigation einklappen|Collapse navigation/,
         });
