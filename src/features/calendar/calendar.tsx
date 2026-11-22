@@ -53,7 +53,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { Dialog } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { CalendarDisplayZone } from "./display-zone";
-import { timeZoneOptions } from "../../lib/time-zone-options";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 import { calendarFoldLabel } from "./display-time";
 import {
   ErrorState,
@@ -276,11 +276,7 @@ function EventForm({
         error={Boolean(errors.time_zone)}
       >
         <select {...register("time_zone")}>
-          {timeZoneOptions(event?.time_zone ?? zone).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
+          <TimeZoneOptions current={event?.time_zone ?? zone} />
         </select>
       </Field>
       {save.isError && (

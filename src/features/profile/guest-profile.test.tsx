@@ -1,6 +1,6 @@
 /** Guest settings render only own profile/Auth controls and do not request operational data. */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
@@ -50,6 +50,18 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   const timeZone = screen.getByRole("combobox", { name: "Zeitzone" });
   expect(timeZone).toHaveValue("US/Eastern");
   expect(timeZone).toHaveAccessibleDescription(/Standard für deinen Kalender/);
+  const common = within(timeZone).getByRole("group", {
+    name: "Häufige Zeitzonen",
+  });
+  expect(within(common).getAllByRole("option")).toHaveLength(35);
+  expect(
+    within(common).getByRole("option", { name: "Australia/Adelaide" }),
+  ).toBeInTheDocument();
+  expect(
+    within(timeZone).getByRole("group", { name: "Weitere Zeitzonen" }),
+  ).toContainElement(
+    within(timeZone).getByRole("option", { name: "US/Eastern" }),
+  );
   expect(
     screen.getByRole("option", { name: "Asia/Tokyo" }),
   ).toBeInTheDocument();
@@ -67,6 +79,11 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   expect(fake.from).not.toHaveBeenCalled();
   expect(await screen.findByDisplayValue("fictional-guest")).toBeVisible();
   expect(fake.rpc.mock.calls).toEqual([["account_username"]]);
+  await act(() => i18n.changeLanguage("en"));
+  expect(
+    within(timeZone).getByRole("group", { name: "Common time zones" }),
+  ).toBeVisible();
+  expect(timeZone).toHaveValue("US/Eastern");
   expect(client.getQueryState(["topics"])?.fetchStatus).toBe("idle");
   expect(client.getQueryState(["expertise", "guest-own"])?.fetchStatus).toBe(
     "idle",

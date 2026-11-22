@@ -429,6 +429,8 @@ const pairs: Record<string, [string, string]> = {
   per_teaching_unit: ["pro Unterrichtseinheit", "per teaching unit"],
   fixed_total: ["pauschal", "fixed total"],
   timezone: ["Zeitzone", "Time zone"],
+  commonTimeZones: ["Häufige Zeitzonen", "Common time zones"],
+  otherTimeZones: ["Weitere Zeitzonen", "Other time zones"],
   chooseTimeZone: ["Zeitzone auswählen", "Choose a time zone"],
   profileTimeZoneHint: [
     "Standard für deinen Kalender, die Terminübersicht und Benachrichtigungszeiten.",

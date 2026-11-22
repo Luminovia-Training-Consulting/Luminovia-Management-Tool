@@ -44,16 +44,18 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     await login(page, owner.email);
     await page.goto("/profile");
     const zoneSelect = page.getByRole("combobox", { name: "Zeitzone", exact: true });
-    await expect(zoneSelect.getByRole("option", { name: "Asia/Tokyo", exact: true })).toHaveCount(1);
-    await zoneSelect.selectOption("Australia/Brisbane");
+    const profileZone = "Australia/Adelaide";
+    const commonZones = zoneSelect.locator('optgroup[label="Häufige Zeitzonen"]');
+    await expect(commonZones.locator(`option[value="${profileZone}"]`)).toHaveCount(1);
+    await zoneSelect.selectOption(profileZone);
     await page.getByRole("button", { name: "Profil speichern", exact: true }).click();
     await expect(page.getByRole("status")).toContainText(/gespeichert/i);
     await page.reload();
-    await expect(zoneSelect).toHaveValue("Australia/Brisbane");
+    await expect(zoneSelect).toHaveValue(profileZone);
     await page.goto("/calendar");
     const displayZone = page.getByLabel("Kalenderanzeige in", {exact: true});
     await expect(displayZone.locator("option:checked")).toHaveText(
-        "Profilzeitzone (Australia/Brisbane)",
+        `Profilzeitzone (${profileZone})`,
     );
     await page
         .getByRole("button", {name: "Privaten Termin hinzufügen", exact: true})
@@ -62,7 +64,7 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
         name: "Privaten Termin hinzufügen",
         exact: true,
     });
-    await expect(dialog.getByLabel("Zeitzone", {exact: true})).toHaveValue("Australia/Brisbane");
+    await expect(dialog.getByLabel("Zeitzone", {exact: true})).toHaveValue(profileZone);
     const title = `Private calendar ${randomUUID().slice(0, 8)}`;
     await dialog.getByLabel("Titel", {exact: true}).fill(title);
     await dialog
@@ -153,12 +155,16 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     const calendarEvent = page.locator(".fc-event").filter({hasText: title});
     const eventTime = calendarEvent.locator(".fc-event-time, .fc-list-event-time");
     // The month grid shows the start. The mobile list shows the full interval.
-    await expect(eventTime).toHaveText(/^10(?::00| Uhr)(?:\s*[-–]\s*11:00)?$/);
+    const profileStart = start.setZone(profileZone);
+    const shownStart = profileStart.toFormat("H:mm");
+    const shownEnd = profileStart.plus({ hours: 1 }).toFormat("H:mm");
+    const profileTime = new RegExp(`^${shownStart}(?:\\s*[-–]\\s*${shownEnd})?$`);
+    await expect(eventTime).toHaveText(profileTime);
     await displayZone.selectOption("UTC");
     await expect(eventTime).toHaveText(/^0{1,2}(?::00| Uhr)(?:\s*[-–]\s*0?1:00)?$/);
     expect(writes, "Changing the display zone must not edit the event").toBe(1);
     await displayZone.selectOption("");
-    await expect(eventTime).toHaveText(/^10(?::00| Uhr)(?:\s*[-–]\s*11:00)?$/);
+    await expect(eventTime).toHaveText(profileTime);
     await page.reload();
     dialog = await eventDialog(page, title);
     await expect(dialog.getByLabel("Beginn", {exact: true})).toHaveValue(

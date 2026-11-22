@@ -33,7 +33,7 @@ import {
 } from "../../lib/queries";
 import type { Profile } from "../../lib/types";
 import { validZone } from "../../lib/dates";
-import { timeZoneOptions } from "../../lib/time-zone-options";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -129,11 +129,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
           <option value="" disabled>
             {t("chooseTimeZone")}
           </option>
-          {timeZoneOptions(profile.time_zone).map((zone) => (
-            <option key={zone} value={zone}>
-              {zone}
-            </option>
-          ))}
+          <TimeZoneOptions current={profile.time_zone} />
         </select>
       </Field>
       <Field id="bio-de" label={t("aboutMe")} error={Boolean(errors.bio_de)}>

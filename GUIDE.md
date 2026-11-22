@@ -1965,7 +1965,7 @@ The notification opens the recipient's exact invitation. They can accept, accept
 
 ## Time and links
 
-Set your account default under **Profil → Zeitzone / Profile → Time zone**. Choose an IANA zone from the dropdown and save the profile. The calendar, dashboard schedule and notification timestamps use this zone where they show times in your personal view. When creating a private event, you can choose the time zone in which you entered its local times.
+Set your account default under **Profil → Zeitzone / Profile → Time zone**. Choose an IANA zone from the dropdown and save the profile. The dropdown lists common zones first and groups the other available zones below. The calendar, dashboard schedule and notification timestamps use this zone where they show times in your personal view. When creating a private event, you can choose the time zone in which you entered its local times.
 
 Use **Kalenderanzeige in / Show calendar in** to change how the calendar displays appointments in the current view. **Profilzeitzone / Profile time zone** restores the account default. A zone change keeps the selected calendar date and leaves stored events and their original zones intact. In a repeated hour the calendar labels the UTC offsets. Global event details show both the original event times and the displayed times when the zones differ.
 

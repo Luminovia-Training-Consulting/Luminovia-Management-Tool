@@ -1,3 +1,7 @@
+# 23 November 2026 — Common time zone choices
+
+Profile, calendar display and private appointments share 35 common IANA choices, including 20 additions. The rest of the browser catalogue and valid saved aliases remain selectable below. Isolated desktop and mobile Chromium saved Adelaide and verified its half-hour clock difference from a Brisbane appointment. All 109 focused Vitest cases, TypeScript, targeted lint, documentation and the build budget passed.
+
 # 23 November 2026 — Chat directory filters and larger conversation area
 
 The internal chat directory filters by company, staff member, course and lecturer. Each category can be narrowed to a specific entry. Search covers the visible room titles and permitted labels, and works with the active and archive lists. Directory controls stay visible while rooms scroll. The compact heading increases the transcript area, including the single-pane mobile reading view.

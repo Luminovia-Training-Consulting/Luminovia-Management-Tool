@@ -2,7 +2,7 @@
 import { useTranslation } from "react-i18next";
 import { Field } from "../../components/common";
 import { validZone } from "../../lib/dates";
-import { timeZoneOptions } from "../../lib/time-zone-options";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 
 /** Change the presentation zone without writing to profile or event records. */
 export function CalendarDisplayZone({
@@ -27,11 +27,7 @@ export function CalendarDisplayZone({
         <option value="">
           {t("calendarProfileZone", { zone: profileZone })}
         </option>
-        {timeZoneOptions(value).map((zone) => (
-          <option key={zone} value={zone}>
-            {zone}
-          </option>
-        ))}
+        <TimeZoneOptions current={value} />
       </select>
     </Field>
   );
