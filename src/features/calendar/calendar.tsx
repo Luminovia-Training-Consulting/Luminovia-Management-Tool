@@ -1045,6 +1045,7 @@ export function CalendarPage() {
         )}
       {global && activeGlobal && (
         <GlobalEventDetails
+          key={activeGlobal.id}
           event={activeGlobal}
           displayZone={zone}
           onClose={() => setGlobalID(null)}

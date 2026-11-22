@@ -421,7 +421,9 @@ The former `/timesheets` route now redirects to `/finance`; the separate time-re
 
 Choose a finite period using its displayed zone and exclusive end date, at most 93 days. Your protected period statement contains own accepted compensation, invoice state and approved minutes in original currencies; an assignment confirmation preserves its accepted terms. Export errors or changed/revoked facts do not produce a successful PDF. These are printable facts, not bank transfers, tax calculations or legal signatures.
 
-Current finance management can use probability-labelled forecast scenarios. Accepted figures, known and unknown customer gross, pipeline positions and recorded lecturer invoice payments remain separate. Role-priced pipeline cost without a known role mix is reported as unknown positions rather than a guessed rate or zero. Authorised gross/margin columns require their extra capability. Never treat scenario totals as confirmed bookings or customer bank receipts.
+Current finance management can use probability-labelled forecast scenarios. Accepted figures, known and unknown customer gross, pipeline positions and recorded lecturer invoice payments remain separate. Role-priced pipeline cost without a known role mix is reported as unknown positions rather than a guessed rate or zero. Download the applied scenario as CSV to retain the selected dates, probability, original currencies and separate amount columns. Unknown amounts stay blank and their counts are included. Gross and margin columns require current authority. Treat scenario totals as forecasts.
+
+The company portal can download monthly accepted fees as CSV for the selected company filter. The report uses the company-local twelve-month window, keeps original currencies and reads the currently authorised projection before saving.
 
 `/control-center` requires current `jobs.manage`. Use its date-filtered exception links for unstaffed offers, missing teaching files, cancellations/handovers, readable overdue tasks, customer requests and separately permitted contract/qualification expiry or course preparation/quality. Each list is bounded; narrow the period when needed. It does not open private tasks, notebooks, DMs or contracts through a general administration bypass.
 See [Finance operations](GUIDE.md#section-timesheets-finance-control-center).
@@ -2003,7 +2005,7 @@ checks.
 
 ## Shared calendar
 
-**Global events** shows explicitly published, unarchived global events and the still-authorised published course runs. Private appointments are not copied into this calendar. The display uses the profile time zone; event details additionally show the stored event zone, description and, where present, an explicitly clickable HTTPS link. Descriptions are plain text, not HTML.
+**Global events** shows explicitly published, unarchived global events and the still-authorised published course runs. Private appointments are not copied into this calendar. The display uses the profile time zone; event details additionally show the stored event zone, description and, where present, an explicitly clickable HTTPS link. Descriptions are plain text. From the details, download an individual ICS file with the title and exact times. The description and related link stay in the portal.
 
 Global events are queried only for the actually visible FullCalendar range. The start is inclusive and the end exclusive; an event must actually overlap the range. Switching month/week/day or navigating backwards/forwards changes the query through `datesSet` without remounting the calendar. A window is limited to 93 days. Pages of 50 results, an explicit **Load more events** action and `(updated_at,id)` as a unique descending cursor prevent a silent full-catalogue fetch or the former confusion
 of the global 1,000-row REST limit with a complete inventory. The displayed number counts loaded global events, excluding separately displayed course sessions.

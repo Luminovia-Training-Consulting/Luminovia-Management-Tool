@@ -16,6 +16,8 @@ import {
 } from "../../components/common";
 import { controlCenterQuery, forecastQuery } from "./finance-api";
 import { FinancePeriodFilter } from "./finance-period";
+import { ForecastExport } from "./forecast-export";
+import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import "./finance-i18n";
 import "./finance.css";
 
@@ -39,8 +41,10 @@ function Section({
 }
 
 export function ControlCenterPage() {
-  const actor = useAuth().session!.user.id,
-    { t, i18n } = useTranslation("financeOps");
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  const boundary = sessionCacheBoundary(session?.access_token);
+  const { t, i18n } = useTranslation("financeOps");
   const [period, setPeriod] = useState(() => ({
       from: DateTime.now().minus({ days: 30 }).toISODate()!,
       until: DateTime.now().plus({ days: 60 }).toISODate()!,
@@ -278,6 +282,20 @@ export function ControlCenterPage() {
           ) : (
             <>
               <p>{t("paymentsHelp")}</p>
+              <ForecastExport
+                key={JSON.stringify([
+                  actor,
+                  boundary,
+                  period.from,
+                  period.until,
+                  probability,
+                ])}
+                actor={actor}
+                boundary={boundary}
+                period={period}
+                probability={probability}
+                hasRows={forecast.data.months.length > 0}
+              />
               {/* The wide table must remain keyboard-scrollable on mobile.
                   A named group avoids duplicating the surrounding region. */}
               <div

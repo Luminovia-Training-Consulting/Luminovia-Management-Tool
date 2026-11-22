@@ -26,6 +26,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import { profileQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import { dateTime, money, validZone, zonedInstant } from "../../lib/dates";
@@ -728,7 +729,14 @@ export function ClientPortalPage() {
               ))}
           </div>
           {!access.data.can_manage_gross && monthly.data && (
-            <CompanySpendingChart rows={monthly.data} />
+            <CompanySpendingChart
+              rows={monthly.data}
+              exportScope={{
+                actor,
+                organisation: organisation || null,
+                boundary: sessionCacheBoundary(session?.access_token),
+              }}
+            />
           )}
           {access.data.can_request &&
             !access.data.can_manage_gross &&

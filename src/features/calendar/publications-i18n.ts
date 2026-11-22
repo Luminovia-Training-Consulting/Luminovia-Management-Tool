@@ -12,6 +12,14 @@ const entries = {
   description: ["Beschreibung", "Description"],
   link: ["HTTPS-Link (optional)", "HTTPS link (optional)"],
   openLink: ["Weiterführenden Link öffnen", "Open related link"],
+  downloadEvent: [
+    "Kalendereintrag herunterladen (.ics)",
+    "Download calendar event (.ics)",
+  ],
+  downloadFailed: [
+    "Der Kalendereintrag konnte nicht heruntergeladen werden.",
+    "The calendar event could not be downloaded.",
+  ],
   save: ["Als Entwurf speichern", "Save as draft"],
   edit: ["Entwurf bearbeiten", "Edit draft"],
   publish: ["Veröffentlichen", "Publish"],

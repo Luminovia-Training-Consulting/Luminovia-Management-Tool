@@ -73,7 +73,7 @@ The inventory maps the current implementation and its principal automated eviden
 
 | Requirement | Current implementation and verification | Remaining acceptance |
 | --- | --- | --- |
-| FC-01 · Public Website | The portal intake and triage have independent API and browser cases. The separate Website source contains the bilingual form and relay, and the Portal download includes its intake contract. | Approve and verify the live sender, provider configuration, notice and both Website locales. |
+| FC-01 · Public Website | The Website footer uses language-specific job and LinkedIn link labels. The separate Website source also contains the bilingual enquiry form and relay, and the Portal download includes its intake contract. | Approve and verify live publication, both Website locales and the sender configuration. |
 | FC-02–13 · UI, demo and navigation | The shared portal and fictional demo include both themes, contextual Forum/Contracts links, role views, account controls and grouped calendar tools. [Guided demo](tests/e2e/guided-demo.spec.ts), [theme](tests/e2e/theme-contrast.spec.ts), [role boundaries](tests/e2e/portal-role-boundaries.spec.ts), [contextual links](tests/e2e/contextual-links.spec.ts) and [calendar](tests/e2e/calendar-connected.spec.ts) tests cover these areas. | Full per-page geometry, keyboard, assistive technology and the wider browser and device matrix. |
 | FC-14–22, FC-24 · Accounts, pricing and contracts | Current role grants control account creation, pricing defaults, expertise, verification and private contract intake. Stable public identifiers stay separate from Auth UUIDs. [Accounts HTTP](scripts/accounts-api-check.mjs), [pricing and roles](tests/e2e/roles-pricing.spec.ts), [qualification](tests/e2e/qualifications.spec.ts) and [commercial records](tests/e2e/commercial.spec.ts) cover these boundaries. | Broader matching role and file cases on the approved target. |
 | FC-23 · Provider configuration | Authorised operators configure and test private email delivery and optional inbound settings. [Mail API](scripts/notification-mail-api-check.mjs) and local relay fixtures cover configuration and transport states. | Real sender, delivery, failure reporting and provider readiness on the target. |
@@ -147,7 +147,8 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 ### R2 — General product/UX completion (`P1/P2`, parallel, but without jeopardising P0)
 
-- [ ] FC-01: public Website footer and translations belong to the separate Website project.
+- [x] FC-01 source: German and English job and LinkedIn labels in the footer of the separate [Website project](https://github.com/Luminovia-Training-Consulting/Website/commit/bc3e698).
+- [ ] FC-01 release: verify the footer on the published Website in both languages.
 - [x] FC-02–03, FC-08–13: the fictional demo, dark/light themes, scoped Courses, Forum and Contracts links, and role preview. Current browser journeys cover these flows. The cross-browser and per-page visual audit remains below.
 - [x] FC-18, FC-20–21: direct expertise editing, fictional demo customers/courses and the scoped contract file picker and drop area. The demo and contract browser checks exercise the active interfaces.
 - [x] FC-25, FC-27, FC-30–33: accessible topic/history filters, chronological offer sorting, calendar source colours, role-scoped course sections and original-currency finance trends.
@@ -234,7 +235,10 @@ The target is ambitious given the reintroduced participant scope. Treat dates as
 ## 6. Deferred and adjacent roadmap (remain visible)
 
 - Authorised public-website enquiry transport into the portal, anti-abuse controls and separate marketing-site deployment approval.
-- Richer global calendar invitations and external provider/device acceptance; additional company reporting and forecasting after baseline correctness.
+- [x] Single-event calendar files for published global events. Each download carries the event title and exact times while leaving the separate meeting link in the portal.
+- [x] Monthly company spending CSV with accepted gross fees, company-local months and original currencies.
+- [x] Finance forecast CSV for the selected date range and applied probability. Known and unknown amounts stay distinct, and gross and margin columns require current permission.
+- [ ] Calendar invitations with recipients and responses, external provider/device acceptance, and any further reporting or forecast models remain separate work.
 - Optional future LMS: online exam submission/grading, question banks, certificates beyond existing verified completion documents and richer learning content. **Not included solely by uploading exam PDFs.**
 - White-label commercial editions are a **separate, subsequent product** in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md), not an alternative demo or part of this main platform release. The Luminovia demo remains here; it is not automatically included in customer installations.
 - Complete business privacy/retention/erasure procedures, off-site backup retention and realistic production-capacity acceptance before scale-up.

@@ -4,6 +4,12 @@ The local Academy administrator can preview and publish a 512 × 512 PNG for the
 
 The pinned Caddy and Envoy binaries verified both signed editions over loopback TLS, including the public manifest, the matching three image URLs, the stable Apple icon, version replacement, missing stale versions, signed fallback and the licence allowance. A disconnected gateway also returns the signed manifest and Apple icon with no-store, while the Auth and business API retain their failure status. The pinned self-host Edge router accepted anonymous manifest GET and HEAD and required a JWT for private paths and writes. A fresh isolated self-hosted installation applied all 269 migrations, authenticated real fictional accounts and ran the complete admin upload through ClamAV. Anonymous GET/HEAD returned the exact scanned PNGs. The native rehearsal denied the learner and stale revision, then restored the signed package. Both Academy catalogues now have 90 paths and retain verification of older signed editions. Installed launcher refresh on physical devices and customer-target acceptance remain open.
 
+# 22 November 2026 — Calendar and reporting downloads
+
+Published global event details offer a single ICS file with the title and original time information. Event descriptions and related links stay in the portal. The company CSV uses the currently selected company scope and accepted ledger amounts in original currencies. The finance CSV uses the applied scenario and keeps accepted figures, estimates, unknown amounts and recorded payments separate. Gross and margin columns require current finance authority. Both report downloads read the current server projection before saving.
+
+The separate Website main commit `bc3e698` localizes the footer's job and LinkedIn links. The source items are checked off in the roadmap. Further checks and publishing were deferred as requested.
+
 # 22 November 2026 — Internal OpenAPI operation contracts
 
 Internal OpenAPI 1.5 adds business rules for all 63 operations that previously had only a generated description. Both document modes retain the native operation IDs, database argument names, empty success responses and current session gate metadata. The contract tests reject a generic entry in the published Internal documents and verify that internal commerce and activation operations stay out of both Academy editions. The API reference was regenerated from all 268 migrations, including the service-only file-promotion operation already in main.

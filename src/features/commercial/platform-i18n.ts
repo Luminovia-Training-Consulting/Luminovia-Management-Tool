@@ -197,6 +197,18 @@ const pairs: Record<string, [string, string]> = {
     "Noch keine angenommenen Aufträge mit bekanntem Bruttopreis.",
     "No accepted assignments with a known gross fee yet.",
   ],
+  companySpendingExport: [
+    "Auftragssummen als CSV laden",
+    "Download fees as CSV",
+  ],
+  companySpendingExportBusy: ["CSV wird erstellt …", "Preparing CSV …"],
+  companySpendingExportFailed: [
+    "Die aktuellen Auftragssummen konnten nicht exportiert werden.",
+    "The current accepted fees could not be exported.",
+  ],
+  companySpendingExportOrganisation: ["Unternehmen", "Company"],
+  companySpendingExportMonth: ["Monat", "Month"],
+  companySpendingExportCurrency: ["Währung", "Currency"],
   acceptedAssignmentsCount: [
     "{{count}} angenommene Aufträge",
     "{{count}} accepted assignments",

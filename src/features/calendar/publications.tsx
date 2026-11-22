@@ -13,6 +13,8 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
+import { saveBlob } from "../../lib/blob-download";
+import { globalEventCalendarFile } from "./ical";
 import {
   type GlobalEvent,
   type GlobalEventForm,
@@ -159,6 +161,7 @@ export function GlobalEventDetails({
 }) {
   const { t, i18n } = useTranslation("calendarPublications");
   const common = useTranslation().t;
+  const [downloadFailed, setDownloadFailed] = useState(false);
   return (
     <Dialog
       open
@@ -183,11 +186,36 @@ export function GlobalEventDetails({
         </p>
       )}
       <p className="preserve-text">{event.description}</p>
-      {event.link_url && (
-        <a href={event.link_url} target="_blank" rel="noopener noreferrer">
-          {t("openLink")}
-        </a>
-      )}
+      <div className="form-actions global-event-detail-actions">
+        {event.link_url && (
+          <Button asChild variant="secondary">
+            <a href={event.link_url} target="_blank" rel="noopener noreferrer">
+              {t("openLink")}
+            </a>
+          </Button>
+        )}
+        {event.published && event.archived_at === null && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setDownloadFailed(false);
+              try {
+                const calendar = globalEventCalendarFile(event, t("global"));
+                saveBlob(
+                  new Blob([calendar], { type: "text/calendar;charset=utf-8" }),
+                  "luminovia-event.ics",
+                );
+              } catch {
+                setDownloadFailed(true);
+              }
+            }}
+          >
+            {t("downloadEvent")}
+          </Button>
+        )}
+      </div>
+      {downloadFailed && <Notice kind="error">{t("downloadFailed")}</Notice>}
     </Dialog>
   );
 }

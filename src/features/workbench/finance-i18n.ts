@@ -100,6 +100,16 @@ const de = {
   probability:
     "Angenommene Wahrscheinlichkeit für offene Angebote und Anfragen (%)",
   calculate: "Szenario berechnen",
+  forecastExport: "Finanzszenario als CSV herunterladen",
+  forecastExportError:
+    "Das Finanzszenario konnte nicht aktuell geladen werden.",
+  forecastExportOffline:
+    "Für den Download ist eine Internetverbindung erforderlich.",
+  forecastZone: "Zeitzone",
+  appliedProbability: "Angenommene Wahrscheinlichkeit (%)",
+  unknownGrossCount: "Zuweisungen ohne bekannten Bruttowert",
+  unknownPipelineCostCount:
+    "Offene Positionen ohne vereinbarte persönliche Vergütung",
   forecastHelp:
     "Ein Szenario ist eine Annahme, keine Zusage. Beträge bleiben in ihrer Originalwährung. Bekannte Bruttowerte und Margen erscheinen nur mit gesonderter Berechtigung; unbekannte Werte werden nicht geschätzt.",
   paymentsHelp:
@@ -214,6 +224,14 @@ const en: Record<keyof typeof de, string> = {
   forecast: "Financial scenario",
   probability: "Assumed probability for open offers and requests (%)",
   calculate: "Calculate scenario",
+  forecastExport: "Download financial scenario as CSV",
+  forecastExportError: "The current financial scenario could not be retrieved.",
+  forecastExportOffline: "Go online to download the financial scenario.",
+  forecastZone: "Time zone",
+  appliedProbability: "Assumed probability (%)",
+  unknownGrossCount: "Assignments without a known gross value",
+  unknownPipelineCostCount:
+    "Open positions without agreed personal compensation",
   forecastHelp:
     "A scenario is an assumption, not a commitment. Amounts remain in their original currency. Known gross values and margins require separate permission; unknown values are not estimated.",
   paymentsHelp:

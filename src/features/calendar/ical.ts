@@ -1,9 +1,13 @@
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { calendarExportSchema } from "./schema";
+import type { GlobalEvent } from "./publications-schema";
 
 export { calendarExportSchema } from "./schema";
 export type CalendarExportEvent = z.infer<typeof calendarExportSchema>[number];
+type CalendarEntry = Omit<CalendarExportEvent, "kind"> & {
+  kind: CalendarExportEvent["kind"] | "global";
+};
 
 function text(value: string) {
   return value
@@ -43,12 +47,11 @@ function instant(value: string) {
   return date.toFormat("yyyyMMdd'T'HHmmss'Z'");
 }
 
-export function calendarFile(
-  input: CalendarExportEvent[],
+function formatCalendar(
+  events: CalendarEntry[],
   name: string,
-  generatedAt = new Date().toISOString(),
+  generatedAt: string,
 ) {
-  const events = calendarExportSchema.parse(input);
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -75,4 +78,28 @@ export function calendarFile(
     );
   }
   return [...lines, "END:VCALENDAR", ""].map(fold).join("\r\n");
+}
+
+export function calendarFile(
+  input: CalendarExportEvent[],
+  name: string,
+  generatedAt = new Date().toISOString(),
+) {
+  return formatCalendar(calendarExportSchema.parse(input), name, generatedAt);
+}
+
+/** Serialize one visible publication without embedding the related link or its description. */
+export function globalEventCalendarFile(
+  event: GlobalEvent,
+  name: string,
+  generatedAt = new Date().toISOString(),
+) {
+  if (!event.published || event.archived_at !== null)
+    throw new Error("The event must be published");
+  const { id, title, starts_at, ends_at, time_zone } = event;
+  return formatCalendar(
+    [{ id, title, starts_at, ends_at, time_zone, kind: "global" }],
+    name,
+    generatedAt,
+  );
 }

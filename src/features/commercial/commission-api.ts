@@ -183,22 +183,22 @@ export const clientSpendQuery = (actor: string) =>
   });
 
 /** Accepted ledger snapshots only, filtered again by current company membership in PostgreSQL. */
+export async function readCompanyMonthlySpending(organisation: string | null) {
+  const { data, error } = await db().rpc("company_monthly_accepted_spending", {
+    p_organisation_id: organisation,
+  });
+  if (error) throw error;
+  return (data ?? []) as CompanyMonthlySpending[];
+}
+
+/** Cache the existing spending projection separately for each actor and company filter. */
 export const companyMonthlySpendingQuery = (
   actor: string,
   organisation: string | null,
 ) =>
   queryOptions({
     queryKey: commissionKeys.monthlySpending(actor, organisation),
-    queryFn: async () => {
-      const { data, error } = await db().rpc(
-        "company_monthly_accepted_spending",
-        {
-          p_organisation_id: organisation,
-        },
-      );
-      if (error) throw error;
-      return (data ?? []) as CompanyMonthlySpending[];
-    },
+    queryFn: () => readCompanyMonthlySpending(organisation),
     staleTime: 15000,
     refetchInterval: 15000,
   });

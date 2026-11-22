@@ -31,7 +31,8 @@
   margin: 0 0 0.5rem;
 }
 
-.global-event-list .form-actions {
+.global-event-list .form-actions,
+.global-event-detail-actions {
   flex-wrap: wrap;
 }
 
