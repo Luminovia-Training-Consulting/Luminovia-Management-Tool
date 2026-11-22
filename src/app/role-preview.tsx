@@ -10,10 +10,11 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Notice, PageHeading } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useDismissibleDisclosure } from "../components/use-dismissible-disclosure";
 import helpCatalogue from "@edition-help";
 import { guideText } from "../features/help/guide";
 import { publicDemoEnabled } from "../lib/installation-brand";
@@ -30,6 +31,9 @@ const roleLabels = {
 export function RolePreviewControls({ state }: { state: RolePreviewState }) {
   const { t } = useTranslation("rolePreview");
   const { t: common } = useTranslation();
+  const { attributes: disclosure } = useDismissibleDisclosure(
+    useLocation().key,
+  );
   if (state.allowed.length === 0 && !state.requested) return null;
   return (
     <div className="role-preview-controls">
@@ -56,7 +60,7 @@ export function RolePreviewControls({ state }: { state: RolePreviewState }) {
         </label>
       )}
       {state.allowed.length > 0 && (
-        <details className="role-preview-options">
+        <details className="role-preview-options" {...disclosure}>
           <summary aria-label={t("customise")} title={t("customise")}>
             <SlidersHorizontal size={17} aria-hidden="true" />
           </summary>

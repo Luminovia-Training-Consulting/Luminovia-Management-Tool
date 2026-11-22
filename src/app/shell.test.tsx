@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -395,7 +396,6 @@ describe("native mobile More navigation", () => {
     await user.click(summary);
     expect(menu).toHaveProperty("open", true);
     const files = within(menu).getByRole("link", { name: "Dateien" });
-    // Search and notifications now precede routes in the complete mobile disclosure.
     for (let i = 0; i < 20 && document.activeElement !== files; i += 1) {
       await user.tab();
     }
@@ -426,21 +426,23 @@ describe("native mobile More navigation", () => {
     ).toBeInTheDocument();
   });
 
-  it("returns focus to the visible summary after mobile search navigation", async () => {
+  it("keeps one header search and preserves its focus while searching", async () => {
     const { user } = setup();
     const summary = screen.getByLabelText("Mehr");
     const menu = summary.closest("details")!;
     await user.click(summary);
-    const search = within(menu).getByLabelText("Stellen durchsuchen");
+    expect(within(menu).queryByRole("search")).not.toBeInTheDocument();
+    const search = within(screen.getByRole("banner")).getByLabelText(
+      "Im Portal suchen",
+    );
     await user.type(search, "Fictional files");
-    // Typing and unrelated Shell state renders are not navigation events.
-    expect(menu).toHaveProperty("open", true);
+    expect(menu).toHaveProperty("open", false);
     await user.keyboard("{Enter}");
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/search?q=Fictional%20files",
     );
     await waitFor(() => expect(menu).toHaveProperty("open", false));
-    expect(summary).toHaveFocus();
+    expect(search).toHaveFocus();
     expect(search).toHaveValue("Fictional files");
   });
 
@@ -450,7 +452,7 @@ describe("native mobile More navigation", () => {
     const menu = summary.closest("details")!;
     await user.click(summary);
     await user.type(
-      within(menu).getByLabelText("Stellen durchsuchen"),
+      within(screen.getByRole("banner")).getByLabelText("Im Portal suchen"),
       "updated",
     );
     await user.keyboard("{Enter}");
@@ -462,7 +464,7 @@ describe("native mobile More navigation", () => {
     await waitFor(() => expect(menu).toHaveProperty("open", false));
     await user.click(summary);
     expect(menu).toHaveProperty("open", true);
-    await user.click(
+    fireEvent.click(
       screen.getByRole("button", { name: "Back in fixture history" }),
     );
     await waitFor(() =>

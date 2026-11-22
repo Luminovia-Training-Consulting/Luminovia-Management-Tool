@@ -127,9 +127,7 @@ export function createCompanyCourseWebhookReceiver({ databasePath, secret }) {
         secret,
         now,
       });
-      // V1 has five required envelope fields. Unknown fields would change what
-      // the sender signed without appearing in the durable receipt.
-      if (!event || Object.keys(event).length !== 5) return reply(401);
+      if (!event) return reply(401);
       let accepted;
       try {
         accepted = inbox.accept(event, new Date(now).toISOString());

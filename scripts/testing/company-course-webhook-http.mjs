@@ -48,6 +48,7 @@ export async function verifyWebhookDeliveryHttp({
   course,
   invoice,
   eventType = "course.published",
+  publishFollowups,
   publishNext,
   revoke,
   enforcePortalGate = false,
@@ -58,6 +59,7 @@ export async function verifyWebhookDeliveryHttp({
   const key = randomBytes(24).toString("hex");
   const calls = [];
   const receiverEvents = [];
+  const expectedTypes = new Set([eventType]);
   const backend = await listen(
     createServer(async (request, response) => {
       try {
@@ -123,7 +125,7 @@ export async function verifyWebhookDeliveryHttp({
         assert.equal(headers.authorization, undefined);
         const event = JSON.parse(body);
         assert.equal(event[resourceKey], resourceId);
-        assert.equal(event.type, eventType);
+        assert.ok(expectedTypes.has(event.type), "Expected signed event type");
         assert.deepEqual(
           Object.keys(event).sort(),
           [resourceKey, "id", "occurred_at", "type", "version"].sort(),
@@ -147,7 +149,7 @@ export async function verifyWebhookDeliveryHttp({
         JSON.parse(
           await sql(
             `select to_jsonb(d) from private.company_course_webhook_deliveries d
-         where subscription_id=${q(subscription.id)} and ${resourceKey}=${q(resourceId)}`,
+         where subscription_id=${q(subscription.id)} and ${resourceKey}=${q(resourceId)} and event_type=${q(eventType)}`,
           ),
         );
 
@@ -170,19 +172,6 @@ export async function verifyWebhookDeliveryHttp({
       assert.equal(await dispatch(), 1);
       assert.equal(receiverEvents.length, 2);
       assert.deepEqual(receiverEvents[0], receiverEvents[1]);
-      const inbox = new DatabaseSync(databasePath, { readOnly: true });
-      try {
-        const persisted = inbox
-          .prepare("SELECT event_json FROM course_event_inbox")
-          .all();
-        assert.equal(persisted.length, 1);
-        assert.deepEqual(
-          JSON.parse(persisted[0].event_json),
-          receiverEvents[0],
-        );
-      } finally {
-        inbox.close();
-      }
       row = await currentDelivery();
       assert.equal(row.state, "delivered");
       assert.equal(row.attempts, 2);
@@ -194,6 +183,48 @@ export async function verifyWebhookDeliveryHttp({
         "/rest/v1/rpc/lease_company_course_webhook",
       ]);
 
+      if (publishFollowups) {
+        const types = await publishFollowups();
+        for (const type of types) expectedTypes.add(type);
+        assert.equal(await dispatch(), types.length);
+        assert.deepEqual(
+          receiverEvents
+            .slice(2)
+            .map(({ type }) => type)
+            .sort(),
+          [...types].sort(),
+          "Only committed follow-up events reach the receiver",
+        );
+      }
+      const accepted = receiverEvents.length;
+      const receipts = new Map(
+        receiverEvents.map((event) => [event.id, event]),
+      );
+      assert.equal(
+        receipts.size,
+        accepted - 1,
+        "Only the first acknowledgement is lost",
+      );
+      const inbox = new DatabaseSync(databasePath, { readOnly: true });
+      try {
+        const persisted = inbox
+          .prepare("SELECT event_json FROM course_event_inbox ORDER BY rowid")
+          .all();
+        assert.deepEqual(
+          persisted.map(({ event_json }) => JSON.parse(event_json)),
+          [...receipts.values()],
+        );
+      } finally {
+        inbox.close();
+      }
+      assert.equal(
+        await sql(
+          `select count(*) from private.company_course_webhook_deliveries
+          where subscription_id=${q(subscription.id)} and state='delivered'`,
+        ),
+        String(receipts.size),
+      );
+
       await publishNext();
       assert.equal(
         await dispatch(async () => {
@@ -204,7 +235,7 @@ export async function verifyWebhookDeliveryHttp({
       );
       assert.equal(
         receiverEvents.length,
-        2,
+        accepted,
         "Revocation after leasing must stop network delivery",
       );
       assert.equal(

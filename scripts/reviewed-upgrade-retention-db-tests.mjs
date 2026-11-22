@@ -90,6 +90,8 @@ await withTestDatabase(
     assert.equal(await apply(baseline), 18);
     const teacher = q(randomUUID());
     const learner = q(randomUUID());
+    const peer = q(randomUUID());
+    const administrator = q(randomUUID());
     const organisation = q(randomUUID());
     const template = q(randomUUID());
     const course = q(randomUUID());
@@ -101,9 +103,10 @@ await withTestDatabase(
     const invoiceFile = q(randomUUID());
     await sql(`
             insert into auth.users(id,email,email_confirmed_at) values
-              (${teacher},'teacher@example.invalid',now()), (${learner},'learner@example.invalid',now());
+              (${teacher},'teacher@example.invalid',now()), (${learner},'learner@example.invalid',now()),
+              (${peer},'peer@example.invalid',now()), (${administrator},'admin@example.invalid',now());
             insert into public.user_roles(user_id,role) values
-              (${teacher},'lecturer'),(${learner},'participant');
+              (${teacher},'lecturer'),(${learner},'participant'),(${peer},'lecturer'),(${administrator},'admin');
             insert into public.organisations(id,name) values (${organisation},'Fictional Academy');
             insert into public.course_templates(id,title) values (${template},'Fictional course');
             insert into public.course_runs(id,template_id,organisation_id,time_zone,published)
@@ -136,6 +139,20 @@ await withTestDatabase(
               values (${invoice},200,'AUD','2026-01-15T00:00:00Z',${teacher},gen_random_uuid());
             update private.document_storage_limits set total_quota_bytes=8589934592, owner_quota_bytes=536870912 where singleton;
         `);
+    const asTeacher = (statement) => actor(teacher.slice(1, -1), statement);
+    const room = q(await asTeacher(`select public.create_dm(${peer})`));
+    const sent = q(
+      await asTeacher(
+        `select public.send_message(${room},'Fictional original chat message',${q(randomUUID())})`,
+      ),
+    );
+    await asTeacher(
+      `select public.edit_message(${sent},'Fictional corrected chat message')`,
+    );
+    await actor(
+      peer.slice(1, -1),
+      `select public.mark_chat_read(${room},${sent})`,
+    );
     const snapshot = async () =>
       JSON.parse(
         await sql(`select jsonb_build_object(
@@ -151,6 +168,12 @@ await withTestDatabase(
           'payment', (select row(amount,currency,paid_at) from public.payment_records where invoice_id=${invoice}),
           'file_metadata', (select jsonb_agg(row(id,object_path,size_bytes,sha256) order by id)
             from public.document_versions where id in (${contractFile},${invoiceFile})),
+          'chat', (select row(room_id,sender_id,client_id,body,created_at,edited_at)
+            from public.messages where id=${sent}),
+          'chat_revision', (select row(actor_id,action,previous_body,created_at)
+            from public.chat_message_revisions where message_id=${sent}),
+          'chat_members', (select jsonb_agg(row(user_id,last_read_message_id,last_read_at) order by user_id)
+            from public.chat_members where room_id=${room}),
           'quota', (select row(total_quota_bytes, owner_quota_bytes) from private.document_storage_limits where singleton)
         )`),
       );
@@ -174,8 +197,22 @@ await withTestDatabase(
       ),
       "0",
     );
+    assert.equal(
+      await actor(
+        peer.slice(1, -1),
+        `select body from public.chat_messages(${room}) where id=${sent}`,
+      ),
+      "Fictional corrected chat message",
+    );
+    await assert.rejects(
+      actor(
+        administrator.slice(1, -1),
+        `select body from public.chat_messages(${room})`,
+      ),
+      /42501/,
+    );
     console.log(
-      `PASS release bb322746 to ${files.length} migrations: retained accounts, courses, contracts, invoice and payment, file metadata and selected quotas`,
+      `PASS release bb322746 to ${files.length} migrations: retained accounts, courses, contracts, invoice and payment, private chat with revisions and read state, file metadata and selected quotas`,
     );
   },
   { migrationsThrough: "00000000000000" },

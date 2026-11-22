@@ -1,8 +1,12 @@
 /** Calendar navigation uses the portal's shared control geometry instead of
  * FullCalendar's theme buttons. Native buttons retain visible focus and state. */
+.calendar-panel {
+  container: portal-calendar / inline-size;
+}
+
 .calendar-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px 20px;
   min-width: 0;
@@ -145,6 +149,43 @@
   --fc-list-event-hover-bg-color: var(--blue-soft);
 }
 
+/* Long unbroken appointment titles must not widen the agenda past its panel. */
+.calendar-panel .fc-list-event-title {
+  overflow-wrap: anywhere;
+}
+
+.calendar-panel .fc-list-event-title a {
+  display: block;
+}
+
+.calendar-panel .fc .fc-list-event-time {
+  white-space: nowrap !important;
+}
+
+.calendar-week-grid {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.calendar-week-grid > .fc {
+  /* Keep the time axis and seven day columns legible when the agenda is too
+     narrow to show the full week. The surrounding page still fits the viewport. */
+  min-width: 44rem;
+}
+
+.calendar-week-scroll-hint {
+  display: none;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-week-grid:focus-visible,
+.calendar-panel .fc-list-event-title a:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
 .calendar-panel .fc .fc-col-header-cell {
   background: color-mix(in srgb, var(--blue-soft) 28%, var(--surface));
   border-bottom-color: var(--line);
@@ -173,9 +214,9 @@
   box-shadow: none;
 }
 
-@media (max-width: 1200px) {
+@container portal-calendar (width < 50rem) {
   .calendar-toolbar {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
   }
 
@@ -193,13 +234,21 @@
     grid-column: 2;
     grid-row: 2;
   }
+}
 
+@container portal-calendar (width < 44rem) {
+  .calendar-week-scroll-hint {
+    display: block;
+  }
+}
+
+@media (max-width: 1200px) {
   .calendar-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 640px) {
+@container portal-calendar (width < 34rem) {
   .calendar-toolbar {
     grid-template-columns: minmax(0, 1fr);
     padding-bottom: 16px;
@@ -224,8 +273,18 @@
     min-width: 0;
     padding-inline: 5px;
     font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
+}
 
+@container portal-calendar (width < 18rem) {
+  .calendar-view-switcher {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
   .calendar-filters {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
 import { installationBrand } from "../../lib/installation-brand";
+import { AcademyBrandContext } from "../branding/academy-branding";
 import { AdminMailPage, type MailConfiguration } from "./mail";
 
 const fake = vi.hoisted(() => ({
@@ -165,12 +166,16 @@ it("uses the dedicated sender identity, offers SMTP only and saves before testin
   };
   render(
     <QueryClientProvider client={client}>
-      <AdminMailPage academy="active" />
+      <AcademyBrandContext
+        value={{ ...installationBrand, name: "Fictional Academy" }}
+      >
+        <AdminMailPage academy="active" />
+      </AcademyBrandContext>
     </QueryClientProvider>,
   );
   expect(await screen.findByLabelText("Server")).toHaveValue("");
   expect(screen.getByLabelText("Absendername")).toHaveValue(
-    installationBrand.name,
+    "Fictional Academy",
   );
   expect(screen.queryByText("Optionaler IMAP-Eingang")).not.toBeInTheDocument();
   const user = userEvent.setup();
@@ -188,13 +193,51 @@ it("uses the dedicated sender identity, offers SMTP only and saves before testin
   expect(await screen.findByText("Erfolgreich")).toBeVisible();
   expect(fake.rpc).toHaveBeenCalledWith(
     "save_mail_configuration",
-    expect.objectContaining({ p_imap: { enabled: false } }),
+    expect.objectContaining({
+      p_imap: { enabled: false },
+      p_smtp: expect.objectContaining({ sender_name: "Fictional Academy" }),
+    }),
   );
   expect(fake.invoke.mock.calls).toEqual([
     ["mail-admin", { body: { protocol: "smtp" } }],
   ]);
   expect(screen.getByLabelText("Passwort")).toHaveValue("");
 });
+
+it.each([
+  ["de", "Absendername"],
+  ["en", "Sender name"],
+])(
+  "tracks the academy default without replacing a sender edit in %s",
+  async (language, senderLabel) => {
+    await i18n.changeLanguage(language);
+    fake.configuration.smtp = {
+      ...fake.configuration.smtp,
+      host: null,
+      sender_name: null,
+    };
+    const view = (name: string) => (
+      <QueryClientProvider client={client}>
+        <AcademyBrandContext value={{ ...installationBrand, name }}>
+          <AdminMailPage academy="active" />
+        </AcademyBrandContext>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(view("Signed Academy"));
+    const server = await screen.findByLabelText("Server");
+    await user.type(server, "smtp.example.com");
+    rerender(view("Published Academy"));
+    const sender = screen.getByLabelText(senderLabel);
+    expect(server).toHaveValue("smtp.example.com");
+    expect(sender).toHaveValue("Published Academy");
+
+    await user.clear(sender);
+    await user.type(sender, "Admissions Office");
+    rerender(view("Renamed Academy"));
+    expect(sender).toHaveValue("Admissions Office");
+  },
+);
 
 it("keeps existing settings visible and read-only during grace", async () => {
   render(

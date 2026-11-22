@@ -1,5 +1,5 @@
 /** Admin-only per-company Premium controls with audited confirmations and retained-course summaries. */
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
@@ -32,12 +32,18 @@ export function CompanyPremiumControl({
   const { t } = useTranslation("operations");
   const online = useOnline();
   const cache = useQueryClient();
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+  const backButton = useRef<HTMLButtonElement>(null);
   const [requested, setRequested] = useState<boolean | null>(null);
   const [confirmationStep, setConfirmationStep] = useState(1);
   const [notice, setNotice] = useState<"saved" | "conflict" | "failed" | null>(
     null,
   );
   const requestId = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (requested !== null && confirmationStep === 2)
+      backButton.current?.focus();
+  }, [confirmationStep, requested]);
   const command = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -78,10 +84,13 @@ export function CompanyPremiumControl({
             variant="secondary"
             role="switch"
             aria-checked={setting.enabled}
-            aria-label={t(setting.enabled ? "premiumDisable" : "premiumEnable")}
+            aria-label={t("premiumSwitch")}
             className={`premium-switch premium-switch-${setting.enabled ? "on" : "off"}`}
-            disabled={!online || command.isPending}
-            onClick={() => {
+            disabled={!online}
+            aria-disabled={!online || command.isPending}
+            onClick={(event) => {
+              if (command.isPending) return;
+              setTrigger(event.currentTarget);
               setNotice(null);
               setRequested(!setting.enabled);
               setConfirmationStep(1);
@@ -145,6 +154,7 @@ export function CompanyPremiumControl({
         }}
         title={t(requested ? "premiumConfirmEnable" : "premiumConfirmDisable")}
         description={t("premiumConfirmHelp")}
+        returnFocusTo={trigger}
       >
         {requested !== null && confirmationStep === 1 ? (
           <div className="form-actions">
@@ -167,6 +177,7 @@ export function CompanyPremiumControl({
             <Button
               type="button"
               variant="secondary"
+              ref={backButton}
               disabled={command.isPending}
               onClick={() => setConfirmationStep(1)}
             >
@@ -203,6 +214,7 @@ function RetainedCompanySummary({
 }) {
   const { t } = useTranslation("operations");
   const [retainedOpen, setRetainedOpen] = useState(false);
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const retained = useMutation({
     // A discarded observer must not retain protected response data in the client.
     gcTime: 0,
@@ -222,7 +234,8 @@ function RetainedCompanySummary({
         type="button"
         variant="secondary"
         disabled={retained.isPending}
-        onClick={() => {
+        onClick={(event) => {
+          setTrigger(event.currentTarget);
           setRetainedOpen(true);
           retained.mutate();
         }}
@@ -238,6 +251,7 @@ function RetainedCompanySummary({
         }}
         title={t("premiumRetainedData")}
         description={t("premiumRetainedHelp")}
+        returnFocusTo={trigger}
       >
         {retained.isPending ? (
           <p role="status">{t("loading")}</p>

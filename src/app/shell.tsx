@@ -49,6 +49,7 @@ import {
   useRolePreview,
 } from "./role-preview-state";
 import { PortalNavigation } from "../components/portal-navigation";
+import { useDismissibleDisclosure } from "../components/use-dismissible-disclosure";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import {
   guestRouteAllowed,
@@ -97,27 +98,16 @@ export function Shell() {
   const actor = session!.user.id;
   const navigate = useNavigate();
   const location = useLocation();
-  const mobileMore = useRef<HTMLDetailsElement>(null);
-  const accountMenu = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    if (accountMenu.current) accountMenu.current.open = false;
-  }, [location]);
+  const { attributes: mobileDisclosure, close: closeMobileMore } =
+    useDismissibleDisclosure(location.key, true);
+  const { attributes: accountDisclosure } = useDismissibleDisclosure(
+    location.key,
+  );
   const [railTooltip, setRailTooltip] = useState<{
     label: string;
     top: number;
     left: number;
   } | null>(null);
-  // Native details survives route changes with the Shell. Close its overlay
-  // after every actual navigation, including query changes and browser back.
-  // Keep keyboard focus visible when its selected link becomes hidden, but do
-  // not take focus from a header search or another control outside the menu.
-  useEffect(() => {
-    const menu = mobileMore.current;
-    if (!menu?.open) return;
-    const focusInside = menu.contains(document.activeElement);
-    menu.open = false;
-    if (focusInside) menu.querySelector("summary")?.focus();
-  }, [location]);
   const client = useQueryClient();
   // Start with the labelled workspace navigation; remember the user's own choice.
   const [collapsed, setCollapsed] = useState(() => {
@@ -569,7 +559,7 @@ export function Shell() {
                 {profile.data?.display_name}
               </span>
             ) : (
-              <details className="account-menu" ref={accountMenu}>
+              <details className="account-menu" {...accountDisclosure}>
                 <summary title={t("profile")}>
                   {limitedAccount ? (
                     <span
@@ -620,7 +610,7 @@ export function Shell() {
             >
               <LogOut size={18} aria-hidden="true" />
             </Button>
-            <details className="mobile-more" ref={mobileMore}>
+            <details className="mobile-more" {...mobileDisclosure}>
               <summary
                 aria-label={t("more")}
                 aria-controls="mobile-shell-navigation"
@@ -628,47 +618,12 @@ export function Shell() {
                 <Menu size={20} aria-hidden="true" />
               </summary>
               <div className="mobile-menu-panel">
-                {!limitedAccount && !previewActive && (
-                  <form
-                    className="global-search mobile-global-search"
-                    role="search"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      navigate(`/search?q=${encodeURIComponent(search)}`);
-                      mobileMore.current?.removeAttribute("open");
-                      mobileMore.current?.querySelector("summary")?.focus();
-                    }}
-                  >
-                    <Search size={18} aria-hidden="true" />
-                    <label htmlFor="mobile-global-search" className="sr-only">
-                      {t("search")}
-                    </label>
-                    <input
-                      id="mobile-global-search"
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder={t("portalSearch")}
-                    />
-                  </form>
-                )}
-                {profile.data?.active &&
-                  online &&
-                  !guestOnly &&
-                  !previewActive && (
-                    <NotificationsMenu
-                      id={session!.user.id}
-                      zone={profile.data.time_zone}
-                    />
-                  )}
                 <PortalNavigation
                   id="mobile-shell-navigation"
                   items={visibleNavigation}
                   ariaLabel={t("menu")}
                   renderLabel={t}
-                  onItemClick={() => {
-                    mobileMore.current?.removeAttribute("open");
-                    mobileMore.current?.querySelector("summary")?.focus();
-                  }}
+                  onItemClick={() => closeMobileMore(true)}
                 />
               </div>
             </details>

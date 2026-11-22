@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,7 +10,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { settlementJournalCsv } from "./settlement-journal-api";
+import {
+  filterSettlementJournal,
+  settlementJournalCsv,
+  settlementJournalTotalsCsv,
+} from "./settlement-journal-api";
 import {
   settlementJournalPeriodSchema,
   settlementJournalSchema,
@@ -19,10 +24,6 @@ import "./i18n";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
-vi.mock("../../lib/online", () => ({
-  useOnline: () => true,
-  requireOnline: () => undefined,
-}));
 
 const originalId = "10000000-0000-4000-8000-000000000001";
 const subject = "10000000-0000-4000-8000-000000000002";
@@ -77,6 +78,8 @@ const response = {
 afterEach(async () => {
   cleanup();
   vi.resetAllMocks();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   await i18n.changeLanguage("de");
 });
 
@@ -113,6 +116,60 @@ it("reconciles exact original-currency totals for a reversal-only period and san
       items: [{ ...item, effective_on: "2024-03-02" }, received],
     }).success,
   ).toBe(false);
+});
+
+it("filters all journal types and keeps the detail, JSON and exact sums consistent", () => {
+  const credit = {
+    ...item,
+    id: "10000000-0000-4000-8000-000000000004",
+    kind: "customer_credit",
+    reverses_id: null,
+    amount: "25.08",
+    reference: "Fictional matched credit",
+  };
+  const report = settlementJournalSchema.parse({
+    ...response,
+    items: [...response.items, credit],
+    totals: [
+      ...response.totals,
+      {
+        kind: "customer_credit",
+        currency: "AUD",
+        recorded: "25.08",
+        reversed: "0.00",
+        net: "25.08",
+      },
+    ],
+  });
+  const posted = filterSettlementJournal(report, {
+    kind: "",
+    currency: "AUD",
+    posting: "recorded",
+  });
+  expect(posted.items).toEqual([credit]);
+  expect(posted.totals).toEqual([report.totals[2]]);
+  expect(settlementJournalSchema.parse(posted)).toEqual(posted);
+  const reversed = filterSettlementJournal(report, {
+    kind: "customer_refund",
+    currency: "AUD",
+    posting: "reversed",
+  });
+  expect(reversed.items).toEqual([item]);
+  expect(settlementJournalSchema.parse(reversed)).toEqual(reversed);
+  expect(settlementJournalCsv(reversed)).not.toMatch(
+    /Fictional matched credit|lecturer_repayment/,
+  );
+  const totals = settlementJournalTotalsCsv(reversed);
+  expect(totals.split("\r\n")).toHaveLength(2);
+  expect(totals).toContain('"customer_refund","AUD","0.00","10.01","-10.01"');
+  const empty = filterSettlementJournal(report, {
+    kind: "lecturer_repayment",
+    currency: "AUD",
+    posting: "",
+  });
+  expect(empty.items).toEqual([]);
+  expect(empty.totals).toEqual([]);
+  expect(settlementJournalTotalsCsv(empty).split("\r\n")).toHaveLength(1);
 });
 
 it("validates leap dates, inclusive bounds and reversed periods", () => {
@@ -170,6 +227,11 @@ it("refreshes authority for export and removes journal values when access is den
   expect(dialog.getByText("12.34 EUR")).toBeVisible();
   expect(rpc).toHaveBeenLastCalledWith("accounting_settlement_journal", period);
 
+  await user.selectOptions(dialog.getByLabelText("Buchungsstatus"), "reversed");
+  expect(dialog.getByText(item.reference)).toBeVisible();
+  expect(dialog.queryByText(received.reference)).not.toBeInTheDocument();
+  expect(rpc).toHaveBeenCalledTimes(1);
+
   await i18n.changeLanguage("en");
   await user.click(
     dialog.getByRole("button", { name: "Download journal JSON" }),
@@ -184,5 +246,109 @@ it("refreshes authority for export and removes journal values when access is den
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(button).toHaveFocus();
+  client.clear();
+});
+
+it("discards a loaded journal on disconnect and waits for a new read on reconnect", async () => {
+  const online = vi.spyOn(window.navigator, "onLine", "get");
+  online.mockReturnValue(true);
+  const user = userEvent.setup();
+  const client = new QueryClient();
+  rpc.mockImplementation(async (_name, args: typeof period) => ({
+    data:
+      rpc.mock.calls.length === 1
+        ? response
+        : {
+            ...response,
+            from: args.p_from,
+            to: args.p_to,
+            items: [],
+            totals: [],
+          },
+    error: null,
+  }));
+  render(
+    <QueryClientProvider client={client}>
+      <SettlementJournalButton />
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Abrechnungsjournal" }));
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByLabelText("Von (einschließlich)"), {
+    target: { value: period.p_from },
+  });
+  fireEvent.change(dialog.getByLabelText("Bis (einschließlich)"), {
+    target: { value: period.p_to },
+  });
+  await user.click(dialog.getByRole("button", { name: "Journal anzeigen" }));
+  expect(await dialog.findByText(item.reference)).toBeVisible();
+
+  act(() => {
+    online.mockReturnValue(false);
+    window.dispatchEvent(new Event("offline"));
+  });
+  expect(dialog.queryByText(item.reference)).not.toBeInTheDocument();
+  expect(
+    dialog.queryByRole("button", { name: "Journal als JSON" }),
+  ).not.toBeInTheDocument();
+  act(() => {
+    online.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+  });
+  expect(dialog.queryByText(item.reference)).not.toBeInTheDocument();
+  expect(rpc).toHaveBeenCalledTimes(1);
+  await user.click(dialog.getByRole("button", { name: "Journal anzeigen" }));
+  expect(
+    await dialog.findByText(
+      "Für diese Auswahl sind keine Buchungen vorhanden.",
+    ),
+  ).toBeVisible();
+  expect(rpc).toHaveBeenCalledTimes(2);
+  client.clear();
+});
+
+it("does not download a pending export after the dialog loses connectivity", async () => {
+  const online = vi.spyOn(window.navigator, "onLine", "get");
+  online.mockReturnValue(true);
+  const createObjectURL = vi.fn(() => "blob:fictional-journal");
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = vi.fn();
+    },
+  );
+  const client = new QueryClient();
+  const user = userEvent.setup();
+  let finish:
+    ((value: { data: typeof response; error: null }) => void) | undefined;
+  rpc.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(
+    <QueryClientProvider client={client}>
+      <SettlementJournalButton />
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Abrechnungsjournal" }));
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByLabelText("Von (einschließlich)"), {
+    target: { value: period.p_from },
+  });
+  fireEvent.change(dialog.getByLabelText("Bis (einschließlich)"), {
+    target: { value: period.p_to },
+  });
+  await user.click(dialog.getByRole("button", { name: "Summen als CSV" }));
+  expect(rpc).toHaveBeenCalledWith("accounting_settlement_journal", period);
+  act(() => {
+    online.mockReturnValue(false);
+    window.dispatchEvent(new Event("offline"));
+  });
+  await act(async () => finish?.({ data: response, error: null }));
+  expect(createObjectURL).not.toHaveBeenCalled();
+  expect(dialog.queryByText(item.reference)).not.toBeInTheDocument();
   client.clear();
 });

@@ -62,6 +62,7 @@ async function contents(download: Download) {
 test("customer invoice PDF, credit evidence, payment totals and exports stay private and bilingual", async ({
   page,
   browser,
+  isMobile,
 }, testInfo) => {
   test.setTimeout(130000);
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
@@ -72,6 +73,9 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   const [org, foreignOrg, job, claim] = Array.from({ length: 4 }, randomUUID);
   const title = `Fictional accounting block ${testInfo.project.name}`;
   const number = `=FICTIONAL-${testInfo.project.name}`;
+  // The finance journal spans organisations. Keep the two browser fixtures
+  // on separate dates when their projects share the same isolated database.
+  const refundOn = isMobile ? "2001-02-06" : "2001-02-05";
   const refundReference = `Fictional partial refund ${testInfo.project.name}`;
   await checked(
     service.from("organisations").insert([
@@ -346,7 +350,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     .fill("10,00");
   await settlement
     .getByLabel("Tatsächlicher Rückzahlungszeitpunkt (UTC)", { exact: true })
-    .fill("2001-02-05T09:30");
+    .fill(`${refundOn}T09:30`);
   await settlement
     .getByLabel("Referenz der ausgeführten Rückzahlung", { exact: true })
     .fill(refundReference);
@@ -374,8 +378,8 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     name: "Abrechnungsjournal",
     exact: true,
   });
-  await journal.getByLabel("Von (einschließlich)").fill("2001-02-05");
-  await journal.getByLabel("Bis (einschließlich)").fill("2001-02-05");
+  await journal.getByLabel("Von (einschließlich)").fill(refundOn);
+  await journal.getByLabel("Bis (einschließlich)").fill(refundOn);
   await journal.getByRole("button", { name: "Journal anzeigen" }).click();
   await expect(
     journal.getByText(refundReference, { exact: true }),
@@ -386,7 +390,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
       journal.getByRole("button", { name: `Journal als ${format}` }).click(),
     ]);
     expect(download.suggestedFilename()).toBe(
-      `luminovia-settlement-journal-2001-02-05-2001-02-05.${format.toLowerCase()}`,
+      `luminovia-settlement-journal-${refundOn}-${refundOn}.${format.toLowerCase()}`,
     );
     const exported = (await contents(download)).toString("utf8");
     if (format === "JSON") {
@@ -398,7 +402,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
           subject_id: json.invoices[0].id,
           currency: "AUD",
           amount: "10.00",
-          effective_on: "2001-02-05",
+          effective_on: refundOn,
           reference: refundReference,
         }),
       );
@@ -406,6 +410,41 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
       expect(exported).toContain(`"AUD","10.00","${refundReference}"`);
     }
   }
+  await journal.getByLabel("Währung", { exact: true }).selectOption("EUR");
+  await expect(journal.getByText(refundReference, { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    journal.getByText("Für diese Auswahl sind keine Buchungen vorhanden."),
+  ).toBeVisible();
+  await journal.getByLabel("Währung", { exact: true }).selectOption("AUD");
+  await journal
+    .getByLabel("Buchungsart", { exact: true })
+    .selectOption("customer_refund");
+  await journal
+    .getByLabel("Buchungsstatus", { exact: true })
+    .selectOption("recorded");
+  await expect(
+    journal.getByText(refundReference, { exact: true }),
+  ).toBeVisible();
+  const [summary] = await Promise.all([
+    page.waitForEvent("download"),
+    journal
+      .getByRole("button", { name: "Summen als CSV", exact: true })
+      .click(),
+  ]);
+  expect(summary.suggestedFilename()).toBe(
+    `luminovia-settlement-journal-${refundOn}-${refundOn}-AUD-customer_refund-recorded-totals.csv`,
+  );
+  const cells = (await contents(summary)).toString("utf8").split("\r\n");
+  expect(cells).toHaveLength(2);
+  expect(cells[1]).toContain('"customer_refund","AUD","10.00","0.00","10.00"');
+  await journal
+    .getByLabel("Buchungsstatus", { exact: true })
+    .selectOption("reversed");
+  await expect(journal.getByText(refundReference, { exact: true })).toHaveCount(
+    0,
+  );
   expect(
     await journal.evaluate(
       (element) => element.scrollWidth <= element.clientWidth + 1,

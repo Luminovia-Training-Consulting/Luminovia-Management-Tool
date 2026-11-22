@@ -131,7 +131,15 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
       body: form,
       signal: AbortSignal.timeout(90000),
     });
-    assert.equal(response.status, 200);
+    if (response.status !== 200) {
+      // Keep raw response bodies and private document identifiers out of CI logs.
+      const body = await response.json().catch(() => null);
+      const knownErrors = ["scanner_unavailable", "upload_failed", "deletion_unavailable"];
+      const reason = knownErrors.includes(body?.error)
+        ? body.error
+        : "unrecognized gateway response";
+      assert.equal(response.status, 200, `Accounting PDF upload: ${reason}`);
+    }
     const body = await response.json();
     assert.equal(body.document.status, "clean");
     return body.document;

@@ -275,16 +275,16 @@ summary:focus-visible {
 
 .skip-link {
   position: fixed;
-  top: -100px;
-  left: 20px;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 1rem;
   background: var(--surface);
   color: var(--ink);
   padding: 14px 22px;
   z-index: 100;
 }
 
-.skip-link:focus {
-  top: 12px;
+.skip-link:not(:focus-visible) {
+  clip-path: inset(50%);
 }
 
 .muted {
@@ -2739,23 +2739,6 @@ legend {
   justify-content: flex-start;
 }
 
-.mobile-global-search {
-  width: 100%;
-  max-width: none;
-  margin: 0 0 8px;
-  min-height: 44px;
-}
-
-.mobile-menu-panel > .notification-menu {
-  margin-bottom: 8px;
-}
-
-.mobile-menu-panel > .notification-menu summary {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-}
-
 .sidebar nav {
   flex: 1;
   gap: 4px;
@@ -2886,11 +2869,6 @@ legend {
 @media (max-width: 760px) {
   .app-shell.has-sidebar-search-open {
     display: block;
-  }
-
-  .mobile-menu-panel > .notification-menu summary {
-    width: 44px;
-    height: 44px;
   }
 
   .app-shell,
@@ -3257,6 +3235,8 @@ legend {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 
 .people-person-button small {
@@ -3337,7 +3317,7 @@ legend {
 
 @media (max-width: 1100px) {
   .people-admin-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .people-results {
@@ -3728,13 +3708,7 @@ legend {
   }
 
   .mobile-more .mobile-menu-panel {
-    position: fixed;
     z-index: 70;
-    top: 62px;
-    right: 8px;
-    left: 8px;
-    max-height: calc(100dvh - 74px);
-    overflow-y: auto;
     padding: 10px;
     border: 1px solid var(--line);
     border-radius: 12px;
@@ -4391,6 +4365,7 @@ tr + tr td {
 
 @media (max-width: 760px) {
   .topbar {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
@@ -4429,17 +4404,26 @@ tr + tr td {
     max-inline-size: none;
   }
 
-  .topbar-actions > .notification-menu {
-    margin: 0;
+  .topbar-actions > :is(.account-menu, .mobile-more, .notification-menu) {
+    position: static;
   }
 
-  .topbar-actions > .notification-menu > .notification-popover {
-    position: fixed;
-    top: 64px;
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-width: none;
+  /* A wrapped toolbar and its search row form one anchor for every panel. */
+  .topbar-actions > .notification-menu > .notification-popover,
+  .topbar
+    :is(
+      .account-menu-panel,
+      .mobile-menu-panel,
+      .role-preview-options > fieldset
+    ) {
+    position: absolute;
+    inset: calc(100% + 0.375rem) 0.75rem auto;
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: none;
+    max-block-size: 55dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 }
 

@@ -1,5 +1,6 @@
 /** Browser acceptance for the red/green admin-only Premium switch and audited retained-course view. */
-import {expect, test} from "@playwright/test";
+import {expect, test, type Page} from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
@@ -18,6 +19,14 @@ async function signedInClient(email: string) {
     return client;
 }
 
+async function checkPremiumAccessibility(page: Page) {
+    const result = await new AxeBuilder({page})
+        .include(".company-premium-control")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+    expect(result.violations).toEqual([]);
+}
+
 test("only an actual admin can confirm Premium ON/OFF and inspect retained course data", async ({
                                                                                                     page,
                                                                                                     browser,
@@ -33,17 +42,21 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
         await page.goto("/admin/clients");
         await page.getByRole("searchbox", {name: "Suchen", exact: true}).fill(name);
         await page.getByRole("button", {name, exact: true}).click();
-        let premiumSwitch = page.getByRole("switch", {
-            name: "Premium aktivieren",
-        });
+        const premiumSwitch = page.getByRole("switch", {name: "Premium LMS", exact: true});
         await expect(premiumSwitch).toBeVisible();
         await expect(premiumSwitch).toHaveAttribute("aria-checked", "false");
 
-        await premiumSwitch.click();
+        await expect(premiumSwitch).toHaveText("Premium LMS AUS");
+        await page.getByLabel("Farbschema", {exact: true}).selectOption("light");
+        await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+        await checkPremiumAccessibility(page);
+
+        await premiumSwitch.press("Space");
         await expect(
             page.getByRole("dialog", {name: "Premium LMS aktivieren?"}),
         ).toBeVisible();
-        await page.getByRole("button", {name: "Abbrechen", exact: true}).click();
+        await page.keyboard.press("Escape");
+        await expect(premiumSwitch).toBeFocused();
         await expect(premiumSwitch).toHaveAttribute("aria-checked", "false");
         const adminClient = await signedInClient(admin.email);
         const unchanged: {organisation_id: string; enabled: boolean; version: number}[] =
@@ -53,18 +66,22 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
         ).toMatchObject({enabled: false, version: 0});
 
         await premiumSwitch.click();
-        await page.getByRole("button", {name: "Weiter", exact: true}).click();
-        await page
-            .getByRole("button", {name: "Premium LMS jetzt einschalten", exact: true})
-            .click();
-        premiumSwitch = page.getByRole("switch", {
-            name: "Premium deaktivieren",
-        });
+        await page.getByRole("button", {name: "Weiter", exact: true}).press("Enter");
+        await expect(page.getByRole("button", {name: "Zurück", exact: true})).toBeFocused();
+        await page.keyboard.press("Tab");
+        await expect(
+            page.getByRole("button", {name: "Premium LMS jetzt einschalten", exact: true}),
+        ).toBeFocused();
+        await page.keyboard.press("Enter");
         await expect(premiumSwitch).toHaveAttribute("aria-checked", "true");
+        await expect(premiumSwitch).toHaveText("Premium LMS EIN");
+        await expect(premiumSwitch).toBeFocused();
 
-        await page
-            .getByRole("button", {name: "Beibehaltene Kursdaten ansehen", exact: true})
-            .click();
+        const retained = page.getByRole("button", {
+            name: "Beibehaltene Kursdaten ansehen",
+            exact: true,
+        });
+        await retained.click();
         await expect(
             page.getByRole("dialog", {
                 name: "Beibehaltene Kursdaten ansehen",
@@ -76,15 +93,20 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
             page.getByRole("dialog", {name: "Beibehaltene Kursdaten ansehen"}),
         ).toHaveCount(0);
 
-        await premiumSwitch.click();
-        await page.getByRole("button", {name: "Weiter", exact: true}).click();
-        await page
-            .getByRole("button", {name: "Premium LMS jetzt ausschalten", exact: true})
-            .click();
-        premiumSwitch = page.getByRole("switch", {
-            name: "Premium aktivieren",
-        });
+        await expect(retained).toBeFocused();
+        await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+        await page.getByLabel("Theme", {exact: true}).selectOption("dark");
+        await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+        await expect(premiumSwitch).toHaveText("Premium LMS ON");
+        await checkPremiumAccessibility(page);
+        await premiumSwitch.press("Space");
+        await expect(page.getByRole("dialog", {name: "Disable Premium LMS?"})).toBeVisible();
+        await page.getByRole("button", {name: "Continue", exact: true}).press("Enter");
+        await expect(page.getByRole("button", {name: "Back", exact: true})).toBeFocused();
+        await page.getByRole("button", {name: "Confirm disabling Premium LMS", exact: true}).press("Enter");
         await expect(premiumSwitch).toHaveAttribute("aria-checked", "false");
+        await expect(premiumSwitch).toHaveText("Premium LMS OFF");
+        await checkPremiumAccessibility(page);
 
         const managerPage = await browser.newPage();
         await login(managerPage, manager.email);

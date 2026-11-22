@@ -11,10 +11,10 @@ import {
   PageHeading,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { installationBrand } from "../../lib/installation-brand";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
+import { useAcademyBrand } from "../branding/academy-branding";
 import { academyMailPaths } from "../developer-api/academy-mail-contract";
 import "./mail-i18n";
 
@@ -48,7 +48,7 @@ type TransportDraft = {
   port: string;
   security: SecurityMode;
   sender_email: string;
-  sender_name: string;
+  sender_name?: string;
   username: string;
   password: string;
 };
@@ -76,9 +76,7 @@ function draftFrom(
       port: String(configuration.smtp.port ?? 465),
       security: configuration.smtp.security ?? "implicit_tls",
       sender_email: configuration.smtp.sender_email ?? "",
-      sender_name:
-        configuration.smtp.sender_name ??
-        (academy ? installationBrand.name : "Luminovia Portal"),
+      sender_name: configuration.smtp.sender_name ?? undefined,
       username: "",
       password: "",
     },
@@ -130,6 +128,7 @@ function TestStatus({
 /** Administer the single SMTP transport used by Auth and notifications plus optional IMAP checks. */
 export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
   const { t } = useTranslation("adminMail");
+  const brand = useAcademyBrand();
   const { session } = useAuth();
   const online = useOnline();
   const cache = useQueryClient();
@@ -177,6 +176,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
         p_smtp: {
           ...draft.smtp,
           port: draft.smtp.port === "" ? null : Number(draft.smtp.port),
+          sender_name: draft.smtp.sender_name ?? brand.name,
         },
         p_imap: academy
           ? { enabled: false }
@@ -362,7 +362,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
               <input
                 type="text"
                 maxLength={120}
-                value={draft.smtp.sender_name}
+                value={draft.smtp.sender_name ?? brand.name}
                 onChange={(event) =>
                   change("smtp", { sender_name: event.currentTarget.value })
                 }

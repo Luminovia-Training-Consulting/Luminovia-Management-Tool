@@ -676,7 +676,9 @@ export function AccountingPage() {
         </Button>
         {(access.data.can_manage_customer_invoices ||
           access.data.can_export_all_lecturers) && (
-          <SettlementJournalButton key={actor} />
+          <SettlementJournalButton
+            key={`${actor}:${access.data.can_manage_customer_invoices}:${access.data.can_export_all_lecturers}`}
+          />
         )}
       </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}

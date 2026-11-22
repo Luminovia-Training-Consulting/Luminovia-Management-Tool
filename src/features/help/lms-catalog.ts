@@ -164,12 +164,12 @@ const lmsHelpGuides: GuideModule[] = [
     steps: {
       de: [
         "Öffne als Admin Verwaltung → Kunden / Unternehmen und wähle das aktive Unternehmen.",
-        "Wähle Premium aktivieren, prüfe die Auswirkungen und bestätige den Wechsel. Kontrolliere anschließend den Status Premium LMS EIN.",
+        "Wähle den Schalter Premium LMS, prüfe die Auswirkungen und bestätige den Wechsel. Kontrolliere anschließend den Status Premium LMS EIN.",
         "Öffne die Teilnehmendenliste oder den betroffenen Kurs und prüfe die freigegebenen Aktionen mit dem vorgesehenen Konto.",
       ],
       en: [
         "As an admin, open Administration → Customers / Companies and select the active company.",
-        "Choose Enable Premium, review the effect and confirm the change. Check that the resulting status is Premium LMS ON.",
+        "Choose the Premium LMS switch, review the effect and confirm the change. Check that the resulting status is Premium LMS ON.",
         "Open the participant roster or affected course and verify the available actions with the intended account.",
       ],
     },
