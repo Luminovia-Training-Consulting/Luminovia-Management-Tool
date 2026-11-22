@@ -3,9 +3,16 @@ import { validateAvatar } from "./avatar.ts";
 export const logoMaxBytes = 256 * 1024;
 
 export function academyLogoVersion(params: URLSearchParams) {
+  return academyAssetVersion(params, "academy-logo");
+}
+
+export function academyAssetVersion(
+  params: URLSearchParams,
+  mode: "academy-logo" | "academy-pwa-icon",
+) {
   const version = params.get("expected_version");
   if (
-    params.size !== 2 || params.get("mode") !== "academy-logo" ||
+    params.size !== 2 || params.get("mode") !== mode ||
     version === null || !/^(0|[1-9]\d{0,9})$/.test(version)
   ) {
     return null;

@@ -32,7 +32,7 @@ function invalid(): never {
 export async function validateAvatar(
     bytes: Uint8Array,
     maxExclusive = MAX_AVATAR_SIZE,
-): Promise<void> {
+): Promise<{ width: number; height: number }> {
     if (bytes.length >= maxExclusive || bytes.length < 57) invalid();
     if (!signature.every((value, i) => bytes[i] === value)) invalid();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -119,4 +119,5 @@ export async function validateAvatar(
         reader.releaseLock();
     }
     if (length !== expected) invalid();
+    return {width, height};
 }

@@ -87,7 +87,8 @@ await withTestDatabase("api_surface", async ({sql}) => {
                  'public.installation_capabilities()', 'private.installation_capability_projection()',
                  'public.academy_public_branding()', 'private.academy_public_branding()',
                  'public.academy_public_brand_links()', 'private.academy_public_brand_links()',
-                 'public.academy_public_logo()', 'private.academy_public_logo()'
+                 'public.academy_public_logo()', 'private.academy_public_logo()',
+                 'public.academy_pwa_icon()', 'private.academy_pwa_icon()'
                ]) allowed(signature) where p.oid = to_regprocedure(allowed.signature))`),
         "",
         "Anonymous actors can only read the public installation bootstrap and Academy branding and run the Data API pre-request hook",

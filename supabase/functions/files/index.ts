@@ -10,6 +10,7 @@ import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
+import {uploadAcademyPwaIcon} from './academy-pwa-icon.ts';
 import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
 import {serveAcademyPwaAsset} from './academy-pwa-assets.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
@@ -83,6 +84,19 @@ Deno.serve(async (request: Request) => {
             const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
             if (profile.error || !profile.data?.active) throw new Error('access_denied');
         };
+        if (requestUrl.searchParams.get('mode') === 'academy-pwa-icon') {
+            return await uploadAcademyPwaIcon(request, {
+                check: (version) => user.rpc('check_academy_pwa_icon_write', {p_expected_version: version}),
+                scan: scanPortalFile,
+                publish: (version, icons) => service.rpc('publish_academy_scanned_pwa_icon', {
+                    p_actor: actor, p_expected_version: version,
+                    p_icon_192_base64: icons.icon_192,
+                    p_icon_512_base64: icons.icon_512,
+                    p_maskable_512_base64: icons.maskable_512,
+                    p_scanners: icons.scanners,
+                }),
+            }, json);
+        }
         if (requestUrl.searchParams.get('mode') === 'academy-logo') {
             const version = academyLogoVersion(requestUrl.searchParams);
             if (version === null) return json(400, {error: 'invalid_request'});
