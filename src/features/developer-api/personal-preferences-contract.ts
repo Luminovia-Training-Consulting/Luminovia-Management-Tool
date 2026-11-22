@@ -1,5 +1,9 @@
 /** Reviewed internal contracts for the authenticated account's presentation state. */
 import { z } from "zod";
+import {
+  jsonContent as json,
+  postgrestErrorResponse as error,
+} from "./postgrest-content.ts";
 import { uiPreferencesSchema } from "../../lib/ui-preferences-schema.ts";
 import { dashboardPreferencesSchema } from "../dashboard/personal-schema.ts";
 import { welcomeProgressSchema } from "../onboarding/schema.ts";
@@ -21,22 +25,9 @@ const dashboardPreferences = dashboardPreferencesSchema
   .strict();
 const welcomeProgress = welcomeProgressSchema.extend({ version }).strict();
 
-const errorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.string().nullable().optional(),
-  hint: z.string().nullable().optional(),
-});
-const json = (schema: z.ZodType) => ({
-  "application/json": { schema: z.toJSONSchema(schema) },
-});
-const error = (description: string, schema: z.ZodType = errorSchema) => ({
-  description,
-  content: json(schema),
-});
 const conflict = error(
   "The expected version does not match the current state. Reload before editing.",
-  errorSchema.extend({ code: z.literal("PT409") }),
+  z.literal("PT409"),
 );
 
 function operation(

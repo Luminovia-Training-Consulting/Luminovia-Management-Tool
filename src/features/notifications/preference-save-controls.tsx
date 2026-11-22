@@ -8,13 +8,15 @@ export function PreferenceSaveControls<T>({
   namespace,
   online,
   dirty,
+  invalid = false,
   save,
   reload,
   reset,
 }: {
-  namespace: "attention" | "inbox";
+  namespace: "attention" | "delivery" | "inbox";
   online: boolean;
   dirty: boolean;
+  invalid?: boolean;
   save: {
     error: unknown;
     isError: boolean;
@@ -36,7 +38,9 @@ export function PreferenceSaveControls<T>({
   return (
     <>
       {save.isError && (
-        <Notice kind="error">{t(conflict ? "conflict" : "error")}</Notice>
+        <Notice kind="error">
+          {t(invalid ? "validation" : conflict ? "conflict" : "error")}
+        </Notice>
       )}
       {Boolean(conflict) && (
         <Button

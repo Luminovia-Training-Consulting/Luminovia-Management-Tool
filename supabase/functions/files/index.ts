@@ -185,13 +185,13 @@ Deno.serve(async (request: Request) => {
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
             const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
             const requestedVersion = scoped
-                ? {data: {sha256: scoped.sha256}, error: null}
-                : await user.from('document_versions').select('sha256').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
+                ? {data: {sha256: scoped.sha256, status: doc.status}, error: null}
+                : await user.from('document_versions').select('sha256,status').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
             if (requestedVersion.error || !requestedVersion.data) return json(503, {error: 'upload_failed'});
             // A retry must not attach different payload bytes to the same reservation.
             if (requestedVersion.data.sha256 && requestedVersion.data.sha256 !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
             if (doc.status === 'clean') {
-                if (!requestedVersion.data.sha256) return json(503, {error: 'upload_failed'});
+                if (requestedVersion.data.status !== 'clean' || !requestedVersion.data.sha256) return json(503, {error: 'upload_failed'});
                 return json(200, {document: doc});
             }
             if (doc.status === 'rejected') return json(422, {error: 'scan_rejected', document_id: doc.id});
@@ -289,21 +289,16 @@ Deno.serve(async (request: Request) => {
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
                 if (protectedUpload) await academyScan('clean', lease, digest, verdict.version);
-                else if (doc.kind === 'invoice') {
-                    const completed = await service.rpc('complete_invoice_upload', {
+                else {
+                    // Both completion RPCs commit the document, version and audit as a single unit.
+                    const complete = doc.kind === 'invoice' ? 'complete_invoice_upload' : 'complete_document_upload';
+                    const completed = await service.rpc(complete, {
                         p_document_id: doc.id, p_version_id: reservation.version_id, p_lease_id: lease,
                         p_sha256: digest, p_scanner_version: verdict.version,
                     });
                     if (completed.error?.code === '42501') throw new Error('access_denied');
                     if (completed.error?.code === 'PT409') return json(409, {error: 'version_superseded'});
                     if (completed.error) return json(503, {error: 'upload_failed'});
-                }
-                else {
-                    const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
-                    const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();
-                    if (!update.data) return json(409, {error: 'version_superseded'});
-                    if (version.error || update.error) return json(503, {error: 'upload_failed'});
-                    await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_clean', resource_id: doc.id});
                 }
                 await service.storage.from('portal-quarantine').remove([reservation.object_path]);
                 return json(200, {document: await currentDocument()});
