@@ -386,6 +386,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const initialReport = await report(client);
     const registered = await register(teacher);
     assert.deepEqual(await report(teacher), initialReport);
+    await assert.rejects(
+      actor(
+        teacher,
+        gate("course_document_access") +
+          `select public.course_document_access('attendance_session',${q(session)})`,
+      ),
+      /42501/,
+    );
     assert.equal(initialReport.report_scope, "session");
     assert.equal(initialReport.id, run);
     assert.equal(initialReport.time_zone, "Australia/Brisbane");

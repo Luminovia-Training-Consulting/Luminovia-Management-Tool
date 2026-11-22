@@ -311,7 +311,7 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
     parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
@@ -328,6 +328,14 @@ const courseDocuments = {
               kind: { const: "attendance" },
               id: uuid,
               format: { const: "pdf", default: "pdf" },
+            }),
+            required: ["kind", "id"],
+          },
+          {
+            ...object({
+              kind: { const: "attendance_session" },
+              id: uuid,
+              format: { enum: ["pdf", "csv"], default: "pdf" },
             }),
             required: ["kind", "id"],
           },
@@ -372,7 +380,10 @@ const courseDocuments = {
       "200": {
         description: "Authorized document bytes",
         headers: privateDownloadHeaders,
-        content: fileByteContent,
+        content: {
+          ...fileByteContent,
+          "text/csv": fileByteContent["text/plain"],
+        },
       },
       ...renderedDocumentErrors,
     },

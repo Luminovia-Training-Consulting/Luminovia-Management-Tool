@@ -276,7 +276,11 @@ export type PortalDocumentRequest =
       id: string;
     }
   | { kind: "attendance_evidence"; id: string }
-  | { kind: "attendance"; id: string; format?: "pdf" | "csv" }
+  | {
+      kind: "attendance" | "attendance_session";
+      id: string;
+      format?: "pdf" | "csv";
+    }
   | { kind: "request_resource"; id: string; request_id: string }
   | {
       kind: "course_chat_attachment";

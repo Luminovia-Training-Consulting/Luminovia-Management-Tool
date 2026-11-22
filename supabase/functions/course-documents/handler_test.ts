@@ -206,6 +206,45 @@ Deno.test("attendance CSV escapes spreadsheet formulas and checks the exact perm
     assert((await legacy.handler(request({kind: "attendance", id, format: "csv"}))).status === 403);
     assert((await legacy.handler(request({kind: "attendance", id}))).status === 200);
 });
+Deno.test("internal exact-session export uses one checked register for both formats", async () => {
+    const facts = {
+        report_scope: "session",
+        id: "b977ffbe-0692-4854-8e33-65fc3cf17571",
+        course: "Fictional Course",
+        time_zone: "Europe/Berlin",
+        sessions: [{id, starts_at: "2026-11-01T08:00:00Z", ends_at: "2026-11-01T09:00:00Z"}],
+        roster: [{user_id: id, name: "Fictional Learner", sessions: [{session_id: id, status: "excused", minutes: 0}]}],
+    };
+    let requested = facts;
+    let reads = 0;
+    let renders = 0;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => true,
+        rpc: async (_token, name, args) => {
+            reads++;
+            assert(name === "course_document_access" && args.p_kind === "attendance_session" && String(args.p_id).toLowerCase() === id);
+            return {data: requested, error: null};
+        },
+        download: async () => { throw new Error("No Storage read expected"); },
+        render: async (kind, suppliedFacts) => {
+            renders++;
+            assert(kind === "attendance" && suppliedFacts === facts);
+            return new TextEncoder().encode("%PDF-1.7\nfictional");
+        },
+    });
+    const csv = await handler(request({kind: "attendance_session", id, format: "csv"}));
+    assert(csv.status === 200 && csv.headers.get("content-type") === "text/csv; charset=utf-8");
+    assert((await csv.text()).includes('"Fictional Learner","excused"'));
+    const pdf = await handler(request({kind: "attendance_session", id: id.toUpperCase()}));
+    assert(pdf.status === 200 && (await pdf.text()).startsWith("%PDF-"));
+    assert(reads === 4 && renders === 1);
+    requested = {...facts, sessions: [{...facts.sessions[0], id: facts.id}]};
+    assert((await handler(request({kind: "attendance_session", id}))).status === 403);
+    requested = {...facts, report_scope: "course"};
+    assert((await handler(request({kind: "attendance_session", id, format: "csv"}))).status === 403);
+    assert(renders === 1);
+});
 Deno.test(
     "financial kinds dispatch only reviewed caller-bound RPC argument shapes",
     async () => {

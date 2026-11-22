@@ -85,6 +85,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 return json(400, "invalid_request");
             }
             const kind = body.kind;
+            const attendance = kind === "attendance" || kind === "attendance_session";
             let name: string, args: Record<string, unknown>;
             if (
                 kind === "qualification_passport" &&
@@ -96,7 +97,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 // same snapshot label; the database still evaluates current expiry.
                 args = {p_locale: body.locale, p_as_of: new Date().toISOString()};
             } else if (
-                kind === "attendance" && uuid(body.id) &&
+                attendance && uuid(body.id) &&
                 (body.format === undefined || body.format === "pdf" || body.format === "csv") &&
                 Object.keys(body).every((key) => ["kind", "id", "format"].includes(key))
             ) {
@@ -171,7 +172,14 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             } else return json(400, "invalid_request");
             const first = await dependencies.rpc(token, name, args);
             if (first.error || !first.data) return json(403, "document_unavailable");
-            const brandPrefix = academyPdfBrand(kind, first.data) ? "course" : "luminovia";
+            if (kind === "attendance_session" &&
+                (first.data.report_scope !== "session" ||
+                    !Array.isArray(first.data.sessions) || first.data.sessions.length !== 1 ||
+                    first.data.sessions[0]?.id !== String(body.id).toLowerCase())) {
+                return json(403, "document_unavailable");
+            }
+            const renderKind = attendance ? "attendance" : kind;
+            const brandPrefix = academyPdfBrand(renderKind, first.data) ? "course" : "luminovia";
             let bytes: Uint8Array,
                 mime = "application/pdf",
                 filename = `${brandPrefix}-${kind}.pdf`;
@@ -218,12 +226,12 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 filename = String(first.data.name ?? "course-resource")
                     .replace(/[^A-Za-z0-9._-]/g, "_")
                     .slice(0, 120);
-            } else if (kind === "attendance" && body.format === "csv") {
+            } else if (attendance && body.format === "csv") {
                 if (first.data.report_scope !== "session") return json(403, "document_unavailable");
                 bytes = renderAttendanceCsv(first.data);
                 mime = "text/csv; charset=utf-8";
                 filename = `${brandPrefix}-attendance-${body.id}.csv`;
-            } else bytes = await dependencies.render(kind, first.data);
+            } else bytes = await dependencies.render(renderKind, first.data);
             // Re-check actual Auth and current database membership after potentially
             // slow storage/font work. Facts changing during rendering fail closed.
             if (!(await dependencies.authenticate(token))) {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -419,6 +420,49 @@ it.each([undefined, "active"] as const)(
     expect(
       screen.queryByRole("button", { name: "attendanceBulkReview" }),
     ).toBeNull();
+  },
+);
+
+it("refreshes an open internal register when the session starts", async () => {
+  vi.useFakeTimers();
+  try {
+    fake.register.starts_at = new Date(Date.now() + 30_000).toISOString();
+    view();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(screen.getByText("Fictional Learner")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "attendancepresent" }),
+    ).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_010);
+    });
+    expect(
+      screen.getByRole("button", { name: "attendancepresent" }),
+    ).toBeVisible();
+  } finally {
+    cleanup();
+    vi.useRealTimers();
+  }
+});
+
+it.each(["csv", "pdf"] as const)(
+  "exports the exact internal register as %s",
+  async (format) => {
+    view();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: format === "csv" ? "attendanceExportCsv" : "attendanceExportPdf",
+      }),
+    );
+    expect(fake.export).toHaveBeenCalledWith(
+      { kind: "attendance_session", id: "session", format },
+      expect.stringMatching(
+        `^attendance-\\d{4}-\\d{2}-\\d{2}-session\\.${format}$`,
+      ),
+    );
   },
 );
 

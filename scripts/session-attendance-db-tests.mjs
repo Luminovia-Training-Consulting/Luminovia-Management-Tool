@@ -148,6 +148,22 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     assert.deepEqual(await importRows(company,[importRow]),{saved:1});
     assert.equal((await register(company)).rows[0].note,"Fictional CSV correction");
     await assert.rejects(importRows(company,[importRow]),/PT409/);
+    const exportSession = (who, target = session) =>
+        rpc(who, "course_document_access", [q("attendance_session"), q(target)]);
+    const report = await exportSession(company);
+    assert.equal(report.report_scope, "session");
+    assert.equal(report.id, run);
+    for (const who of [teacher, admin]) assert.deepEqual(await exportSession(who), report);
+    assert.deepEqual(report.sessions.map((record) => record.id), [session]);
+    assert.equal(report.roster[0].sessions[0].status, "present");
+    assert.equal(report.roster[0].sessions[0].minutes, 60);
+    assert.doesNotMatch(JSON.stringify(report), /Fictional CSV correction|Roster\.pdf|Paper register confirmed/);
+    assert.equal((await exportSession(company, historicSession)).roster[0].sessions[0].status, null);
+    for (const who of [participant, outsider]) await assert.rejects(exportSession(who), /42501/);
+    await assert.rejects(exportSession(company, run), /42501/);
+    const legacy = await rpc(admin, "course_document_access", [q("attendance"), q(run)]);
+    assert.equal(legacy.sessions.length, 3);
+    console.log("PASS internal exact-session export preserves the existing course report and denies non-staff access");
     const toggle = actor(admin, `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});select pg_sleep(0.7)`);
     let holdsPremiumLock = false;
     for (let index = 0; index < 30 && !holdsPremiumLock; index++) {
@@ -159,6 +175,7 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     const lateSave = assert.rejects(save(teacher,"present",4,{reason:"Concurrent edit"}), /42501/);
     await Promise.all([toggle, lateSave]);
     await assert.rejects(register(company),/42501/);
+    await assert.rejects(exportSession(company),/42501/);
     await assert.rejects(save(teacher,"present",4,{reason:"Retest"}),/42501/);
     await assert.rejects(rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
 });

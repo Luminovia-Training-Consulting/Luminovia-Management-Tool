@@ -1403,7 +1403,9 @@ describe("documented Premium course and spending operations", () => {
     expect(documentHandler).toContain(
       '["resource", "exam", "completion", "attendance_evidence"].includes(kind)',
     );
-    expect(documentHandler).toContain('kind === "attendance" && uuid(body.id)');
+    expect(documentHandler).toContain(
+      'const attendance = kind === "attendance" || kind === "attendance_session";',
+    );
     expect(source("supabase/functions/files/index.ts")).toContain(
       "request.headers.get('content-type')?.startsWith('multipart/form-data')",
     );
@@ -1419,6 +1421,13 @@ describe("documented Premium course and spending operations", () => {
           properties: {
             kind: { const: "attendance" },
             format: { const: "pdf" },
+          },
+          required: ["kind", "id"],
+        },
+        {
+          properties: {
+            kind: { const: "attendance_session" },
+            format: { enum: ["pdf", "csv"] },
           },
           required: ["kind", "id"],
         },
@@ -1461,7 +1470,10 @@ describe("documented Premium course and spending operations", () => {
         headers: {
           "Cache-Control": { schema: { const: "no-store, private" } },
         },
-        content: { "text/plain": { schema: { format: "binary" } } },
+        content: {
+          "text/plain": { schema: { format: "binary" } },
+          "text/csv": { schema: { format: "binary" } },
+        },
       },
       "403": {
         content: {

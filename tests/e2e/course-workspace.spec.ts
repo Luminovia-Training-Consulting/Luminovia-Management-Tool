@@ -652,6 +652,24 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
     expect((await secondRegister()).rows[0]).toMatchObject({
         user_id: f.learner.id, status: "excused", version: 1,
     });
+    const [csv] = await Promise.all([
+        page.waitForEvent("download"),
+        attendance.getByRole("button", {name: "Anwesenheit als CSV herunterladen"}).click(),
+    ]);
+    expect(csv.suggestedFilename()).toContain(`${secondSession.slice(0, 8)}.csv`);
+    const csvContents = await readFile(await csv.path(), "utf8");
+    expect(csvContents).toContain("Fictional Müller Μαρία Мария");
+    expect(csvContents).toContain(secondSession);
+    expect(csvContents).toContain('"excused"');
+    expect(csvContents).not.toContain(f.session);
+    expect(csvContents).not.toContain("Reviewed register");
+
+    const [pdf] = await Promise.all([
+        page.waitForEvent("download"),
+        attendance.getByRole("button", {name: "Anwesenheit als PDF herunterladen"}).click(),
+    ]);
+    expect(pdf.suggestedFilename()).toContain(`${secondSession.slice(0, 8)}.pdf`);
+    expect((await readFile(await pdf.path())).subarray(0, 5).toString("ascii")).toBe("%PDF-");
     expect((await register()).rows[0]).toMatchObject({
         user_id: f.learner.id, status: "present", note: "Reviewed register", version: 1,
     });

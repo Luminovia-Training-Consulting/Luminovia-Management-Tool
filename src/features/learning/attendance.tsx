@@ -50,7 +50,13 @@ type RowEditorProps = {
   row: AttendanceRow;
 };
 
-function AttendanceExport({ register }: { register: AttendanceRegister }) {
+function AttendanceExport({
+  register,
+  academy,
+}: {
+  register: AttendanceRegister;
+  academy: boolean;
+}) {
   const { t } = useTranslation("learning");
   const day = DateTime.fromISO(register.starts_at, {
     zone: register.time_zone,
@@ -58,7 +64,11 @@ function AttendanceExport({ register }: { register: AttendanceRegister }) {
   const download = useMutation({
     mutationFn: (format: "csv" | "pdf") =>
       downloadPortalDocument(
-        { kind: "attendance", id: register.session_id, format },
+        {
+          kind: academy ? "attendance" : "attendance_session",
+          id: register.session_id,
+          format,
+        },
         `attendance-${day ?? "session"}-${register.session_id.slice(0, 8)}.${format}`,
       ),
   });
@@ -425,7 +435,18 @@ export function AttendancePanel({
   const query = useQuery({
     ...attendanceRegisterQuery(actor, course.id, session, Boolean(academy)),
     enabled: allowed && Boolean(session) && (!academy || online),
-    ...(academy && { refetchInterval: 10_000, refetchOnMount: "always" }),
+    ...(academy && { refetchOnMount: "always" }),
+    refetchInterval: ({ state }) => {
+      if (!online) return false;
+      if (academy) return 10_000;
+      if (state.status !== "success") return false;
+      const start = Date.parse(state.data?.starts_at ?? "");
+      // Allow an already open register to become editable at the start after
+      // a fresh server read. Bound long timers to the browser timer range.
+      if (start > state.dataUpdatedAt)
+        return Math.max(1, Math.min(start - Date.now(), 2_147_483_647));
+      return false;
+    },
   });
   if (!allowed || !course.sessions.length) return null;
   const canEdit =
@@ -474,12 +495,11 @@ export function AttendancePanel({
       {query.isSuccess && online && (
         <>
           <p>{t("attendanceZone", { zone: course.time_zone })}</p>
-          {academy && (
-            <AttendanceExport
-              key={query.data.session_id}
-              register={query.data}
-            />
-          )}
+          <AttendanceExport
+            key={query.data.session_id}
+            register={query.data}
+            academy={Boolean(academy)}
+          />
           {rows.length ? (
             <>
               <ul
