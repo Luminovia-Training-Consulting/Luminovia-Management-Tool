@@ -1,3 +1,17 @@
+# 22 November 2026 — Bound local QA memory use
+
+The systemd journal recorded a 21:46 termination of a Chromium application scope after laptop RAM and swap usage both exceeded 90 percent. Local QA processes shared the desktop application scope. The `/tmp` RAM filesystem held nearly 16 GiB, including inactive test image data. Three verified inactive artifacts moved to private disk storage, with links at their original paths.
+
+The local launcher places desktop-initiated source checks and full tests in a separate systemd background scope with memory and swap limits. The full runner uses a disk-backed temporary directory and local preflight checks memory before starting additional work. Local Vitest and SQL suite concurrency are bounded. A live scope probe confirmed the separate group and limits. Thirty orchestration and memory regressions passed. The CI command keeps the full test inventory.
+
+# 22 November 2026 — Course evaluations and company lecturer restrictions
+
+The course workspace now offers role- and subject-specific feedback after the last session. Learners can evaluate assigned instructors and the company. Company contacts can evaluate assigned instructors. Instructors can evaluate difficulty, the company and the linked class. The server checks the current course scope on each read or write. Shared comments omit author identities, and exact-run management can review retained evaluations. The earlier aggregate feedback stays available in the course workspace.
+
+Companies and organisation management can block and unblock a lecturer for a single company. The scoped search shows assignment history to company contacts. The active restriction removes lecturer access to the company's jobs and courses, course chat and calendar and prevents new assignments. The database preserves accepted records and independent roles. Component tests exercise both languages, permission-sensitive controls and revision conflicts. PostgreSQL suites cover the three editions, including concurrent block and claim decisions.
+
+Both native Academy installations passed signed bootstrap, ClamAV publication, exact public retrieval and package reset. Chromium then exposed a stale manifest from Workbox's implicit precache. The dedicated build now serves its packaged fallback separately and keeps both runtime icon metadata and the Apple icon out of the cache. A live service worker saw two successive revisions and the signed fallback in desktop and mobile Chromium. The native Caddy suite also verified that internal transport error diagnostics remain available after isolating the Academy fallback handler.
+
 # 22 November 2026 — Roadmap acceptance and release decision
 
 The exact starting revision `3e3ff46f` passed GitHub Security analysis. Its application run caught a stale keyboard expectation after the forecast CSV button and a Caddy logging regression introduced by the Academy PWA fallback. The new component assertions cover the updated focus order, exact CSV permissions and currency scope, stale download results and private calendar fields. A loopback test with the image-pinned Caddy binary reproduced the missing 502 diagnostics and verified that the corrected configuration logs both errors without query values or request headers. The Academy fallback continued to serve the packaged manifest and icon during the upstream outage. Chromium exercised the separate Website footer at the four required widths in German and English, and the Website suite passed 186 tests.

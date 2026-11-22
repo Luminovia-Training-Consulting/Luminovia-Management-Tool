@@ -169,6 +169,67 @@ async function linkWorkspaceLearner(f: Awaited<ReturnType<typeof fixture>>) {
     return learner;
 }
 
+test("completed course evaluations and lecturer restrictions follow current roles", async ({page, browser}, info) => {
+    test.setTimeout(90_000);
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run,
+        p_user_id: f.learner.id,
+        p_status: "enrolled",
+    }));
+    const workspace = `/courses/${f.run}/workspace#course-evaluations`;
+    const review = (current: Page) => current.getByRole("region", {name: "Kursbewertungen", exact: true});
+    await login(page, f.learner.email, /\/learning$/);
+    await page.goto(workspace);
+    const learner = review(page);
+    await learner.getByLabel("Wen oder was bewertest du?").selectOption(`learner/lecturer/${f.teacher.id}`);
+    await learner.getByLabel("Punktzahl").selectOption("5");
+    await learner.getByLabel("Kommentar (optional)").fill("Fictional clear and practical instruction");
+    await learner.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
+    await expect(learner.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
+    await expect(learner.getByText(/5 von 5 · 1 Bewertung/)).toBeVisible();
+    await expect(learner.getByRole("button", {name: /^Kommentare/})).toHaveCount(0);
+
+    const viewport = page.viewportSize() ?? undefined;
+    const teacherContext = await browser.newContext({viewport, isMobile: info.project.name.includes("mobile")});
+    const companyContext = await browser.newContext({viewport, isMobile: info.project.name.includes("mobile")});
+    try {
+        const teacher = await teacherContext.newPage();
+        const company = await companyContext.newPage();
+        await login(teacher, f.teacher.email);
+        await teacher.goto(workspace);
+        const teacherReviews = review(teacher);
+        await teacherReviews.getByRole("button", {name: /^Kommentare/}).click();
+        await expect(teacherReviews.getByText("Fictional clear and practical instruction", {exact: true})).toBeVisible();
+        await teacherReviews.getByLabel("Wen oder was bewertest du?").selectOption(`lecturer/course/${f.run}`);
+        await teacherReviews.getByLabel("Anspruch des Kurses").selectOption("4");
+        await teacherReviews.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
+        await expect(teacherReviews.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
+        expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+        await login(company, f.client.email, /\/client$/);
+        await company.getByText("Dozentensperren", {exact: true}).click();
+        const block = company.getByRole("button", {name: "Sperren Fictional course workspace teacher", exact: true});
+        await block.click();
+        await company.getByRole("dialog").getByRole("button", {name: "Sperren", exact: true}).click();
+        const release = company.getByRole("button", {name: "Freigeben Fictional course workspace teacher", exact: true});
+        await expect(release).toBeVisible();
+        await teacher.reload();
+        await expect(teacher.getByRole("alert").first()).toBeVisible();
+        await expect(teacher.getByRole("heading", {name: f.title, exact: true})).toHaveCount(0);
+        await release.click();
+        await company.getByRole("dialog").getByRole("button", {name: "Freigeben", exact: true}).click();
+        await expect(block).toBeVisible();
+        await teacher.reload();
+        await expect(teacher.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
+        await expect(teacherReviews.getByText(/5 von 5 · 1 Bewertung/)).toBeVisible();
+    } finally {
+        await teacherContext.close();
+        await companyContext.close();
+    }
+});
+
 test("Premium exam switching and scanned bytes follow real access across two companies", async ({
     page,
     browser,

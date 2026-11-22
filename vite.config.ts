@@ -266,6 +266,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: "./src/test/setup.ts",
       include: ["src/**/*.test.{ts,tsx}"],
       clearMocks: true,
+      ...(process.env.CI !== "true" && { maxWorkers: 2 }),
       coverage: {
         provider: "v8",
         // Keep unimported application modules visible as uncovered. Browser,

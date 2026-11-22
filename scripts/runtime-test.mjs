@@ -4,9 +4,10 @@
  */
 import {cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync,} from "node:fs";
 import {basename, join} from "node:path";
-import {availableParallelism, tmpdir} from "node:os";
+import {availableParallelism} from "node:os";
 import {createHash, randomBytes} from "node:crypto";
 import {browserAcceptance, browserFailure, browserPlan, browserProjectSelection,} from "./testing/browser-evidence.mjs";
+import {assertLocalQaMemory, localQaTempRoot} from "./runtime-qa-memory.mjs";
 import {runtimeSnapshotSource} from "./runtime-snapshot.mjs";
 import {runtimeTestArguments, runtimeTestPhasePlan,} from "./runtime-test-phase.mjs";
 import {acquireTestLock, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
@@ -20,6 +21,7 @@ const browserProjects = browserProjectSelection(
     process.env.PORTAL_BROWSER_PROJECT,
     phase.phase,
 );
+assertLocalQaMemory(3);
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
@@ -43,7 +45,7 @@ try {
         );
     }
     privateWrite(join(lock, "pid"), String(process.pid));
-    scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
+    scratch = mkdtempSync(join(localQaTempRoot(), "luminovia-portal-test-"));
     privateDirectory(artifacts);
 } catch (error) {
     if (scratch) rmSync(scratch, {recursive: true, force: true});
@@ -53,6 +55,7 @@ try {
 }
 const env = cleanEnvironment({
     PORTAL_TEST_MODE: "1",
+    TMPDIR: scratch,
     PORTAL_DB_CONTAINER: `supabase_db_${project}`,
     E2E_BASE_URL: "http://127.0.0.1:5273",
     E2E_MAILPIT_URL: "http://127.0.0.1:55324",
@@ -491,7 +494,8 @@ try {
             .sort();
         // Each suite creates and drops its own randomly named PostgreSQL database;
         // bounded parallelism reduces repeated migration replay without sharing fixtures.
-        const suiteWorkers = Math.max(1, Math.min(4, availableParallelism()));
+        const maxSuiteWorkers = process.env.CI === "true" ? 4 : 2;
+        const suiteWorkers = Math.max(1, Math.min(maxSuiteWorkers, availableParallelism()));
         await runBounded(databaseSuites, suiteWorkers, (script) =>
             step(`Additional SQL security cases ${script}`, process.execPath, [
                 `scripts/${script}`,
@@ -510,6 +514,7 @@ try {
         ]);
     }
     if (phase.browser) {
+        assertLocalQaMemory(2);
         // CI uses the Playwright-supported runner. A local desktop may already
         // support Chromium while lacking WebKit's system libraries.
         const includeWebKit = browserProjects.includes("desktop-chromium") &&

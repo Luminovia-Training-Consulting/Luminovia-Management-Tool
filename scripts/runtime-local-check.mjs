@@ -3,6 +3,7 @@
  * This complements the isolated database/API/browser suite in ./portal test;
  * a passing source/build check does not certify those backend paths.
  */
+import {assertLocalQaMemory, localQaTempRoot} from "./runtime-qa-memory.mjs";
 import {cleanEnvironment, command, ensureDependencies, root,} from "./runtime-lib.mjs";
 
 /**
@@ -15,6 +16,8 @@ export async function runLocalCheck({
                                         ensure = ensureDependencies,
                                         report = console.log,
                                     } = {}) {
+    assertLocalQaMemory(1.5);
+    const temporary = localQaTempRoot();
     await ensure();
     const steps = [
         ["Typecheck", "npm", ["run", "typecheck"]],
@@ -39,15 +42,16 @@ export async function runLocalCheck({
             cwd: root,
             // Synthetic public values override inherited/backend build settings.
             // No real endpoint, cloud credential or running database is needed.
-            env: cleanEnvironment(
-                label === "Build"
+            env: cleanEnvironment({
+                TMPDIR: temporary,
+                ...(label === "Build"
                     ? {
                         VITE_SUPABASE_URL: "https://local-check.example.invalid",
                         VITE_SUPABASE_PUBLISHABLE_KEY:
                             "sb_publishable_local_check_fictional_build_only",
                     }
-                    : {},
-            ),
+                    : {}),
+            }),
             timeoutMs: 600000,
         });
     }

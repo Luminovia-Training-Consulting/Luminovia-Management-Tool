@@ -90,6 +90,8 @@ async function runFixture({
         },
         writeFileSync() {
         },
+        assertLocalQaMemory() {},
+        localQaTempRoot: () => "/owned-qa",
         mkdtempSync: () => "/owned-qa/scratch",
         readFileSync: (path) =>
             path.endsWith("config.toml")
@@ -115,7 +117,6 @@ async function runFixture({
         browserAcceptance,
         browserFailure,
         browserProjectSelection,
-        tmpdir: () => "/owned-qa/tmp",
         root: "/owned-qa/source",
         runtimeDir: "/owned-qa/reports",
         runtimeSnapshotSource: () => true,

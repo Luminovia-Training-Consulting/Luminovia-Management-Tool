@@ -1420,7 +1420,6 @@ const nativePaths = {
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...courseEvaluationPaths(false),
-  ...companyLecturerBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,
@@ -4299,6 +4298,7 @@ const paths: Record<string, Record<string, unknown>> = {
       { post: { ...nativeExplorerPaths[path]?.post, ...operation.post } },
     ]),
   ),
+  ...companyLecturerBlockPaths,
   "/rest/v1/rpc/company_course_webhook_list": companyWebhookList,
   "/rest/v1/rpc/company_course_webhook_revoke": companyWebhookRevoke,
   "/rest/v1/rpc/company_integration_keys": {

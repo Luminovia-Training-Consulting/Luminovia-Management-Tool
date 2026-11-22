@@ -15,4 +15,13 @@ if ! node -e 'const [major,minor]=process.versions.node.split(".").map(Number);p
   echo 'Node.js >=22.12 is required; please update Node.js.' >&2
   exit 1
 fi
+# Keep heavy QA descendants out of the desktop application's memory group.
+if [[ "${CI:-}" != "true" && "${1:-}" =~ ^(check|test)$ && -r /proc/self/cgroup ]] \
+  && grep -q '/app.slice/app-.*\.scope' /proc/self/cgroup \
+  && command -v systemd-run >/dev/null 2>&1 \
+  && systemctl --user show-environment >/dev/null 2>&1; then
+  exec systemd-run --user --scope --quiet --slice=background.slice \
+    -p MemoryHigh=3G -p MemoryMax=5G -p MemorySwapMax=768M \
+    node scripts/runtime-cli.mjs "$@"
+fi
 exec node scripts/runtime-cli.mjs "$@"

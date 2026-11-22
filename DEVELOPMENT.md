@@ -203,6 +203,8 @@ The pinned Deno package needs its reviewed postinstall script to copy the platfo
 
 The first start needs Docker image downloads and may take several minutes. The scanner needs additional RAM for signature loading; see the scanner documentation. Ports must be free; the launcher does not kill an unrelated process occupying a port.
 
+On Linux, local acceptance uses a disk-backed temporary directory for the checkout and child processes. Set `TMPDIR` to a writable directory on disk to choose another location. Local unit and database runs limit parallel workers to reduce memory spikes. Local checks stop early if available memory is too low. When launched from a desktop app with a systemd user session, `./portal check` and `./portal test` use a separate background scope with RAM and swap limits. These safeguards preserve the CI test inventory.
+
 Disk-constrained local QA can opt into the smaller images selected by the locked Supabase CLI with `SUPABASE_USE_SLIM_IMAGES=1 ./portal test`. The acceptance JSON records the CLI image profile. The self-hosted compatibility checks use their separately pinned deployment images.
 
 The launcher creates only its own labelled `portal_network_<project>` Docker bridge with `com.docker.network.bridge.host_binding_ipv4=127.0.0.1`, then passes that network explicitly to Supabase startup and Edge Functions. It inspects the effective container port bindings before reporting readiness: PostgreSQL, the API and Mailpit must publish only to loopback; ClamAV publishes no host port. It refuses an unowned network and never changes the Docker daemon configuration. The legacy
