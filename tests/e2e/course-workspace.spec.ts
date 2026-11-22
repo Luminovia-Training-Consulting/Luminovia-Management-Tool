@@ -208,7 +208,8 @@ test("completed course evaluations and lecturer restrictions follow current role
         await expect(teacherReviews.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
         expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
-        await login(company, f.client.email, /\/client$/);
+        await login(company, f.client.email);
+        await company.goto("/client");
         await company.getByText("Dozentensperren", {exact: true}).click();
         const block = company.getByRole("button", {name: "Sperren Fictional course workspace teacher", exact: true});
         await block.click();
