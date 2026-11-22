@@ -156,6 +156,7 @@ The original requirements for assignment amendments and Website enquiries are tr
 - [x] FC-02–03, FC-08–13: the fictional demo, dark/light themes, scoped Courses, Forum and Contracts links, and role preview. Current browser journeys cover these flows. The cross-browser and per-page visual audit remains below.
 - [x] FC-18, FC-20–21: direct expertise editing, fictional demo customers/courses and the scoped contract file picker and drop area. The demo and contract browser checks exercise the active interfaces.
 - [x] FC-25, FC-27, FC-30–33: accessible topic/history filters, chronological offer sorting, calendar source colours, role-scoped course sections and original-currency finance trends.
+- [x] Ship internal analytics for lecturers, companies, management and administration. The page includes monthly time, orders and finance, original-currency charts and table views, date and company filters, and an all-company 90-day finance scenario with adjustable probability. [Local implementation and evidence](docs/WORKLOG.md#22-november-2026--role-scoped-portal-analytics).
 - [x] FC-36–37: default 30-day terms with explicit overrides, due-date sorting and text/icon statuses with colour. Accounting fixtures verify actual due and payment states.
 - [ ] Validate every page in DE/EN, both themes, keyboard, 390/768/1280/1920px, Safari/Firefox where required and installed PWA behaviour.
 

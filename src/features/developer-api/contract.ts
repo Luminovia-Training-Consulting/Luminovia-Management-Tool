@@ -25,6 +25,11 @@ import {
   type InstallationBrand,
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
+import {
+  analyticsAccessSchema,
+  analyticsReportSchema,
+  analyticsScopes,
+} from "../analytics/schema.ts";
 import { accountingPaths } from "./accounting-contract.ts";
 import { deliveryEvidencePaths } from "./delivery-evidence-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
@@ -2010,6 +2015,27 @@ const nativePaths = {
       p_client_id: uuid,
     },
     uuid,
+  ),
+  "/rest/v1/rpc/analytics_access": rpc(
+    "getAnalyticsAccess",
+    "Operations",
+    "List the caller's analytics perspectives and company filters",
+    "Available in the internal edition. Staff access uses jobs.manage or finance.manage. A company perspective requires an active membership. The response includes each selectable company's reporting time zone.",
+    {},
+    z.toJSONSchema(analyticsAccessSchema),
+  ),
+  "/rest/v1/rpc/analytics_report": rpc(
+    "getAnalyticsReport",
+    "Operations",
+    "Read role-scoped monthly workload and financial analytics",
+    "The internal edition uses the actor's profile time zone or, in company view, the selected company's zone. Until is exclusive and the maximum range is 731 days. Confirmed amounts and assignment counts are attributed to the first unreleased session. Session duration is clipped to report boundaries. Cash totals include payments, refunds and repayments by effective date. Choose company scope with an active membership and organisation ID. Staff requires jobs.manage or finance.manage. Open positions require jobs.manage, lecturer costs require finance.manage or ownership, and customer figures require company membership or finance.gross.read. Null denotes an unavailable series.",
+    {
+      p_scope: { type: "string", enum: [...analyticsScopes] },
+      ...operationsPeriod,
+      p_organisation_id: { ...uuid, nullable: true, default: null },
+    },
+    z.toJSONSchema(analyticsReportSchema),
+    ["p_organisation_id"],
   ),
   "/rest/v1/rpc/finance_forecast": rpc(
     "getFinanceForecast",
@@ -4602,7 +4628,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.8.0",
+      version: "1.9.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

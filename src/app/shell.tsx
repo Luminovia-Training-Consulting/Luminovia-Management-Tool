@@ -17,6 +17,7 @@ import { PermanentDeletionProvider } from "../features/deletions/deletions";
 import { AnnouncementBanners } from "../features/announcements/announcement-banners";
 import {
   Bell,
+  ChartNoAxesCombined,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -278,6 +279,19 @@ export function Shell() {
           { to: "/files", icon: FolderOpen, label: "files" },
           ...(teaching || permissions.data?.includes("contracts.read")
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
+            : []),
+          ...(portalInternalEdition &&
+          (teaching ||
+            clientPortalAccess ||
+            permissions.data?.includes("jobs.manage") ||
+            permissions.data?.includes("finance.manage"))
+            ? [
+                {
+                  to: "/analytics",
+                  icon: ChartNoAxesCombined,
+                  label: "analytics",
+                },
+              ]
             : []),
           ...(financeAccess
             ? [{ to: "/finance", icon: Wallet, label: "finance" }]

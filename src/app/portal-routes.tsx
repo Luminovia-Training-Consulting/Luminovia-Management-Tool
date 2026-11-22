@@ -129,6 +129,12 @@ const FinancePage = lazy(() =>
   })),
 );
 
+const AnalyticsPage = lazy(() =>
+  import("../features/analytics/analytics").then((module) => ({
+    default: module.AnalyticsPage,
+  })),
+);
+
 const AccountingPage = lazy(() =>
   import("../features/accounting/accounting").then((module) => ({
     default: module.AccountingPage,
@@ -277,6 +283,7 @@ export default function PortalRoutes() {
           />
           <Route path="contracts" element={<ContractsPage />} />
           <Route path="finance" element={<FinancePage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="accounting" element={<AccountingPage />} />
           <Route path="changes" element={<ChangeRequestsPage />} />
           <Route path="changes/:id" element={<ChangeRequestsPage />} />

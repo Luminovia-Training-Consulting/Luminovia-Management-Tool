@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Internal portal analytics
+
+- Analytics gives instructors their own compensation and payment history, companies their own scheduled work and customer figures, and management and administration company filters with permissioned finance. The report uses explicit date windows and original currencies. It allocates confirmed fees to the first unreleased session and splits scheduled time across reporting-zone month boundaries.
+- The financial history distinguishes confirmed fees from recorded cash. The all-company finance view can model open work using the existing 90-day finance forecast and user-selected probability. Company-filtered lecturer payments remain unavailable because an invoice can cover several organisations.
+- The feature has targeted PostgreSQL, component, contract and responsive Chromium evidence. Full hosted acceptance remains in the existing release inventory.
+
 ## Responsive UI and edition presentation
 
 - The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.

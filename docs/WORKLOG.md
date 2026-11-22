@@ -1,3 +1,9 @@
+# 22 November 2026 — Role-scoped portal analytics
+
+The internal portal now shows monthly assignments, scheduled teaching time and original-currency finance for lecturers, companies and current staff permissions. The page offers company, period, metric and currency filters, bar, doughnut and line charts with accessible monthly data tables, and an all-company scenario for the next 90 days. Committed fees follow the first unreleased session. Recorded cash includes refunds, repayment corrections and reversals at their effective dates.
+
+The migrated PostgreSQL suite covers role and membership boundaries, cross-month and clipped teaching hours, missing customer amounts, separate currencies, voids and reversals, and future allocations. Component tests cover both languages, date submission, company views and finance selection. A local Chromium run with fictional RPC data checked layout at 390, 768, 1280 and 1920 px, keyboard operation and scope switching. The two authenticated analytics operations are in Internal OpenAPI 1.9.
+
 # 22 November 2026 — Course-evaluation save confirmation after a lost response
 
 An evaluation now returns the same committed revision when the authorized caller repeats the exact score and comment with the immediately preceding version. The repeat creates no additional revision receipt. A different payload or a superseded version is still rejected. The editor uses the confirmed version immediately and refreshes aggregates in the background.
