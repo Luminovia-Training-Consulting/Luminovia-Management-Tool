@@ -417,6 +417,11 @@ verify_jwt = false
 # Public recovery requires an allowed browser origin and server-side alias/rate checks.
 verify_jwt = false
 
+[functions.files]
+# Local CLI cannot exempt individual methods of a worker. Every private file operation
+# still requires an allowed Origin and a current Auth user inside the handler.
+verify_jwt = false
+
 [functions.course-documents]
 static_files = ["./functions/course-documents/assets/DejaVuSans.ttf"]
 

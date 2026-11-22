@@ -5,13 +5,14 @@
 - The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.
 - The demo regression covers bottom navigation at 320 px and in landscape, the role selector, Escape and focus return, scroll position and entry points to help and sign-in. Both Academy builds have additional open-menu coverage at intermediate widths with a long customer name and populated notification inbox.
 - Compare customer-facing branding in both Academy packages and keep published settings as the default for the SMTP sender display name. Authenticated workflows, emulated viewport sizes and public production build checks have separate recorded evidence. Physical-device and independent live-customer acceptance remain open.
+- Both Academy editions support a separately managed app icon under the existing PWA identity. PostgreSQL verifies atomic publication, current administrator authority, concurrent version conflicts, licence grace and reset. The pinned local TLS front end verifies public assets and the signed package fallback. Launcher refresh on an existing physical device remains acceptance work.
 
 ## Local reset, release performance and Academy operations
 
 - First launch from a source ZIP checks Docker before npm and attempts to start the standard local Docker service. The launcher tests cover successful recovery, existing service, failed startup and endpoint boundaries. The affected CachyOS host still needs a reboot into an installed kernel with matching modules for a full launch.
 - The local reset has a real isolated Docker regression with seeded PostgreSQL, Auth, Storage, Mailpit and existing scanner state. The default launch after confirmation replays the tracked migrations and fictional seed.
 - The Build job and `./portal check` enforce production asset budgets. Full main acceptance still includes component coverage, native HTTP/PostgreSQL and retained-data tests, Chromium desktop and mobile, and PWA checks with the actual service worker.
-- Dedicated Academy ingress no longer includes CMS aliases. The private operator workflow now includes reviewed fulfilment receipts and local health monitoring. Academy OpenAPI 1.31 retains the actual rate-limit and maintenance transport responses. Independent customer deployment, provider delivery, customer receiver onboarding and full external acceptance remain in the White-Label roadmap.
+- Dedicated Academy ingress no longer includes CMS aliases. The private operator workflow now includes reviewed fulfilment receipts and local health monitoring. Academy OpenAPI 1.32 retains the actual rate-limit and maintenance transport responses. Independent customer deployment, provider delivery, customer receiver onboarding and full external acceptance remain in the White-Label roadmap.
 
 ## Core function review
 

@@ -367,6 +367,9 @@ Deno.serve({onError}, async (req: Request) => {
         service_name === "calendar-feed" &&
         pathname === "/calendar-feed" &&
         req.method === "GET";
+    const fileMode = url.searchParams.get("mode");
+    const academyPwaAsset = pathname === "/files" && (req.method === "GET" || req.method === "HEAD") &&
+        (fileMode === "academy-pwa-manifest" || fileMode === "academy-pwa-image");
     const companyIntegrationMethod =
         pathname === "/company-integration" || pathname === "/company-integration/participation"
             ? "GET"
@@ -385,7 +388,7 @@ Deno.serve({onError}, async (req: Request) => {
             },
         });
     }
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegrationMethod) {
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegrationMethod && !academyPwaAsset) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);

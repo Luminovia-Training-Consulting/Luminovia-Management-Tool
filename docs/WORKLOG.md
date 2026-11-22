@@ -1,3 +1,9 @@
+# 22 November 2026 — White Label app icon updates
+
+The local Academy administrator can preview and publish a 512 × 512 PNG for the existing app identity or confirm a return to the signed package icon. The portal prepares regular 192 px and 512 px assets and a 512 px maskable variant. The file gateway scans all three. PostgreSQL commits one shared revision, rechecks current authority and rejects stale concurrent writes. The public Edge routes serve only the approved revision and preserve the signed package as fallback. Local database fixtures passed for both licensed editions, including read-only grace and clear. The component suite passed the revision-aware reset and learner denials.
+
+The pinned Caddy and Envoy binaries verified both signed editions over loopback TLS, including the public manifest, the matching three image URLs, the stable Apple icon, version replacement, missing stale versions, signed fallback and the licence allowance. The pinned self-host Edge router accepted anonymous manifest GET and HEAD and required a JWT for private paths and writes. The generated API reference includes the 269th migration. Both Academy catalogues now have 90 paths and retain verification of older signed editions. Installed launcher refresh on physical devices and customer-target acceptance remain open.
+
 # 22 November 2026 — Internal OpenAPI operation contracts
 
 Internal OpenAPI 1.5 adds business rules for all 63 operations that previously had only a generated description. Both document modes retain the native operation IDs, database argument names, empty success responses and current session gate metadata. The contract tests reject a generic entry in the published Internal documents and verify that internal commerce and activation operations stay out of both Academy editions. The API reference was regenerated from all 268 migrations, including the service-only file-promotion operation already in main.
