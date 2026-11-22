@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   configureAcademyCourseAccess,
   prepareAcademyInstallation,
+  renewAcademyInstallationLicence,
 } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -172,6 +173,47 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       `insert into public.user_roles(user_id,role) values(${q(admin)},'admin');`,
     );
 
+    const renewed = {
+      ...terms,
+      issued_at: date(-1.95),
+      expires_at: date(20),
+      grace_until: date(24),
+      limits: { ...terms.limits, api_requests_per_minute: 95 },
+    };
+    const renewal = {
+      ...options,
+      previousEnvelope: options.envelope,
+      envelope: signAcademyLicence(renewed, key.privateKey),
+    };
+    await renewAcademyInstallationLicence(renewal, sql);
+    await renewAcademyInstallationLicence(renewal, sql);
+    const afterRenewal = await read();
+    assert.equal(afterRenewal.api_requests_per_minute, 95);
+    assert.equal(
+      new Date(afterRenewal.expires_at).toISOString(),
+      renewed.expires_at,
+    );
+    assert.deepEqual(afterRenewal.seats, current.seats);
+    assert.deepEqual(afterRenewal.storage, current.storage);
+    await assert.rejects(
+      renewAcademyInstallationLicence(
+        {
+          ...renewal,
+          envelope: signAcademyLicence(
+            {
+              ...renewed,
+              issued_at: date(-1.92),
+              limits: { ...renewed.limits, api_requests_per_minute: 120 },
+            },
+            key.privateKey,
+          ),
+        },
+        sql,
+      ),
+      /40001|Academy licence changed concurrently/,
+    );
+    assert.deepEqual(await read(), afterRenewal);
+
     const grace = {
       ...terms,
       issued_at: date(-1.9),
@@ -194,7 +236,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await configureAcademyCourseAccess({ ...options, enabled: false }, sql);
     await assert.rejects(read(), /42501/);
     console.log(
-      `PASS ${edition} first-admin seat, shared occupied seats and retained/pending bytes, grace and lower limits, exact admin-only/private projection`,
+      `PASS ${edition} first-admin seat, retained users/storage accounting, signed same-release renewal and exact retry, grace and admin-only projection`,
     );
   });
 }

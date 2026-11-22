@@ -2,6 +2,8 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  constants,
+  copyFileSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -14,13 +16,15 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseEnv } from "node:util";
+import { isDeepStrictEqual, parseEnv } from "node:util";
+import { verifyAcademyLicence } from "./academy-licence.mjs";
 import {
   planAcademyStaging,
   readAcademyOperatorInput,
 } from "./academy-staging-plan.mjs";
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const rateTemplate = new URL(
   "../deploy/academy/api-ingress.template.yml",
   import.meta.url,
@@ -136,22 +140,58 @@ export function requireStoppedAcademyIngress(root, project) {
     throw new Error("academy_install_ingress_must_be_stopped");
 }
 
+/** Both licence envelopes use the exact same operator-selected trust and release. */
+export function verifyAcademyLicenceRenewal({
+  previousEnvelope,
+  envelope,
+  publicKey,
+  expected,
+  now,
+}) {
+  const { terms: previous } = verifyAcademyLicence(
+    previousEnvelope,
+    publicKey,
+    expected,
+    now,
+  );
+  const { state, terms } = verifyAcademyLicence(
+    envelope,
+    publicKey,
+    expected,
+    now,
+  );
+  if (state !== "active") throw new Error("academy_install_renewal_inactive");
+  if (terms.issued_at <= previous.issued_at)
+    throw new Error("academy_install_renewal_issue_time");
+  return { previous, terms };
+}
+
+async function renewRuntimeLicence(root, input) {
+  const { renewAcademyLicenceInRuntime } =
+    await import("./academy-installation.mjs");
+  await renewAcademyLicenceInRuntime(root, input);
+}
+
 /** Publish the exact browser package. An explicit maintenance upgrade retains
  * the previous signed browser directory and never writes application data. */
 export async function installAcademyBrowser(
-  { root, config, replaceRevision, ...release },
+  { root, config, replaceRevision, previousLicence, ...release },
   checkIngress = requireStoppedAcademyIngress,
+  renewLicence = renewRuntimeLicence,
 ) {
   if (!isAbsolute(root ?? "") || realpathSync(root) !== root)
     throw new Error("academy_install_runtime_path");
   requirePrivateDirectory(root);
   const browserRoot = join(root, "browser");
   requirePrivateDirectory(browserRoot);
-  if (replaceRevision === undefined && readdirSync(browserRoot).length)
+  const renewal = previousLicence !== undefined;
+  const replacement = replaceRevision !== undefined;
+  if (!renewal && !replacement && readdirSync(browserRoot).length)
     throw new Error("academy_install_runtime_already_staged");
   if (
-    replaceRevision !== undefined &&
-    (!revisionPattern.test(replaceRevision) ||
+    replacement &&
+    (renewal ||
+      !revisionPattern.test(replaceRevision) ||
       replaceRevision === config.release_commit)
   )
     throw new Error("academy_install_replacement_revision");
@@ -170,16 +210,44 @@ export async function installAcademyBrowser(
     parseEnv(runtime),
     publicValues,
   );
+  const now = release.now ?? Date.now();
   const { plan, files } = await planAcademyStaging({
     ...release,
+    now,
     config,
     publicConfig: publicValues,
     includeFiles: true,
   });
 
-  const replacement = replaceRevision !== undefined;
+  const expected = {
+    installation_id: plan.release.installation_id,
+    edition: plan.release.edition,
+    release_commit: plan.release.source_revision,
+  };
+  const renewalInput = {
+    previousEnvelope: previousLicence,
+    envelope: release.licence,
+    publicKey: release.licencePublicKey,
+    expected,
+    now,
+  };
+  const { terms } = renewal
+    ? verifyAcademyLicenceRenewal(renewalInput)
+    : verifyAcademyLicence(
+        release.licence,
+        release.licencePublicKey,
+        expected,
+        now,
+      );
+  // Envoy's local bucket uses uint32 values. A higher signed maximum must
+  // never overflow into an unlimited or larger allowance.
+  const throughput = Math.min(
+    terms.limits.api_requests_per_minute,
+    0xffff_ffff,
+  );
+  const exchange = replacement || renewal;
   const staged = mkdtempSync(
-    join(root, replacement ? ".browser-previous-" : ".browser-stage-"),
+    join(root, exchange ? ".browser-previous-" : ".browser-stage-"),
   );
   let retainPrevious = false;
   try {
@@ -197,16 +265,14 @@ export async function installAcademyBrowser(
       state: "browser-staged",
       customer_ready: false,
       release: plan.release,
-      brand_manifest_sha256: createHash("sha256")
-        .update(files.get("manifest.webmanifest"))
-        .digest("hex"),
+      brand_manifest_sha256: sha256(files.get("manifest.webmanifest")),
+      licence: {
+        sha256: sha256(release.licence),
+        issued_at: terms.issued_at,
+        expires_at: terms.expires_at,
+        api_requests_per_minute: throughput,
+      },
     };
-    // Envoy's local bucket uses uint32 values. A higher signed maximum must
-    // never overflow into an unlimited or larger allowance.
-    const throughput = Math.min(
-      plan.licensed_limits.api_requests_per_minute,
-      0xffff_ffff,
-    );
     const ingress = readFileSync(rateTemplate, "utf8").replaceAll(
       "ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE",
       String(throughput),
@@ -223,7 +289,7 @@ export async function installAcademyBrowser(
         mode: 0o600,
       },
     );
-    if (replacement) {
+    if (exchange) {
       const lock = join(root, ".browser-upgrade-lock");
       try {
         mkdirSync(lock, { mode: 0o700 });
@@ -244,10 +310,47 @@ export async function installAcademyBrowser(
           previous.state !== "browser-staged" ||
           previous.release?.installation_id !== plan.release.installation_id ||
           previous.release?.edition !== plan.release.edition ||
-          previous.release?.source_revision !== replaceRevision
+          previous.release?.source_revision !==
+            (renewal ? expected.release_commit : replaceRevision)
         )
           throw new Error("academy_install_replacement_revision");
+        if (
+          renewal &&
+          (!isDeepStrictEqual(previous.release, receipt.release) ||
+            (previous.brand_manifest_sha256 !== undefined &&
+              previous.brand_manifest_sha256 !==
+                receipt.brand_manifest_sha256) ||
+            (previous.licence &&
+              previous.licence.sha256 !== sha256(previousLicence) &&
+              previous.licence.sha256 !== receipt.licence.sha256))
+        )
+          throw new Error("academy_install_renewal_receipt_mismatch");
+
         await checkIngress(root, config.compose_project);
+        if (renewal) {
+          const marker = join(browserRoot, "maintenance.enabled");
+          const markerState = lstatSync(marker, { throwIfNoEntry: false });
+          if (markerState) {
+            if (!markerState.isFile())
+              throw new Error("academy_install_maintenance_marker");
+            copyFileSync(
+              marker,
+              join(staged, "maintenance.enabled"),
+              constants.COPYFILE_EXCL,
+            );
+          }
+          const alreadyStaged =
+            isDeepStrictEqual(previous, receipt) &&
+            utf8.decode(
+              await readAcademyOperatorInput(
+                join(browserRoot, "api-ingress.yml"),
+              ),
+            ) === ingress;
+          // The DB compares its actual licence before applying the successor.
+          // If an exchange failed after DB commit, that exact successor is accepted on retry.
+          await renewLicence(root, renewalInput);
+          if (alreadyStaged) return previous;
+        }
         // From this point the allocated directory may contain the previous
         // release even if the process exits before reporting the exchange.
         retainPrevious = true;
@@ -288,11 +391,14 @@ if (
       licenceKeyPath,
       releaseKeyPath,
       flag,
-      replaceRevision,
+      operationArgument,
     ] = process.argv.slice(2);
     if (
       process.argv.length !== 9 &&
-      !(process.argv.length === 11 && flag === "--replace-revision")
+      !(
+        process.argv.length === 11 &&
+        ["--replace-revision", "--renew-licence"].includes(flag)
+      )
     )
       throw new Error("academy_install_usage");
     const [config, signature, licence, licencePublicKey, releasePublicKey] =
@@ -313,7 +419,14 @@ if (
       licence: utf8.decode(licence).trim(),
       licencePublicKey,
       releasePublicKey,
-      replaceRevision,
+      replaceRevision:
+        flag === "--replace-revision" ? operationArgument : undefined,
+      previousLicence:
+        flag === "--renew-licence"
+          ? utf8
+              .decode(await readAcademyOperatorInput(operationArgument))
+              .trim()
+          : undefined,
     });
     process.stdout.write(JSON.stringify(receipt, null, 2) + "\n");
   } catch (error) {
@@ -325,7 +438,7 @@ if (
     process.stderr.write(
       "Academy browser installation rejected" +
         reason +
-        ". Check RUNTIME_ROOT TARGET_JSON PACKAGE_DIR RELEASE_SIG LICENCE LICENCE_PUBLIC_KEY RELEASE_PUBLIC_KEY [--replace-revision CURRENT_COMMIT].\n",
+        ". Check RUNTIME_ROOT TARGET_JSON PACKAGE_DIR RELEASE_SIG LICENCE LICENCE_PUBLIC_KEY RELEASE_PUBLIC_KEY [--replace-revision CURRENT_COMMIT | --renew-licence PREVIOUS_SIGNED_LICENCE].\n",
     );
     process.exitCode = 1;
   }

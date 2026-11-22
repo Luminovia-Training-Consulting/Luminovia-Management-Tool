@@ -1071,14 +1071,14 @@ test("offline CLI consumes only its closed public env file and emits no credenti
   assert.ok(!symlink.stderr.includes(redirected));
 });
 
-async function installFixture(t, now) {
-  const fixture = releaseFixture(t, now);
+async function installFixture(t, now, buildMetadata = metadata) {
+  const fixture = releaseFixture(t, now, buildMetadata);
   const root = join(fixture.root, "runtime");
   const { browser_directory: browser, ...identity } = initializeAcademyRuntime({
     root,
-    installationId: metadata.installationId,
-    edition: metadata.edition,
-    portalOrigin: new URL(metadata.backend).origin,
+    installationId: buildMetadata.installationId,
+    edition: buildMetadata.edition,
+    portalOrigin: new URL(buildMetadata.backend).origin,
     bindAddress: "127.0.0.1",
   });
   const key = parseEnv(
@@ -1089,7 +1089,7 @@ async function installFixture(t, now) {
   const signature = await fixture.signRelease();
   const config = {
     ...identity,
-    release_commit: metadata.sourceRevision,
+    release_commit: buildMetadata.sourceRevision,
     backup_retention_days: 30,
     data_region: "local",
     time_zone: "Europe/Berlin",
@@ -1301,6 +1301,126 @@ test("an explicit signed replacement retains previous browser bytes and never wr
     /academy_install_replacement_revision/,
   );
 });
+
+for (const edition of ["customer-self-hosted", "customer-managed"]) {
+  test(`same-release signed ${edition} renewal retains files and resumes an interrupted commit`, async (t) => {
+    const { root, browser, inputs, issuer, terms, signRelease } =
+      await installFixture(t, undefined, { ...metadata, edition });
+    const original = await installAcademyBrowser(inputs);
+    if (edition === "customer-managed") {
+      // Older installations have a perfectly valid release receipt without a licence fingerprint.
+      const legacy = structuredClone(original);
+      delete legacy.licence;
+      writeFileSync(join(browser, "release.json"), JSON.stringify(legacy));
+    }
+    const receiptFile = join(browser, "release.json");
+    const originalReceipt = readFileSync(receiptFile);
+    const ingressFile = join(browser, "api-ingress.yml");
+    const originalPolicy = readFileSync(ingressFile);
+    const originalScript = readFileSync(join(browser, runtimePath));
+    const environment = readFileSync(join(root, "runtime.env"));
+    const retained = join(root, "data", "existing-records");
+    writeFileSync(retained, "Private retained course");
+    writeFileSync(join(browser, "maintenance.enabled"), "");
+
+    const nextTerms = {
+      ...terms,
+      issued_at: terms.starts_at,
+      expires_at: "2040-07-01T00:00:00.000Z",
+      grace_until: "2040-07-02T00:00:00.000Z",
+      limits: { ...terms.limits, api_requests_per_minute: 95 },
+    };
+    const licence = signAcademyLicence(nextTerms, issuer.privateKey);
+    const signature = await signRelease({ licence });
+    const renewal = {
+      ...inputs,
+      licence,
+      signature,
+      previousLicence: inputs.licence,
+    };
+    const renewals = [];
+    const apply = (runtime, candidate) => {
+      assert.equal(runtime, root);
+      assert.equal(candidate.envelope, licence);
+      assert.equal(candidate.previousEnvelope, inputs.licence);
+      renewals.push(candidate);
+    };
+
+    await assert.rejects(
+      installAcademyBrowser(
+        { ...renewal, signature: inputs.signature },
+        () => {},
+        apply,
+      ),
+      /academy_browser_release_signature/,
+    );
+    await assert.rejects(
+      installAcademyBrowser(
+        { ...inputs, previousLicence: inputs.licence },
+        () => {},
+        apply,
+      ),
+      /academy_install_renewal_issue_time/,
+    );
+    const runningIngress = () => {
+      throw new Error("ingress running");
+    };
+    await assert.rejects(
+      installAcademyBrowser(renewal, runningIngress, apply),
+      /ingress running/,
+    );
+    assert.equal(renewals.length, 0);
+
+    await assert.rejects(
+      installAcademyBrowser(
+        renewal,
+        () => {},
+        (...args) => {
+          apply(...args);
+          throw new Error("interrupted after database commit");
+        },
+      ),
+      /interrupted after database commit/,
+    );
+    assert.deepEqual(readFileSync(receiptFile), originalReceipt);
+    assert.deepEqual(readFileSync(ingressFile), originalPolicy);
+
+    const receipt = await installAcademyBrowser(renewal, () => {}, apply);
+    assert.equal(
+      receipt.release.source_revision,
+      original.release.source_revision,
+    );
+    assert.equal(
+      receipt.release.archive_sha256,
+      original.release.archive_sha256,
+    );
+    assert.deepEqual(receipt.licence, {
+      sha256: sha256(licence),
+      issued_at: nextTerms.issued_at,
+      expires_at: nextTerms.expires_at,
+      api_requests_per_minute: 95,
+    });
+    assert.match(readFileSync(ingressFile, "utf8"), /max_tokens: 95\b/);
+    assert.match(readFileSync(ingressFile, "utf8"), /tokens_per_fill: 95\b/);
+    assert.deepEqual(readFileSync(join(browser, runtimePath)), originalScript);
+    assert.equal(
+      readFileSync(join(browser, "maintenance.enabled"), "utf8"),
+      "",
+    );
+    assert.deepEqual(readFileSync(join(root, "runtime.env")), environment);
+    assert.equal(readFileSync(retained, "utf8"), "Private retained course");
+    assert.deepEqual(
+      await installAcademyBrowser(renewal, () => {}, apply),
+      receipt,
+    );
+    assert.equal(renewals.length, 3);
+    assert.equal(
+      readdirSync(root).filter((file) => file.startsWith(".browser-previous-"))
+        .length,
+      1,
+    );
+  });
+}
 
 test("points database bootstrap only at the matching private staged Compose project", async (t) => {
   const { root, inputs, expected } = await installFixture(t);

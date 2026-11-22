@@ -10,7 +10,10 @@ import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
-import { requireStoppedAcademyIngress } from "./academy-install-browser.mjs";
+import {
+  requireStoppedAcademyIngress,
+  verifyAcademyLicenceRenewal,
+} from "./academy-install-browser.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
 import {
   academyMigrationsScript,
@@ -121,6 +124,42 @@ export async function prepareAcademyInstallation(
   )
     throw new Error("academy_installation_confirmation_failed");
   return current;
+}
+
+/** Update only the pinned licence. A precise successor is safe to resume on retry. */
+export async function renewAcademyInstallationLicence(input, executeSql) {
+  const { previous, terms } = verifyAcademyLicenceRenewal(input);
+  const installation = sqlText(terms.installation_id);
+  const edition = sqlText(terms.edition);
+  const previousTerms = sqlText(JSON.stringify(previous));
+  const newTerms = sqlText(JSON.stringify(terms));
+  const result = await executeSql(`
+    begin;
+    do $renewal$
+    declare current_terms jsonb;
+    begin
+      perform 1 from private.installation_identity
+      where installation_id = ${installation}::uuid and edition = ${edition}
+      for update;
+      if not found then
+        raise exception 'Academy licence renewal target differs' using errcode = '22023';
+      end if;
+      select terms into current_terms from private.installation_verified_licence
+      where installation_id = ${installation}::uuid;
+      if current_terms is distinct from ${previousTerms}::jsonb
+        and current_terms is distinct from ${newTerms}::jsonb then
+        raise exception 'Academy licence changed concurrently' using errcode = '40001';
+      end if;
+      perform private.apply_verified_installation_licence(${newTerms}::jsonb);
+    end
+    $renewal$;
+    select coalesce(terms = ${newTerms}::jsonb, false)
+    from private.installation_verified_licence
+    where installation_id = ${installation}::uuid;
+    commit;
+  `);
+  if (result.trim() !== "t")
+    throw new Error("academy_install_renewal_database_receipt");
 }
 
 /** Return an operator's current release and licence inventory without taking write locks. */
@@ -274,8 +313,11 @@ export async function academyDatabaseComposeArguments(root, expected) {
 }
 
 /** Always use an explicit private libpq target or the staged Compose project. */
-async function operatorSql(expected, timeout = 30000) {
-  const root = process.env.PORTAL_ACADEMY_RUNTIME_ROOT;
+async function operatorSql(
+  expected,
+  timeout = 30000,
+  root = process.env.PORTAL_ACADEMY_RUNTIME_ROOT,
+) {
   const privateLibpq =
     process.env.PGSERVICE || (process.env.PGHOST && process.env.PGDATABASE);
   if (Boolean(root) === Boolean(privateLibpq))
@@ -300,6 +342,11 @@ async function operatorSql(expected, timeout = 30000) {
       throw new Error("academy_installation_database_rejected");
     return result.stdout;
   };
+}
+
+export async function renewAcademyLicenceInRuntime(root, input) {
+  const executeSql = await operatorSql(input.expected, 30000, root);
+  await renewAcademyInstallationLicence(input, executeSql);
 }
 
 async function migrateAcademyInstallation(input) {
