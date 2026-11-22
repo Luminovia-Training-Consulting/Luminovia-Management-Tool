@@ -26,6 +26,7 @@ import {
   signAcademyLicence,
   verifyAcademyLicence,
 } from "./academy-licence.mjs";
+import { signAcademyRuntimeHandoff } from "./academy-runtime-handoff.mjs";
 import { readPrivateFixture } from "./testing/read-private-fixture.mjs";
 
 const run = promisify(execFile);
@@ -122,6 +123,266 @@ function extend(request, receipt, overrides = {}) {
     ...overrides,
   };
 }
+
+async function handoverFixture(t, edition) {
+  const vendor = await vendorFixture(t, edition);
+  const handoffKeys = generateKeyPairSync("ed25519");
+  const keyFile = join(vendor.root, "handoff-issuer.pem");
+  const handoffKey = join(vendor.root, "handoff-public.pem");
+  const licenceKey = join(vendor.root, "licence-public.pem");
+  await writeFile(
+    keyFile,
+    handoffKeys.privateKey.export({ type: "pkcs8", format: "pem" }),
+    { mode: 0o600 },
+  );
+  await writeFile(
+    handoffKey,
+    handoffKeys.publicKey.export({ type: "spki", format: "pem" }),
+    { mode: 0o644 },
+  );
+  await writeFile(
+    licenceKey,
+    vendor.keys.publicKey.export({ type: "spki", format: "pem" }),
+    { mode: 0o644 },
+  );
+  const requestId = vendor.request.draft_request_id;
+  const status = () =>
+    vendor.command("fulfilment-status", requestId, handoffKey, licenceKey);
+  const handoff = () =>
+    vendor.command("export-runtime-handoff", requestId, keyFile);
+  const preview = (source) =>
+    vendor.command("preview-fulfilment", source, handoffKey, licenceKey);
+  const confirm = (source, approval) =>
+    vendor.command(
+      "confirm-fulfilment",
+      source,
+      handoffKey,
+      licenceKey,
+      approval,
+    );
+  return {
+    ...vendor,
+    handoffKeys,
+    handoffKey,
+    licenceKey,
+    status,
+    handoff,
+    preview,
+    confirm,
+  };
+}
+
+function licenceDates(issued, start, end, grace) {
+  const instant = (minutes) =>
+    new Date(Date.now() + minutes * 60_000).toISOString();
+  return {
+    issued_at: instant(issued),
+    starts_at: instant(start),
+    expires_at: instant(end),
+    grace_until: instant(grace),
+  };
+}
+
+test("confirms a private handover only from the reviewed signed exports and preserves its receipt after renewal", async (t) => {
+  const {
+    root,
+    request,
+    stage,
+    issue,
+    command,
+    installation,
+    handoffKeys,
+    handoffKey,
+    licenceKey,
+    status,
+    handoff,
+    preview,
+    confirm,
+  } = await handoverFixture(t, "customer-managed");
+  assert.equal((await status()).status, "draft-approved");
+  const issued = await issue(
+    await stage({ ...request, ...licenceDates(-90, -60, 60, 120) }),
+  );
+  const review = {
+    version: 1,
+    draft_request_id: request.draft_request_id,
+    licence_action_id: issued.action_id,
+    agreement_reference: request.agreement_reference,
+    handover_reference: "CUSTOMER-RECEIPT-FICTIONAL",
+  };
+  const source = await input(root, review, "handover.json");
+  assert.equal((await status()).current_licence.exported, false);
+  await assert.rejects(preview(source), /Export the verified runtime handoff/);
+  const handoffExport = await handoff();
+  await assert.rejects(preview(source), /Export the verified runtime handoff/);
+  const licenceExport = await command("export-licence", issued.action_id);
+  assert.equal((await status()).status, "ready-for-handover");
+
+  const wrongAgreement = await input(
+    root,
+    { ...review, agreement_reference: "WRONG-AGREEMENT" },
+    "other-agreement.json",
+  );
+  await assert.rejects(
+    preview(wrongAgreement),
+    /match the handoff release and reviewed agreement/,
+  );
+  await assert.rejects(
+    command(
+      "fulfilment-status",
+      request.draft_request_id,
+      licenceKey,
+      handoffKey,
+    ),
+    /handoff does not match the approved target and trusted key/,
+  );
+  const handoffPath = join(root, handoffExport.filename);
+  const handoffBytes = readPrivateFixture(handoffPath);
+  const foreignHandoff = signAcademyRuntimeHandoff(
+    {
+      ...JSON.parse(handoffBytes).target,
+      installation_id: randomUUID(),
+    },
+    handoffKeys.privateKey,
+  );
+  await writeFile(handoffPath, foreignHandoff);
+  await assert.rejects(
+    preview(source),
+    /handoff does not match the approved target and trusted key/,
+  );
+  await writeFile(handoffPath, handoffBytes);
+
+  const licencePath = join(root, licenceExport.filename);
+  const licenceBytes = readPrivateFixture(licencePath);
+  await writeFile(
+    licencePath,
+    Buffer.concat([licenceBytes, Buffer.from("\n")]),
+  );
+  await assert.rejects(preview(source), /licence or its export does not match/);
+  await writeFile(licencePath, licenceBytes);
+
+  const before = readPrivateFixture(join(root, ledger));
+  const exactReview = await preview(source);
+  assert.deepEqual(readPrivateFixture(join(root, ledger)), before);
+  assert.equal(
+    exactReview.handoff_sha256,
+    createHash("sha256").update(handoffBytes).digest("hex"),
+  );
+  assert.equal(exactReview.licence_sha256, issued.licence_sha256);
+  await assert.rejects(
+    confirm(source, "CONFIRM wrong"),
+    /Approval does not match/,
+  );
+  assert.deepEqual(readPrivateFixture(join(root, ledger)), before);
+  const results = await Promise.all([
+    confirm(source, exactReview.approval),
+    confirm(source, exactReview.approval),
+  ]);
+  const first = results.find(({ created }) => created);
+  assert.deepEqual(
+    results.find(({ created }) => !created),
+    { ...first, created: false },
+  );
+  assert.equal(first.installation_id, installation);
+  assert.equal(first.status, "handover-confirmed");
+  const after = readPrivateFixture(join(root, ledger));
+  const stored = JSON.parse(after).fulfilments;
+  assert.equal(stored.length, 1);
+  assert.deepEqual(stored[0].request, review);
+  assert.equal(
+    JSON.stringify(first).includes(review.handover_reference),
+    false,
+  );
+  await assert.rejects(
+    preview(
+      await input(
+        root,
+        { ...review, handover_reference: "CHANGED-RECEIPT" },
+        "changed.json",
+      ),
+    ),
+    /different confirmed handover/,
+  );
+
+  const renewal = await issue(
+    await stage(
+      extend(request, issued, {
+        ...licenceDates(-30, -15, 1440, 1500),
+        release_commit: "b".repeat(40),
+      }),
+    ),
+  );
+  const current = await status();
+  assert.equal(current.status, "handover-confirmed");
+  assert.equal(current.current_licence.action_id, renewal.action_id);
+  assert.equal(current.handover.licence_action_id, first.licence_action_id);
+  assert.deepEqual(await confirm(source, exactReview.approval), {
+    ...first,
+    created: false,
+  });
+  const ledgerPath = join(root, ledger);
+  const altered = JSON.parse(readPrivateFixture(ledgerPath));
+  altered.fulfilments[0].handoff_sha256 = "0".repeat(64);
+  await writeFile(ledgerPath, JSON.stringify(altered));
+  await assert.rejects(status(), /conflicting or modified handover receipts/);
+});
+
+test("expired, stale and wrong-release licences cannot confirm the first handover", async (t) => {
+  const {
+    root,
+    request,
+    stage,
+    issue,
+    command,
+    status,
+    handoff,
+    preview,
+    confirm,
+  } = await handoverFixture(t, "customer-self-hosted");
+  const issued = await issue(
+    await stage({ ...request, ...licenceDates(-180, -160, -120, -90) }),
+  );
+  await handoff();
+  await command("export-licence", issued.action_id);
+  const review = {
+    version: 1,
+    draft_request_id: request.draft_request_id,
+    licence_action_id: issued.action_id,
+    agreement_reference: request.agreement_reference,
+    handover_reference: "FICTIONAL-EXPIRED-HANDOVER",
+  };
+  const source = await input(root, review, "handover-expired.json");
+  assert.equal((await status()).current_licence.state, "expired");
+  await assert.rejects(
+    confirm(source, "CONFIRM invalid"),
+    /current active licence/,
+  );
+  const renewed = await issue(
+    await stage(
+      extend(request, issued, {
+        ...licenceDates(-60, -30, 90, 120),
+        release_commit: "b".repeat(40),
+      }),
+    ),
+  );
+  await command("export-licence", renewed.action_id);
+  await assert.rejects(preview(source), /current licence action/);
+  const wrongRelease = await input(
+    root,
+    {
+      ...review,
+      licence_action_id: renewed.action_id,
+      agreement_reference: "SUPPORT-RENEWAL-02",
+    },
+    "handover-wrong-release.json",
+  );
+  assert.equal((await status()).status, "preparing-handover");
+  await assert.rejects(preview(wrongRelease), /match the handoff release/);
+  assert.equal(
+    JSON.parse(readPrivateFixture(join(root, ledger))).fulfilments,
+    undefined,
+  );
+});
 
 test("issues from a v1 approved draft, converts a managed trial, renews, and exports the exact recorded envelope", async (t) => {
   const {

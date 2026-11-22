@@ -23,7 +23,11 @@ import {
   academyBrandShortName,
 } from "../src/features/branding/academy-branding-schema.ts";
 import { describeAcademyRuntime } from "./academy-runtime-config.mjs";
-import { signAcademyRuntimeHandoff } from "./academy-runtime-handoff.mjs";
+import {
+  readRuntimeHandoffFile,
+  signAcademyRuntimeHandoff,
+  verifyAcademyRuntimeHandoff,
+} from "./academy-runtime-handoff.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 import {
   signAcademyLicence,
@@ -40,6 +44,13 @@ import {
   releaseCommit,
   sha256,
 } from "./academy-customer-licensing.mjs";
+import {
+  fulfilmentReceiptSchema,
+  handoffTarget,
+  indexFulfilments,
+  parseFulfilmentRequest,
+  planFulfilment,
+} from "./academy-customer-fulfilment.mjs";
 
 const checkout = fileURLToPath(new URL("../", import.meta.url)).replace(
   /\/$/,
@@ -170,6 +181,7 @@ const registrySchema = z.strictObject({
   version: z.literal(1),
   drafts: z.array(receiptSchema),
   licences: z.array(licenceReceiptSchema).optional(),
+  fulfilments: z.array(fulfilmentReceiptSchema).optional(),
 });
 
 /** A random request ID fixes the installation UUID across previews and retry. */
@@ -617,7 +629,7 @@ async function exportLicence(root, actionId) {
     const receipt = actions.get(actionId);
     if (!receipt)
       throw new Error("The approved licence action could not be found.");
-    const filename = "licence-" + receipt.request.action_id + ".signed";
+    const filename = licenceFilename(receipt);
     const output = join(root, filename);
     const bytes = Buffer.from(receipt.envelope + "\n");
     try {
@@ -634,6 +646,11 @@ async function exportLicence(root, actionId) {
   });
 }
 
+const licenceFilename = ({ request }) =>
+  "licence-" + request.action_id + ".signed";
+const handoffFilename = ({ installation_id }) =>
+  "runtime-handoff-" + installation_id + ".signed";
+
 async function exportRuntimeHandoff(root, requestId, keyPath) {
   await requireRegistryRoot(root);
   return withRegistryLock(root, async () => {
@@ -641,20 +658,13 @@ async function exportRuntimeHandoff(root, requestId, keyPath) {
     const receipt = drafts.find(({ draft }) => draft.request_id === requestId);
     if (!receipt)
       throw new Error("The approved customer draft could not be found.");
-    const { draft, installation_id } = receipt;
     const handoff = Buffer.from(
       signAcademyRuntimeHandoff(
-        {
-          installation_id,
-          edition: draft.target.edition,
-          portal_origin: draft.target.portal_origin,
-          runtime_directory: draft.target.runtime_directory,
-          source_revision: draft.licence.release_commit,
-        },
+        handoffTarget(receipt),
         createPrivateKey(await readPrivateInput(keyPath, 16 * 1024)),
       ),
     );
-    const filename = "runtime-handoff-" + installation_id + ".signed";
+    const filename = handoffFilename(receipt);
     const output = join(root, filename);
     try {
       await writePrivateFile(root, output, handoff);
@@ -666,8 +676,202 @@ async function exportRuntimeHandoff(root, requestId, keyPath) {
           { cause: error },
         );
     }
-    return { filename, installation_id };
+    return { filename, installation_id: receipt.installation_id };
   });
+}
+
+async function readOptionalExport(root, filename) {
+  try {
+    return await readPrivateInput(join(root, filename), 17 * 1024);
+  } catch (error) {
+    if (error?.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function readFulfilmentState(registry, draftId) {
+  const index = indexLicenceActions(registry);
+  const draft = index.drafts.get(draftId);
+  if (!draft)
+    throw new Error("The approved customer draft could not be found.");
+  const licence = index.latest.get(draftId);
+  return {
+    draft,
+    licence,
+    terms: licence && index.termsByAction.get(licence.request.action_id),
+    confirmed: indexFulfilments(registry, index).get(draftId),
+  };
+}
+
+async function verifyFulfilmentArtifacts(
+  root,
+  { draft, licence, terms },
+  handoffKeyPath,
+  licenceKeyPath,
+) {
+  const [handoffKey, licenceKey] = [handoffKeyPath, licenceKeyPath].map(
+    (path) => createPublicKey(readRuntimeHandoffFile(path, false)),
+  );
+  if (
+    [handoffKey, licenceKey].some((key) => key.asymmetricKeyType !== "ed25519")
+  )
+    throw new Error(
+      "Use independently trusted Ed25519 public keys for handover checks.",
+    );
+  const [handoff, signedLicence] = await Promise.all([
+    readOptionalExport(root, handoffFilename(draft)),
+    licence && readOptionalExport(root, licenceFilename(licence)),
+  ]);
+  if (handoff) {
+    try {
+      const { target } = verifyAcademyRuntimeHandoff(handoff, handoffKey);
+      if (!isDeepStrictEqual(target, handoffTarget(draft)))
+        throw new Error("handoff_target_mismatch");
+    } catch (cause) {
+      throw new Error(
+        "The exported runtime handoff does not match the approved target and trusted key.",
+        { cause },
+      );
+    }
+  }
+  const now = Date.now();
+  let licence_state;
+  if (licence) {
+    try {
+      const result = verifyAcademyLicence(
+        licence.envelope,
+        licenceKey,
+        terms,
+        now,
+      );
+      if (
+        !isDeepStrictEqual(result.terms, terms) ||
+        (signedLicence &&
+          !signedLicence.equals(Buffer.from(licence.envelope + "\n")))
+      )
+        throw new Error("licence_export_mismatch");
+      licence_state = result.state;
+    } catch (cause) {
+      throw new Error(
+        "The current licence or its export does not match the recorded terms and trusted key.",
+        { cause },
+      );
+    }
+  }
+  return {
+    handoff_sha256: handoff && sha256(handoff),
+    licence_exported: Boolean(signedLicence),
+    licence_state,
+    now,
+  };
+}
+
+function fulfilmentSummary(draft, record) {
+  return {
+    request_id: draft.draft.request_id,
+    installation_id: draft.installation_id,
+    purpose: draft.draft.purpose,
+    approved_release: draft.draft.licence.release_commit,
+    licence_action_id: record.request.licence_action_id,
+    handoff_sha256: record.handoff_sha256,
+    licence_sha256: record.licence_sha256,
+    ...(record.confirmed_at
+      ? { status: "handover-confirmed", confirmed_at: record.confirmed_at }
+      : {
+          status: "handover-review",
+          approval: "CONFIRM " + record.approval_sha256,
+        }),
+  };
+}
+
+async function fulfilmentStatus(root, draftId, handoffKey, licenceKey) {
+  await requireRegistryRoot(root);
+  const state = readFulfilmentState(await readRegistry(root), draftId);
+  const { draft, licence, confirmed } = state;
+  const artifacts = await verifyFulfilmentArtifacts(
+    root,
+    state,
+    handoffKey,
+    licenceKey,
+  );
+  const materialsReady =
+    artifacts.handoff_sha256 &&
+    artifacts.licence_exported &&
+    artifacts.licence_state === "active" &&
+    licence.request.release_commit === draft.draft.licence.release_commit;
+  let status = "draft-approved";
+  if (licence || artifacts.handoff_sha256) status = "preparing-handover";
+  if (materialsReady) status = "ready-for-handover";
+  if (confirmed) status = "handover-confirmed";
+  return {
+    status,
+    request_id: draftId,
+    installation_id: draft.installation_id,
+    purpose: draft.draft.purpose,
+    edition: draft.draft.target.edition,
+    approved_release: draft.draft.licence.release_commit,
+    handoff_exported: Boolean(artifacts.handoff_sha256),
+    current_licence: licence
+      ? {
+          action_id: licence.request.action_id,
+          release_commit: licence.request.release_commit,
+          tier: licence.tier,
+          state: artifacts.licence_state,
+          exported: artifacts.licence_exported,
+        }
+      : null,
+    handover: confirmed ? fulfilmentSummary(draft, confirmed) : null,
+  };
+}
+
+async function fulfilmentAction(
+  root,
+  source,
+  handoffKey,
+  licenceKey,
+  approval,
+) {
+  await requireRegistryRoot(root);
+  const request = parseFulfilmentRequest(
+    await readPrivateJson(source, 16 * 1024),
+  );
+  const review = async () => {
+    const registry = await readRegistry(root);
+    const state = readFulfilmentState(registry, request.draft_request_id);
+    const { draft, licence, confirmed } = state;
+    if (confirmed && !isDeepStrictEqual(confirmed.request, request))
+      throw new Error(
+        "This academy already has a different confirmed handover.",
+      );
+    if (!confirmed && licence?.request.action_id !== request.licence_action_id)
+      throw new Error(
+        "Review the current licence action before confirming delivery.",
+      );
+    const artifacts = confirmed
+      ? null
+      : await verifyFulfilmentArtifacts(root, state, handoffKey, licenceKey);
+    const plan =
+      confirmed ?? planFulfilment(draft, request, licence, artifacts);
+    if (approval === undefined) return fulfilmentSummary(draft, plan);
+    if (approval !== "CONFIRM " + plan.approval_sha256)
+      throw new Error(
+        "Approval does not match this handover request. Preview it again.",
+      );
+    if (confirmed)
+      return { ...fulfilmentSummary(draft, confirmed), created: false };
+    const receipt = {
+      ...plan,
+      confirmed_at: new Date(artifacts.now).toISOString(),
+    };
+    const updated = {
+      ...registry,
+      fulfilments: [...(registry.fulfilments ?? []), receipt],
+    };
+    indexFulfilments(updated, indexLicenceActions(registry));
+    await writeRegistry(root, updated);
+    return { ...fulfilmentSummary(draft, receipt), created: true };
+  };
+  return approval === undefined ? review() : withRegistryLock(root, review);
 }
 
 function publicReview(plan) {
@@ -700,32 +904,32 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    const [command, root, source, approval, key, existing, ...rest] =
-      process.argv.slice(2);
+    const [command, root, ...args] = process.argv.slice(2);
+    const counts = {
+      preview: [1],
+      approve: [2],
+      "preview-licence": [1],
+      "issue-licence": [3, 4],
+      "licence-history": [1],
+      "export-licence": [1],
+      "export-runtime-handoff": [2],
+      "fulfilment-status": [3],
+      "preview-fulfilment": [3],
+      "confirm-fulfilment": [4],
+    };
     if (
-      rest.length ||
       !root ||
-      !source ||
-      !(
-        ([
-          "preview",
-          "preview-licence",
-          "licence-history",
-          "export-licence",
-        ].includes(command) &&
-          approval === undefined) ||
-        ((command === "approve" || command === "export-runtime-handoff") &&
-          approval !== undefined &&
-          key === undefined) ||
-        (command === "issue-licence" &&
-          approval !== undefined &&
-          key !== undefined)
-      )
+      !args.every(Boolean) ||
+      !Object.hasOwn(counts, command) ||
+      !counts[command].includes(args.length)
     ) {
       throw new Error(
-        "Usage: academy-customer-draft.mjs preview|approve|preview-licence|issue-licence|licence-history|export-licence PRIVATE_REGISTRY INPUT [APPROVAL [PRIVATE_SIGNING_KEY [EXISTING_SIGNED_LICENCE]]] or export-runtime-handoff PRIVATE_REGISTRY DRAFT_REQUEST_ID PRIVATE_SIGNING_KEY",
+        "Usage: academy-customer-draft.mjs COMMAND PRIVATE_REGISTRY INPUT [OPTIONS]. Commands: " +
+          Object.keys(counts).join(", ") +
+          ". See deploy/academy/FULFILMENT.md for private handover commands.",
       );
     }
+    const [source, approval, key, existing] = args;
     let result;
     switch (command) {
       case "preview":
@@ -758,6 +962,13 @@ if (
         break;
       case "export-runtime-handoff":
         result = await exportRuntimeHandoff(root, source, approval);
+        break;
+      case "fulfilment-status":
+        result = await fulfilmentStatus(root, ...args);
+        break;
+      case "preview-fulfilment":
+      case "confirm-fulfilment":
+        result = await fulfilmentAction(root, ...args);
         break;
     }
     console.log(JSON.stringify(result, null, 2));
