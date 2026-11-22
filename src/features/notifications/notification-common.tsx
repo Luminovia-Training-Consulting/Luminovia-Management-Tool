@@ -30,6 +30,7 @@ const knownKinds = new Set([
   "chat_message",
   "forum_reply",
   "session_reminder",
+  "calendar_invitation",
   "contract_expiring",
   "contract_available",
   "support_update",

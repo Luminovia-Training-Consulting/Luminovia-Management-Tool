@@ -36,6 +36,7 @@ import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import {
   calendarExpectedRevision,
+  calendarInvitationRecipients,
   calendarInvitationRoster,
   calendarInvitationVersion,
   calendarRecipientCode,
@@ -1661,7 +1662,7 @@ const nativePaths = {
         "readCalendarInvitations",
         "Calendar",
         "Read personal invitations or the roster of an exact published event",
-        "Internal portal only. An empty request pages upcoming invitations for the current operational account. Pass both next_cursor fields to continue. Supplying the event ID and its exact published version instead requires courses.manage and returns the event's current recipient roster. The event must still accept invitations.",
+        "Internal portal only. An empty request pages upcoming invitations for the current operational account. Pass both next_cursor fields to continue. Supply only the event ID to read the caller’s invitation to that event. Supplying its exact published version as well requires courses.manage and returns the current recipient roster.",
         {},
         {
           anyOf: [
@@ -1679,6 +1680,7 @@ const nativePaths = {
               p_after_at: { type: "string", format: "date-time" },
               p_after_id: uuid,
             }),
+            object({ p_event_id: uuid }),
             object({
               p_event_id: uuid,
               p_event_version: z.toJSONSchema(calendarInvitationVersion),
@@ -1688,6 +1690,18 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/calendar_invitation_recipients": rpc(
+    "findCalendarInvitationRecipients",
+    "Calendar",
+    "Find eligible recipients by name",
+    "Requires courses.manage in the internal portal and the exact published event version. A literal search of at least two characters returns up to 25 active operational accounts that are not currently invited.",
+    {
+      p_event_id: uuid,
+      p_event_version: z.toJSONSchema(calendarInvitationVersion),
+      p_search: { ...text, maxLength: 120 },
+    },
+    z.toJSONSchema(calendarInvitationRecipients),
+  ),
   "/rest/v1/rpc/set_calendar_invitation": rpc(
     "setCalendarInvitation",
     "Calendar",
@@ -4588,7 +4602,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.7.0",
+      version: "1.8.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

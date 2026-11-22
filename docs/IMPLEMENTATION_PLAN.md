@@ -19,6 +19,8 @@
 
 ## Core function review
 
+Global event invitations in the internal portal support a scoped search by display name and an exact Luminovia User ID. Notifications open only the current recipient's invitation. The manager roster remains bound to the exact published revision.
+
 | Area | Implemented in the portal | Remaining work or evidence |
 | --- | --- | --- |
 | Course and assignment workflow | Course and offer creation, publication, transactional claims, withdrawal, reopening, directed handover and role views. Existing coverage includes `assignment-withdrawal-api-check.mjs`, `assignment-handover-api-check.mjs` and their browser scenarios. | Observe the combined role journeys on the actual application stack, including rejected and concurrent transitions. |

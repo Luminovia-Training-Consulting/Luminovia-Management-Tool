@@ -187,8 +187,7 @@ At `/calendar`, choose month, week, day or agenda, navigate dates, and check the
 appointments. Published courses link to their authorised course details. Open a published global event for its plain text description, original event zone and optional HTTPS link. **Weitere Termine laden / Load more events** adds another server page for the visible calendar window (maximum 93 days). Loaded event counts exclude the separately displayed published course sessions. Private-event/assignment and course queries retain their own existing limits.
 
 With current `courses.manage`, **Globale Termine verwalten / Manage global events** opens the visible-window management list. **Globalen Termin erstellen / Create global event** records title, description, start/end, IANA zone and optional HTTPS link. **Als Entwurf speichern / Save as draft** does not publish; editing a published event withdraws its publication. Review the saved draft and explicitly **Veröffentlichen / Publish**. You can unpublish, archive or **Als Entwurf wiederherstellen /
-Recover as draft**; recovery never publishes automatically. If an event is moved outside the displayed period, navigate to its new period. Search is literal and pages load explicitly. Concurrent edits preserve your draft; review/reload before another attempt. A lost-response retry uses the same operation identity. Private calendars remain private; this management screen grants no appointment access. Global-event file attachments/invitations, automatic publication and private-event drag editing
-remain pending; personal ICS exports and subscriptions are described below. See [Calendar](GUIDE.md#section-calendar).
+Recover as draft**; recovery never publishes automatically. If an event is moved outside the displayed period, navigate to its new period. Search is literal and pages load explicitly. Concurrent edits preserve your draft; review/reload before another attempt. A lost-response retry uses the same operation identity. Private calendars remain private; this management screen grants no appointment access. See [event invitations](GUIDE.md#section-calendar-invitations) for recipient management and replies.
 
 The `/availability` address now redirects to `/calendar`. The standalone availability-window editor is not part of the current interface. Existing unavailable windows still block overlapping new claims through the database, and the `my_availability`/`save_lecturer_availability` RPCs remain available to authorised clients. At `/calendar`, edit your own private appointments; they are separate from availability windows and never grant access to another person’s calendar.
 
@@ -2020,7 +2019,7 @@ The existing course-run/template query retains its own resource authorisation an
 
 ## Manage global events
 
-Accounts with **current `courses.manage` permission and MFA/AAL2** see management controls for the visible global-calendar range. They can:
+Accounts with **current `courses.manage` permission** see management controls for the visible global-calendar range. They can:
 
 - Create a draft with title, description, start/end, IANA zone and optional HTTPS link.
 - Edit an observed draft and explicitly publish it.
@@ -2032,6 +2031,14 @@ Accounts with **current `courses.manage` permission and MFA/AAL2** see managemen
 
 Every change uses an observed version and a stable request UUID. An unchanged retry after a lost response returns the same confirmed server state. Different content with the same request UUID is rejected; concurrent versions do not overwrite one another. A version conflict preserves the draft for review. Authoritative access revocation immediately hides the private list and dialog, including during subsequent network failures. Only a successful authorised refresh opens a clean view again. Writes
 are not confirmed offline.
+
+<a id="section-calendar-invitations"></a>
+
+## Global event invitations
+
+In the internal portal, open **Einladungen verwalten / Manage invitations** on a published global event. Search by name and confirm the Luminovia User ID shown next to the person, or enter their known Luminovia User ID directly. Choose **Einladen / Invite**. An event version supports up to 100 recipients. The panel lists replies and lets you withdraw an invitation.
+
+The notification opens the recipient's exact invitation. They can accept, accept tentatively or decline. The recipient sees their own reply. Calendar managers see the roster. Publishing an edited event gives it a new version and requires fresh invitations. Delivery is in-app.
 
 <a id="section-calendar-time-and-links"></a>
 

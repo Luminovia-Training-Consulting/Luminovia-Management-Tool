@@ -6,14 +6,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { z } from "zod";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
+import { notificationKeys } from "../notifications/api";
 import {
   invitationConflict,
+  invitationRecipientsQuery,
   invitationRosterQuery,
   invitationsKey,
   ownInvitationsQuery,
@@ -28,14 +31,22 @@ export function CalendarInvitationOverview({ actor }: { actor: string }) {
   const { t, i18n } = useTranslation("calendarInvitations");
   const online = useOnline();
   const client = useQueryClient();
-  const { hash } = useLocation();
+  const { hash, search } = useLocation();
+  const params = new URLSearchParams(search);
+  const requested = z.uuid().safeParse(params.get("invitation"));
+  const eventId = requested.success ? requested.data : null;
+  const direct = eventId !== null || hash === "#calendar-invitations";
+  params.delete("invitation");
   const invitations = useInfiniteQuery({
-    ...ownInvitationsQuery(actor),
+    ...ownInvitationsQuery(actor, eventId),
     enabled: online,
   });
   const reply = useMutation({
     mutationFn: (values: Parameters<typeof replyCalendarInvitation>) =>
       replyCalendarInvitation(...values),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: notificationKeys.all(actor) });
+    },
     onSettled: () =>
       client.invalidateQueries({ queryKey: invitationsKey(actor) }),
   });
@@ -47,18 +58,13 @@ export function CalendarInvitationOverview({ actor }: { actor: string }) {
     ).values(),
   ];
 
-  if (
-    rows.length === 0 &&
-    !invitations.isError &&
-    hash !== "#calendar-invitations"
-  )
-    return null;
+  if (rows.length === 0 && !invitations.isError && !direct) return null;
 
   return (
     <details
       className="panel global-event-management"
       id="calendar-invitations"
-      open={hash === "#calendar-invitations" || undefined}
+      open={direct || undefined}
     >
       <summary>{t("invitations")}</summary>
       {!online ? (
@@ -69,7 +75,21 @@ export function CalendarInvitationOverview({ actor }: { actor: string }) {
         <Loading />
       ) : (
         <div className="global-event-list">
-          {rows.length === 0 && <p>{t("noInvitations")}</p>}
+          {eventId && (
+            <Button asChild variant="secondary">
+              <Link
+                to={{
+                  search: params.toString(),
+                  hash: "#calendar-invitations",
+                }}
+              >
+                {t("showAll")}
+              </Link>
+            </Button>
+          )}
+          {rows.length === 0 && (
+            <p>{t(eventId ? "invitationUnavailable" : "noInvitations")}</p>
+          )}
           {rows.map((event) => (
             <article key={event.event_id}>
               <h3>{event.title}</h3>
@@ -88,6 +108,7 @@ export function CalendarInvitationOverview({ actor }: { actor: string }) {
                   <Button
                     key={response}
                     variant="secondary"
+                    aria-pressed={event.response === response}
                     disabled={reply.isPending || event.response === response}
                     onClick={() =>
                       reply.mutate([
@@ -138,10 +159,16 @@ export function CalendarInvitationEditor({
   const online = useOnline();
   const client = useQueryClient();
   const [input, setInput] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [invalid, setInvalid] = useState(false);
   const roster = useQuery({
     ...invitationRosterQuery(actor, event.id, event.version),
     enabled: online,
+  });
+  const recipients = useQuery({
+    ...invitationRecipientsQuery(actor, event.id, event.version, search),
+    enabled: online && search.length >= 2 && roster.isSuccess,
   });
   const change = useMutation({
     mutationFn: (values: {
@@ -183,6 +210,57 @@ export function CalendarInvitationEditor({
         <Loading />
       ) : (
         <>
+          <form
+            className="global-event-search"
+            onSubmit={(submit) => {
+              submit.preventDefault();
+              setSearch(searchInput.trim());
+            }}
+          >
+            <Field id="calendar-invitation-search" label={t("searchName")}>
+              <input
+                type="search"
+                value={searchInput}
+                maxLength={120}
+                onChange={(change) => setSearchInput(change.target.value)}
+              />
+            </Field>
+            <Button disabled={!ready || searchInput.trim().length < 2}>
+              {t("search")}
+            </Button>
+          </form>
+          {search && recipients.isPending && <Loading />}
+          {search && recipients.isError && (
+            <ErrorState retry={() => void recipients.refetch()} />
+          )}
+          {recipients.data?.length === 0 && (
+            <p role="status">{t("noMatches")}</p>
+          )}
+          {Boolean(recipients.data?.length) && (
+            <div className="global-event-list">
+              {recipients.data?.map((candidate) => (
+                <article key={candidate.user_code}>
+                  <h3>{candidate.name}</h3>
+                  <p>{candidate.user_code}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!ready || recipients.isFetching}
+                    aria-label={t("invitePerson", { name: candidate.name })}
+                    onClick={() =>
+                      change.mutate({
+                        code: candidate.user_code,
+                        revision: candidate.revision,
+                        invited: true,
+                      })
+                    }
+                  >
+                    {t("invite")}
+                  </Button>
+                </article>
+              ))}
+            </div>
+          )}
           <form
             className="global-event-search"
             onSubmit={(submit) => {

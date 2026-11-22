@@ -9,6 +9,16 @@ const eventVersion = z.int().min(1).max(2147483647);
 export const calendarInvitationVersion = eventVersion;
 export const calendarExpectedRevision = z.int().min(0).max(2147483647);
 
+export const calendarInvitationRecipients = z
+  .array(
+    z.strictObject({
+      user_code: calendarRecipientCode,
+      name: z.string(),
+      revision: calendarExpectedRevision,
+    }),
+  )
+  .max(25);
+
 export const calendarInvitationCursor = z.strictObject({
   at: z.iso.datetime({ offset: true }),
   id: z.uuid(),

@@ -3,6 +3,7 @@ import type { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import {
+  calendarInvitationRecipients,
   calendarInvitationRoster,
   ownCalendarInvitations,
   type calendarInvitationCursor,
@@ -14,24 +15,58 @@ export const invitationsKey = (actor: string) => [
   actor,
 ];
 
-export const ownInvitationsQuery = (actor: string) =>
+export const ownInvitationsQuery = (
+  actor: string,
+  eventId: string | null = null,
+) =>
   infiniteQueryOptions({
-    queryKey: [...invitationsKey(actor), "own"],
+    queryKey: [...invitationsKey(actor), "own", eventId],
     initialPageParam: null as z.infer<typeof calendarInvitationCursor> | null,
     queryFn: async ({ signal, pageParam }) => {
       requireOnline();
       const { data, error } = await db()
         .rpc(
           "calendar_invitations",
-          pageParam
-            ? { p_after_at: pageParam.at, p_after_id: pageParam.id }
-            : {},
+          eventId
+            ? { p_event_id: eventId }
+            : pageParam
+              ? { p_after_at: pageParam.at, p_after_id: pageParam.id }
+              : {},
         )
         .abortSignal(signal);
       if (error) throw error;
       return ownCalendarInvitations.parse(data);
     },
     getNextPageParam: (page) => page.next_cursor ?? undefined,
+    retry: false,
+  });
+
+export const invitationRecipientsQuery = (
+  actor: string,
+  eventId: string,
+  version: number,
+  search: string,
+) =>
+  queryOptions({
+    queryKey: [
+      ...invitationsKey(actor),
+      "recipients",
+      eventId,
+      version,
+      search,
+    ],
+    queryFn: async ({ signal }) => {
+      requireOnline();
+      const { data, error } = await db()
+        .rpc("calendar_invitation_recipients", {
+          p_event_id: eventId,
+          p_event_version: version,
+          p_search: search,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return calendarInvitationRecipients.parse(data);
+    },
     retry: false,
   });
 

@@ -1,3 +1,9 @@
+# 22 November 2026 — Recipient search and direct calendar invitation links
+
+The existing calendar invitation editor can search eligible recipients by name and displays each matching Luminovia User ID so managers can distinguish namesakes. The explicit ID input remains available. Search checks the exact published event revision and current management authority, with no email addresses in the results. The recipient link opens only that user's invitation to that event. A confirmed reply marks its notification as read. Editing or withdrawing a publication still invalidates that revision's invitations.
+
+The native PostgreSQL fixture verifies literal search, lack of access to another person's addressed invitation, the exact notification link, withdrawal, revision conflicts and pagination. The five focused component and contract files passed all 69 tests. Four end-to-end calendar tests passed on desktop and mobile Chromium with the actual isolated services, including German and English, dark theme and viewport fit. All 11 database API checks passed. The regenerated API reference exposes the new search operation in Internal OpenAPI 1.8.
+
 # 22 November 2026 — Internal calendar invitations
 
 Calendar managers can add recipients by Luminovia User ID or withdraw invitations from a published global event. Invitees find the event and reply in the calendar. The in-app inbox links to their invitations without exposing the roster. An invitation belongs to one published event version. Stale writes return a conflict and withdrawing, editing or unpublishing the event removes its actionable invitation. The OpenAPI contracts cover the personal paged list, the manager roster and both writes. External provider and device delivery remain separate.

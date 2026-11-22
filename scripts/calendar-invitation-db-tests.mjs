@@ -9,6 +9,7 @@ await withTestDatabase("calendar_invitation", async ({sql, actor}) => {
         ${[admin, lecturer, other, participant].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
       insert into public.user_roles(user_id,role)
         values (${q(admin)},'admin'),(${q(lecturer)},'lecturer'),(${q(other)},'client'),(${q(participant)},'participant');
+      update public.profiles set display_name = 'Fictional %_ calendar instructor' where id = ${q(lecturer)};
       insert into public.global_events(id,title,starts_at,ends_at,published)
         values (${q(event)},'Fictional invited session','2060-04-01T08:00:00Z','2060-04-01T09:00:00Z',true);`);
 
@@ -19,6 +20,9 @@ await withTestDatabase("calendar_invitation", async ({sql, actor}) => {
     }
     const recipient = await code(lecturer);
     const excluded = await code(participant);
+    const search = (id, value) =>
+        call(id, `calendar_invitation_recipients(${q(event)},1,${q(value)})`);
+    const exact = (id) => call(id, `calendar_invitations(p_event_id => ${q(event)})`);
     const set = (id, version, userCode, invited, revision) =>
         call(id, `set_calendar_invitation(${q(event)},${version},${q(userCode)},${invited},${revision})`);
     const reply = (id, version, revision, response) =>
@@ -29,12 +33,20 @@ await withTestDatabase("calendar_invitation", async ({sql, actor}) => {
 
     await assert.rejects(set(lecturer, 1, recipient, true, 0), /42501/);
     await assert.rejects(list(other, 1), /42501/);
+    await assert.rejects(search(other, "%_"), /42501/);
+    assert.deepEqual(await search(admin, "%X_"), []);
+    assert.deepEqual(await search(admin, "%_"), [
+        {user_code: recipient, name: "Fictional %_ calendar instructor", revision: 0},
+    ]);
     await assert.rejects(set(admin, 1, excluded, true, 0), /22023/);
     assert.equal(await set(admin, 1, recipient.toLowerCase(), true, 0), true);
     assert.equal(await set(admin, 1, recipient, true, 0), true);
     assert.equal((await list(lecturer)).items[0].response, "pending");
     assert.deepEqual(await list(other), {items: [], next_cursor: null});
-    assert.equal((await notifications(lecturer))[0].href, "/calendar#calendar-invitations");
+    assert.equal((await notifications(lecturer))[0].href, `/calendar?invitation=${event}#calendar-invitations`);
+    assert.deepEqual(await exact(lecturer), await list(lecturer));
+    assert.deepEqual(await exact(other), {items: [], next_cursor: null});
+    assert.deepEqual(await search(admin, "%_"), []);
     assert.deepEqual(await notifications(other), []);
 
     await assert.rejects(reply(other, 1, 1, "accepted"), /42501/);
@@ -42,10 +54,13 @@ await withTestDatabase("calendar_invitation", async ({sql, actor}) => {
     assert.equal(await reply(lecturer, 1, 1, "tentative"), true);
     await assert.rejects(reply(lecturer, 1, 1, "declined"), /40001/);
     assert.equal((await list(admin, 1))[0].response, "tentative");
+    assert.ok((await notifications(lecturer))[0].read_at);
 
     assert.equal(await set(admin, 1, recipient, false, 2), true);
     assert.deepEqual(await list(lecturer), {items: [], next_cursor: null});
     assert.deepEqual(await notifications(lecturer), []);
+    assert.deepEqual(await exact(lecturer), {items: [], next_cursor: null});
+    assert.equal((await search(admin, "%_"))[0].revision, 3);
     await assert.rejects(reply(lecturer, 1, 3, "accepted"), /42501/);
     assert.equal(await set(admin, 1, recipient, true, 3), true);
     assert.equal((await list(lecturer)).items[0].response, "pending");
