@@ -1,7 +1,7 @@
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -917,7 +917,7 @@ function CourseBasics({ course }: { course: CourseWorkspace }) {
   );
 }
 
-/** Keep the sections mounted so anchor navigation preserves forms and draft state. */
+/** Keep sections mounted so mobile navigation preserves forms and draft state. */
 function CourseWorkspaceLayout({
   course,
   actor,
@@ -933,6 +933,7 @@ function CourseWorkspaceLayout({
 }) {
   const { t, i18n } = useTranslation("learning");
   const location = useLocation();
+  const navigate = useNavigate();
   const learner = course.access.learner;
   const editor = course.access.staff || course.access.client;
   const canEdit = academy !== "grace";
@@ -970,6 +971,10 @@ function CourseWorkspaceLayout({
   const currentSection =
     sections.find(({ id }) => location.hash === "#" + id)?.id ??
     "course-overview";
+  const sectionClass = (id: string) =>
+    id === currentSection
+      ? "course-room-section"
+      : "course-room-section course-room-section-inactive";
   const next = course.sessions.find(
     (session) => Date.parse(session.ends_at) > now,
   );
@@ -980,7 +985,10 @@ function CourseWorkspaceLayout({
   // loads. Apply that hash when its destination first becomes available.
   useEffect(() => {
     if (location.hash !== "#" + currentSection) return;
-    const target = document.getElementById(currentSection);
+    const mobile = window.matchMedia?.("(max-width: 850px)").matches;
+    const target = document.getElementById(
+      mobile ? "course-room-navigation" : currentSection,
+    );
     target?.scrollIntoView?.({ block: "start" });
   }, [currentSection, location.hash]);
 
@@ -1056,9 +1064,45 @@ function CourseWorkspaceLayout({
       )}
       <div className="course-room-layout">
         <nav
+          id="course-room-navigation"
           className="course-room-navigation"
           aria-label={t("workspaceNavigation")}
         >
+          <div className="course-room-mobile-navigation">
+            <Field
+              id="course-room-section-select"
+              label={t("workspaceSection")}
+            >
+              <select
+                id="course-room-section-select"
+                value={currentSection}
+                onChange={(event) =>
+                  void navigate({
+                    pathname: location.pathname,
+                    search: location.search,
+                    hash: "#" + event.target.value,
+                  })
+                }
+              >
+                {sections.map(({ id, label }) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {currentSection === "course-overview" &&
+              (learner || hasRegister) && (
+                <Link
+                  to={{
+                    search: location.search,
+                    hash: learner ? "#course-materials" : "#course-register",
+                  }}
+                >
+                  {t(learner ? "workspaceMaterials" : "workspaceRegister")}
+                </Link>
+              )}
+          </div>
           <ul>
             {sections.map(({ id, label }) => (
               <li key={id}>
@@ -1077,7 +1121,7 @@ function CourseWorkspaceLayout({
           </ul>
         </nav>
         <div className="course-room-content">
-          <div className="course-room-section" id="course-overview">
+          <div className={sectionClass("course-overview")} id="course-overview">
             <CourseBasics course={course} />
             <CourseClasses
               key={`classes:${actor}:${course.id}`}
@@ -1121,6 +1165,9 @@ function CourseWorkspaceLayout({
             {editor && (
               <Preparation course={course} actor={actor} academy={academy} />
             )}
+            {academy && editor && !hasRegister && (
+              <CourseParticipationReport key={course.id} courseId={course.id} />
+            )}
             {learner && (
               <CourseWithdrawal
                 key={academy ?? "internal"}
@@ -1130,7 +1177,10 @@ function CourseWorkspaceLayout({
               />
             )}
           </div>
-          <div className="course-room-section" id="course-materials">
+          <div
+            className={sectionClass("course-materials")}
+            id="course-materials"
+          >
             <Resources
               course={course}
               actor={actor}
@@ -1145,7 +1195,10 @@ function CourseWorkspaceLayout({
             />
           </div>
           {hasSubmissions && (
-            <div className="course-room-section" id="course-submissions">
+            <div
+              className={sectionClass("course-submissions")}
+              id="course-submissions"
+            >
               <CourseSubmissions
                 key={`${actor}:${course.id}`}
                 actor={actor}
@@ -1155,7 +1208,7 @@ function CourseWorkspaceLayout({
             </div>
           )}
           {examVisible && (
-            <div className="course-room-section" id="course-exam">
+            <div className={sectionClass("course-exam")} id="course-exam">
               <CourseExams
                 key={`${actor}:${course.id}:${course.exams.version ?? course.exams.required}`}
                 course={course}
@@ -1165,7 +1218,10 @@ function CourseWorkspaceLayout({
             </div>
           )}
           {canManageEnrolments && (
-            <div className="course-room-section" id="course-enrolments">
+            <div
+              className={sectionClass("course-enrolments")}
+              id="course-enrolments"
+            >
               {academy === "active" &&
                 course.lms_enabled &&
                 course.access.client && (
@@ -1182,26 +1238,37 @@ function CourseWorkspaceLayout({
             </div>
           )}
           {hasRegister && (
-            <div className="course-room-section" id="course-register">
+            <div
+              className={sectionClass("course-register")}
+              id="course-register"
+            >
               <AttendancePanel
                 course={course}
                 actor={actor}
                 academy={academy}
               />
+              {academy && editor && (
+                <CourseParticipationReport
+                  key={course.id}
+                  courseId={course.id}
+                />
+              )}
             </div>
           )}
-          {academy && editor && (
-            <CourseParticipationReport key={course.id} courseId={course.id} />
-          )}
-          <CourseChat
-            run={course.id}
-            actor={actor}
-            canCreate={academy === "active" && course.access.manager}
-            showProtection={course.access.client || course.access.manager}
-            readOnly={!canEdit}
-          />
+          <div className={sectionClass("course-chat")}>
+            <CourseChat
+              run={course.id}
+              actor={actor}
+              canCreate={academy === "active" && course.access.manager}
+              showProtection={course.access.client || course.access.manager}
+              readOnly={!canEdit}
+            />
+          </div>
           {hasActivities && (
-            <div className="course-room-section" id="course-learning">
+            <div
+              className={sectionClass("course-learning")}
+              id="course-learning"
+            >
               {academy && (learner || course.access.staff) && (
                 <AcademyNotebook
                   key={`notebook:${actor}:${course.id}:${course.notebook?.version ?? 0}`}
@@ -1240,11 +1307,13 @@ function CourseWorkspaceLayout({
             </div>
           )}
           {hasEvaluations && (
-            <CourseEvaluations
-              actor={actor}
-              courseId={course.id}
-              readOnly={!canEdit}
-            />
+            <div className={sectionClass("course-evaluations")}>
+              <CourseEvaluations
+                actor={actor}
+                courseId={course.id}
+                readOnly={!canEdit}
+              />
+            </div>
           )}
         </div>
       </div>

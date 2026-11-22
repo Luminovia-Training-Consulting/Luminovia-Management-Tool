@@ -41,6 +41,7 @@ import {
 } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { TableImport } from "../../components/table-import";
+import { importTableRow } from "../../components/table-import-api";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -877,7 +878,7 @@ export function CoursesPage() {
           parse={(row) =>
             templateSchema.parse({ ...row, topic_ids: [], archived: false })
           }
-          save={(row) => saveCourseTemplate(row, null)}
+          save={(row, key) => importTableRow(key, "course-template", row)}
           refresh={() => client.invalidateQueries({ queryKey: ["operations"] })}
         />
       )}
@@ -949,14 +950,7 @@ export function CoursesPage() {
                 throw new Error("invalid course session");
               return { ...values, sessions: [{ starts_at, ends_at }] };
             }}
-            save={async (values) => {
-              requireOnline();
-              const { error } = await db().rpc("save_course_run", {
-                p_id: null,
-                p_payload: values,
-              });
-              if (error) throw error;
-            }}
+            save={(row, key) => importTableRow(key, "course-draft", row)}
             refresh={() =>
               client.invalidateQueries({ queryKey: ["operations"] })
             }

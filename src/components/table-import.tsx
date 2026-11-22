@@ -10,6 +10,24 @@ import {
 import { Field, Notice } from "./common";
 import { Button } from "./ui/button";
 
+function saveFailureReason(cause: unknown, de: boolean) {
+  const code =
+    cause && typeof cause === "object" && "code" in cause ? cause.code : null;
+  if (code === "42501")
+    return de ? "Berechtigung fehlt." : "Permission required.";
+  if (code === "PT409")
+    return de
+      ? "Die Importkennung wurde bereits für andere Daten verwendet."
+      : "The import key was already used for different data.";
+  if (typeof code === "string" && /^(22|23)\d{3}$/.test(code))
+    return de
+      ? "Die Daten wurden abgelehnt."
+      : "The server rejected the row data.";
+  return de
+    ? "Der Server hat den Vorgang nicht bestätigt."
+    : "The server did not confirm the operation.";
+}
+
 export function TableImport<T>({
   label,
   filename,
@@ -27,7 +45,7 @@ export function TableImport<T>({
   parse: (values: Record<string, string>) => T;
   refresh: () => Promise<unknown>;
 } & (
-  | { save: (row: T) => Promise<unknown>; saveBatch?: never }
+  | { save: (row: T, key: string) => Promise<unknown>; saveBatch?: never }
   | {
       save?: never;
       saveBatch: (rows: T[]) => Promise<{ created: number; skipped: number }>;
@@ -38,15 +56,19 @@ export function TableImport<T>({
   const online = useOnline();
   const id = useId();
   const [rows, setRows] = useState<
-    { number: number; cells: string[]; value: T }[]
+    { number: number; cells: string[]; value: T; key: string }[]
   >([]);
   const [status, setStatus] = useState("");
   const [error, setError] = useState(false);
+  const [completed, setCompleted] = useState(0);
+  const [failed, setFailed] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function prepare(file: File) {
     setBusy(true);
     setRows([]);
+    setCompleted(0);
+    setFailed(null);
     setStatus("");
     setError(false);
     let row = 1;
@@ -62,6 +84,7 @@ export function TableImport<T>({
           row = rowNumber;
           return {
             number: rowNumber,
+            key: crypto.randomUUID(),
             cells,
             value: parse(
               Object.fromEntries(
@@ -109,13 +132,13 @@ export function TableImport<T>({
 
   async function confirm() {
     setBusy(true);
-    setRows([]);
     setStatus("");
     setError(false);
-    let completed = 0;
+    let confirmed = completed;
     try {
       if (saveBatch) {
         const outcome = await saveBatch(rows.map(({ value }) => value));
+        setRows([]);
         setStatus(
           de
             ? `${outcome.created} angelegt, ${outcome.skipped} vorhandene übersprungen.`
@@ -123,16 +146,17 @@ export function TableImport<T>({
         );
         return;
       }
-      for (const row of rows) {
-        await save(row.value);
-        completed++;
+      for (const row of rows.slice(confirmed)) {
+        await save(row.value, row.key);
+        setFailed(null);
+        setCompleted(++confirmed);
       }
       setStatus(
         de
-          ? `${completed} Einträge angelegt.`
-          : `Created ${completed} records.`,
+          ? `${confirmed} Einträge angelegt.`
+          : `Created ${confirmed} records.`,
       );
-    } catch {
+    } catch (cause) {
       setError(true);
       if (saveBatch) {
         setStatus(
@@ -141,11 +165,13 @@ export function TableImport<T>({
             : "The import was not confirmed.",
         );
       } else {
-        const failed = rows[completed].number;
+        const row = rows[confirmed].number;
+        setFailed(row);
+        const reason = saveFailureReason(cause, de);
         setStatus(
           de
-            ? `${completed} bestätigt. Bei Zeile ${failed} gestoppt. Prüfe vorhandene Einträge vor einem neuen Import.`
-            : `${completed} confirmed. Stopped at row ${failed}. Check existing records before importing again.`,
+            ? `${confirmed} bestätigt. Zeile ${row} konnte nicht bestätigt werden. ${reason} Der nächste Versuch setzt dort fort.`
+            : `${confirmed} confirmed. Row ${row} could not be confirmed. ${reason} Retrying resumes from that row.`,
         );
       }
     } finally {
@@ -200,22 +226,44 @@ export function TableImport<T>({
           <details open>
             <summary>{de ? "Vorschau" : "Preview"}</summary>
             <ul>
-              {rows.map(({ number, cells }) => (
+              {rows.map(({ number, cells }, index) => (
                 <li key={number}>
                   {number}: {cells.filter(Boolean).join(" · ")}
+                  {!saveBatch && " · "}
+                  {!saveBatch && (
+                    <small className="muted">
+                      {index < completed
+                        ? de
+                          ? "Gespeichert"
+                          : "Saved"
+                        : number === failed
+                          ? de
+                            ? "Bestätigung fehlt"
+                            : "Unconfirmed"
+                          : de
+                            ? "Offen"
+                            : "Pending"}
+                    </small>
+                  )}
                 </li>
               ))}
             </ul>
           </details>
-          <Button
-            type="button"
-            disabled={!online || busy}
-            onClick={() => void confirm()}
-          >
-            {de
-              ? `${rows.length} Einträge anlegen`
-              : `Create ${rows.length} records`}
-          </Button>
+          {completed < rows.length && (
+            <Button
+              type="button"
+              disabled={!online || busy}
+              onClick={() => void confirm()}
+            >
+              {failed !== null
+                ? de
+                  ? "Offene Zeilen erneut versuchen"
+                  : "Retry pending rows"
+                : de
+                  ? `${rows.length} Einträge anlegen`
+                  : `Create ${rows.length} records`}
+            </Button>
+          )}
         </>
       )}
       {status && <Notice kind={error ? "error" : undefined}>{status}</Notice>}

@@ -26,39 +26,48 @@ const fixture = vi.hoisted(() => ({
     version: number;
   }[],
   courseRead: undefined as Promise<void> | undefined,
+  materials: [] as {
+    id: string;
+    course_id: string;
+    course_title: string;
+    name: string;
+    category: string;
+    version: number;
+    can_upload: boolean;
+  }[],
+  calls: [] as {
+    p_course_id?: string;
+    p_search?: string;
+    p_category?: string;
+    p_offset?: number;
+  }[],
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "fictional-learner" } } }),
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: (name: string, args?: { p_run_id: string }) => ({
+    rpc: (name: string, args: (typeof fixture.calls)[number] = {}) => ({
       abortSignal: async () => {
         await fixture.courseRead;
+        if (name === "search_course_materials") {
+          fixture.calls.push(args);
+          const offset = args.p_offset ?? 0;
+          const matches = fixture.materials.filter(
+            (file) =>
+              (!args.p_course_id || args.p_course_id === file.course_id) &&
+              (!args.p_category || args.p_category === file.category) &&
+              file.name
+                .toLowerCase()
+                .includes((args.p_search ?? "").toLowerCase()),
+          );
+          return { data: matches.slice(offset, offset + 25), error: null };
+        }
         return {
           data:
             name === "my_course_workspaces"
               ? fixture.courses
-              : name === "course_workspace"
-                ? {
-                    lms_enabled: true,
-                    access: {
-                      learner: true,
-                      teacher: args?.p_run_id === "soon",
-                    },
-                    resources: [
-                      {
-                        id: args?.p_run_id,
-                        name:
-                          args?.p_run_id === "now"
-                            ? "Workshop.pdf"
-                            : "Course notes.pdf",
-                        category: "material",
-                        version: 1,
-                      },
-                    ],
-                  }
-                : fixture.invitations,
+              : fixture.invitations,
           error: null,
         };
       },
@@ -80,6 +89,8 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   fixture.courseRead = undefined;
   fixture.invitations = [];
+  fixture.materials = [];
+  fixture.calls = [];
   const base = {
     description: "",
     syllabus: "",
@@ -232,7 +243,27 @@ it("waits for current company courses and invitations after reconnecting with a 
   queryClient.clear();
 });
 
-it("finds accessible material by course and file name and links upload only for a teaching assignment", async () => {
+it("searches beyond the course overview, applies all three filters and preserves scoped file actions", async () => {
+  fixture.materials = [
+    {
+      id: "a",
+      course_id: "older",
+      course_title: "Older course outside the dashboard",
+      name: "Workshop.pdf",
+      category: "material",
+      version: 1,
+      can_upload: false,
+    },
+    {
+      id: "b",
+      course_id: "soon",
+      course_title: "Upcoming course",
+      name: "Workshop report.pdf",
+      category: "report",
+      version: 2,
+      can_upload: true,
+    },
+  ];
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={["/learning?view=materials"]}>
@@ -241,30 +272,66 @@ it("finds accessible material by course and file name and links upload only for 
     </QueryClientProvider>,
   );
   expect(await screen.findByText("Workshop.pdf")).toBeVisible();
-  expect(await screen.findAllByText("Course notes.pdf")).not.toHaveLength(0);
-  expect(
-    screen.queryByRole("heading", { name: "Completed course" }),
-  ).toBeNull();
-
   const course = screen.getByRole("combobox", { name: "Nach Kurs filtern" });
-  fireEvent.change(course, { target: { value: "now" } });
-  expect(screen.queryByText("Course notes.pdf")).toBeNull();
+  const search = screen.getByRole("searchbox");
+  fireEvent.change(search, { target: { value: "workshop" } });
   expect(
-    screen.queryByRole("link", { name: "Neue Kursdatei freigeben" }),
-  ).toBeNull();
-  expect(
-    screen.getByRole("button", { name: "Workshop.pdf herunterladen" }),
+    await screen.findByRole("button", { name: "Workshop.pdf herunterladen" }),
   ).toBeVisible();
-  fireEvent.change(screen.getByRole("searchbox"), {
-    target: { value: "missing" },
+  fireEvent.change(screen.getByRole("combobox", { name: "Dokumentart" }), {
+    target: { value: "report" },
   });
+  expect(await screen.findByText("Workshop report.pdf")).toBeVisible();
   expect(screen.queryByText("Workshop.pdf")).toBeNull();
-  expect(
-    screen.getByText("Keine passenden Dateien in diesem Kurs."),
-  ).toBeVisible();
 
   fireEvent.change(course, { target: { value: "soon" } });
   expect(
     await screen.findByRole("link", { name: "Neue Kursdatei freigeben" }),
   ).toHaveAttribute("href", "/courses/soon/workspace#course-materials");
+  expect(fixture.calls.at(-1)).toEqual({
+    p_course_id: "soon",
+    p_search: "workshop",
+    p_category: "report",
+    p_offset: 0,
+  });
+  fireEvent.change(search, { target: { value: "missing" } });
+  expect(
+    await screen.findByText("Keine passenden Dateien gefunden."),
+  ).toBeVisible();
+});
+
+it("paginates matching files and uses the result to filter a course outside the overview", async () => {
+  fixture.materials = Array.from({ length: 25 }, (_, index) => ({
+    id: String(index),
+    course_id: "older",
+    course_title: "Outside dashboard",
+    name: `Handout-${index}.pdf`,
+    category: "material",
+    version: 1,
+    can_upload: false,
+  }));
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/learning?view=materials"]}>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Weitere Dateien laden" }),
+  );
+  expect(await screen.findByText("Handout-24.pdf")).toBeVisible();
+  expect(screen.getByText("Handout-0.pdf")).toBeVisible();
+  expect(fixture.calls.at(-1)?.p_offset).toBe(24);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Nur diesen Kurs anzeigen" }),
+  );
+  expect(await screen.findByText("Handout-0.pdf")).toBeVisible();
+  expect(
+    screen.getByRole("combobox", { name: "Nach Kurs filtern" }),
+  ).toHaveValue("older");
+  expect(
+    screen.queryByRole("link", { name: "Neue Kursdatei freigeben" }),
+  ).toBeNull();
+  expect(fixture.calls.at(-1)?.p_course_id).toBe("older");
 });

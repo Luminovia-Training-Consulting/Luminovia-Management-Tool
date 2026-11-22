@@ -115,6 +115,33 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal((await rpc(foreign, "my_course_workspaces")).length, 0);
         },
     );
+    await check("Concurrent spreadsheet retries commit exactly once and failed writes leave no receipt", async () => {
+        const key = randomUUID();
+        const title = "Fictional imported template";
+        const args = [q(key), q("course-template"), "null", q(JSON.stringify({title}))];
+        const importRow = (who, input = args) => rpc(who, "import_table_row", input);
+        assert.deepEqual(await Promise.all([importRow(admin), importRow(admin)]), [true, true]);
+        assert.equal(await sql(`select count(*) from public.course_templates where title=${q(title)}`), "1");
+        await assert.rejects(importRow(admin, [...args.slice(0, 3), q('{"title":"Different template"}')]), /PT409/);
+        await assert.rejects(importRow(foreign), /42501/);
+        assert.equal(await sql(`select count(*) from private.table_import_receipts where row_key=${q(key)}`), "1");
+
+        const retry = [q(randomUUID()), ...args.slice(1, 3)];
+        await assert.rejects(importRow(admin, [...retry, q("{}")]), /22023/);
+        assert.equal(await importRow(admin, [...retry, q('{"title":"Corrected template"}')]), true);
+        assert.equal(await sql("select has_function_privilege('anon', 'public.import_table_row(uuid,text,uuid,jsonb)', 'execute')"), "f");
+    });
+    await check("An enrolment retry confirms the original write after the eligible candidate disappears", async () => {
+        const participantId = await sql(`select luminovia_user_id from public.profiles where id=${q(second)}`);
+        const args = [q(randomUUID()), q("enrolment"), q(current), q(JSON.stringify({id: participantId}))];
+        const candidates = () => rpc(client, "course_enrolment_candidates", [q(current), q(participantId)]);
+        assert.equal((await candidates())[0].user_id, second);
+        assert.equal(await rpc(client, "import_table_row", args), true);
+        assert.deepEqual(await candidates(), []);
+        assert.equal(await rpc(client, "import_table_row", args), true);
+        assert.equal(await sql(`select count(*) from public.audit_events
+          where action='course.enrolment.changed' and resource_id=${q(current)} and details->>'user_id'=${q(second)}`), "1");
+    });
     let preparation;
     await check(
         "Shared checklist is real CAS state; learner cannot write, client sees only selected rows",
@@ -192,6 +219,25 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                     category: "material",
                 })
             ).id;
+            const materialSearch = (who, course = null, search = "AGREED", category = null, offset = 0) =>
+                rpc(who, "search_course_materials", [
+                    course ? q(course) : "null", q(search), category ? q(category) : "null", String(offset),
+                ]);
+            const match = {id: resource, course_id: run, name: "Agreed.pdf", version: 1, category: "material"};
+            assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
+            assert.deepEqual(await materialSearch(learner), [{
+                ...match, course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
+            }]);
+            assert.equal((await materialSearch(admin, run))[0].can_upload, true);
+            assert.equal((await materialSearch(teacher, run))[0].can_upload, true);
+            assert.deepEqual(await materialSearch(learner, current), []);
+            assert.deepEqual(await materialSearch(learner, run, "%"), []);
+            assert.deepEqual(await materialSearch(learner, run, "AGREED", "report"), []);
+            assert.deepEqual(await materialSearch(learner, run, "AGREED", "material", 1), []);
+            assert.deepEqual(await materialSearch(client, run), []);
+            assert.deepEqual(await materialSearch(foreign), []);
+            await actor(learner, `set local request.path='/rpc/search_course_materials';
+              set local request.method='POST';select public.require_portal_access()`);
             assert.equal((await workspace(client)).resources.length, 0);
             assert.equal(
                 (await workspace(learner)).resources[0].version_id,
@@ -220,6 +266,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             await action(learner, "resource_acknowledge", {id: resource});
             assert.equal((await workspace(learner)).resources[0].acknowledged, true);
             await action(admin, "resource_remove", {id: resource});
+            assert.deepEqual(await materialSearch(learner), []);
             await assert.rejects(
                 rpc(learner, "course_document_access", [q("resource"), q(resource)]),
                 /42501/,

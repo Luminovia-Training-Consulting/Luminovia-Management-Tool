@@ -360,13 +360,14 @@ test("Premium exam switching and scanned bytes follow real access across two com
         const companyPage = await companyContext.newPage();
         const teacher = await teachingContext.newPage();
         const companyAttendance = companyPage.getByRole("region", {name: "Anwesenheitsliste je Termin", exact: true});
-        await page.goto(workspace);
+        await page.goto(workspace + "#course-chat");
         await expect(page.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
         await expect(examRegion(page)).toHaveCount(0);
         await expect(chat.getByText(messageA, {exact: true})).toBeVisible();
         await login(companyPage, f.client.email);
-        await companyPage.goto(workspace);
+        await companyPage.goto(workspace + "#course-register");
         await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
+        await companyPage.goto(workspace + "#course-exam");
         await expect(
             examRegion(companyPage).getByRole("option", {
                 name: "Lösungsschlüssel für das Kursteam",
@@ -388,7 +389,7 @@ test("Premium exam switching and scanned bytes follow real access across two com
         });
         const [published] = (await exams()).documents;
         expect(published.name).toBe(paper);
-        await page.reload();
+        await page.goto(workspace + "#course-exam");
         await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
         const downloaded = page.waitForEvent("download");
         await examRegion(page)
@@ -399,7 +400,7 @@ test("Premium exam switching and scanned bytes follow real access across two com
         expect(await readFile((await download.path())!)).toEqual(bytes);
 
         await login(teacher, f.teacher.email);
-        await teacher.goto(workspace);
+        await teacher.goto(workspace + "#course-exam");
         await examRegion(teacher)
             .getByLabel("Dokumenttyp", {exact: true})
             .selectOption("exam_staff");
@@ -740,7 +741,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
         .getByRole("button", {name: "Datei hochladen", exact: true})
         .click();
     await expect(dialog).toBeHidden({timeout: 45000});
-    await page.goto(`/courses/${f.run}/workspace`);
+    await page.goto(`/courses/${f.run}/workspace#course-materials`);
     const resources = page.getByRole("region", {
         name: "Kursdateien",
         exact: true,
@@ -787,6 +788,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
         await expect(
             customer.getByRole("region", {name: "Fragen & Antworten", exact: true}),
         ).toHaveCount(0);
+        await customer.goto(`/courses/${f.run}/workspace#course-materials`);
         const download = customer.waitForEvent("download");
         await customer
             .getByRole("region", {
@@ -799,6 +801,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
         expect(await readFile((await file.path())!)).toEqual(bytes);
         await customer.getByLabel("Sprache", {exact: true}).selectOption("en");
         await customer.getByLabel("Theme", {exact: true}).selectOption("dark");
+        await customer.goto(`/courses/${f.run}/workspace#course-overview`);
         await expect(
             customer.getByRole("region", {
                 name: "Shared course preparation",
@@ -950,7 +953,7 @@ test("Private course submission uses the real scanner, current staff access and 
     await checked(f.adminClient.rpc("manage_course_enrolment", {
         p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
     }));
-    const workspace = `/courses/${f.run}/workspace`;
+    const workspace = `/courses/${f.run}/workspace#course-submissions`;
     const filename = "fictional-lab-work.txt";
     const fileBytes = Buffer.from("Fictional classroom exercise\n");
     await login(page, f.client.email);
@@ -1043,15 +1046,17 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
     await linkWorkspaceLearner(f);
 
     await adminLogin(page,f.manager);
-    await page.goto(`/courses/${f.run}/workspace#course-enrolments`);
+    await page.goto(`/courses/${f.run}/workspace#course-register`);
     const attendance = page.getByRole("region", {name: "Anwesenheitsliste je Termin", exact: true});
     await expect(attendance.getByText("Keine eingeschriebenen Teilnehmenden.", {exact: true})).toBeVisible();
+    await page.goto(`/courses/${f.run}/workspace#course-enrolments`);
     await page.getByLabel("Teilnehmende Person",{exact:true}).selectOption(f.learner.id);
     await page.getByRole("button",{name:"Zum Kurs anmelden",exact:true}).click();
     await page.getByRole("dialog").getByRole("button",{name:"Bestätigen",exact:true}).click();
     await expect(page.getByText("Kursanmeldung aktualisiert.",{exact:true})).toBeVisible();
 
-    // The mounted session register must get the newly enrolled roster without a reload.
+    // Switch back to the mounted session register without a full document reload.
+    await page.goto(`/courses/${f.run}/workspace#course-register`);
     await expect(attendance.getByText("Keine eingeschriebenen Teilnehmenden.", {exact: true})).toHaveCount(0);
     await attendance.getByText("Anwesenheit aus CSV oder XLSX übernehmen",{exact:true}).click();
     await attendance.getByLabel("CSV- oder XLSX-Datei prüfen",{exact:true}).setInputFiles({

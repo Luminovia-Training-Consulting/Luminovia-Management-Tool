@@ -25,6 +25,7 @@ const readPaths = [
   "/rest/v1/rpc/course_chat_protection",
   "/rest/v1/rpc/course_class_options",
   "/rest/v1/rpc/course_submissions",
+  "/rest/v1/rpc/search_course_materials",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -48,6 +49,7 @@ const writePaths = [
   "/rest/v1/rpc/set_course_class",
   "/rest/v1/rpc/set_course_submissions",
   "/rest/v1/rpc/withdraw_course_submission",
+  "/rest/v1/rpc/import_table_row",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

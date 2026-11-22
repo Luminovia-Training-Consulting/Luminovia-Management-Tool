@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Spreadsheet imports, course materials and navigation
+
+- Preserve each spreadsheet preview on a failed write. Resume at the outstanding row using a caller-scoped receipt committed with the existing create operation. Keep the calendar's atomic and deduplicated batch import.
+- Search clean material metadata across every current course in scope. Page matches by file name and resource ID, expose course and category filters, and keep download authority on the existing file gateway.
+- Show one selected course workspace section on narrow layouts. Retain hash navigation, role-specific actions and form drafts across section changes.
+- Remember chat category, permitted selection and unread or archive state per account in the browser. Keep free-text searches and legacy company names out of browser preferences.
+
 ## First-use and setup guidance
 
 - Keep demo material and course actions above optional guidance. Preserve the selected demo perspective when clearing fictional practice state.

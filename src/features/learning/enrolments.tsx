@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { TableImport } from "../../components/table-import";
+import { importTableRow } from "../../components/table-import-api";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { Field, Loading, Notice } from "../../components/common";
@@ -242,24 +243,9 @@ export function CourseEnrolmentsPanel({
                   throw new Error("invalid participant ID");
                 return id;
               }}
-              save={async (id) => {
-                requireOnline();
-                const { data, error } = await db().rpc(
-                  "course_enrolment_candidates",
-                  {
-                    p_course_run_id: course.id,
-                    p_search: id,
-                  },
-                );
-                if (error || !Array.isArray(data))
-                  throw error ?? new Error("invalid candidates");
-                const candidate = (data as Candidate[]).find(
-                  (row) => row.luminovia_user_id?.toUpperCase() === id,
-                );
-                if (!candidate)
-                  throw new Error("eligible participant not found");
-                await saveEnrolment(candidate.user_id, "enrolled");
-              }}
+              save={(id, key) =>
+                importTableRow(key, "enrolment", { id }, course.id)
+              }
               refresh={refreshEnrolments}
             />
           )}

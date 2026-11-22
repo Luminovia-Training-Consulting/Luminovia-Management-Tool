@@ -43,6 +43,46 @@ const record = <Fields extends Record<string, unknown>>(
   additionalProperties: false,
 });
 
+const materialCategory = { type: "string", enum: ["material", "report"] };
+export const materialSearchParameters = {
+  p_course_id: nullable(uuid),
+  p_search: nullable({ ...text, maxLength: 200 }),
+  p_category: nullable(materialCategory),
+  p_offset: integer,
+};
+export const materialSearchResult = {
+  ...itemList(
+    record({
+      id: uuid,
+      course_id: uuid,
+      course_title: text,
+      organisation_name: nullable(text),
+      name: text,
+      version: integer,
+      category: materialCategory,
+      can_upload: boolean,
+    }),
+  ),
+  maxItems: 25,
+};
+export const importRowParameters = {
+  p_row_key: uuid,
+  p_kind: {
+    type: "string",
+    enum: [
+      "course-template",
+      "course-draft",
+      "company",
+      "contact",
+      "taxonomy",
+      "enrolment",
+    ],
+  },
+  p_scope: nullable(uuid),
+  p_payload: { type: "object" },
+};
+export const importRowResult = { const: true };
+
 export const enrolmentState = { enum: ["enrolled", "completed", "removed"] };
 const deliveryType = { enum: ["online", "onsite"] };
 const audience = { enum: ["staff", "client", "participants", "all"] };

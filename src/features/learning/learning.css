@@ -368,6 +368,10 @@
   scroll-margin-block-start: 5rem;
 }
 
+.course-room-mobile-navigation {
+  display: none;
+}
+
 @media (max-width: 850px) {
   .course-room-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -375,10 +379,20 @@
 
   .course-room-navigation {
     position: static;
+    scroll-margin-block-start: 4.5rem;
   }
 
   .course-room-navigation ul {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.25rem), 1fr));
+    display: none;
+  }
+
+  .course-room-mobile-navigation {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .course-room-section-inactive {
+    display: none;
   }
 
   .course-room-section,

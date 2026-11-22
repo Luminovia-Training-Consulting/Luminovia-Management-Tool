@@ -1,3 +1,9 @@
+# 23 November 2026 — Resumable imports, material search and daily navigation
+
+Spreadsheet previews retain saved and outstanding rows after a failure. Retrying an unconfirmed row uses the same key. The database records the receipt and the existing permission-checked create in one transaction. The material library searches all currently authorised courses by file name, course and category. Mobile course rooms show the selected area and keep draft state and direct links. The chat directory remembers per-account filters in the browser and combines unread counts and manual unread flags.
+
+The 1,557 frontend tests, 14 course workspace PostgreSQL groups, both dedicated-edition material suites and all 11 native API surface checks passed. Chromium CSS checks at 390 and 1,280 px passed. The authenticated browser suite could not start because the existing local test stack occupies port 55322.
+
 # 23 November 2026 — Course demo and administrator setup
 
 Course lists and course links come before optional tour controls. The safety notice can expand on demand. Clearing demo data preserves the selected role, and the Academy mobile menu omits the unavailable public Help link. The Admin reset remains protected and sits under System operations. The README and roadmap describe that the full local reset leaves services stopped.

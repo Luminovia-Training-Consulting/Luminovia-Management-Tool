@@ -450,6 +450,8 @@ describe("connected course workspace", () => {
     const nav = await screen.findByRole("navigation", {
       name: "Bereiche im Kursraum",
     });
+    const mobileSelect = nav.querySelector("select")!;
+    expect(mobileSelect).toHaveValue("course-chat");
     expect(nav.querySelector('[href$="#course-chat"]')).toHaveAttribute(
       "aria-current",
       "location",
@@ -465,6 +467,11 @@ describe("connected course workspace", () => {
       screen.getByRole("heading", { name: "Kursübersicht & Termine" }),
     ).toBeVisible();
     expect(document.getElementById("course-chat")).toBeInTheDocument();
+    await user.selectOptions(mobileSelect, "course-overview");
+    expect(mobileSelect).toHaveValue("course-overview");
+    expect(document.getElementById("course-chat")?.parentElement).toHaveClass(
+      "course-room-section-inactive",
+    );
   });
 
   it("connects learner quiz, feedback and completion without staff controls", async () => {

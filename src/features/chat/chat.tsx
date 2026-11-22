@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { readPreference, writePreference } from "../../lib/preferences";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
@@ -49,13 +50,49 @@ import "./pins-i18n";
 import "./room-archive-i18n";
 import "./chat.css";
 
+const filterCategories = ["company", "staff", "course", "lecturer"] as const;
+type DirectoryPreference = {
+  category: ChatDirectoryFacet["category"] | "";
+  key: string;
+  archived: boolean;
+  unread: boolean;
+};
+const defaultDirectory: DirectoryPreference = {
+  category: "",
+  key: "",
+  archived: false,
+  unread: false,
+};
+
+function readDirectory(actor: string): DirectoryPreference {
+  try {
+    const saved = JSON.parse(
+      readPreference(`chat-directory.${actor}`) ?? "null",
+    );
+    const category =
+      filterCategories.find((value) => value === saved?.category) ?? "";
+    return {
+      category,
+      key: category && typeof saved?.key === "string" ? saved.key : "",
+      archived: saved?.archived === true,
+      unread: saved?.unread === true,
+    };
+  } catch {
+    return defaultDirectory;
+  }
+}
+
 /** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  return <ChatDirectory key={actor} actor={actor} />;
+}
+
+function ChatDirectory({ actor }: { actor: string }) {
   const { t, i18n } = useTranslation("chat");
   const common = useTranslation().t;
   const online = useOnline();
-  const { session } = useAuth();
-  const actor = session!.user.id;
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("room");
@@ -66,11 +103,20 @@ export function ChatPage() {
   const permissions = useQuery(permissionsQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<{
-    category: ChatDirectoryFacet["category"] | "";
-    key: string;
-  }>({ category: "", key: "" });
-  const [showArchived, setShowArchived] = useState(false);
+  const [filter, setFilter] = useState(() => readDirectory(actor));
+  const showArchived = filter.archived;
+  function changeFilter(changes: Partial<DirectoryPreference>) {
+    const next = { ...filter, ...changes };
+    setFilter(next);
+    // Historical company facets can contain a name instead of an identifier.
+    writePreference(
+      `chat-directory.${actor}`,
+      JSON.stringify({
+        ...next,
+        key: next.key.startsWith("job-name:") ? "" : next.key,
+      }),
+    );
+  }
   const archiveText = useTranslation("chatRoomArchive").t;
   const [contactsOpen, setContactsOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
@@ -239,6 +285,7 @@ export function ChatPage() {
       const facets = facetsByRoom.get(room.id) ?? [];
       const title = room.kind === "general" ? t("kind_general") : room.title;
       return (
+        (!filter.unread || room.unread_count > 0 || room.manual_unread) &&
         (!category ||
           facets.some(
             (facet) =>
@@ -255,8 +302,7 @@ export function ChatPage() {
         Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
         (a.pinned && b.pinned ? (a.pinOrder ?? 0) - (b.pinOrder ?? 0) : 0),
     );
-  const hasFilter = Boolean(needle || category);
-  const filterCategories = ["company", "staff", "course", "lecturer"] as const;
+  const hasFilter = Boolean(needle || category || filter.unread);
   return (
     <section
       className={`chat-page ${selectedId ? "chat-page-has-selection" : ""}`}
@@ -316,7 +362,7 @@ export function ChatPage() {
                       filterCategories.find(
                         (item) => item === event.target.value,
                       ) ?? "";
-                    setFilter({ category, key: "" });
+                    changeFilter({ category, key: "" });
                   }}
                 >
                   <option value="">{t("filterAll")}</option>
@@ -335,7 +381,7 @@ export function ChatPage() {
                   <select
                     value={key}
                     onChange={(event) =>
-                      setFilter({ category, key: event.target.value })
+                      changeFilter({ key: event.target.value })
                     }
                   >
                     <option value="">{t("filterAllMatches")}</option>
@@ -368,7 +414,7 @@ export function ChatPage() {
                 type="button"
                 variant={!showArchived ? "default" : "secondary"}
                 aria-pressed={!showArchived}
-                onClick={() => setShowArchived(false)}
+                onClick={() => changeFilter({ archived: false })}
               >
                 {archiveText("active")}
               </Button>
@@ -376,9 +422,17 @@ export function ChatPage() {
                 type="button"
                 variant={showArchived ? "default" : "secondary"}
                 aria-pressed={showArchived}
-                onClick={() => setShowArchived(true)}
+                onClick={() => changeFilter({ archived: true })}
               >
                 {archiveText("archived")}
+              </Button>
+              <Button
+                type="button"
+                variant={filter.unread ? "default" : "secondary"}
+                aria-pressed={filter.unread}
+                onClick={() => changeFilter({ unread: !filter.unread })}
+              >
+                {t("filterUnread")}
               </Button>
             </div>
           </div>
@@ -604,7 +658,7 @@ export function ChatPage() {
                       variant="secondary"
                       onClick={() => {
                         setSearch("");
-                        setFilter({ category: "", key: "" });
+                        changeFilter({ category: "", key: "", unread: false });
                       }}
                     >
                       {t("clearFilters")}

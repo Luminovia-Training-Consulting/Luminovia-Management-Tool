@@ -1,9 +1,9 @@
 /**
- * Best-effort persistence for language/theme only. Blocked browser storage must not break the
+ * Best-effort persistence for interface preferences. Blocked browser storage must not break the
  * active UI; Auth persistence follows the separate Supabase SDK contract.
  */
 /** Non-sensitive UI preferences only, never Auth or business-data storage. */
-type Preference = "language" | "theme";
+type Preference = "language" | "theme" | `chat-directory.${string}`;
 export const uiLocalChangeEvent = "luminovia-ui-local-change";
 
 /**

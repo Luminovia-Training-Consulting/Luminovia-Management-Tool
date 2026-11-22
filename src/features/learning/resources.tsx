@@ -16,6 +16,7 @@ import {
   courseAction,
   type CourseWorkspace,
   courseWorkspaceKey,
+  courseMaterialLibraryKey,
   downloadCourseDocument,
   shareAcademyCourseMaterial,
   removeAcademyCourseMaterial,
@@ -91,9 +92,12 @@ export function Resources({
   const [reviewedAudience, setReviewedAudience] = useState("all");
   const [reviewedCategory, setReviewedCategory] = useState("material");
   const refresh = () =>
-    client.invalidateQueries({
-      queryKey: courseWorkspaceKey(actor, course.id),
-    });
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course.id),
+      }),
+      client.invalidateQueries({ queryKey: courseMaterialLibraryKey(actor) }),
+    ]);
   const save = useMutation({
     mutationFn: ({
       action,

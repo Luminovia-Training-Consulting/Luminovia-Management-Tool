@@ -13,6 +13,7 @@ import { useAuth } from "../auth/auth-context";
 import { permissionsQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
 import { TableImport } from "../../components/table-import";
+import { importTableRow } from "../../components/table-import-api";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -275,7 +276,9 @@ export function TaxonomyPage() {
             taxonomyPayload(values);
             return values;
           }}
-          save={(row) => saveTaxonomyTopic(null, row)}
+          save={(row, key) =>
+            importTableRow(key, "taxonomy", taxonomyPayload(row))
+          }
           refresh={refreshQueries}
         />
       )}

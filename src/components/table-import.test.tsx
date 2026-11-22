@@ -21,9 +21,15 @@ function selectCsv(text: string) {
 }
 
 it("previews semicolon CSV and stops on a failed row without submitting later rows", async () => {
-  const save = vi.fn(async (name: string) => {
-    if (name === "Second") throw new Error("denied");
-  });
+  let loseResponse = true;
+  const save = vi.fn<(name: string, key: string) => Promise<void>>(
+    async (name) => {
+      if (name === "Second" && loseResponse) {
+        loseResponse = false;
+        throw new Error("response lost");
+      }
+    },
+  );
   const refresh = vi.fn(async () => undefined);
   render(
     <TableImport
@@ -41,12 +47,29 @@ it("previews semicolon CSV and stops on a failed row without submitting later ro
   const confirm = await screen.findByRole("button", {
     name: "Create 3 records",
   });
-  expect(screen.getByText("2: First; name")).toBeInTheDocument();
+  expect(screen.getByText(/2: First; name/)).toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
   fireEvent.click(confirm);
-  await screen.findByText(/1 confirmed. Stopped at row 3/);
-  expect(save.mock.calls).toEqual([["First; name"], ["Second"]]);
+  await screen.findByText(/1 confirmed. Row 3 could not be confirmed/);
+  expect(screen.getByText("Saved")).toBeVisible();
+  expect(screen.getByText("Unconfirmed")).toBeVisible();
+  expect(save.mock.calls.map(([name]) => name)).toEqual([
+    "First; name",
+    "Second",
+  ]);
   expect(refresh).toHaveBeenCalledOnce();
+
+  fireEvent.click(screen.getByRole("button", { name: "Retry pending rows" }));
+  await screen.findByText("Created 3 records.");
+  expect(save.mock.calls.map(([name]) => name)).toEqual([
+    "First; name",
+    "Second",
+    "Second",
+    "Third",
+  ]);
+  expect(save.mock.calls[2][1]).toBe(save.mock.calls[1][1]);
+  expect(save.mock.calls[3][1]).not.toBe(save.mock.calls[2][1]);
+  expect(screen.getAllByText("Saved")).toHaveLength(3);
 });
 
 it("rejects the whole file before confirmation if a data row has the wrong shape", async () => {

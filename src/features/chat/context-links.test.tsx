@@ -14,13 +14,14 @@ import type { ChatRoom } from "./types";
 import i18n from "../../lib/i18n";
 
 const state = vi.hoisted(() => ({
+  actor: "fictional-forum-contact",
   canAuthor: true,
   roles: ["client"] as string[],
   rooms: [] as ChatRoom[],
   facets: [] as ChatDirectoryFacet[],
 }));
 vi.mock("../auth/auth-context", () => ({
-  useAuth: () => ({ session: { user: { id: "fictional-forum-contact" } } }),
+  useAuth: () => ({ session: { user: { id: state.actor } } }),
 }));
 vi.mock("../../lib/online", () => ({
   requireOnline: () => undefined,
@@ -74,6 +75,8 @@ vi.mock("./thread", () => ({
 const clients: QueryClient[] = [];
 afterEach(() => {
   cleanup();
+  localStorage.clear();
+  state.actor = "fictional-forum-contact";
   clients.forEach((client) => client.clear());
   clients.length = 0;
   state.rooms = [];
@@ -239,4 +242,75 @@ it("filters active or archived chats by category and identity without replacing 
   await user.selectOptions(screen.getByLabelText("Select lecturer"), "alex");
   expect(screen.getByRole("button", { name: /^Room C/ })).toBeVisible();
   expect(screen.getByRole("heading", { name: "Open: Room A" })).toBeVisible();
+});
+
+it("combines unread filters with room categories and remembers them only for the same account", async () => {
+  await i18n.changeLanguage("en");
+  state.rooms = [
+    ["new", "Unseen messages", 2, false],
+    ["flag", "Manually flagged", 0, true],
+    ["read", "Already read", 0, false],
+  ].map(([id, title, unread, manual]) => ({
+    id: String(id),
+    title: String(title),
+    unread_count: Number(unread),
+    manual_unread: Boolean(manual),
+    kind: "dm",
+    job_id: null,
+    owner_id: null,
+    muted: false,
+    last_message_at: null,
+    personal_archived: true,
+  }));
+  state.facets = state.rooms.map((room) => ({
+    room_id: room.id,
+    category: "staff",
+    facet_key: "a8fbaa65-02e8-4cf9-ba55-69ef3879c240",
+    label: "Course team",
+  }));
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(await screen.findByRole("button", { name: "Archived" }));
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Filter by" }),
+    "staff",
+  );
+  const teamFilter = screen.getByRole("option", { name: "Course team" });
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Select staff member" }),
+    teamFilter,
+  );
+  await user.click(screen.getByRole("button", { name: "Unread" }));
+  expect(await screen.findByText("Unseen messages")).toBeVisible();
+  expect(screen.getByText("Manually flagged")).toBeVisible();
+  expect(screen.queryByText("Already read")).toBeNull();
+
+  cleanup();
+  renderPage();
+  expect(await screen.findByText("Manually flagged")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Archived" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "Unread" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("combobox", { name: "Filter by" })).toHaveValue(
+    "staff",
+  );
+  expect(
+    screen.getByRole("combobox", { name: "Select staff member" }),
+  ).toHaveValue("a8fbaa65-02e8-4cf9-ba55-69ef3879c240");
+  cleanup();
+  state.actor = "second-account";
+  renderPage();
+  expect(await screen.findByRole("button", { name: "Unread" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(screen.getByRole("button", { name: "Archived" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });

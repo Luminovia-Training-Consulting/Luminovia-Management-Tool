@@ -136,13 +136,15 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
     },
   });
   const paths = Object.keys(document.paths);
-  expect(paths).toHaveLength(98);
+  expect(paths).toHaveLength(100);
   expect(paths).toContain("/rest/v1/rpc/learning_analytics_access");
   expect(paths).toContain("/rest/v1/rpc/learning_analytics_report");
   expect(paths).toContain("/rest/v1/rpc/course_submissions");
   expect(paths).toContain("/rest/v1/rpc/academy_licence_receipt");
   expect(paths).toContain("/rest/v1/rpc/installation_capabilities");
   expect(paths).toContain("/rest/v1/rpc/course_workspace");
+  expect(paths).toContain("/rest/v1/rpc/search_course_materials");
+  expect(paths).toContain("/rest/v1/rpc/import_table_row");
   expect(
     paths.filter((path) => !path.startsWith("/rest/v1/rpc/")).sort(),
   ).toEqual([

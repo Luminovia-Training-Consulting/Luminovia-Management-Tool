@@ -135,6 +135,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
 
     const access = (who, selected = share, kind = "resource") =>
       actor(who, gate() + read(selected, kind)).then(JSON.parse);
+    const searchPath = "/rpc/search_course_materials";
+    const importPath = "/rpc/import_table_row";
+    const search = (who) =>
+      actor(who, gate(searchPath) +
+        `select public.search_course_materials(${q(run)},null,'material',0)`).then(JSON.parse);
+    const enrolmentGate = (who) => actor(who, gate(importPath));
     const shareCall = (id = sharedVersion, course = run, audience = "all") =>
       `select public.academy_course_material_action(${q(course)},'resource_share',${q(id)},${q(audience)},'material')`;
     const command = (who, write = shareCall()) =>
@@ -153,7 +159,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(actor(manager, read(share)), /42501/);
     await assert.rejects(command(teacher), /42501/);
     await assert.rejects(actor(teacher, shareCall()), /42501/);
+    await assert.rejects(search(learner), /42501/);
     await configure(true);
+    assert.deepEqual((await search(learner)).map(({ id, can_upload }) => [id, can_upload]), [[share, false]]);
+    assert.deepEqual((await search(client)).map(({ id, can_upload }) => [id, can_upload]), [[clientShare, true]]);
+    assert.deepEqual(await search(otherClient), []);
+    await enrolmentGate(manager);
+    await assert.rejects(actor(manager, gate(searchPath, "GET")), /42501/);
     for (const [target, method] of [
       [path, "GET"],
       [path, "HEAD"],
@@ -584,6 +596,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(await access(learner), exact);
     await assert.rejects(command(teacher), /42501/);
     await assert.rejects(reserve(teacher), /42501/);
+    const graceMaterials = await search(teacher);
+    assert.ok(graceMaterials.some((row) => row.id === share));
+    assert.ok(graceMaterials.every((row) => !row.can_upload));
+    await assert.rejects(enrolmentGate(manager), /42501/);
     const gracePage = await submissions(learner);
     assert.equal(gracePage.can_upload, false);
     assert.equal(gracePage.entries[0].can_withdraw, false);
@@ -609,6 +625,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       grace_until: date(-1),
     });
     await assert.rejects(access(learner), /42501/);
+    await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);
     assert.equal(await storagePath(learnerDraft), "");
     assert.equal(

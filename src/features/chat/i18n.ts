@@ -75,6 +75,7 @@ const pairs: Record<string, [string, string]> = {
   filterValue_staff: ["Mitarbeitende auswählen", "Select staff member"],
   filterValue_course: ["Kurs auswählen", "Select course"],
   filterValue_lecturer: ["Dozierende auswählen", "Select lecturer"],
+  filterUnread: ["Ungelesen", "Unread"],
   filterAllMatches: ["Alle in dieser Kategorie", "All in this category"],
   noFilterMatches: [
     "Keine passenden Unterhaltungen",

@@ -146,6 +146,9 @@ export interface CourseWorkspace {
   } | null;
 }
 
+export const courseMaterialLibraryKey = (actor: string) =>
+  ["course-material-library", actor] as const;
+
 export const courseWorkspaceKey = (actor: string, run: string) =>
   ["course-workspace", actor, run] as const;
 /** Own current memberships determine this hub; its actor key prevents cache reuse across accounts. */

@@ -57,7 +57,7 @@ const StandaloneSwagger = lazy(() =>
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration(?:\/mail)?|\/timetable|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration(?:\/mail)?|\/timetable|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning|submissions|evaluations))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/academy-explorer").then((module) => ({

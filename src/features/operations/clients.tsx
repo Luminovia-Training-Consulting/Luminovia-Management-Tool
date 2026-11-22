@@ -18,6 +18,7 @@ import { validZone } from "../../lib/dates";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { TableImport } from "../../components/table-import";
+import { importTableRow } from "../../components/table-import-api";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -61,6 +62,16 @@ const contactSchema = z.object({
   archived: z.boolean(),
 });
 
+function organisationPayload(values: z.infer<typeof orgSchema>) {
+  return {
+    ...values,
+    tags: values.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+  };
+}
+
 async function saveOrganisation(
   values: z.infer<typeof orgSchema>,
   id: string | null,
@@ -68,13 +79,7 @@ async function saveOrganisation(
   requireOnline();
   const { data, error } = await db().rpc("save_organisation", {
     p_id: id,
-    p_payload: {
-      ...values,
-      tags: values.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    },
+    p_payload: organisationPayload(values),
   });
   if (error) throw error;
   return data as string;
@@ -338,7 +343,9 @@ function ClientWorkspace({
           "",
         ]}
         parse={(row) => orgSchema.parse({ ...row, archived: false })}
-        save={(row) => saveOrganisation(row, null)}
+        save={(row, key) =>
+          importTableRow(key, "company", organisationPayload(row))
+        }
         refresh={refresh}
       />
       {saved && <Notice>{t("saved")}</Notice>}
@@ -470,7 +477,9 @@ function ClientWorkspace({
                 "",
               ]}
               parse={(row) => contactSchema.parse({ ...row, archived: false })}
-              save={(row) => saveContact(row, organisation.id, null)}
+              save={(row, key) =>
+                importTableRow(key, "contact", row, organisation.id)
+              }
               refresh={refresh}
             />
             <div className="operations-contact-list">

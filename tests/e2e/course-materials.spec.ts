@@ -83,7 +83,7 @@ async function upload(page: Page, name: string, bytes: Buffer, audience: "staff"
 test("the assigned lecturer can scan, share and withdraw their own course material within the audience", async ({page, browser}) => {
     test.setTimeout(150_000);
     const f = await fixture();
-    const path = `/courses/${f.run}/workspace`;
+    const path = `/courses/${f.run}/workspace#course-materials`;
     const staffName = `Fictional-staff-${f.suffix}.txt`;
     const participantName = `Fictional-course-${f.suffix}.txt`;
     const participantBytes = Buffer.from(`Fictional reviewed course material ${f.suffix}.`);
@@ -150,6 +150,25 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
         expect(file.suggestedFilename()).toBe(participantName);
         expect(await readFile(await file.path())).toEqual(participantBytes);
         await unavailable(learnerPage, learner.accessToken, staffResource.id);
+
+        const materialQuery = {p_course_id: null, p_search: f.suffix, p_category: "material", p_offset: 0};
+        expect((await checked(learner.client.rpc("search_course_materials", materialQuery), {requireData: true}))
+            .map((resource: {name: string}) => resource.name)).toEqual([participantName]);
+        await learnerPage.goto("/learning?view=materials");
+        await learnerPage.getByRole("searchbox", {name: "Nach Dateiname suchen"}).fill(f.suffix);
+        await expect(learnerPage.getByRole("button", {name: `${participantName} herunterladen`})).toBeVisible();
+        await expect(learnerPage.getByRole("button", {name: `${staffName} herunterladen`})).toHaveCount(0);
+        await learnerPage.goto(path);
+        const mobileNavigation = learnerPage.getByLabel("Kursbereich", {exact: true});
+        if ((learnerPage.viewportSize()?.width ?? Infinity) <= 850) {
+            await expect(mobileNavigation).toHaveValue("course-materials");
+            await expect(learnerPage.locator("#course-overview")).toBeHidden();
+            await mobileNavigation.selectOption("course-overview");
+            await expect(learnerPage.locator("#course-overview")).toBeVisible();
+            await expect(learnerPage.locator("#course-materials")).toBeHidden();
+            await learnerPage.locator(".course-room-mobile-navigation").getByRole("link", {name: "Materialien"}).click();
+            await expect(sharedFile).toBeVisible();
+        }
 
         const companyPage = await openAs(f.company.email);
         await expect(courseFiles(companyPage)).toBeVisible();
