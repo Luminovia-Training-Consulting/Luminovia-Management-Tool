@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Responsive UI and edition presentation
+
+- The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.
+- Compare customer-facing branding in both Academy packages and keep published settings as the default for the SMTP sender display name. Authenticated workflows, emulated viewport sizes and public production build checks have separate recorded evidence. Physical-device and independent live-customer acceptance remain open.
+
 ## Local reset, release performance and Academy operations
 
 - The local reset has a real isolated Docker regression with seeded PostgreSQL, Auth, Storage, Mailpit and existing scanner state. The default launch after confirmation replays the tracked migrations and fictional seed.

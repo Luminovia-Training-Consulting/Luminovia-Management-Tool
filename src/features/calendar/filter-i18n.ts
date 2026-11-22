@@ -10,6 +10,12 @@ const values = {
   timeGridWeek: ["Woche", "Week"],
   timeGridDay: ["Tag", "Day"],
   listMonth: ["Termine", "Agenda"],
+  calendarScope: ["Kalenderbereich", "Calendar scope"],
+  weeklyCalendar: ["Kalenderwoche", "Calendar week"],
+  scrollWeek: [
+    "Seitlich scrollen, um alle Wochentage zu sehen.",
+    "Scroll horizontally to see all days of the week.",
+  ],
   customer: ["Kunde", "Customer"],
   allCustomers: ["Alle Kunden", "All customers"],
   calendarColors: ["Kalenderfarben", "Calendar colors"],

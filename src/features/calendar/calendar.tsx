@@ -696,6 +696,7 @@ export function CalendarPage() {
       i18n.language,
     ),
   );
+  const weekView = calendarView === "timeGridWeek";
   return (
     <>
       <PageHeading
@@ -721,9 +722,14 @@ export function CalendarPage() {
       />
       <CalendarTools actor={session!.user.id} zone={zone} />
       <div className="calendar-controls">
-        <div className="segmented">
+        <div
+          className="segmented"
+          role="group"
+          aria-label={filterText("calendarScope")}
+        >
           <Button
             variant={!global ? "default" : "ghost"}
+            aria-pressed={!global}
             onClick={() => {
               setGlobal(false);
               setEventType("all");
@@ -735,6 +741,7 @@ export function CalendarPage() {
           </Button>
           <Button
             variant={global ? "default" : "ghost"}
+            aria-pressed={global}
             onClick={() => {
               setGlobal(true);
               setEventType("all");
@@ -893,75 +900,106 @@ export function CalendarPage() {
             calendarRef.current?.getApi().changeView(view);
           }}
         />
-        {/* A live timezone change can collapse distinct UTC instants in a DST
+        {weekView && (
+          <p
+            id="calendar-week-scroll-hint"
+            className="calendar-week-scroll-hint"
+          >
+            {filterText("scrollWeek")}
+          </p>
+        )}
+        <div
+          className={weekView ? "calendar-week-grid" : undefined}
+          role={weekView ? "region" : undefined}
+          aria-label={weekView ? filterText("weeklyCalendar") : undefined}
+          aria-describedby={weekView ? "calendar-week-scroll-hint" : undefined}
+          tabIndex={weekView ? 0 : undefined}
+        >
+          {/* A live timezone change can collapse distinct UTC instants in a DST
             fold. Build a new date environment from the source events instead. */}
-        <FullCalendar
-          key={zone}
-          plugins={[
-            dayGridPlugin,
-            timeGridPlugin,
-            listPlugin,
-            interactionPlugin,
-            luxonPlugin,
-          ]}
-          locale={i18n.language === "de" ? deLocale : enLocale}
-          timeZone={zone}
-          ref={calendarRef}
-          initialView={calendarView}
-          initialDate={
-            (viewAnchor?.assignment === assignment
-              ? viewAnchor.date
-              : undefined) ?? assignmentStart
-          }
-          headerToolbar={false}
-          datesSet={handleDatesSet}
-          events={events.filter(
-            (event) =>
-              (eventType === "all" || event.extendedProps.kind === eventType) &&
-              (!customer || event.extendedProps.customerKey === customer) &&
-              (!topicIds.length ||
-                event.extendedProps.topics.some((topic) =>
-                  topicIds.includes(topic.id),
-                )) &&
-              event.title
-                .toLocaleLowerCase()
-                .includes(search.trim().toLocaleLowerCase()),
-          )}
-          height="auto"
-          eventContent={({ event }) => {
-            const source = sourceEvents.get(event.id);
-            const label =
-              source &&
-              calendarFoldLabel(source.start, source.end, zone, i18n.language);
-            if (!label) return true;
-            return (
-              <>
-                <div className="fc-event-time">{label}</div>
-                <div className="fc-event-title">{event.title}</div>
-              </>
-            );
-          }}
-          dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
-          eventInteractive
-          nowIndicator
-          dayMaxEvents={3}
-          eventClick={(info) => {
-            if (info.event.extendedProps.kind === "global") {
-              info.jsEvent.preventDefault();
-              setGlobalID(info.event.id);
+          <FullCalendar
+            key={zone}
+            plugins={[
+              dayGridPlugin,
+              timeGridPlugin,
+              listPlugin,
+              interactionPlugin,
+              luxonPlugin,
+            ]}
+            locale={i18n.language === "de" ? deLocale : enLocale}
+            timeZone={zone}
+            ref={calendarRef}
+            initialView={calendarView}
+            initialDate={
+              (viewAnchor?.assignment === assignment
+                ? viewAnchor.date
+                : undefined) ?? assignmentStart
             }
-            if (info.event.extendedProps.kind === "private") {
-              const next = personal.data.find((e) => e.id === info.event.id);
-              if (open && eventDirty)
-                setDiscardAction({ kind: "event", event: next });
-              else if (!eventBusy) {
-                setSelected(next);
-                setEventDirty(false);
-                setOpen(true);
+            headerToolbar={false}
+            datesSet={handleDatesSet}
+            events={events.filter(
+              (event) =>
+                (eventType === "all" ||
+                  event.extendedProps.kind === eventType) &&
+                (!customer || event.extendedProps.customerKey === customer) &&
+                (!topicIds.length ||
+                  event.extendedProps.topics.some((topic) =>
+                    topicIds.includes(topic.id),
+                  )) &&
+                event.title
+                  .toLocaleLowerCase()
+                  .includes(search.trim().toLocaleLowerCase()),
+            )}
+            height="auto"
+            eventContent={({ event }) => {
+              const source = sourceEvents.get(event.id);
+              const label =
+                source &&
+                calendarFoldLabel(
+                  source.start,
+                  source.end,
+                  zone,
+                  i18n.language,
+                );
+              if (!label) return true;
+              return (
+                <>
+                  <div className="fc-event-time">{label}</div>
+                  <div className="fc-event-title">{event.title}</div>
+                </>
+              );
+            }}
+            dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
+            eventInteractive
+            eventDidMount={({ el, event }) => {
+              if (event.url) return;
+              // FullCalendar already activates these controls with Enter/Space,
+              // but href-less anchors otherwise expose no action to screen readers.
+              const target = el.matches("a")
+                ? el
+                : el.querySelector(".fc-list-event-title a");
+              target?.setAttribute("role", "button");
+            }}
+            nowIndicator
+            dayMaxEvents={3}
+            eventClick={(info) => {
+              if (info.event.extendedProps.kind === "global") {
+                info.jsEvent.preventDefault();
+                setGlobalID(info.event.id);
               }
-            }
-          }}
-        />
+              if (info.event.extendedProps.kind === "private") {
+                const next = personal.data.find((e) => e.id === info.event.id);
+                if (open && eventDirty)
+                  setDiscardAction({ kind: "event", event: next });
+                else if (!eventBusy) {
+                  setSelected(next);
+                  setEventDirty(false);
+                  setOpen(true);
+                }
+              }
+            }}
+          />
+        </div>
       </div>
       {global && (
         <div className="global-event-public-status">

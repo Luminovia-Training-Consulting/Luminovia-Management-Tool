@@ -496,3 +496,59 @@ test("calendar search and event type filter the current user's loaded events", a
     await page.getByLabel("Kalendertermine suchen").clear();
     await expect(beta).toBeVisible();
 });
+
+test("calendar navigation and long agenda titles stay usable on narrow phones and tablets", async ({
+    page,
+}) => {
+    const owner = await actor("Fictional responsive calendar lecturer", "lecturer");
+    const client = await signedIn(owner);
+    const start = DateTime.utc().startOf("day").plus({hours: 11});
+    const title = "Fortbildungskoordinationundprüfungsvorbereitungsworkshopabschlussdokumentation";
+    await checked(
+        client.from("personal_events").insert({
+            user_id: owner.id,
+            title,
+            starts_at: start.toISO(),
+            ends_at: start.plus({hours: 3}).toISO(),
+            time_zone: "UTC",
+        }),
+    );
+    await page.setViewportSize({width: 768, height: 900});
+    await login(page, owner.email);
+    await page.goto("/calendar");
+    const views = page.getByRole("group", {name: "Kalenderansicht", exact: true});
+    const dates = page.getByRole("group", {name: "Zeitraum wechseln", exact: true});
+    await views.getByRole("button", {name: "Termine", exact: true}).click();
+    const event = page.getByRole("button", {name: title, exact: true});
+    await expect(event).toBeVisible();
+    for (const width of [768, 320]) {
+        await page.setViewportSize({width, height: 900});
+        const nav = await dates.boundingBox();
+        const tabs = await views.boundingBox();
+        expect(nav && tabs && (
+            nav.y + nav.height <= tabs.y + 1 ||
+            nav.x + nav.width <= tabs.x + 1
+        ), `Calendar controls fit at ${width}px`).toBe(true);
+        await expect(dates.getByRole("button", {name: "Nächster Zeitraum"})).toBeInViewport();
+        expect(await event.evaluate((element) => {
+            const agenda = element.closest(".fc-list")!;
+            const table = element.closest("table")!;
+            return table.getBoundingClientRect().width <= agenda.clientWidth + 1;
+        }), `Agenda title stays inside the agenda at ${width}px`).toBe(true);
+    }
+    await event.press("Enter");
+    const appointment = page.getByRole("dialog", {name: "Privater Termin", exact: true});
+    await expect(appointment).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(appointment).toBeHidden();
+
+    await views.getByRole("button", {name: "Woche", exact: true}).click();
+    const week = page.getByRole("region", {name: "Kalenderwoche", exact: true});
+    await expect(week).toHaveAccessibleDescription(
+        "Seitlich scrollen, um alle Wochentage zu sehen.",
+    );
+    await expect(week).toHaveAttribute("tabindex", "0");
+    expect(await week.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await week.press("ArrowRight");
+    await expect.poll(() => week.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+});

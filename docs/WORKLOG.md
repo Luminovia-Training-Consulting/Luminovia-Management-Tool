@@ -1,3 +1,13 @@
+# 22 November 2026 — Responsive portal and Academy visual checks
+
+The native Chromium sweep used the local Docker application with administrator, lecturer, company and participant sessions. It covered 36 routes and 720 layout measurements at widths from 320 to 1440 CSS pixels across German, English, light and dark. On the baseline, the account menu extended off the left edge, the role-preview choices appeared below the viewport and the People administration page overflowed at 320 px. The same sweep after the fixes found no page-level horizontal overflow or clipped header panels. The mobile application exposes one search and one notification bell, and its header panels dismiss on Escape or when attention moves outside. The shared skip link stays visually hidden until keyboard focus, including when capturing a scrolled page.
+
+Calendar controls now adapt to the calendar's workspace width. Long agenda titles wrap and the explicit week view can scroll inside its own labelled region. Calendar events that open a dialog have button semantics. Both Chromium profiles passed the new header and calendar regressions through actual sign-in and service requests. The combined focused browser run passed all 12 cases. A separate calendar sweep checked eight widths in German dark and English light.
+
+Login, public demo and help were checked at five widths for both compiled Academy editions as well as the internal portal. The production packages use the customer app name, logo, icons and API title. An unset SMTP sender display name now follows the currently published Academy brand. Explicit saved or edited sender values retain precedence. The full pre-push frontend coverage run passed 1,493 tests, and the build passed the existing startup, lazy explorer and PWA budgets. The browser runs use emulated dimensions and local fictional data.
+
+The browser-loaded translation inventory contained the same 4,055 keys in German and English across 72 modules. The resource audit found no empty entries or differences in interpolation placeholders.
+
 # 22 November 2026 — Filtered settlement exports and further LMS acceptance
 
 The settlement journal filters entry type, original currency and posting status. The preview, versioned JSON, detail CSV and totals CSV use the same selection. Totals keep signed decimal values, including a reversal-only negative net. Each export rechecks current finance access. Disconnect discards the open report, and reconnect requires a new authorised request. All 29 accounting component and contract tests passed. Native desktop and mobile Chromium verified the detail and totals exports, filter isolation and denial for customer accounts with real Auth, PostgREST, Storage and ClamAV.

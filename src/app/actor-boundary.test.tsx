@@ -154,7 +154,7 @@ it("clears real Shell local search state when a native Auth event changes actor 
   await sessionEvent("SIGNED_IN", "actor-b");
   await screen.findByText("Fictional workspace");
   expect(client.getQueryData(["private", "actor-a"])).toBeUndefined();
-  expect(document.querySelector("#mobile-global-search")).toHaveValue("");
+  expect(document.querySelector("#portal-global-search")).toHaveValue("");
 });
 it("preserves protected local drafts on same-actor token refresh and rerenders", async () => {
   const { user } = setup();
