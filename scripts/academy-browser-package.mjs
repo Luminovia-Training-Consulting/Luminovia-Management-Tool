@@ -264,6 +264,7 @@ const reviewedHistoricCatalogueDigests = new Set([
   "aaddce805db2ca452464911eb2584732c9775fe1293e2ef6afa9cd6601f54765", // 1.29.0 at ef8a724f
   "357c7a0b831c57e752e1c900bc88e4907108957054e3a4a74aec53d2fa5dc26a", // 1.30.0 at 72b60eec
   "abdf4557bc499a06e85cf92bf9f900cf9ef135f21e32a72eba037906c368c0a7", // 1.31.0 at dac6ad2c
+  "7258117b1fb505f2e1a612fdc20282cc4a80c80c24f7d2e0917aeac08993b10f", // 1.32.0 at 80b21cca
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */
@@ -395,6 +396,16 @@ function validateBrowserOutput(
   );
   const apiBackend = backendUrl(brand.backend);
   const expectedApi = academyOpenApi(apiBackend, brand);
+  if (
+    api.info?.version === expectedApi.info.version &&
+    /["']\/?(?:manifest\.webmanifest|icons\/apple-touch-icon\.png)["']/.test(
+      worker,
+    )
+  ) {
+    throw new Error(
+      "The PWA cache cannot contain runtime-managed branding assets.",
+    );
+  }
   // Keep the original empty-catalogue exception exact. Nonempty catalogue
   // history requires a verified release signature in addition to its digest.
   if (apiHistory !== "none" && api.info?.version === "1.1.0") {

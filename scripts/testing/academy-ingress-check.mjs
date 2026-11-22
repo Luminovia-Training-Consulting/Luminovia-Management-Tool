@@ -192,6 +192,7 @@ try {
     XDG_CONFIG_HOME: root,
     PORTAL_CADDY_ALIAS_PROFILE: "academy_no_aliases",
     PORTAL_CADDY_PWA_PROFILE: "academy_runtime_pwa",
+    PORTAL_CADDY_ERROR_PROFILE: "academy_pwa_errors",
   };
   await exec(
     resolve(binary),

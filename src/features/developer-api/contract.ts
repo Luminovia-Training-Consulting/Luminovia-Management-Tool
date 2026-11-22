@@ -33,6 +33,7 @@ import {
   websiteEnquiryIntakePath,
 } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
+import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import {
   contractRecordsSchema,
   invoicePaymentsSchema,
@@ -1417,6 +1418,7 @@ const nativePaths = {
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
+  ...courseEvaluationPaths(false),
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,
@@ -4516,7 +4518,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.5.0",
+      version: "1.6.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

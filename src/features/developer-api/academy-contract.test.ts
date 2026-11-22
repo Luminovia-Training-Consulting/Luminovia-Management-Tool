@@ -73,6 +73,9 @@ const personalPaths = [
   "/rest/v1/rpc/academy_save_appearance",
 ] as const;
 const academyParityPaths = [
+  "/rest/v1/rpc/course_evaluations",
+  "/rest/v1/rpc/course_evaluation_comments",
+  "/rest/v1/rpc/save_course_evaluation",
   "/rest/v1/rpc/portal_access",
   "/rest/v1/rpc/authenticator_settings_available",
   "/rest/v1/rpc/course_workspace_entitlement",
@@ -196,7 +199,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.32.0");
+      expect(spec.info.version).toBe("1.33.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({

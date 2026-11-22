@@ -294,6 +294,15 @@ test("verifies the exact historic empty catalogue as an existing archive", async
   assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
 });
 
+test("rejects a current Academy worker that caches the live PWA manifest", async (t) => {
+  const { file, write } = releaseFixture(t);
+  file(
+    "sw.js",
+    'importScripts("push-sw.js"); precache("brand/academy-logo.png","icons/icon-512.png","manifest.webmanifest");',
+  );
+  await assert.rejects(write(), /runtime-managed branding assets/);
+});
+
 test("accepts an exact nonempty historical catalogue only after signature authentication", async (t) => {
   const files = releaseFixture(t);
   const {
@@ -418,6 +427,7 @@ for (const version of [
   "1.29.0",
   "1.30.0",
   "1.31.0",
+  "1.32.0",
 ]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);

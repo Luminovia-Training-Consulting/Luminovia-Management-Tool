@@ -52,6 +52,7 @@ import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
+import { CourseEvaluations } from "./course-evaluations";
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -942,6 +943,7 @@ function CourseWorkspaceLayout({
   );
   const hasActivities = learner || editor;
   const hasSubmissions = course.lms_enabled && hasActivities;
+  const hasEvaluations = course.lms_enabled && course.ended && hasActivities;
   const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
@@ -961,6 +963,9 @@ function CourseWorkspaceLayout({
     { id: "course-chat", label: t("courseChat") },
     ...(hasActivities
       ? [{ id: "course-learning", label: t("workspaceActivities") }]
+      : []),
+    ...(hasEvaluations
+      ? [{ id: "course-evaluations", label: t("evaluations") }]
       : []),
   ];
   const currentSection =
@@ -1234,6 +1239,13 @@ function CourseWorkspaceLayout({
                   <RepeatBooking course={course} actor={actor} />
                 )}
             </div>
+          )}
+          {hasEvaluations && (
+            <CourseEvaluations
+              actor={actor}
+              courseId={course.id}
+              readOnly={!canEdit}
+            />
           )}
         </div>
       </div>

@@ -346,6 +346,15 @@ beforeEach(async () => {
             next: null,
           };
           break;
+        case "course_evaluations":
+          data = {
+            completed: true,
+            writable: false,
+            targets: [],
+            mine: [],
+            summaries: [],
+          };
+          break;
         case "course_class_options":
           if (fake.foreignCourse || fake.withdrawn) error = { code: "42501" };
           data = {

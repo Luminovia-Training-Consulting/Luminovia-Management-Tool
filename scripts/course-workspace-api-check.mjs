@@ -428,6 +428,30 @@ await withApiFixture(
             comment: "Fictional practical course feedback",
         });
         assert.equal((await workspace(teacher)).feedback_summary.average, null);
+        const evaluationRead = {p_run_id: run};
+        const writeEvaluation = (who, role, kind, subject, score, comment) => documentedRpc(
+            who.client, "save_course_evaluation", {
+                ...evaluationRead, p_rater_role: role, p_subject_kind: kind,
+                p_subject_id: subject, p_score: score, p_comment: comment, p_expected_version: 0,
+            },
+        );
+        const commentRead = {
+            ...evaluationRead, p_rater_role: "learner", p_subject_kind: "lecturer", p_subject_id: teacher.id,
+        };
+        const instructorComment = "Fictional learner described the instructor's practical explanations.";
+        assert.equal((await documentedRpc(learner.client, "course_evaluations", evaluationRead)).targets.length, 2);
+        await writeEvaluation(learner, "learner", "lecturer", teacher.id, 5, instructorComment);
+        await writeEvaluation(learner, "learner", "company", org, 4, "Fictional useful course organisation");
+        await writeEvaluation(client, "company", "lecturer", teacher.id, 4, "Fictional company teaching review");
+        await writeEvaluation(teacher, "lecturer", "course", run, 3, "Fictional moderate difficulty");
+        const evaluations = await documentedRpc(learner.client, "course_evaluations", evaluationRead);
+        assert.equal(evaluations.mine.length, 2);
+        assert.equal(evaluations.summaries.length, 2);
+        assert.ok(evaluations.summaries.every((item) => item.subject_id === teacher.id && !item.can_read_comments));
+        const teacherComments = await documentedRpc(teacher.client, "course_evaluation_comments", commentRead);
+        assert.deepEqual(teacherComments.items.map(({comment}) => comment), [instructorComment]);
+        await documentedRpc(learner.client, "course_evaluation_comments", commentRead, 403, "42501");
+        assert.equal((await documentedRpc(admin.client, "course_evaluations", evaluationRead)).summaries.length, 4);
         await action(teacher, "completion_revoke", {
             id: completion,
             reason: "Fictional verification correction",
@@ -558,6 +582,7 @@ await withApiFixture(
         await checked(send(learner, otherRoom, "Fictional first company B message"));
         await eventually(() => otherEvents.length === 1, "The learner receives a live company B marker before deactivation");
         await setPremium(org, false, 1);
+        await documentedRpc(learner.client, "course_evaluations", evaluationRead, 403, "42501");
         assert.equal((await history(room)).error?.code, "42501");
         assert.equal((await send(teacher, room, "Fictional denied message")).error?.code, "42501");
         assert.equal((await download(learner, "resource", resource)).status, 403);
@@ -663,8 +688,17 @@ await withApiFixture(
             "The previously connected learner receives neither the disabled revision nor activity after withdrawal",
         );
         assert.deepEqual(peerEvents, []);
+        const {rows} = await checked(client.client.rpc("company_lecturer_blocks", {p_organisation_id: org}, {get: true}));
+        assert.equal(rows.find((row) => row.lecturer_id === teacher.id)?.blocked, false);
+        const block = {p_organisation_id: org, p_lecturer_id: teacher.id, p_blocked: true, p_expected_version: 0};
+        await documentedRpc(client.client, "set_company_lecturer_block", block);
+        assert.equal((await teacher.client.rpc("course_workspace", {p_run_id: run})).status, 403);
+        assert.equal((await teacher.client.rpc("course_chat_messages", {p_room_id: room})).status, 403);
+        assert.equal((await sql(`select status from public.job_claims where id=${q(claim)}`)).trim(), "confirmed");
+        await documentedRpc(admin.client, "set_company_lecturer_block", {...block, p_blocked: false, p_expected_version: 1});
+        assert.equal((await workspace(teacher)).id, run);
     },
 );
 console.log(
-    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, private scanned submissions, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
+    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed materials, private submissions, protected PDFs, scoped course evaluations, lecturer restrictions, private chat attachments, two-company Premium revocation and restoration, and enrolment withdrawal.",
 );

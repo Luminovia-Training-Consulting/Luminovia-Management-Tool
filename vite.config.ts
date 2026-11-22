@@ -23,11 +23,36 @@ export default defineConfig(({ mode }) => {
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
     mode === "production",
   );
-  const { brand, assets, publicDemo } = loadAcademyBrand(
+  const {
+    brand,
+    assets: brandAssets,
+    publicDemo,
+  } = loadAcademyBrand(
     process.env.PORTAL_ACADEMY_BRAND_FILE,
     resolve("public"),
   );
+  const assets = new Map(brandAssets);
   const internal = brand.edition === "internal";
+  const webManifest = {
+    name: brand.name,
+    short_name: brand.shortName,
+    description: internal ? "Training & Consulting · Portal" : brand.name,
+    lang: brand.defaultLanguage,
+    start_url: "/",
+    scope: "/",
+    display: "standalone" as const,
+    theme_color: brand.themeColor,
+    background_color: "#f8f5ee",
+    icons: [...brand.pwaIcons],
+  };
+  if (!internal) {
+    // The PWA plugin automatically precaches the manifest it emits. Academies
+    // serve the live manifest through ingress and package these bytes for fallback.
+    assets.set(
+      "manifest.webmanifest",
+      Buffer.from(JSON.stringify(webManifest) + "\n"),
+    );
+  }
   const internalOnlyModule =
     /\/(?:data\/native-rpc\.generated\.json|src\/(?:app\/portal-routes\.tsx|features\/(?:(?:accounting|commercial|jobs|replacements)\/|developer-api\/(?:accounting-contract|commercial-records-contract|contract|portal-explorer|native-contract)\.|help\/catalog\.ts|learning\/destinations\.tsx|workbench\/finance-)))/;
   const escapeHtml = (value: string) =>
@@ -94,6 +119,10 @@ export default defineConfig(({ mode }) => {
             .replace(
               "Luminovia Portal – gemeinsam lehren, lernen und organisieren.",
               escapeHtml(description),
+            )
+            .replace(
+              "</head>",
+              '  <link rel="manifest" href="/manifest.webmanifest">\n  </head>',
             );
           return publicDemo
             ? branded.replace(
@@ -116,7 +145,9 @@ export default defineConfig(({ mode }) => {
                 ? "font/woff2"
                 : path.endsWith(".js")
                   ? "text/javascript"
-                  : "text/plain; charset=utf-8";
+                  : path === "manifest.webmanifest"
+                    ? "application/manifest+json"
+                    : "text/plain; charset=utf-8";
             res.setHeader("Content-Type", contentType);
             res.setHeader("X-Content-Type-Options", "nosniff");
             res.end(req.method === "HEAD" ? undefined : bytes);
@@ -192,18 +223,7 @@ export default defineConfig(({ mode }) => {
         ...(internal && {
           includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"],
         }),
-        manifest: {
-          name: brand.name,
-          short_name: brand.shortName,
-          description: internal ? "Training & Consulting · Portal" : brand.name,
-          lang: brand.defaultLanguage,
-          start_url: "/",
-          scope: "/",
-          display: "standalone",
-          theme_color: brand.themeColor,
-          background_color: "#f8f5ee",
-          icons: [...brand.pwaIcons],
-        },
+        manifest: internal ? webManifest : false,
         workbox: {
           importScripts: ["/push-sw.js"],
 
@@ -220,12 +240,18 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           runtimeCaching: [],
           navigateFallbackDenylist: [
+            /^\/backend(?:\/|$)/,
             /^\/auth\//,
             /^\/rest\//,
             /^\/storage\//,
             /^\/functions\//,
             /^\/realtime\//,
             /^\/api\/openapi\.json$/,
+            ...(!internal
+              ? [
+                  /^\/(?:manifest\.webmanifest|icons\/apple-touch-icon\.png)(?:\?|$)/,
+                ]
+              : []),
             ...(!publicDemo ? [/^\/demo(?:\/|$)/] : []),
           ],
         },

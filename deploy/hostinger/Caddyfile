@@ -34,6 +34,9 @@
 (portal_static_pwa) {
 }
 
+(portal_standard_errors) {
+}
+
 # Dedicated installations may overlay these public assets while the signed
 # package stays byte-exact and readable through the package query.
 (academy_pwa_asset) {
@@ -83,8 +86,7 @@
 	}
 }
 
-{$PORTAL_DOMAIN} {
-	encode zstd gzip
+(academy_pwa_errors) {
 	handle_errors 5xx {
 		@academyPwaFallback vars academy_pwa_static_fallback true
 		route @academyPwaFallback {
@@ -98,6 +100,11 @@
 			}
 		}
 	}
+}
+
+{$PORTAL_DOMAIN} {
+	encode zstd gzip
+	import {$PORTAL_CADDY_ERROR_PROFILE:portal_standard_errors}
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
