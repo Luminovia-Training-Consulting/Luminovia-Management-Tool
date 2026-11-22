@@ -49,6 +49,7 @@ import {
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
 import { validZone, zonedInstant, zonedInstantForEdit } from "../../lib/dates";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Dialog } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
@@ -59,6 +60,7 @@ import {
   ErrorState,
   Field,
   Loading,
+  NextPageError,
   Notice,
   PageHeading,
 } from "../../components/common";
@@ -420,7 +422,9 @@ export function CalendarPage() {
     enabled: global,
   });
   const [globalID, setGlobalID] = useState<string | null>(null);
-  const globalRows = globals.isError
+  const retryGlobalPage = canRetryNextPage(globals);
+  const globalsFailed = globals.isError && !retryGlobalPage;
+  const globalRows = globalsFailed
     ? []
     : [
         ...new Map(
@@ -512,11 +516,13 @@ export function CalendarPage() {
   const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
   const zone = displayZone || profileZone;
   const assignment = calendarParams.get("assignment");
+  if (viewAnchor && viewAnchor.assignment !== assignment)
+    setViewAnchor(undefined);
   const assignmentStart = claims.data
     ?.find((claim) => claim.job_id === assignment)
     ?.assignment_sessions.map((session) => session.starts_at)
     .filter((value) => Number.isFinite(Date.parse(value)))
-    .sort()[0];
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
   if (
     claims.isPending ||
     personal.isPending ||
@@ -920,7 +926,7 @@ export function CalendarPage() {
           {/* A live timezone change can collapse distinct UTC instants in a DST
             fold. Build a new date environment from the source events instead. */}
           <FullCalendar
-            key={zone}
+            key={`${zone}/${assignment ?? ""}`}
             plugins={[
               dayGridPlugin,
               timeGridPlugin,
@@ -1016,20 +1022,31 @@ export function CalendarPage() {
           )}
           {globals.isPending ? (
             <Loading />
-          ) : globals.isError ? (
+          ) : globalsFailed ? (
             <ErrorState retry={() => void globals.refetch()} />
           ) : (
             <>
               <p role="status">
                 {publicationText("loaded", { count: globalRows.length })}
               </p>
-              {globals.hasNextPage && (
-                <Button
-                  disabled={!online || globals.isFetchingNextPage}
-                  onClick={() => void globals.fetchNextPage()}
-                >
-                  {publicationText("more")}
-                </Button>
+              {retryGlobalPage ? (
+                <NextPageError
+                  retry={() =>
+                    void globals.fetchNextPage({ cancelRefetch: false })
+                  }
+                  disabled={!online || globals.isFetching}
+                />
+              ) : (
+                globals.hasNextPage && (
+                  <Button
+                    disabled={!online || globals.isFetching}
+                    onClick={() =>
+                      void globals.fetchNextPage({ cancelRefetch: false })
+                    }
+                  >
+                    {publicationText("more")}
+                  </Button>
+                )
               )}
             </>
           )}

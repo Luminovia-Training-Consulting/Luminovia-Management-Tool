@@ -35,6 +35,7 @@ const fixture = vi.hoisted(() => ({
     version: number;
     can_upload: boolean;
   }[],
+  nextPageForbidden: false,
   calls: [] as {
     p_course_id?: string;
     p_search?: string;
@@ -53,6 +54,8 @@ vi.mock("../../lib/supabase", () => ({
         if (name === "search_course_materials") {
           fixture.calls.push(args);
           const offset = args.p_offset ?? 0;
+          if (offset && fixture.nextPageForbidden)
+            return { data: null, error: { code: "42501" }, status: 403 };
           const matches = fixture.materials.filter(
             (file) =>
               (!args.p_course_id || args.p_course_id === file.course_id) &&
@@ -91,6 +94,7 @@ beforeEach(async () => {
   fixture.invitations = [];
   fixture.materials = [];
   fixture.calls = [];
+  fixture.nextPageForbidden = false;
   const base = {
     description: "",
     syllabus: "",
@@ -334,4 +338,33 @@ it("paginates matching files and uses the result to filter a course outside the 
     screen.queryByRole("link", { name: "Neue Kursdatei freigeben" }),
   ).toBeNull();
   expect(fixture.calls.at(-1)?.p_course_id).toBe("older");
+});
+
+it("hides the material already shown when a continuation reports permission revocation", async () => {
+  fixture.materials = Array.from({ length: 25 }, (_, index) => ({
+    id: String(index),
+    course_id: "older",
+    course_title: "Restricted course",
+    name: `Restricted-${index}.pdf`,
+    category: "material",
+    version: 1,
+    can_upload: false,
+  }));
+  fixture.nextPageForbidden = true;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/learning?view=materials"]}>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Restricted-0.pdf")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Weitere Dateien laden" }),
+  );
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(screen.queryByText("Restricted-0.pdf")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Erneut versuchen" }),
+  ).toBeVisible();
 });

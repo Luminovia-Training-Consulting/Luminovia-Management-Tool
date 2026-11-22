@@ -4,6 +4,7 @@
  */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 
 import {
@@ -61,7 +62,7 @@ export const notificationInboxQuery = (actor: string, unreadOnly: boolean) =>
     queryKey: [...notificationKeys.all(actor), "inbox", unreadOnly],
     initialPageParam: null as Cursor | null,
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("notification_inbox", {
           p_unread_only: unreadOnly,
           p_before_at: pageParam?.at ?? null,
@@ -69,7 +70,7 @@ export const notificationInboxQuery = (actor: string, unreadOnly: boolean) =>
           p_limit: 40,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return inboxPageSchema.parse(data);
     },
     getNextPageParam: (page): Cursor | undefined => {

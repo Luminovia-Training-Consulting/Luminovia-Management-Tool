@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Retry, calendar links and personal settings
+
+- Preserve visible pages after temporary continuation failures in search, file discovery, course materials, the notification inbox and global calendar. Retry the same cursor. Discard visible results on access errors and failed full rechecks.
+- Reopen the calendar on the exact earliest confirmed session when changing assignment links within the page. Recover learning analytics to the last valid page after the available course count shrinks.
+- Preserve existing biography translations on unrelated profile edits. Use the shared IANA zone catalogue for quiet hours and retain valid saved aliases.
+
 ## Spreadsheet imports, course materials and navigation
 
 - Preserve each spreadsheet preview on a failed write. Resume at the outstanding row using a caller-scoped receipt committed with the existing create operation. Keep the calendar's atomic and deduplicated batch import.

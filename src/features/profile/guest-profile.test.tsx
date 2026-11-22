@@ -1,6 +1,14 @@
 /** Guest settings render only own profile/Auth controls and do not request operational data. */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {
+  cleanup,
+  render,
+  screen,
+  within,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
@@ -87,5 +95,62 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   expect(client.getQueryState(["topics"])?.fetchStatus).toBe("idle");
   expect(client.getQueryState(["expertise", "guest-own"])?.fetchStatus).toBe(
     "idle",
+  );
+});
+
+it("saves a new time zone without overwriting an existing biography in another language", async () => {
+  await i18n.changeLanguage("de");
+  fake.rpc.mockResolvedValue({
+    data: { username: "fictional-guest", version: 1 },
+    error: null,
+  });
+  const update = vi.fn(() => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({ data: { id: "guest-own" }, error: null }),
+      }),
+    }),
+  }));
+  fake.from.mockImplementation(() => ({
+    update,
+    select: () => ({
+      eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }),
+    }),
+  }));
+  const profile = {
+    id: "guest-own",
+    luminovia_user_id: "LV-0001-0002-0003-0004-0005",
+    display_name: "Fictional Guest",
+    phone: "",
+    time_zone: "Europe/Berlin",
+    bio_de: "Deutscher Profiltext",
+    bio_en: "A different English profile",
+    active: true,
+  };
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  client.setQueryData(["profile", "guest-own"], profile);
+  client.setQueryData(["user-roles", "guest-own"], ["guest"]);
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Zeitzone" }),
+    "Australia/Adelaide",
+  );
+  await user.click(screen.getByRole("button", { name: "Profil speichern" }));
+  await waitFor(() =>
+    expect(update).toHaveBeenCalledWith({
+      display_name: "Fictional Guest",
+      phone: "",
+      time_zone: "Australia/Adelaide",
+      locale: "de",
+    }),
   );
 });

@@ -1054,6 +1054,7 @@ it.each(["back", "programmatic"] as const)(
 
 it("centres a job deep link only on an own confirmed assignment session", async () => {
   const jobID = "d7000000-0000-4000-8000-000000000001";
+  const secondJob = "d7000000-0000-4000-8000-000000000002";
   state.claims = [
     {
       id: "claim",
@@ -1063,6 +1064,22 @@ it("centres a job deep link only on an own confirmed assignment session", async 
           id: "session",
           starts_at: "2060-01-01T08:00:00Z",
           ends_at: "2060-01-01T10:00:00Z",
+        },
+        {
+          id: "earlier",
+          starts_at: "2060-01-01T09:00:00+10:00",
+          ends_at: "2060-01-01T11:00:00+10:00",
+        },
+      ],
+    },
+    {
+      id: "second-claim",
+      job_id: secondJob,
+      assignment_sessions: [
+        {
+          id: "second-session",
+          starts_at: "2060-09-02T08:00:00Z",
+          ends_at: "2060-09-02T10:00:00Z",
         },
       ],
     },
@@ -1088,25 +1105,28 @@ it("centres a job deep link only on an own confirmed assignment session", async 
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const view = render(
+  render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/calendar?assignment=${jobID}`]}>
         <CalendarPage />
+        <Link to={`/calendar?assignment=${secondJob}`}>Another assignment</Link>
+        <Link to="/calendar?assignment=unrelated">Unknown assignment</Link>
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  await screen.findByRole("link", { name: "Fictional own job" });
-  expect(state.initialDate).toBe("2060-01-01T08:00:00Z");
-  view.unmount();
-  state.initialDate = undefined;
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/calendar?assignment=unrelated"]}>
-        <CalendarPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
+  await screen.findAllByRole("link", { name: "Fictional own job" });
+  expect(state.initialDate).toBe("2060-01-01T09:00:00+10:00");
+  const prior = screen
+    .getByTestId("calendar-engine")
+    .getAttribute("data-instance");
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("link", { name: "Another assignment" }));
+  expect(state.initialDate).toBe("2060-09-02T08:00:00Z");
+  expect(screen.getByTestId("calendar-engine")).not.toHaveAttribute(
+    "data-instance",
+    prior,
   );
-  await screen.findByRole("link", { name: "Fictional own job" });
+  await user.click(screen.getByRole("link", { name: "Unknown assignment" }));
   expect(state.initialDate).toBeUndefined();
   client.clear();
 });

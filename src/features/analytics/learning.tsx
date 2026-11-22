@@ -45,6 +45,10 @@ import "./learning-i18n";
 const presets = ["around", "historyYear", "nextQuarter"] as const;
 const coursesPerPage = 25;
 
+function learningReportPages(total: number) {
+  return Math.max(1, Math.ceil(total / coursesPerPage));
+}
+
 function LearningReport({
   report,
   page,
@@ -73,7 +77,7 @@ function LearningReport({
       .toLocaleString({ month: "short", year: "2-digit" }),
   );
   const { totals, courses } = report;
-  const pages = Math.max(1, Math.ceil(totals.courses / coursesPerPage));
+  const pages = learningReportPages(totals.courses);
   const counts: ChartSeries[] = [
     {
       name: t("finished"),
@@ -308,6 +312,13 @@ function LearningAnalyticsView({
     }),
     enabled: Boolean(scope),
   });
+  const lastPage = query.isSuccess
+    ? learningReportPages(query.data.totals.courses)
+    : page;
+  if (page > lastPage) {
+    setPage(lastPage);
+    return <Loading />;
+  }
   if (!scope) return <p className="panel">{t("unavailable")}</p>;
 
   function searchCourses(event: FormEvent<HTMLFormElement>) {

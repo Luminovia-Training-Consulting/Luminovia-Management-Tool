@@ -9,8 +9,12 @@ import {
   ErrorState,
   Field,
   Loading,
+  NextPageError,
+  Notice,
   PageHeading,
 } from "../../components/common";
+import { useOnline } from "../../lib/online";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { unifiedSearchQuery } from "./unified-api";
 import { searchKinds } from "./unified-schema";
 import "./unified-i18n";
@@ -69,13 +73,18 @@ function SearchForm({
 export function PortalSearch() {
   const { t } = useTranslation("unifiedSearch");
   const { session } = useAuth();
+  const online = useOnline();
   const [params, setParams] = useSearchParams();
   const q = (params.get("q") ?? "").trim().slice(0, 100),
     rawKind = params.get("kind") ?? "",
     kind = searchKinds.includes(rawKind as (typeof searchKinds)[number])
       ? rawKind
       : "";
-  const query = useInfiniteQuery(unifiedSearchQuery(session!.user.id, q, kind));
+  const query = useInfiniteQuery({
+    ...unifiedSearchQuery(session!.user.id, q, kind),
+    enabled: online && q.length >= 2,
+  });
+  const retryNext = canRetryNextPage(query);
   const rows = new Map<
     string,
     NonNullable<typeof query.data>["pages"][number]["items"][number]
@@ -96,9 +105,11 @@ export function PortalSearch() {
         }
       />
       {q.length >= 2 &&
-        (query.isPending ? (
+        (!online ? (
+          <Notice>{t("offline")}</Notice>
+        ) : query.isPending ? (
           <Loading />
-        ) : query.isError ? (
+        ) : query.isError && !retryNext ? (
           <ErrorState retry={() => void query.refetch()} />
         ) : rows.size ? (
           <>
@@ -113,14 +124,23 @@ export function PortalSearch() {
                 </li>
               ))}
             </ul>
-            {query.hasNextPage && (
-              <Button
-                variant="secondary"
-                disabled={query.isFetchingNextPage}
-                onClick={() => void query.fetchNextPage()}
-              >
-                {t("more")}
-              </Button>
+            {retryNext ? (
+              <NextPageError
+                retry={() => void query.fetchNextPage({ cancelRefetch: false })}
+                disabled={query.isFetching}
+              />
+            ) : (
+              query.hasNextPage && (
+                <Button
+                  variant="secondary"
+                  disabled={query.isFetching}
+                  onClick={() =>
+                    void query.fetchNextPage({ cancelRefetch: false })
+                  }
+                >
+                  {t("more")}
+                </Button>
+              )
             )}
           </>
         ) : (

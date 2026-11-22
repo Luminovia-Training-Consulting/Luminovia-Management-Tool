@@ -8,7 +8,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  NextPageError,
+  Notice,
+} from "../../components/common";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { useOnline } from "../../lib/online";
 import {
   discoveredDocuments,
@@ -64,6 +71,7 @@ export function DocumentExplorer({
       enabled: online,
     }),
     rows = discoveredDocuments(query.data?.pages);
+  const retryNext = canRetryNextPage(query);
   // Query-state counters advance even if structurally shared data or the clock
   // stays equal. A pending key is not a successful authorisation epoch.
   const state = client.getQueryState(options.queryKey);
@@ -126,7 +134,7 @@ export function DocumentExplorer({
         </Button>
       </div>
       {!online && <Notice kind="error">{t("discoveryOffline")}</Notice>}
-      {query.isError ? (
+      {query.isError && !retryNext ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : (
         <>
@@ -146,15 +154,28 @@ export function DocumentExplorer({
               <span role="status">
                 {t("loadedFiles", { count: rows.length })}
               </span>
-              {query.hasNextPage && (
-                <Button
+              {retryNext ? (
+                <NextPageError
+                  retry={() =>
+                    void query.fetchNextPage({ cancelRefetch: false })
+                  }
                   disabled={!online || query.isFetching}
-                  onClick={() => void query.fetchNextPage()}
-                >
-                  {t(
-                    query.isFetchingNextPage ? "loadingFiles" : "loadMoreFiles",
-                  )}
-                </Button>
+                />
+              ) : (
+                query.hasNextPage && (
+                  <Button
+                    disabled={!online || query.isFetching}
+                    onClick={() =>
+                      void query.fetchNextPage({ cancelRefetch: false })
+                    }
+                  >
+                    {t(
+                      query.isFetchingNextPage
+                        ? "loadingFiles"
+                        : "loadMoreFiles",
+                    )}
+                  </Button>
+                )
               )}
             </div>
           )}

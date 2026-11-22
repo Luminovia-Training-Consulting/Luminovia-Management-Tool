@@ -45,6 +45,30 @@ export function ErrorState({ retry }: { retry?: () => void }) {
   );
 }
 
+/** Offer a continuation retry next to the individually confirmed pages. */
+export function NextPageError({
+  retry,
+  disabled,
+}: {
+  retry: () => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="state error" role="alert">
+      <p>{t("nextPageUnavailable")}</p>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={retry}
+        disabled={disabled}
+      >
+        {t("retryNextPage")}
+      </Button>
+    </div>
+  );
+}
+
 /** The native ID/ARIA attributes that Field may augment for accessible labelling. */
 type FieldControlProps = Pick<
   AriaAttributes,

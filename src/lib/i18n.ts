@@ -349,6 +349,14 @@ const pairs: Record<string, [string, string]> = {
     "Die Anfrage konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
     "The request could not be completed. Please try again.",
   ],
+  nextPageUnavailable: [
+    "Weitere Ergebnisse konnten gerade nicht geladen werden.",
+    "More results could not be loaded right now.",
+  ],
+  retryNextPage: [
+    "Weitere Ergebnisse erneut laden",
+    "Retry loading more results",
+  ],
   retry: ["Erneut versuchen", "Try again"],
   offline: [
     "Du bist offline. Für aktuelle Daten und Änderungen ist eine Verbindung erforderlich.",

@@ -2,8 +2,14 @@ import { useDeferredValue, useId, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ErrorState, Field, Loading } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  NextPageError,
+} from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { canRetryNextPage, throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import {
   courseMaterialLibraryKey,
@@ -41,7 +47,7 @@ export function MaterialLibrary({
   const query = useInfiniteQuery({
     queryKey: [...courseMaterialLibraryKey(actor), courseId, needle, category],
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("search_course_materials", {
           p_course_id: courseId || null,
           p_search: needle,
@@ -49,7 +55,7 @@ export function MaterialLibrary({
           p_offset: pageParam,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return data as Material[];
     },
     initialPageParam: 0,
@@ -59,6 +65,7 @@ export function MaterialLibrary({
     refetchOnMount: "always",
     refetchInterval: 30_000,
   });
+  const retryNext = canRetryNextPage(query);
   const groups = new Map<string, Material[]>();
   const seen = new Set<string>();
   for (const page of query.data?.pages ?? []) {
@@ -121,7 +128,7 @@ export function MaterialLibrary({
           </select>
         </Field>
       </div>
-      {query.isError && !query.isFetchNextPageError ? (
+      {query.isError && !retryNext ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : query.isPending ||
         !query.isFetchedAfterMount ||
@@ -176,14 +183,18 @@ export function MaterialLibrary({
           );
         })
       )}
-      {query.isFetchNextPageError ? (
-        <ErrorState retry={() => void query.fetchNextPage()} />
+      {retryNext ? (
+        <NextPageError
+          retry={() => void query.fetchNextPage({ cancelRefetch: false })}
+          disabled={query.isFetching}
+        />
       ) : (
+        !query.isError &&
         query.hasNextPage && (
           <Button
             variant="secondary"
-            disabled={query.isFetchingNextPage}
-            onClick={() => void query.fetchNextPage()}
+            disabled={query.isFetching}
+            onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
           >
             {t("materialMoreFiles")}
           </Button>

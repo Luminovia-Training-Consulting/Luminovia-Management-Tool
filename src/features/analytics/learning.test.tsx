@@ -69,10 +69,16 @@ const report: LearningAnalyticsReport = {
   ],
 };
 
-function open(capabilities: LearningAnalyticsAccess) {
-  rpc.mockImplementation((name: string) => ({
+function open(
+  capabilities: LearningAnalyticsAccess,
+  pageReport: (page: number) => LearningAnalyticsReport = () => report,
+) {
+  rpc.mockImplementation((name: string, args?: { p_page: number }) => ({
     abortSignal: async () => ({
-      data: name === "learning_analytics_access" ? capabilities : report,
+      data:
+        name === "learning_analytics_access"
+          ? capabilities
+          : pageReport(args?.p_page ?? 1),
       error: null,
     }),
   }));
@@ -157,4 +163,30 @@ it("does not request a course report when the account has no reporting scope", a
     "LMS analytics are currently unavailable for your role.",
   );
   expect(rpc).toHaveBeenCalledExactlyOnceWith("learning_analytics_access");
+});
+
+it("returns to a valid page if the course count drops while changing pages", async () => {
+  let removed = false;
+  open(access, (page) => {
+    if (page === 2) removed = true;
+    return removed
+      ? {
+          ...report,
+          totals: { ...report.totals, courses: 1 },
+          courses: page === 1 ? report.courses : [],
+        }
+      : report;
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Next page" }));
+  expect(
+    await screen.findByRole("link", { name: "Fictional Linux training" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Next page" }),
+  ).not.toBeInTheDocument();
+  const requests = rpc.mock.calls.filter(
+    ([name]) => name === "learning_analytics_report",
+  );
+  expect(requests.map(([, args]) => args.p_page)).toEqual([1, 2, 1]);
 });

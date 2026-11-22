@@ -58,6 +58,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const online = useOnline();
   const client = useQueryClient();
   const [done, setDone] = useState(false);
+  const biography = profile.bio_de || profile.bio_en || "";
   const {
     register,
     handleSubmit,
@@ -66,16 +67,18 @@ function ProfileForm({ profile }: { profile: Profile }) {
     resolver: zodResolver(schema),
     defaultValues: {
       ...profile,
-      bio_de: profile.bio_de || profile.bio_en || "",
+      bio_de: biography,
       phone: profile.phone ?? "",
     },
   });
   const mutation = useMutation({
-    mutationFn: async (values: z.infer<typeof schema>) => {
+    mutationFn: async ({ bio_de, ...values }: z.infer<typeof schema>) => {
       requireOnline();
+      const biographyUpdate =
+        bio_de === biography ? {} : { bio_de, bio_en: bio_de };
       const { data, error } = await db()
         .from("profiles")
-        .update({ ...values, bio_en: values.bio_de, locale: i18n.language })
+        .update({ ...values, ...biographyUpdate, locale: i18n.language })
         .eq("id", profile.id)
         .select("id")
         .single();

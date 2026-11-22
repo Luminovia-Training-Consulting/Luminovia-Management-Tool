@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { useId } from "react";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { useAuth } from "../auth/auth-context";
@@ -30,7 +31,7 @@ function QuietHoursForm({
   const formId = useId();
   const online = useOnline();
   const client = useQueryClient();
-  const { register, handleSubmit, reset, formState } =
+  const { control, register, handleSubmit, reset, formState } =
     useForm<AttentionPreferences>({
       resolver: zodResolver(attentionSchema),
       defaultValues: initial,
@@ -69,9 +70,17 @@ function QuietHoursForm({
           <Field id={`${formId}-end`} label={t("end")}>
             <input type="time" step={60} required {...register("end_time")} />
           </Field>
-          <Field id={`${formId}-zone`} label={t("zone")}>
-            <input required maxLength={100} {...register("time_zone")} />
-          </Field>
+          <Controller
+            control={control}
+            name="time_zone"
+            render={({ field }) => (
+              <Field id={`${formId}-zone`} label={t("zone")}>
+                <select required {...field}>
+                  <TimeZoneOptions current={field.value} />
+                </select>
+              </Field>
+            )}
+          />
         </div>
         <p>{t("interval")}</p>
       </fieldset>

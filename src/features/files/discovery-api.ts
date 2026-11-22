@@ -1,6 +1,7 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import type { PortalDocument } from "./api";
@@ -31,7 +32,7 @@ export const documentDiscoveryQuery = (
     initialPageParam: null as z.infer<typeof documentCursorSchema> | null,
     queryFn: async ({ pageParam, signal }) => {
       requireOnline();
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("document_discovery", {
           p_search: filters.search,
           p_tag: filters.tag,
@@ -44,7 +45,7 @@ export const documentDiscoveryQuery = (
           p_limit: 40,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return documentDiscoveryPageSchema.parse(data);
     },
     getNextPageParam: (page) =>

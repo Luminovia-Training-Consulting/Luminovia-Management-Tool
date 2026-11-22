@@ -23,6 +23,7 @@ import { Button } from "../../components/ui/button";
 import {
   ErrorState,
   Loading,
+  NextPageError,
   Notice,
   PageHeading,
 } from "../../components/common";
@@ -34,6 +35,7 @@ import {
 import { Preferences } from "../../components/preferences";
 import { saveUiPreferences } from "../../lib/ui-preferences-api";
 import { WelcomeGuideEntry } from "../onboarding/welcome";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
   mergeNotificationPages,
@@ -88,8 +90,10 @@ export function NotificationsPage({
   const awaitingAcademy = Boolean(
     academy && query.isFetching && !query.isFetchedAfterMount,
   );
+  const retryNext = canRetryNextPage(query);
+  const inboxFailed = query.isError && !retryNext;
   const first =
-    online && !query.isError && !awaitingAcademy
+    online && !inboxFailed && !awaitingAcademy
       ? query.data?.pages[0]
       : undefined;
   const loadedItems = mergeNotificationPages(query.data?.pages);
@@ -109,7 +113,7 @@ export function NotificationsPage({
         </div>
       )}
       <div className="panel inbox-toolbar">
-        <label htmlFor="inbox-filter">{t("title")}</label>
+        <label htmlFor="inbox-filter">{t("readFilter")}</label>
         <select
           id="inbox-filter"
           value={unreadOnly ? "unread" : "all"}
@@ -125,7 +129,7 @@ export function NotificationsPage({
           <Button
             variant="secondary"
             disabled={
-              !online || mark.isPending || !first?.unread_count || query.isError
+              !online || mark.isPending || !first?.unread_count || inboxFailed
             }
             onClick={() =>
               mark.mutate({ ids: null, before: first!.as_of, read: true })
@@ -157,7 +161,7 @@ export function NotificationsPage({
         <Notice>{t("offlineInbox")}</Notice>
       ) : query.isPending || awaitingAcademy ? (
         <Loading />
-      ) : query.isError ? (
+      ) : inboxFailed ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : !items.length ? (
         <div className="empty-state">{t("empty")}</div>
@@ -192,14 +196,23 @@ export function NotificationsPage({
                 />
               ))}
           </ul>
-          {query.hasNextPage && (
-            <Button
-              variant="secondary"
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              {t("more")}
-            </Button>
+          {retryNext ? (
+            <NextPageError
+              retry={() => void query.fetchNextPage({ cancelRefetch: false })}
+              disabled={!online || query.isFetching}
+            />
+          ) : (
+            query.hasNextPage && (
+              <Button
+                variant="secondary"
+                disabled={!online || query.isFetching}
+                onClick={() =>
+                  void query.fetchNextPage({ cancelRefetch: false })
+                }
+              >
+                {t("more")}
+              </Button>
+            )
           )}
         </section>
       )}

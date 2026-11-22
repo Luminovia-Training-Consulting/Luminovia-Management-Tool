@@ -1,6 +1,7 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, type QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { validZone, resolveScheduleWindow } from "../../lib/dates";
@@ -43,7 +44,7 @@ export const globalEventsQuery = (
     queryKey: ["global-events", actor, from, to, manage, search],
     initialPageParam: null as { at: string; id: string } | null,
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("global_calendar_events", {
           p_from: from,
           p_to: to,
@@ -54,7 +55,7 @@ export const globalEventsQuery = (
           p_limit: 50,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return globalEventsPageSchema.parse(data);
     },
     getNextPageParam: (p) =>

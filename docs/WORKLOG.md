@@ -1,3 +1,9 @@
+# 23 November 2026 — Portal recovery and settings audit
+
+Search, the notification inbox, file discovery, the material library and global calendar retain confirmed rows on a temporary continuation error and retry the same cursor. Permission failures still hide the results. The search shows a clear offline state. The personal calendar recentres on the earliest actual instant when the assignment link changes, and learning analytics returns to the last available page when its result set shrinks.
+
+Profile updates preserve existing biographies when another setting changes. Quiet hours reuse the shared time zone selector, including valid saved aliases. Tests cover temporary failure, permission revocation, network changes, narrowed results, calendar navigation and preference saves. All 1,564 Vitest cases passed, alongside TypeScript, lint, formatting, reachability and production build budgets. The authenticated browser suite could not start because the existing test stack occupies port 55322.
+
 # 23 November 2026 — Resumable imports, material search and daily navigation
 
 Spreadsheet previews retain saved and outstanding rows after a failure. Retrying an unconfirmed row uses the same key. The database records the receipt and the existing permission-checked create in one transaction. The material library searches all currently authorised courses by file name, course and category. Mobile course rooms show the selected area and keep draft state and direct links. The chat directory remembers per-account filters in the browser and combines unread counts and manual unread flags.

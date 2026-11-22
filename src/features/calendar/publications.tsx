@@ -1,3 +1,4 @@
+import { canRetryNextPage } from "../../lib/paged-read";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useState } from "react";
@@ -12,7 +13,13 @@ import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  NextPageError,
+  Notice,
+} from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
 import { saveBlob } from "../../lib/blob-download";
@@ -245,6 +252,7 @@ export function GlobalEventManagement({
   const records = useInfiniteQuery(
     globalEventsQuery(actor, from, to, true, search),
   );
+  const retryNext = canRetryNextPage(records);
   const lost =
     isDatabasePermissionDenied(records.error) ||
     isDatabasePermissionDenied(records.failureReason);
@@ -341,7 +349,7 @@ export function GlobalEventManagement({
       {change.isError && <Notice kind="error">{t("error")}</Notice>}
       {records.isPending ? (
         <Loading />
-      ) : records.isError ? (
+      ) : records.isError && !retryNext ? (
         <ErrorState retry={() => void refresh()} />
       ) : (
         <>
@@ -411,13 +419,22 @@ export function GlobalEventManagement({
               </article>
             ))}
           </div>
-          {records.hasNextPage && (
-            <Button
-              disabled={!online || records.isFetchingNextPage}
-              onClick={() => void records.fetchNextPage()}
-            >
-              {t("more")}
-            </Button>
+          {retryNext ? (
+            <NextPageError
+              retry={() => void records.fetchNextPage({ cancelRefetch: false })}
+              disabled={!online || records.isFetching}
+            />
+          ) : (
+            records.hasNextPage && (
+              <Button
+                disabled={!online || records.isFetching}
+                onClick={() =>
+                  void records.fetchNextPage({ cancelRefetch: false })
+                }
+              >
+                {t("more")}
+              </Button>
+            )
           )}
         </>
       )}

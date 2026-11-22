@@ -164,6 +164,63 @@ function view(component: React.ReactNode, initialEntries = ["/"]) {
   );
 }
 
+it("keeps confirmed inbox rows visible after a temporary continuation failure and retries the same cursor", async () => {
+  const normal = state.rpc.getMockImplementation()!;
+  const page = Array.from({ length: 40 }, (_, index) => ({
+    ...notice,
+    id: `fe82d6cc-91ef-4a98-8a59-${String(index).padStart(12, "0")}`,
+    title: `Inbox row ${index}`,
+  }));
+  let fail = true;
+  state.rpc.mockImplementation((name, args) => {
+    if (name !== "notification_inbox") return normal(name, args);
+    if (args?.p_before_id && fail) {
+      fail = false;
+      return {
+        abortSignal: async () => ({
+          status: 503,
+          data: null,
+          error: { code: "" },
+        }),
+      };
+    }
+    return {
+      abortSignal: async () => ({
+        status: 200,
+        error: null,
+        data: {
+          items: args?.p_before_id
+            ? [{ ...notice, title: "Older scoped notification" }]
+            : page,
+          unread_count: 41,
+          as_of: "2026-11-15T11:00:00Z",
+        },
+      }),
+    };
+  });
+  view(<NotificationsPage />);
+  const user = userEvent.setup();
+  const row = await screen.findByText("Inbox row 0");
+  await user.click(
+    screen.getByRole("button", { name: "Weitere Meldungen laden" }),
+  );
+  const retry = await screen.findByRole("button", {
+    name: "Weitere Ergebnisse erneut laden",
+  });
+  expect(row).toBeVisible();
+  await user.click(retry);
+  await screen.findByText("Older scoped notification");
+  expect(row).toBeVisible();
+  const inboxCalls = state.rpc.mock.calls.filter(
+    ([name]) => name === "notification_inbox",
+  );
+  expect(inboxCalls.map(([, args]) => args.p_before_id)).toEqual([
+    null,
+    page[39].id,
+    page[39].id,
+  ]);
+});
+
 describe("connected notification inbox", () => {
   it.each([
     [],
@@ -557,7 +614,7 @@ describe("effective quiet-hour settings", () => {
       enabled: false,
       start_time: "23:00",
       end_time: "06:00",
-      time_zone: "Europe/Berlin",
+      time_zone: "America/Buenos_Aires",
       version: 2,
     };
     await userEvent.click(
@@ -575,7 +632,7 @@ describe("effective quiet-hour settings", () => {
     await waitFor(() => expect(enabled).not.toBeChecked());
     expect(screen.getByLabelText("Beginn der Ruhezeit")).toHaveValue("23:00");
     expect(screen.getByLabelText("Zeitzone der Ruhezeit")).toHaveValue(
-      "Europe/Berlin",
+      "America/Buenos_Aires",
     );
   });
   it("offline edits remain a local draft and cannot issue a preference mutation", async () => {
@@ -596,29 +653,32 @@ describe("effective quiet-hour settings", () => {
       ),
     ).toHaveLength(0);
   });
-  it("invalid editable zones show a useful error instead of sending or confirming them", async () => {
+  it("offers valid time zones and preserves an existing alias until the user chooses another zone", async () => {
+    state.attention.time_zone = "US/Eastern";
     view(<SettingsPage />);
     await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
-    await screen.findByRole("checkbox", {
-      name: "Tägliche Ruhezeit aktivieren",
+    const zone = await screen.findByRole("combobox", {
+      name: "Zeitzone der Ruhezeit",
     });
-    const zone = screen.getByLabelText("Zeitzone der Ruhezeit");
-    await userEvent.clear(zone);
-    await userEvent.type(zone, "Not/AZone");
+    expect(zone).toHaveValue("US/Eastern");
+    const common = within(zone).getByRole("group", {
+      name: "Häufige Zeitzonen",
+    });
+    const adelaide = within(common).getByRole("option", {
+      name: "Australia/Adelaide",
+    });
+    await userEvent.selectOptions(zone, adelaide);
     await userEvent.click(
       screen.getByRole("button", { name: "Ruhezeiten speichern" }),
     );
-    expect(
-      await screen.findByText(
-        "Prüfe Uhrzeiten und Zeitzone, zum Beispiel Europe/Berlin.",
-      ),
-    ).toBeVisible();
-    expect(
-      state.rpc.mock.calls.filter(
-        ([name]) => name === "save_attention_preferences",
-      ),
-    ).toHaveLength(0);
+    await waitFor(() =>
+      expect(state.rpc).toHaveBeenCalledWith("save_attention_preferences", {
+        p_payload: expect.objectContaining({ time_zone: "Australia/Adelaide" }),
+        p_expected_version: 0,
+      }),
+    );
   });
+
   it("the quiet bell preserves the full inbox counter and exposes only critical attention without acknowledging anything", async () => {
     const request = Promise.resolve({
       data: {

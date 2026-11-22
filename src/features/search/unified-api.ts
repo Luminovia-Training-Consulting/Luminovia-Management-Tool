@@ -1,6 +1,7 @@
 /** Authenticated search contract: scoped caches, abortable reads and opaque cursors. */
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { unifiedSearchPageSchema, type SearchCursor } from "./unified-schema";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 
 /** Authority comes from Auth, while actor only separates browser cache entries. */
@@ -14,7 +15,7 @@ export const unifiedSearchQuery = (
     enabled: query.length >= 2,
     initialPageParam: null as SearchCursor | null,
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("unified_search", {
           p_query: query,
           p_kind: kind,
@@ -24,7 +25,7 @@ export const unifiedSearchQuery = (
           p_limit: 40,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return unifiedSearchPageSchema.parse(data);
     },
     getNextPageParam: (page) =>
