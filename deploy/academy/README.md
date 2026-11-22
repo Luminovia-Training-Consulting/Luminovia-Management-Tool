@@ -180,7 +180,7 @@ node scripts/academy-install-browser.mjs "$runtime_root" "$target_json" \
 academy_compose --profile ingress up -d --no-deps --force-recreate --wait api-ingress web
 ```
 
-Wait for both ingress services to be ready and confirm the new licence receipt, current course access and API allowance. The command updates the exact currently recorded licence and atomically replaces the private Envoy policy with the allowance from the new signature. It preserves any existing maintenance marker, accounts, courses, file objects and release. If execution stops after updating the database, leave ingress stopped and repeat the same command with both signed licences to finish the replacement.
+Wait for both ingress services to be ready and confirm the new licence receipt, current course access and API allowance. The command updates the recorded licence and changes only the two bucket values in the installed Envoy policy. It preserves existing route rules, maintenance marker, accounts and retained course data. If execution stops after updating the database, leave ingress stopped and repeat the same command with both signed licences. An expired replacement can finish the policy update only after PostgreSQL confirms that this exact signed licence already committed. Keep ingress stopped until an active renewal succeeds.
 
 ## Encrypted recovery for a dedicated installation
 
