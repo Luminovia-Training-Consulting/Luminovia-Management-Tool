@@ -49,7 +49,9 @@ const de = {
   open: "Öffnen",
   markRead: "Als gelesen markieren",
   markUnread: "Als ungelesen markieren",
-  markAll: "Alle bisher eingegangenen Meldungen lesen",
+  markAll: "Alle als gelesen markieren",
+  readFilter: "Lesestatus",
+  recentUnreadEmpty: "Keine ungelesenen Einträge in dieser Vorschau.",
   empty: "Hier gibt es gerade keine Meldungen.",
   unavailable:
     "Dieser Inhalt ist nicht mehr verfügbar oder nicht mehr für dich freigegeben.",
@@ -172,7 +174,9 @@ const en: Record<keyof typeof de, string> = {
   open: "Open",
   markRead: "Mark as read",
   markUnread: "Mark as unread",
-  markAll: "Read all notifications received so far",
+  markAll: "Mark all as read",
+  readFilter: "Read status",
+  recentUnreadEmpty: "No unread items in this preview.",
   empty: "There are no notifications here right now.",
   unavailable:
     "This content is no longer available or you no longer have access.",

@@ -230,7 +230,7 @@ describe("connected notification inbox", () => {
     expect(document.querySelector("script")).toBeNull();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Alle bisher eingegangenen Meldungen lesen",
+        name: "Alle als gelesen markieren",
       }),
     );
     await waitFor(() =>
@@ -359,6 +359,53 @@ it("the newest fetched copy wins if notification cursor pages overlap", () => {
     { items: [notice], unread_count: 1, as_of: notice.created_at },
   ]);
   expect(rows).toEqual([current]);
+});
+
+it("filters out read preview rows and marks the whole inbox through its server cutoff", async () => {
+  const originalRpc = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name, payload) =>
+    name === "notification_inbox"
+      ? {
+          abortSignal: async () => ({
+            data: {
+              items: [
+                notice,
+                {
+                  ...notice,
+                  id: "5780cb31-643e-42be-a008-e17ec4946581",
+                  title: "Already read",
+                  read_at: notice.created_at,
+                },
+              ],
+              unread_count: 45,
+              as_of: "2026-11-15T11:00:00Z",
+            },
+            error: null,
+          }),
+        }
+      : originalRpc(name, payload),
+  );
+  view(<NotificationsMenu id="actor-a" zone="UTC" />);
+  await userEvent.click(
+    await screen.findByLabelText("Benachrichtigungen: 45 ungelesen"),
+  );
+  expect(screen.getByText("Already read")).toBeVisible();
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: "Lesestatus" }),
+    "unread",
+  );
+  expect(screen.queryByText("Already read")).toBeNull();
+  expect(screen.getByText(notice.title)).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Alle als gelesen markieren" }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("mark_notifications", {
+      p_ids: null,
+      p_all_before: "2026-11-15T11:00:00Z",
+      p_read: true,
+    }),
+  );
 });
 
 it("opening the inbox closes the native notification popover", async () => {

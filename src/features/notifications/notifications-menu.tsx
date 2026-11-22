@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
-import { ErrorState, Loading, Notice } from "../../components/common";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useDismissibleDisclosure } from "../../components/use-dismissible-disclosure";
+import { Button } from "../../components/ui/button";
 import { useOnline } from "../../lib/online";
 import { notificationCategory, type NotificationCategory } from "./categories";
 import { notificationPreviewQuery } from "./api";
@@ -26,6 +27,8 @@ export function NotificationsMenu({
 }) {
   const { t } = useTranslation("inbox");
   const [category, setCategory] = useState<NotificationCategory>("all");
+  const filterId = useId();
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const online = useOnline();
   const query = useQuery({
     ...notificationPreviewQuery(id),
@@ -55,6 +58,13 @@ export function NotificationsMenu({
   const { attributes: disclosure } = useDismissibleDisclosure(
     useLocation().key,
   );
+  const page = !query.isError && !awaitingAcademy ? query.data : undefined;
+  const items =
+    page?.items.filter(
+      (item) =>
+        (!unreadOnly || !item.read_at) &&
+        (category === "all" || notificationCategory(item.kind) === category),
+    ) ?? [];
   return (
     <details
       className={`notification-menu${academy ? " academy-notification-menu" : ""}`}
@@ -76,39 +86,63 @@ export function NotificationsMenu({
             <p className="notification-filter-scope">{t("recentScope")}</p>
           </>
         )}
+        <Field
+          id={`notification-preview-filter-${filterId}`}
+          label={t("readFilter")}
+        >
+          <select
+            value={unreadOnly ? "unread" : "all"}
+            onChange={(event) => setUnreadOnly(event.target.value === "unread")}
+          >
+            <option value="all">{t("all")}</option>
+            <option value="unread">{t("unread")}</option>
+          </select>
+        </Field>
+        {academy && unreadOnly && (
+          <p className="notification-filter-scope">{t("recentScope")}</p>
+        )}
+        {page && academy !== "grace" && (
+          <Button
+            variant="secondary"
+            disabled={!online || mark.isPending || !page.unread_count}
+            onClick={() =>
+              mark.mutate({ ids: null, before: page.as_of, read: true })
+            }
+          >
+            {t("markAll")}
+          </Button>
+        )}
         {academy && !online ? (
           <Notice>{t("offlineInbox")}</Notice>
         ) : query.isPending || awaitingAcademy ? (
           <Loading />
         ) : query.isError ? (
           <ErrorState retry={() => void query.refetch()} />
-        ) : !query.data.items.some(
-            (item) =>
-              category === "all" ||
-              notificationCategory(item.kind) === category,
-          ) ? (
-          <p>{t(category === "all" ? "empty" : "categoryEmpty")}</p>
+        ) : items.length === 0 ? (
+          <p>
+            {t(
+              unreadOnly
+                ? "recentUnreadEmpty"
+                : category === "all"
+                  ? "empty"
+                  : "categoryEmpty",
+            )}
+          </p>
         ) : (
           <ul>
-            {query.data.items
-              .filter(
-                (item) =>
-                  category === "all" ||
-                  notificationCategory(item.kind) === category,
-              )
-              .map((item) => (
-                <NotificationRow
-                  key={item.id}
-                  item={item}
-                  zone={zone}
-                  compact
-                  disabled={!online || mark.isPending}
-                  readOnly={academy === "grace"}
-                  mark={(id, read) =>
-                    mark.mutate({ ids: [id], before: null, read })
-                  }
-                />
-              ))}
+            {items.map((item) => (
+              <NotificationRow
+                key={item.id}
+                item={item}
+                zone={zone}
+                compact
+                disabled={!online || mark.isPending}
+                readOnly={academy === "grace"}
+                mark={(id, read) =>
+                  mark.mutate({ ids: [id], before: null, read })
+                }
+              />
+            ))}
           </ul>
         )}
         {mark.isError && <Notice kind="error">{t("error")}</Notice>}
