@@ -224,6 +224,9 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(list(teacher), denied);
         await assert.rejects(save(peerLearner,"learner","lecturer",teacher,4,1), denied);
         assert.ok((await list(peerLearner)).summaries.every(({subject_id}) => subject_id !== teacher));
+        assert.ok((await list(manager)).summaries.some(({subject_id}) => subject_id === teacher));
+        assert.ok((await comments(admin, "learner", "lecturer", teacher)).items.length > 0);
+
         console.log(`PASS ${edition} retained legacy privacy, exact POST gating, entitlement and revoked enrolment/assignment`);
     });
 }

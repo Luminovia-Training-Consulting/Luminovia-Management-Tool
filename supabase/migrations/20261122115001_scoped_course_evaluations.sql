@@ -136,6 +136,21 @@ begin
     from subjects subject
     cross join (values ('learner'), ('company'), ('lecturer')) rater(rater_role)
     where private.course_evaluation_can_rate(context, rater.rater_role, subject.subject_kind, subject.subject_id)
+  ), review_subjects as (
+    select * from subjects
+    union all
+    -- Managers reviewing the same run can still see the dated allocation's
+    -- retained evaluations. Ordinary roles see only currently scoped subjects.
+    select distinct retained.subject_kind, retained.subject_id,
+      coalesce(profile.display_name, organisation.name, class.name, '')
+    from private.course_evaluations retained
+    left join public.profiles profile on retained.subject_kind = 'lecturer' and profile.id = retained.subject_id
+    left join public.organisations organisation on retained.subject_kind = 'company' and organisation.id = retained.subject_id
+    left join private.course_classes class on retained.subject_kind = 'class' and class.id = retained.subject_id
+    where retained.run_id = p_run_id and (context->>'manager')::boolean and not exists (
+      select 1 from subjects subject
+      where subject.subject_kind = retained.subject_kind and subject.subject_id = retained.subject_id
+    )
   ), grouped as (
     select evaluation.rater_role, subject.subject_kind, subject.subject_id, subject.label,
       count(*) as count, round(avg(evaluation.score), 2) as average,
@@ -143,7 +158,7 @@ begin
         context, evaluation.rater_role, subject.subject_kind, subject.subject_id, true
       ) as can_read_comments
     from private.course_evaluations evaluation
-    join subjects subject using (subject_kind, subject_id)
+    join review_subjects subject using (subject_kind, subject_id)
     where evaluation.run_id = p_run_id and private.course_evaluation_can_review(
       context, evaluation.rater_role, subject.subject_kind, subject.subject_id, false
     )
@@ -187,10 +202,10 @@ begin
     or not coalesce(private.course_evaluation_can_review(
       context, p_rater_role, p_subject_kind, p_subject_id, true
     ), false)
-    or not exists (
+    or (not (context->>'manager')::boolean and not exists (
       select 1 from private.course_evaluation_subjects(p_run_id) subject
       where subject.subject_kind = p_subject_kind and subject.subject_id = p_subject_id
-    ) then raise insufficient_privilege; end if;
+    )) then raise insufficient_privilege; end if;
 
   with page as (
     select id, comment from private.course_evaluations evaluation
