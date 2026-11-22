@@ -8,9 +8,9 @@
 }
 
 :root[data-theme="dark"] .portal-analytics {
-  --analytics-past: #aac5ff;
-  --analytics-future: #87e4c6;
-  --analytics-open: #d5bbfa;
+  --analytics-past: var(--brand);
+  --analytics-future: var(--status-success-ink);
+  --analytics-open: var(--status-paid-ink);
 }
 
 .analytics-filters,

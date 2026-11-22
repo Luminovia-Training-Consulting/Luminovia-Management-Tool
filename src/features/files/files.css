@@ -157,8 +157,8 @@
 }
 
 .file-status.status-clean {
-  color: #23533e;
-  background: #e1f3e9;
+  color: var(--status-published-ink);
+  background: var(--status-published-surface);
   padding: 4px 8px;
   border-radius: 5px;
   width: fit-content;
@@ -166,8 +166,8 @@
 
 .file-status.status-rejected,
 .file-status.status-scan_error {
-  color: #872821;
-  background: #fff0ed;
+  color: var(--notice-error-ink);
+  background: var(--notice-error-surface);
   padding: 4px 8px;
   border-radius: 5px;
   width: fit-content;

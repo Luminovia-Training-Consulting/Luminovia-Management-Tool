@@ -254,7 +254,7 @@
 }
 
 .commercial-file-ready {
-  color: var(--navy);
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
@@ -320,25 +320,25 @@
 
 [data-theme="dark"] .commercial-status-active,
 [data-theme="dark"] .invoice-due-early {
-  background: #203d38;
-  color: #c8f5e2;
+  background: var(--status-success-surface);
+  color: var(--status-success-ink);
 }
 
 [data-theme="dark"] .commercial-status-paid,
 [data-theme="dark"] .invoice-due-paid {
-  background: #392d4d;
-  color: #e6ddff;
+  background: var(--status-paid-surface);
+  color: var(--status-paid-ink);
 }
 
 [data-theme="dark"] .invoice-due-half_term,
 [data-theme="dark"] .invoice-due-due_soon {
-  background: #453b20;
-  color: #fff0c5;
+  background: var(--status-warning-surface);
+  color: var(--status-warning-ink);
 }
 
 [data-theme="dark"] .invoice-due-overdue {
-  background: #472c35;
-  color: #ffdad5;
+  background: var(--status-danger-surface);
+  color: var(--status-danger-ink);
 }
 
 .commercial-status-expected,
@@ -355,25 +355,25 @@
 [data-theme="dark"] .commercial-status-expired,
 [data-theme="dark"] .commercial-status-cancelled,
 [data-theme="dark"] .commercial-status-rejected {
-  background: #403735;
-  color: #f3e5dc;
+  background: var(--status-archived-surface);
+  color: var(--status-archived-ink);
 }
 
 [data-theme="dark"] .commercial-status-approved,
 [data-theme="dark"] .commercial-status-completed {
-  background: #392d4d;
-  color: #e6ddff;
+  background: var(--status-paid-surface);
+  color: var(--status-paid-ink);
 }
 
 [data-theme="dark"] .commercial-status-expected,
 [data-theme="dark"] .commercial-status-submitted {
-  background: #453b20;
-  color: #fff0c5;
+  background: var(--status-warning-surface);
+  color: var(--status-warning-ink);
 }
 
 [data-theme="dark"] .commercial-status-invoiced {
-  background: #25384f;
-  color: #dceaff;
+  background: var(--status-filled-surface);
+  color: var(--status-filled-ink);
 }
 
 .commercial-currency-grid {

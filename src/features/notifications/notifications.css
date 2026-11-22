@@ -155,7 +155,7 @@
 }
 
 :root[data-theme="dark"] .notification-count {
-  color: #102755;
+  color: var(--on-brand);
 }
 
 .settings-section {

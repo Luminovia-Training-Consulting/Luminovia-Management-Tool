@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Dark appearance
+
+- Keep one dark palette for the canvas, surfaces, controls and readable status pairs. Use the same appearance in the standalone API documentation and test contrast at desktop and mobile widths. Size the dashboard overview to the cards available to the current account.
+
 ## CI runtime reachability
 
 - Resolve destructured runtime properties to their TypeScript source symbols so lazy exports are checked through their real callers. Keep unused exports and disconnected callers detectable.

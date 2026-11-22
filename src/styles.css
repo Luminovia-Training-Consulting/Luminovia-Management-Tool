@@ -73,44 +73,50 @@
   color-scheme: light;
 }
 
-/* Deliberate dark surface/text contrasts rather than simply inverted brand accents. */
+/* The dark palette separates the canvas, work panels and raised controls. */
 :root[data-theme="dark"] {
-  --paper: #111a2e;
-  --surface: #1b2840;
-  --ink: #f6f9ff;
-  --muted: #c7d3e9;
-  --line: #4a5c78;
-  --brand: #b5cdff;
-  --brand-hover: #d4e2ff;
-  --blue-soft: #293f63;
-  --surface-raised: #24344f;
-  --surface-muted: #17243a;
-  --input-border: #4a5c78;
-  --focus-ring: #d4e2ff;
-  --status-success-surface: #203d38;
-  --status-success-ink: #c8f5e2;
-  --status-warning-surface: #453b20;
-  --status-warning-ink: #fff0c5;
-  --status-danger-surface: #472c35;
-  --status-danger-ink: #ffdad5;
-  --status-paid-surface: #392d4d;
-  --status-paid-ink: #e6ddff;
-  --notice-success-surface: #203d38;
-  --notice-success-ink: #c8f5e2;
-  --notice-success-line: #587b72;
-  --notice-error-surface: #472c35;
-  --notice-error-ink: #ffdad5;
-  --notice-error-line: #a86d77;
-  --status-published-surface: #203d38;
-  --status-published-ink: #c8f5e2;
-  --status-filled-surface: #293f63;
-  --status-filled-ink: #d4e2ff;
-  --status-draft-surface: #453b20;
-  --status-draft-ink: #fff0c5;
-  --status-archived-surface: #392d4d;
-  --status-archived-ink: #e6ddff;
-  --shadow: 0 5px 20px #0001;
   color-scheme: dark;
+  --paper: #15171e;
+  --surface: #1e222c;
+  --surface-raised: #282d3a;
+  --surface-muted: #191d26;
+  --ink: #f1f3f8;
+  --muted: #b6c0d1;
+  --line: #3e475a;
+  --input-border: #707d96;
+  --brand: #a3beff;
+  --brand-hover: #c4d4ff;
+  --on-brand: #182541;
+  --blue-soft: #2a3956;
+  --navy: #121620;
+  --focus-ring: #f4cb86;
+  --shadow: 0 5px 18px #06080f44;
+  --dark-banner: linear-gradient(110deg, #272d3e, #202635 65%, #232d42);
+  --dark-welcome:
+    radial-gradient(ellipse at 100% 125%, #3a507b 0%, transparent 65%),
+    linear-gradient(120deg, #2b3043, #242b3c 62%, #293550);
+  --status-success-surface: #203c35;
+  --status-success-ink: #ace5cb;
+  --status-warning-surface: #423723;
+  --status-warning-ink: #f7d99e;
+  --status-danger-surface: #472c35;
+  --status-danger-ink: #ffc0c4;
+  --status-paid-surface: #3a314c;
+  --status-paid-ink: #e4d2ff;
+  --notice-success-surface: var(--status-success-surface);
+  --notice-success-ink: var(--status-success-ink);
+  --notice-success-line: #5b8776;
+  --notice-error-surface: var(--status-danger-surface);
+  --notice-error-ink: var(--status-danger-ink);
+  --notice-error-line: #b77b86;
+  --status-published-surface: var(--status-success-surface);
+  --status-published-ink: var(--status-success-ink);
+  --status-filled-surface: var(--blue-soft);
+  --status-filled-ink: #ceddff;
+  --status-draft-surface: var(--status-warning-surface);
+  --status-draft-ink: var(--status-warning-ink);
+  --status-archived-surface: #343845;
+  --status-archived-ink: #d3d9e7;
 }
 
 /* Consistent box sizing and native defaults before component rules. */
@@ -335,10 +341,6 @@ summary:focus-visible {
 
 .button-primary:hover:not(:disabled) {
   background: var(--brand-hover);
-}
-
-[data-theme="dark"] .button-primary {
-  color: #102345;
 }
 
 .button-secondary {
@@ -1023,16 +1025,16 @@ legend {
 }
 
 [data-theme="dark"] .hero {
-  background: #263e4c;
-  border-color: #496773;
+  background: var(--dark-welcome);
+  border-color: var(--line);
 }
 
 [data-theme="dark"] .hero h2 {
-  color: #f6f9ff;
+  color: var(--ink);
 }
 
 [data-theme="dark"] .hero p {
-  color: #dbede5;
+  color: var(--muted);
 }
 
 /* Responsive metric cards use official pastel accents and legible navy text. */
@@ -3047,18 +3049,6 @@ legend {
   --radius: 15px;
 }
 
-:root[data-theme="dark"] {
-  --paper: #111a2e;
-  --surface: #1b2840;
-  --ink: #f6f9ff;
-  --muted: #c7d3e9;
-  --line: #425370;
-  --brand: #b5cdff;
-  --brand-hover: #d4e2ff;
-  --blue-soft: #293f63;
-  --navy: #0d1830;
-}
-
 body {
   background: var(--paper);
 }
@@ -3237,7 +3227,7 @@ body {
 
 [data-theme="dark"] .button-primary {
   background: var(--brand);
-  color: #102345;
+  color: var(--on-brand);
 }
 
 [data-theme="dark"] .button-primary:hover:not(:disabled) {
@@ -3345,23 +3335,6 @@ tr + tr td {
   --radius: 18px;
 }
 
-:root[data-theme="dark"] {
-  --paper: #101b2d;
-  --surface: #1c2d44;
-  --surface-raised: #263b55;
-  --surface-muted: #17263b;
-  --ink: #f4f8ff;
-  --muted: #c5d3e8;
-  --line: #536882;
-  --input-border: #657a93;
-  --brand: #bad2ff;
-  --brand-hover: #dce8ff;
-  --blue-soft: #304a68;
-  --navy: #0d203b;
-  --focus-ring: #ffe08b;
-  --shadow: 0 8px 24px #060d1a55;
-}
-
 .page-heading,
 .dashboard-page > h1 {
   background:
@@ -3399,18 +3372,7 @@ tr + tr td {
 
 [data-theme="dark"] .page-heading,
 [data-theme="dark"] .dashboard-page > h1 {
-  background:
-    radial-gradient(
-      ellipse 110px 100px at 100% 160%,
-      #7d88d850 99%,
-      transparent
-    ),
-    radial-gradient(
-      ellipse 140px 120px at 86% 180%,
-      #1749b550 99%,
-      transparent
-    ),
-    linear-gradient(110deg, #253553, #1b2840);
+  background: var(--dark-banner);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -3460,10 +3422,86 @@ tr + tr td {
       ),
       linear-gradient(110deg, #ffe0df, #fff5ec);
   }
+}
 
-  [data-theme="dark"] .page-heading {
-    background: linear-gradient(110deg, #253553, #1b2840);
-  }
+/* Dark workspace controls have distinct borders and a consistent selected state. */
+[data-theme="dark"] .sidebar {
+  background: linear-gradient(155deg, #1b2233, var(--navy) 66%);
+  border-inline-end: 1px solid var(--line);
+}
+
+[data-theme="dark"] .sidebar nav a,
+[data-theme="dark"] .mobile-nav {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .sidebar nav a.active,
+[data-theme="dark"] .mobile-nav a.active {
+  background: var(--blue-soft);
+  color: var(--status-filled-ink);
+  box-shadow: inset 0 0 0 1px #536e9b;
+}
+
+[data-theme="dark"] .sidebar nav a.active svg {
+  color: var(--brand);
+}
+
+[data-theme="dark"] .mobile-nav {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .topbar {
+  background: var(--surface-muted);
+}
+
+[data-theme="dark"] .button-secondary {
+  background: var(--surface-raised);
+  border-color: var(--input-border);
+}
+
+[data-theme="dark"] .button-secondary:hover:not(:disabled) {
+  background: var(--blue-soft);
+}
+
+[data-theme="dark"] .button-danger {
+  background: var(--status-danger-surface);
+  color: var(--status-danger-ink);
+  border-color: var(--notice-error-line);
+}
+
+[data-theme="dark"]
+  :is(button, a, input, select, textarea, summary):focus-visible {
+  outline-color: var(--focus-ring);
+}
+
+[data-theme="dark"] :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--notice-error-line);
+}
+
+[data-theme="dark"] input[type="checkbox"] {
+  accent-color: var(--brand);
+}
+
+[data-theme="dark"] .login-story {
+  background: var(--dark-welcome);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .login-story :is(.eyebrow, p) {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .login-story .brand-full:not(.academy-logo-preview) {
+  background: #f8f5ee;
+  border-radius: 10px;
+  padding: 0.6rem;
+}
+
+[data-theme="dark"] .login-illustration > span {
+  background: var(--mint);
+  color: #14233b;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
 }
 
 /* Header search and bell stay inside the workspace at every sidebar width. */

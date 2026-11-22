@@ -1460,38 +1460,38 @@
 [data-theme="dark"] .chat-lounge,
 [data-theme="dark"] .chat-kind-general,
 [data-theme="dark"] .chat-message-own .chat-message-avatar {
-  background: #203d38;
-  color: #c8f5e2;
+  background: var(--status-success-surface);
+  color: var(--status-success-ink);
 }
 
 [data-theme="dark"] .chat-room-symbol.chat-kind-dm,
 [data-theme="dark"] .chat-kind-dm {
-  background: #293f63;
-  color: #d4e2ff;
+  background: var(--status-filled-surface);
+  color: var(--status-filled-ink);
 }
 
 [data-theme="dark"] .chat-kind-topic,
 [data-theme="dark"] .chat-welcome-motif {
-  background: #453b20;
-  color: #fff0c5;
+  background: var(--status-warning-surface);
+  color: var(--status-warning-ink);
 }
 
 [data-theme="dark"] .chat-kind-lecturer_course {
-  background: #513b32;
-  color: #ffdfc6;
+  background: color-mix(in srgb, var(--peach) 16%, var(--surface));
+  color: var(--peach);
 }
 
 [data-theme="dark"] .chat-kind-participant_course {
-  background: #392d4d;
-  color: #e6ddff;
+  background: var(--status-paid-surface);
+  color: var(--status-paid-ink);
 }
 
 [data-theme="dark"] .chat-message-avatar {
-  background: #513b32;
-  color: #ffdfc6;
+  background: color-mix(in srgb, var(--peach) 16%, var(--surface));
+  color: var(--peach);
 }
 
 [data-theme="dark"] .chat-unread {
-  background: #b5cdff;
-  color: #102345;
+  background: var(--brand);
+  color: var(--on-brand);
 }

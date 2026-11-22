@@ -209,8 +209,8 @@
 }
 
 [data-theme="dark"] .calendar-view-switcher .button[aria-pressed="true"] {
-  background: #b5cdff;
-  color: #102345;
+  background: var(--brand);
+  color: var(--on-brand);
   box-shadow: none;
 }
 
@@ -388,4 +388,17 @@
 .calendar-color-form > .notice,
 .calendar-color-form > .form-actions {
   grid-column: 1 / -1;
+}
+
+[data-theme="dark"] .calendar-panel .fc {
+  --fc-button-bg-color: var(--surface-raised);
+  --fc-button-border-color: var(--input-border);
+  --fc-button-hover-bg-color: var(--blue-soft);
+  --fc-button-active-bg-color: var(--blue-soft);
+  --fc-button-text-color: var(--ink);
+}
+
+[data-theme="dark"] .calendar-panel .fc .fc-day-today .fc-daygrid-day-number {
+  background: var(--brand);
+  color: var(--on-brand);
 }

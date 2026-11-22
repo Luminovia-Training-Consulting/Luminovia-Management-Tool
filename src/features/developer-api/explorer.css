@@ -1,3 +1,47 @@
+.standalone-swagger {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100dvh;
+  padding-block: 1rem 2rem;
+}
+
+.standalone-swagger > p {
+  width: min(calc(100% - 2rem), 72rem);
+  margin: 1rem auto;
+}
+
+.standalone-swagger .swagger-ui .wrapper {
+  padding-inline: clamp(14px, 3vw, 24px);
+}
+
+.standalone-swagger .standalone-swagger-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.standalone-swagger-nav a {
+  color: var(--brand);
+}
+
+.standalone-swagger-nav .preferences {
+  gap: 0.5rem;
+}
+
+.standalone-swagger-nav .preferences select:last-of-type {
+  min-inline-size: 7rem;
+}
+
+[data-theme="dark"]
+  .standalone-swagger
+  .swagger-ui
+  button.authorization__btn
+  svg {
+  fill: var(--muted);
+}
+
 .api-explorer {
   min-width: 0;
   max-width: 100%;

@@ -162,22 +162,31 @@
 
 [data-theme="dark"] .dashboard-metric {
   color: var(--ink);
+  background: color-mix(
+    in srgb,
+    var(--metric-accent, var(--brand)) 9%,
+    var(--surface)
+  );
+  box-shadow:
+    inset 0 2px var(--metric-accent, var(--brand)),
+    var(--shadow);
+  border: 1px solid var(--line);
 }
 
 [data-theme="dark"] .dashboard-metric--mint {
-  background: color-mix(in srgb, var(--mint) 14%, var(--surface));
+  --metric-accent: var(--mint);
 }
 
 [data-theme="dark"] .dashboard-metric--peach {
-  background: color-mix(in srgb, var(--peach) 14%, var(--surface));
+  --metric-accent: var(--peach);
 }
 
 [data-theme="dark"] .dashboard-metric--yellow {
-  background: color-mix(in srgb, var(--yellow) 14%, var(--surface));
+  --metric-accent: var(--yellow);
 }
 
 [data-theme="dark"] .dashboard-metric--lilac {
-  background: color-mix(in srgb, var(--lilac) 14%, var(--surface));
+  --metric-accent: var(--lilac);
 }
 
 .dashboard-metric-arrow {
@@ -283,21 +292,26 @@
   margin-top: 0;
 }
 
+[data-theme="dark"]
+  .dashboard-page
+  :is(.dashboard-overview > .panel, .dashboard-widget) {
+  border-top-width: 2px;
+}
+
 [data-theme="dark"] .dashboard-welcome {
   color: var(--ink);
   border-color: var(--line);
-  background:
-    radial-gradient(
-      ellipse 160px 140px at 100% 160%,
-      #7d88d850 99%,
-      transparent
-    ),
-    radial-gradient(
-      ellipse 170px 130px at 83% 180%,
-      #1749b550 99%,
-      transparent
-    ),
-    linear-gradient(110deg, #253553, #1b2840);
+  background: var(--dark-welcome);
+}
+
+@media (min-width: 761px) {
+  .dashboard-overview:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-overview:has(> :only-child) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 1150px) {
@@ -305,7 +319,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-overview > .dashboard-calendar {
+  .dashboard-overview > .dashboard-calendar:nth-child(3) {
     grid-column: 1 / -1;
   }
 }
@@ -319,7 +333,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .dashboard-overview > .dashboard-calendar {
+  .dashboard-overview > .dashboard-calendar:nth-child(3) {
     grid-column: auto;
   }
 }

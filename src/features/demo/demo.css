@@ -605,19 +605,7 @@
 }
 
 [data-theme="dark"] .demo-sidebar {
-  background:
-    radial-gradient(
-      ellipse 100px 100px at 90% 104%,
-      #4264ec88 99%,
-      transparent
-    ),
-    radial-gradient(ellipse 95px 105px at 36% 109%, #b8edd966 99%, transparent),
-    radial-gradient(
-      ellipse 115px 110px at 68% 112%,
-      #ffdb7666 99%,
-      transparent
-    ),
-    linear-gradient(160deg, #0b1b35, var(--navy));
+  background: linear-gradient(155deg, #1b2233, var(--navy) 66%);
 }
 
 .demo-content-grid {

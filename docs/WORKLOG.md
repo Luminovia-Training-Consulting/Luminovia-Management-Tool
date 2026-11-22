@@ -1,3 +1,9 @@
+# 23 November 2026 — Dark appearance refresh
+
+The dark theme uses a single graphite palette with distinct panel and control surfaces, quieter navigation and consistent action, focus and status colours. Dashboard overview cards fill the available columns. The standalone API documentation follows the current appearance and offers its own appearance control.
+
+Isolated desktop and mobile Chromium verified contrast and layout across sign-in, dashboard, calendar, chat, files, accounting and profile, plus the standalone API layout and theme switch. Six public demo browser checks covered courses, the learner workspace and analytics. All 212 focused Vitest cases passed. TypeScript, targeted lint, documentation, runtime reachability and bundle budgets passed.
+
 # 23 November 2026 — Runtime reachability for lazy XLSX imports
 
 The TypeScript reachability analyser follows object binding properties to their source symbols, including named exports read via awaited imports. The XLSX template downloads remain lazy. The exact CI code-quality command reports no unused runtime exports or unreachable functions. The regression checks direct and renamed bindings, reachable helper calls and unused exports. The analyser, documentation and XLSX tests and targeted lint passed.

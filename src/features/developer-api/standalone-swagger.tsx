@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { SwaggerView } from "./swagger-view";
+import { Preferences } from "../../components/preferences";
+import "./explorer.css";
 
 const openApiUrl = "/api/openapi.json";
 const readOnly = [] as const;
@@ -25,16 +27,19 @@ export function StandaloneSwagger() {
   });
 
   return (
-    <main style={{ background: "#fff", color: "#3b4151", minHeight: "100dvh" }}>
+    <main className="api-explorer standalone-swagger">
       <nav className="swagger-ui" aria-label="Swagger UI">
-        <div className="wrapper">
-          <a href={openApiUrl} download>
-            OpenAPI JSON
-          </a>
-          {" · "}
-          <Link to="/api/docs">
-            {de ? "Interaktiver API-Explorer" : "Interactive API explorer"}
-          </Link>
+        <div className="wrapper standalone-swagger-nav">
+          <div>
+            <a href={openApiUrl} download>
+              OpenAPI JSON
+            </a>
+            {" · "}
+            <Link to="/api/docs">
+              {de ? "Interaktiver API-Explorer" : "Interactive API explorer"}
+            </Link>
+          </div>
+          <Preferences />
         </div>
       </nav>
       {spec.isPending && (
