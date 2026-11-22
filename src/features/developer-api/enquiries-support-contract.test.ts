@@ -159,3 +159,52 @@ describe("institution enquiry and support OpenAPI", () => {
     ).toBe(false);
   });
 });
+
+it("publishes the Website server intake while keeping its credential outside Try it out", () => {
+  const route = "/functions/v1/website-enquiries";
+  expect(portalOpenApi(backend, false).paths).not.toHaveProperty(route);
+  const download = portalOpenApi(backend, true);
+  const { post } = download.paths[
+    route
+  ] as typeof import("./enquiries-support-contract").websiteEnquiryIntakePath;
+  expect(post.security).toEqual([{ publicApiKey: [], websiteIntakeToken: [] }]);
+  expect(Object.keys(post.responses).sort()).toEqual([
+    "202",
+    "400",
+    "401",
+    "403",
+    "409",
+    "413",
+    "415",
+    "429",
+    "503",
+  ]);
+  const accepted = z.fromJSONSchema(post.responses["202"].content[json].schema);
+  expect(accepted.safeParse({ received: true, receipt: uuid }).success).toBe(
+    true,
+  );
+  expect(
+    accepted.safeParse({ received: true, receipt: uuid, organisation_id: uuid })
+      .success,
+  ).toBe(false);
+  const request = z.fromJSONSchema(post.requestBody.content[json].schema);
+  const enquiry = {
+    submission_id: uuid,
+    company_name: "Fictional Academy",
+    contact_name: "Fictional Learner",
+    email: "fictional@example.invalid",
+    phone: "",
+    topic: "Course",
+    message: "Test",
+    preferred_dates: "",
+    duration: "",
+    delivery_type: "flexible",
+    time_zone: "Europe/Berlin",
+    locale: "de",
+    privacy_notice_version: "test-v1",
+    consent: true,
+  };
+  expect(request.safeParse(enquiry).success).toBe(true);
+  expect(request.safeParse({ ...enquiry, consent: false }).success).toBe(false);
+  expect(request.safeParse({ ...enquiry, role: "admin" }).success).toBe(false);
+});

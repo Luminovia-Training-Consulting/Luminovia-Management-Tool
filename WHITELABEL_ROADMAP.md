@@ -354,7 +354,8 @@ A temporary external HTTPS receiver passed the pinned TLS preflight and signatur
 - [x] Apply a renewed licence and revised ingress allowance while keeping the exact browser release, existing course profile and retained customer data. Both editions passed the local licence and fresh PostgreSQL replacement checks. [Renewal runbook](deploy/academy/README.md#apply-a-renewed-licence-on-the-same-release)
 - [x] Export a portable encrypted course, participant and approved-file archive after licence expiry. PostgreSQL and pinned Storage verify private role denial, isolation, direct attendance evidence and actual file bytes. [Customer export runbook](deploy/academy/OFFBOARDING.md)
 - [ ] Rehearse issuance, renewal and offboarding with the customer's independent installation, operator and publication policy.
-- [ ] Written customer licence/terms, third-party/GPL history legal review, security/privacy/retention/processor responsibilities and support agreement.
+- [x] Prepare customer-neutral, editable [licence, operations/support and handover templates](docs/customer-handoff/README.md).
+- [ ] Approve written customer licence/terms, third-party and historical licensing rights, security/privacy/retention responsibilities and the final support agreement for the particular customer.
 
 ### WL-07 — Managed branded hosting (P1)
 

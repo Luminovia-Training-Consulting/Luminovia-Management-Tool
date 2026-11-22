@@ -1,4 +1,4 @@
-/** Send one documented Academy request with a current human access token. */
+/** Send one documented Academy or Portal request with a current human access token. */
 import { readFileSync } from "node:fs";
 
 const operations = {
@@ -16,6 +16,42 @@ const operations = {
   },
   "create-draft": {
     path: "rest/v1/rpc/academy_create_course_draft",
+    statuses: [200],
+  },
+  "draft-schedule": {
+    path: "rest/v1/rpc/academy_draft_schedule",
+    statuses: [200],
+  },
+  "save-draft-schedule": {
+    path: "rest/v1/rpc/academy_save_draft_schedule",
+    statuses: [200],
+  },
+  "instructor-candidates": {
+    path: "rest/v1/rpc/academy_course_instructor_candidates",
+    statuses: [200],
+  },
+  "assign-instructor": {
+    path: "rest/v1/rpc/academy_assign_course_instructor",
+    statuses: [200],
+  },
+  "publish-course": {
+    path: "rest/v1/rpc/academy_publish_course",
+    statuses: [200],
+  },
+  "invite-portal-account": {
+    path: "functions/v1/accounts/v1/invitations",
+    statuses: [200],
+  },
+  "invite-portal-participant": {
+    path: "functions/v1/accounts/v1/company-participant-invitations",
+    statuses: [202],
+  },
+  "create-portal-template": {
+    path: "rest/v1/rpc/save_course_template",
+    statuses: [200],
+  },
+  "create-portal-run": {
+    path: "rest/v1/rpc/save_course_run",
     statuses: [200],
   },
 };
@@ -47,7 +83,7 @@ async function main(): Promise<number> {
     /^(?:https:\/\/[A-Za-z0-9][A-Za-z0-9.-]*(?::[0-9]+)?|http:\/\/127\.0\.0\.1:[0-9]+)(?:\/backend)?\/?$/;
   if (!basePattern.test(base) || !URL.canParse(base)) {
     console.error(
-      "Set LUMINOVIA_API_BASE_URL to the server shown in Academy OpenAPI.",
+      "Set LUMINOVIA_API_BASE_URL to the server shown in your edition's OpenAPI.",
     );
     return 2;
   }
@@ -89,7 +125,6 @@ async function main(): Promise<number> {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         apikey: apiKey,
-        Origin: endpoint.origin,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -108,7 +143,7 @@ async function main(): Promise<number> {
     console.log(JSON.stringify(await response.json()));
     return 0;
   } catch {
-    console.error("The Academy request or JSON response failed.");
+    console.error("The request or JSON response failed.");
     return 1;
   }
 }

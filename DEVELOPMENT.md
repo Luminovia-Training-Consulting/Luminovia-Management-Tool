@@ -3162,6 +3162,8 @@ The latest operational addition supplies four API/DB pairs (`readiness`, `delive
 
 The built `pwa.spec.ts` selects two scenarios in each of the two Chromium projects: shell/deep-link/private-cache boundaries and an explicitly opted-in cold-offline schedule with logout/account-change purging. These are four declared built-PWA cases, distinct from the application selection; current execution counts and outcomes must come from its independent discovery and report.
 
+The desktop CI phase also checks cold worker activation and offline navigation with private requests excluded in Playwright's pinned WebKit. The supported Ubuntu CI runner installs WebKit and its system dependencies. On a compatible local system with those dependencies installed, use `PORTAL_BROWSER_WEBKIT=true ./portal test --phase browser` to include its separate discovery and acceptance report. The local default uses Chromium for the existing desktop and mobile workflows.
+
 The new main slices include private work tasks/favourites, personal dashboard/teaching preparation, consented waitlist/substitution with recipient-specific terms, customer teaching briefs/history, course-member preparation/resources/Q&A/private notes/attendance/quiz/completion evidence, staff contact consent, teaching-time review/financial scenarios, calendar exports/subscriptions and qualification PDFs. Their existing suites check resource-specific access rather than granting general
 administration access to private messages, calendars or lecturer documents. Notification email/push source and captured/synthetic delivery checks do not establish real external SMTP delivery, device-vendor delivery or an activated production scheduler.
 

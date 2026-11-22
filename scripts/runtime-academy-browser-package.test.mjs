@@ -45,7 +45,12 @@ import {
   readStagedAcademyDocumentBrand,
   renewAcademyInstallationLicence,
 } from "./academy-installation.mjs";
-import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
+import {
+  describeAcademyRuntime,
+  initializeAcademyRuntime,
+} from "./academy-runtime-config.mjs";
+import { checkAcademyPublic } from "./academy-check-public.mjs";
+import { signAcademyRuntimeHandoff } from "./academy-runtime-handoff.mjs";
 import { planAcademyStaging } from "./academy-staging-plan.mjs";
 
 const metadata = {
@@ -800,6 +805,215 @@ async function stagingFixture(
   };
   return { ...fixture, key, manifest, inputs, config, publicConfig, signature };
 }
+
+async function publicIngressFixture(t) {
+  const { dist, inputs, key, manifest } = await stagingFixture(t);
+  const runtimeDirectory = "/srv/academy-practice";
+  const identity = describeAcademyRuntime({
+    root: runtimeDirectory,
+    installationId: metadata.installationId,
+    edition: metadata.edition,
+    portalOrigin: inputs.config.portal_origin,
+  });
+  const approval = generateKeyPairSync("ed25519");
+  inputs.config = {
+    ...inputs.config,
+    ...identity,
+    tls: "acme",
+  };
+  delete inputs.config.browser_directory;
+  inputs.handoff = Buffer.from(
+    signAcademyRuntimeHandoff(
+      {
+        installation_id: identity.installation_id,
+        edition: identity.edition,
+        portal_origin: identity.portal_origin,
+        runtime_directory: runtimeDirectory,
+        source_revision: "c".repeat(40),
+      },
+      approval.privateKey,
+    ),
+  );
+  inputs.handoffPublicKey = approval.publicKey;
+  const addresses = ["1.1.1.1", "2606:4700:4700::1111"];
+  const requests = [];
+  const testRequest = async ({
+    address,
+    hostname,
+    path,
+    secure,
+    key: suppliedKey,
+  }) => {
+    assert.ok(addresses.includes(address));
+    assert.equal(hostname, "academy.example.invalid");
+    requests.push({ address, path, secure });
+    const headers = { "cache-control": "no-store, private" };
+    if (secure === false) {
+      assert.equal(suppliedKey, undefined);
+      headers.location = identity.portal_origin + path;
+      return { status: 308, headers, body: Buffer.alloc(0) };
+    }
+    if (path === "/backend/rest/v1/rpc/installation_capabilities") {
+      assert.equal(suppliedKey, key);
+      return {
+        status: 200,
+        headers,
+        body: Buffer.from(
+          JSON.stringify({
+            installation_id: identity.installation_id,
+            edition: identity.edition,
+            licence_status: "active",
+            customer_ready: false,
+            lms_available: false,
+            marketplace_available: false,
+            company_premium_switch_available: false,
+          }),
+        ),
+      };
+    }
+    assert.equal(suppliedKey, undefined);
+    if (path.startsWith("/backend/"))
+      return { status: 404, headers, body: Buffer.alloc(0) };
+    const file = ["/", "/auth/callback", "/auth/password"].includes(path)
+      ? "index.html"
+      : path.slice(1);
+    return { status: 200, headers, body: readFileSync(join(dist, file)) };
+  };
+  return {
+    inputs,
+    addresses,
+    requests,
+    manifest,
+    key,
+    dependencies: {
+      resolveAddresses: async (hostname) => {
+        assert.equal(hostname, "academy.example.invalid");
+        return addresses;
+      },
+      request: testRequest,
+    },
+  };
+}
+
+test("binds public Academy ingress to the signed current release on each DNS address", async (t) => {
+  const { inputs, dependencies, addresses, requests, manifest, key } =
+    await publicIngressFixture(t);
+  const receipt = await checkAcademyPublic(inputs, dependencies);
+  assert.equal(receipt.status, "public_ingress_verified");
+  assert.equal(receipt.source_revision, metadata.sourceRevision);
+  assert.equal(receipt.archive_sha256, manifest.archive.sha256);
+  assert.equal(receipt.public_dns_address_count, 2);
+  assert.equal(receipt.http_redirect, "verified");
+  assert.equal(JSON.stringify(receipt).includes(key), false);
+  for (const address of addresses) {
+    const paths = requests.filter((request) => request.address === address);
+    assert.equal(paths.filter(({ secure }) => secure === false).length, 1);
+    for (const path of [
+      "/auth/callback",
+      "/auth/password",
+      "/sw.js",
+      "/api/openapi.json",
+      "/backend/rest/v1/rpc/installation_capabilities",
+      "/backend/auth/v1/admin/users",
+      "/backend/storage/v1/bucket",
+    ])
+      assert.ok(
+        paths.some((request) => request.path === path),
+        path,
+      );
+  }
+
+  requests.length = 0;
+  inputs.config.tls = "operator-terminated";
+  const operatorReceipt = await checkAcademyPublic(inputs, dependencies);
+  assert.equal(operatorReceipt.http_redirect, "operator_check_required");
+  assert.ok(requests.every(({ secure }) => secure !== false));
+});
+
+test("fails closed before probing an untrusted Academy target or mixed public DNS", async (t) => {
+  const { inputs, dependencies, requests, addresses } =
+    await publicIngressFixture(t);
+  const otherKey = generateKeyPairSync("ed25519").publicKey;
+  await assert.rejects(
+    checkAcademyPublic({ ...inputs, handoffPublicKey: otherKey }, dependencies),
+    /academy_public_trust_inputs/,
+  );
+  await assert.rejects(
+    checkAcademyPublic(
+      {
+        ...inputs,
+        config: { ...inputs.config, compose_project: "other-academy" },
+      },
+      dependencies,
+    ),
+    /academy_public_target/,
+  );
+  await assert.rejects(
+    checkAcademyPublic(inputs, {
+      ...dependencies,
+      resolveAddresses: async () => [...addresses, "127.0.0.1"],
+    }),
+    /academy_public_addresses/,
+  );
+  assert.deepEqual(requests, []);
+});
+
+test("rejects a stale shell, wrong capability identity, unsafe cache or open private route on any address", async (t) => {
+  const { inputs, dependencies, addresses } = await publicIngressFixture(t);
+  const checks = [
+    [
+      "/auth/callback?academy-acceptance=1",
+      "redirect",
+      (response) => {
+        response.headers.location = "https://another.example.invalid";
+      },
+    ],
+    [
+      "/auth/password",
+      "signed_bytes",
+      (response) => {
+        response.body = Buffer.from("A stale app shell");
+      },
+    ],
+    [
+      "/sw.js",
+      "shell_cache",
+      (response) => {
+        response.headers["cache-control"] = "public, max-age=3600";
+      },
+    ],
+    [
+      "/backend/rest/v1/rpc/installation_capabilities",
+      "capabilities_identity",
+      (response) => {
+        const body = JSON.parse(response.body);
+        body.licence_status = "grace";
+        response.body = JSON.stringify(body);
+      },
+    ],
+    [
+      "/backend/storage/v1/bucket",
+      "restricted_route",
+      (response) => {
+        response.status = 200;
+      },
+    ],
+  ];
+  for (const [path, reason, alter] of checks) {
+    await assert.rejects(
+      checkAcademyPublic(inputs, {
+        ...dependencies,
+        request: async (probe) => {
+          const response = await dependencies.request(probe);
+          if (probe.address === addresses[1] && probe.path === path)
+            alter(response);
+          return response;
+        },
+      }),
+      new RegExp("academy_public_" + reason),
+    );
+  }
+});
 
 test("derives a tenant-specific staging handoff for the exact active browser release", async (t) => {
   const { manifest, key, inputs, terms, config } = await stagingFixture(t);

@@ -101,6 +101,9 @@ export async function synchronizePushActor(actor: string | null) {
   try {
     const old = await storage(undefined, valid);
     if (stamp !== revision || (old && old.actor === actor)) return;
+    // On first use there is neither a binding nor browser consent. Querying
+    // native push during worker installation can stall WebKit's app shell.
+    if (!old && Notification.permission !== "granted") return;
     await storage(null, valid);
     if (!valid()) return;
     const registration = await navigator.serviceWorker.getRegistration();

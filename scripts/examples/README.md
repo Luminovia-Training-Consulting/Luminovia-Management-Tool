@@ -106,6 +106,100 @@ node --experimental-strip-types scripts/examples/academy-workflows.ts create-dra
   }
 }
 JSON
+```
+
+### Edit, staff and publish the draft · Entwurf bearbeiten, besetzen und veröffentlichen
+
+Keep the returned course ID. Read the schedule before editing. Send the returned revision and all sessions, retaining their IDs. Use `null` for a new session ID. A stale revision returns HTTP 409. Read the new schedule before deciding whether to repeat the edit.
+
+Behalte die zurückgegebene Kurs-ID. Lies vor dem Bearbeiten den Terminplan und übergib die erhaltene Revision und alle Termine mit ihren IDs. Übergib bei einem neuen Termin `null` als ID. Eine veraltete Revision liefert HTTP 409. Lies dann den aktuellen Terminplan und entscheide, ob die Änderung weiterhin passt.
+
+```bash
+node --experimental-strip-types scripts/examples/academy-workflows.ts draft-schedule <<'JSON'
+{"p_course_id":"a7777777-7777-4777-8777-777777777777"}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts save-draft-schedule <<'JSON'
+{
+  "p_course_id": "a7777777-7777-4777-8777-777777777777",
+  "p_expected_revision": 1,
+  "p_payload": {
+    "time_zone": "Europe/Berlin",
+    "delivery_type": "online",
+    "venue": "",
+    "sessions": [
+      {"id":"a8888888-8888-4888-8888-888888888888","starts_at":"2030-05-06T11:00:00+02:00","ends_at":"2030-05-06T13:00:00+02:00"}
+    ]
+  }
+}
+JSON
+```
+
+Find an eligible instructor and inspect the assignment result. Publish only after the assignment returns `confirmed`. Publishing the same capacity is repeatable. A different capacity on an already published course uses the separate capacity-change operation.
+
+Suche eine berechtigte Lehrkraft und prüfe das Ergebnis der Zuweisung. Veröffentliche erst nach dem Status `confirmed`. Eine Veröffentlichung mit derselben Kapazität lässt sich wiederholen. Änderungen an der Kapazität eines veröffentlichten Kurses erfolgen über den separaten Kapazitätsaufruf.
+
+```bash
+node --experimental-strip-types scripts/examples/academy-workflows.ts instructor-candidates <<'JSON'
+{"p_course_id":"a7777777-7777-4777-8777-777777777777","p_search":"Teacher"}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts assign-instructor <<'JSON'
+{"p_course_id":"a7777777-7777-4777-8777-777777777777","p_instructor_id":"a9999999-9999-4999-8999-999999999999","p_request_id":"b1111111-1111-4111-8111-111111111111"}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts publish-course <<'JSON'
+{"p_course_id":"a7777777-7777-4777-8777-777777777777","p_capacity":12}
+JSON
+```
+
+## Internal Portal invitations and courses · Einladungen und Kurse im internen Portal
+
+Use the internal Portal's server address, public key and current actor's access token. Staff invitations require user and role management. Omitting `role` selects lecturer. Use the separate Premium invitation for a participant and provide their company's ID. Read the returned status. `requested` acknowledges a company request. `sent` and `already_sent` confirm the recorded staff-invitation state. Retain the original invitation ID key and fields across retries.
+
+Verwende die Serveradresse des internen Portals, den zugehörigen öffentlichen Schlüssel und das aktuelle Zugriffstoken. Einladungen für Mitarbeitende erfordern die Benutzer- und Rollenverwaltung. Ohne `role` wird eine Lehrkraft eingeladen. Teilnehmende werden über die separate Premium-Einladung mit der Firmen-ID eingeladen. Prüfe den erhaltenen Status. `requested` quittiert die Unternehmensanfrage. `sent` und `already_sent` bestätigen den gespeicherten Status der Mitarbeitendeneinladung. Behalte bei Wiederholungen denselben Anfrageschlüssel und dieselben Felder.
+
+```bash
+export LUMINOVIA_API_BASE_URL='https://portal.example.invalid/backend'
+read -rs LUMINOVIA_PUBLISHABLE_KEY
+read -rs LUMINOVIA_ACCESS_TOKEN
+export LUMINOVIA_PUBLISHABLE_KEY LUMINOVIA_ACCESS_TOKEN
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts invite-portal-account <<'JSON'
+{"email":"teacher@example.invalid","display_name":"Fictional Teacher","idempotency_key":"b2222222-2222-4222-8222-222222222222"}
+JSON
+
+# Load the scoped company actor's token for the participant invitation.
+read -rs LUMINOVIA_ACCESS_TOKEN
+node --experimental-strip-types scripts/examples/academy-workflows.ts invite-portal-participant <<'JSON'
+{"email":"participant@example.invalid","display_name":"Fictional Participant","organisation_id":"b3333333-3333-4333-8333-333333333333","idempotency_key":"b4444444-4444-4444-8444-444444444444"}
+JSON
+```
+
+Create a template with the course manager's token. Use its returned ID to create a scheduled course. The CMS save operations have no request key for creation. After an ambiguous network failure, check the course list before creating another record. Set `published` to `false` to keep your first save in draft.
+
+Erstelle mit dem Token der Kursverwaltung eine Vorlage und verwende die zurückgegebene ID für den terminierten Kurs. Die CMS-Speicheraufrufe verwenden bei der Neuanlage keinen Anfrageschlüssel. Prüfe nach einem unklaren Netzwerkfehler die Kursliste vor einer weiteren Neuanlage. Mit `published: false` bleibt der erste gespeicherte Stand ein Entwurf.
+
+```bash
+read -rs LUMINOVIA_ACCESS_TOKEN
+node --experimental-strip-types scripts/examples/academy-workflows.ts create-portal-template <<'JSON'
+{"p_id":null,"p_payload":{"title":"Fictional Portal Course"}}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts create-portal-run <<'JSON'
+{
+  "p_id": null,
+  "p_payload": {
+    "template_id": "b5555555-5555-4555-8555-555555555555",
+    "organisation_id": null,
+    "time_zone": "Europe/Berlin",
+    "delivery_type": "online",
+    "venue": "",
+    "published": false,
+    "sessions": [{"starts_at":"2030-05-06T10:00:00+02:00","ends_at":"2030-05-06T12:00:00+02:00"}]
+  }
+}
+JSON
 unset LUMINOVIA_ACCESS_TOKEN LUMINOVIA_PUBLISHABLE_KEY
 ```
 

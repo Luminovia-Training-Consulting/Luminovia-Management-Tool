@@ -1,8 +1,9 @@
 /**
  * Browser checks for the built public offline shell without private API caches.
- * Service-worker behaviour is exercised in Chromium; physical PWA installation remains separate acceptance.
+ * Chromium covers authenticated offline use. The explicit WebKit lane checks
+ * a cold worker installation and offline navigation in a built preview.
  */
-import {expect, test} from "@playwright/test";
+import {expect, test, type Page} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
@@ -10,6 +11,56 @@ test.skip(
     process.env.E2E_PWA !== "1",
     "Run against a built preview with E2E_PWA=1 and E2E_BASE_URL.",
 );
+
+async function controlWithBuiltWorker(page: Page) {
+    await expect.poll(() => page.evaluate(async () => {
+        const worker = (await navigator.serviceWorker.getRegistration())?.active;
+        return worker?.state === "activated" && new URL(worker.scriptURL).pathname;
+    }), {timeout: 20_000}).toBe("/sw.js");
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => {
+        const controller = navigator.serviceWorker.controller;
+        return controller && new URL(controller.scriptURL).pathname;
+    })).toBe("/sw.js");
+}
+
+test("built PWA WebKit activates the app worker and serves an offline deep link", {tag: "@pwa-webkit"}, async ({
+    page,
+    context,
+}) => {
+    await page.goto("/login");
+    await expect(page.locator("#email")).toBeVisible();
+    await controlWithBuiltWorker(page);
+    const cachedPaths = await page.evaluate(async () => {
+        const names = await caches.keys();
+        const entries = await Promise.all(names.map(async (name) =>
+            (await (await caches.open(name)).keys()).map(({url}) => new URL(url).pathname),
+        ));
+        return entries.flat();
+    });
+    expect(cachedPaths).toContain("/index.html");
+    expect(cachedPaths.filter((path) => /^\/(?:backend|auth|rest|storage|functions|realtime)\//.test(path))).toEqual([]);
+
+    await context.setOffline(true);
+    try {
+        const response = await page.goto("/help");
+        expect(response?.status()).toBe(200);
+        expect(response?.fromServiceWorker()).toBe(true);
+        await expect(page.locator("#help-title")).toBeVisible();
+        await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+        const privateReply = await page.evaluate(async () => {
+            try {
+                await fetch("/rest/v1/rpc/my_push_devices", {method: "POST"});
+                return "unexpected response";
+            } catch {
+                return "network unavailable";
+            }
+        });
+        expect(privateReply).toBe("network unavailable");
+    } finally {
+        await context.setOffline(false);
+    }
+});
 
 test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({
                                                                                                                      page,

@@ -716,8 +716,12 @@ const coursePaths = {
         p_payload: z.toJSONSchema(academyDraftPayload),
       }),
       oneOf: [
-        { properties: { p_template_id: uuid, p_template_title: nil } },
         {
+          type: "object",
+          properties: { p_template_id: uuid, p_template_title: nil },
+        },
+        {
+          type: "object",
           properties: {
             p_template_id: nil,
             p_template_title: { ...string, minLength: 1, maxLength: 200 },

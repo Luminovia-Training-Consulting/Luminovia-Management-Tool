@@ -7,7 +7,7 @@ import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {setTimeout as delay} from "node:timers/promises";
 import {createClient} from "@supabase/supabase-js";
-import {verifyAccountHttpResponse} from "./testing/openapi-contract.mjs";
+import {accountResponse, verifyAccountHttpResponse} from "./testing/openapi-contract.mjs";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
 
 if (process.env.PORTAL_TEST_MODE !== "1")
@@ -416,15 +416,32 @@ try {
     assert.equal(retry.status, 200);
     assert.equal(retry.body.status, "already_sent");
     assert.equal(retry.body.invitation_id, sent.body.invitation_id);
-    assert.equal(
-        (
-            await request(admin, "invitations", "POST", {
-                ...body,
-                role: "lecturer",
-                organisation_id: null,
-            })
-        ).status,
-        409,
+    const conflictingInvite = await request(admin, "invitations", "POST", {
+        ...body,
+        role: "lecturer",
+        organisation_id: null,
+    });
+    assert.equal(conflictingInvite.status, 409);
+    accountResponse("/v1/invitations", "post", "409")(
+        JSON.stringify(conflictingInvite.body),
+    );
+    const deniedInvite = await request(teacher, "invitations", "POST", body);
+    assert.equal(deniedInvite.status, 403);
+    accountResponse("/v1/invitations", "post", "403")(
+        JSON.stringify(deniedInvite.body),
+    );
+    const deniedCompanyInvite = await request(
+        teacher, "company-participant-invitations", "POST",
+        {
+            email,
+            display_name: body.display_name,
+            organisation_id: org,
+            idempotency_key: randomUUID(),
+        },
+    );
+    assert.equal(deniedCompanyInvite.status, 403);
+    accountResponse("/v1/company-participant-invitations", "post", "403")(
+        JSON.stringify(deniedCompanyInvite.body),
     );
     const invited = (
         await checked(

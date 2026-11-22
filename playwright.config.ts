@@ -12,7 +12,7 @@ if (process.env.PORTAL_TEST_MODE !== "1")
     );
 
 const stage = process.env.PORTAL_BROWSER_STAGE;
-if (stage && !["application", "pwa"].includes(stage))
+if (stage && !["application", "pwa", "pwa-webkit"].includes(stage))
     throw new Error("Unknown isolated browser acceptance stage.");
 const reportRoot = stage ? `.local/browser/${stage}` : undefined;
 
@@ -51,7 +51,12 @@ export default defineConfig({
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
     },
-    projects: [
+    ...(stage === "pwa-webkit"
+        ? {grep: /@pwa-webkit/, testMatch: "**/pwa.spec.ts"}
+        : {grepInvert: /@pwa-webkit/}),
+    projects: stage === "pwa-webkit" ? [
+        {name: "desktop-webkit", use: {...devices["Desktop Safari"]}},
+    ] : [
         // Both Chromium layouts run the same journeys; this does not establish
         // physical PWA installation or Safari/iOS compatibility.
         {

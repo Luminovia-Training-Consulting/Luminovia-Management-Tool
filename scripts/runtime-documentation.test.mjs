@@ -197,9 +197,16 @@ test("documentation keeps only the required project records under docs", async (
         "UNIVERSAL_MASTER_PROMPT.txt",
         "UI_ACCEPTANCE_20261117.md",
         "WORKLOG.md",
+        "customer-handoff",
     ]);
     const deliveredRecords = (await readdir("docs")).sort();
     assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
+    assert.deepEqual((await readdir("docs/customer-handoff")).sort(), [
+        "ACCEPTANCE-AND-HANDOVER.de.md",
+        "CUSTOMER-LICENCE.de.md",
+        "OPERATIONS-AND-SUPPORT.de.md",
+        "README.md",
+    ]);
     const generator = await readFile(
         "scripts/generate-api-reference.mjs",
         "utf8",

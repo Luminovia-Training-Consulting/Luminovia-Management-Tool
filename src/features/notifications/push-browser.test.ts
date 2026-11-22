@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  browserSubscription,
   currentPushToken,
   pushCapability,
   pushSupported,
@@ -51,6 +52,29 @@ it("explains denied permission and refuses insecure unsupported contexts", () =>
   vi.stubGlobal("isSecureContext", false);
   expect(pushCapability()).toBe("unsupported");
 });
+it.each(["default", "denied"])(
+  "does not attempt to subscribe when a permission request resolves to %s",
+  async (permission) => {
+    const requestPermission = vi.fn().mockResolvedValue(permission);
+    const getSubscription = vi.fn();
+    const subscribe = vi.fn();
+    vi.stubGlobal("Notification", { requestPermission });
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        getRegistration: async () => ({
+          active: {},
+          pushManager: { getSubscription, subscribe },
+        }),
+      },
+    });
+    await expect(browserSubscription("fictional-public-key")).rejects.toThrow(
+      "push_permission_denied",
+    );
+    expect(requestPermission).toHaveBeenCalledOnce();
+    expect(getSubscription).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
+  },
+);
 it("does not treat a stored binding as a surviving native subscription", async () => {
   const getSubscription = vi.fn().mockResolvedValue(null);
   vi.stubGlobal("navigator", {

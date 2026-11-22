@@ -48,15 +48,16 @@ async function runFixture({
     // consume list reports without execution and actual-style first-pass results.
     const browserReport = (path) => {
         const discovery = path.endsWith("plan.json");
-        const stage = path.includes("/pwa/") ? "pwa" : "application";
-        const name = stage === "pwa" ? "pwa.spec.ts" : "workflow.spec.ts";
-        const browserNames = inherited.PORTAL_BROWSER_PROJECT
+        const stage = path.includes("/pwa-webkit/") ? "pwa-webkit"
+            : path.includes("/pwa/") ? "pwa" : "application";
+        const name = stage === "application" ? "workflow.spec.ts" : "pwa.spec.ts";
+        const browserNames = stage === "pwa-webkit" ? ["desktop-webkit"] : inherited.PORTAL_BROWSER_PROJECT
             ? [inherited.PORTAL_BROWSER_PROJECT]
             : ["desktop-chromium", "mobile-chromium"];
         const report = {
             config: {
                 rootDir: "/owned-qa/scratch/tests/e2e",
-                projects: ["desktop-chromium", "mobile-chromium"].map((name) => ({
+                projects: browserNames.map((name) => ({
                     name,
                 })),
             },
@@ -281,9 +282,11 @@ test("a browser lane cannot reduce complete or system acceptance before acquirin
 test("an explicit browser phase may execute one selected CI lane", async () => {
     const result = await runFixture({
         args: ["--phase", "browser"],
-        inherited: {PORTAL_BROWSER_PROJECT: "mobile-chromium"},
+        inherited: {CI: "true", PORTAL_BROWSER_PROJECT: "mobile-chromium"},
     });
     assert.equal(result.error, undefined);
+    assert.equal(Boolean(browserCommand(result, "pwa-webkit")), false);
+    assert.equal(contains(result, "webkit"), false);
     for (const stage of ["application", "pwa"]) {
         for (const discovery of [true, false]) {
             const call = browserCommand(result, stage, discovery);
@@ -293,6 +296,48 @@ test("an explicit browser phase may execute one selected CI lane", async () => {
             assert.equal(call.args[index + 1], "mobile-chromium");
         }
     }
+});
+
+test("CI desktop and opted-in local desktop require discovery and execution of the WebKit PWA", async () => {
+    for (const [env, failingExecution] of [
+        [{CI: "true", PORTAL_BROWSER_WEBKIT: "false"}, false],
+        [{CI: "false", PORTAL_BROWSER_WEBKIT: "true"}, false],
+        [{CI: "true"}, true],
+    ]) {
+        const result = await runFixture({
+            args: ["--phase", "browser"],
+            inherited: {...env, PORTAL_BROWSER_PROJECT: "desktop-chromium"},
+            fail: ({env, args}) => failingExecution &&
+                env.PORTAL_BROWSER_STAGE === "pwa-webkit" && !args.includes("--list"),
+        });
+        const install = result.calls.find(({args}) => args.includes("install") && args.includes("webkit"));
+        const discovery = browserCommand(result, "pwa-webkit", true);
+        const execution = browserCommand(result, "pwa-webkit");
+        assert.ok(install && discovery && execution);
+        assert.ok(result.calls.indexOf(install) < result.calls.indexOf(discovery));
+        assert.ok(result.calls.indexOf(discovery) < result.calls.indexOf(execution));
+        assert.equal(execution.args[execution.args.indexOf("--project") + 1], "desktop-webkit");
+        assert.equal(execution.env.E2E_PWA, "1");
+        assert.equal(execution.env.E2E_BASE_URL, "http://127.0.0.1:4273");
+        if (failingExecution) {
+            assert.match(result.error?.message, /Fictional stage failure/);
+            assert.equal(acceptance(result).browsers["pwa-webkit"].status, "failed");
+        } else {
+            assert.equal(result.error, undefined);
+            assert.equal(acceptance(result).browsers["pwa-webkit"].status, "passed");
+        }
+    }
+});
+
+test("local Chromium acceptance needs no WebKit system libraries by default", async () => {
+    const result = await runFixture({
+        args: ["--phase", "browser"],
+        inherited: {CI: "false"},
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(Boolean(browserCommand(result, "pwa-webkit")), false);
+    assert.equal(contains(result, "webkit"), false);
+    assert.equal(acceptance(result).browsers.pwa.status, "passed");
 });
 
 test("no arguments remain complete; explicit phase arguments reject every unknown or partial option", () => {

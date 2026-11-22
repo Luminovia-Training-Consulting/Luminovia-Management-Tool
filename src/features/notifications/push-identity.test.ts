@@ -82,6 +82,28 @@ it("ignores stale current-device cleanup after switching accounts", async () => 
   expect(await browser.currentPushToken(peer)).toBe("new-token");
 });
 
+it.each(["default", "denied"])(
+  "leaves native push untouched with %s permission and no binding",
+  async (permission) => {
+    vi.stubGlobal("Notification", { permission });
+    const getRegistration = vi.spyOn(
+      navigator.serviceWorker,
+      "getRegistration",
+    );
+    await browser.synchronizePushActor(null);
+    expect(getRegistration).not.toHaveBeenCalled();
+    expect(unsubscribe).not.toHaveBeenCalled();
+  },
+);
+
+it("clears a previous actor's native subscription when permission was revoked", async () => {
+  await browser.bindPushDevice(owner, "own-token");
+  vi.stubGlobal("Notification", { permission: "denied" });
+  await browser.synchronizePushActor(peer);
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(await browser.currentPushToken(owner)).toBeNull();
+});
+
 it("clears the current actor binding and native subscription on explicit removal", async () => {
   await browser.bindPushDevice(owner, "own-token");
   await browser.clearPushDevice(owner);

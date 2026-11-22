@@ -28,7 +28,10 @@ import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts"
 import { accountingPaths } from "./accounting-contract.ts";
 import { deliveryEvidencePaths } from "./delivery-evidence-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
-import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
+import {
+  enquiriesSupportPaths,
+  websiteEnquiryIntakePath,
+} from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import {
   contractRecordsSchema,
@@ -4200,6 +4203,7 @@ function internalOpenApi(
         ...nativeDownloadPaths,
         ...paths,
         ...credentialPaths,
+        "/functions/v1/website-enquiries": websiteEnquiryIntakePath,
         "/rest/v1/rpc/issue_company_integration_key": {
           post: {
             ...companyIntegrationKeyIssue.post,
@@ -4241,6 +4245,12 @@ function internalOpenApi(
         ...accountOpenApi.components.securitySchemes,
         ...(includeNonInteractive
           ? {
+              websiteIntakeToken: {
+                type: "apiKey",
+                in: "header",
+                name: "X-Luminovia-Integration-Token",
+                description: "Dedicated server-only Website intake credential.",
+              },
               integrationKey: {
                 type: "http",
                 scheme: "bearer",
