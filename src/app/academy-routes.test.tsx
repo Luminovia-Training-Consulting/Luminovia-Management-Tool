@@ -317,6 +317,16 @@ beforeEach(async () => {
                   exams: { ...workspace.exams, required: fake.examRequired },
                 };
           break;
+        case "course_submissions":
+          data = {
+            enabled: false,
+            can_manage:
+              fake.licence === "active" && fake.actor !== "fictional-learner",
+            can_upload: false,
+            entries: [],
+            next: null,
+          };
+          break;
         case "course_class_options":
           if (fake.foreignCourse || fake.withdrawn) error = { code: "42501" };
           data = {
@@ -605,10 +615,13 @@ it("opens the course hub without activating the full edition and reuses scoped a
   ).toBeNull();
   expect(screen.getByRole("button", { name: /acknowledge/i })).toBeVisible();
   expect(screen.queryByRole("button", { name: /unshare/i })).toBeNull();
-  const picker = screen.getByLabelText("Attach file");
-  expect(picker).toBeVisible();
+  const chatPicker = screen.getByLabelText("Attach file");
+  const materialPicker = screen.getByLabelText("Choose file");
+  expect(chatPicker).toBeVisible();
+  expect(materialPicker).toBeVisible();
   expect([...document.querySelectorAll('input[type="file"]')]).toEqual([
-    picker,
+    materialPicker,
+    chatPicker,
   ]);
   expect(fake.from).not.toHaveBeenCalled();
   expect(fake.rpc.mock.calls.map(([name]) => name)).toEqual(

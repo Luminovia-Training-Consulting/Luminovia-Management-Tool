@@ -137,6 +137,41 @@ const invitationConflict = record(
     {status: {const: "idempotency_conflict"}, invitation_id: uuid},
     ["status"],
 );
+const invitationIdentity = {
+    email: {type: "string", format: "email", maxLength: 254},
+    display_name: {type: "string", maxLength: 120},
+    idempotency_key: uuid,
+};
+const invitationInput = {
+    anyOf: [
+        record({
+            ...invitationIdentity,
+            role: {const: "client"},
+            organisation_id: {
+                anyOf: [uuid, nil],
+                description: "An optional active organisation. The current inviter must be allowed to manage the association.",
+            },
+        }, ["email", "role", "idempotency_key"]),
+        record({
+            ...invitationIdentity,
+            role: {
+                enum: ["admin", "management", "senior_lecturer", "lecturer", "guest"],
+                default: "lecturer",
+            },
+            organisation_id: nil,
+        }, ["email", "idempotency_key"]),
+    ],
+};
+const invitationError = (description: string, ...codes: string[]) =>
+    jsonResponse(record({error: {enum: codes}}), description);
+const invitationHttpErrors = {
+    "400": invitationError("Invalid invitation request", "invalid_request"),
+    "401": invitationError("Current authenticated account required", "authentication_required"),
+    "403": invitationError("Current invitation authority, resource scope and an approved origin are required", "permission_required", "origin_not_allowed"),
+    "413": invitationError("Request exceeds 16 KiB", "request_too_large"),
+    "415": invitationError("A JSON content type is required", "json_required"),
+    "503": invitationError("Invitation delivery is disabled or unavailable", "invitations_disabled", "service_unavailable"),
+};
 
 export const accountOpenApi = {
     openapi: "3.1.0",
@@ -499,23 +534,11 @@ export const accountOpenApi = {
                 operationId: "inviteAccount",
                 summary:
                     "Idempotent captured/approved email invitation; authoritative role and optional client organisation",
-                requestBody: jsonBody({
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["email", "role", "idempotency_key"],
-                    properties: {
-                        email: {type: "string", format: "email", maxLength: 254},
-                        display_name: {type: "string", maxLength: 120},
-                        role,
-                        organisation_id: {
-                            type: ["string", "null"],
-                            format: "uuid",
-                            description: "Required exactly for client role",
-                        },
-                        idempotency_key: {type: "string", format: "uuid"},
-                    },
-                }),
+                description:
+                    "Requires current user and role-management authority. Omit role to invite a lecturer. Only a client invitation may name an organisation, which requires additional authority. Company participant invitations have their own operation. Repeat the original request with the same key to check its result. A retained failed status does not send another email.",
+                requestBody: jsonBody(invitationInput),
                 responses: {
+                    ...invitationHttpErrors,
                     "200": jsonResponse(
                         {anyOf: [sentInvitation, invitationInProgress]},
                         "Delivery result or retained reservation status.",
@@ -526,7 +549,6 @@ export const accountOpenApi = {
                         record({status: {const: "failed"}, invitation_id: uuid}),
                         "Delivery could not be confirmed.",
                     ),
-                    ...errors,
                 },
             },
         },
@@ -534,25 +556,17 @@ export const accountOpenApi = {
             post: {
                 operationId: "inviteCompanyParticipant",
                 summary: "Request a company-scoped participant-only invitation; no role or account lookup is exposed",
-                requestBody: jsonBody({
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["email", "display_name", "organisation_id", "idempotency_key"],
-                    properties: {
-                        email: {type: "string", format: "email", maxLength: 254},
-                        display_name: {type: "string", minLength: 1, maxLength: 120},
-                        organisation_id: {type: "string", format: "uuid"},
-                        idempotency_key: {type: "string", format: "uuid"},
-                    },
-                }),
+                description:
+                    "Requires current invitation authority for the specified company while Premium is active. The participant role is determined by the server. Requested acknowledges the submission; it does not confirm account existence, delivery or enrolment. Repeat the original fields with the same key.",
+                requestBody: jsonBody(record({
+                    ...invitationIdentity,
+                    display_name: {type: "string", minLength: 1, maxLength: 120, pattern: "\\S"},
+                    organisation_id: uuid,
+                })),
                 responses: {
-                    "202": jsonResponse({
-                        type: "object",
-                        properties: {
-                            status: {const: "requested"},
-                        },
-                    }),
-                    ...errors,
+                    ...invitationHttpErrors,
+                    "202": jsonResponse(record({status: {const: "requested"}})),
+                    "409": invitationError("The same request key was used with different fields", "invalid_request"),
                 },
             },
         },

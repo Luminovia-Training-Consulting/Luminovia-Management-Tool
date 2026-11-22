@@ -1,9 +1,10 @@
 /**
  * Browser checks for the built public offline shell without private API caches.
- * Service-worker behaviour is exercised in Chromium; physical PWA installation remains separate acceptance.
+ * Chromium covers authenticated offline use. The explicit WebKit lane checks
+ * a cold worker installation, offline navigation and native push refusal.
  */
 import {expect, test, type Page} from "@playwright/test";
-import {randomUUID} from "node:crypto";
+import {createECDH, randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
 test.skip(
@@ -11,8 +12,111 @@ test.skip(
     "Run against a built preview with E2E_PWA=1 and E2E_BASE_URL.",
 );
 
-/** Wait for the built service worker to control the actual login page. */
-async function openControlledPwa(page: Page) {
+async function controlWithBuiltWorker(page: Page) {
+    await expect.poll(() => page.evaluate(async () => {
+        const worker = (await navigator.serviceWorker.getRegistration())?.active;
+        return worker?.state === "activated" && new URL(worker.scriptURL).pathname;
+    }), {timeout: 20_000}).toBe("/sw.js");
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => {
+        const controller = navigator.serviceWorker.controller;
+        return controller && new URL(controller.scriptURL).pathname;
+    })).toBe("/sw.js");
+}
+
+test("built PWA WebKit activates the app worker and serves an offline deep link", {tag: "@pwa-webkit"}, async ({
+    page,
+    context,
+}) => {
+    await page.goto("/login");
+    await expect(page.locator("#email")).toBeVisible();
+    await controlWithBuiltWorker(page);
+    const cachedPaths = await page.evaluate(async () => {
+        const names = await caches.keys();
+        const entries = await Promise.all(names.map(async (name) =>
+            (await (await caches.open(name)).keys()).map(({url}) => new URL(url).pathname),
+        ));
+        return entries.flat();
+    });
+    expect(cachedPaths).toContain("/index.html");
+    expect(cachedPaths.filter((path) => /^\/(?:backend|auth|rest|storage|functions|realtime)\//.test(path))).toEqual([]);
+
+    await context.setOffline(true);
+    try {
+        const response = await page.goto("/help");
+        expect(response?.status()).toBe(200);
+        expect(response?.fromServiceWorker()).toBe(true);
+        await expect(page.locator("#help-title")).toBeVisible();
+        await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+        const privateReply = await page.evaluate(async () => {
+            try {
+                await fetch("/rest/v1/rpc/my_push_devices", {method: "POST"});
+                return "unexpected response";
+            } catch {
+                return "network unavailable";
+            }
+        });
+        expect(privateReply).toBe("network unavailable");
+    } finally {
+        await context.setOffline(false);
+    }
+});
+
+test("built PWA WebKit refuses notification permission without registering a device", {tag: "@pwa-webkit"}, async ({page}) => {
+    const lecturer = await actor("Fictional WebKit push lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const viewer = api(process.env.SUPABASE_ANON_KEY!);
+    try {
+        await checked(viewer.auth.signInWithPassword({
+            email: lecturer.email,
+            password: process.env.E2E_PASSWORD!,
+        }), {requireData: true});
+        const previous = await checked(viewer.rpc("my_push_devices"), {requireData: true});
+        const key = previous.public_key ?? createECDH("prime256v1").generateKeys().toString("base64url");
+        await checked(service.rpc("configure_web_push", {p_public_key: key, p_enabled: true}));
+        try {
+            await page.addInitScript(() => {
+                const requestPermission = Notification.requestPermission.bind(Notification);
+                Notification.requestPermission = async () => {
+                    const decision = await requestPermission();
+                    document.documentElement.setAttribute("data-push-decision", decision);
+                    return decision;
+                };
+            });
+            await page.goto("/login");
+            await controlWithBuiltWorker(page);
+            await login(page, lecturer.email);
+            const registrations: string[] = [];
+            page.on("request", (request) => {
+                if (new URL(request.url()).pathname.endsWith("/rpc/register_push_device"))
+                    registrations.push(request.method());
+            });
+            await page.goto("/settings");
+            const delivery = page.locator("details.settings-section").filter({
+                hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/,
+            });
+            await delivery.locator("summary").press("Enter");
+            await expect(delivery).toHaveJSProperty("open", true);
+            const enable = page.getByRole("button", {name: /Push auf diesem Gerät aktivieren|Enable push on this device/});
+            await expect(enable).toBeEnabled();
+            await enable.click();
+            await expect(page.locator("html")).toHaveAttribute("data-push-decision", "denied");
+            await expect(page.getByText(/Push konnte nicht geändert werden|Push could not be changed/)).toBeVisible();
+            expect(registrations).toEqual([]);
+            const devices = await checked(viewer.rpc("my_push_devices"), {requireData: true});
+            expect(devices.devices).toEqual([]);
+        } finally {
+            await checked(service.rpc("configure_web_push", {p_public_key: previous.public_key ?? key, p_enabled: previous.enabled}));
+        }
+    } finally {
+        await checked(service.auth.admin.deleteUser(lecturer.id));
+    }
+});
+
+test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({
+                                                                                                                     page,
+                                                                                                                     context,
+                                                                                                                 }) => {
     await page.goto("/login");
     await page.evaluate(async () => {
         await navigator.serviceWorker.ready;

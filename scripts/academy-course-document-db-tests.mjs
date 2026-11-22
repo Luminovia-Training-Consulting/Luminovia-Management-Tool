@@ -212,9 +212,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
           scanCall(reservation, action, lease, sha256, scanner) +
           ";commit;",
       );
-    for (const who of [manager, learner, client, outside]) {
+    for (const who of [learner, otherClient, outside]) {
       await assert.rejects(reserve(who), /42501/);
     }
+    await assert.rejects(
+      reserve(client, randomUUID(), digest, otherRun),
+      /42501/,
+    );
     const staging = await reserve(teacher);
     assert.equal(staging.status, "quarantined");
     assert.deepEqual(await reserve(teacher), staging);
@@ -302,12 +306,111 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       assert.ok(validation.success, `${path}: ${validation.error?.message}`);
     };
     checkResponse("/functions/v1/files", { document: confirmed.document });
+    const submissions = (who) =>
+      actor(who, gate("/rpc/course_submissions") +
+        `select public.course_submissions(${q(run)})`).then(JSON.parse);
+    const setSubmissions = (who, enabled) =>
+      actor(who, gate("/rpc/set_course_submissions") +
+        `select to_jsonb(public.set_course_submissions(${q(run)},${enabled}))`).then(JSON.parse);
+    const reserveSubmission = (who, bytes = incoming.length) =>
+      actor(who, gate("/rpc/reserve_course_submission") +
+        `select public.reserve_course_submission(${q(run)},'fictional-lab.txt','text/plain',${bytes},${q(randomUUID())},${q(digest)})`).then(JSON.parse);
+    const submissionAccess = (who, draft) =>
+      actor(who, gate("/rpc/course_submission_access") +
+        `select public.course_submission_access(${q(run)},${q(draft.version_id)})`).then(JSON.parse);
+    const submissionWorker = (draft, action, lease = null, sha = null, scanner = null) =>
+      sql("begin;set local role service_role;" + gate("/rpc/course_submission_scan") +
+        `select public.course_submission_scan(${[draft.document_id, draft.version_id, action, lease, sha, scanner]
+          .map((item) => (item === null ? "null" : q(item))).join(",")});commit;`);
+    const storagePath = (draft) =>
+      sql("begin;set local role service_role;" + gate("/rpc/course_submission_storage_path") +
+        `select public.course_submission_storage_path(${q(run)},${q(draft.version_id)});commit;`);
+    assert.equal((await submissions(learner)).enabled, false);
+    await assert.rejects(reserveSubmission(learner), /42501/);
+    await assert.rejects(setSubmissions(otherClient, true), /42501/);
+    await assert.rejects(setSubmissions(teacher, true), /42501/);
+    assert.equal(await setSubmissions(client, true), true);
+    await assert.rejects(reserveSubmission(client), /42501/);
+    await assert.rejects(reserveSubmission(learner, 2_000_000), /54000/);
+    const learnerDraft = await reserveSubmission(learner);
+    const learnerLease = await submissionWorker(learnerDraft, "begin", null, digest);
+    await submissionWorker(learnerDraft, "clean", learnerLease, digest, fresh);
+    await submissionWorker(learnerDraft, "end", learnerLease);
+    const learnerPage = await submissions(learner);
+    checkResponse("/rest/v1/rpc/course_submissions", learnerPage);
+    assert.equal(learnerPage.entries[0].version_id, learnerDraft.version_id);
+    assert.equal(learnerPage.entries[0].participant, null);
+    assert.equal((await submissions(teacher)).entries[0].version_id, learnerDraft.version_id);
+    assert.equal((await submissions(client)).entries[0].version_id, learnerDraft.version_id);
+    await assert.rejects(submissionAccess(outside, learnerDraft), /42501/);
+    await assert.rejects(submissionAccess(otherClient, learnerDraft), /42501/);
+    const expectedPath = `${learner}/${learnerDraft.document_id}/${learnerDraft.version_id}`;
+    assert.equal(await storagePath(learnerDraft), expectedPath);
+    assert.equal((await submissionAccess(learner, learnerDraft)).object_path, undefined);
+    await assert.rejects(
+      actor(teacher, gate("/rpc/course_submission_storage_path") +
+        `select public.course_submission_storage_path(${q(run)},${q(learnerDraft.version_id)})`),
+      /42501/,
+    );
+    const scannedSubmission = await actor(learner, gate("/rpc/course_submission_status") +
+      `select public.course_submission_status(${q(run)},${q(learnerDraft.document_id)},${q(learnerDraft.version_id)})`
+    ).then(JSON.parse);
+    checkResponse("/functions/v1/files", {document: scannedSubmission.document});
     const newlyShared = await command(teacher, shareCall(staging.version_id));
     checkResponse("/rest/v1/rpc/academy_course_material_action", newlyShared);
     assert.equal((await access(learner, newlyShared.id)).sha256, digest);
     assert.equal(
       (await access(learner, newlyShared.id)).id,
       staging.version_id,
+    );
+    for (const [publisher, ownerKind] of [
+      [manager, "staff"],
+      [client, "company"],
+    ]) {
+      const draft = await reserve(publisher, randomUUID());
+      assert.equal(
+        (await uploadStatus(publisher, draft)).document.status,
+        "quarantined",
+      );
+      assert.equal(await uploadStatus(teacher, draft), null);
+      const scan = await worker(draft, "begin", null, digest);
+      await worker(draft, "clean", scan, digest, fresh);
+      await worker(draft, "end", scan);
+      const { document: exact } = await uploadStatus(publisher, draft);
+      assert.equal(exact.current_version_id, draft.version_id);
+      await assert.rejects(
+        command(publisher, shareCall(draft.version_id, otherRun)),
+        /42501/,
+      );
+      const share = await command(publisher, shareCall(draft.version_id));
+      const ownership = await sql(
+        `select ownership_kind from private.course_resources where id=${q(share.id)}`,
+      );
+      assert.equal(ownership, ownerKind);
+      assert.equal((await access(learner, share.id)).id, draft.version_id);
+      await assert.rejects(command(teacher, removeCall(share.id)), /42501/);
+      if (publisher === client)
+        await assert.rejects(command(manager, removeCall(share.id)), /42501/);
+      await command(publisher, removeCall(share.id));
+      await assert.rejects(access(learner, share.id), /42501/);
+    }
+    const fromFormerContact = await reserve(client, randomUUID());
+    const contactLease = await worker(fromFormerContact, "begin", null, digest);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    await assert.rejects(
+      worker(fromFormerContact, "clean", contactLease, digest, fresh),
+      /42501/,
+    );
+    await worker(fromFormerContact, "end", contactLease);
+    assert.equal(await uploadStatus(client, fromFormerContact), null);
+    await assert.rejects(
+      command(client, shareCall(fromFormerContact.version_id)),
+      /42501/,
+    );
+    await sql(
+      `update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`,
     );
     const rejected = await reserve(teacher, randomUUID());
     const rejectedLease = await worker(rejected, "begin", null, digest);
@@ -438,6 +541,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_release_course_instructor(${q(run)},${q(assignment.claim_id)},'Fictional assignment release',${q(randomUUID())})`,
     );
     await assert.rejects(access(teacher), /42501/);
+    await assert.rejects(submissionAccess(teacher, learnerDraft), /42501/);
     await assert.rejects(command(teacher), /42501/);
     await assert.rejects(command(teacher, removeCall(published.id)), /42501/);
     assert.deepEqual(await access(learner), exact);
@@ -452,6 +556,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     ).then(JSON.parse);
     assert.equal(replacement.status, "confirmed");
     assert.deepEqual(await command(teacher), published);
+    const nextSubmission = await reserveSubmission(learner);
+    const nextSubmissionLease = await submissionWorker(nextSubmission, "begin", null, digest);
     const graceReservation = await reserve(teacher, randomUUID());
     const graceLease = await worker(graceReservation, "begin", null, digest);
     await renew({
@@ -462,6 +568,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(await access(learner), exact);
     await assert.rejects(command(teacher), /42501/);
     await assert.rejects(reserve(teacher), /42501/);
+    const gracePage = await submissions(learner);
+    assert.equal(gracePage.can_upload, false);
+    assert.equal(gracePage.entries[0].can_withdraw, false);
+    assert.equal((await submissions(client)).can_manage, false);
+    assert.equal((await submissionAccess(learner, learnerDraft)).sha256, digest);
+    assert.equal(await storagePath(learnerDraft), expectedPath);
+    await assert.rejects(setSubmissions(client, false), /42501/);
+    await assert.rejects(reserveSubmission(learner), /42501/);
+    await assert.rejects(submissionWorker(nextSubmission, "clean", nextSubmissionLease, digest, fresh), /42501/);
+    await submissionWorker(nextSubmission, "end", nextSubmissionLease);
     await assert.rejects(uploadStatus(teacher, staging), /42501/);
     await assert.rejects(
       worker(graceReservation, "clean", graceLease, digest, fresh),
@@ -476,6 +592,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       grace_until: date(-1),
     });
     await assert.rejects(access(learner), /42501/);
+    await assert.rejects(submissions(learner), /42501/);
+    assert.equal(await storagePath(learnerDraft), "");
+    assert.equal(
+      await sql(`select count(*) from private.course_submission_offboard where version_id=${q(learnerDraft.version_id)}`),
+      "1",
+    );
     await assert.rejects(actor(manager, read(share)), /42501/);
     assert.equal(
       await sql(`select count(*) from private.course_resources
@@ -483,7 +605,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "1",
     );
     console.log(
-      `PASS ${edition} reserve, scan, publish/remove own exact course material, audience and retained files after expiry`,
+      `PASS ${edition} reserve, scan, manage exact course materials and private learner submissions, signed quotas, grace and expiry`,
     );
   });
 }

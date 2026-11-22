@@ -277,6 +277,7 @@ export type PortalDocumentRequest =
       id: string;
     }
   | { kind: "attendance_evidence"; id: string }
+  | { kind: "participant_submission"; id: string; version_id: string }
   | {
       kind: "attendance" | "attendance_session";
       id: string;
@@ -289,6 +290,15 @@ export type PortalDocumentRequest =
       version_id: string;
       organisation_id?: string;
       reason?: string;
+    }
+  | {
+      kind: "retained_course_file";
+      organisation_id: string;
+      run_id: string;
+      id: string;
+      version_id: string;
+      file_kind: "exam" | "material";
+      reason: string;
     }
   | { kind: "qualification_passport"; locale: "de" | "en" }
   | { kind: "earnings_statement"; from: string; until: string; all?: boolean };

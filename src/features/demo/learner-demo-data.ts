@@ -52,6 +52,8 @@ export type CoursePractice = {
   welcome: string;
   meeting: boolean;
   materials: boolean;
+  submissionsOpen: boolean;
+  sampleSubmitted: boolean;
   examRequired: boolean;
   examPublished: boolean;
   className: string;
@@ -70,6 +72,8 @@ export function initialCoursePractice(): Record<string, CoursePractice> {
         welcome: "",
         meeting: false,
         materials: false,
+        submissionsOpen: false,
+        sampleSubmitted: false,
         examRequired: course.exam,
         examPublished: course.exam,
         className: "",

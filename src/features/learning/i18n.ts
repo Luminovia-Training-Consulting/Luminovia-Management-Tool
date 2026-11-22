@@ -1,6 +1,77 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  submissions: ["Dateiabgaben", "File submissions"],
+  submissionOnline: [
+    "Dateiabgaben sind online verfügbar.",
+    "Go online to use file submissions.",
+  ],
+  submissionUnavailable: [
+    "Die Dateiabgaben konnten nicht geladen werden.",
+    "Could not load file submissions.",
+  ],
+  submissionRetry: ["Erneut versuchen", "Try again"],
+  submissionOpen: [
+    "Teilnehmende können Dateien privat abgeben. Das zuständige Kursteam kann sie einsehen.",
+    "Participants can submit files privately. The course team can review them.",
+  ],
+  submissionClosed: [
+    "Dieser Kurs nimmt derzeit keine Dateiabgaben an.",
+    "This course is currently closed to file submissions.",
+  ],
+  submissionReadOnly: [
+    "Dateiabgaben können eingesehen werden. Änderungen sind zurzeit gesperrt.",
+    "File submissions are available to review. Changes are currently locked.",
+  ],
+  submissionEnable: ["Dateiabgaben erlauben", "Allow file submissions"],
+  submissionDisable: ["Dateiabgaben schließen", "Close file submissions"],
+  submissionFile: ["Datei auswählen", "Choose file"],
+  submissionFileLimit: [
+    "Maximale Dateigröße: 10 MB.",
+    "Maximum file size: 10 MB.",
+  ],
+  submissionScanning: ["Datei wird geprüft …", "Scanning file…"],
+  submissionSend: ["Datei abgeben", "Submit file"],
+  submissionRejected: [
+    "Die Sicherheitsprüfung hat die Datei abgelehnt.",
+    "The security scan rejected the file.",
+  ],
+  submissionScannerUnavailable: [
+    "Die Sicherheitsprüfung ist derzeit nicht verfügbar. Versuche es erneut.",
+    "The security scan is temporarily unavailable. Try again.",
+  ],
+  submissionUploadFailed: [
+    "Die Datei konnte nicht abgegeben werden.",
+    "Could not submit the file.",
+  ],
+  submissionUploaded: [
+    "Die geprüfte Datei wurde abgegeben.",
+    "The scanned file was submitted.",
+  ],
+  submissionDownload: [
+    "Datei herunterladen: {{name}}",
+    "Download file: {{name}}",
+  ],
+  submissionWithdraw: ["Abgabe zurückziehen", "Withdraw submission"],
+  submissionWithdrawFile: [
+    "Abgabe zurückziehen: {{name}}",
+    "Withdraw submission: {{name}}",
+  ],
+  submissionConfirm: [
+    "Möchtest du die Abgabe „{{name}}“ zurückziehen?",
+    "Withdraw the submission “{{name}}”?",
+  ],
+  submissionCancel: ["Abbrechen", "Cancel"],
+  submissionWithdrawn: [
+    "Die Abgabe wurde zurückgezogen.",
+    "The submission was withdrawn.",
+  ],
+  submissionEmpty: [
+    "Auf dieser Seite gibt es keine Dateiabgaben.",
+    "There are no submissions on this page.",
+  ],
+  submissionPrevious: ["Vorherige Seite", "Previous page"],
+  submissionNext: ["Nächste Seite", "Next page"],
   participationReport: ["Teilnahmebericht", "Participation report"],
   exportParticipation: [
     "Teilnahmebericht als CSV exportieren",

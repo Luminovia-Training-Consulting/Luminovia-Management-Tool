@@ -5,6 +5,7 @@
 import {execFileSync, spawn} from "node:child_process";
 import {chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync,} from "node:fs";
 import {join, resolve} from "node:path";
+import {release} from "node:os";
 import {createHash} from "node:crypto";
 import {setTimeout as delay} from "node:timers/promises";
 
@@ -314,7 +315,7 @@ export async function ensureDependencies() {
 }
 
 /** Requires a local Docker endpoint before service mutations; remote daemons are not valid test targets. */
-export async function assertLocalDocker() {
+export async function assertLocalDocker({startService = false} = {}) {
     const host =
         (!process.env.DOCKER_CONTEXT && process.env.DOCKER_HOST) ||
         (
@@ -345,10 +346,63 @@ export async function assertLocalDocker() {
                 "This local launcher refuses a remote Docker context. Select a local Docker Engine first.",
             );
     }
-    await command("docker", ["info", "--format", "{{.ServerVersion}}"], {
+    const defaultSocket = ["unix:///var/run/docker.sock", "unix:///run/docker.sock"].includes(host);
+    const probe = () => command("docker", ["info", "--format", "{{.ServerVersion}}"], {
         quiet: true,
         timeoutMs: 10000,
     });
+
+    try {
+        await probe();
+    } catch (error) {
+        if (!startService || error.cause?.code === "ENOENT") throw error;
+        if (/permission denied/i.test(error.message)) {
+            throw new Error(
+                "Docker socket access was denied. Run docker info as your regular user and fix Docker access before retrying ./portal start.",
+                {cause: error},
+            );
+        }
+        if (!defaultSocket || !/cannot connect|connection refused|no such file/i.test(error.message)) {
+            throw new Error(
+                "The selected local Docker Engine is unavailable. Start it or check your Docker context with docker context ls and docker info.",
+                {cause: error},
+            );
+        }
+
+        const interactive = Boolean(process.stdin.isTTY && process.stderr.isTTY);
+        console.log("Docker is stopped or unavailable. Starting the local docker.service …");
+        try {
+            if (interactive) {
+                // Keep the terminal attached so systemd can use its normal authentication prompt.
+                execFileSync("systemctl", ["start", "docker.service"], {
+                    stdio: "inherit",
+                    timeout: 60_000,
+                    killSignal: "SIGKILL",
+                });
+            } else {
+                await command("systemctl", ["--no-ask-password", "start", "docker.service"], {
+                    quiet: true,
+                    timeoutMs: 60_000,
+                });
+            }
+        } catch {
+            // The Docker probe is authoritative, including when another process starts the service.
+        }
+
+        try {
+            await probe();
+        } catch (retryError) {
+            const kernel = release();
+            const missingModules = existsSync("/usr/lib/modules") &&
+                !existsSync(join("/usr/lib/modules", kernel));
+            const guidance = /permission denied/i.test(retryError.message)
+                ? "Docker is unreachable with your current socket permissions. Check docker info as your regular user."
+                : missingModules
+                    ? `The module directory for the running kernel (${kernel}) is missing. If Linux was updated, reboot into the installed kernel, then retry ./portal start.`
+                    : "Run sudo systemctl start docker.service in a terminal. If it fails, inspect journalctl -b -u docker.service -n 30 --no-pager.";
+            throw new Error(`The local Docker Engine is unavailable. ${guidance}`, {cause: retryError});
+        }
+    }
     return host;
 }
 

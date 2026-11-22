@@ -55,6 +55,7 @@ import {
   courseParticipationReportRequest,
   courseParticipationReportSchema,
 } from "../learning/course-participation-report-schema.ts";
+import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { humanAuthPaths } from "./human-auth-contract.ts";
 import { sessionPaths } from "./session-contract.ts";
@@ -224,7 +225,7 @@ const materialUploadResult = record({
       owner_id: uuid,
       uploaded_by: uuid,
       scope: { enum: ["personal", "room"] },
-      kind: { enum: ["material", "chat"] },
+      kind: { enum: ["material", "chat", "participant_submission"] },
       room_id: nullable(uuid),
       job_id: nil,
       original_name: { ...string, minLength: 1, maxLength: 200 },
@@ -241,7 +242,7 @@ const materialUploadResult = record({
         required: ["scope", "kind", "room_id"],
         properties: {
           scope: { const: "personal" },
-          kind: { const: "material" },
+          kind: { enum: ["material", "participant_submission"] },
           room_id: nil,
         },
       },
@@ -263,7 +264,7 @@ const materialUpload = {
     tags: ["Licensed course profile"],
     summary:
       "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -280,6 +281,7 @@ const materialUpload = {
             "academy-course-chat",
             "academy-attendance",
             "academy-logo",
+            "course-submission",
           ],
         },
       },
@@ -311,6 +313,7 @@ const materialUpload = {
                 academy_course_id: uuid,
                 academy_room_id: uuid,
                 academy_session_id: uuid,
+                course_run_id: uuid,
                 client_id: uuid,
                 file: {
                   ...string,
@@ -335,6 +338,11 @@ const materialUpload = {
                 type: "object",
                 properties: { academy_session_id: uuid },
                 required: ["academy_session_id"],
+              },
+              {
+                type: "object",
+                properties: { course_run_id: uuid },
+                required: ["course_run_id"],
               },
             ],
           },
@@ -423,7 +431,7 @@ const courseDocumentDownload = {
     tags: ["Licensed course profile"],
     summary:
       "Download a protected learning document, attachment or attendance report",
-    description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. To download scanned evidence, use attendance_evidence and the evidence ID from that register. The caller’s authority and facts are checked again before delivery.`,
+    description: `${readAccess} Send an approved Origin and the exact published document ID. Student and staff exam visibility follow the current course and the selected audience. Course materials, exam papers and chat attachments use the exact scan-confirmed version. Chat attachments require the message ID, exact version ID and current room membership. Completion documents use retained verified facts. For attendance, current course staff and authorised company contacts can request PDF or CSV with the session ID. To download scanned evidence, use attendance_evidence and the evidence ID from that register. For participant_submission provide the owning course ID and the exact submission version. Only the submitting learner or the scoped course team can download it. The caller’s authority and facts are checked again before delivery.`,
     security: credentials,
     "x-portal-licence": "active-or-grace",
     parameters: [gatewayOriginHeader],
@@ -438,6 +446,11 @@ const courseDocumentDownload = {
           record({ kind: { const: "attendance_evidence" }, id: uuid }),
           record({
             kind: { const: "course_chat_attachment" },
+            id: uuid,
+            version_id: uuid,
+          }),
+          record({
+            kind: { const: "participant_submission" },
             id: uuid,
             version_id: uuid,
           }),
@@ -716,8 +729,12 @@ const coursePaths = {
         p_payload: z.toJSONSchema(academyDraftPayload),
       }),
       oneOf: [
-        { properties: { p_template_id: uuid, p_template_title: nil } },
         {
+          type: "object",
+          properties: { p_template_id: uuid, p_template_title: nil },
+        },
+        {
+          type: "object",
           properties: {
             p_template_id: nil,
             p_template_title: { ...string, minLength: 1, maxLength: 200 },
@@ -844,6 +861,30 @@ const coursePaths = {
     z.toJSONSchema(courseWithdrawalWindowSchema),
   ),
   "/rest/v1/rpc/cancel_own_course_enrolment": learnerWithdrawal,
+  "/rest/v1/rpc/course_submissions": courseOperation(
+    "readAcademyCourseSubmissions",
+    "List private participant file submissions",
+    "Participants see their own clean submissions. Current assigned instructors, course management and authorised contacts of the course company see the submissions in their course. Pass the returned next cursor as p_after for older submissions.",
+    "active-or-grace",
+    record({ ...run, p_after: nullable(uuid) }, ["p_run_id"]),
+    z.toJSONSchema(courseSubmissionPage),
+  ),
+  "/rest/v1/rpc/set_course_submissions": courseOperation(
+    "setAcademyCourseSubmissions",
+    "Open or close private participant file submissions",
+    "Current course managers and authorised company contacts can enable private submissions for that course. New courses default to closed. Closing submissions preserves authorised access to previously submitted files.",
+    "active",
+    record({ ...run, p_enabled: { type: "boolean" } }),
+    { type: "boolean" },
+  ),
+  "/rest/v1/rpc/withdraw_course_submission": courseOperation(
+    "withdrawAcademyCourseSubmission",
+    "Withdraw an exact file submission",
+    "An enrolled participant can withdraw their own submission while intake is open. Current course managers and authorised company contacts can withdraw a submission in their course. Withdrawn versions are no longer visible in the course.",
+    "active",
+    record({ ...run, p_version_id: uuid }),
+    { type: "boolean" },
+  ),
   "/rest/v1/rpc/set_course_meeting_link": courseOperation(
     "setAcademyCourseMeetingLink",
     "Set or clear an online course meeting link",
@@ -874,7 +915,7 @@ const coursePaths = {
   "/rest/v1/rpc/academy_course_material_action": courseOperation(
     "publishAcademyCourseMaterial",
     "Publish or withdraw a scanned course material version",
-    "Only the currently assigned lecturer can publish their own exact clean version for the selected audience. Use the returned current_version_id from the course upload. Repeating a share for the same version and audience returns the same resource ID. To withdraw your own publication, send the resource ID with resource_remove and omit the audience and category.",
+    "A current course manager, assigned lecturer or authorised contact of the exact course company can publish their own scanned version reserved for this course and release. Use the returned current_version_id from the course upload. Repeating a share for the same version and audience returns the same resource ID. To withdraw your own publication, send the resource ID with resource_remove and omit the audience and category.",
     "active",
     materialAction,
     record({ id: uuid }),
@@ -1091,7 +1132,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.30.0",
+      version: "1.31.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

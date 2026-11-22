@@ -289,3 +289,105 @@ export const enquiriesSupportPaths = {
     },
   ),
 };
+
+/** The Website backend uses a separate secret. Keep this path download-only. */
+const websiteEnquiry = z.strictObject({
+  submission_id: id,
+  company_name: text(200),
+  contact_name: text(120),
+  email: z.string().trim().max(254).email(),
+  phone: z
+    .string()
+    .max(60)
+    // eslint-disable-next-line no-control-regex -- Match the intake handler's rejection of ASCII control characters.
+    .regex(/^[^\u0000-\u001f\u007f]*$/),
+  topic: text(200),
+  message: text(12000),
+  preferred_dates: z.string().max(1000),
+  duration: z.string().max(200),
+  delivery_type: z.enum(["online", "onsite", "flexible"]),
+  time_zone: z.string().min(1).describe("Recognised IANA time zone"),
+  locale: z.enum(["de", "en"]),
+  privacy_notice_version: text(120).describe(
+    "Current configured notice version",
+  ),
+  consent: z.literal(true),
+  website: z.literal("").optional().describe("Honeypot"),
+});
+
+const websiteErrors = {
+  "400": ["Invalid input, consent or notice version", "invalid_request"],
+  "401": [
+    "Invalid or missing server integration credential",
+    "integration_authentication_required",
+  ],
+  "403": ["Origin does not match the configured Website", "origin_not_allowed"],
+  "409": [
+    "The receipt UUID was previously used with a different payload",
+    "retry_conflict",
+  ],
+  "413": ["The streamed JSON exceeds 24,000 bytes", "invalid_request"],
+  "415": ["Content-Type must be application/json", "json_required"],
+  "429": ["The durable integration sender quota was reached", "rate_limited"],
+  "503": [
+    "The intake is unavailable or did not confirm delivery",
+    "integration_unavailable",
+    "delivery_unavailable",
+  ],
+} as const;
+
+export const websiteEnquiryIntakePath = {
+  post: {
+    operationId: "receiveWebsiteEnquiry",
+    tags: ["Website integration"],
+    summary: "Submit a contact enquiry from the trusted Website service",
+    description:
+      "The public gateway key is required. Follow the target gateway configuration for a legacy anonymous JWT. Keep the additional Website integration token on the server. Repeat the exact UUID and payload after an uncertain response. A confirmed receipt contains the caller's submission ID.",
+    security: [{ publicApiKey: [], websiteIntakeToken: [] }],
+    parameters: [
+      {
+        name: "Origin",
+        in: "header",
+        required: false,
+        description:
+          "If supplied, must exactly match the configured Website origin.",
+        schema: { type: "string" },
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": { schema: z.toJSONSchema(websiteEnquiry) },
+      },
+    },
+    responses: {
+      "202": {
+        description: "Durable intake acknowledgement",
+        content: {
+          "application/json": {
+            schema: z.toJSONSchema(
+              z.strictObject({ received: z.literal(true), receipt: id }),
+            ),
+          },
+        },
+      },
+      ...Object.fromEntries(
+        Object.entries(websiteErrors).map(
+          ([status, [description, ...errors]]) => [
+            status,
+            {
+              description,
+              content: {
+                "application/json": {
+                  schema: z.toJSONSchema(
+                    z.strictObject({ error: z.enum(errors) }),
+                  ),
+                },
+              },
+            },
+          ],
+        ),
+      ),
+    },
+  },
+};

@@ -129,7 +129,8 @@ test("mobile demo navigation explains and permits access to its remaining sectio
         await expect(
             page.getByRole("button", {name: "More demo sections", exact: true}),
         ).toBeVisible();
-        await page.locator(".demo-mobile-more > summary").click();
+        await page.getByLabel("Language", {exact: true}).focus();
+        await expect(nav).toBeHidden();
     } else {
         const nav = page.locator(".demo-sidebar nav");
         await expect(nav).toBeVisible();
@@ -145,6 +146,49 @@ test("mobile demo navigation explains and permits access to its remaining sectio
         });
     }
     if (viewport) await page.setViewportSize(viewport);
+});
+
+test("demo More opens beside the bottom navigation and restores keyboard focus", async ({page}) => {
+  await page.setViewportSize({width: 320, height: 568});
+  await page.goto("/demo");
+  const role = page.locator("#demo-role");
+  await role.focus();
+  await role.press("ArrowDown");
+  await expect(role).toHaveValue("management");
+  await expect(role).toBeFocused();
+  await role.press("ArrowDown");
+  await expect(role).toHaveValue("admin");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const offset = await page.evaluate(() => window.scrollY);
+  expect(offset).toBeGreaterThan(0);
+  const trigger = page.getByRole("button", {name: "Mehr Demo-Bereiche"});
+  const panel = page.locator("#demo-mobile-panel");
+  await expect(trigger).toHaveCount(1);
+  await trigger.click();
+  await expect(panel).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(await page.evaluate(() => window.scrollY)).toBe(offset);
+  await expect(panel.locator('a[href="/help"]')).toHaveCount(1);
+  await expect(panel.locator('a[href="/login"]')).toHaveCount(1);
+  for (const [width, height] of [[320, 568], [568, 320]]) {
+    await page.setViewportSize({width, height});
+    const box = await panel.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(height);
+  }
+  await panel.getByRole("link").last().focus();
+  await expect(panel.getByRole("link").last()).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.click();
+  await page.locator(".demo-mobile-primary-nav a[href='/demo/calendar']").click();
+  await expect(page).toHaveURL(/\/demo\/calendar$/);
+  await expect(panel).toBeHidden();
 });
 
 test("fictional job outcomes never reserve real work, and language changes retain practice state", async ({
@@ -651,6 +695,8 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
   await page.getByRole("button", {name: "Beispiel-Meeting freigeben"}).click();
   await page.getByText("Materialien", {exact: true}).click();
   await page.getByRole("button", {name: "Beispielmaterial freigeben"}).click();
+  await page.getByRole("heading", {name: "Dateiabgaben", exact: true}).click();
+  await page.getByRole("button", {name: "Beispielabgaben öffnen", exact: true}).click();
   await page.getByText("Einladungen & Einschreibung", {exact: true}).click();
   await page.getByLabel("Fiktive Person").selectOption("Kim Beispiel");
   await page.getByRole("button", {name: "Einladung in der Demo vormerken"}).click();
@@ -667,6 +713,9 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
   await expect(page.getByText("Anwesend", {exact: true})).toBeVisible();
   await expect(page.getByText("Kim Beispiel", {exact: true})).toHaveCount(0);
   await expect(page.getByText("Anwesenheitsliste", {exact: true})).toHaveCount(0);
+  await page.getByRole("button", {name: "Beispieldatei abgeben", exact: true}).click();
+  await expect(page.getByText("Fiktive Kursabgabe von Demo Alex", {exact: true})).toBeVisible();
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
   await page.getByRole("button", {name: "Beispiel-Meeting öffnen"}).click();
   await expect(page.getByRole("status")).toContainText("Kamera und Mikrofon bleiben aus");
   await page.getByLabel("Sprache", {exact: true}).selectOption("en");
@@ -675,8 +724,13 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
 
   await role.selectOption("lecturer");
   await expect(page.getByText("Invitations & enrolment", {exact: true})).toHaveCount(0);
+  await page.getByRole("heading", {name: "File submissions", exact: true}).click();
+  await expect(page.getByText("Fictional course submission by Demo Alex", {exact: true})).toBeVisible();
+  await expect(page.getByRole("button", {name: "Close sample submissions", exact: true})).toHaveCount(0);
   await page.locator(".demo-practice-section > summary").filter({hasText: /^Exam$/}).click();
   await page.getByRole("checkbox", {name: "Exam required"}).uncheck();
   await role.selectOption("participant");
   await expect(page.getByRole("link", {name: "Exam", exact: true})).toHaveCount(0);
+  await page.getByRole("button", {name: "Withdraw sample submission", exact: true}).click();
+  await expect(page.getByText("Fictional course submission by Demo Alex", {exact: true})).toHaveCount(0);
 });

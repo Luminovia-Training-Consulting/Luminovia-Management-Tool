@@ -13,6 +13,8 @@ import {
   type CompanyPremiumSetting,
 } from "./company-premium-schema";
 import { AuditedCourseChat } from "./audited-course-chat";
+import { RetainedCourseAttendancePanel } from "./retained-course-attendance";
+import { RetainedCourseFilesPanel } from "./retained-course-files";
 import "./i18n";
 
 /** Keep every role's status readable while only a current admin receives mutation controls. */
@@ -125,6 +127,7 @@ export function CompanyPremiumControl({
               key={`${actor}:${setting.organisation_id}`}
               organisation={setting.organisation_id}
               zone={zone}
+              premiumEnabled={setting.enabled}
             />
           ) : (
             <Button type="button" variant="secondary" disabled>
@@ -208,9 +211,11 @@ export function CompanyPremiumControl({
 function RetainedCompanySummary({
   organisation,
   zone,
+  premiumEnabled,
 }: {
   organisation: string;
   zone?: string;
+  premiumEnabled: boolean;
 }) {
   const { t } = useTranslation("operations");
   const [retainedOpen, setRetainedOpen] = useState(false);
@@ -290,6 +295,19 @@ function RetainedCompanySummary({
                     zone={zone ?? "UTC"}
                   />
                 )}
+                {!premiumEnabled && !retained.data?.premium_enabled && (
+                  <RetainedCourseFilesPanel
+                    organisation={organisation}
+                    course={course.run_id}
+                  />
+                )}
+                {!retained.data?.premium_enabled &&
+                  course.attendance_entries > 0 && (
+                    <RetainedCourseAttendancePanel
+                      organisation={organisation}
+                      course={course.run_id}
+                    />
+                  )}
               </article>
             ))}
           </div>

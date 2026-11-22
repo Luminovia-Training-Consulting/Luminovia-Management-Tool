@@ -662,6 +662,78 @@ Deno.test("course chat download checks the exact version, scan hash and post-sto
     assert(denied.status === 403 && !(await denied.text()).includes("Fictional course file"));
 });
 
+Deno.test("retained files require exact scope and are audited only after byte verification", async () => {
+    const bytes = new TextEncoder().encode("Fictional retained exam");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+        .map((value) => value.toString(16).padStart(2, "0")).join("");
+    const version = "52b7ddee-2166-485a-bcee-04d0eea958d2";
+    const company = "52b7ddee-2166-485a-bcee-04d0eea958d3";
+    const course = "52b7ddee-2166-485a-bcee-04d0eea958d4";
+    const reason = "Fictional archived exam review";
+    const facts = {
+        version_id: version, size_bytes: bytes.length,
+        name: "Fictional exam.pdf", sha256: hash, mime_type: "application/pdf",
+    };
+    const sequence: string[] = [];
+    let denied = false, revokeDuringDownload = false, integrityFailure = false;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => {
+            sequence.push("auth");
+            return true;
+        },
+        rpc: async (_token, name, args) => {
+            assert(name === "retained_course_file_access");
+            assert(args.p_organisation_id === company && args.p_run_id === course);
+            assert(args.p_file_kind === "exam" && args.p_file_id === id);
+            assert(args.p_version_id === version && args.p_reason === reason);
+            assert(typeof args.p_record_access === "boolean");
+            sequence.push(args.p_record_access ? "final audit" : "preflight");
+            return denied ? {data: null, error: true} : {data: facts, error: null};
+        },
+        retainedPath: async (requestedVersion, requestedHash) => {
+            sequence.push("path");
+            assert(requestedVersion === version && requestedHash === hash);
+            return "fictional/retained-exam";
+        },
+        download: async (path) => {
+            sequence.push("storage");
+            assert(path === "fictional/retained-exam");
+            if (revokeDuringDownload) denied = true;
+            return integrityFailure ? new Uint8Array(bytes.length) : bytes;
+        },
+        render: async () => { throw new Error("Retained files must return the scanned bytes"); },
+    });
+    const body = {
+        kind: "retained_course_file", organisation_id: company, run_id: course,
+        id, version_id: version, file_kind: "exam", reason,
+    };
+    const ok = await handler(request(body));
+    assert(ok.status === 200 && await ok.text() === "Fictional retained exam");
+    assert(ok.headers.get("Cache-Control") === "no-store, private");
+    assert(ok.headers.get("Content-Disposition") === 'attachment; filename="Fictional_exam.pdf"');
+    assert(sequence.splice(0).join(",") === "auth,preflight,path,storage,auth,final audit");
+
+    assert((await handler(request({...body, object_path: "fictional/custom"}))).status === 400);
+    assert((await handler(request({...body, reason: "short"}))).status === 400);
+    assert(sequence.splice(0).join(",") === "auth,auth");
+
+    denied = true;
+    assert((await handler(request(body))).status === 403);
+    assert(sequence.splice(0).join(",") === "auth,preflight");
+
+    denied = false;
+    integrityFailure = true;
+    assert((await handler(request(body))).status === 503);
+    assert(sequence.splice(0).join(",") === "auth,preflight,path,storage");
+
+    integrityFailure = false;
+    revokeDuringDownload = true;
+    const revoked = await handler(request(body));
+    assert(revoked.status === 403 && !(await revoked.text()).includes("Fictional retained exam"));
+    assert(sequence.join(",") === "auth,preflight,path,storage,auth,final audit");
+});
+
 Deno.test("dedicated course PDFs use database branding and reject a changing issuer or request override", async () => {
     const brand = {
         name: "Fictional academy",
@@ -703,4 +775,59 @@ Deno.test("dedicated course PDFs use database branding and reject a changing iss
     const forged = await handler(request({kind: "completion", id, academy_pdf_brand: brand}));
     assert(forged.status === 400);
     assert(Number(calls) === 4 && renderCalls === 2);
+});
+
+Deno.test("private submissions use one exact service-resolved version and fail closed on revoked access", async () => {
+    const version = "22715826-28c1-458a-8975-05bf4b916cd2";
+    const bytes = new TextEncoder().encode("Fictional private submission");
+    const digest = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+        .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    let reads: Record<string, unknown>[] = [];
+    let resolved = 0, downloaded = 0;
+    let revoke = false, wrongVersion = false, wrongSize = false;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => true,
+        rpc: async (_token, name, args) => {
+            assert(name === "course_submission_access");
+            reads.push(args);
+            return {
+                data: revoke && args.p_record ? null : {
+                    version_id: wrongVersion ? id : version,
+                    name: "private-course.txt",
+                    mime_type: "text/plain",
+                    size_bytes: bytes.length + (wrongSize ? 1 : 0),
+                    sha256: digest,
+                },
+                error: null,
+            };
+        },
+        submissionPath: async (course, selected) => {
+            resolved++;
+            assert(course === id && selected === version);
+            return "private/exact-version";
+        },
+        download: async (path) => {
+            downloaded++;
+            assert(path === "private/exact-version");
+            return bytes;
+        },
+        render: async () => { throw new Error("Unexpected render"); },
+    });
+    const body = {kind: "participant_submission", id, version_id: version};
+    const delivered = await handler(request(body));
+    assert(delivered.status === 200);
+    assert(await delivered.text() === "Fictional private submission");
+    assert(delivered.headers.get("cache-control")?.includes("no-store"));
+    assert(reads.length === 2 && reads[0].p_run_id === id && reads[0].p_version_id === version);
+    assert(!reads[0].p_record && reads[1].p_record);
+    revoke = true;
+    reads = [];
+    assert((await handler(request(body))).status === 403);
+    wrongSize = true;
+    assert((await handler(request(body))).status === 503);
+    wrongVersion = true;
+    assert((await handler(request(body))).status === 403);
+    assert((await handler(request({...body, owner_id: id}))).status === 400);
+    assert(resolved === 3 && downloaded === 3);
 });

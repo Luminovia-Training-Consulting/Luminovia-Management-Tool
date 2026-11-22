@@ -12,7 +12,7 @@ import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
-import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery} from './academy-material.ts';
+import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -103,9 +103,11 @@ Deno.serve(async (request: Request) => {
         const academyChat = query === academyCourseChatQuery;
         const academyAttendance = query === academyAttendanceQuery;
         const academyIntake = academyChat || academyAttendance || examReservation !== null || query === academyMaterialQuery;
+        const submissionIntake = query === courseSubmissionQuery;
+        const scopedIntake = academyIntake || submissionIntake;
         const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
-        if (academyIntake && !multipart) return json(400, {error: 'invalid_request'});
-        if (academyIntake) {
+        if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
+        if (scopedIntake) {
             const access = await user.rpc('portal_access');
             if (access.error || access.data !== true) throw new Error('access_denied');
         } else await requireProfile();
@@ -116,12 +118,13 @@ Deno.serve(async (request: Request) => {
         };
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
-            const raw = await boundedBytes(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
+            const raw = await bounded(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
             const attendanceSession = academyAttendanceSession(form, academyAttendance);
-            const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession);
+            const submissionRun = courseSubmissionRun(form, submissionIntake);
+            const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession || submissionRun);
             const file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
@@ -147,7 +150,9 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = attendanceSession
+            const reserved = submissionRun
+                ? await user.rpc('reserve_course_submission', {p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                : attendanceSession
                 ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : chatRoom
                 ? await user.rpc('reserve_academy_course_chat_file', {p_room_id: chatRoom, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
@@ -168,9 +173,11 @@ Deno.serve(async (request: Request) => {
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
             const courseStatus = async () => {
-                const target = attendanceSession ? {p_session_id: attendanceSession}
+                const target = submissionRun ? {p_run_id: submissionRun}
+                    : attendanceSession ? {p_session_id: attendanceSession}
                     : materialRun ? {p_run_id: materialRun} : {p_room_id: roomId};
-                const endpoint = attendanceSession ? 'academy_attendance_upload_status'
+                const endpoint = submissionRun ? 'course_submission_status'
+                    : attendanceSession ? 'academy_attendance_upload_status'
                     : materialRun ? 'academy_course_material_status' : 'course_chat_upload_status';
                 const status = await user.rpc(endpoint, {
                     ...target,
@@ -195,8 +202,8 @@ Deno.serve(async (request: Request) => {
                 return json(200, {document: doc});
             }
             if (doc.status === 'rejected') return json(422, {error: 'scan_rejected', document_id: doc.id});
-            const academyScan = async (action: string, lease: string | null, sha256: string | null, scannerVersion: string | null) => {
-                const result = await service.rpc('academy_course_material_scan', {
+            const protectedScan = async (action: string, lease: string | null, sha256: string | null, scannerVersion: string | null) => {
+                const result = await service.rpc(submissionRun ? 'course_submission_scan' : 'academy_course_material_scan', {
                     p_document_id: doc.id, p_version_id: reservation.version_id, p_action: action,
                     p_lease_id: lease, p_sha256: sha256, p_scanner_version: scannerVersion,
                 });
@@ -210,14 +217,14 @@ Deno.serve(async (request: Request) => {
             // while this request could still recreate a clean/quarantine object.
             return await withUploadLease({
                 begin: async () => {
-                    if (protectedUpload) return await academyScan('begin', null, incomingDigest, null);
+                    if (protectedUpload) return await protectedScan('begin', null, incomingDigest, null);
                     const r = await service.rpc('deletion_upload_begin', {p_document_id: doc.id, p_version_id: reservation.version_id});
                     if (r.error || typeof r.data !== 'string') throw new Error('access_denied');
                     return r.data;
                 },
                 end: async (lease) => {
                     if (protectedUpload) {
-                        await academyScan('end', lease, null, null);
+                        await protectedScan('end', lease, null, null);
                         return;
                     }
                     const r = await service.rpc('deletion_upload_end', {p_lease_id: lease});
@@ -253,7 +260,7 @@ Deno.serve(async (request: Request) => {
                 try {
                     verdict = await scanPortalFile(storedBytes);
                 } catch {
-                    if (protectedUpload) await academyScan('scan_error', lease, null, null);
+                    if (protectedUpload) await protectedScan('scan_error', lease, null, null);
                     else {
                         await service.from('document_versions').update({status: 'scan_error'}).eq('id', reservation.version_id);
                         await service.from('documents').update({status: 'scan_error'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
@@ -261,7 +268,7 @@ Deno.serve(async (request: Request) => {
                     return json(503, {error: 'scanner_unavailable', document_id: doc.id});
                 }
                 if (!verdict.clean) {
-                    if (protectedUpload) await academyScan('rejected', lease, digest, verdict.version);
+                    if (protectedUpload) await protectedScan('rejected', lease, digest, verdict.version);
                     else {
                         await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
                         await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
@@ -288,11 +295,26 @@ Deno.serve(async (request: Request) => {
                     const existingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await existingBytes.data.arrayBuffer()))).map(b => b.toString(16).padStart(2, '0')).join('');
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
-                if (protectedUpload) await academyScan('clean', lease, digest, verdict.version);
-                else {
-                    // Both completion RPCs commit the document, version and audit as a single unit.
-                    const complete = doc.kind === 'invoice' ? 'complete_invoice_upload' : 'complete_document_upload';
-                    const completed = await service.rpc(complete, {
+                if (protectedUpload) {
+                    try {
+                        await protectedScan('clean', lease, digest, verdict.version);
+                    } catch (error) {
+                        // This lease is the only active writer. A definite authority
+                        // rejection did not publish the version, so discard its clean copy.
+                        // An uncertain RPC may already have committed and must keep the bytes.
+                        if (submissionRun && error instanceof Error && error.message === 'access_denied') {
+                            const acknowledgeRemoval = writes.begin();
+                            const removed = await service.storage.from('portal-clean').remove([reservation.object_path]);
+                            // A failed remote deletion may still finish after this request.
+                            // Hold the lease so a retry cannot publish bytes that are being removed.
+                            if (removed.error) throw new Error('deletion_unavailable');
+                            acknowledgeRemoval();
+                        }
+                        throw error;
+                    }
+                }
+                else if (doc.kind === 'invoice') {
+                    const completed = await service.rpc('complete_invoice_upload', {
                         p_document_id: doc.id, p_version_id: reservation.version_id, p_lease_id: lease,
                         p_sha256: digest, p_scanner_version: verdict.version,
                     });

@@ -5,7 +5,8 @@ import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
 import {eventually, subscribeToRoom} from "./testing/realtime.mjs";
 import {setTimeout as delay} from "node:timers/promises";
-import {portalJsonResponse} from "./testing/openapi-contract.mjs";
+import {checkPrivateCourseSubmissions} from "./testing/private-course-submission-check.mjs";
+import {documentedRpc, portalJsonResponse} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
     async ({actor, passwordOnly, checked, service, sql, defer, url}) => {
@@ -274,6 +275,10 @@ await withApiFixture(
                 signal: AbortSignal.timeout(30000),
             });
         }
+
+        await checkPrivateCourseSubmissions({
+            admin, teacher, learner, client, peer, run, otherRun, checked, url, headers, download, bytes,
+        });
 
         const material = await download(learner, "resource", resource);
         assert.equal(material.status, 200);
@@ -557,6 +562,46 @@ await withApiFixture(
         assert.equal((await send(teacher, room, "Fictional denied message")).error?.code, "42501");
         assert.equal((await download(learner, "resource", resource)).status, 403);
         assert.equal((await download(learner, "course_chat_attachment", message, chatVersion)).status, 403);
+        const inspection = {
+            p_organisation_id: org,
+            p_run_id: run,
+            p_reason: "Review the retained fictional mark after deactivation",
+        };
+        const retainedAttendance = await documentedRpc(admin.client, "inspect_retained_course_attendance", inspection);
+        assert.equal(retainedAttendance.time_zone, "Europe/Berlin");
+        assert.equal(retainedAttendance.next_cursor, null);
+        assert.equal(retainedAttendance.items.length, 1);
+        assert.equal(retainedAttendance.items[0].session_id, session);
+        assert.equal(retainedAttendance.items[0].user_id, learner.id);
+        assert.equal(retainedAttendance.items[0].status, "present");
+        await documentedRpc(teacher.client, "inspect_retained_course_attendance", inspection, 403, "42501");
+        await documentedRpc(admin.client, "inspect_retained_course_attendance", {...inspection, p_run_id: otherRun}, 403, "42501");
+
+        const fileInspection = {
+            ...inspection,
+            p_reason: "Review the fictional retained file after deactivation",
+        };
+        const retainedFiles = await documentedRpc(admin.client, "inspect_retained_course_files", fileInspection);
+        const retainedMaterial = retainedFiles.items.find((file) => file.id === resource);
+        assert.ok(retainedMaterial);
+        assert.equal(retainedMaterial.file_kind, "material");
+        assert.equal(retainedMaterial.version_id, document.current_version_id);
+        assert.equal(retainedMaterial.object_path, undefined);
+        const fileOptions = {
+            organisation_id: org, run_id: run, file_kind: retainedMaterial.file_kind,
+            version_id: retainedMaterial.version_id, reason: fileInspection.p_reason,
+        };
+        const archivedDownload = () => download(admin, "retained_course_file", resource, fileOptions);
+        assert.equal((await download(teacher, "retained_course_file", resource, fileOptions)).status, 403);
+        assert.equal((await download(admin, "retained_course_file", resource, {...fileOptions, run_id: otherRun})).status, 403);
+        assert.equal((await download(admin, "retained_course_file", resource, {...fileOptions, version_id: randomUUID()})).status, 403);
+        const archived = await archivedDownload();
+        assert.equal(archived.status, 200);
+        assert.equal(archived.headers.get("cache-control"), "no-store, private");
+        assert.deepEqual(new Uint8Array(await archived.arrayBuffer()), bytes);
+        assert.equal(await sql(`select count(*) from public.audit_events
+            where action = 'course.retained_file_download_authorized' and resource_id = ${q(run)}
+              and actor_id = ${q(admin.id)} and details->>'file_id' = ${q(resource)}`), "1");
 
         // Test the existing subscription's per-event check independently of the disabled posting API.
         const blockedRevision = await sql(`update public.course_chat_activity
@@ -570,6 +615,9 @@ await withApiFixture(
         assert.deepEqual(teacherEvents, [firstActivity]);
 
         await setPremium(org, true, 2);
+        await documentedRpc(admin.client, "inspect_retained_course_attendance", inspection, 403, "42501");
+        await documentedRpc(admin.client, "inspect_retained_course_files", fileInspection, 403, "42501");
+        assert.equal((await archivedDownload()).status, 403);
         assert.ok((await checked(history(room))).some((entry) => entry.id === message));
         const restoredFile = await download(learner, "course_chat_attachment", message, chatVersion);
         assert.equal(restoredFile.status, 200);
@@ -618,5 +666,5 @@ await withApiFixture(
     },
 );
 console.log(
-    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
+    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, private scanned submissions, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
 );

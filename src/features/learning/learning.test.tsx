@@ -134,23 +134,34 @@ beforeEach(async () => {
                     }
                     return resolve({ data, error: fake.meetingError });
                   })
-                : [
-                      "course_chat_rooms",
-                      "course_enrolments",
-                      "course_enrolment_candidates",
-                    ].includes(name)
-                  ? Promise.resolve({ data: [], error: null }).then(resolve)
-                  : Promise.resolve(
-                      fake.pending ?? { id: null, saved: true },
-                    ).then((data) =>
-                      resolve({
-                        data,
-                        error:
-                          args?.p_action === "resource_share"
-                            ? fake.shareError
-                            : fake.error,
-                      }),
-                    ),
+                : name === "course_submissions"
+                  ? Promise.resolve({
+                      data: {
+                        enabled: false,
+                        can_manage: false,
+                        can_upload: false,
+                        entries: [],
+                        next: null,
+                      },
+                      error: null,
+                    }).then(resolve)
+                  : [
+                        "course_chat_rooms",
+                        "course_enrolments",
+                        "course_enrolment_candidates",
+                      ].includes(name)
+                    ? Promise.resolve({ data: [], error: null }).then(resolve)
+                    : Promise.resolve(
+                        fake.pending ?? { id: null, saved: true },
+                      ).then((data) =>
+                        resolve({
+                          data,
+                          error:
+                            args?.p_action === "resource_share"
+                              ? fake.shareError
+                              : fake.error,
+                        }),
+                      ),
       };
       return request;
     });
@@ -235,6 +246,28 @@ describe("connected course workspace", () => {
         },
       ]),
     );
+  });
+
+  it.each(["manager", "client"] as const)(
+    "offers the scanned Academy upload to the scoped %s",
+    async (role) => {
+      fake.workspace.access.teacher = false;
+      fake.workspace.access[role] = true;
+      fake.workspace.access.staff = role === "manager";
+      setup("#course-materials", "active");
+      expect(await screen.findByLabelText("Datei auswählen")).toBeVisible();
+    },
+  );
+
+  it("does not offer the Academy material publisher to a learner", async () => {
+    fake.workspace.access.teacher = false;
+    fake.workspace.access.staff = false;
+    fake.workspace.access.learner = true;
+    setup("#course-materials", "active");
+    expect(
+      await screen.findByRole("heading", { name: "Fictional course" }),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("Datei auswählen")).toBeNull();
   });
 
   it("does not offer the academy material picker to the assigned lecturer in grace", async () => {

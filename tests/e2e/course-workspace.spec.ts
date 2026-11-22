@@ -872,6 +872,71 @@ test("current instructor publishes a meeting link for a consented participant", 
     }
 });
 
+test("Private course submission uses the real scanner, current staff access and withdrawal", async ({page, browser}, info) => {
+    test.setTimeout(120_000);
+    const f = await fixture({upcoming: true});
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    const workspace = `/courses/${f.run}/workspace`;
+    const filename = "fictional-lab-work.txt";
+    const fileBytes = Buffer.from("Fictional classroom exercise\n");
+    await login(page, f.client.email);
+    await expect(page.getByRole("main")).toBeVisible();
+    await page.goto(workspace);
+    const control = page.getByRole("region", {name: "Dateiabgaben", exact: true});
+    await control.getByRole("button", {name: "Dateiabgaben erlauben", exact: true}).click();
+    await expect(control.getByRole("button", {name: "Dateiabgaben schließen", exact: true})).toBeVisible();
+    await expect(control.getByLabel("Datei auswählen", {exact: true})).toHaveCount(0);
+
+    const browserOptions = {
+        viewport: page.viewportSize() ?? undefined,
+        isMobile: info.project.use.isMobile,
+        hasTouch: info.project.use.hasTouch,
+    };
+    const learnerContext = await browser.newContext(browserOptions);
+    const reviewerContext = await browser.newContext(browserOptions);
+    try {
+        const learner = await learnerContext.newPage();
+        await login(learner, f.learner.email, /\/learning$/);
+        await learner.goto(workspace);
+        const submissions = learner.getByRole("region", {name: "Dateiabgaben", exact: true});
+        await expect(submissions.getByRole("button", {name: "Dateiabgaben schließen", exact: true})).toHaveCount(0);
+        await submissions.getByLabel("Datei auswählen", {exact: true}).setInputFiles({
+            name: filename, mimeType: "text/plain", buffer: fileBytes,
+        });
+        await submissions.getByRole("button", {name: "Datei abgeben", exact: true}).click();
+        await expect(submissions.getByText("Die geprüfte Datei wurde abgegeben.", {exact: true})).toBeVisible();
+        await expect(submissions.getByText(filename, {exact: true})).toBeVisible();
+
+        const reviewer = await reviewerContext.newPage();
+        await login(reviewer, f.teacher.email);
+        await reviewer.goto(workspace);
+        await reviewer.getByLabel("Sprache", {exact: true}).selectOption("en");
+        await reviewer.getByLabel("Theme", {exact: true}).selectOption("dark");
+        const review = reviewer.getByRole("region", {name: "File submissions", exact: true});
+        const downloadButton = review.getByRole("button", {name: `Download file: ${filename}`, exact: true});
+        await expect(downloadButton).toBeVisible();
+        await expect(review.getByRole("button", {name: `Withdraw submission: ${filename}`, exact: true})).toHaveCount(0);
+        expect((await new AxeBuilder({page: reviewer}).include("#course-submissions").analyze()).violations
+            .map(({id, nodes}) => ({id, nodes: nodes.map((node) => node.target)}))).toEqual([]);
+        const [download] = await Promise.all([reviewer.waitForEvent("download"), downloadButton.click()]);
+        expect(download.suggestedFilename()).toBe(filename);
+        expect(await readFile(await download.path())).toEqual(fileBytes);
+
+        await submissions.getByRole("button", {name: `Abgabe zurückziehen: ${filename}`, exact: true}).click();
+        await learner.getByRole("dialog", {name: "Abgabe zurückziehen", exact: true})
+            .getByRole("button", {name: "Abgabe zurückziehen", exact: true}).click();
+        await expect(submissions.getByText(filename, {exact: true})).toHaveCount(0);
+        await reviewer.reload();
+        await expect(review.getByText("There are no submissions on this page.", {exact: true})).toBeVisible();
+        await expect(downloadButton).toHaveCount(0);
+    } finally {
+        await Promise.all([learnerContext.close(), reviewerContext.close()]);
+    }
+});
+
 /** Produce a real single-sheet workbook without attaching any existing learner data. */
 async function attendanceWorkbook(participantId: string) {
     const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";

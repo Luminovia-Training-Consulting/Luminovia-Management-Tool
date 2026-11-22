@@ -26,7 +26,7 @@ CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
 SECTIONS = (
     "organisations", "templates", "courses", "classes", "class_assignments", "sessions", "participants",
     "participant_memberships", "enrolments", "instructor_assignments",
-    "attendance", "completion", "attendance_evidence", "file_links",
+    "attendance", "completion", "attendance_evidence", "file_links", "course_submission_links",
 )
 
 # Use the supported authenticated object endpoint of the existing local

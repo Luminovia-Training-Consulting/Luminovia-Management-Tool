@@ -14,6 +14,8 @@ interface Dependencies {
     ) => Promise<{ data: Record<string, unknown> | null; error: unknown }>;
     download: (path: string) => Promise<Uint8Array>;
     wikiPath?: (id: string, version: string) => Promise<string | null>;
+    retainedPath?: (version: string, sha256: string) => Promise<string | null>;
+    submissionPath?: (course: string, version: string) => Promise<string | null>;
     render: (kind: string, facts: Record<string, unknown>) => Promise<Uint8Array>;
 }
 
@@ -69,8 +71,9 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             }
             const body = raw as Record<string, unknown>;
             const kind = body.kind;
-            if (typeof kind !== "string") return json(400, "invalid_request");
+            const submission = kind === "participant_submission";
             const attendance = kind === "attendance" || kind === "attendance_session";
+            const retained = kind === "retained_course_file";
             let name: string, args: Record<string, unknown>;
             if (
                 kind === "qualification_passport" &&
@@ -88,6 +91,26 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             ) {
                 name = "course_document_access";
                 args = {p_kind: kind, p_id: body.id};
+            } else if (
+                retained && uuid(body.organisation_id) && uuid(body.run_id) &&
+                uuid(body.id) && uuid(body.version_id) &&
+                (body.file_kind === "exam" || body.file_kind === "material") &&
+                typeof body.reason === "string" &&
+                body.reason.trim().length >= 8 && body.reason.trim().length <= 300 &&
+                Object.keys(body).every((key) => [
+                    "kind", "organisation_id", "run_id", "id", "version_id", "file_kind", "reason",
+                ].includes(key))
+            ) {
+                name = "retained_course_file_access";
+                args = {
+                    p_organisation_id: body.organisation_id,
+                    p_run_id: body.run_id,
+                    p_file_kind: body.file_kind,
+                    p_file_id: body.id,
+                    p_version_id: body.version_id,
+                    p_reason: body.reason,
+                    p_record_access: false,
+                };
             } else if (
                 ["resource", "exam", "completion", "attendance_evidence"].includes(kind) &&
                 uuid(body.id) &&
@@ -133,6 +156,14 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 name = "client_request_document_access";
                 args = {p_request_id: body.request_id, p_version_id: body.id};
             } else if (
+                submission &&
+                uuid(body.id) &&
+                uuid(body.version_id) &&
+                Object.keys(body).every((key) => ["kind", "id", "version_id"].includes(key))
+            ) {
+                name = "course_submission_access";
+                args = {p_run_id: body.id, p_version_id: body.version_id};
+            } else if (
                 kind === "assignment_confirmation" &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
@@ -174,24 +205,33 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 kind === "exam" ||
                 kind === "request_resource" ||
                 kind === "wiki_resource" ||
-                kind === "course_chat_attachment"
+                kind === "course_chat_attachment" || retained || submission
             ) {
+                const exactProtectedVersion = retained || submission;
+                if ((kind === "course_chat_attachment" || exactProtectedVersion) &&
+                    (!Number.isSafeInteger(first.data.size_bytes) ||
+                        Number(first.data.size_bytes) < 1 ||
+                        Number(first.data.size_bytes) > (submission ? 10 : 100) * 1024 * 1024)) {
+                    return json(403, "document_unavailable");
+                }
                 let objectPath: string | null = null;
-                if (kind === "wiki_resource") {
-                    if (!uuid(args.p_id) || !uuid(first.data.version_id) || !dependencies.wikiPath)
+                if (exactProtectedVersion) {
+                    if (!uuid(first.data.version_id) ||
+                        first.data.version_id !== String(body.version_id).toLowerCase() ||
+                        typeof first.data.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(first.data.sha256)) {
                         return json(403, "document_unavailable");
-                    objectPath = await dependencies.wikiPath(
-                        args.p_id,
-                        first.data.version_id,
-                    );
+                    }
+                    objectPath = (submission
+                        ? await dependencies.submissionPath?.(body.id, first.data.version_id)
+                        : await dependencies.retainedPath?.(first.data.version_id, first.data.sha256)) ?? null;
+                } else if (kind === "wiki_resource") {
+                    if (!uuid(first.data.version_id) || !dependencies.wikiPath)
+                        return json(403, "document_unavailable");
+                    objectPath = await dependencies.wikiPath(body.id, first.data.version_id);
                 } else if (typeof first.data.object_path === "string") {
                     objectPath = first.data.object_path;
                 }
-                if (kind === "course_chat_attachment" &&
-                    (first.data.version_id !== body.version_id ||
-                        !Number.isSafeInteger(first.data.size_bytes) ||
-                        Number(first.data.size_bytes) < 1 ||
-                        Number(first.data.size_bytes) > 100 * 1024 * 1024)) {
+                if (kind === "course_chat_attachment" && first.data.version_id !== body.version_id) {
                     return json(403, "document_unavailable");
                 }
                 if (!objectPath || typeof first.data.sha256 !== "string")
@@ -205,7 +245,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                     .map((value) => value.toString(16).padStart(2, "0"))
                     .join("");
                 if (digest !== first.data.sha256 ||
-                    (kind === "course_chat_attachment" && bytes.length !== first.data.size_bytes)) {
+                    ((kind === "course_chat_attachment" || exactProtectedVersion) &&
+                        bytes.length !== first.data.size_bytes)) {
                     return json(503, "document_integrity_failed");
                 }
                 mime = String(first.data.mime_type ?? "application/octet-stream");
@@ -223,7 +264,9 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             if (!(await dependencies.authenticate(token))) {
                 return json(403, "document_unavailable");
             }
-            const final = await dependencies.rpc(token, name, args);
+            const finalArgs = retained ? {...args, p_record_access: true}
+                : submission ? {...args, p_record: true} : args;
+            const final = await dependencies.rpc(token, name, finalArgs);
             if (
                 final.error ||
                 !final.data ||

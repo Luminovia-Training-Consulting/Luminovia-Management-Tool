@@ -51,6 +51,7 @@ import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
+import { CourseSubmissions } from "./course-submissions";
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -940,12 +941,16 @@ function CourseWorkspaceLayout({
     (course.exams.required || course.exams.can_edit || (academy && editor)),
   );
   const hasActivities = learner || editor;
+  const hasSubmissions = course.lms_enabled && hasActivities;
   const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
     { id: "course-materials", label: t("workspaceMaterials") },
+    ...(hasSubmissions
+      ? [{ id: "course-submissions", label: t("submissions") }]
+      : []),
     ...(examVisible ? [{ id: "course-exam", label: t("workspaceExam") }] : []),
     ...(canManageEnrolments
       ? [{ id: "course-enrolments", label: t("workspaceParticipants") }]
@@ -1127,9 +1132,24 @@ function CourseWorkspaceLayout({
               actor={actor}
               readOnly={Boolean(academy)}
               academy={academy === "active"}
-              academyCanUpload={academy === "active" && course.access.teacher}
+              academyCanUpload={
+                academy === "active" &&
+                (course.access.manager ||
+                  course.access.teacher ||
+                  course.access.client)
+              }
             />
           </div>
+          {hasSubmissions && (
+            <div className="course-room-section" id="course-submissions">
+              <CourseSubmissions
+                key={`${actor}:${course.id}`}
+                actor={actor}
+                courseId={course.id}
+                readOnly={academy === "grace"}
+              />
+            </div>
+          )}
           {examVisible && (
             <div className="course-room-section" id="course-exam">
               <CourseExams

@@ -20,8 +20,6 @@ const browserProjects = browserProjectSelection(
     process.env.PORTAL_BROWSER_PROJECT,
     phase.phase,
 );
-const browserProjectArgs =
-    browserProjects.length === 1 ? ["--project", browserProjects[0]] : [];
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
@@ -183,17 +181,20 @@ try {
         args,
         extra = {},
         timeoutMs = 1200000,
+        projects = browserProjects,
     ) => {
         const directory = join(scratch, ".local/browser", stage);
         privateDirectory(directory);
         const stageEnv = {...extra, PORTAL_BROWSER_STAGE: stage};
+        const projectArgs =
+            projects.length === 1 ? ["--project", projects[0]] : [];
         const expectedFiles = readdirSync(join(scratch, "tests/e2e"), {
             recursive: true,
         })
             .filter(
                 (file) =>
                     file.endsWith(".spec.ts") &&
-                    (stage === "pwa") === (file === "pwa.spec.ts"),
+                    (stage !== "application") === (file === "pwa.spec.ts"),
             )
             .sort();
         const planPath = join(directory, "plan.json");
@@ -205,7 +206,7 @@ try {
                 "playwright",
                 "test",
                 ...args,
-                ...browserProjectArgs,
+                ...projectArgs,
                 "--list",
                 "--reporter=json",
             ],
@@ -213,7 +214,7 @@ try {
         );
         const planned = browserPlan(JSON.parse(readFileSync(planPath, "utf8")), {
             files: expectedFiles,
-            projects: browserProjects,
+            projects,
         });
         evidence.browsers[stage] = {
             status: "planned",
@@ -225,7 +226,7 @@ try {
             await step(
                 label,
                 "npx",
-                ["--no-install", "playwright", "test", ...args, ...browserProjectArgs],
+                ["--no-install", "playwright", "test", ...args, ...projectArgs],
                 stageEnv,
                 timeoutMs,
             );
@@ -401,6 +402,9 @@ try {
                 ...readdirSync(join(hosting, "scanner"))
                     .filter((name) => name.endsWith(".test.mjs"))
                     .map((name) => `deploy/hostinger/scanner/${name}`),
+                ...readdirSync(join(hosting, "selfhost"))
+                    .filter((name) => name.endsWith(".test.mjs"))
+                    .map((name) => `deploy/hostinger/selfhost/${name}`),
                 ...(existsSync(join(hosting, "backups"))
                     ? readdirSync(join(hosting, "backups"))
                         .filter((name) => name.endsWith(".test.mjs"))
@@ -502,12 +506,17 @@ try {
         ]);
     }
     if (phase.browser) {
-        await step("Install Chromium", "npx", [
+        // CI uses the Playwright-supported runner. A local desktop may already
+        // support Chromium while lacking WebKit's system libraries.
+        const includeWebKit = browserProjects.includes("desktop-chromium") &&
+            (process.env.CI === "true" || process.env.PORTAL_BROWSER_WEBKIT === "true");
+        await step("Install test browsers", "npx", [
             "--no-install",
             "playwright",
             "install",
             ...(process.env.CI === "true" ? ["--with-deps"] : []),
             "chromium",
+            ...(includeWebKit ? ["webkit"] : []),
         ]);
         // Projects run sequentially against one Auth service. Give each one
         // the same aggregate budget CI uses for a single browser project.
@@ -525,12 +534,22 @@ try {
             "scripts/runtime-test-preview.mjs",
             "start",
         ]);
+        const pwaOptions = {E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273"};
         await browserStage(
             "pwa",
             "PWA, offline shell and absence of private caches",
             ["tests/e2e/pwa.spec.ts"],
-            {E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273"},
+            pwaOptions,
         );
+        if (includeWebKit)
+            await browserStage(
+                "pwa-webkit",
+                "WebKit PWA, offline navigation and private cache boundaries",
+                ["tests/e2e/pwa.spec.ts"],
+                pwaOptions,
+                1200000,
+                ["desktop-webkit"],
+            );
     }
 } catch (error) {
     failure = error;

@@ -155,6 +155,8 @@ The dedicated gateway forwards the course and local administration functions, ap
 
 Verify the private first administrator, dedicated edition, licence limits, normal account sign-in, author/publish/enrol and learner journeys, protected objects, ClamAV, Realtime, current email routes and the encrypted backup/recovery target. When the customer's DNS and firewall are authorised and verified, the `ingress` profile starts Caddy on the generated address. Review certificate issuance and the browser edition, hostname and protected API against that particular environment. A fresh-install receipt is separate from approval of any data migration, upgrade, commercial handover or public deployment.
 
+Use the [customer target acceptance procedure](TARGET-ACCEPTANCE.md) to collect the exact public release, provider delivery, signed receiver, operational health, retained-data restore and upgrade evidence.
+
 ## Read the installed release and licence state
 
 Use the signed licence and exact installed revision with the existing private operator connection.

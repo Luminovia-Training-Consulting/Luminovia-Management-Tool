@@ -28,7 +28,10 @@ import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts"
 import { accountingPaths } from "./accounting-contract.ts";
 import { deliveryEvidencePaths } from "./delivery-evidence-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
-import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
+import {
+  enquiriesSupportPaths,
+  websiteEnquiryIntakePath,
+} from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import {
   contractRecordsSchema,
@@ -108,6 +111,7 @@ import {
   courseClassAssignment,
   courseClassOptions,
 } from "../learning/course-classes-schema.ts";
+import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
   readinessListSchema,
@@ -159,6 +163,8 @@ import {
   companyPremiumCommandSchema,
   companyPremiumSettingsSchema,
   retainedCompanyLmsSchema,
+  retainedCourseAttendanceSchema,
+  retainedCourseFilesSchema,
 } from "../operations/company-premium-schema.ts";
 import {
   companyAssignableCoursesSchema,
@@ -283,8 +289,17 @@ function voidRpc(
   summary: string,
   description: string,
   input: Record<string, unknown>,
+  optional: readonly string[] = [],
 ) {
-  const { post } = rpc(operationId, tag, summary, description, input, {});
+  const { post } = rpc(
+    operationId,
+    tag,
+    summary,
+    description,
+    input,
+    {},
+    optional,
+  );
   const { "200": success, ...errors } = post.responses;
   return {
     post: {
@@ -317,7 +332,7 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes. For participant_submission use the Premium course ID and exact submission version ID. Only the submitting learner or the current scoped course team can download it.",
     parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
@@ -379,6 +394,20 @@ const courseDocuments = {
             organisation_id: uuid,
             reason: courseChatAuditReason,
           }),
+          object({
+            kind: { const: "retained_course_file" },
+            organisation_id: uuid,
+            run_id: uuid,
+            id: uuid,
+            version_id: uuid,
+            file_kind: { enum: ["exam", "material"] },
+            reason: courseChatAuditReason,
+          }),
+          object({
+            kind: { const: "participant_submission" },
+            id: uuid,
+            version_id: uuid,
+          }),
         ],
       }),
     },
@@ -404,8 +433,16 @@ const fileGateway = {
     tags: ["Files"],
     summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status.",
-    parameters: [gatewayOriginHeader],
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. This mode accepts only course_run_id, client_id and file.",
+    parameters: [
+      gatewayOriginHeader,
+      {
+        name: "mode",
+        in: "query",
+        required: false,
+        schema: { const: "course-submission", type: "string" },
+      },
+    ],
     requestBody: {
       required: true,
       content: {
@@ -417,6 +454,11 @@ const fileGateway = {
             properties: {
               file: { type: "string", format: "binary" },
               client_id: uuid,
+              course_run_id: {
+                ...uuid,
+                description:
+                  "Required for mode=course-submission. Omit for all generic transfers.",
+              },
               scope: {
                 enum: ["personal", "room", "job_before", "job_after"],
                 default: "personal",
@@ -457,6 +499,13 @@ const fileGateway = {
               },
             },
             additionalProperties: false,
+            dependentSchemas: {
+              course_run_id: object({
+                course_run_id: uuid,
+                client_id: uuid,
+                file: { type: "string", format: "binary" },
+              }),
+            },
           },
         },
         ...json({
@@ -641,7 +690,7 @@ const wikiVersion = { ...version, minimum: 1 };
 const wikiPublishedVersion = { type: ["integer", "null"], minimum: 1 };
 const wikiLocale = { enum: ["de", "en"] };
 const wikiStatus = { enum: ["draft", "published", "archived"] };
-const wikiPage = object({
+const wikiPageFields = {
   id: uuid,
   title: text,
   locale: wikiLocale,
@@ -655,8 +704,75 @@ const wikiPage = object({
   published_version: wikiPublishedVersion,
   has_draft: boolean,
   updated_at: sessionInstant,
+};
+const wikiPage = object({
+  ...wikiPageFields,
   content: knowledgeDocument,
 });
+const knowledgeCategoryKind = { enum: ["wiki", "forum"] };
+const knowledgeCategory = object({
+  id: uuid,
+  kind: knowledgeCategoryKind,
+  slug: text,
+  label_de: text,
+  label_en: text,
+  archived: boolean,
+});
+const forumThreadFields = {
+  id: uuid,
+  title: text,
+  category_id: uuid,
+  category_label_de: text,
+  category_label_en: text,
+  owner_id: uuid,
+  owner_name: text,
+  locked: boolean,
+  pinned: boolean,
+  archived: boolean,
+  accepted_post_id: nullableUuid,
+  post_count: { type: "integer", minimum: 0 },
+  subscribed: boolean,
+  created_at: sessionInstant,
+  updated_at: sessionInstant,
+};
+const knowledgeListFilters = {
+  p_search: { type: ["string", "null"], default: "" },
+  p_category_id: { ...nullableUuid, default: null },
+  p_include_archived: { ...boolean, default: false },
+};
+const forumMetadataEdit = rpc(
+  "native_edit_forum_thread_metadata",
+  "Knowledge",
+  "Change a forum thread's title and category",
+  "Requires access to the thread. Its owner can edit an unlocked, unarchived thread. A forum moderator can also edit locked or archived threads. Select an active forum category and pass the last-read metadata version. The result is the new metadata version.",
+  {
+    p_thread_id: uuid,
+    p_title: { ...text, minLength: 1, maxLength: 200 },
+    p_category_id: uuid,
+    p_expected_version: wikiVersion,
+  },
+  wikiVersion,
+);
+const forumPostReport = rpc(
+  "native_report_forum_post",
+  "Knowledge",
+  "Report an accessible discussion post",
+  "The caller must be able to read the thread and the post must still exist without a tombstone. At most five new reports per reporter are accepted in an hour. A repeat of a valid request for the same post returns the reporter's existing report ID.",
+  { p_post_id: uuid, p_reason: { ...text, minLength: 5, maxLength: 2000 } },
+  uuid,
+);
+const wikiCourseReference = voidRpc(
+  "native_manage_wiki_course_template",
+  "Knowledge",
+  "Add or remove a visible course template on a wiki draft",
+  "Requires staff access and page ownership or wiki management permission. Only the current unpublished draft can change. The template must be readable to the actor and active when adding it. A draft supports at most 20 distinct references. Repeated additions or removals of the same reference leave the same result.",
+  {
+    p_page_id: uuid,
+    p_revision: wikiVersion,
+    p_template_id: uuid,
+    p_remove: boolean,
+  },
+);
 const jobBriefingFields = {
   reference_url: { ...text, maxLength: 2048 },
   reference_label: { ...text, maxLength: 120 },
@@ -2647,6 +2763,97 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/chat_contacts": rpc(
+    "native_chat_contacts",
+    "Chat",
+    "List eligible chat contacts",
+    "Returns the names and role labels of currently eligible contacts for the authenticated portal actor. The caller is excluded. Visibility depends on current staff, course-management or shared-room authority.",
+    {},
+    {
+      type: "array",
+      items: object({
+        id: uuid,
+        display_name: text,
+        roles: { type: "array", items: text },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/chat_rooms_with_manual_unread": rpc(
+    "native_chat_rooms_with_manual_unread",
+    "Chat",
+    "List accessible rooms and personal read indicators",
+    "Returns only rooms the current caller can access, most recent first. The preview is at most 160 characters, excludes personally hidden messages and contains no deleted message body. Manual unread and mute values belong to the caller.",
+    {},
+    {
+      type: "array",
+      items: object({
+        id: uuid,
+        kind: {
+          enum: [
+            "dm",
+            "general",
+            "topic",
+            "lecturer_course",
+            "participant_course",
+          ],
+        },
+        title: text,
+        job_id: nullableUuid,
+        owner_id: nullableUuid,
+        unread_count: version,
+        last_message_at: nullableDateTime,
+        muted: boolean,
+        manual_unread: boolean,
+        last_message_preview: { type: ["string", "null"], maxLength: 160 },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/chat_pinned_rooms": rpc(
+    "native_chat_pinned_rooms",
+    "Chat",
+    "List the caller's pinned rooms in display order",
+    "Returns IDs from the caller's own retained memberships, ordered by personal pin rank. Rooms that are currently inaccessible or whose membership has ended are excluded.",
+    {},
+    { type: "array", items: uuid },
+  ),
+  "/rest/v1/rpc/chat_personal_archives": rpc(
+    "native_chat_personal_archives",
+    "Chat",
+    "List the caller's personally archived chats",
+    "Returns still-accessible direct messages and topic groups archived by the caller. The personal archive never changes the shared room or another member's directory.",
+    {},
+    { type: "array", items: uuid },
+  ),
+  "/rest/v1/rpc/create_dm": rpc(
+    "native_create_dm",
+    "Chat",
+    "Open the direct message room for an eligible contact",
+    "Requires an eligible contact for the current portal actor. Repeated requests and reversed requests by the same pair return the same room ID. Current contact eligibility is checked before opening an existing room.",
+    { p_user_id: uuid },
+    uuid,
+  ),
+  "/rest/v1/rpc/ensure_general_chat": rpc(
+    "native_ensure_general_chat",
+    "Chat",
+    "Join the shared lecturer chat",
+    "Requires a current lecturer or senior lecturer role. Exact and concurrent retries return the same shared room ID and keep one membership per caller.",
+    {},
+    uuid,
+  ),
+  "/rest/v1/rpc/create_chat_group": rpc(
+    "native_create_chat_group",
+    "Chat",
+    "Create a topic group or participant course chat",
+    "A topic group requires a current staff role and eligible staff members. A participant course chat requires course-management authority and a job belonging to a valid course with Premium enabled. An existing participant course chat returns a conflict. Each eligible participant and assigned lecturer is added through current enrolment and assignment checks.",
+    {
+      p_title: { ...text, minLength: 1, maxLength: 160 },
+      p_member_ids: { type: ["array", "null"], maxItems: 100, items: uuid },
+      p_kind: { enum: ["topic", "participant_course"], default: "topic" },
+      p_job_id: nullableUuid,
+    },
+    uuid,
+    ["p_kind", "p_job_id"],
+  ),
   "/rest/v1/rpc/chat_group_settings": rpc(
     "native_chat_group_settings",
     "Chat",
@@ -2659,6 +2866,34 @@ const nativePaths = {
       version: { ...version, minimum: 1 },
     }),
   ),
+  "/rest/v1/rpc/update_chat_group_settings": (() => {
+    const operation = rpc(
+      "native_update_chat_group_settings",
+      "Chat",
+      "Update group information with its current version",
+      "Requires current group access and ownership, or course-management authority for a course room. Read the current settings version first. A stale version returns PostgreSQL code 40001. Read the settings again before retrying a reviewed change.",
+      {
+        p_room_id: uuid,
+        p_title: { ...text, minLength: 1, maxLength: 120 },
+        p_description: { ...text, maxLength: 2000 },
+        p_expected_version: { ...version, minimum: 1 },
+      },
+      { ...version, minimum: 2 },
+    );
+    return {
+      post: {
+        ...operation.post,
+        responses: {
+          ...operation.post.responses,
+          "500": {
+            ...error,
+            description:
+              "Server error, including SQLSTATE 40001 for a stale settings version",
+          },
+        },
+      },
+    };
+  })(),
   "/rest/v1/rpc/chat_mention_candidates": rpc(
     "native_chat_mention_candidates",
     "Chat",
@@ -3000,6 +3235,42 @@ const nativePaths = {
       can_moderate_forum: boolean,
     }),
   ),
+  "/rest/v1/rpc/knowledge_categories": rpc(
+    "native_knowledge_categories",
+    "Knowledge",
+    "List visible wiki or forum categories",
+    "Requires current Knowledge staff access. Categories are ordered by German label and ID. Archived wiki categories are visible to wiki managers, and archived forum categories are visible to forum moderators.",
+    { p_kind: knowledgeCategoryKind },
+    { type: "array", items: knowledgeCategory },
+  ),
+  "/rest/v1/rpc/save_knowledge_category": rpc(
+    "native_save_knowledge_category",
+    "Knowledge",
+    "Save or archive a bilingual category",
+    "Requires wiki.manage for a wiki category or forum.moderate for a forum category. Pass null as the ID to create a category. Existing categories retain their kind. The slug must be unique within its kind. Omit the archived flag to save the category as active.",
+    {
+      p_id: nullableUuid,
+      p_kind: knowledgeCategoryKind,
+      p_slug: { ...text, maxLength: 80, pattern: "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      p_label_de: { ...text, minLength: 1, maxLength: 120 },
+      p_label_en: { ...text, minLength: 1, maxLength: 120 },
+      p_archived: { ...boolean, default: false },
+    },
+    uuid,
+    ["p_archived"],
+  ),
+  "/rest/v1/rpc/wiki_pages_list": rpc(
+    "native_wiki_pages_list",
+    "Knowledge",
+    "List and search authorised wiki revisions",
+    "Requires current Knowledge staff access. Owners and wiki managers search the latest revision. Other staff search only visible published revisions. Search is a case-insensitive literal substring of the readable title or text. Archived pages require the archive flag and current owner or wiki management authority. Returns up to 200 pages, newest updated first.",
+    {
+      ...knowledgeListFilters,
+      p_locale: { enum: ["", "de", "en", null], default: "" },
+    },
+    { type: "array", maxItems: 200, items: object(wikiPageFields) },
+    [...Object.keys(knowledgeListFilters), "p_locale"],
+  ),
   "/rest/v1/rpc/wiki_page": rpc(
     "native_wiki_page",
     "Knowledge",
@@ -3060,6 +3331,28 @@ const nativePaths = {
       items: object({ id: uuid, version_id: uuid, name: text }),
     },
   ),
+  "/rest/v1/rpc/manage_wiki_course_template": {
+    post: {
+      ...wikiCourseReference.post,
+      responses: {
+        ...wikiCourseReference.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including a stale or published revision (40001) or the reference limit (54000).",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/forum_threads_list": rpc(
+    "native_forum_threads_list",
+    "Knowledge",
+    "List and search accessible staff discussions",
+    "Requires current Knowledge staff access. Search matches the thread title and text of undeleted posts as case-insensitive literal substrings. Archived threads require the archive flag and current thread ownership or forum moderation authority. Returns up to 200 threads with pinned threads first and each caller's own subscription state.",
+    knowledgeListFilters,
+    { type: "array", maxItems: 200, items: object(forumThreadFields) },
+    Object.keys(knowledgeListFilters),
+  ),
   "/rest/v1/rpc/forum_thread": rpc(
     "native_forum_thread",
     "Knowledge",
@@ -3067,21 +3360,7 @@ const nativePaths = {
     "Requires current staff forum access. Includes the caller's subscription state, current moderation flags and the metadata version needed for a reviewed edit.",
     { p_id: uuid },
     object({
-      id: uuid,
-      title: text,
-      category_id: uuid,
-      category_label_de: text,
-      category_label_en: text,
-      owner_id: uuid,
-      owner_name: text,
-      locked: boolean,
-      pinned: boolean,
-      archived: boolean,
-      accepted_post_id: nullableUuid,
-      post_count: { type: "integer", minimum: 0 },
-      subscribed: boolean,
-      created_at: sessionInstant,
-      updated_at: sessionInstant,
+      ...forumThreadFields,
       metadata_version: wikiVersion,
     }),
   ),
@@ -3137,6 +3416,93 @@ const nativePaths = {
       p_content: knowledgeDocument,
       p_expected_version: wikiVersion,
     },
+  ),
+  "/rest/v1/rpc/edit_forum_thread_metadata": {
+    post: {
+      ...forumMetadataEdit.post,
+      responses: {
+        ...forumMetadataEdit.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including a stale metadata version (40001). Read the current metadata before retrying.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/delete_forum_post": voidRpc(
+    "native_delete_forum_post",
+    "Knowledge",
+    "Remove an authored or moderated forum post",
+    "Requires access to the thread and either post authorship or forum.moderate. Only moderators can remove posts inside a locked or archived thread. The server saves a revision, replaces the visible content with a tombstone and clears any accepted-answer pointer to this post. Repeating a permitted removal of the same tombstone is safe.",
+    { p_post_id: uuid },
+  ),
+  "/rest/v1/rpc/moderate_forum_thread": voidRpc(
+    "native_moderate_forum_thread",
+    "Knowledge",
+    "Set the lock, pin or archive state of a discussion",
+    "Requires current forum.moderate permission. Send the flags to change and omit or pass null for those to retain. A missing discussion is rejected as invalid input. Changes are audited.",
+    {
+      p_thread_id: uuid,
+      p_locked: { type: ["boolean", "null"], default: null },
+      p_pinned: { type: ["boolean", "null"], default: null },
+      p_archived: { type: ["boolean", "null"], default: null },
+    },
+    ["p_locked", "p_pinned", "p_archived"],
+  ),
+  "/rest/v1/rpc/accept_forum_answer": voidRpc(
+    "native_accept_forum_answer",
+    "Knowledge",
+    "Select or clear the accepted reply to a discussion",
+    "Requires access to the thread and either thread ownership or forum.moderate. Accept a current undeleted reply belonging to the thread. Pass null to clear the accepted answer.",
+    { p_thread_id: uuid, p_post_id: nullableUuid },
+  ),
+  "/rest/v1/rpc/subscribe_forum_thread": voidRpc(
+    "native_subscribe_forum_thread",
+    "Knowledge",
+    "Set the caller's subscription to a visible thread",
+    "Requires access to the thread. The subscription belongs to the authenticated actor. Repeating the same subscription state is safe, and unsubscribing preserves previous notices.",
+    { p_thread_id: uuid, p_subscribed: boolean },
+  ),
+  "/rest/v1/rpc/report_forum_post": {
+    post: {
+      ...forumPostReport.post,
+      responses: {
+        ...forumPostReport.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including the hourly report limit (54000).",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/forum_reports": rpc(
+    "native_forum_reports",
+    "Knowledge",
+    "List the caller's reports or the moderation queue",
+    "Requires current Knowledge staff access. Staff see their own reports. Forum moderators can see the queue. Returns up to 200 latest reports first.",
+    {},
+    {
+      type: "array",
+      maxItems: 200,
+      items: object({
+        id: uuid,
+        post_id: uuid,
+        thread_id: uuid,
+        reason: text,
+        status: { enum: ["open", "resolved"] },
+        reporter_name: text,
+        created_at: sessionInstant,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/resolve_forum_report": voidRpc(
+    "native_resolve_forum_report",
+    "Knowledge",
+    "Resolve or reopen an existing report",
+    "Requires current forum.moderate permission. Pass true to resolve a report or false to reopen it. A missing report is rejected as invalid input. The current reviewer and an audit event are recorded.",
+    { p_report_id: uuid, p_resolved: boolean },
   ),
   "/rest/v1/rpc/job_briefing": rpc(
     "native_job_briefing",
@@ -3334,6 +3700,31 @@ const nativePaths = {
     "Requires current Premium and course access. Each response contains actor-scoped sessions, the current online meeting link, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     workspaceResult,
+  ),
+  "/rest/v1/rpc/course_submissions": rpc(
+    "courseSubmissions",
+    "Premium LMS",
+    "List private participant file submissions",
+    "Internal Premium LMS only. Participants see their own clean submissions. Assigned instructors, course management and authorised contacts of the course company can see its submissions. Pass next as p_after to page through older submissions. Closing intake preserves scoped reads.",
+    { ...course, p_after: nullableUuid },
+    z.toJSONSchema(courseSubmissionPage),
+    ["p_after"],
+  ),
+  "/rest/v1/rpc/set_course_submissions": rpc(
+    "setCourseSubmissions",
+    "Premium LMS",
+    "Open or close participant file submissions",
+    "Requires active company Premium and course-management authority or a current contact of the exact company. Each course defaults to closed. Opening intake permits enrolled participants to submit private files.",
+    { ...course, p_enabled: boolean },
+    boolean,
+  ),
+  "/rest/v1/rpc/withdraw_course_submission": rpc(
+    "withdrawCourseSubmission",
+    "Premium LMS",
+    "Withdraw an exact participant submission",
+    "On an active Premium course, an enrolled participant can withdraw their own file while submissions are open. Course management and authorised contacts of the course company can withdraw a file in their course. The version stops appearing in all active course views.",
+    { ...course, p_version_id: uuid },
+    boolean,
   ),
   "/rest/v1/rpc/set_course_meeting_link": rpc(
     "setCourseMeetingLink",
@@ -3647,6 +4038,37 @@ const nativePaths = {
     "Requires the active admin role and records an audit event. Includes counts and resource display metadata for current and archived courses, regardless of the Premium switch. The response contains aggregate activity, never learner identities, attendance notes, message bodies, answer keys or file bytes.",
     organisation,
     z.toJSONSchema(retainedCompanyLmsSchema),
+  ),
+  "/rest/v1/rpc/inspect_retained_course_attendance": rpc(
+    "inspectRetainedCourseAttendance",
+    "Administration",
+    "Inspect recorded attendance for a retained Premium course",
+    "Requires the current explicit internal admin role, a company with Premium switched off and an exact company/course match. Each page audits the inspection purpose. The read returns up to 50 persisted attendance entries in session order. It includes only recorded marks and notes, with no learner email, evidence bytes or write authority. Omit all cursor fields on the first request and send the three returned cursor fields together on the next.",
+    {
+      ...organisation,
+      ...course,
+      p_reason: courseChatAuditReason,
+      p_after_start: nullableDateTime,
+      p_after_session_id: nullableUuid,
+      p_after_user_id: nullableUuid,
+    },
+    z.toJSONSchema(retainedCourseAttendanceSchema),
+    ["p_after_start", "p_after_session_id", "p_after_user_id"],
+  ),
+  "/rest/v1/rpc/inspect_retained_course_files": rpc(
+    "inspectRetainedCourseFiles",
+    "Administration",
+    "List retained exam and material file versions",
+    "Requires the current explicit internal admin role, a company with Premium switched off and an exact company/course match. Each page audits the inspection purpose. Up to 50 clean file versions are returned, including withdrawn course links. Omit both cursor fields on the first request and send both returned cursor fields together on the next. Use the exact returned file kind, ID and version with the course-documents gateway. This response contains no bytes or storage locations.",
+    {
+      ...organisation,
+      ...course,
+      p_reason: courseChatAuditReason,
+      p_after_kind: { enum: ["exam", "material", null] },
+      p_after_id: nullableUuid,
+    },
+    z.toJSONSchema(retainedCourseFilesSchema),
+    ["p_after_kind", "p_after_id"],
   ),
   "/rest/v1/rpc/set_company_premium": rpc(
     "setCompanyPremium",
@@ -4064,6 +4486,7 @@ function internalOpenApi(
         ...nativeDownloadPaths,
         ...paths,
         ...credentialPaths,
+        "/functions/v1/website-enquiries": websiteEnquiryIntakePath,
         "/rest/v1/rpc/issue_company_integration_key": {
           post: {
             ...companyIntegrationKeyIssue.post,
@@ -4093,7 +4516,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.3.0",
+      version: "1.4.0",
       description:
         "Account and business contracts with native RPC schemas derived from the migrated database. Current permissions, company scope and entitlements still apply. The repository API reference describes feature-specific JSON payloads and integration flows.",
     },
@@ -4105,6 +4528,12 @@ function internalOpenApi(
         ...accountOpenApi.components.securitySchemes,
         ...(includeNonInteractive
           ? {
+              websiteIntakeToken: {
+                type: "apiKey",
+                in: "header",
+                name: "X-Luminovia-Integration-Token",
+                description: "Dedicated server-only Website intake credential.",
+              },
               integrationKey: {
                 type: "http",
                 scheme: "bearer",

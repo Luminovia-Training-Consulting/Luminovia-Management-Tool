@@ -6,6 +6,14 @@
 > **Product:** One maintained codebase, separately configured editions, independent customer data, customer-controlled branding and permissions, a complete supported API, professional installation/update/recovery and commercial licensing.  
 > **Original source:** Existing product and operations documentation; latest owner decisions on hosted learning, self-hosted software sales, company branding, removal of intermediary marketplace/commission features, username-or-email authentication and Swagger/OpenAPI.
 
+### Source and acceptance review — 22 November 2026
+
+- Both editions have built and tested customer-branded browser, OpenAPI and installation workflows. Administrators can publish an Academy name, logo, tab icon, accent and public links. Replacement of the already-installed PWA icons uses the customer's signed brand package. The in-portal controls do not provide that replacement independently.
+- The [Academy workflow examples](scripts/examples/README.md#academy-invitations-and-course-drafts--academy-einladungen-und-kursentwürfe) exercise existing role-scoped invitations, course draft options and idempotent draft creation. Complete exact-version transport and permission coverage remains an acceptance item.
+- Current course managers, assigned lecturers and authorised contacts for the course company can scan and publish their own material in both Academy editions. PostgreSQL tests cover exact file versions, foreign-company denial and membership withdrawal during scanning.
+- Both editions can enable private course-file submissions. PostgreSQL verifies exact versions, course and participant scope, the signed storage quota, read-only grace and expiry. The operator export includes eligible submissions with course and learner ownership. The signed browser packages and local TLS gateway were verified for both editions.
+- The independent target's domain, SMTP, monitor, update/restore and installed PWA still require customer-target acceptance. Temporary external provider and receiver tests used fictional installations. Sales, contract and commercial handover are separate from this source review.
+
 ## 0. Goals, non-goals and critical boundaries
 
 ### Goals
@@ -50,7 +58,7 @@ Both dedicated editions use validated customer branding in the shell, PWA assets
 
 Academy administrators create local organisations and manage their instructors, learners and course managers. Staff can create, schedule and publish courses independently, assign their own lecturers, enrol learners, set meeting links, upload course materials, publish student and staff exam files, maintain attendance and export scoped attendance and participation reports. Learners can read and acknowledge materials, use course chat with scanned attachments, track private notes, submit assessments and feedback, receive course notifications and obtain the verified completion record. Local acceptance covers native authentication, current role and licence checks, exact private file bytes, desktop/mobile Chromium and offline cache separation. Read access continues during grace and access closes at expiry. [Current test evidence](docs/WORKLOG.md)
 
-The dedicated OpenAPI 1.30 catalogue documents 85 paths with domain schemas and the signed API allowance and maintenance response formats. Both editions offer distinct keys for the published course index, enrolment and aggregate reports. The [signed webhook receiver](scripts/examples/README.md#signed-course-webhook-receiver) uses a separate signing secret, stores accepted events durably and handles retries. The [installation runbook](deploy/academy/README.md) distinguishes the locally tested setup from customer handoff.
+The dedicated OpenAPI 1.31 catalogue documents 88 paths with domain schemas, scoped course material publishing and the signed API allowance and maintenance response formats. Signed packages with the previous 1.30 catalogue remain verifiable. Both editions offer distinct keys for the published course index, enrolment and aggregate reports. The [signed webhook receiver](scripts/examples/README.md#signed-course-webhook-receiver) uses a separate signing secret, stores accepted events durably and handles retries. The [installation runbook](deploy/academy/README.md) distinguishes the locally tested setup from customer handoff.
 
 Release gates still cover the complete target installation, public domain/TLS, SMTP and dedicated delivery, migration and recovery of retained customer data, operational handoff and commercial fulfilment. The acceptance matrix below tracks those separately.
 
@@ -317,7 +325,8 @@ A temporary external HTTPS receiver passed the pinned TLS preflight and signatur
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
 - [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. Academy OpenAPI 1.30 records the actual Envoy `429` and Caddy maintenance `503` response formats with `Retry-After` alongside business responses. Verify the pinned ingress in both editions and preserve the historical signed 1.29 catalogue. The optional fictional sandbox remains available in signed customer packages.
 - [x] Run the published course-index, idempotent enrolment and separate aggregate report examples against the Edge handler. Verify credentials, error bodies and argument validation. [Integration examples](scripts/examples/README.md)
-- [ ] Finish exact-release request, response and error coverage across HTTP, file transfers, Realtime and notifications. Expand example coverage to account invitations and scoped course authoring.
+- [x] Provide tested examples for local account invitations, company-scoped learner invitations, authorised course draft inputs and exact retry of course creation.
+- [ ] Finish exact-release request, response and error coverage across HTTP, file transfers, Realtime and notifications.
 - [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
 - [x] Check the configured receiver's public DNS resolution and pinned TLS certificate for one alias before processing deliveries. The local TLS fixture exercises successful verification, a hostname mismatch and refusal of private or mixed DNS results.
 - [x] Issue, rotate and revoke course-index credentials for one academy organisation. Native HTTP and Chromium verify the exact published-course scope and current revocation.
@@ -346,7 +355,8 @@ A temporary external HTTPS receiver passed the pinned TLS preflight and signatur
 - [x] Apply a renewed licence and revised ingress allowance while keeping the exact browser release, existing course profile and retained customer data. Both editions passed the local licence and fresh PostgreSQL replacement checks. [Renewal runbook](deploy/academy/README.md#apply-a-renewed-licence-on-the-same-release)
 - [x] Export a portable encrypted course, participant and approved-file archive after licence expiry. PostgreSQL and pinned Storage verify private role denial, isolation, direct attendance evidence and actual file bytes. [Customer export runbook](deploy/academy/OFFBOARDING.md)
 - [ ] Rehearse issuance, renewal and offboarding with the customer's independent installation, operator and publication policy.
-- [ ] Written customer licence/terms, third-party/GPL history legal review, security/privacy/retention/processor responsibilities and support agreement.
+- [x] Prepare customer-neutral, editable [licence, operations/support and handover templates](docs/customer-handoff/README.md).
+- [ ] Approve written customer licence/terms, third-party and historical licensing rights, security/privacy/retention responsibilities and the final support agreement for the particular customer.
 
 ### WL-07 — Managed branded hosting (P1)
 

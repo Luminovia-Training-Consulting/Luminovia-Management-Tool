@@ -3067,20 +3067,9 @@ The public Website has not been changed or connected by this source change.
 
 ## Current Website boundary
 
-The read-only investigation examined Website main
-`2778a9be96b7d6c29ec0f11a1677c7530c602ccc`: a static Vite/React JSX site with
-production Preact compatibility and React Router. Its contact page prepares a
-localised `mailto` draft, including recognised training intent/course links.
-GitHub Pages publishes the marketing repository's main branch. There is no
-existing server-side contact-form transport in that source.
-The [read-only Website source](https://github.com/Luminovia-Training-Consulting/Website/tree/2778a9be96b7d6c29ec0f11a1677c7530c602ccc)
-is a separate repository and deployment boundary.
+The separate public Website uses a static Vite/React build on GitHub Pages. Its optional bilingual enquiry form posts to a server-side relay, which validates a Turnstile challenge for the configured Website hostname and submission ID. Only that relay holds the separately provisioned intake token. The regular email contact remains available.
 
-Never embed the Portal integration token, service key or another server secret
-in that static site or a `VITE_` variable. Public activation is **pending** a
-reviewed trusted sender/transport and a separately authorised Website change.
-No new service registration, DNS change, paid component or public deployment is
-introduced here. A static browser cannot safely use this server credential.
+Use the [Website relay instructions](https://github.com/Luminovia-Training-Consulting/Website/tree/main/integrations/portal-enquiry) to configure the public build, the intended relay route and the Portal intake. The tested source supports this integration with an exact confirmation receipt. Public activation requires a reviewed privacy notice and approved Website, challenge, relay and Portal configuration. The Portal's server token is stored outside the static build.
 
 <a id="section-website-enquiries-intake-contract"></a>
 

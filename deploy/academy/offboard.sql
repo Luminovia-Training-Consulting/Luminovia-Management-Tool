@@ -119,13 +119,21 @@ select row_to_json(item) from (
   order by run_id, id
 ) item;
 
+\echo @course_submission_links
+select row_to_json(item) from (
+  select run_id, owner_id, version_id, submitted_at
+  from private.course_submission_offboard order by run_id, submitted_at, version_id
+) item;
+
 \echo @files
 select row_to_json(item) from (
   select version.id, version.document_id, version.version, version.object_path,
     version.original_name, version.mime_type, version.size_bytes, version.sha256
   from public.document_versions version
   join public.documents document on document.id = version.document_id
-  where version.status = 'clean' and document.deleted_at is null and document.kind = 'material' and (
+  where version.status = 'clean' and document.deleted_at is null and (
+    exists (select from private.course_submission_offboard submission where submission.version_id = version.id)
+    or document.kind = 'material' and (
     exists (select from private.course_resources resource where resource.version_id = version.id)
     or exists (select from private.course_exam_documents exam where exam.version_id = version.id)
     or exists (
@@ -135,6 +143,7 @@ select row_to_json(item) from (
         session.course_run_id, session.id, evidence.version_id
       ) approved
       where evidence.version_id = version.id and evidence.source = 'academy_scan'
+    )
     )
   )
   order by version.id
