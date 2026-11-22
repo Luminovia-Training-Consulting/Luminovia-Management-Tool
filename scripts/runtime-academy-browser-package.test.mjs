@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
+  existsSync,
   linkSync,
   lstatSync,
   mkdirSync,
@@ -17,6 +18,7 @@ import { tmpdir } from "node:os";
 import { once } from "node:events";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { parseEnv } from "node:util";
@@ -1464,14 +1466,80 @@ test("the browser maintenance lock recovers from SIGKILL and retains mutual excl
     await closed;
   }
   assert.equal(lstatSync(marker).isSymbolicLink(), true);
-  const release = acquireAcademyBrowserMaintenanceLock(root);
-  release();
+  acquireAcademyBrowserMaintenanceLock(root).release();
   mkdirSync(marker);
   assert.throws(
     () => acquireAcademyBrowserMaintenanceLock(root),
     /upgrade_in_progress/,
   );
   assert.equal(lstatSync(marker).isDirectory(), true);
+});
+
+test("an inherited maintenance lock survives the Node process until its mutator exits", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "academy-maintenance-process-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const module = new URL("./academy-install-browser.mjs", import.meta.url).href;
+  const finish = join(root, "finish");
+  const done = join(root, "done");
+  const worker = `
+import os
+from pathlib import Path
+from sys import argv
+from time import sleep
+os.fstat(3)
+print("Ready", flush=True)
+for _ in range(250):
+    if Path(argv[1]).exists():
+        break
+    sleep(0.02)
+os.close(3)
+Path(argv[2]).touch()
+`;
+  const child = spawn(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `
+    import { spawn } from "node:child_process";
+    import { acquireAcademyBrowserMaintenanceLock } from ${JSON.stringify(module)};
+    const lock = acquireAcademyBrowserMaintenanceLock(process.argv[1]);
+    const worker = spawn("python3", ["-I", "-c", ${JSON.stringify(worker)}, process.argv[2], process.argv[3]], {
+      stdio: ["ignore", "pipe", "inherit", lock.descriptor],
+    });
+    worker.stdout.pipe(process.stdout);
+  `,
+      root,
+      finish,
+      done,
+    ],
+    { stdio: ["ignore", "pipe", "inherit"] },
+  );
+  const closed = once(child, "close");
+  try {
+    const ready = await Promise.race([
+      once(child.stdout, "data"),
+      closed.then(() => []),
+    ]);
+    assert.equal(ready[0]?.toString().trim(), "Ready");
+    child.kill("SIGKILL");
+    assert.equal((await closed)[1], "SIGKILL");
+    assert.throws(
+      () => acquireAcademyBrowserMaintenanceLock(root),
+      /upgrade_in_progress/,
+    );
+    assert.throws(() => mkdirSync(join(root, ".browser-upgrade-lock")), {
+      code: "EEXIST",
+    });
+  } finally {
+    child.kill("SIGKILL");
+    await closed;
+    writeFileSync(finish, "");
+    for (let attempt = 0; attempt < 100 && !existsSync(done); attempt++)
+      await delay(20);
+  }
+  assert.equal(existsSync(done), true);
+  acquireAcademyBrowserMaintenanceLock(root).release();
 });
 
 test("points database bootstrap only at the matching private staged Compose project", async (t) => {

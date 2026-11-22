@@ -41,6 +41,8 @@ import ctypes
 import os
 import sys
 
+# Keep the inherited maintenance lock alive through the entire exchange.
+os.fstat(3)
 AT_FDCWD = -100
 RENAME_EXCHANGE = 2
 rename = ctypes.CDLL(None, use_errno=True).renameat2
@@ -106,12 +108,15 @@ export function acquireAcademyBrowserMaintenanceLock(root) {
           cause: error,
         });
     }
-    return () => {
-      try {
-        unlinkSync(marker);
-      } finally {
-        closeSync(descriptor);
-      }
+    return {
+      descriptor,
+      release() {
+        try {
+          unlinkSync(marker);
+        } finally {
+          closeSync(descriptor);
+        }
+      },
     };
   } catch (error) {
     closeSync(descriptor);
@@ -355,7 +360,7 @@ export async function installAcademyBrowser(
       },
     );
     if (exchange) {
-      const unlock = acquireAcademyBrowserMaintenanceLock(root);
+      const lock = acquireAcademyBrowserMaintenanceLock(root);
       try {
         const previous = JSON.parse(
           utf8.decode(
@@ -416,13 +421,14 @@ export async function installAcademyBrowser(
           ["-I", "-c", swapBrowserDirectories, staged, browserRoot],
           {
             env: { PATH: process.env.PATH },
+            stdio: ["ignore", "ignore", "ignore", lock.descriptor],
             timeout: 15000,
           },
         );
         if (swap.status !== 0)
           throw new Error("academy_install_atomic_replacement_failed");
       } finally {
-        unlock();
+        lock.release();
       }
     } else {
       // Concurrent first installers cannot overwrite a populated directory.
