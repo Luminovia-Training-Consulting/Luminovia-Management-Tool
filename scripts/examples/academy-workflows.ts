@@ -54,6 +54,22 @@ const operations = {
     path: "rest/v1/rpc/save_course_run",
     statuses: [200],
   },
+  "portal-permissions": {
+    path: "rest/v1/rpc/get_my_permissions",
+    statuses: [200],
+  },
+  "portal-chat-members": {
+    path: "rest/v1/rpc/chat_room_members",
+    statuses: [200],
+  },
+  "acknowledge-portal-announcement": {
+    path: "rest/v1/rpc/acknowledge_announcement",
+    statuses: [200],
+  },
+  "cancel-portal-course-request": {
+    path: "rest/v1/rpc/cancel_client_request",
+    statuses: [204],
+  },
 };
 
 /** This check catches accidental privileged credentials. The server verifies the JWT. */
@@ -140,7 +156,8 @@ async function main(): Promise<number> {
       console.error(`HTTP ${response.status}${safeCode ? ` (${code})` : ""}`);
       return 1;
     }
-    console.log(JSON.stringify(await response.json()));
+    if (response.status !== 204)
+      console.log(JSON.stringify(await response.json()));
     return 0;
   } catch {
     console.error("The request or JSON response failed.");

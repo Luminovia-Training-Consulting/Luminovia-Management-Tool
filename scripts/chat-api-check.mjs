@@ -218,9 +218,8 @@ try {
                 .insert({room_id: dm, user_id: outsider.id})
         ).error,
     );
-    await checked(
-        b.client.rpc("react_to_message", {p_message_id: message, p_emoji: "👍"}),
-        "Add real reaction",
+    await documentedRpc(
+        b.client, "react_to_message", {p_message_id: message, p_emoji: "👍"}, 204,
     );
     assert.deepEqual(
         (
@@ -231,9 +230,8 @@ try {
         )[0].reactions,
         [{emoji: "👍", count: 1, mine: false}],
     );
-    await checked(
-        b.client.rpc("mark_chat_read", {p_room_id: dm, p_message_id: message}),
-        "Persist actual read state",
+    await documentedRpc(
+        b.client, "mark_chat_read", {p_room_id: dm, p_message_id: message}, 204,
     );
     assert.equal(
         (await checked(b.client.rpc("chat_rooms_list"), "Unread room list")).find(

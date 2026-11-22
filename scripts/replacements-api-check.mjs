@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {documentedRpc} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
     async ({actor, service, checked, sql, defer, passwordOnly, suffix}) => {
@@ -87,12 +88,10 @@ await withApiFixture(
                 p_emergency: true,
                 p_request_id: key,
             };
-        assert.ok((await foreign.client.rpc("request_replacement", input)).error);
-        const offer = await checked(
-            original.client.rpc("request_replacement", input),
-        );
+        await documentedRpc(foreign.client, "request_replacement", input, 403, "42501");
+        const offer = await documentedRpc(original.client, "request_replacement", input);
         assert.equal(
-            await checked(original.client.rpc("request_replacement", input)),
+            await documentedRpc(original.client, "request_replacement", input),
             offer,
         );
         const market = await checked(first.client.rpc("replacement_marketplace"));

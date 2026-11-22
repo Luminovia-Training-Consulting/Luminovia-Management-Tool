@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {documentedRpc} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(async ({actor, passwordOnly, sql, defer, checked, suffix}) => {
     const admin = await actor("announcement-admin", "admin"),
@@ -128,21 +129,13 @@ await withApiFixture(async ({actor, passwordOnly, sql, defer, checked, suffix}) 
         "important publish retries create one exact revision notice and a newer draft cannot overwrite the public snapshot",
     );
 
-    const ack = await checked(
-        teacher.client.rpc("acknowledge_announcement", {
-            p_revision_id: published.published.id,
-        }),
-        "Actual revision acknowledgement",
-    );
+    const acknowledgement = {p_revision_id: published.published.id};
+    const ack = await documentedRpc(teacher.client, "acknowledge_announcement", acknowledgement);
     assert.equal(
-        await checked(
-            teacher.client.rpc("acknowledge_announcement", {
-                p_revision_id: published.published.id,
-            }),
-            "Idempotent ACK retry",
-        ),
+        await documentedRpc(teacher.client, "acknowledge_announcement", acknowledgement),
         ack,
     );
+    await documentedRpc(client.client, "acknowledge_announcement", acknowledgement, 403, "42501");
     assert.equal(
         (await list(teacher, {p_unacknowledged: true})).items.length,
         0,

@@ -207,6 +207,41 @@ Run `node --test scripts/runtime-academy-workflow-examples.test.mjs` to check th
 
 `node --test scripts/runtime-academy-workflow-examples.test.mjs` prüft den Client am echten Accounts-Handler und an einer lokalen Entwurfs-Fixture mit den OpenAPI-Schemas. Der [Datenbanktest für Academy-Kursentwürfe](../academy-course-creation-db-tests.mjs) prüft die echte Transaktion und die serverseitige Rollenprüfung.
 
+## Internal Portal permissions and scoped actions · Berechtigungen und Aktionen im internen Portal
+
+Use your Internal Portal OpenAPI server URL and the publishable key. Load the current user's token. Inspect their permissions and list the members of a chat they can access. Acknowledge the published revision currently visible to that user. For cancellation, load the token of a current contact of the request's company or an authorised gross-finance account. Use your own disposable unpublished request as this action changes its state.
+
+Nutze die Serveradresse aus der OpenAPI-Datei des internen Portals und den öffentlichen Schlüssel. Lade das aktuelle Benutzertoken. Lies die Berechtigungen und die Mitglieder eines Chats, auf den das Konto Zugriff hat. Bestätige die aktuell veröffentlichte und für dieses Konto sichtbare Mitteilung. Lade zur Stornierung das Token eines aktuellen Kontakts des anfragenden Unternehmens oder eines berechtigten Finanzkontos mit Bruttozugriff. Verwende eine eigene unveröffentlichte Testanfrage, deren Status geändert werden darf.
+
+```bash
+export LUMINOVIA_API_BASE_URL='https://portal.example.invalid/backend'
+read -rs LUMINOVIA_PUBLISHABLE_KEY
+read -rs LUMINOVIA_ACCESS_TOKEN
+export LUMINOVIA_PUBLISHABLE_KEY LUMINOVIA_ACCESS_TOKEN
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts portal-permissions <<'JSON'
+{}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts portal-chat-members <<'JSON'
+{"p_room_id":"e1111111-1111-4111-8111-111111111111"}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts acknowledge-portal-announcement <<'JSON'
+{"p_revision_id":"e2222222-2222-4222-8222-222222222222"}
+JSON
+
+read -rs LUMINOVIA_ACCESS_TOKEN
+node --experimental-strip-types scripts/examples/academy-workflows.ts cancel-portal-course-request <<'JSON'
+{"p_request_id":"e3333333-3333-4333-8333-333333333333"}
+JSON
+unset LUMINOVIA_ACCESS_TOKEN LUMINOVIA_PUBLISHABLE_KEY
+```
+
+Replace example IDs with records visible to the test user. Permissions and members are JSON arrays. Acknowledging the same visible revision again returns the original timestamp. Successful cancellation and its retry return HTTP 204 with an empty body. On HTTP errors the client writes the status and any recognised error code to stderr and exits with code 1.
+
+Ersetze die Beispiel-IDs durch Datensätze, die das jeweilige Testkonto sehen darf. Berechtigungen und Chatmitglieder sind JSON-Listen. Eine erneute Bestätigung derselben sichtbaren Mitteilung liefert den ursprünglichen Zeitstempel. Eine erfolgreiche Stornierung und ihre Wiederholung liefern HTTP 204 mit leerem Antwortkörper. Bei HTTP-Fehlern meldet der Client Status und gegebenenfalls Fehlercode auf stderr und beendet sich mit Exit-Code 1.
+
 ## Local verification · Lokale Prüfung
 
 ```bash

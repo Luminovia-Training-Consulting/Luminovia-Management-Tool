@@ -37,6 +37,8 @@ The internal and dedicated portals share the role preview selector. Current admi
 
 The work log records source, local verification and exact-revision CI evidence. Deployment, production mail and hosting acceptance have their own checks.
 
+The Internal OpenAPI upgrade closes the 63 generated-description backlog entries. The published operation IDs, database signatures and edition boundaries are retained. The bilingual example client now exercises current permissions, a scoped chat roster, announcement acknowledgement and an empty cancellation response. Keep the deployment and exhaustive per-role HTTP matrix active in the roadmap.
+
 The local Docker daemon is reachable through the private `luminovia-qa` context. The canonical system phase passed on `67502ec0`. Both canonical Chromium browser lanes passed on `9d29d3b4` with 256 application and four built PWA cases. Subsequent verification covered the migration and API catalogue additions, the long combined-role account name and the latest responsive fixes at six viewport widths. See the [current acceptance record](WORKLOG.md#22-november-2026--local-docker-api-and-academy-acceptance).
 
 The internal course API test now crosses the live WebSocket and authenticated document boundaries in one enrolment-withdrawal workflow. The published contract describes the [file and Realtime formats](../API_REFERENCE.md#realtime-course-activity-and-inbox). The same canonical API fixtures check notification cursor and preference errors and scan-confirmed upload metadata against the running services.

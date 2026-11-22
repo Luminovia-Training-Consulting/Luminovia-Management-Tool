@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
+import {documentedRpc} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
     async ({service, actor, passwordOnly, sql, defer, checked, suffix}) => {
@@ -220,28 +221,20 @@ await withApiFixture(
         assert.equal(before.confirmed_count, 0);
         assert.equal(before.open_positions, 3);
         assert.equal(before.capacity_basis, "per_position");
-        await checked(
-            admin.client.rpc("set_job_capacity", capacityChange),
-            "Versioned position edit before acceptance",
-        );
         assert.equal(
-            await checked(
-                admin.client.rpc("set_job_capacity", capacityChange),
-                "Position edit retry is idempotent",
-            ),
+            await documentedRpc(admin.client, "set_job_capacity", capacityChange),
             job,
         );
         assert.equal(
-            (
-                await admin.client.rpc("set_job_capacity", {
-                    ...capacityChange,
-                    p_capacity: 4,
-                    p_request_id: randomUUID(),
-                })
-            ).error?.code,
-            "40001",
-            "A stale board revision cannot overwrite the new position count",
+            await documentedRpc(admin.client, "set_job_capacity", capacityChange),
+            job,
         );
+        // PostgREST keeps PostgreSQL serialization failures on HTTP 500.
+        await documentedRpc(admin.client, "set_job_capacity", {
+            ...capacityChange,
+            p_capacity: 4,
+            p_request_id: randomUUID(),
+        }, 500, "40001");
         const changed = await metadata(job);
         assert.equal(changed.capacity, 2);
         assert.equal(Number(changed.gross_budget), 200.02);

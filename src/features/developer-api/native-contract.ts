@@ -1,12 +1,37 @@
 /** Renders replay-verified browser RPC contracts for the download and explorer. */
 import catalogue from "../../../data/native-rpc.generated.json" with { type: "json" };
+import { chatOperationDocumentation } from "./chat-operation-documentation.ts";
+import { commercialOperationDocumentation } from "./commercial-operation-documentation.ts";
+import { knowledgeOperationDocumentation } from "./knowledge-operation-documentation.ts";
+import { operationsRpcDocumentation } from "./operations-rpc-documentation.ts";
+
+type RpcRequest = {
+  properties: Record<string, Record<string, unknown> | undefined>;
+  required: string[];
+};
+
+type RpcDocumentation = {
+  summary: string;
+  description: string;
+  parameters?: Record<string, Record<string, unknown>>;
+  required?: readonly string[];
+  result?: Record<string, unknown>;
+  errors?: Record<string, string>;
+};
+
+const operationDocumentation: Record<string, RpcDocumentation | undefined> = {
+  ...chatOperationDocumentation,
+  ...commercialOperationDocumentation,
+  ...knowledgeOperationDocumentation,
+  ...operationsRpcDocumentation,
+};
 
 type NativeRpc = {
   feature: string;
   participant: boolean;
   guest: boolean;
   overloads: {
-    request: { required: string[] };
+    request: RpcRequest;
     response: unknown;
     void?: boolean;
   }[];
@@ -50,6 +75,31 @@ function schemaForOverloads(schemas: unknown[]) {
   return schemas.length === 1 ? schemas[0] : { anyOf: schemas };
 }
 
+/** Apply business constraints to known SQL arguments without changing overloads. */
+function documentRequest(
+  request: RpcRequest,
+  documentation?: RpcDocumentation,
+) {
+  if (!documentation) return request;
+  return {
+    ...request,
+    properties: Object.fromEntries(
+      Object.entries(request.properties).map(([name, property]) => [
+        name,
+        { ...property, ...documentation.parameters?.[name] },
+      ]),
+    ),
+    required: [
+      ...new Set([
+        ...request.required,
+        ...(documentation.required ?? []).filter((name) =>
+          Object.hasOwn(request.properties, name),
+        ),
+      ]),
+    ],
+  };
+}
+
 /** Compose native methods without creating or proxying any backend routes. */
 function buildNativePaths(explorer: boolean) {
   const entries: Record<string, NativeRpc> = catalogue;
@@ -59,6 +109,10 @@ function buildNativePaths(explorer: boolean) {
       .filter(([name]) => !/^(?:save_|clear_)?academy_/.test(name))
       .filter(([name]) => !explorer || !documentOnly.has(name))
       .map(([name, entry]) => {
+        const documentation = operationDocumentation[name];
+        const requests = entry.overloads.map((item) =>
+          documentRequest(item.request, documentation),
+        );
         const returnsData = entry.overloads.filter((item) => !item.void);
         return [
           "/rest/v1/rpc/" + name,
@@ -66,8 +120,9 @@ function buildNativePaths(explorer: boolean) {
             post: {
               operationId: "native_" + name,
               tags: ["Native / " + entry.feature.replaceAll("-", " ")],
-              summary: name.replaceAll("_", " "),
+              summary: documentation?.summary ?? name.replaceAll("_", " "),
               description:
+                documentation?.description ??
                 "Native PostgREST operation used by the portal. Current database authority and resource membership apply. Omit defaulted parameters to use server defaults. JSON and JSONB values follow the owning feature's validation. Inspect returned business states before reporting success.",
               "x-luminovia-rest-gate": {
                 postgresRole: "authenticated",
@@ -76,14 +131,12 @@ function buildNativePaths(explorer: boolean) {
                 guestSession: entry.guest,
               },
               requestBody: {
-                required: entry.overloads.every(
-                  (item) => item.request.required.length > 0,
+                required: requests.every(
+                  (request) => request.required.length > 0,
                 ),
                 content: {
                   "application/json": {
-                    schema: schemaForOverloads(
-                      entry.overloads.map((item) => item.request),
-                    ),
+                    schema: schemaForOverloads(requests),
                   },
                 },
               },
@@ -94,9 +147,11 @@ function buildNativePaths(explorer: boolean) {
                         description: "Current server result",
                         content: {
                           "application/json": {
-                            schema: schemaForOverloads(
-                              returnsData.map((item) => item.response),
-                            ),
+                            schema:
+                              documentation?.result ??
+                              schemaForOverloads(
+                                returnsData.map((item) => item.response),
+                              ),
                           },
                         },
                       },
@@ -117,6 +172,14 @@ function buildNativePaths(explorer: boolean) {
                 "429": postgrestError,
                 "503": postgrestError,
                 default: postgrestError,
+                ...Object.fromEntries(
+                  Object.entries(documentation?.errors ?? {}).map(
+                    ([status, description]) => [
+                      status,
+                      { ...postgrestError, description },
+                    ],
+                  ),
+                ),
               },
             },
           },

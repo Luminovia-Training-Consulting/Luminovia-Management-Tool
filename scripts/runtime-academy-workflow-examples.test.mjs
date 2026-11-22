@@ -142,6 +142,22 @@ test("workflow examples invite accounts and author courses over the documented e
     academy_publish_course: [publication, { published: true, capacity: 12 }],
     save_course_template: [portalTemplate, template],
     save_course_run: [portalRun, course],
+    get_my_permissions: [{}, ["courses.manage"]],
+    chat_room_members: [
+      { p_room_id: course },
+      [
+        {
+          user_id: user,
+          display_name: "Fictional Teacher",
+          joined_at: "2030-05-01T10:00:00Z",
+        },
+      ],
+    ],
+    acknowledge_announcement: [
+      { p_revision_id: creation },
+      "2030-05-06T10:00:00Z",
+    ],
+    cancel_client_request: [{ p_request_id: creation }, undefined],
   };
   const expectedAccountPaths = new Set([
     "/functions/v1/accounts/v1/academy/users",
@@ -206,7 +222,10 @@ test("workflow examples invite accounts and author courses over the documented e
           );
         } else {
           assert.deepEqual(data, expected);
-          response = Response.json(result);
+          response =
+            result === undefined
+              ? new Response(null, { status: 204 })
+              : Response.json(result);
         }
       } else {
         assert.equal(path, "/rest/v1/rpc/academy_create_course_draft");
@@ -218,6 +237,12 @@ test("workflow examples invite accounts and author courses over the documented e
                 { status: 403 },
               );
         if (response.ok) receipts.set(data.p_request_id, receipt);
+      }
+      if (response.status === 204) {
+        assert.ok(operation.responses["204"]);
+        assert.equal(operation.responses["204"].content, undefined);
+        reply.writeHead(204).end();
+        return;
       }
       const body = await response.json();
       z.fromJSONSchema(
@@ -332,7 +357,7 @@ test("workflow examples invite accounts and author courses over the documented e
       );
       child.stdin.on("error", reject);
       child.stdin.end(JSON.stringify(data));
-    }).then(JSON.parse);
+    }).then((stdout) => (stdout ? JSON.parse(stdout) : undefined));
 
   assert.deepEqual(
     await run("invite-account", {
@@ -379,6 +404,10 @@ test("workflow examples invite accounts and author courses over the documented e
     ["publish-course", "academy_publish_course"],
     ["create-portal-template", "save_course_template"],
     ["create-portal-run", "save_course_run"],
+    ["portal-permissions", "get_my_permissions"],
+    ["portal-chat-members", "chat_room_members"],
+    ["acknowledge-portal-announcement", "acknowledge_announcement"],
+    ["cancel-portal-course-request", "cancel_client_request"],
   ]) {
     const [request, response] = courseSteps[name];
     assert.deepEqual(await run(command, request), response);
