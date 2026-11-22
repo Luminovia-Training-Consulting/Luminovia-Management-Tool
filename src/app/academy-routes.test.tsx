@@ -316,6 +316,16 @@ beforeEach(async () => {
                   exams: { ...workspace.exams, required: fake.examRequired },
                 };
           break;
+        case "course_submissions":
+          data = {
+            enabled: false,
+            can_manage:
+              fake.licence === "active" && fake.actor !== "fictional-learner",
+            can_upload: false,
+            entries: [],
+            next: null,
+          };
+          break;
         case "course_class_options":
           if (fake.foreignCourse || fake.withdrawn) error = { code: "42501" };
           data = {
