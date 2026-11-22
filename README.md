@@ -20,6 +20,7 @@ Open [the local portal](http://127.0.0.1:5173). The launcher installs locked dep
 ./portal status
 ./portal stop          # Stop owned services; retain data
 ./portal restart
+./portal reset         # Confirm a full local reset and restart with fictional data
 ```
 
 The development API uses port `54321`. Private runtime state and credentials stay in ignored `.local/`; do not share them in issues or screenshots. A persistent volume is not a backup.

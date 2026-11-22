@@ -46,6 +46,8 @@ see [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development). Inspect evolv
 
 Use `./portal stop` when the local background system is no longer required; the command preserves Auth/database/Storage data. `./portal start` resumes that data. Preserve source/migrations/roadmap/evidence, not running-process promises. Do not remove an existing unrelated stack or delete stored data as cleanup.
 
+For an intentional local rebuild, run `./portal reset` and confirm the project named in the prompt. The command verifies ownership on the local Docker engine, checks attached volumes, stops the selected instance and verifies the old persistent volumes are gone before starting the fictional setup. Its scope covers local database, Auth, Storage, Mailpit, scanner state and generated credentials. A failed shutdown leaves the deletion step unopened. A failed restart returns an error that can be inspected with `./portal status` and `.local/runtime.log`.
+
 <a id="section-deployment-runbook-pinned-cli-semantics"></a>
 
 ## Pinned CLI semantics

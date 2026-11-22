@@ -228,6 +228,8 @@ An empty owned Docker network is removed after its containers stop. Data volumes
 
 Use `./portal restart` for a data-preserving stop/start, or `./portal up` to stay attached and stop with Ctrl+C. Local services started with `start` remain running until `stop`, system shutdown or a fatal child-service failure. Source/plan/QA evidence ledger persist independently in Git; a process is not a substitute for durable source.
 
+Use `./portal reset` when you want a fresh local portal. Confirm `RESET luminovia-portal` at the prompt. For a scripted run, give the exact local project with `./portal reset --confirm luminovia-portal`. The command permanently deletes the selected local database, accounts, Storage uploads, local Mailpit inbox, scanner volume and generated runtime configuration, then applies the checkout's migrations and starts with fictional accounts. It verifies the local Docker socket and project resource ownership before deletion. Use `./portal credentials` for the fresh local sign-in. The browser may still have a previous session for the same address. Sign in again after a reset.
+
 Do not manually delete Docker volumes or `.local` credentials if their data are needed. A volume is persistence, not an off-site backup. Production backup of PostgreSQL and Storage objects, retention and restore drills remain separate release requirements.
 
 <a id="section-local-development-one-command-complete-local-verification"></a>

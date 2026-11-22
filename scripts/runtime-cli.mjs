@@ -67,7 +67,7 @@ async function locked(operation) {
 /** Describes only commands actually offered and their local data storage. */
 function help() {
     console.log(
-        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
+        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset        Erase the confirmed local project and restart with fictional data\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
     );
 }
 
@@ -246,6 +246,30 @@ try {
                     `\n${readFileSync(join(runtimeDir, "ADMIN-DEMO.txt"), "utf8")}`,
                 );
             break;
+        case "reset": {
+            const { assertResetDockerHost, confirmLocalReset, localResetTarget, resetLocalPortal } =
+                await import("./local-reset.mjs");
+            const confirmed = localResetTarget(root);
+            await confirmLocalReset(process.argv.slice(3), confirmed.id);
+            await locked(async () => {
+                const dockerHost = await assertLocalDocker();
+                assertResetDockerHost(dockerHost);
+                // Pin every nested lifecycle/scanner/CLI subprocess to the same local daemon.
+                delete process.env.DOCKER_CONTEXT;
+                process.env.DOCKER_HOST = dockerHost;
+                await ensureDependencies();
+                await resetLocalPortal({
+                    checkout: root,
+                    confirmed,
+                    docker: (args) => command("docker", args, {quiet: true, timeoutMs: 30000}),
+                    ownsRuntime: () => processIsOurs(readState()),
+                    stop,
+                    start,
+                });
+                console.log(`Local project ${confirmed.id} reset and started with fictional data.`);
+            });
+            break;
+        }
         case "reset-demo-admin":
             await locked(async () => {
                 await assertLocalDocker();

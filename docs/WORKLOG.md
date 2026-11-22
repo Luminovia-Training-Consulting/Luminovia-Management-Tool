@@ -1,3 +1,9 @@
+# 22 November 2026 — Full local portal reset
+
+`./portal reset` confirms the exact local project, checks the local Docker socket, rejects linked Supabase projects and verifies Docker container, network and volume ownership before deleting any data. It stops the existing stack, removes the verified project volumes and generated local credentials, then starts a fresh runtime using the tracked migrations and fictional seed. The existing `stop` and `restart` commands retain data as before.
+
+Six operator tests passed. A separate Docker installation proved a refused incorrect confirmation, removal of a populated PostgreSQL fixture, Auth user, Storage object, Mailpit message and scanner volume, and successful login on the reseeded installation. An unrelated Docker volume and the source configuration survived. The disposable test stack was removed after verification.
+
 # 22 November 2026 — Academy licence issuance and roadmap reconciliation
 
 The private Academy registry accepts approved initial trial and licensed terms, imports an existing trusted envelope, converts a trial and records renewals. Each action binds to the original approved customer and the exact preceding licence. The issuer uses the established Ed25519 envelope and validator. The registry keeps the review receipt and makes the matching envelope available through an explicit private export. The first action reads the previous draft-only registry without a migration. Hosted fulfilment and commercial approval remain separate steps.

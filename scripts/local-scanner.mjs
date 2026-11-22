@@ -147,7 +147,7 @@ async function start(runtime) {
         // restart with entrypoint-dependent ownership and can prevent clamd startup.
         const config = `Foreground yes\nUser clamav\nLocalSocket /tmp/clamd.sock\nTCPSocket 3310\nTCPAddr 0.0.0.0\nDatabaseDirectory /var/lib/clamav\nLogTime yes\nStreamMaxLength 100M\nMaxScanSize 300M\nMaxFileSize 100M\nMaxRecursion 10\nMaxFiles 1000\nAlertExceedsMax yes\nAlertEncryptedArchive yes\nAlertEncryptedDoc yes\nHeuristicAlerts yes\nScanArchive yes\nScanPDF yes\nScanOLE2 yes\nScanXMLDOCS yes\n`;
         writeScannerFile(`${runtime}/clamd.conf`, config, 0o644);
-        docker(["volume", "create", `portal_clamav_${project}`]);
+        docker(["volume", "create", "--label", `org.luminovia.portal=${project}`, `portal_clamav_${project}`]);
         console.log(
             "Preparing the pinned ClamAV image and persistent signatures (first start can take a few minutes).",
         );
