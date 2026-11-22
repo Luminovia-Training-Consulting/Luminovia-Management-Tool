@@ -161,6 +161,10 @@ for (const edition of [
         values ${[makeJob(job, course), makeJob(nextJob, nextCourse), makeJob(outsideJob, outsideCourse), makeJob(requestJob)].join(",")};
         insert into private.client_course_requests(id,organisation_id,requested_by,client_id,payload,creation_options,job_id)
           values(${q(companyRequest)},${q(org)},${q(contact)},${q(randomUUID())},'{}','{}',${q(requestJob)});
+        insert into private.job_commission_offers(job_id,organisation_id,gross_amount,gross_total_amount,platform_total_amount,
+          lecturer_net_amount,lecturer_net_total_amount,currency,pricing_mode,regular_percent,senior_percent,policy_version)
+          values(${q(requestJob)},${q(org)},100,100,0,0,0,'EUR','role_split',50,50,1);
+        insert into private.lecturer_compensation(user_id,mode,currency,version) values(${q(teacher)},'daily','AUD',2);
         insert into public.job_sessions(job_id,starts_at,ends_at)
         values (${q(nextJob)},${q(date(7))},${q(date(7.1))}),(${q(outsideJob)},${q(date(8))},${q(date(8.1))});
         insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
@@ -171,6 +175,16 @@ for (const edition of [
         update public.chat_members set removed_at=null where room_id=${q(chatRoom)} and user_id=${q(teacher)};
         insert into public.chat_members(room_id,user_id) values(${q(chatRoom)},${q(teacher)}) on conflict do nothing;
       `);
+      assert.equal(
+        (
+          await call(
+            teacher,
+            "claim_job",
+            `${q(requestJob)},${q(randomUUID())},1`,
+          )
+        ).status,
+        "quote_unavailable",
+      );
     }
     const initial = assertSchema(list, "get", await readBlocks(contact));
     const entry = (blocked, version) => ({
@@ -321,6 +335,16 @@ for (const edition of [
         originalClaim,
       );
       await assert.rejects(call(teacher, "job_waitlist", q(nextJob)), /42501/);
+      assert.equal(
+        (
+          await call(
+            teacher,
+            "claim_job",
+            `${q(requestJob)},${q(randomUUID())},1`,
+          )
+        ).status,
+        "not_eligible",
+      );
       assert.equal(
         await actor(
           teacher,
