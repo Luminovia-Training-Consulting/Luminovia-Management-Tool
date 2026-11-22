@@ -432,6 +432,10 @@ try {
             await step("Caddy access and private boundaries", process.execPath, [
                 "scripts/hostinger-caddy-check.mjs",
             ]);
+            if (existsSync(join(hosting, "backups/test_complete_restore.mjs")))
+                await step("Complete encrypted PostgreSQL and file recovery", process.execPath, [
+                    "deploy/hostinger/backups/test_complete_restore.mjs",
+                ]);
         }
     }
     await step("Start complete isolated services", process.execPath, [

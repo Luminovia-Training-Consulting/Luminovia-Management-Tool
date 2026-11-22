@@ -5,15 +5,13 @@ import assert from "node:assert/strict";
 import {mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
-import {createIsolatedDatabase} from "../restore-check.mjs";
+import {candidateDatabaseImage, createIsolatedDatabase} from "../restore-check.mjs";
 import {collectCommand} from "../backup.mjs";
 import {restoreComplete} from "./restore_complete.mjs";
 import {installExtensionRecovery} from "./extension_recovery.mjs";
 import {verifiesScram} from "./credential_recovery.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const image =
-    "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de";
 const age = process.env.AGE_TEST_BINARY ?? "age";
 const keygen = process.env.AGE_KEYGEN_TEST_BINARY ?? "age-keygen";
 const privateRoot = resolve(here, "../../../.local/hostinger");
@@ -21,12 +19,14 @@ await mkdir(privateRoot, {recursive: true, mode: 0o700});
 const temporary = await mkdtemp(resolve(privateRoot, "complete-fixture-"));
 let source;
 try {
+    await collectCommand("docker", ["image", "inspect", candidateDatabaseImage])
+        .catch(() => collectCommand("docker", ["pull", candidateDatabaseImage]));
     const identity = resolve(temporary, "fictional.agekey");
     await collectCommand(keygen, ["-o", identity]);
     const recipient = await collectCommand(keygen, ["-y", identity]);
     const recipientFile = resolve(temporary, "recipient.txt");
     await writeFile(recipientFile, recipient + "\n", {mode: 0o600});
-    source = await createIsolatedDatabase(image);
+    source = await createIsolatedDatabase(candidateDatabaseImage);
     await source.sql("create role postgres; create role service_role;");
     const recovery = JSON.parse(
         await readFile(resolve(here, "extension-recovery.json"), "utf8"),

@@ -285,6 +285,7 @@ test("an explicit browser phase may execute one selected CI lane", async () => {
         inherited: {CI: "true", PORTAL_BROWSER_PROJECT: "mobile-chromium"},
     });
     assert.equal(result.error, undefined);
+    assert.equal(contains(result, "deploy/hostinger/backups/test_complete_restore.mjs"), false);
     assert.equal(Boolean(browserCommand(result, "pwa-webkit")), false);
     assert.equal(contains(result, "webkit"), false);
     for (const stage of ["application", "pwa"]) {
@@ -442,6 +443,7 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
         "--gateway-routing",
         "deploy/hostinger/selfhost/course-documents.test.mjs",
         "scripts/hostinger-caddy-check.mjs",
+        "deploy/hostinger/backups/test_complete_restore.mjs",
         "scripts/runtime-persistence-check.mjs",
         "scripts/local-seed.mjs",
         "test:db",
@@ -488,6 +490,7 @@ test("system PR phase delegates only independently required quality and coverage
     assert(!contains(result, ".github"));
     assert(!contains(result, "scripts/code-integrity.mjs"));
     assert(contains(result, "deploy/hostinger/selfhost/course-documents.test.mjs"));
+    assert(contains(result, "deploy/hostinger/backups/test_complete_restore.mjs"));
     assert(contains(result, "scripts/runtime-safety.test.mjs"));
     assert(contains(result, "--audit-level=low"));
     assert(contains(result, "test:db"));
@@ -499,15 +502,20 @@ test("system PR phase delegates only independently required quality and coverage
     assert.equal(result.released, 1);
 });
 
-test("a failed course PDF runtime rehearsal fails system acceptance before service startup", async () => {
-    const result = await runFixture({
-        args: ["--phase", "system"],
-        fail: ({args}) => args.includes("deploy/hostinger/selfhost/course-documents.test.mjs"),
-    });
-    assert.ok(result.error);
-    assert.equal(acceptance(result).status, "failed");
-    assert.equal(contains(result, "start"), false);
-    assert.equal(result.released, 1);
+test("failed PDF or complete backup rehearsals stop system acceptance before service startup", async () => {
+    for (const path of [
+        "deploy/hostinger/selfhost/course-documents.test.mjs",
+        "deploy/hostinger/backups/test_complete_restore.mjs",
+    ]) {
+        const result = await runFixture({
+            args: ["--phase", "system"],
+            fail: ({args}) => args.includes(path),
+        });
+        assert.ok(result.error);
+        assert.equal(acceptance(result).status, "failed");
+        assert.equal(contains(result, "start"), false);
+        assert.equal(result.released, 1);
+    }
 });
 
 test("complete main CI phase keeps browser/PWA acceptance while delegating parallel quality and coverage", async () => {
