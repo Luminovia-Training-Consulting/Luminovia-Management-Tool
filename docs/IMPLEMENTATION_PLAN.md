@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Local reset, release performance and Academy operations
+
+- The local reset has a real isolated Docker regression with seeded PostgreSQL, Auth, Storage, Mailpit and existing scanner state. The default launch after confirmation replays the tracked migrations and fictional seed.
+- The Build job and `./portal check` enforce production asset budgets. Full main acceptance still includes component coverage, native HTTP/PostgreSQL and retained-data tests, Chromium desktop and mobile, and PWA checks with the actual service worker.
+- Dedicated Academy ingress no longer includes CMS aliases. The private operator workflow now includes reviewed fulfilment receipts and local health monitoring. Academy OpenAPI 1.30 models the actual rate-limit and maintenance transport responses. Independent customer deployment, provider delivery, customer receiver onboarding and full external acceptance remain in the White-Label roadmap.
+
 ## Core function review
 
 | Area | Implemented in the portal | Remaining work or evidence |

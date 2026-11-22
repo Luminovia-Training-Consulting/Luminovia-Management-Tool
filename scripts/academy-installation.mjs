@@ -30,11 +30,16 @@ import {
 const sqlText = (value) => "'" + String(value).replaceAll("'", "''") + "'";
 const authIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
-function requirePrivateAcademyRuntime(root) {
+function requirePrivateAcademyRuntime(root, allowRoot = false) {
   if (!isAbsolute(root ?? "") || realpathSync(root) !== root)
     throw new Error("academy_database_runtime_path");
   const info = lstatSync(root);
-  if (!info.isDirectory() || info.uid !== process.getuid() || info.mode & 0o077)
+  const uid = process.getuid();
+  if (
+    !info.isDirectory() ||
+    (info.uid !== uid && !(allowRoot && uid === 0)) ||
+    info.mode & 0o077
+  )
     throw new Error("academy_database_runtime_path");
 }
 
@@ -187,7 +192,7 @@ export async function renewAcademyInstallationLicence(input, executeSql) {
 
 /** Return an operator's current release and licence inventory without taking write locks. */
 export async function readAcademyInstallationStatus(
-  { envelope, publicKey, expected, now },
+  { envelope, publicKey, expected, now, requireExactLicence = false },
   executeSql,
 ) {
   const { terms } = verifyAcademyLicence(envelope, publicKey, expected, now);
@@ -215,7 +220,8 @@ export async function readAcademyInstallationStatus(
     join private.installation_verified_licence licence using (installation_id)
     where capability.installation_id = ${sqlText(terms.installation_id)}::uuid
       and capability.edition = ${sqlText(terms.edition)}
-      and licence.terms->>'release_commit' = ${sqlText(terms.release_commit)};
+      and licence.terms->>'release_commit' = ${sqlText(terms.release_commit)}
+      ${requireExactLicence ? `and licence.terms = ${sqlText(JSON.stringify(terms))}::jsonb` : ""};
     commit;
   `);
   if (!output.trim()) throw new Error("academy_status_target_mismatch");
@@ -270,8 +276,12 @@ export async function configureAcademyCourseAccess(
 }
 
 /** Pin the private Compose target to this generated runtime and staged release. */
-export async function academyDatabaseComposeArguments(root, expected) {
-  requirePrivateAcademyRuntime(root);
+export async function academyDatabaseComposeArguments(
+  root,
+  expected,
+  { allowRoot = false } = {},
+) {
+  requirePrivateAcademyRuntime(root, allowRoot);
   const browser = join(root, "browser");
   if (realpathSync(browser) !== browser)
     throw new Error("academy_database_runtime_path");

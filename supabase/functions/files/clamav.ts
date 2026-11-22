@@ -20,7 +20,7 @@ interface ScannerDependencies {
 }
 
 // Validate response format and signature date; a version string alone does not prove fresh signatures.
-function validateVersion(value: unknown): string {
+export function validateClamAvVersion(value: unknown, now = Date.now()): string {
     if (
         typeof value !== "string" || !value.startsWith("ClamAV ") ||
         value.length > 1024 ||
@@ -29,7 +29,7 @@ function validateVersion(value: unknown): string {
         )
     ) throw new Error("scanner_version");
     const stamp = Date.parse(value.slice(value.lastIndexOf("/") + 1));
-    const age = Date.now() - stamp;
+    const age = now - stamp;
     if (!Number.isFinite(stamp) || age > SIGNATURE_MAX_AGE || age < -86400000) {
         throw new Error("scanner_definitions_stale");
     }
@@ -138,7 +138,7 @@ async function scanHttps(
         }
         const verdict = result as { clean?: unknown; version?: unknown };
         if (typeof verdict.clean !== "boolean") throw new Error("scanner_response");
-        return {clean: verdict.clean, version: validateVersion(verdict.version)};
+        return {clean: verdict.clean, version: validateClamAvVersion(verdict.version)};
     };
     try {
         return await Promise.race([operation(), deadline]);
@@ -187,7 +187,7 @@ async function scannerVersion(host: string, port: number) {
     }, 3000);
     try {
         await writeAll(conn, encoder.encode("zVERSION\0"));
-        return validateVersion(await readResult(conn));
+        return validateClamAvVersion(await readResult(conn));
     } finally {
         clearTimeout(timeout);
         try {

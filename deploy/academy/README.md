@@ -209,6 +209,21 @@ Restoration verifies the archive against the independently recorded SHA-256 and 
 
 For a portable handover, the [Academy data export](OFFBOARDING.md) provides course records, participant data and the verified bytes of approved learning files in an independently encrypted format. It works during licence grace and after expiry. Use the recovery workflow above for restoring the exact application, configuration and Auth data on a separate host.
 
+## Monitor a dedicated installation
+
+Save the JSON output from the successful `recovery.py backup` command to a root-owned file with permissions `0600`. Run the monitor using the same expected installation and signed release as the deployment. The licence file and receipt must belong to the account running the monitor. A root operator can use a root-owned private copy of each. The key file contains the issuer's public verification key.
+
+```sh
+sudo "$(command -v node)" scripts/academy-health.mjs \
+  "$runtime_root" "$licence_file" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit" \
+  --backup-receipt "$backup_receipt" --max-backup-age-hours 24 --expect-ingress
+```
+
+Use the exit status in the installation's monitoring schedule. `0` reports healthy, `1` reports actionable degradation, and `2` reports unavailable or invalid operator input. The JSON includes the current licence, matching database release and migration ledger, service states, signature freshness and backup age. It omits configuration values, account and course data, Docker logs and file paths. `--expect-ingress` detects missing ingress on a serving installation. Omit it when rehearsing an intentionally private backend. Use `--verify-backup` for a periodic full SHA-256 read of the encrypted archive. The receipt's fingerprint should also be stored independently for incident recovery.
+
+Treat a target mismatch as an installation incident. Confirm the expected release and runtime before restarting a service. For an expired licence, use the renewal workflow. For an old or invalid backup, take a new cold backup and rehearse restoration according to the recovery instructions. Verify external HTTPS, signing receiver deliveries and provider mail from their own authorised endpoints during acceptance. The local report records ingress processes and private service health.
+
 ## Upgrade an existing academy
 
 Use a newer signed licence issued for the same installation and edition and the new source revision. Record the current receipt and actual backend image digests. Rehearse the recovery set and upgrade in an independently provisioned copy before maintaining an installation that holds customer records. Quiesce application writers before taking the recovery set. Include PostgreSQL databases and roles, the physical Storage mount, private runtime and signing/encryption configuration, and the persistent configuration volumes. Keep the encrypted recovery set and independent decryption key on different storage. Record the source revision and migration inventory with the set.

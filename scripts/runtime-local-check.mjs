@@ -31,7 +31,7 @@ export async function runLocalCheck({
             ["scripts/code-integrity.mjs", "--exports"],
         ],
         ["Tests and coverage", "npm", ["run", "test:coverage"]],
-        ["Build", "npm", ["run", "build"]],
+        ["Build", "npm", ["run", "build:quality"]],
     ];
     for (const [label, file, args] of steps) {
         report(`Local check: ${label}`);

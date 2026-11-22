@@ -37,7 +37,7 @@ test("local checks await setup and each gate before starting the next", async ()
             ["npx", "--no-install", "prettier", "--check", ".github"],
             [process.execPath, "scripts/code-integrity.mjs", "--exports"],
             ["npm", "run", "test:coverage"],
-            ["npm", "run", "build"],
+            ["npm", "run", "build:quality"],
         ],
     );
     for (const {options} of calls) {
@@ -77,7 +77,7 @@ test("a failed prerequisite or gate stops later checks and the success report", 
         (error) => error === failure,
     );
     assert.equal(calls.length, 6);
-    assert(!calls.some((args) => args.includes("build")));
+    assert(!calls.some((args) => args.includes("build:quality")));
     assert(!reports.some((message) => message.includes("bestanden")));
 });
 
@@ -106,7 +106,7 @@ test("backend environment is removed and the build receives only fictional publi
             assert.equal(env.SUPABASE_SERVICE_ROLE_KEY, undefined);
             assert.equal(env.DATABASE_URL, undefined);
             assert.equal(env.PORTAL_PROJECT_ID, undefined);
-            if (args.includes("build")) {
+            if (args.includes("build:quality")) {
                 assert.equal(
                     env.VITE_SUPABASE_URL,
                     "https://local-check.example.invalid",

@@ -297,11 +297,14 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Local administrators can preview and publish a scanned PNG for the Academy shell, sign-in and invitations. The signed package supplies the fallback logo, favicon and PWA icons.
 - [x] Provide a private offline vendor workflow to preview a dedicated academy draft and save an exact, explicitly approved receipt. The registry checks duplicate requests, domains and overlapping host paths.
 - [x] Export a signed runtime handoff from the approved draft. The customer operator confirms the path and the trusted key before generating the independent local credentials. An exact retry preserves the existing configuration. [Operator handoff](deploy/academy/RUNTIME-HANDOFF.md)
-- [ ] Connect approved drafts to authorised commercial fulfilment and live provisioning.
+- [x] Bind the approved draft, signed runtime handoff, issued licence and reviewed handover reference in the private vendor registry. [Fulfilment runbook](deploy/academy/FULFILMENT.md)
+- [ ] Carry out live provisioning and commercial handover on the authorised customer target.
 - [x] Allow each academy administrator to publish or remove local support, privacy, legal notice and terms links. Confirm safe public display before sign-in and edit denial for learners in both editions.
-- [ ] Customer domain/TLS/redirects, Auth callback URLs, verified sender and domain-safe PWA/cache.
+- [x] Scope dedicated Caddy/Envoy routing to the installed academy domain. Both edition configurations were validated with pinned Caddy and active TLS in isolation. CMS aliases remain in the internal edition.
+- [ ] Confirm the customer's domain and DNS, public TLS and redirects, Auth callback URLs, verified sender and installed PWA cache on the independent target.
 - [x] Provide private SMTP administration for confirmed local administrators with encrypted credentials and exact TLS/STARTTLS connection checks. Verify saved configuration, refusal after role loss and read-only grace in both editions.
 - [x] Render academy issuer, footer, metadata and accent colour on generated completion and attendance PDFs. Confirm exact issued-brand retention and separate current report branding in both dedicated editions.
+- [x] Use neutral account identifier labels in both customer editions across profile, account and learner-management views. Keep the operational label in the CMS edition.
 - [ ] Remove unnecessary Luminovia branding from all customer-facing surfaces; retain mandatory legal notices.
 
 ### WL-04 — Full API, username login and Swagger (P0)
@@ -310,7 +313,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Send the automatically assigned username with the one-time invitation. Require a personal password before opening protected resources and support verified-email or username sign-in after setup. Initial passwords supplied by administrators require a first sign-in change.
 - [x] Provision confirmed company contacts for one organisation. Allow them to request learner invitations from their own courses under the shared licensed seats and invitation budgets, with a scoped and opaque receipt.
 - [x] Provide staged native authenticator pairing and enforce current TOTP proof for administrators and owners when the installation opts in. Support SMTP security notices about factor changes.
-- [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. The Academy catalogue describes 85 paths, including human authentication, course operations, files and scoped integration administration. Include an optional fictional sandbox in the signed customer package.
+- [x] Publish the edition-specific versioned OpenAPI download and authenticated Swagger UI. Academy OpenAPI 1.30 records the actual Envoy `429` and Caddy maintenance `503` response formats with `Retry-After` alongside business responses. Verify the pinned ingress in both editions and preserve the historical signed 1.29 catalogue. The optional fictional sandbox remains available in signed customer packages.
 - [ ] Finish exact-release request, response and error coverage across HTTP, file transfers, Realtime and notifications. Expand runnable integration examples where the existing guides and the signed receiver do not cover a workflow.
 - [x] Provide organisation-scoped signed course webhooks in both dedicated editions. Local administrators can configure subscriptions, revoke and reissue signing keys, and inspect delivery history. The shared worker retries stable event IDs and checks the licence and exact release before delivery.
 - [x] Issue, rotate and revoke course-index credentials for one academy organisation. Native HTTP and Chromium verify the exact published-course scope and current revocation.
@@ -324,12 +327,14 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Signed browser replacement, exact-source database migration and independent encrypted backup and restore commands. Local verification includes retained sign-in, course enrolment, Storage bytes and a new isolated recovery target.
 - [ ] Independent full-stack startup and health confirmation on the final target, issuer-to-operator onboarding, DNS and ACME, real SMTP delivery and the full Docker upgrade and recovery rehearsal.
 - [x] Read the dedicated installation, exact licensed revision, licence and course-profile state and latest migration ledger entry from the private operator command.
-- [ ] Complete target monitoring, support procedures and maintenance and incident acceptance.
+- [x] Provide a private local health command for either licensed edition. It checks the staged release, database licence and ledger, Docker service state, scanner signatures and encrypted recovery receipt. [Monitoring runbook](deploy/academy/README.md#monitor-a-dedicated-installation)
+- [ ] Connect the report to the final target's monitor and rehearse support, maintenance and incident response.
 
 ### WL-06 — Licence sales & fulfilment operations (P1)
 
 - [x] The private vendor registry records approved customers, editions, domains, capacity, support agreement references and the exact terms and signed envelope for each issuance. A serialised approval ledger supports initial trial and licensed terms, registration of an existing trusted licence, trial conversion and renewal. The seller can export the exact recorded licence for delivery. [Issuer runbook](deploy/academy/README.md#issue-convert-or-renew-a-customer-licence)
-- [ ] Connect reviewed agreements, provisioning progress, authorised commercial fulfilment and the external handover to the private vendor process.
+- [x] Preview and confirm the reviewed private fulfilment record bound to the exported licence and signed deployment handover. Handle concurrent confirmation, exact retries and historical receipts across renewals.
+- [ ] Obtain commercial authorisation and complete the external customer handover.
 - [x] Signed licence validation on the exact release with active, read-only grace and expiry gates. Local administrators can review validity, occupied and available seats, retained storage and the signed API allowance. Seat, Storage and ingress limits apply at their owning server boundary.
 - [x] Apply a renewed licence and revised ingress allowance while keeping the exact browser release, existing course profile and retained customer data. Both editions passed the local licence and fresh PostgreSQL replacement checks. [Renewal runbook](deploy/academy/README.md#apply-a-renewed-licence-on-the-same-release)
 - [x] Export a portable encrypted course, participant and approved-file archive after licence expiry. PostgreSQL and pinned Storage verify private role denial, isolation, direct attendance evidence and actual file bytes. [Customer export runbook](deploy/academy/OFFBOARDING.md)
@@ -338,7 +343,8 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-07 — Managed branded hosting (P1)
 
-- [ ] Dedicated managed academy provisioning and infrastructure isolation, independent backups/monitoring/mail/file scan and exact-version upgrades.
+- [x] Ship isolated managed academy runtime configuration, independent backups and local monitoring, configurable mail and scanner services, and a signed exact-release upgrade path.
+- [ ] Verify live managed provisioning and infrastructure isolation, provider delivery, scheduled backups and monitored upgrades on an independent customer target.
 - [ ] Contractually defined customer versus vendor responsibility, support authorisation and issue response; no blanket vendor access to private learner data.
 - [ ] Domain handover, controlled migration from self-hosted to managed or reverse, and tested offboarding.
 

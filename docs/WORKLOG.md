@@ -1,3 +1,11 @@
+# 22 November 2026 — Build budgets and dedicated Academy operations
+
+Production build verification now measures emitted gzip bytes for the startup graph and on-demand API explorer, plus the uncompressed offline precache. The initial observed sizes were 486.3, 499.6 and 4,053.4 KiB against budgets of 525, 530 and 4,352 KiB. Tests cover a shared dependency, every violated budget, missing build artifacts and accidental eager loading or precaching of the API explorer. Main verification still runs the full native test and Chromium matrix.
+
+Dedicated Caddy excludes the CMS aliases. Pinned Caddy and Envoy exercised both signed editions over local TLS, including the signed allowance and actual `429` and `503` responses documented by Academy OpenAPI 1.30. The vendor registry now records reviewed handovers against the exact issued licence and operator handoff, with concurrent confirmation and exact retry checks. Both branded editions use neutral account identifier labels and include a private health report for the local Compose stack, database, scanner and backup receipt.
+
+Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#13-implementation-and-customer-release-sequence) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
+
 # 22 November 2026 — Full local portal reset
 
 `./portal reset` confirms the exact local project, checks the local Docker socket, rejects linked Supabase projects and verifies Docker container, network and volume ownership before deleting any data. It stops the existing stack, removes the verified project volumes and generated local credentials, then starts a fresh runtime using the tracked migrations and fictional seed. The existing `stop` and `restart` commands retain data as before.

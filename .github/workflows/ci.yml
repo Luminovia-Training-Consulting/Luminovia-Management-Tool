@@ -59,7 +59,7 @@ jobs:
         include:
           - name: Build
             # Typecheck runs beside this job; npm run build would execute tsc -b again.
-            command: npx vite build
+            command: npm run build:quality
           - name: Typecheck
             command: npm run typecheck
           - name: Lint
