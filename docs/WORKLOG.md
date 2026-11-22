@@ -1,3 +1,11 @@
+# 23 November 2026 — Course visibility after acceptance and course period filters
+
+Published previews are visible to eligible lecturers until a lecturer takes the course. A confirmed allocation restricts the course and its sessions to the assigned teaching team, the owning company, enrolled learners and authorised course managers. A filled offer is also hidden from former lecturers whose allocations were cancelled. Explicitly open positions in a multi-position advertisement still use the marketplace.
+
+The course catalogue and learning hub can be filtered by upcoming, ongoing, past or unscheduled dates. Company requests can be filtered by their requested dates. The same classification uses the earliest start and latest end, including courses that span several sessions.
+
+An isolated PostgreSQL replay ran a real claim and checked both lecturers, two companies, individual past and future enrolments, session rows and direct workspace reads. The existing course overview, job discovery and wiki course-template PostgreSQL groups also passed.
+
 # 22 November 2026 — Role-scoped portal analytics
 
 The internal portal now shows monthly assignments, scheduled teaching time and original-currency finance for lecturers, companies and current staff permissions. The page offers company, period, metric and currency filters, bar, doughnut and line charts with accessible monthly data tables, and an all-company scenario for the next 90 days. Committed fees follow the first unreleased session. Recorded cash includes refunds, repayment corrections and reversals at their effective dates.

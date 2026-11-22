@@ -12,6 +12,11 @@ import {
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import "../learning/i18n";
+import { CoursePhaseFilter } from "../learning/course-phase-filter";
+import {
+  scheduledCoursePhase,
+  type CoursePhaseSelection,
+} from "../learning/course-phase";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -615,6 +620,7 @@ export function ClientPortalPage() {
   const requests = useQuery({
     ...clientRequestsQuery(actor, organisation || null),
     enabled: eligible,
+    refetchInterval: 30000,
   });
   const spend = useQuery({ ...clientSpendQuery(actor), enabled: eligible });
   const monthly = useQuery({
@@ -627,6 +633,7 @@ export function ClientPortalPage() {
   const [writing, setWriting] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
   if (!eligible)
@@ -640,6 +647,9 @@ export function ClientPortalPage() {
     requests.data?.filter(
       (row) =>
         (!status || row.status === status) &&
+        (phase === "all" ||
+          scheduledCoursePhase(row.sessions, requests.dataUpdatedAt) ===
+            phase) &&
         `${row.title} ${row.organisation_name} ${row.assigned_lecturer_name ?? ""} ${row.assigned_lecturers?.map((person) => person.display_name).join(" ") ?? ""}`
           .toLocaleLowerCase(i18n.language)
           .includes(search.toLocaleLowerCase(i18n.language)),
@@ -773,6 +783,12 @@ export function ClientPortalPage() {
                 ))}
               </select>
             </Field>
+            <CoursePhaseFilter
+              id="client-request-phase"
+              value={phase}
+              onChange={setPhase}
+              requested
+            />
             <Field id="client-status" label={t("requestStatus")}>
               <select
                 id="client-status"

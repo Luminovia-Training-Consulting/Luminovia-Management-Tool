@@ -1,4 +1,5 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -22,20 +23,16 @@ import { userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
 import { AcademyCompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { courseHubQuery, type CourseOverview } from "./api";
+import {
+  coursePhase,
+  coursePhases,
+  type CoursePhaseSelection,
+} from "./course-phase";
+import { CoursePhaseFilter } from "./course-phase-filter";
 import { CompanyInvitations } from "./company-invitations";
 import { AcademyCourseDraft } from "./academy-draft";
 import "./i18n";
 import "./learning.css";
-
-const phases = ["current", "upcoming", "completed", "unscheduled"] as const;
-type Phase = (typeof phases)[number];
-
-/** Classify in one clock snapshot for the whole list. Instants already include an offset. */
-function phase(course: CourseOverview, now: number): Phase {
-  if (!course.starts_at || !course.ends_at) return "unscheduled";
-  if (Date.parse(course.ends_at) <= now) return "completed";
-  return Date.parse(course.starts_at) > now ? "upcoming" : "current";
-}
 
 function CourseCard({ course }: { course: CourseOverview }) {
   const { t, i18n } = useTranslation("learning");
@@ -124,6 +121,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
+  const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
     staleTime: 0,
@@ -147,28 +145,51 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
         <div className="empty-state">{t("noCourses")}</div>
       ) : (
         <div className="course-hub-groups">
-          {phases.map((group) => {
-            const courses = query.data.filter(
-              (course) => phase(course, query.dataUpdatedAt) === group,
-            );
-            if (courses.length === 0) return null;
-            if (group === "upcoming") courses.reverse();
-            return (
-              <section
-                className="course-hub-group"
-                data-phase={group}
-                aria-labelledby={`course-phase-${group}`}
-                key={group}
-              >
-                <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
-                <div className="learning-grid">
-                  {courses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+          <section className="panel course-hub-filter">
+            <CoursePhaseFilter
+              id="learning-course-phase"
+              value={selection}
+              onChange={setSelection}
+            />
+          </section>
+          {selection !== "all" &&
+            !query.data.some(
+              (course) =>
+                coursePhase(
+                  course.starts_at,
+                  course.ends_at,
+                  query.dataUpdatedAt,
+                ) === selection,
+            ) && <div className="empty-state">{t("noCoursesInPhase")}</div>}
+          {coursePhases
+            .filter((group) => selection === "all" || group === selection)
+            .map((group) => {
+              const courses = query.data.filter(
+                (course) =>
+                  coursePhase(
+                    course.starts_at,
+                    course.ends_at,
+                    query.dataUpdatedAt,
+                  ) === group,
+              );
+              if (courses.length === 0) return null;
+              if (group === "upcoming") courses.reverse();
+              return (
+                <section
+                  className="course-hub-group"
+                  data-phase={group}
+                  aria-labelledby={`course-phase-${group}`}
+                  key={group}
+                >
+                  <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
+                  <div className="learning-grid">
+                    {courses.map((course) => (
+                      <CourseCard key={course.id} course={course} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
         </div>
       )}
     </>

@@ -99,6 +99,8 @@ export const jobDiscoveryQuery = (
     getNextPageParam: (page) =>
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
     staleTime: 15000,
+    refetchOnWindowFocus: "always",
+    refetchInterval: 30000,
   });
 /** Validate the complete exact detail DTO, including a possibly restricted quote. */
 export const jobDetailQuery = (actor: string, id: string) =>
@@ -112,6 +114,8 @@ export const jobDetailQuery = (actor: string, id: string) =>
       return jobSchema.parse(data);
     },
     enabled: Boolean(id),
+    refetchOnWindowFocus: "always",
+    refetchInterval: 15000,
   });
 export const savedJobViewsQuery = (actor: string) =>
   queryOptions({

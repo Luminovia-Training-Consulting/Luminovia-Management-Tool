@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Course visibility and time filters
+
+- The course catalogue and session reads use the current teaching allocation, company membership or enrolled learner identity. Lecturer previews of explicitly published courses stop once a lecturer has a confirmed allocation. Open positions in a multi-position offer remain available through job discovery.
+- The course catalogue and individual workspaces can be filtered by upcoming, current, completed or unscheduled courses. Company requests also have a filter for the requested dates. The teaching period runs from the first session start through the last session end.
+
 ## Internal portal analytics
 
 - Analytics gives instructors their own compensation and payment history, companies their own scheduled work and customer figures, and management and administration company filters with permissioned finance. The report uses explicit date windows and original currencies. It allocates confirmed fees to the first unreleased session and splits scheduled time across reporting-zone month boundaries.

@@ -188,9 +188,22 @@ const pairs: Record<string, [string, string]> = {
     "Für dein Konto sind noch keine Kursräume freigegeben.",
     "No course workspaces are available to your account yet.",
   ],
+  coursePhaseFilter: [
+    "Kurse nach Zeitraum filtern",
+    "Filter courses by time period",
+  ],
+  requestPhaseFilter: [
+    "Anfragen nach gewünschtem Zeitraum filtern",
+    "Filter requests by requested dates",
+  ],
+  noCoursesInPhase: [
+    "Keine Kurse in diesem Zeitraum.",
+    "No courses in this time period.",
+  ],
+  "phase.all": ["Alle Zeiträume", "All time periods"],
   "phase.current": ["Laufende Kurse", "Current courses"],
   "phase.upcoming": ["Kommende Kurse", "Upcoming courses"],
-  "phase.completed": ["Abgeschlossene Kurse", "Completed courses"],
+  "phase.completed": ["Vergangene Kurse", "Past courses"],
   "phase.unscheduled": ["Kurse ohne Termin", "Courses awaiting a schedule"],
   workspaceNavigation: ["Bereiche im Kursraum", "Course workspace sections"],
   workspaceMaterials: ["Materialien", "Materials"],

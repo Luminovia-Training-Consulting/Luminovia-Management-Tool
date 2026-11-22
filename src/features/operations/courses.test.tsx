@@ -155,6 +155,61 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it("filters the visible course list by time without requiring administrative permission", async () => {
+  const user = userEvent.setup();
+  const now = Date.now();
+  const span = (before: number, after: number) => [
+    {
+      id: run.course_sessions[0].id,
+      starts_at: new Date(now + before * 60_000).toISOString(),
+      ends_at: new Date(now + after * 60_000).toISOString(),
+    },
+  ];
+  const fixtures = [
+    { title: "Fictional ongoing course", sessions: span(-10, 10) },
+    { title: "Fictional upcoming course", sessions: span(10, 20) },
+    { title: "Fictional past course", sessions: span(-20, -10) },
+  ];
+  renderCourses({
+    permissions: [],
+    templates: fixtures.map(({ title }, index) => ({
+      ...template,
+      id: `template-${index}`,
+      title,
+    })),
+    runs: fixtures.map(({ sessions }, index) => ({
+      ...run,
+      id: `run-${index}`,
+      template_id: `template-${index}`,
+      course_sessions: sessions,
+    })),
+  });
+
+  const period = await screen.findByRole("combobox", {
+    name: "Kurse nach Zeitraum filtern",
+  });
+  expect(screen.getByRole("link", { name: "Meine Kurse" })).toHaveAttribute(
+    "href",
+    "/learning",
+  );
+  for (const [index, option] of [
+    "current",
+    "upcoming",
+    "completed",
+  ].entries()) {
+    await user.selectOptions(period, option);
+    expect(
+      screen.getByRole("heading", { name: fixtures[index].title }),
+    ).toBeVisible();
+    for (const [other, fixture] of fixtures.entries()) {
+      if (other !== index)
+        expect(
+          screen.queryByRole("heading", { name: fixture.title }),
+        ).toBeNull();
+    }
+  }
+});
+
 describe("course form failure and confirmation boundaries", () => {
   it.each([
     ["nonexistent Berlin time", "2030-03-31T02:30", "2030-03-31T04:00"],

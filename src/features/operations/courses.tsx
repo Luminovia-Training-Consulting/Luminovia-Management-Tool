@@ -13,6 +13,11 @@ import { ResourceComments } from "../comments/comments";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CoursePhaseFilter } from "../learning/course-phase-filter";
+import {
+  scheduledCoursePhase,
+  type CoursePhaseSelection,
+} from "../learning/course-phase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, CalendarDays, Copy, Plus, Trash2 } from "lucide-react";
@@ -505,13 +510,19 @@ export function CoursesPage() {
   const actor = session!.user.id;
   const permissions = useQuery(permissionsQuery(actor));
   const templates = useQuery(templatesQuery(actor));
-  const runs = useQuery(runsQuery(actor));
+  const manage = permissions.data?.includes("courses.manage") ?? false;
+  const runs = useQuery({
+    ...runsQuery(actor),
+    refetchInterval: manage ? false : 10000,
+    refetchOnMount: manage ? true : "always",
+  });
   const orgs = useQuery(orgQuery(actor));
   const topics = useQuery(topicsQuery);
   const blocks = useQuery(buildingBlocksQuery(actor));
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
+  const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [tab, setTab] = useState<"runs" | "templates" | "blocks">("runs");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<
@@ -542,7 +553,6 @@ export function CoursesPage() {
   }>();
   const [copyTitle, setCopyTitle] = useState("");
   const [message, setMessage] = useState("");
-  const manage = permissions.data?.includes("courses.manage") ?? false;
   const visibility = useMutation({
     mutationFn: async ({
       run,
@@ -617,16 +627,20 @@ export function CoursesPage() {
     );
   const findTemplate = (run: CourseRun) =>
     templates.data.find((template) => template.id === run.template_id);
-  const filteredRuns = runs.data.filter((run) =>
-    [
-      findTemplate(run)?.title,
-      findTemplate(run)?.description,
-      orgs.data.find((org) => org.id === run.organisation_id)?.name,
-      run.venue,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+  const filteredRuns = runs.data.filter(
+    (run) =>
+      (phase === "all" ||
+        scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) ===
+          phase) &&
+      [
+        findTemplate(run)?.title,
+        findTemplate(run)?.description,
+        orgs.data.find((org) => org.id === run.organisation_id)?.name,
+        run.venue,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
   const filteredTemplates = templates.data.filter((template) =>
     [template.title, template.description, template.syllabus]
@@ -646,7 +660,7 @@ export function CoursesPage() {
         title={t("courses")}
         description={t("coursesIntro")}
         action={
-          manage && (
+          manage ? (
             <div className="operations-actions">
               <Button
                 variant="secondary"
@@ -667,6 +681,10 @@ export function CoursesPage() {
                 {t("newRun")}
               </Button>
             </div>
+          ) : (
+            <Button asChild variant="secondary">
+              <Link to="/learning">{t("translation:myCourses")}</Link>
+            </Button>
           )
         }
       />
@@ -679,6 +697,13 @@ export function CoursesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </Field>
+        {tab === "runs" && (
+          <CoursePhaseFilter
+            id="catalogue-course-phase"
+            value={phase}
+            onChange={setPhase}
+          />
+        )}
         <div className="segmented" role="group" aria-label={t("catalogue")}>
           <Button
             variant={tab === "runs" ? "default" : "ghost"}
@@ -703,7 +728,7 @@ export function CoursesPage() {
             </Button>
           )}
         </div>
-        <p className="muted">{t("publishedHint")}</p>
+        {manage && <p className="muted">{t("publishedHint")}</p>}
       </section>
       {message && <Notice>{message}</Notice>}
       {visibility.isError && (
@@ -719,6 +744,14 @@ export function CoursesPage() {
           onView={(id) => setParams({ block: id })}
           onPlan={planRun}
         />
+      ) : tab === "runs" && filteredRuns.length === 0 ? (
+        <div className="empty-state">
+          {t(
+            phase === "all"
+              ? "learning:noCourses"
+              : "learning:noCoursesInPhase",
+          )}
+        </div>
       ) : tab === "runs" ? (
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {

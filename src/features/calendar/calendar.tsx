@@ -399,6 +399,8 @@ export function CalendarPage() {
   const publicRuns = useQuery({
     ...runsQuery(session!.user.id),
     enabled: global,
+    refetchOnWindowFocus: "always",
+    refetchInterval: 15000,
   });
   const templates = useQuery({
     ...templatesQuery(session!.user.id),

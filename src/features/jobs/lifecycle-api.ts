@@ -126,6 +126,8 @@ export async function refreshJobState(client: QueryClient) {
       "changeable-assignments",
       "job-briefing",
       "claims",
+      "course-workspaces",
+      "course-workspace",
       "finance",
       "accounting",
       "commission-report",

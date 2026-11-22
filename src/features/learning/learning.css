@@ -439,3 +439,7 @@
 .course-welcome-check input {
   flex: none;
 }
+
+.course-hub-filter .field {
+  max-inline-size: 24rem;
+}

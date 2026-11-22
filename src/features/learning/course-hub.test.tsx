@@ -138,10 +138,22 @@ it("groups current, next and past courses and preserves a direct scoped chat des
       .map((item) => item.textContent),
   ).toEqual(["Kommende Kurse", "Upcoming course", "Fictional workshop"]);
   const completed = screen.getByRole("region", {
-    name: "Abgeschlossene Kurse",
+    name: "Vergangene Kurse",
   });
   expect(within(completed).getByText("Lernzugriff deaktiviert")).toBeVisible();
   expect(within(completed).queryByRole("link")).toBeNull();
+
+  const phases = screen.getByRole("combobox", {
+    name: "Kurse nach Zeitraum filtern",
+  });
+  fireEvent.change(phases, { target: { value: "completed" } });
+  expect(
+    screen.getByRole("region", { name: "Vergangene Kurse" }),
+  ).toBeVisible();
+  expect(screen.queryByRole("region", { name: "Laufende Kurse" })).toBeNull();
+  fireEvent.change(phases, { target: { value: "unscheduled" } });
+  expect(screen.getByText("Keine Kurse in diesem Zeitraum.")).toBeVisible();
+  fireEvent.change(phases, { target: { value: "all" } });
 
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
   fireEvent(window, new Event("offline"));
