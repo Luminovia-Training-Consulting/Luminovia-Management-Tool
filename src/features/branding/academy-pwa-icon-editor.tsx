@@ -177,8 +177,8 @@ export function AcademyPwaIconEditor() {
           ) : mutation.isSuccess ? (
             <Notice>
               {word(
-                "App-Symbol gespeichert. Bereits installierte Apps übernehmen die Änderung nach ihrem Browser-Update.",
-                "App icon saved. Installed apps use the new icon after their browser updates it.",
+                "App-Symbol gespeichert. Browser und Betriebssystem bestimmen, wann das Symbol einer installierten App aktualisiert wird.",
+                "App icon saved. The browser and operating system decide when an installed app’s icon updates.",
               )}
             </Notice>
           ) : null}

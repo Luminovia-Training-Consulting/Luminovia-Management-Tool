@@ -45,7 +45,7 @@ function fileEndpoint() {
 }
 
 export function publishedAcademyPwaIcon(version: number) {
-  const endpoint = fileEndpoint();
+  const endpoint = new URL("/backend/functions/v1/files", location.origin);
   endpoint.searchParams.set("mode", "academy-pwa-image");
   endpoint.searchParams.set("variant", "icon_512");
   endpoint.searchParams.set("version", String(version));
@@ -95,15 +95,14 @@ export async function prepareAcademyPwaImages(
 ): Promise<AcademyPwaImages> {
   if (file.type !== "image/png" || file.size > variants.icon_512.limit)
     throw new Error("invalid_icon");
-  await validateAvatar(
+  const { width, height } = await validateAvatar(
     new Uint8Array(await file.arrayBuffer()),
     variants.icon_512.limit + 1,
   );
+  if (width !== 512 || height !== 512) throw new Error("invalid_icon");
   const image = await createImageBitmap(file);
   try {
-    if (image.width !== 512 || image.height !== 512)
-      throw new Error("invalid_icon");
-    async function render(variant: Variant) {
+    async function render(variant: Exclude<Variant, "icon_512">) {
       const { side, limit } = variants[variant];
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = side;
@@ -132,12 +131,11 @@ export async function prepareAcademyPwaImages(
       if (!result || result.size > limit) throw new Error("invalid_icon");
       return result;
     }
-    const [small, large, maskable] = await Promise.all([
+    const [small, maskable] = await Promise.all([
       render("icon_192"),
-      render("icon_512"),
       render("maskable_512"),
     ]);
-    return { icon_192: small, icon_512: large, maskable_512: maskable };
+    return { icon_192: small, icon_512: file, maskable_512: maskable };
   } finally {
     image.close();
   }

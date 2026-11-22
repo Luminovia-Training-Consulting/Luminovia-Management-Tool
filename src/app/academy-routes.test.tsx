@@ -49,6 +49,7 @@ const fake = vi.hoisted(() => ({
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
   brandName: null as string | null,
   brandLogo: null as string | null,
+  appIcon: { version: 0, custom: false },
   brandLinkConflict: false,
   draftScheduleRevision: 1,
   withdrawalAvailable: false,
@@ -217,6 +218,7 @@ beforeEach(async () => {
   fake.brandLinks = null;
   fake.brandName = null;
   fake.brandLogo = null;
+  fake.appIcon = { version: 0, custom: false };
   fake.brandLinkConflict = false;
   fake.draftScheduleRevision = 1;
   fake.withdrawalAvailable = false;
@@ -246,6 +248,23 @@ beforeEach(async () => {
             marketplace_available: false,
             company_premium_switch_available: false,
           };
+          break;
+        case "academy_pwa_icon":
+          data = {
+            installation_id: fake.returnedInstallation,
+            ...fake.appIcon,
+          };
+          break;
+        case "clear_academy_pwa_icon":
+          if (input?.p_expected_version === fake.appIcon.version) {
+            fake.appIcon = { version: fake.appIcon.version + 1, custom: false };
+            data = {
+              installation_id: fake.returnedInstallation,
+              ...fake.appIcon,
+            };
+          } else {
+            error = { code: "PT409" };
+          }
           break;
         case "academy_public_logo":
           data = {
@@ -1002,6 +1021,32 @@ it("opens local user administration only after the authority is confirmed", asyn
   ).toBeVisible();
 });
 
+it("shows the published app icon and restores the signed package with the last read revision", async () => {
+  fake.administration = true;
+  fake.appIcon = { version: 6, custom: true };
+  open("/administration");
+  const icon = await screen.findByRole("img", { name: "Current app icon" });
+  expect(icon).toHaveAttribute(
+    "src",
+    expect.stringContaining("variant=icon_512&version=6"),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Use package icon" }),
+  );
+  expect(fake.rpc.mock.calls.flat()).not.toContain("clear_academy_pwa_icon");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Confirm package icon" }),
+  );
+  expect(await screen.findByText(/App icon saved/)).toBeVisible();
+  expect(screen.getByRole("img", { name: "Current app icon" })).toHaveAttribute(
+    "src",
+    "/icons/apple-touch-icon.png",
+  );
+  expect(fake.rpc).toHaveBeenCalledWith("clear_academy_pwa_icon", {
+    p_expected_version: 6,
+  });
+});
+
 it("does not show administration or its navigation link to a learner", async () => {
   fake.actor = "fictional-learner";
   open("/administration");
@@ -1013,6 +1058,9 @@ it("does not show administration or its navigation link to a learner", async () 
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Save organisation" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "App icon" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("combobox", { name: "Navigation preview" }),

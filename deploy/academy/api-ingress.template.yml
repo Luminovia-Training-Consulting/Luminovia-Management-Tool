@@ -51,8 +51,15 @@ static_resources:
                                 string_match:
                                   safe_regex:
                                     {
-                                      regex: "(?:academy-(material|student-exam|course-chat|attendance|answer-key|logo|pwa-icon|pwa-manifest|pwa-image)|course-submission)",
+                                      regex: "(?:academy-(?:material|student-exam|course-chat|attendance|answer-key|logo)|course-submission)",
                                     }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
+                        - match:
+                            path: "/functions/v1/files"
+                            query_parameters:
+                              - name: mode
+                                string_match:
+                                  safe_regex: { regex: "academy-pwa-(?:icon|manifest|image)" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
                         - match: { path: "/functions/v1/human-login" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
