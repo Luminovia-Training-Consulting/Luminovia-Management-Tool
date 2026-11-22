@@ -1,5 +1,12 @@
 /** Reads a single-sheet XLSX attendance template locally, without evaluating workbook features. */
-import { Uint8ArrayReader, ZipReader, type FileEntry } from "@zip.js/zip.js";
+import {
+  BlobWriter,
+  TextReader,
+  Uint8ArrayReader,
+  ZipReader,
+  ZipWriter,
+  type FileEntry,
+} from "@zip.js/zip.js";
 import type { AttendanceRow } from "./attendance-api";
 import {
   AttendanceImportError,
@@ -136,7 +143,7 @@ function cellText(cell: Element, strings: string[], row: number) {
 }
 
 /** Translate sparse worksheet cells into the same seven columns as the CSV template. */
-function* worksheetRows(sheet: Element, strings: string[]) {
+function* worksheetRows(sheet: Element, strings: string[], width: number) {
   const data = children(sheet, "sheetData")[0];
   if (!data) throw new AttendanceImportError(1);
   let previous = 0;
@@ -154,18 +161,18 @@ function* worksheetRows(sheet: Element, strings: string[]) {
       throw new AttendanceImportError(rowNumber);
     }
     previous = rowNumber;
-    const columns: string[] = Array(7).fill("");
+    const columns: string[] = Array(width).fill("");
     let lastColumn = -1;
     for (const cell of children(row, "c")) {
       const reference = cell.getAttribute("r");
-      const coordinate = reference?.match(/^([A-G])([1-9]\d*)$/);
+      const coordinate = reference?.match(/^([A-Z])([1-9]\d*)$/);
       const column =
         reference === null
           ? lastColumn + 1
           : (coordinate?.[1].charCodeAt(0) ?? 0) - 65;
       if (
         column <= lastColumn ||
-        column > 6 ||
+        column >= width ||
         (coordinate && Number(coordinate[2]) !== rowNumber)
       ) {
         throw new AttendanceImportError(rowNumber);
@@ -180,10 +187,9 @@ function* worksheetRows(sheet: Element, strings: string[]) {
 }
 
 /** Build a preview in memory. The caller still must confirm the ordinary versioned import RPC. */
-export async function readAttendanceXlsx(
+export async function readSpreadsheetXlsx(
   file: File,
-  current: AttendanceRow[],
-  session?: AttendanceImportSession,
+  headers: readonly string[],
 ) {
   if (
     file.size > maxWorkbookBytes ||
@@ -244,19 +250,100 @@ export async function readAttendanceXlsx(
     const sheet = await readXml(entries.get(sheetPath), "worksheet");
     if (sheet.namespaceURI !== workbook.namespaceURI)
       throw new AttendanceImportError(1);
-    const rows = worksheetRows(sheet, strings);
+    const rows = worksheetRows(sheet, strings, headers.length);
     const header = rows.next().value;
     if (
       header?.rowNumber !== 1 ||
-      header.columns.join(",") !== attendanceCsvHeader
+      header.columns.some((value, index) => value !== headers[index])
     ) {
       throw new AttendanceImportError(1);
     }
-    return validateAttendanceRows(rows, current, session);
+    return [...rows];
   } catch (error) {
     if (error instanceof AttendanceImportError) throw error;
     throw new AttendanceImportError(1, { cause: error });
   } finally {
     await zip.close();
   }
+}
+
+export async function readAttendanceXlsx(
+  file: File,
+  current: AttendanceRow[],
+  session?: AttendanceImportSession,
+) {
+  return validateAttendanceRows(
+    await readSpreadsheetXlsx(file, attendanceCsvHeader.split(",")),
+    current,
+    session,
+  );
+}
+
+const packageRelationships =
+  "http://schemas.openxmlformats.org/package/2006/relationships";
+const workbookMime =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/** Keep roster values literal, even when spreadsheet syntax appears in a name. */
+function xmlText(value: string) {
+  return Array.from(value)
+    .filter((character) => {
+      const point = character.codePointAt(0)!;
+      return (
+        point === 9 ||
+        point === 10 ||
+        point === 13 ||
+        (point >= 32 && point <= 0xd7ff) ||
+        (point >= 0xe000 && point <= 0xfffd) ||
+        point >= 0x10000
+      );
+    })
+    .join("")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+export function attendanceXlsxTemplate(
+  rows: readonly Pick<AttendanceRow, "user_id" | "name">[],
+): Promise<Blob> {
+  return spreadsheetXlsxTemplate(
+    attendanceCsvHeader.split(","),
+    rows
+      .slice(0, maxAttendanceImportRows)
+      .map(({ user_id, name }) => [user_id, name]),
+  );
+}
+
+export async function spreadsheetXlsxTemplate(
+  headers: readonly string[],
+  rows: readonly (readonly string[])[],
+): Promise<Blob> {
+  const values = [headers, ...rows];
+  const sheetRows = values
+    .map((row, index) => {
+      const number = index + 1;
+      const cells = row
+        .map(
+          (cell, column) =>
+            `<c r="${String.fromCharCode(65 + column)}${number}" t="inlineStr"><is><t xml:space="preserve">${xmlText(cell)}</t></is></c>`,
+        )
+        .join("");
+      return `<row r="${number}">${cells}</row>`;
+    })
+    .join("");
+  const parts = {
+    "[Content_Types].xml":
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+    "_rels/.rels": `<Relationships xmlns="${packageRelationships}"><Relationship Id="rId1" Type="${relationships}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    "xl/workbook.xml": `<workbook xmlns="${namespace}" xmlns:r="${relationships}"><sheets><sheet name="Import" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    "xl/_rels/workbook.xml.rels": `<Relationships xmlns="${packageRelationships}"><Relationship Id="rId1" Type="${relationships}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
+    "xl/worksheets/sheet1.xml": `<worksheet xmlns="${namespace}"><sheetData>${sheetRows}</sheetData></worksheet>`,
+  };
+  const writer = new ZipWriter(new BlobWriter(workbookMime), {
+    useWebWorkers: false,
+  });
+  for (const [path, contents] of Object.entries(parts))
+    await writer.add(path, new TextReader(contents));
+  return writer.close();
 }

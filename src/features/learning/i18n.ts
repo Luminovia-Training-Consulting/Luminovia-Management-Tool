@@ -565,10 +565,15 @@ const pairs: Record<string, [string, string]> = {
     "Import attendance from CSV or XLSX",
   ],
   attendanceImportHelp: [
-    "Nutze die CSV-Vorlage für diesen Termin. Du kannst sie auch als XLSX mit einem Tabellenblatt speichern. Trage present, absent oder excused ein. Lass Status und Zusatzfelder leer, wenn ein Eintrag unverändert bleiben soll. Gib Zeiten als Text mit UTC-Offset ein, etwa 2026-11-20T09:20+01:00. Korrekturen brauchen einen Grund. Verwende feste Zellwerte.",
-    "Use this session’s CSV template. You can also save it as XLSX with one worksheet. Enter present, absent or excused. Leave status and optional fields blank for unchanged entries. Enter times as text with a UTC offset, such as 2026-11-20T09:20+01:00. Corrections require a reason. Use literal cell values.",
+    "Lade die CSV- oder XLSX-Vorlage für diesen Termin herunter. Behalte die Spaltenüberschriften und die IDs bei. Trage present, absent oder excused ein. Lass Status und Zusatzfelder leer, wenn ein Eintrag unverändert bleiben soll. Gib Zeiten als Text mit UTC-Offset ein, etwa 2026-11-20T09:20+01:00. Korrekturen brauchen einen Grund. Verwende feste Zellwerte.",
+    "Download the CSV or XLSX template for this session. Keep the column headings and IDs. Enter present, absent or excused. Leave status and optional fields blank for unchanged entries. Enter times as text with a UTC offset, such as 2026-11-20T09:20+01:00. Corrections require a reason. Use literal cell values.",
   ],
   attendanceImportTemplate: ["CSV-Vorlage laden", "Download CSV template"],
+  attendanceXlsxTemplate: ["XLSX-Vorlage laden", "Download XLSX template"],
+  attendanceXlsxTemplateFailed: [
+    "Die XLSX-Vorlage konnte nicht erstellt werden.",
+    "Could not create the XLSX template.",
+  ],
   attendanceImportFile: [
     "CSV- oder XLSX-Datei prüfen",
     "Review CSV or XLSX file",

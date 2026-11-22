@@ -17,6 +17,7 @@ import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { validZone } from "../../lib/dates";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
+import { TableImport } from "../../components/table-import";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -60,6 +61,39 @@ const contactSchema = z.object({
   archived: z.boolean(),
 });
 
+async function saveOrganisation(
+  values: z.infer<typeof orgSchema>,
+  id: string | null,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("save_organisation", {
+    p_id: id,
+    p_payload: {
+      ...values,
+      tags: values.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    },
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+async function saveContact(
+  values: z.infer<typeof contactSchema>,
+  organisation: string,
+  id: string | null,
+) {
+  requireOnline();
+  const { error } = await db().rpc("save_organisation_contact", {
+    p_id: id,
+    p_organisation_id: organisation,
+    p_payload: values,
+  });
+  if (error) throw error;
+}
+
 /** Validate organization metadata and await the owning create/update RPC. */
 function OrganisationForm({
   original,
@@ -91,21 +125,8 @@ function OrganisationForm({
     },
   });
   const save = useMutation({
-    mutationFn: async (values: z.infer<typeof orgSchema>) => {
-      requireOnline();
-      const { data, error } = await db().rpc("save_organisation", {
-        p_id: original?.id ?? null,
-        p_payload: {
-          ...values,
-          tags: values.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        },
-      });
-      if (error) throw error;
-      return data as string;
-    },
+    mutationFn: (values: z.infer<typeof orgSchema>) =>
+      saveOrganisation(values, original?.id ?? null),
     onSuccess: async (id) => {
       await client.invalidateQueries({ queryKey: ["operations"] });
       onDone(id);
@@ -172,15 +193,8 @@ function ContactForm({
     },
   });
   const save = useMutation({
-    mutationFn: async (values: z.infer<typeof contactSchema>) => {
-      requireOnline();
-      const { error } = await db().rpc("save_organisation_contact", {
-        p_id: original?.id ?? null,
-        p_organisation_id: organisation,
-        p_payload: values,
-      });
-      if (error) throw error;
-    },
+    mutationFn: (values: z.infer<typeof contactSchema>) =>
+      saveContact(values, organisation, original?.id ?? null),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["operations"] });
       onDone();
@@ -231,7 +245,10 @@ function ClientWorkspace({
   canManageIntegrations: boolean;
   canSubscribeAccounting: boolean;
 }) {
-  const { t } = useTranslation("operations");
+  const { t, i18n } = useTranslation("operations");
+  const de = i18n.language.startsWith("de");
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: ["operations"] });
   const orgs = useQuery(orgQuery(actor));
   const contacts = useQuery(contactsQuery(actor));
   const notes = useQuery(notesQuery(actor));
@@ -298,6 +315,31 @@ function ClientWorkspace({
             {t("newClient")}
           </Button>
         }
+      />
+      <TableImport
+        label={de ? "Firmen importieren" : "Import companies"}
+        filename="companies"
+        columns={[
+          "name",
+          "country",
+          "time_zone",
+          "industry",
+          "city",
+          "tags",
+          "private_notes",
+        ]}
+        example={[
+          "Beispielakademie",
+          "DE",
+          "Europe/Berlin",
+          "Training",
+          "Hamburg",
+          "",
+          "",
+        ]}
+        parse={(row) => orgSchema.parse({ ...row, archived: false })}
+        save={(row) => saveOrganisation(row, null)}
+        refresh={refresh}
       />
       {saved && <Notice>{t("saved")}</Notice>}
       <div className="operations-layout">
@@ -411,6 +453,26 @@ function ClientWorkspace({
                 {t("newContact")}
               </Button>
             </div>
+            <TableImport
+              key={organisation.id}
+              label={
+                de
+                  ? "Kontakte dieser Firma importieren"
+                  : "Import contacts for this company"
+              }
+              filename="company-contacts"
+              columns={["name", "position", "email", "phone", "notes"]}
+              example={[
+                "Alex Example",
+                "Training",
+                "alex@example.invalid",
+                "",
+                "",
+              ]}
+              parse={(row) => contactSchema.parse({ ...row, archived: false })}
+              save={(row) => saveContact(row, organisation.id, null)}
+              refresh={refresh}
+            />
             <div className="operations-contact-list">
               {contacts.data
                 .filter(

@@ -1570,7 +1570,20 @@ No hosted database, real customer, production service, SMTP recipient or public 
 
 ## Premium course session register
 
-In **Courses**, open an authorised Premium course and choose a session in the attendance register. Download its CSV template to get the current roster identifiers and column order. The register accepts that UTF-8 CSV or an XLSX copy with one visible worksheet. Keep the headings and identifiers, fill `present`, `absent` or `excused`, and leave the status and optional cells empty for rows that should stay unchanged. Use literal values and enter optional arrival and departure instants as text with a UTC offset, for example `2026-11-20T09:20+01:00`. A change to an existing attendance record requires a correction reason. Each import supports up to 200 rows.
+### Spreadsheet imports
+
+Use the import panel in the owning workspace. Each panel provides a UTF-8 CSV and native XLSX template. Replace fictional examples with your own values, keep the headers and use one visible worksheet. Administrative spreadsheet imports also accept semicolon-separated CSV. Review the preview before confirming. Each spreadsheet supports up to 200 records.
+
+- **Companies** creates new company records. Open a company to import its contact directory entries.
+- **Courses** imports reusable templates or unpublished course drafts with one session per row. Drafts use the exact title of an existing template and, optionally, the exact name of a company. Enter the session start and end in local time using the zone in that row.
+- **Course enrolment** uses the Luminovia IDs of eligible existing participants. This does not create new user accounts.
+- **Topics** imports top-level topics, tools and languages. Use `topic`, `tool` or `language` in the kind column.
+- **Personal calendar** imports private appointments atomically, using explicit offsets and an IANA display zone. Repeating the same appointment skips it.
+- **Attendance** uses the selected session’s roster, reviewed and saved as a batch.
+
+Other administrative imports commit each confirmed row through its ordinary write operation. They stop on the first server failure. Inspect the reported row and existing records before retrying.
+
+In **Courses**, open an authorised Premium course and choose a session in the attendance register. Download its CSV or XLSX template to get the current roster identifiers and column order. The register accepts UTF-8 CSV and XLSX with one visible worksheet. Keep the headings and identifiers, fill `present`, `absent` or `excused`, and leave the status and optional cells empty for rows that should stay unchanged. Use literal values and enter optional arrival and departure instants as text with a UTC offset, for example `2026-11-20T09:20+01:00`. A change to an existing attendance record requires a correction reason. Each import supports up to 200 rows.
 
 Select the file to preview the changes. The file stays in the browser and the names in the preview come from the current course roster. Confirm the preview to submit the versioned rows as a single operation. If an imported participant is removed or a reviewed record changes before submission, reload the register and review the file again. Scanned PDF evidence uses the separate attachment action.
 

@@ -12,6 +12,7 @@ import { Archive, FolderTree, Pencil, Plus, RotateCcw } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
+import { TableImport } from "../../components/table-import";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -25,6 +26,7 @@ import {
   saveTaxonomyTopic,
   setTaxonomyArchived,
   taxonomyFormSchema,
+  taxonomyPayload,
   type TaxonomyFormValues,
   taxonomyQuery,
   type TaxonomyTopic,
@@ -251,6 +253,32 @@ export function TaxonomyPage() {
   return (
     <>
       <PageHeading title={t("title")} description={t("help")} />
+      {canEdit && (
+        <TableImport
+          label={
+            i18n.language.startsWith("de")
+              ? "Themen, Tools und Sprachen importieren"
+              : "Import topics, tools and languages"
+          }
+          filename="taxonomy"
+          columns={[
+            "label_de",
+            "label_en",
+            "kind",
+            "aliases",
+            "description_de",
+            "description_en",
+          ]}
+          example={["Tabellenkalkulation", "Spreadsheets", "topic", "", "", ""]}
+          parse={(row) => {
+            const values = taxonomyFormSchema.parse({ ...row, parent_id: "" });
+            taxonomyPayload(values);
+            return values;
+          }}
+          save={(row) => saveTaxonomyTopic(null, row)}
+          refresh={refreshQueries}
+        />
+      )}
       <div className="taxonomy-toolbar">
         {canEdit ? (
           <Button

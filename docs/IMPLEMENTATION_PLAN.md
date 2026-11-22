@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Spreadsheet imports
+
+- Provide CSV and XLSX starter files, local validation and a confirmed preview in each owning workspace. Keep existing per-record permission checks and atomic calendar and attendance batches.
+
 ## Urgent teaching cover
 
 - A lecturer can report a selected teaching day on their confirmed assignment. The ordinary job list ranks the released future sessions first as an urgent single-position offer. The original assignment keeps its other days and historical terms. A concurrent legacy whole-block handover cannot re-advertise the released sessions.

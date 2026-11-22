@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
+import { saveBlob } from "../../lib/blob-download";
 import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { saveAttendanceBatch, type AttendanceRegister } from "./attendance-api";
@@ -41,6 +42,21 @@ export function AttendanceImportPanel({
   const [preview, setPreview] = useState<AttendanceImportRequest["p_rows"]>();
   const [invalidRow, setInvalidRow] = useState<number>();
   const [reading, setReading] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [templateFailed, setTemplateFailed] = useState(false);
+
+  async function downloadWorkbook() {
+    setWriting(true);
+    setTemplateFailed(false);
+    try {
+      const { attendanceXlsxTemplate } = await import("./attendance-xlsx");
+      saveBlob(await attendanceXlsxTemplate(rows), "attendance.xlsx");
+    } catch {
+      setTemplateFailed(true);
+    } finally {
+      setWriting(false);
+    }
+  }
   const save = useMutation({
     mutationFn: (confirmed: AttendanceImportRequest) =>
       saveAttendanceBatch(
@@ -79,15 +95,30 @@ export function AttendanceImportPanel({
     <details className="attendance-import">
       <summary>{t("attendanceImport")}</summary>
       <p>{t("attendanceImportHelp")}</p>
-      <a
-        download="attendance.csv"
-        href={
-          "data:text/csv;charset=utf-8," +
-          encodeURIComponent(attendanceCsvTemplate(rows))
-        }
-      >
-        {t("attendanceImportTemplate")}
-      </a>
+      <div className="button-row">
+        <Button asChild variant="secondary">
+          <a
+            download="attendance.csv"
+            href={
+              "data:text/csv;charset=utf-8," +
+              encodeURIComponent(attendanceCsvTemplate(rows))
+            }
+          >
+            {t("attendanceImportTemplate")}
+          </a>
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={writing}
+          onClick={() => void downloadWorkbook()}
+        >
+          {t("attendanceXlsxTemplate")}
+        </Button>
+      </div>
+      {templateFailed && (
+        <Notice kind="error">{t("attendanceXlsxTemplateFailed")}</Notice>
+      )}
       <Field id={id} label={t("attendanceImportFile")}>
         <input
           id={id}

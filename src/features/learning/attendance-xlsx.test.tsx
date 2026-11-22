@@ -11,11 +11,18 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { Uint8ArrayReader, Uint8ArrayWriter, ZipWriter } from "@zip.js/zip.js";
+import {
+  TextReader,
+  TextWriter,
+  Uint8ArrayReader,
+  Uint8ArrayWriter,
+  ZipReader,
+  ZipWriter,
+} from "@zip.js/zip.js";
 import { afterEach, expect, it, vi } from "vitest";
 import { AttendanceImportPanel } from "./attendance-import-panel";
 import { attendanceCsvHeader } from "./attendance-import";
-import { readAttendanceXlsx } from "./attendance-xlsx";
+import { attendanceXlsxTemplate, readAttendanceXlsx } from "./attendance-xlsx";
 
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
@@ -100,6 +107,47 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   rpc.mockReset();
+});
+
+it("downloads a literal Excel template that works with the existing importer", async () => {
+  const blob = await attendanceXlsxTemplate([
+    { ...roster[0], name: "=A1 & <Name>" },
+  ]);
+  const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(blob);
+  });
+  const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(buffer)), {
+    useWebWorkers: false,
+  });
+  const edited = new ZipWriter(new Uint8ArrayWriter(), {
+    useWebWorkers: false,
+  });
+  for (const entry of await reader.getEntries()) {
+    if (entry.directory) throw Error("Unexpected directory in template");
+    let text = await entry.getData(new TextWriter());
+    if (entry.filename === "xl/worksheets/sheet1.xml") {
+      expect(text).toContain("=A1 &amp; &lt;Name&gt;");
+      expect(text).not.toContain("<f>");
+      text = text.replace(
+        "</row></sheetData>",
+        '<c r="C2" t="inlineStr"><is><t>present</t></is></c><c r="G2" t="inlineStr"><is><t>Reviewed</t></is></c></row></sheetData>',
+      );
+    }
+    await edited.add(entry.filename, new TextReader(text));
+  }
+  await reader.close();
+  const bytes = await edited.close();
+  const file = new File([], "attendance.xlsx");
+  Object.defineProperties(file, {
+    size: { value: bytes.byteLength },
+    arrayBuffer: { value: async () => bytes.buffer },
+  });
+  await expect(readAttendanceXlsx(file, roster)).resolves.toMatchObject([
+    { user_id: "sample-learner", status: "present", expected_version: 2 },
+  ]);
 });
 
 it("reads shared and rich inline strings and binds import rows to the current roster", async () => {

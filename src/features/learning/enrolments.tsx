@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { TableImport } from "../../components/table-import";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { Field, Loading, Notice } from "../../components/common";
@@ -47,7 +48,7 @@ export function CourseEnrolmentsPanel({
   actor,
   academy,
 }: Props & { academy?: boolean }) {
-  const { t } = useTranslation("learning");
+  const { t, i18n } = useTranslation("learning");
   const queryClient = useQueryClient();
   const online = useOnline();
   const fieldId = useId();
@@ -90,30 +91,35 @@ export function CourseEnrolmentsPanel({
     },
     retry: false,
   });
+  async function saveEnrolment(userId: string, status: Status) {
+    requireOnline();
+    const { error } = await db().rpc("manage_course_enrolment", {
+      p_course_run_id: course.id,
+      p_user_id: userId,
+      p_status: status,
+    });
+    if (error) throw error;
+  }
+
+  const refreshEnrolments = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: enrolmentsKey }),
+      queryClient.invalidateQueries({ queryKey: candidatesKey }),
+      queryClient.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course.id),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: attendanceRegistersKey(actor, course.id),
+      }),
+    ]);
+
   const save = useMutation({
-    mutationFn: async ({ participant, status }: Change) => {
-      requireOnline();
-      const { error } = await db().rpc("manage_course_enrolment", {
-        p_course_run_id: course.id,
-        p_user_id: participant.user_id,
-        p_status: status,
-      });
-      if (error) throw error;
-    },
+    mutationFn: ({ participant, status }: Change) =>
+      saveEnrolment(participant.user_id, status),
     onSuccess: async () => {
       setChange(null);
       setSelection("");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: enrolmentsKey }),
-        queryClient.invalidateQueries({ queryKey: candidatesKey }),
-        queryClient.invalidateQueries({
-          queryKey: courseWorkspaceKey(actor, course.id),
-        }),
-        // Each session register reads the current enrolment roster separately.
-        queryClient.invalidateQueries({
-          queryKey: attendanceRegistersKey(actor, course.id),
-        }),
-      ]);
+      await refreshEnrolments();
     },
   });
   const participant = candidates.data?.find(
@@ -219,6 +225,44 @@ export function CourseEnrolmentsPanel({
                 </Button>
               </div>
             ))}
+          {candidates.isSuccess && enrolments.isSuccess && (
+            <TableImport
+              key={course.id}
+              label={
+                i18n.language.startsWith("de")
+                  ? "Teilnehmende für diesen Kurs importieren"
+                  : "Import participants into this course"
+              }
+              filename="course-participants"
+              columns={["luminovia_user_id"]}
+              example={["LV-0000-0000-0000-0000-0001"]}
+              parse={({ luminovia_user_id }) => {
+                const id = luminovia_user_id.trim().toUpperCase();
+                if (!/^LV(?:-[0-9A-F]{4}){5}$/.test(id))
+                  throw new Error("invalid participant ID");
+                return id;
+              }}
+              save={async (id) => {
+                requireOnline();
+                const { data, error } = await db().rpc(
+                  "course_enrolment_candidates",
+                  {
+                    p_course_run_id: course.id,
+                    p_search: id,
+                  },
+                );
+                if (error || !Array.isArray(data))
+                  throw error ?? new Error("invalid candidates");
+                const candidate = (data as Candidate[]).find(
+                  (row) => row.luminovia_user_id?.toUpperCase() === id,
+                );
+                if (!candidate)
+                  throw new Error("eligible participant not found");
+                await saveEnrolment(candidate.user_id, "enrolled");
+              }}
+              refresh={refreshEnrolments}
+            />
+          )}
           {enrolments.isSuccess && (
             <>
               <h3>{t("enrolmentCurrent")}</h3>

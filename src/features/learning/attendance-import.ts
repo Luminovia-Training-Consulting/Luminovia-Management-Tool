@@ -33,6 +33,48 @@ export class AttendanceImportError extends Error {
   }
 }
 
+/** Read template-shaped UTF-8 CSV records with the same bounded quoting rules. */
+export async function readSpreadsheetCsv(
+  file: File,
+  headers: readonly string[],
+) {
+  if (
+    file.size > maxImportTextBytes ||
+    !file.name.toLowerCase().endsWith(".csv")
+  )
+    throw new AttendanceImportError(1);
+  const input = new TextDecoder("utf-8", { fatal: true })
+    .decode(await file.arrayBuffer())
+    .replace(/\r\n/g, "\n");
+  function recordsWithHeader(delimiter: "," | ";") {
+    const records = csvRows(input, 1, delimiter);
+    try {
+      const header = records.next().value;
+      if (
+        header &&
+        header.columns.length === headers.length &&
+        header.columns.every((cell, index) => cell === headers[index])
+      )
+        return records;
+    } catch (cause) {
+      if (!(cause instanceof AttendanceImportError)) throw cause;
+    }
+  }
+  const records = recordsWithHeader(",") ?? recordsWithHeader(";");
+  if (!records) throw new AttendanceImportError(1);
+  const rows = [];
+  for (const record of records) {
+    if (
+      record.rowNumber > maxAttendanceImportRows + 1 ||
+      record.columns.length !== headers.length ||
+      record.columns.some((cell) => cell.includes("\0"))
+    )
+      throw new AttendanceImportError(record.rowNumber);
+    if (record.columns.some(Boolean)) rows.push(record);
+  }
+  return rows;
+}
+
 /** Parse the seven-column import template, including quoted commas and line breaks. */
 export function parseAttendanceCsv(
   source: string,
@@ -53,13 +95,16 @@ export function parseAttendanceCsv(
 }
 
 /** Keep CSV quoting, physical file syntax and logical record numbers out of domain validation. */
-function* csvRows(data: string) {
+function* csvRows(data: string, firstRow = 2, delimiter: "," | ";" = ",") {
   // Each match consumes a complete field. A quote inside an unquoted field or
   // text after its closing quote cannot be consumed by this grammar.
-  const field = /(?:"((?:[^"]|"")*)"|([^",\n]*))(,|\n|$)/gy;
+  const field =
+    delimiter === ","
+      ? /(?:"((?:[^"]|"")*)"|([^",\n]*))(,|\n|$)/gy
+      : /(?:"((?:[^"]|"")*)"|([^";\n]*))(;|\n|$)/gy;
   let offset = 0;
   let columns: string[] = [];
-  let rowNumber = 2;
+  let rowNumber = firstRow;
   while (offset < data.length) {
     const match = field.exec(data);
     if (!match) throw new AttendanceImportError(rowNumber);
@@ -67,7 +112,7 @@ function* csvRows(data: string) {
     columns.push(
       match[1] === undefined ? match[2] : match[1].replaceAll('""', '"'),
     );
-    if (match[3] === ",") {
+    if (match[3] === delimiter) {
       if (offset === data.length) columns.push("");
       else continue;
     }

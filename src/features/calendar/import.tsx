@@ -6,13 +6,48 @@ import { DateTime } from "luxon";
 import { Upload } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
-import { dateTime } from "../../lib/dates";
+import { dateTime, validZone } from "../../lib/dates";
+import { TableImport } from "../../components/table-import";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
 import { type ImportedAppointment, parseCalendarImport } from "./import-ical";
 import { calendarImportReceipt } from "./schema";
 import "./import-i18n";
 import "./import.css";
+
+function tableAppointment(row: Record<string, string>): ImportedAppointment {
+  const title = row.title.trim();
+  const timeZone = row.time_zone.trim();
+  const readInstant = (value: string) => {
+    if (
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+        value,
+      )
+    )
+      throw new Error("offset required");
+    const date = DateTime.fromISO(value, { setZone: true });
+    if (!date.isValid) throw new Error("invalid date");
+    return date.toUTC();
+  };
+  const start = readInstant(row.starts_at);
+  const end = readInstant(row.ends_at);
+  if (
+    !title ||
+    title.length > 200 ||
+    row.description.length > 10000 ||
+    !validZone(timeZone) ||
+    end <= start
+  )
+    throw new Error("invalid appointment");
+  return {
+    uid: JSON.stringify(["table", title, start.toISO(), end.toISO()]),
+    title,
+    description: row.description,
+    starts_at: start.toISO()!,
+    ends_at: end.toISO()!,
+    time_zone: timeZone,
+  };
+}
 
 export function CalendarImport({
   actor,
@@ -34,16 +69,20 @@ export function CalendarImport({
   const [preview, setPreview] = useState<ImportedAppointment[] | null>(null);
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
+  async function saveAppointments(events: ImportedAppointment[]) {
+    requireOnline();
+    const { data, error } = await db().rpc("import_my_calendar", {
+      p_events: events,
+    });
+    if (error) throw error;
+    return calendarImportReceipt.parse(data);
+  }
+
   const save = useMutation({
     mutationKey: ["calendar-import", actor],
     mutationFn: async () => {
-      requireOnline();
       if (!preview) throw new Error("No reviewed import");
-      const { data, error } = await db().rpc("import_my_calendar", {
-        p_events: preview,
-      });
-      if (error) throw error;
-      return calendarImportReceipt.parse(data);
+      return saveAppointments(preview);
     },
     onSuccess: async () => {
       setPreview(null);
@@ -73,107 +112,129 @@ export function CalendarImport({
     }
   }
 
+  const de = i18n.language.startsWith("de");
   return (
-    <details className="panel calendar-import">
-      <summary>
-        <Upload size={18} aria-hidden="true" /> {t("title")}
-      </summary>
-      <p>{t("help", { zone })}</p>
-      <div className="calendar-import-window">
-        <Field id="calendar-import-from" label={t("from")}>
+    <>
+      <TableImport
+        label={
+          de
+            ? "Private Termine aus CSV oder XLSX importieren"
+            : "Import private appointments from CSV or XLSX"
+        }
+        filename="personal-calendar"
+        columns={["title", "starts_at", "ends_at", "time_zone", "description"]}
+        example={[
+          "Example",
+          "2027-01-11T09:00+01:00",
+          "2027-01-11T10:00+01:00",
+          "Europe/Berlin",
+          "",
+        ]}
+        parse={tableAppointment}
+        saveBatch={saveAppointments}
+        refresh={() => cache.invalidateQueries({ queryKey: ["events", actor] })}
+      />
+      <details className="panel calendar-import">
+        <summary>
+          <Upload size={18} aria-hidden="true" /> {t("title")}
+        </summary>
+        <p>{t("help", { zone })}</p>
+        <div className="calendar-import-window">
+          <Field id="calendar-import-from" label={t("from")}>
+            <input
+              id="calendar-import-from"
+              type="date"
+              value={from}
+              disabled={reading || save.isPending}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                setPreview(null);
+              }}
+            />
+          </Field>
+          <Field id="calendar-import-until" label={t("until")}>
+            <input
+              id="calendar-import-until"
+              type="date"
+              value={until}
+              disabled={reading || save.isPending}
+              onChange={(e) => {
+                setUntil(e.target.value);
+                setPreview(null);
+              }}
+            />
+          </Field>
+        </div>
+        <Field id="calendar-import-file" label={t("file")}>
           <input
-            id="calendar-import-from"
-            type="date"
-            value={from}
+            id="calendar-import-file"
+            type="file"
+            accept=".ics,text/calendar"
             disabled={reading || save.isPending}
-            onChange={(e) => {
-              setFrom(e.target.value);
+            onChange={async (e) => {
+              const input = e.currentTarget;
+              const file = input.files?.[0];
+              if (!file) return;
               setPreview(null);
+              save.reset();
+              setError("");
+              setSource("");
+              if (
+                file.size > 2_000_000 ||
+                !file.name.toLowerCase().endsWith(".ics")
+              ) {
+                setError("invalid_file");
+                return;
+              }
+              setReading(true);
+              try {
+                const text = await file.text();
+                setSource(text);
+                review(text);
+              } catch {
+                setError("invalid_file");
+              } finally {
+                setReading(false);
+                input.value = "";
+              }
             }}
           />
         </Field>
-        <Field id="calendar-import-until" label={t("until")}>
-          <input
-            id="calendar-import-until"
-            type="date"
-            value={until}
-            disabled={reading || save.isPending}
-            onChange={(e) => {
-              setUntil(e.target.value);
-              setPreview(null);
-            }}
-          />
-        </Field>
-      </div>
-      <Field id="calendar-import-file" label={t("file")}>
-        <input
-          id="calendar-import-file"
-          type="file"
-          accept=".ics,text/calendar"
-          disabled={reading || save.isPending}
-          onChange={async (e) => {
-            const input = e.currentTarget;
-            const file = input.files?.[0];
-            if (!file) return;
-            setPreview(null);
-            save.reset();
-            setError("");
-            setSource("");
-            if (
-              file.size > 2_000_000 ||
-              !file.name.toLowerCase().endsWith(".ics")
-            ) {
-              setError("invalid_file");
-              return;
-            }
-            setReading(true);
-            try {
-              const text = await file.text();
-              setSource(text);
-              review(text);
-            } catch {
-              setError("invalid_file");
-            } finally {
-              setReading(false);
-              input.value = "";
-            }
-          }}
-        />
-      </Field>
-      {source && !preview && (
-        <Button
-          variant="secondary"
-          disabled={reading || save.isPending}
-          onClick={() => review()}
-        >
-          {t("review")}
-        </Button>
-      )}
-      {error && <Notice kind="error">{t(error)}</Notice>}
-      {preview && (
-        <section aria-label={t("preview")}>
-          <h3>{t("count", { count: preview.length })}</h3>
-          <ul className="calendar-import-preview">
-            {preview.map((item) => (
-              <li key={item.uid}>
-                <strong>{item.title}</strong>
-                <span>
-                  {dateTime(item.starts_at, i18n.language, zone)} –{" "}
-                  {dateTime(item.ends_at, i18n.language, zone)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        {source && !preview && (
           <Button
-            disabled={!online || save.isPending}
-            onClick={() => save.mutate()}
+            variant="secondary"
+            disabled={reading || save.isPending}
+            onClick={() => review()}
           >
-            {t("confirm")}
+            {t("review")}
           </Button>
-        </section>
-      )}
-      {save.isError && <Notice kind="error">{t("failed")}</Notice>}
-      {save.isSuccess && <Notice>{t("saved", save.data)}</Notice>}
-    </details>
+        )}
+        {error && <Notice kind="error">{t(error)}</Notice>}
+        {preview && (
+          <section aria-label={t("preview")}>
+            <h3>{t("count", { count: preview.length })}</h3>
+            <ul className="calendar-import-preview">
+              {preview.map((item) => (
+                <li key={item.uid}>
+                  <strong>{item.title}</strong>
+                  <span>
+                    {dateTime(item.starts_at, i18n.language, zone)} –{" "}
+                    {dateTime(item.ends_at, i18n.language, zone)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              disabled={!online || save.isPending}
+              onClick={() => save.mutate()}
+            >
+              {t("confirm")}
+            </Button>
+          </section>
+        )}
+        {save.isError && <Notice kind="error">{t("failed")}</Notice>}
+        {save.isSuccess && <Notice>{t("saved", save.data)}</Notice>}
+      </details>
+    </>
   );
 }

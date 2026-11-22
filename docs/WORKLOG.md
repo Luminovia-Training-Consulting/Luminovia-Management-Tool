@@ -1,3 +1,7 @@
+# 23 November 2026 — CSV and XLSX data import templates
+
+The internal company directory and contacts, course templates and draft sessions, eligible course enrolments, taxonomy and personal calendar now offer data-specific CSV and XLSX templates and a local preview before saving. Attendance has equivalent roster templates in both formats. The bounded workbook reader is shared and keeps formula evaluation disabled. Directory imports use the existing scoped create operations and report partial progress; calendar and attendance keep their atomic batch operations. TypeScript, targeted lint, a production build and all 58 focused tests passed.
+
 # 23 November 2026 — Accounting export toolbar alignment
 
 The invoice source and its two actions now share the same control height and align on one row when space allows. The action group wraps below the source on narrower screens. All 29 accounting component tests passed. Chromium rendered the actual accounting page with fictional data in German and English at 320, 390, 768, 1280 and 1920 pixels. The existing isolated accounting journey now also asserts desktop alignment and mobile wrapping.
