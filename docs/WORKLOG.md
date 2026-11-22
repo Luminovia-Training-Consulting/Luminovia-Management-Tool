@@ -1,3 +1,9 @@
+# 23 November 2026 — Personal chat deletion
+
+The chat directory offers a confirmed delete action for the caller's whole conversation, including course rooms. The action hides existing messages for that account and clears its archive, pin and manual unread state. Other members keep the conversation and a new message returns it to the caller's list.
+
+The isolated PostgreSQL replay verified both members' views, search and history, unread state, reopening, course rooms and denied access. All 273 focused Vitest cases, 11 API-surface checks and 7 documentation checks passed, as did TypeScript, targeted lint and the production build budget. The existing callable reachability check still flags the XLSX template helpers on the unmodified main baseline. Chromium and deployment were not verified for this change.
+
 # 23 November 2026 — Common time zone choices
 
 Profile, calendar display and private appointments share 35 common IANA choices, including 20 additions. The rest of the browser catalogue and valid saved aliases remain selectable below. Isolated desktop and mobile Chromium saved Adelaide and verified its half-hour clock difference from a Brisbane appointment. All 109 focused Vitest cases, TypeScript, targeted lint, documentation and the build budget passed.

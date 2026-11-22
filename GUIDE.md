@@ -313,6 +313,8 @@ Use **Filtern nach / Filter by** to show conversations by company, staff member,
 Write the message and choose **Nachricht senden / Send message** while connected. A failed request leaves the draft available to retry. A message is shown as sent only after server confirmation. Search the room’s text, load earlier messages, mark it read or mute it through the available controls. Reactions use the displayed emoji choices. Your own messages can be edited within the server’s 15-minute window; deletion asks for confirmation and leaves a tombstone. Safe web links open as links;
 pasted HTML remains text.
 
+Use the trash icon next to a chat and confirm **Chat für mich löschen / Delete chat for me** to clear your view of the entire conversation and remove it from your list. Other members retain their history. A new message brings the chat back with the new history.
+
 Attach or drop one supported file onto the composer and wait for its clean scan before sending; progress is not scan approval. **Personen erwähnen / Mention people** loads current eligible room members on demand. Select up to 20 explicitly; typed `@names` alone are text. The first committed structured mention can renew that message's one notice for a recipient. Exact retries, ordinary edits and remove/re-add cycles do not repeatedly renew it. A mention can override room mute while the global
 chat-category preference still applies. Quiet hours affect attention counts, not message delivery.
 

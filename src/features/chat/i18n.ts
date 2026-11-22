@@ -5,6 +5,16 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  clearRoom: ["Chat für mich löschen", "Delete chat for me"],
+  clearRoomLabel: ["{{title}} für mich löschen", "Delete {{title}} for me"],
+  clearRoomDescription: [
+    "„{{title}}“ verschwindet aus deiner Chatliste. Der bisherige Verlauf wird für dich ausgeblendet. Andere Mitglieder behalten ihren Verlauf. Sobald eine neue Nachricht gesendet wird, erscheint der Chat wieder.",
+    "“{{title}}” will disappear from your chat list and its previous messages will be hidden for you. Other members keep their history. The chat will reappear when a new message is sent.",
+  ],
+  clearRoomError: [
+    "Der Chat konnte nicht gelöscht werden. Bitte versuche es erneut.",
+    "The chat could not be deleted. Please try again.",
+  ],
   composerHelp: [
     "Hinweise zum Schreiben & Anhängen",
     "Writing & attachment tips",

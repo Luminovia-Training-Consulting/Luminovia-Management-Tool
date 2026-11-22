@@ -61,9 +61,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 63 former generic operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(63);
-    expect(definitions).toHaveLength(63);
+  it("covers the 64 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(64);
+    expect(definitions).toHaveLength(64);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>

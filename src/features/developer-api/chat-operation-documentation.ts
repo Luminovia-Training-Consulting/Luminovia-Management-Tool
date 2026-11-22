@@ -228,6 +228,15 @@ export const chatOperationDocumentation = {
         "The room, mention targets or attachment are unavailable to the caller.",
     },
   },
+  clear_personal_chat: {
+    summary: "Delete a conversation from the caller's chat list",
+    description:
+      "Requires current room membership. Hides the existing messages for the caller and clears their pin, personal archive and manual unread state. The room reappears with a new visible message. Other members retain the shared messages and room access.",
+    parameters: { p_room_id: currentRoom },
+    errors: {
+      "403": "The caller lacks current access to the room.",
+    },
+  },
   set_chat_personal_archive: {
     summary: "Archive or restore a room in the caller's chat list",
     description:

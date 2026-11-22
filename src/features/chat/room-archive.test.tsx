@@ -134,3 +134,79 @@ it("retains the active conversation when an archive request fails", async () => 
   client.clear();
   await i18n.changeLanguage("de");
 });
+
+it("clears a selected course chat after confirmation and lists it again with a new message", async () => {
+  await i18n.changeLanguage("de");
+  const course = rooms[1]!;
+  let directoryCourse: typeof course & { personal_deleted?: boolean } = course;
+  let finish!: (result: unknown) => void;
+  fake.rpc.mockImplementation(async (name: string) => {
+    if (name === "chat_rooms_with_manual_unread")
+      return { data: [rooms[0], directoryCourse], error: null };
+    if (name === "clear_personal_chat")
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    return { data: [], error: null };
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/chats?room=course"]}>
+        <ChatPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const open = () =>
+    user.click(
+      screen.getByRole("button", { name: "Fictional course für mich löschen" }),
+    );
+  await screen.findByText(course.title);
+  await open();
+  expect(screen.getByRole("dialog")).toHaveTextContent(
+    "Andere Mitglieder behalten ihren Verlauf",
+  );
+  await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+  expect(
+    fake.rpc.mock.calls.some(([name]) => name === "clear_personal_chat"),
+  ).toBe(false);
+  await open();
+  await user.click(
+    screen.getByRole("button", { name: "Chat für mich löschen" }),
+  );
+  expect(fake.rpc).toHaveBeenCalledWith("clear_personal_chat", {
+    p_room_id: "course",
+  });
+  expect(screen.getByText(course.title, { exact: true })).toBeInTheDocument();
+  finish({ error: { code: "42501" } });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Chat konnte nicht gelöscht werden",
+  );
+  expect(screen.getByText(course.title, { exact: true })).toBeInTheDocument();
+
+  await user.click(
+    screen.getByRole("button", { name: "Chat für mich löschen" }),
+  );
+  directoryCourse = { ...course, personal_deleted: true };
+  finish({ error: null });
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(
+    screen.queryByText(course.title, { exact: true }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("searchbox")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Archiviert" }));
+  expect(
+    screen.queryByText(course.title, { exact: true }),
+  ).not.toBeInTheDocument();
+
+  directoryCourse = course;
+  await client.invalidateQueries({ queryKey: ["chat-rooms", "actor"] });
+  await user.click(screen.getByRole("button", { name: "Aktiv" }));
+  expect(await screen.findByText(course.title)).toBeVisible();
+  client.clear();
+});

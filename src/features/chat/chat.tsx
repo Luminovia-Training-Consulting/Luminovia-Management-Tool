@@ -18,6 +18,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
@@ -28,6 +29,7 @@ import {
   userRolesQuery,
 } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import {
   chatDirectoryFiltersQuery,
@@ -37,6 +39,7 @@ import {
 } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
+import type { ChatRoom } from "./types";
 import { RoomActivity } from "./room-activity";
 import { RoomUnread } from "./room-unread";
 import { TopicInvitationInbox } from "./topic-invitations";
@@ -49,6 +52,7 @@ import "./chat.css";
 /** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
   const { t, i18n } = useTranslation("chat");
+  const common = useTranslation().t;
   const online = useOnline();
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -70,6 +74,11 @@ export function ChatPage() {
   const archiveText = useTranslation("chatRoomArchive").t;
   const [contactsOpen, setContactsOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
+  const [roomToClear, setRoomToClear] = useState<ChatRoom | null>(null);
+  const [clearTrigger, setClearTrigger] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
   const previousRooms = useRef<string[]>([]);
   const selected = rooms.data?.find((room) => room.id === selectedId);
   const canManageCourses =
@@ -162,6 +171,28 @@ export function ChatPage() {
     onSuccess: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
+  const clearRoom = useMutation({
+    mutationFn: async (room: string) => {
+      requireOnline();
+      const { error } = await db().rpc("clear_personal_chat", {
+        p_room_id: room,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async (_, room) => {
+      if (selectedId === room) selectRoom(null);
+      const history = chatKeys.messages(actor, room);
+      client.removeQueries({ queryKey: history, type: "inactive" });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+        client.invalidateQueries({ queryKey: history }),
+        client.invalidateQueries({ queryKey: ["course-chat-messages", actor] }),
+        client.invalidateQueries({ queryKey: ["course-chat-rooms", actor] }),
+        client.invalidateQueries({ queryKey: ["unified-search", actor] }),
+      ]);
+      setRoomToClear(null);
+    },
+  });
   const pinnedOrder = (rooms.data ?? [])
     .filter((room) => room.pinned)
     .sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0))
@@ -186,7 +217,9 @@ export function ChatPage() {
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
   const directoryRooms = (rooms.data ?? []).filter(
-    (room) => Boolean(room.personal_archived) === showArchived,
+    (room) =>
+      !room.personal_deleted &&
+      Boolean(room.personal_archived) === showArchived,
   );
   const directoryIds = new Set(directoryRooms.map(({ id }) => id));
   const facetsByRoom = new Map<string, ChatDirectoryFacet[]>();
@@ -266,6 +299,7 @@ export function ChatPage() {
               </label>
               <input
                 id="chat-room-search"
+                ref={setRoomSearch}
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -500,6 +534,23 @@ export function ChatPage() {
                     >
                       {room.pinned ? <PinOff size={16} /> : <Pin size={16} />}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("clearRoomLabel", {
+                        title: room.title || t(`kind_${room.kind}`),
+                      })}
+                      title={t("clearRoom")}
+                      disabled={!online || clearRoom.isPending}
+                      onClick={(event) => {
+                        setClearTrigger(event.currentTarget);
+                        clearRoom.reset();
+                        setRoomToClear(room);
+                      }}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </Button>
                     {room.pinned && (
                       <div className="chat-pin-reorder">
                         {(["up", "down"] as const).map((direction) => (
@@ -605,6 +656,40 @@ export function ChatPage() {
           )}
         </div>
       </div>
+      <Dialog
+        open={Boolean(roomToClear)}
+        onOpenChange={(open) => {
+          if (!open && !clearRoom.isPending) setRoomToClear(null);
+        }}
+        title={t("clearRoom")}
+        description={t("clearRoomDescription", {
+          title:
+            roomToClear?.title ||
+            (roomToClear ? t(`kind_${roomToClear.kind}`) : ""),
+        })}
+        closeDisabled={clearRoom.isPending}
+        returnFocusTo={clearTrigger?.isConnected ? clearTrigger : roomSearch}
+      >
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            onClick={() => setRoomToClear(null)}
+            disabled={clearRoom.isPending}
+          >
+            {common("cancel")}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => roomToClear && clearRoom.mutate(roomToClear.id)}
+            disabled={!online || clearRoom.isPending}
+          >
+            {t("clearRoom")}
+          </Button>
+        </div>
+        {clearRoom.isError && (
+          <Notice kind="error">{t("clearRoomError")}</Notice>
+        )}
+      </Dialog>
       <ContactPicker
         actor={actor}
         open={contactsOpen}

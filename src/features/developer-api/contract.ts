@@ -2928,7 +2928,7 @@ const nativePaths = {
     "native_chat_rooms_with_manual_unread",
     "Chat",
     "List accessible rooms and personal read indicators",
-    "Returns only rooms the current caller can access, most recent first. The preview is at most 160 characters, excludes personally hidden messages and contains no deleted message body. Manual unread and mute values belong to the caller.",
+    "Returns only rooms the current caller can access, most recent first. The preview is at most 160 characters, excludes personally hidden messages and contains no deleted message body. Manual unread and mute values belong to the caller. The personal_deleted flag marks rooms omitted from the caller's directory until they have a new visible message.",
     {},
     {
       type: "array",
@@ -2951,6 +2951,7 @@ const nativePaths = {
         muted: boolean,
         manual_unread: boolean,
         last_message_preview: { type: ["string", "null"], maxLength: 160 },
+        personal_deleted: boolean,
       }),
     },
   ),
