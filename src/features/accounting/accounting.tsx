@@ -629,27 +629,28 @@ export function AccountingPage({
       <p className="accounting-hint">{t("original")}</p>
       <p className="accounting-hint">{t("taxUnknown")}</p>
       <div className="accounting-toolbar">
-        <Field id="accounting-source" label={t("source")}>
-          <select
-            id="accounting-source"
-            value={source}
-            disabled={exportRecords.isPending}
-            onChange={(e) => {
-              setSource(e.target.value as AccountingSource);
-              setSelected([]);
-              setSnapshot(null);
-              setSaved(false);
-            }}
-          >
-            <option value="own">{t("own")}</option>
-            {access.data.can_export_all_lecturers && (
-              <option value="lecturer_all">{t("lecturer_all")}</option>
-            )}
-            {access.data.can_export_customer && (
-              <option value="customer">{t("customer")}</option>
-            )}
-          </select>
-        </Field>
+        <label className="accounting-source-label" htmlFor="accounting-source">
+          {t("source")}
+        </label>
+        <select
+          id="accounting-source"
+          value={source}
+          disabled={exportRecords.isPending}
+          onChange={(e) => {
+            setSource(e.target.value as AccountingSource);
+            setSelected([]);
+            setSnapshot(null);
+            setSaved(false);
+          }}
+        >
+          <option value="own">{t("own")}</option>
+          {access.data.can_export_all_lecturers && (
+            <option value="lecturer_all">{t("lecturer_all")}</option>
+          )}
+          {access.data.can_export_customer && (
+            <option value="customer">{t("customer")}</option>
+          )}
+        </select>
         <div className="accounting-toolbar-actions">
           <Button
             variant="secondary"

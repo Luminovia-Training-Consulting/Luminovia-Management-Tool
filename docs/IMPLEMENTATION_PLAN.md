@@ -77,7 +77,7 @@
 
 ## Responsive UI and edition presentation
 
-- Keep the accounting export source and action controls at a common height. Group the actions beneath the source when the row is too narrow.
+- Place the accounting source label above the controls, align the source and actions at a common height, and group the actions beneath the source on narrow screens.
 - The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.
 - The demo regression covers bottom navigation at 320 px and in landscape, the role selector, Escape and focus return, scroll position and entry points to help and sign-in. Both Academy builds have additional open-menu coverage at intermediate widths with a long customer name and populated notification inbox.
 - Compare customer-facing branding in both Academy packages and keep published settings as the default for the SMTP sender display name. Authenticated workflows, emulated viewport sizes and public production build checks have separate recorded evidence. Physical-device and independent live-customer acceptance remain open.

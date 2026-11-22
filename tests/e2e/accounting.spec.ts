@@ -123,9 +123,14 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await adminLogin(page, owner);
   await page.goto("/accounting");
   const toolbar = page.locator(".accounting-toolbar");
-  await expect(toolbar.getByRole("combobox")).toBeVisible();
+  await expect(
+    toolbar.getByRole("combobox", { name: "Rechnungsquelle" }),
+  ).toBeVisible();
   const layout = await toolbar.evaluate((element) => {
     const { left, right } = element.getBoundingClientRect();
+    const labelBottom = element
+      .querySelector("label")!
+      .getBoundingClientRect().bottom;
     const controls = Array.from(
       element.querySelectorAll("select, button"),
       (control) => {
@@ -134,7 +139,10 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
           top: box.top,
           bottom: box.bottom,
           height: box.height,
-          fits: box.left >= left && box.right <= right + 1,
+          fits:
+            box.left >= left &&
+            box.right <= right + 1 &&
+            box.top >= labelBottom,
         };
       },
     );
@@ -143,7 +151,8 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   expect(layout).toHaveLength(3);
   expect(layout.every(({ height, fits }) => fits && height >= 44)).toBe(true);
   if (isMobile) {
-    expect(layout[1].top).toBeGreaterThan(layout[0].bottom);
+    for (const button of layout.slice(1))
+      expect(button.top).toBeGreaterThan(layout[0].bottom);
   } else {
     for (const button of layout.slice(1)) {
       expect(Math.abs(button.top - layout[0].top)).toBeLessThan(1);
