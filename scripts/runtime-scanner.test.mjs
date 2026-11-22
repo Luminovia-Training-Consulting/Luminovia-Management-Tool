@@ -34,7 +34,9 @@ if (operation === "inspect" && container === "supabase_db_${project}") {
         State: {Running: true, Health: {Status: "healthy"}},
     }]));
 } else if (!(operation === "exec" && container === scanner) &&
-           !(operation === "volume" && container === "create" && rest[0] === "portal_clamav_${project}")) {
+           !(operation === "volume" && container === "create" && rest.length === 3 &&
+             rest[0] === "--label" && rest[1] === "org.luminovia.portal=${project}" &&
+             rest[2] === "portal_clamav_${project}")) {
     process.exit(1);
 }
 `,

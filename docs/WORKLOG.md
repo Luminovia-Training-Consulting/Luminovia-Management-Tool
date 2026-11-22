@@ -6,6 +6,8 @@ Dedicated Caddy excludes the CMS aliases. Pinned Caddy and Envoy exercised both 
 
 Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#13-implementation-and-customer-release-sequence) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
 
+The first exact-main run exposed two obsolete fixtures. The Academy access guard test now supplies the compiled edition with the other branding exports. The scanner startup fixture now requires the new local ownership label for the signature volume. The full workflow needs the corrected exact SHA. The earlier CodeQL run completed successfully.
+
 # 22 November 2026 — Full local portal reset
 
 `./portal reset` confirms the exact local project, checks the local Docker socket, rejects linked Supabase projects and verifies Docker container, network and volume ownership before deleting any data. It stops the existing stack, removes the verified project volumes and generated local credentials, then starts a fresh runtime using the tracked migrations and fictional seed. The existing `stop` and `restart` commands retain data as before.

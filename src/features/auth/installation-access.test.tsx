@@ -10,12 +10,18 @@ const fakes = vi.hoisted(() => ({
   online: true,
   installation: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
 }));
-vi.mock("../../lib/installation-brand", () => ({
-  installationBrand: {
-    edition: "customer-managed",
-    installationId: fakes.installation,
-  },
-}));
+vi.mock("../../lib/installation-brand", async (load) => {
+  const source = await load<typeof import("../../lib/installation-brand")>();
+  return {
+    ...source,
+    portalInternalEdition: false,
+    installationBrand: {
+      ...source.installationBrand,
+      edition: "customer-managed",
+      installationId: fakes.installation,
+    },
+  };
+});
 vi.mock("../../lib/online", () => ({ useOnline: () => fakes.online }));
 vi.mock("./auth-context", () => ({ useAuth: () => ({ session: null }) }));
 vi.mock("../../lib/supabase", () => ({
