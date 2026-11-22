@@ -33,6 +33,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { PageHeading } from "../../components/common";
 import { Preferences } from "../../components/preferences";
+import { useDismissibleDisclosure } from "../../components/use-dismissible-disclosure";
 import {
   PortalNavigation,
   type PortalNavigationItem,
@@ -193,7 +194,8 @@ export function DemoPage() {
   const navigate = useNavigate();
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
-  const mobileNavigation = useRef<HTMLDetailsElement>(null);
+  const { attributes: mobileNavigation, close: closeMobileNavigation } =
+    useDismissibleDisclosure(location.key);
   const restoreLauncherFocus = useRef(false);
   const [role, setRole] = useState<DemoRole>(() => {
     const requested = new URLSearchParams(location.search).get("role");
@@ -309,7 +311,7 @@ export function DemoPage() {
   }, [navigate, selectionIsVisible, visibleModules]);
   useEffect(() => {
     if (!activeCourse || !location.hash) heading.current?.focus();
-  }, [activeCourse, location.hash, location.pathname, queryModule, role]);
+  }, [activeCourse, location.hash, location.pathname, queryModule]);
   useEffect(() => {
     // Pause/finish remove their triggering button. Restore keyboard focus to
     // the surviving launcher after its new label/ref have been committed.
@@ -471,26 +473,6 @@ export function DemoPage() {
             <Link className="demo-login-link" to="/login">
               {t("login")}
             </Link>
-            <details
-              className="mobile-more demo-mobile-more"
-              ref={mobileNavigation}
-            >
-              <summary aria-label={t("navigation")}>
-                <Menu size={20} aria-hidden="true" />
-              </summary>
-              <div className="mobile-menu-panel">
-                <p className="demo-role-hint">{t("roleHint")}</p>
-                <PortalNavigation
-                  id="demo-mobile-navigation"
-                  className="demo-mobile-navigation"
-                  items={navigationItems}
-                  ariaLabel={t("navigation")}
-                  onItemClick={() =>
-                    mobileNavigation.current?.removeAttribute("open")
-                  }
-                />
-              </div>
-            </details>
           </div>
         </header>
         <main id="demo-main" className="main-content demo-main">
@@ -1099,18 +1081,31 @@ export function DemoPage() {
           ariaLabel={t("navigation")}
           onItemClick={() => report("")}
         />
-        <button
-          type="button"
-          className="demo-mobile-more-button"
-          aria-label={t("navigationMore")}
-          onClick={() => {
-            mobileNavigation.current?.setAttribute("open", "");
-            mobileNavigation.current?.querySelector("summary")?.focus();
-          }}
-        >
-          <Menu size={20} aria-hidden="true" />
-          <span>{t("compactMore")}</span>
-        </button>
+        <details className="demo-mobile-more" {...mobileNavigation}>
+          <summary
+            className="demo-mobile-more-button"
+            role="button"
+            aria-label={t("navigationMore")}
+            aria-controls="demo-mobile-panel"
+          >
+            <Menu size={20} aria-hidden="true" />
+            <span>{t("compactMore")}</span>
+          </summary>
+          <div id="demo-mobile-panel" className="demo-mobile-panel">
+            <p className="demo-role-hint">{t("roleHint")}</p>
+            <div className="demo-mobile-panel-links">
+              <Link to="/help">{t("help")}</Link>
+              <Link to="/login">{t("login")}</Link>
+            </div>
+            <PortalNavigation
+              id="demo-mobile-navigation"
+              className="demo-mobile-navigation"
+              items={navigationItems}
+              ariaLabel={t("navigation")}
+              onItemClick={() => closeMobileNavigation(true)}
+            />
+          </div>
+        </details>
       </div>
     </div>
   );

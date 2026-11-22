@@ -577,10 +577,6 @@
   text-underline-offset: 3px;
 }
 
-.demo-mobile-more {
-  display: none;
-}
-
 .demo-role-control {
   display: inline-flex;
   align-items: center;
@@ -813,6 +809,7 @@
 
   .demo-topbar-actions .preferences select {
     max-inline-size: none;
+    min-block-size: 44px;
   }
 
   .demo-topbar-actions .preferences select:last-of-type {
@@ -832,45 +829,54 @@
   }
 
   .demo-role-control select {
-    max-width: 100px;
-    min-height: 38px;
+    max-inline-size: min(11rem, 44vw);
+    min-block-size: 44px;
     padding: 4px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
-  .demo-login-link {
+  .demo-login-link,
+  .demo-topbar .demo-help-link {
     display: none;
   }
 
   .demo-mobile-more {
     display: block;
+    flex: 0 0 18%;
   }
 
-  .demo-mobile-more summary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    min-height: 40px;
+  .demo-mobile-panel {
+    position: absolute;
+    inset: auto 0.5rem calc(100% + 0.375rem);
+    max-block-size: 70dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0.75rem;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    color: var(--ink);
-    cursor: pointer;
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .demo-mobile-navigation {
+  .demo-mobile-navigation,
+  .demo-mobile-panel-links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
-    max-height: min(60dvh, 28rem);
-    overflow-y: auto;
   }
 
-  .demo-mobile-navigation a {
+  .demo-mobile-panel-links {
+    margin-block-end: 0.5rem;
+    border-block-end: 1px solid var(--line);
+  }
+
+  .demo-mobile-navigation a,
+  .demo-mobile-panel-links a {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    min-height: 44px;
     padding: 8px;
     border-radius: 8px;
     color: var(--ink);
@@ -958,10 +964,6 @@
     font-weight: 700;
   }
 
-  .demo-mobile-more-button {
-    flex: 0 0 18%;
-  }
-
   .demo-mobile-primary-nav .sidebar-link-label {
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -969,9 +971,6 @@
   }
 }
 @media (max-width: 430px) {
-  .demo-help-link {
-    display: none;
-  }
   .demo-topbar {
     flex-wrap: wrap;
   }

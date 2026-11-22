@@ -134,7 +134,8 @@ test("mobile demo navigation explains and permits access to its remaining sectio
         await expect(
             page.getByRole("button", {name: "More demo sections", exact: true}),
         ).toBeVisible();
-        await page.locator(".demo-mobile-more > summary").click();
+        await page.getByLabel("Language", {exact: true}).focus();
+        await expect(nav).toBeHidden();
     } else {
         const nav = page.locator(".demo-sidebar nav");
         await expect(nav).toBeVisible();
@@ -150,6 +151,47 @@ test("mobile demo navigation explains and permits access to its remaining sectio
         });
     }
     if (viewport) await page.setViewportSize(viewport);
+});
+
+test("demo More opens beside the bottom navigation and restores keyboard focus", async ({page}) => {
+  await page.setViewportSize({width: 320, height: 568});
+  await page.goto("/demo");
+  const role = page.locator("#demo-role");
+  await role.focus();
+  await role.press("ArrowDown");
+  await expect(role).toHaveValue("management");
+  await expect(role).toBeFocused();
+  await role.press("ArrowDown");
+  await expect(role).toHaveValue("admin");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const offset = await page.evaluate(() => window.scrollY);
+  expect(offset).toBeGreaterThan(0);
+  const trigger = page.getByRole("button", {name: "Mehr Demo-Bereiche"});
+  const panel = page.locator("#demo-mobile-panel");
+  await expect(trigger).toHaveCount(1);
+  await trigger.click();
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBe(offset);
+  await expect(panel.locator('a[href="/help"]')).toHaveCount(1);
+  await expect(panel.locator('a[href="/login"]')).toHaveCount(1);
+  for (const [width, height] of [[320, 568], [568, 320]]) {
+    await page.setViewportSize({width, height});
+    const box = await panel.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(height);
+  }
+  await panel.getByRole("link").last().focus();
+  await expect(panel.getByRole("link").last()).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page.locator(".demo-mobile-primary-nav a[href='/demo/calendar']").click();
+  await expect(page).toHaveURL(/\/demo\/calendar$/);
+  await expect(panel).toBeHidden();
 });
 
 test("fictional job outcomes never reserve real work, and language changes retain practice state", async ({

@@ -1,3 +1,9 @@
+# 22 November 2026 — Demo navigation and Academy header follow-up
+
+The mobile demo opens More directly from the fixed bottom navigation. The panel stays in view in portrait and landscape, includes help and sign-in, and closes when attention moves outside. Escape returns focus to More. Changing a demo role on the current page keeps focus on the selector so arrow-key navigation can continue. Viewport checks cover all five fictional roles, German and English, and both themes. The browser regression also verifies that opening More on a scrolled page preserves its scroll offset.
+
+A long Academy name exposed two layout faults that closed-page checks could miss. At 640 px the participant's open notification panel clipped at the left edge. At 761–840 px the administrator's role options could clip and overlap the header. Both panels now anchor beneath the wrapped header. The logo and multiline academy name remain side by side. Chromium exercised 72 panel measurements and dismissal checks in each production-built edition with intercepted fictional authenticated responses and a populated inbox. These checks cover the rendered interface with emulated viewports.
+
 # 22 November 2026 — External acceptance with fictional records
 
 The actual webhook worker resolved and verified the public HTTPS receiver, submitted the signed original bytes and completed its PostgreSQL delivery records. The temporary provider's receipts matched the accounting invoice, payment, credit application, refund and their credit/refund reversals. Both Academy editions each delivered one signed course publication. The shared verifier accepted exactly the v1 fields and matched every delivery ID. The catcher and its test records were deleted. Local HTTP/SQLite tests retain the separate retry and in-flight revocation evidence.
