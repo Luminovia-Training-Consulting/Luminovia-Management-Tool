@@ -19,6 +19,10 @@ const pairs: Record<string, [string, string]> = {
     "Dieser Kurs nimmt derzeit keine Dateiabgaben an.",
     "This course is currently closed to file submissions.",
   ],
+  submissionReadOnly: [
+    "Dateiabgaben können eingesehen werden. Änderungen sind zurzeit gesperrt.",
+    "File submissions are available to review. Changes are currently locked.",
+  ],
   submissionEnable: ["Dateiabgaben erlauben", "Allow file submissions"],
   submissionDisable: ["Dateiabgaben schließen", "Close file submissions"],
   submissionFile: ["Datei auswählen", "Choose file"],

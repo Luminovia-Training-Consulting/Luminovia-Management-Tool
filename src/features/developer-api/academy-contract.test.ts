@@ -22,6 +22,7 @@ const readPaths = [
   "/rest/v1/rpc/academy_licence_receipt",
   "/rest/v1/rpc/course_chat_protection",
   "/rest/v1/rpc/course_class_options",
+  "/rest/v1/rpc/course_submissions",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -43,6 +44,8 @@ const writePaths = [
   "/rest/v1/rpc/attach_course_session_evidence",
   "/rest/v1/rpc/set_course_chat_protection",
   "/rest/v1/rpc/set_course_class",
+  "/rest/v1/rpc/set_course_submissions",
+  "/rest/v1/rpc/withdraw_course_submission",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -601,6 +604,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-course-chat",
                 "academy-attendance",
                 "academy-logo",
+                "course-submission",
               ],
             },
           },
@@ -615,6 +619,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                   { required: ["academy_course_id"] },
                   { required: ["academy_room_id"] },
                   { required: ["academy_session_id"] },
+                  { required: ["course_run_id"] },
                 ],
                 properties: { file: { format: "binary" } },
               },
@@ -647,6 +652,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
       expect(intake.description).toContain("publishAcademyStudentExamPdf");
       for (const servicePath of [
+        "/rest/v1/rpc/course_submission_storage_path",
+        "/rest/v1/rpc/course_submission_scan",
+        "/rest/v1/rpc/reserve_course_submission",
         "/rest/v1/rpc/reserve_academy_student_exam_pdf",
         "/rest/v1/rpc/reserve_academy_answer_key_pdf",
         "/rest/v1/rpc/reserve_academy_course_chat_file",

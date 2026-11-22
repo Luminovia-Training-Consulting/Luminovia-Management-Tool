@@ -79,9 +79,11 @@ function SubmissionRow({
 export function CourseSubmissions({
   actor,
   courseId,
+  readOnly = false,
 }: {
   actor: string;
   courseId: string;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -169,8 +171,16 @@ export function CourseSubmissions({
       )}
       {page && (
         <>
-          <p>{t(page.enabled ? "submissionOpen" : "submissionClosed")}</p>
-          {page.can_manage && (
+          <p>
+            {t(
+              readOnly
+                ? "submissionReadOnly"
+                : page.enabled
+                  ? "submissionOpen"
+                  : "submissionClosed",
+            )}
+          </p>
+          {!readOnly && page.can_manage && (
             <Button
               variant="secondary"
               disabled={busy}
@@ -180,7 +190,7 @@ export function CourseSubmissions({
             </Button>
           )}
           {settings.isError && <Notice kind="error">{t("saveError")}</Notice>}
-          {page.can_upload && (
+          {!readOnly && page.can_upload && (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -264,7 +274,7 @@ export function CourseSubmissions({
                 <SubmissionRow
                   key={entry.version_id}
                   courseId={courseId}
-                  entry={entry}
+                  entry={readOnly ? { ...entry, can_withdraw: false } : entry}
                   disabled={busy}
                   withdraw={(event) => {
                     withdrawal.reset();

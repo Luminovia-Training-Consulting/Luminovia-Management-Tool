@@ -941,11 +941,7 @@ function CourseWorkspaceLayout({
     (course.exams.required || course.exams.can_edit || (academy && editor)),
   );
   const hasActivities = learner || editor;
-  const hasSubmissions =
-    __PORTAL_INTERNAL_EDITION__ &&
-    !academy &&
-    course.lms_enabled &&
-    hasActivities;
+  const hasSubmissions = course.lms_enabled && hasActivities;
   const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
@@ -1150,6 +1146,7 @@ function CourseWorkspaceLayout({
                 key={`${actor}:${course.id}`}
                 actor={actor}
                 courseId={course.id}
+                readOnly={academy === "grace"}
               />
             </div>
           )}

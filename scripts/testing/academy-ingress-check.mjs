@@ -49,6 +49,7 @@ const allowedApi = [
   "/functions/v1/company-integration/participation",
   "/functions/v1/course-documents",
   "/functions/v1/files?mode=academy-material",
+  "/functions/v1/files?mode=course-submission",
   "/functions/v1/files?mode=academy-student-exam",
   "/functions/v1/files?mode=academy-course-chat",
   "/functions/v1/files?mode=academy-attendance",

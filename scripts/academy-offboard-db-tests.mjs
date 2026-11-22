@@ -45,7 +45,8 @@ await withTestDatabase("academy_offboard", async ({ sql }) => {
     evidenceVersion,
     evidenceId,
     cohort,
-  ] = Array.from({ length: 19 }, randomUUID);
+    submissionDocument, submissionVersion, withdrawnDocument, withdrawnVersion,
+  ] = Array.from({ length: 23 }, randomUUID);
   const roster = Buffer.from("%PDF-1.4\nFictional roster\x00\xff\n");
   const rosterHash = createHash("sha256").update(roster).digest("hex");
   const edition = "customer-managed";
@@ -123,6 +124,18 @@ await withTestDatabase("academy_offboard", async ({ sql }) => {
       values(${q(evidenceVersion)},${q(course)},${q(commit)},${q(rosterHash)},'attendance_evidence',${q(session)});
     insert into private.course_attendance_evidence(id,session_id,version_id,attached_by,source)
       values(${q(evidenceId)},${q(session)},${q(evidenceVersion)},${q(admin)},'academy_scan');
+    insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+    values
+      (${q(submissionDocument)},${q(participant)},${q(participant)},'personal','participant_submission','Private-lab.txt','text/plain',12,'clean',${q(randomUUID())}),
+      (${q(withdrawnDocument)},${q(participant)},${q(participant)},'personal','participant_submission','Withdrawn-lab.txt','text/plain',12,'clean',${q(randomUUID())});
+    insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256,scanner_version)
+    values
+      (${q(submissionVersion)},${q(submissionDocument)},${q(participant)},${q(randomUUID())},1,${q([participant,submissionDocument,submissionVersion].join("/"))},'Private-lab.txt','text/plain',12,'clean',repeat('a',64),'ClamAV fictional fixture'),
+      (${q(withdrawnVersion)},${q(withdrawnDocument)},${q(participant)},${q(randomUUID())},1,${q([participant,withdrawnDocument,withdrawnVersion].join("/"))},'Withdrawn-lab.txt','text/plain',12,'clean',repeat('b',64),'ClamAV fictional fixture');
+    update public.documents set current_version_id=${q(submissionVersion)} where id=${q(submissionDocument)};
+    update public.documents set current_version_id=${q(withdrawnVersion)} where id=${q(withdrawnDocument)};
+    insert into private.course_submissions(version_id, run_id, expected_sha256, withdrawn_at)
+    values (${q(submissionVersion)},${q(course)},repeat('a',64),null),(${q(withdrawnVersion)},${q(course)},repeat('b',64),now());
   `);
 
   assert.equal(
@@ -153,7 +166,7 @@ await withTestDatabase("academy_offboard", async ({ sql }) => {
   assert.equal(records.get("class_assignments")[0].class_id, cohort);
   assert.deepEqual(
     new Set(records.get("files").map(({ id }) => id)),
-    new Set([cleanVersion, evidenceVersion]),
+    new Set([cleanVersion, evidenceVersion, submissionVersion]),
   );
   const [evidence] = records.get("attendance_evidence");
   assert.equal(evidence.id, evidenceId);
@@ -169,6 +182,9 @@ await withTestDatabase("academy_offboard", async ({ sql }) => {
     records.get("file_links").map(({ version_id }) => version_id),
     [cleanVersion],
   );
+  assert.deepEqual(records.get("course_submission_links").map(({run_id, owner_id, version_id}) => ({run_id, owner_id, version_id})), [
+    {run_id: course, owner_id: participant, version_id: submissionVersion},
+  ]);
   assert.deepEqual(records.get("complete"), []);
   for (const excluded of [
     "fixture-password-hash",
@@ -176,12 +192,13 @@ await withTestDatabase("academy_offboard", async ({ sql }) => {
     "fixture-staff-internal-note",
     "Unshared.pdf",
     "Held.pdf",
+    "Withdrawn-lab.txt",
     "admin@example.invalid",
     "unrelated@example.invalid",
   ]) {
     assert.equal(output.includes(excluded), false);
   }
-  assert.equal(await sql("select count(*) from public.document_versions"), "4");
+  assert.equal(await sql("select count(*) from public.document_versions"), "6");
   console.log(
     "PASS expired Academy retains a database-operator export of scoped records and approved files",
   );

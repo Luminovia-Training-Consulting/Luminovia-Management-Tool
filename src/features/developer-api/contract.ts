@@ -3705,7 +3705,7 @@ const nativePaths = {
     "courseSubmissions",
     "Premium LMS",
     "List private participant file submissions",
-    "Internal Premium LMS only. Participants see their own clean submissions. Assigned instructors, course management and authorised contacts of the course company can see its submissions. Pass next as p_after to page through the course. Closing intake preserves scoped reads.",
+    "Internal Premium LMS only. Participants see their own clean submissions. Assigned instructors, course management and authorised contacts of the course company can see its submissions. Pass next as p_after to page through older submissions. Closing intake preserves scoped reads.",
     { ...course, p_after: nullableUuid },
     z.toJSONSchema(courseSubmissionPage),
     ["p_after"],

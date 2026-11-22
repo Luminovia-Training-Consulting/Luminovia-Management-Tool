@@ -13,7 +13,8 @@ interface Dependencies {
     ) => Promise<{ data: Record<string, unknown> | null; error: unknown }>;
     download: (path: string) => Promise<Uint8Array>;
     wikiPath?: (id: string, version: string) => Promise<string | null>;
-    exactPath?: (version: string, sha256: string) => Promise<string | null>;
+    retainedPath?: (version: string, sha256: string) => Promise<string | null>;
+    submissionPath?: (course: string, version: string) => Promise<string | null>;
     render: (kind: string, facts: Record<string, unknown>) => Promise<Uint8Array>;
 }
 
@@ -230,12 +231,14 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 }
                 let objectPath: string | null = null;
                 if (exactProtectedVersion) {
-                    if (!dependencies.exactPath || !uuid(first.data.version_id) ||
+                    if (!uuid(first.data.version_id) ||
                         first.data.version_id !== String(body.version_id).toLowerCase() ||
                         typeof first.data.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(first.data.sha256)) {
                         return json(403, "document_unavailable");
                     }
-                    objectPath = await dependencies.exactPath(first.data.version_id, first.data.sha256);
+                    objectPath = (submission
+                        ? await dependencies.submissionPath?.(body.id, first.data.version_id)
+                        : await dependencies.retainedPath?.(first.data.version_id, first.data.sha256)) ?? null;
                 } else if (kind === "wiki_resource") {
                     if (!uuid(first.data.version_id) || !dependencies.wikiPath)
                         return json(403, "document_unavailable");

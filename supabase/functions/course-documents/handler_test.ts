@@ -677,7 +677,7 @@ Deno.test("retained files require exact scope and are audited only after byte ve
             sequence.push(args.p_record_access ? "final audit" : "preflight");
             return denied ? {data: null, error: true} : {data: facts, error: null};
         },
-        exactPath: async (requestedVersion, requestedHash) => {
+        retainedPath: async (requestedVersion, requestedHash) => {
             sequence.push("path");
             assert(requestedVersion === version && requestedHash === hash);
             return "fictional/retained-exam";
@@ -788,9 +788,9 @@ Deno.test("private submissions use one exact service-resolved version and fail c
                 error: null,
             };
         },
-        exactPath: async (selected, selectedDigest) => {
+        submissionPath: async (course, selected) => {
             resolved++;
-            assert(selected === version && selectedDigest === digest);
+            assert(course === id && selected === version);
             return "private/exact-version";
         },
         download: async (path) => {

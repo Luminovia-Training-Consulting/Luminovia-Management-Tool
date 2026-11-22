@@ -328,7 +328,12 @@ Deno.serve(async (request: Request) => {
                         // rejection did not publish the version, so discard its clean copy.
                         // An uncertain RPC may already have committed and must keep the bytes.
                         if (submissionRun && error instanceof Error && error.message === 'access_denied') {
-                            await service.storage.from('portal-clean').remove([reservation.object_path]);
+                            const acknowledgeRemoval = writes.begin();
+                            const removed = await service.storage.from('portal-clean').remove([reservation.object_path]);
+                            // A failed remote deletion may still finish after this request.
+                            // Hold the lease so a retry cannot publish bytes that are being removed.
+                            if (removed.error) throw new Error('deletion_unavailable');
+                            acknowledgeRemoval();
                         }
                         throw error;
                     }
