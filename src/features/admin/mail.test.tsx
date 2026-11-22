@@ -86,7 +86,15 @@ beforeEach(async () => {
     },
   );
   fake.invoke.mockImplementation(
-    async (_name: string, args: { body: { protocol: "smtp" | "imap" } }) => {
+    async (
+      _name: string,
+      args: { method: "GET" } | { body: { protocol: "smtp" | "imap" } },
+    ) => {
+      if ("method" in args)
+        return {
+          data: { relay_configured: true, invitations_enabled: false },
+          error: null,
+        };
       const protocol = args.body.protocol;
       fake.configuration.version++;
       fake.configuration[protocol].last_test = {
@@ -126,7 +134,11 @@ it("keeps credentials write-only and tests the saved SMTP configuration through 
     screen.getByRole("button", { name: "SMTP-Verbindung testen" }),
   );
 
-  await screen.findByText("Erfolgreich");
+  const result = await screen.findByText(/^Erfolgreich/);
+  expect(result.querySelector("time")).toHaveAttribute(
+    "datetime",
+    "2026-11-20T12:00:01Z",
+  );
   expect(fake.rpc).toHaveBeenCalledWith(
     "save_mail_configuration",
     expect.objectContaining({
@@ -155,7 +167,9 @@ it("does not allow a test before credentials are configured or while SMTP is dis
     name: "SMTP-Verbindung testen",
   });
   expect(smtpTest).toBeDisabled();
-  expect(fake.invoke).not.toHaveBeenCalled();
+  expect(
+    fake.invoke.mock.calls.every(([, args]) => args.method === "GET"),
+  ).toBe(true);
 });
 
 it("uses the dedicated sender identity, offers SMTP only and saves before testing a changed configuration", async () => {
@@ -190,7 +204,7 @@ it("uses the dedicated sender identity, offers SMTP only and saves before testin
   await user.click(
     screen.getByRole("button", { name: "SMTP-Verbindung testen" }),
   );
-  expect(await screen.findByText("Erfolgreich")).toBeVisible();
+  expect(await screen.findByText(/^Erfolgreich/)).toBeVisible();
   expect(fake.rpc).toHaveBeenCalledWith(
     "save_mail_configuration",
     expect.objectContaining({
@@ -198,7 +212,7 @@ it("uses the dedicated sender identity, offers SMTP only and saves before testin
       p_smtp: expect.objectContaining({ sender_name: "Fictional Academy" }),
     }),
   );
-  expect(fake.invoke.mock.calls).toEqual([
+  expect(fake.invoke.mock.calls.filter(([, args]) => args.body)).toEqual([
     ["mail-admin", { body: { protocol: "smtp" } }],
   ]);
   expect(screen.getByLabelText("Passwort")).toHaveValue("");
@@ -252,7 +266,9 @@ it("keeps existing settings visible and read-only during grace", async () => {
   expect(
     screen.queryByRole("button", { name: "Einstellungen speichern" }),
   ).not.toBeInTheDocument();
-  expect(fake.invoke).not.toHaveBeenCalled();
+  expect(
+    fake.invoke.mock.calls.every(([, args]) => args.method === "GET"),
+  ).toBe(true);
 });
 
 it("refuses a direct mail settings URL after current server authority is denied", async () => {
@@ -268,5 +284,31 @@ it("refuses a direct mail settings URL after current server authority is denied"
     ),
   ).toBeVisible();
   expect(screen.queryByLabelText("Server")).not.toBeInTheDocument();
-  expect(fake.invoke).not.toHaveBeenCalled();
+  expect(
+    fake.invoke.mock.calls.every(([, args]) => args.method === "GET"),
+  ).toBe(true);
+});
+
+it("shows server switches and never rewrites an unchanged transport before testing", async () => {
+  fake.configuration.smtp = {
+    ...fake.configuration.smtp,
+    enabled: true,
+    credentials_configured: true,
+    sender_email: "sender@example.invalid",
+  };
+  render(
+    <QueryClientProvider client={client}>
+      <AdminMailPage />
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByText(/E-Mail-Einladungen sind serverseitig gesperrt/),
+  ).toBeVisible();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "SMTP-Verbindung testen" }),
+  );
+  expect(await screen.findByText(/^Erfolgreich/)).toBeVisible();
+  expect(
+    fake.rpc.mock.calls.some(([name]) => name === "save_mail_configuration"),
+  ).toBe(false);
 });

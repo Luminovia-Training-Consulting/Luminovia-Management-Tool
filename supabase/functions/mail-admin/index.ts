@@ -1,5 +1,6 @@
 /** Deno entry point for caller-authorized, relay-only SMTP/IMAP connection tests. */
 import {createClient} from "npm:@supabase/supabase-js@2.119.0";
+import { invitationsAvailable } from "../_shared/invitation-availability.ts";
 import {createMailAdminHandler} from "./handler.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -20,23 +21,28 @@ if (
     throw new Error("Mail relay configuration is invalid.");
 const relayAvailable = Boolean(relayUrl && relayToken);
 
-const origins = [
-    appOrigin,
-    ...(Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "").split(","),
-]
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map((value) => new URL(value).origin);
+const allowedOrigins = (Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "")
+    .split(",").map((value) => value.trim()).filter(Boolean);
+const origins = [appOrigin, ...allowedOrigins].map((value) => new URL(value).origin);
+const caller = (token: string) => createClient(supabaseUrl, anonKey, {
+    auth: {persistSession: false, autoRefreshToken: false},
+    global: {headers: {Authorization: `Bearer ${token}`}},
+});
 
 const handler = createMailAdminHandler({
     origins,
     relayAvailable,
+    invitationsEnabled: invitationsAvailable(
+        Deno.env.get("PORTAL_INVITES_ENABLED"), appOrigin, allowedOrigins,
+    ),
+    authorizeStatus: async (token) => {
+        const result = await caller(token).rpc("get_mail_configuration");
+        if (result.error?.code === "42501") return false;
+        if (result.error) throw new Error("mail_status_unavailable");
+        return Boolean(result.data);
+    },
     queueTest: async (userToken, protocol) => {
-        const userClient = createClient(supabaseUrl, anonKey, {
-            auth: {persistSession: false, autoRefreshToken: false},
-            global: {headers: {Authorization: `Bearer ${userToken}`}},
-        });
-        return await userClient.rpc("queue_mail_connection_test", {
+        return await caller(userToken).rpc("queue_mail_connection_test", {
             p_protocol: protocol,
         });
     },

@@ -4677,7 +4677,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.11.0",
+      version: "1.12.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

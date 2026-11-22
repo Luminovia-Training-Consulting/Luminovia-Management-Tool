@@ -4,6 +4,7 @@
  */
 import {createClient} from "npm:@supabase/supabase-js@2.119.0";
 import {createAccountHandler} from "./handler.ts";
+import { invitationsAvailable } from "../_shared/invitation-availability.ts";
 import {accountOpenApi} from "./openapi.ts";
 import {type DeletionResult, type DeletionWork, executeDeletion,} from "./deletion-worker.ts";
 
@@ -59,9 +60,9 @@ Deno.serve(
             }
             return result.data.edition === "internal";
         },
-        invitationsEnabled:
-            Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
-            origins.includes(appOrigin),
+        invitationsEnabled: invitationsAvailable(
+            Deno.env.get("PORTAL_INVITES_ENABLED"), appOrigin, origins,
+        ),
         authenticateAcademy: async (token) => {
             const user = await caller(token).auth.getUser(token);
             return !user.error && Boolean(user.data.user);

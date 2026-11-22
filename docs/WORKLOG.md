@@ -1,3 +1,11 @@
+# 23 November 2026 — Course demo and administrator setup
+
+Course lists and course links come before optional tour controls. The safety notice can expand on demand. Clearing demo data preserves the selected role, and the Academy mobile menu omits the unavailable public Help link. The Admin reset remains protected and sits under System operations. The README and roadmap describe that the full local reset leaves services stopped.
+
+Mail administrators can inspect the configured relay and invitation switches. The Edge read checks current mail settings permission. A transport test uses an unchanged saved configuration without writing it again. The UI labels the handshake scope and dates the last result. The published API describes the new read and prior signed Academy contracts remain accepted.
+
+The 1,555 Vitest cases passed, followed by the eight focused mail cases. Isolated Chromium passed all 30 demo and mail cases on desktop and mobile, and verified the disabled destructive action in both profiles. Seven Edge tests, 42 Academy package checks, the documentation gate, reachability, TypeScript, targeted lint and build budgets passed. Provider mail and retained-data verification on the intended independent customer target remain release acceptance.
+
 # 23 November 2026 — Dark appearance refresh
 
 The dark theme uses a single graphite palette with distinct panel and control surfaces, quieter navigation and consistent action, focus and status colours. Dashboard overview cards fill the available columns. The standalone API documentation follows the current appearance and offers its own appearance control.

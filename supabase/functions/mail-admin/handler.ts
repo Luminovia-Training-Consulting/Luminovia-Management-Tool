@@ -9,6 +9,8 @@ type RelayResult = {
 export type MailAdminDependencies = {
     origins: string[];
     relayAvailable: boolean;
+    invitationsEnabled: boolean;
+    authorizeStatus: (token: string) => Promise<boolean>;
     queueTest: (
         userToken: string,
         protocol: MailProtocol,
@@ -56,7 +58,7 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
         if (request.method === "OPTIONS") {
             if (!origin) return response(204, {});
             const preflight = response(204, {}, origin);
-            preflight.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+            preflight.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
             preflight.headers.set(
                 "Access-Control-Allow-Headers",
                 "authorization, apikey, content-type, x-client-info",
@@ -64,7 +66,7 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
             preflight.headers.set("Access-Control-Max-Age", "600");
             return preflight;
         }
-        if (request.method !== "POST")
+        if (request.method !== "GET" && request.method !== "POST")
             return response(405, {error: "method_not_allowed"}, origin);
         const authorization = request.headers.get("authorization") ?? "";
         const token = /^Bearer ([A-Za-z0-9._~-]{20,8192})$/.exec(
@@ -72,6 +74,18 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
         )?.[1];
         if (!token)
             return response(401, {error: "authentication_required"}, origin);
+        if (request.method === "GET") {
+            try {
+                if (!(await deps.authorizeStatus(token)))
+                    return response(403, {error: "permission_denied"}, origin);
+                return response(200, {
+                    relay_configured: deps.relayAvailable,
+                    invitations_enabled: deps.invitationsEnabled,
+                }, origin);
+            } catch {
+                return response(503, {error: "test_unavailable"}, origin);
+            }
+        }
         if (
             request.headers.get("content-type")?.split(";", 1)[0].trim() !==
             "application/json"

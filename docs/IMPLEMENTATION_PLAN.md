@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## First-use and setup guidance
+
+- Keep demo material and course actions above optional guidance. Preserve the selected demo perspective when clearing fictional practice state.
+- Report configured invitation and relay switches to current mail administrators and distinguish the TLS handshake from delivery. Test unchanged transports without rewriting their settings.
+- Present local reset under System operations and document the stopped end state. Use the intended customer target for provider and recovery acceptance.
+
 ## Dark appearance
 
 - Keep one dark palette for the canvas, surfaces, controls and readable status pairs. Use the same appearance in the standalone API documentation and test contrast at desktop and mobile widths. Size the dashboard overview to the cards available to the current account.

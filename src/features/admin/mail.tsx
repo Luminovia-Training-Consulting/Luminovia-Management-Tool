@@ -15,7 +15,10 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 import { useAcademyBrand } from "../branding/academy-branding";
-import { academyMailPaths } from "../developer-api/academy-mail-contract";
+import {
+  academyMailPaths,
+  mailRuntimeStatus,
+} from "../developer-api/academy-mail-contract";
 import "./mail-i18n";
 
 type Protocol = "smtp" | "imap";
@@ -101,7 +104,10 @@ function TestStatus({
   result: ConnectionResult | null;
   t: (key: string) => string;
 }) {
+  const { i18n } = useTranslation();
   if (!result) return null;
+  const testedAt = result.finished_at ?? result.created_at;
+  const timestamp = new Date(testedAt);
   const status = {
     pending: "statusPending",
     running: "statusRunning",
@@ -121,6 +127,17 @@ function TestStatus({
     <p className="mail-test-status" role="status">
       {t(status)}
       {errorKey && ` · ${t(errorKey)}`}
+      {Number.isFinite(timestamp.getTime()) && (
+        <>
+          {" · "}
+          <time dateTime={testedAt}>
+            {new Intl.DateTimeFormat(i18n.language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(timestamp)}
+          </time>
+        </>
+      )}
     </p>
   );
 }
@@ -154,6 +171,19 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       return (
         academy ? academyMailConfiguration.parse(result.data) : result.data
       ) as MailConfiguration;
+    },
+  });
+  const runtime = useQuery({
+    queryKey: ["admin-mail-runtime", actor, Boolean(academy)],
+    enabled: online && configuration.isSuccess,
+    retry: false,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data, error } = await db().functions.invoke("mail-admin", {
+        method: "GET",
+      });
+      if (error) throw error;
+      return mailRuntimeStatus.parse(data);
     },
   });
   const [edits, setDraft] = useState<MailDraft | null>(null);
@@ -213,7 +243,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
     mutationFn: async (protocol: Protocol) => {
       requireOnline();
       if (readOnly) throw new Error("configuration_unavailable");
-      if (!academy || edits) await save.mutateAsync();
+      if (edits) await save.mutateAsync();
       const response = await db().functions.invoke("mail-admin", {
         body: { protocol },
       });
@@ -275,6 +305,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       save.isPending ||
       test.isPending ||
       !transport.enabled ||
+      runtime.data?.relay_configured === false ||
       (!saved.credentials_configured &&
         (!transport.username.trim() || !transport.password))
     );
@@ -286,6 +317,38 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
         description={t(academy ? "academyDescription" : "description")}
       />
       {readOnly && <Notice>{t("academyReadOnly")}</Notice>}
+      <section className="panel" aria-labelledby="mail-setup-title">
+        <h2 id="mail-setup-title">{t("setupTitle")}</h2>
+        <ul>
+          <li>
+            {t(
+              configuration.data.smtp.enabled &&
+                configuration.data.smtp.credentials_configured
+                ? "smtpConfigured"
+                : "smtpIncomplete",
+            )}
+          </li>
+          <li>
+            {t(
+              runtime.data
+                ? runtime.data.relay_configured
+                  ? "relayConfigured"
+                  : "relayMissing"
+                : "relayUnknown",
+            )}
+          </li>
+          <li>
+            {t(
+              runtime.data
+                ? runtime.data.invitations_enabled
+                  ? "invitationEnabled"
+                  : "invitationDisabled"
+                : "invitationUnknown",
+            )}
+          </li>
+        </ul>
+        <p>{t("connectionScope")}</p>
+      </section>
       {notice && (
         <Notice kind={notice === "saved" ? "success" : "error"}>
           {t(notice)}

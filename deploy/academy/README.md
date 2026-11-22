@@ -109,7 +109,7 @@ academy_compose -f deploy/academy/mail-capture.override.yml \
   --profile mail-capture up -d --wait
 ```
 
-The mail relay, invitation routes and notification delivery each have separate activation controls. After the confirmed local administrator can sign in, open Administration → Email transport. Store the chosen provider and sender there and run a connection check. The check verifies TLS and credentials without sending a message. The relay uses the stored sender for both Auth invitation and recovery mail. Enable `PORTAL_INVITES_ENABLED=true` in the private runtime environment and recreate the `functions` service only when the operator has approved invitation delivery. Activating invitations and activating separate scheduled notifications are independent controls.
+The mail relay, invitation routes and notification delivery each have separate activation controls. After the confirmed local administrator can sign in, open Administration → Email transport. Store the chosen provider and sender there and run a connection check. The setup panel shows whether the private relay is configured and the runtime allows invitations. The connection check verifies TLS and credentials without sending a message. The relay uses the stored sender for both Auth invitation and recovery mail. Enable `PORTAL_INVITES_ENABLED=true` in the private runtime environment and recreate the `functions` service only when the operator has approved invitation delivery. Activating invitations and activating separate scheduled notifications are independent controls.
 
 ### Optional course notification email
 

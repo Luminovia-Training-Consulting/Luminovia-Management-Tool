@@ -316,7 +316,7 @@ describe("connected fictional workflows", () => {
     expect(network).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Demo zurücksetzen" }));
-    fireEvent.change(role, { target: { value: "participant" } });
+    expect(role).toHaveValue("participant");
     expect(
       screen.queryByText("Willkommen zur fiktiven Übung."),
     ).not.toBeInTheDocument();

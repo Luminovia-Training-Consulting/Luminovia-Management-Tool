@@ -55,8 +55,8 @@ export function AdminNavigation() {
         {canReset && (
           <NavLink to="/admin/reset">
             {i18n.language.startsWith("de")
-              ? "Plattform zurücksetzen"
-              : "Reset platform"}
+              ? "Systembetrieb"
+              : "System operations"}
           </NavLink>
         )}
       </nav>

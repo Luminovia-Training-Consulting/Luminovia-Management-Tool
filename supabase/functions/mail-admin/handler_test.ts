@@ -15,13 +15,15 @@ function fixture(
     const dependencies: MailAdminDependencies = {
         origins: [origin],
         relayAvailable: true,
-        queueTest: async (userToken, protocol) => {
+        invitationsEnabled: false,
+        authorizeStatus: () => Promise.resolve(true),
+        queueTest: (userToken, protocol) => {
             calls.push(`queue:${userToken}:${protocol}`);
-            return {data: testId, error: null};
+            return Promise.resolve({data: testId, error: null});
         },
-        relayTest: async (id) => {
+        relayTest: (id) => {
             calls.push(`relay:${id}`);
-            return relayValue;
+            return Promise.resolve(relayValue);
         },
         ...overrides,
     };
@@ -63,7 +65,7 @@ Deno.test(
         assertEquals(preflight.status, 204);
         assertEquals(
             preflight.headers.get("access-control-allow-methods"),
-            "POST, OPTIONS",
+            "GET, POST, OPTIONS",
         );
         const wrongOrigin = await f.handler(
             new Request("https://portal.example.invalid/functions/v1/mail-admin", {
@@ -80,7 +82,7 @@ Deno.test(
         assertEquals(
             (
                 await f.handler(
-                    new Request("https://portal.example.invalid", {method: "GET"}),
+                    new Request("https://portal.example.invalid", {method: "PUT"}),
                 )
             ).status,
             405,
@@ -112,7 +114,7 @@ Deno.test(
 
 Deno.test("database permission denial blocks relay access", async () => {
     const f = fixture({
-        queueTest: async () => ({data: null, error: {code: "42501"}}),
+        queueTest: () => Promise.resolve({data: null, error: {code: "42501"}}),
     });
     const response = await f.handler(f.request());
 
@@ -161,4 +163,20 @@ Deno.test("unknown relay error strings are discarded", async () => {
     const response = await f.handler(f.request());
 
     assertEquals(await response.json(), {status: "failed", error_code: null});
+});
+Deno.test("mail status is read-only, caller-authorized and returns only runtime flags", async () => {
+    const request = () => new Request("https://portal.example.invalid/functions/v1/mail-admin", {
+        headers: {origin, authorization: `Bearer ${token}`},
+    });
+    const fixtureWithStatus = fixture({
+        authorizeStatus: (userToken) => Promise.resolve(userToken === token),
+        invitationsEnabled: true,
+        relayAvailable: false,
+    });
+    const status = await fixtureWithStatus.handler(request());
+    assertEquals(status.status, 200);
+    assertEquals(await status.json(), {relay_configured: false, invitations_enabled: true});
+    assertEquals(fixtureWithStatus.calls, []);
+    assertEquals((await fixture({authorizeStatus: () => Promise.resolve(false)}).handler(request())).status, 403);
+    assertEquals((await fixture({authorizeStatus: () => Promise.reject(new Error("hidden"))}).handler(request())).status, 503);
 });

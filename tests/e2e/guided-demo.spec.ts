@@ -83,6 +83,23 @@ async function visitDemoSection(page: Page, path: string) {
   await page.locator(`#demo-mobile-navigation a[href="/demo${path}"]`).click();
 }
 
+test("the learner can open a demo course before the optional tour", async ({ page }) => {
+  await page.goto("/demo/learning");
+  const firstCourse = page.getByRole("link", { name: /Kurs öffnen: Linux Grundlagen/ });
+  await expect(firstCourse).toBeVisible();
+  const startTour = page.getByRole("button", { name: "Rundgang starten", exact: true });
+  const courseBounds = await firstCourse.boundingBox();
+  const tourBounds = await startTour.boundingBox();
+  expect(courseBounds?.y).toBeLessThan(tourBounds?.y ?? 0);
+  await firstCourse.click();
+  const contents = page.getByRole("navigation", { name: "Kursbereiche" });
+  await expect(contents.getByRole("link", { name: "Materialien" })).toBeVisible();
+  await expect(page.locator("details.demo-safety")).not.toHaveAttribute("open");
+  await page.getByRole("button", { name: "Demo zurücksetzen", exact: true }).click();
+  await expect(contents.getByRole("link", { name: "Materialien" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Demo-Rolle" })).toHaveValue("participant");
+});
+
 test("fictional course cards and dark theme stay accessible at portal widths", async ({
   page,
 }, testInfo) => {

@@ -3,6 +3,20 @@ import i18n from "../../lib/i18n";
 
 const de = {
   title: "E-Mail-Transport",
+  setupTitle: "Einrichtung prüfen",
+  smtpConfigured: "SMTP ist aktiviert und Zugangsdaten sind gespeichert.",
+  smtpIncomplete: "SMTP ist deaktiviert oder Zugangsdaten fehlen.",
+  relayConfigured:
+    "Der private Mail-Relay ist in der Installation konfiguriert.",
+  relayMissing: "Der Mail-Relay fehlt. Prüfe die Serverkonfiguration.",
+  relayUnknown: "Status des Mail-Relays ist derzeit nicht verfügbar.",
+  invitationEnabled: "Der Server erlaubt E-Mail-Einladungen.",
+  invitationDisabled:
+    "E-Mail-Einladungen sind serverseitig gesperrt. Prüfe die Einladungseinstellung der Installation.",
+  invitationUnknown:
+    "Der Status der E-Mail-Einladungen ist derzeit nicht verfügbar.",
+  connectionScope:
+    "Der Verbindungstest prüft TLS und Zugangsdaten ohne E-Mail-Versand. Prüfe die tatsächliche Zustellung separat mit einer Einladung oder Passwort-Wiederherstellung an ein freigegebenes Testpostfach.",
   description:
     "SMTP wird für Authentifizierung und Portalbenachrichtigungen gemeinsam verwendet. Zugangsdaten werden nur verschlüsselt gespeichert und nie erneut angezeigt.",
   academyDescription:
@@ -52,6 +66,19 @@ const de = {
 };
 const en: typeof de = {
   title: "Mail transport",
+  setupTitle: "Setup status",
+  smtpConfigured: "SMTP is enabled and credentials are stored.",
+  smtpIncomplete: "SMTP is disabled or credentials are missing.",
+  relayConfigured:
+    "The private mail relay is configured for this installation.",
+  relayMissing: "The mail relay is missing. Check the server configuration.",
+  relayUnknown: "The mail relay status is currently unavailable.",
+  invitationEnabled: "The server allows email invitations.",
+  invitationDisabled:
+    "The server blocks email invitations. Check the installation's invitation setting.",
+  invitationUnknown: "The email invitation status is currently unavailable.",
+  connectionScope:
+    "The connection test checks TLS and credentials without sending mail. Verify real delivery separately with an invitation or password recovery to an approved test mailbox.",
   description:
     "SMTP is shared by Auth and portal notifications. Credentials are stored encrypted and are never displayed again.",
   academyDescription:

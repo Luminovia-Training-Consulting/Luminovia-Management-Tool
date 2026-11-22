@@ -10,6 +10,8 @@ const endpoint = "/__portal/local-reset";
 
 const copy = {
   title: ["Plattform zurücksetzen", "Reset platform"],
+  operations: ["Systembetrieb", "System operations"],
+  irreversible: ["Dauerhafte Datenlöschung", "Permanent data deletion"],
   denied: [
     "Diese Seite ist nur für aktive Administratoren und Owner.",
     "This page is for active administrators and owners only.",
@@ -146,77 +148,83 @@ function PlatformResetForm({
   }
 
   return (
-    <section className="card stack" aria-labelledby="platform-reset-title">
-      <h1 id="platform-reset-title">{t("title")}</h1>
-      {target.isLoading ? (
-        <p role="status">{t("checking")}</p>
-      ) : target.data ? (
-        <>
-          <p>{t("scope")}</p>
-          {target.data && (
-            <p>
-              {t("target")} <code>{target.data}</code>
-            </p>
-          )}
-          <form className="stack max-w-md" onSubmit={submit}>
-            <label className="stack" htmlFor="reset-confirmation">
-              {t("confirm")}
-              <input
-                id="reset-confirmation"
-                className="input"
-                autoComplete="off"
-                spellCheck={false}
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.currentTarget.value)}
-              />
-            </label>
-            <label className="stack" htmlFor="reset-password">
-              {t("password")}
-              <input
-                id="reset-password"
-                className="input"
-                type="password"
-                autoComplete="current-password"
-                required
-                maxLength={1024}
-                value={password}
-                onChange={(event) => setPassword(event.currentTarget.value)}
-              />
-            </label>
-            <label className="stack" htmlFor="reset-code">
-              {t("code")}
-              <input
-                id="reset-code"
-                className="input"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                value={code}
-                onChange={(event) => setCode(event.currentTarget.value)}
-              />
-            </label>
-            {result && <p role="alert">{t(result)}</p>}
-            <Button
-              className="self-start"
-              type="submit"
-              variant="danger"
-              disabled={confirmation !== "DELETE" || !password || pending}
-            >
-              {t("action")}
-            </Button>
-          </form>
-        </>
-      ) : import.meta.env.DEV ? (
-        <p>{t("localUnavailable")}</p>
-      ) : (
-        <>
-          <p>{t("hosted")}</p>
-          <code className="break-words">./portal reset-live --plan</code>
-          <code className="break-words">./portal reset-live --apply</code>
-        </>
-      )}
-    </section>
+    <div className="stack">
+      <h1>{t("operations")}</h1>
+      <section className="panel stack" aria-labelledby="platform-reset-title">
+        <h2 id="platform-reset-title">{t("title")}</h2>
+        <p className="notice error">{t("irreversible")}</p>
+        {target.isLoading ? (
+          <p role="status">{t("checking")}</p>
+        ) : target.data ? (
+          <>
+            <p>{t("scope")}</p>
+            {target.data && (
+              <p>
+                {t("target")} <code>{target.data}</code>
+              </p>
+            )}
+            <form className="stack max-w-md" onSubmit={submit}>
+              <label className="stack" htmlFor="reset-confirmation">
+                {t("confirm")}
+                <input
+                  id="reset-confirmation"
+                  className="input"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={confirmation}
+                  onChange={(event) =>
+                    setConfirmation(event.currentTarget.value)
+                  }
+                />
+              </label>
+              <label className="stack" htmlFor="reset-password">
+                {t("password")}
+                <input
+                  id="reset-password"
+                  className="input"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={1024}
+                  value={password}
+                  onChange={(event) => setPassword(event.currentTarget.value)}
+                />
+              </label>
+              <label className="stack" htmlFor="reset-code">
+                {t("code")}
+                <input
+                  id="reset-code"
+                  className="input"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(event) => setCode(event.currentTarget.value)}
+                />
+              </label>
+              {result && <p role="alert">{t(result)}</p>}
+              <Button
+                className="self-start"
+                type="submit"
+                variant="danger"
+                disabled={confirmation !== "DELETE" || !password || pending}
+              >
+                {t("action")}
+              </Button>
+            </form>
+          </>
+        ) : import.meta.env.DEV ? (
+          <p>{t("localUnavailable")}</p>
+        ) : (
+          <>
+            <p>{t("hosted")}</p>
+            <code className="break-words">./portal reset-live --plan</code>
+            <code className="break-words">./portal reset-live --apply</code>
+          </>
+        )}
+      </section>
+    </div>
   );
 }
 

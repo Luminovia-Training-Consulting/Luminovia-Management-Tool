@@ -358,7 +358,6 @@ export function DemoPage() {
     setCoursePractice(initialCoursePractice());
     setTour(false);
     setComplete(false);
-    setRole("lecturer");
     report("resetDone");
   }
 
@@ -408,6 +407,63 @@ export function DemoPage() {
                       : path === "/wiki" || path === "/forum"
                         ? Boolean(contentPosts[path]?.length)
                         : checked.includes(path);
+  const tourPanel = (
+    <section className="demo-tour" aria-label={t("tour")}>
+      <div className="demo-tour-top">
+        <Compass aria-hidden="true" />
+        <strong>{t("tour")}</strong>
+        <span aria-live="polite">
+          {t("progress", {
+            current: index + 1,
+            total: visibleModules.length,
+          })}
+        </span>
+      </div>
+      {tour ? (
+        <>
+          <p>{description}</p>
+          <div className="demo-controls">
+            <Button
+              variant="secondary"
+              disabled={index === 0}
+              onClick={() => visit(index - 1)}
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              {t("previous")}
+            </Button>
+            <Button
+              onClick={() => {
+                if (index === visibleModules.length - 1) {
+                  stopTour(true);
+                } else visit(index + 1);
+              }}
+            >
+              {t(index === visibleModules.length - 1 ? "finish" : "next")}
+              <ArrowRight size={16} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" onClick={() => stopTour()}>
+              {t("pause")}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {complete && <p role="status">{t("completed")}</p>}
+          <Button
+            ref={launcher}
+            onClick={() => {
+              heading.current?.focus();
+              setTour(true);
+              setComplete(false);
+              if (complete) visit(0);
+            }}
+          >
+            {t(complete ? "restart" : "start")}
+          </Button>
+        </>
+      )}
+    </section>
+  );
   return (
     <div className="app-shell demo-app" data-demo-role={role}>
       <a className="skip-link" href="#demo-main">
@@ -481,13 +537,15 @@ export function DemoPage() {
           </div>
         </header>
         <main id="demo-main" className="main-content demo-main">
-          <div className="demo-safety" role="note">
-            <FlaskConical aria-hidden="true" size={20} />
-            <span>{t(academyDemo ? "academyIsolation" : "isolation")}</span>
-          </div>
+          <details className="demo-safety">
+            <summary>
+              <FlaskConical aria-hidden="true" size={17} />
+              {t("badge")}
+            </summary>
+            <p>{t(academyDemo ? "academyIsolation" : "isolation")}</p>
+          </details>
           {!selected && <p role="alert">{t("invalid")}</p>}
           <PageHeading
-            eyebrow={t("badge")}
             title={
               activeCourse
                 ? t(activeCourse.title)
@@ -515,66 +573,17 @@ export function DemoPage() {
               </Button>
             }
           />
-          <p className="demo-perspective">
-            {academyDemo
-              ? t(demoRoleLabel[role])
-              : t(`role${role[0].toUpperCase()}${role.slice(1)}`)}
-          </p>
-          <section className="demo-tour" aria-label={t("tour")}>
-            <div className="demo-tour-top">
-              <Compass aria-hidden="true" />
-              <strong>{t("tour")}</strong>
-              <span aria-live="polite">
-                {t("progress", {
-                  current: index + 1,
-                  total: visibleModules.length,
-                })}
-              </span>
-            </div>
-            {tour ? (
-              <>
-                <p>{description}</p>
-                <div className="demo-controls">
-                  <Button
-                    variant="secondary"
-                    disabled={index === 0}
-                    onClick={() => visit(index - 1)}
-                  >
-                    <ArrowLeft size={16} aria-hidden="true" />
-                    {t("previous")}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (index === visibleModules.length - 1) {
-                        stopTour(true);
-                      } else visit(index + 1);
-                    }}
-                  >
-                    {t(index === visibleModules.length - 1 ? "finish" : "next")}
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </Button>
-                  <Button variant="ghost" onClick={() => stopTour()}>
-                    {t("pause")}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p>{complete ? t("completed") : description}</p>
-                <Button
-                  ref={launcher}
-                  onClick={() => {
-                    heading.current?.focus();
-                    setTour(true);
-                    setComplete(false);
-                    if (complete) visit(0);
-                  }}
-                >
-                  {t(complete ? "restart" : "start")}
-                </Button>
-              </>
-            )}
-          </section>
+          {feedback?.path === path && feedback.key === "resetDone" && (
+            <p role="status">{t("resetDone")}</p>
+          )}
+          {path === "/" && (
+            <p className="demo-perspective">
+              {academyDemo
+                ? t(demoRoleLabel[role])
+                : t(`role${role[0].toUpperCase()}${role.slice(1)}`)}
+            </p>
+          )}
+          {((!courseSection && !customLearnerView) || tour) && tourPanel}
           {path === "/" && (
             <div className="demo-stats kpi-grid">
               {demoDashboardStats(
@@ -1051,7 +1060,7 @@ export function DemoPage() {
                 <p className="demo-progress-label">
                   {t("state")}: {t(practiceDone ? "done" : "empty")}
                 </p>
-                {feedback?.path === path && (
+                {feedback?.path === path && feedback.key !== "resetDone" && (
                   <p role="status">{t(feedback.key)}</p>
                 )}
               </section>
@@ -1094,6 +1103,7 @@ export function DemoPage() {
               </section>
             </div>
           )}
+          {(courseSection || customLearnerView) && !tour && tourPanel}
         </main>
       </div>
       <div className="mobile-nav demo-mobile-nav">
@@ -1123,7 +1133,7 @@ export function DemoPage() {
           <div id="demo-mobile-panel" className="demo-mobile-panel">
             <p className="demo-role-hint">{t("roleHint")}</p>
             <div className="demo-mobile-panel-links">
-              <Link to="/help">{t("help")}</Link>
+              {!academyDemo && <Link to="/help">{t("help")}</Link>}
               <Link to="/login">{t("login")}</Link>
             </div>
             <PortalNavigation

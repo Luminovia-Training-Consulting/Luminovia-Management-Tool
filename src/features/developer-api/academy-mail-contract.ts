@@ -93,6 +93,10 @@ const smtpDraft = z.union([
     ...writeOnly,
   }),
 ]);
+export const mailRuntimeStatus = z.strictObject({
+  relay_configured: z.boolean(),
+  invitations_enabled: z.boolean(),
+});
 const result = z.strictObject({
   status: z.enum(["succeeded", "failed"]),
   error_code: safeErrorCode.nullable(),
@@ -105,6 +109,24 @@ const forbidden = response(
   "Current administrator and relevant licence required",
 );
 
+const runtimeStatusOperation = (
+  operationId: string,
+  operationTags: string[],
+  security: Array<Record<string, never[]>>,
+) => ({
+  operationId,
+  tags: operationTags,
+  security,
+  summary: "Read the configured mail relay and account invitation switches",
+  description:
+    "Requires current mail administration authority. Reports configured runtime switches without performing a handshake or attempting delivery.",
+  responses: {
+    "200": response("Runtime switches", mailRuntimeStatus),
+    "401": response("Authentication required", edgeError),
+    "403": response("Origin or current authority refused", edgeError),
+    "503": response("Status unavailable", edgeError),
+  },
+});
 export const academyMailPaths = {
   "/rest/v1/rpc/get_mail_configuration": {
     post: {
@@ -175,6 +197,15 @@ export const academyMailPaths = {
     },
   },
   "/functions/v1/mail-admin": {
+    get: {
+      ...runtimeStatusOperation(
+        "readAcademyMailRuntimeStatus",
+        tags,
+        credentials,
+      ),
+      "x-portal-licence": "active-or-grace",
+      "x-portal-document-only": true,
+    },
     post: {
       operationId: "checkAcademyMailConnection",
       tags,
@@ -300,6 +331,11 @@ export const internalMailDownload = {
     },
   },
   "/functions/v1/mail-admin": {
+    get: runtimeStatusOperation(
+      "readMailRuntimeStatus",
+      internalTags,
+      internalSecurity,
+    ),
     post: {
       operationId: "checkMailConnection",
       tags: internalTags,
