@@ -48,6 +48,7 @@ const fake = vi.hoisted(() => ({
   publicDemo: false,
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
   brandName: null as string | null,
+  brandLogo: null as string | null,
   brandLinkConflict: false,
   draftScheduleRevision: 1,
   withdrawalAvailable: false,
@@ -214,6 +215,7 @@ beforeEach(async () => {
   fake.publicDemo = false;
   fake.brandLinks = null;
   fake.brandName = null;
+  fake.brandLogo = null;
   fake.brandLinkConflict = false;
   fake.draftScheduleRevision = 1;
   fake.withdrawalAvailable = false;
@@ -247,8 +249,8 @@ beforeEach(async () => {
         case "academy_public_logo":
           data = {
             installation_id: fake.returnedInstallation,
-            version: 0,
-            png_base64: null,
+            version: fake.brandLogo ? 1 : 0,
+            png_base64: fake.brandLogo,
           };
           break;
         case "academy_public_branding":
@@ -642,9 +644,11 @@ it.each([
     ).toHaveAttribute("href", "/");
     expect(
       fake.rpc.mock.calls.every(([name]) =>
-        ["academy_public_branding", "academy_public_brand_links"].includes(
-          name,
-        ),
+        [
+          "academy_public_branding",
+          "academy_public_brand_links",
+          "academy_public_logo",
+        ].includes(name),
       ),
     ).toBe(true);
     expect(fake.from).not.toHaveBeenCalled();
@@ -780,6 +784,49 @@ it("publishes only academy guides and its own downloadable OpenAPI contract", as
   expect(
     screen.getByRole("link", { name: "Open section in the portal" }),
   ).toHaveAttribute("href", "/learning");
+});
+
+it("updates the signed-out Academy tab icon and restores the signed fallback", async () => {
+  fake.actor = null;
+  fake.brandLogo =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR2sAAAAASUVORK5CYII=";
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL() {
+        return "blob:fictional-academy-logo";
+      }
+      static revokeObjectURL() {}
+    },
+  );
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.href = "/icons/icon-192.png";
+  const touchIcon = document.createElement("link");
+  touchIcon.rel = "apple-touch-icon";
+  touchIcon.href = "/icons/apple-touch-icon.png";
+  document.head.append(favicon, touchIcon);
+  try {
+    const page = open("/login");
+    await waitFor(() =>
+      expect(favicon).toHaveAttribute(
+        "href",
+        `data:image/png;base64,${fake.brandLogo}`,
+      ),
+    );
+    expect(touchIcon).toHaveAttribute("href", "/icons/apple-touch-icon.png");
+
+    fake.brandLogo = null;
+    await act(async () =>
+      page.client.invalidateQueries({ queryKey: ["academy-public-logo"] }),
+    );
+    await waitFor(() =>
+      expect(favicon).toHaveAttribute("href", "/icons/icon-192.png"),
+    );
+  } finally {
+    favicon.remove();
+    touchIcon.remove();
+  }
 });
 
 it("documents included Premium LMS and Academy integration separately from the vendor portal", async () => {
@@ -1170,7 +1217,12 @@ it("rejects internal paths in the dedicated app without making protected backend
   expect(await screen.findByRole("heading")).toHaveTextContent(
     /could not be found/i,
   );
-  expect(fake.rpc).toHaveBeenCalledTimes(2);
+  expect(fake.rpc).toHaveBeenCalledTimes(3);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "academy_public_logo",
+    {},
+    { get: true },
+  );
   expect(fake.rpc).toHaveBeenCalledWith(
     "academy_public_branding",
     {},

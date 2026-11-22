@@ -1221,8 +1221,22 @@ function CourseWorkspaceLayout({
   );
 }
 
-/** Revalidate the signed-in actor's course and entitlement before rendering any protected panels. */
+/** Remount the protected course query on reconnect so cached panels wait for a current entitlement check. */
 export function CourseWorkspacePage({
+  academy,
+}: {
+  academy?: "active" | "grace";
+}) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  return online ? (
+    <ConnectedCourseWorkspace academy={academy} />
+  ) : (
+    <Notice>{t("workspaceOffline")}</Notice>
+  );
+}
+
+function ConnectedCourseWorkspace({
   academy,
 }: {
   academy?: "active" | "grace";
@@ -1230,18 +1244,14 @@ export function CourseWorkspacePage({
   const { id = "" } = useParams();
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
-  const online = useOnline();
   const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const query = useQuery({
     ...courseWorkspaceQuery(actor, id),
-    enabled: online,
     staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: 10_000,
   });
-  if (!online) return <Notice>{t("workspaceOffline")}</Notice>;
-  if (query.isPending || (query.isFetching && !query.isFetchedAfterMount))
-    return <Loading />;
+  if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
   if (
     query.error?.message?.includes("company_premium_lms_off") ||
     (query.isSuccess && !query.data.lms_enabled)

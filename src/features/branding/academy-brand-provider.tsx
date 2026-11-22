@@ -7,9 +7,11 @@ import {
   AcademyBrandContext,
   useAcademyBrandingQuery,
 } from "./academy-branding";
+import { useAcademyLogoPng } from "./academy-logo";
 
 export function AcademyBrandProvider({ children }: { children: ReactNode }) {
   const online = useOnline();
+  const logo = useAcademyLogoPng();
   const branding = useQuery({
     ...useAcademyBrandingQuery(),
     enabled:
@@ -38,5 +40,15 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", brand.themeColor);
   }, [brand]);
+  useEffect(() => {
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) return;
+    icon.href = logo
+      ? `data:image/png;base64,${logo}`
+      : installationBrand.favicon;
+    return () => {
+      icon.href = installationBrand.favicon;
+    };
+  }, [logo]);
   return <AcademyBrandContext value={brand}>{children}</AcademyBrandContext>;
 }

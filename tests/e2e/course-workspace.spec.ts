@@ -13,11 +13,19 @@ test.skip(
 
 type CompanyInvitation = {organisation_id: string; version: number};
 
-async function fixture({ upcoming = false } = {}) {
+async function fixture({
+    upcoming = false,
+    premium = true,
+    sharedLearner,
+}: {
+    upcoming?: boolean;
+    premium?: boolean;
+    sharedLearner?: Awaited<ReturnType<typeof actor>>;
+} = {}) {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
         manager = await actor("Fictional course workspace manager", "admin"),
         teacher = await actor("Fictional course workspace teacher", "lecturer"),
-        learner = await actor("Fictional Müller Μαρία Мария", "participant"),
+        learner = sharedLearner ?? await actor("Fictional Müller Μαρία Мария", "participant"),
         client = await actor("Fictional course workspace customer", "client");
     const org = randomUUID(),
         template = randomUUID(),
@@ -104,9 +112,11 @@ async function fixture({ upcoming = false } = {}) {
     );
     const adminClient = api(process.env.SUPABASE_ANON_KEY!);
     await checked(adminClient.auth.signInWithPassword({email: manager.email, password: process.env.E2E_PASSWORD!}));
-    await checked(adminClient.rpc("set_company_premium", {
-        p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
-    }));
+    if (premium) {
+        await checked(adminClient.rpc("set_company_premium", {
+            p_organisation_id: org, p_enabled: true, p_expected_version: 0, p_request_id: randomUUID(),
+        }));
+    }
     return {
         service,
         manager,
@@ -116,6 +126,7 @@ async function fixture({ upcoming = false } = {}) {
         org,
         adminClient,
         run,
+        job,
         session,
         contact,
         title,
@@ -158,20 +169,77 @@ async function linkWorkspaceLearner(f: Awaited<ReturnType<typeof fixture>>) {
     return learner;
 }
 
-test("Premium exam switching and scanned bytes follow real company, lecturer and learner access", async ({
+test("Premium exam switching and scanned bytes follow real access across two companies", async ({
     page,
     browser,
 }, info) => {
-    test.setTimeout(120_000);
-    const f = await fixture({upcoming: true});
+    test.setTimeout(150_000);
+    const f = await fixture({premium: false});
+    const other = await fixture({premium: false, sharedLearner: f.learner});
+    const togglePremium = async (target: typeof f, enabled: boolean, version: number) => {
+        const result = await checked(target.adminClient.rpc("set_company_premium", {
+            p_organisation_id: target.org,
+            p_enabled: enabled,
+            p_expected_version: version,
+            p_request_id: randomUUID(),
+        }), {requireData: true});
+        expect(result).toEqual({status: "updated", enabled, version: version + 1});
+    };
+    await login(page, f.learner.email, /\/learning$/);
+    await expect(page.getByText("Für dein Konto sind noch keine Kursräume freigegeben.", {exact: true})).toBeVisible();
+    const company = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(company.auth.signInWithPassword({email: f.client.email, password: process.env.E2E_PASSWORD!}));
+    const register = (requester: ReturnType<typeof api>, target = f) =>
+        requester.rpc("course_session_register", {p_run_id: target.run, p_session_id: target.session});
+    expect((await register(company)).error?.code).toBe("42501");
+    for (const target of [f, other]) await togglePremium(target, true, 0);
     const learner = await linkWorkspaceLearner(f);
-    await checked(
-        f.adminClient.rpc("manage_course_enrolment", {
-            p_course_run_id: f.run,
+    await linkWorkspaceLearner(other);
+    for (const target of [f, other]) {
+        await checked(target.adminClient.rpc("manage_course_enrolment", {
+            p_course_run_id: target.run,
             p_user_id: f.learner.id,
             p_status: "enrolled",
-        }),
-    );
+        }));
+    }
+    const attendanceNote = "Fictional reviewed attendance";
+    await checked(company.rpc("save_course_session_attendance", {
+        p_run_id: f.run, p_session_id: f.session, p_user_id: f.learner.id,
+        p_status: "present", p_arrival_at: null, p_departure_at: null, p_note: attendanceNote,
+        p_reason: null, p_expected_version: 0,
+    }));
+    const attendanceBefore = await checked(register(company), {requireData: true});
+    expect(attendanceBefore.rows).toMatchObject([{user_id: f.learner.id, status: "present", note: attendanceNote, version: 1}]);
+    expect((await register(company, other)).error?.code).toBe("42501");
+    expect((await register(learner)).error?.code).toBe("42501");
+    const startChat = async (target: typeof f, body: string) => {
+        const room = await checked(target.adminClient.rpc("create_chat_group", {
+            p_title: `Fictional chat ${target.token}`,
+            p_kind: "participant_course",
+            p_job_id: target.job,
+            p_member_ids: [],
+        }), {requireData: true});
+        await checked(target.adminClient.rpc("send_course_chat_message", {
+            p_room_id: room,
+            p_body: body,
+            p_client_id: randomUUID(),
+        }));
+        return room;
+    };
+    const messageA = "Fictional message for company A";
+    const messageB = "Fictional message for company B";
+    const roomA = await startChat(f, messageA);
+    await startChat(other, messageB);
+    const chat = page.getByRole("region", {name: "Kurs-Chat", exact: true});
+    const enrolments = () => checked(f.service.from("course_enrolments")
+        .select("course_run_id,user_id,status,created_at,updated_at")
+        .eq("user_id", f.learner.id).order("course_run_id"), {requireData: true});
+    const originalEnrolments = await enrolments();
+    expect(originalEnrolments).toHaveLength(2);
+    await page.reload();
+    for (const target of [f, other]) {
+        await expect(page.getByRole("heading", {name: target.title, exact: true})).toBeVisible();
+    }
     const learnerSession = await checked(learner.auth.getSession(), {requireData: true});
     expect(learnerSession.session).toBeTruthy();
     const workspace = `/courses/${f.run}/workspace`;
@@ -218,31 +286,33 @@ test("Premium exam switching and scanned bytes follow real company, lecturer and
     const companyContext = await browser.newContext(context);
     const teachingContext = await browser.newContext(context);
     try {
-        const company = await companyContext.newPage();
+        const companyPage = await companyContext.newPage();
         const teacher = await teachingContext.newPage();
-        await login(page, f.learner.email, /\/learning$/);
+        const companyAttendance = companyPage.getByRole("region", {name: "Anwesenheitsliste je Termin", exact: true});
         await page.goto(workspace);
         await expect(page.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
         await expect(examRegion(page)).toHaveCount(0);
-        await login(company, f.client.email);
-        await company.goto(workspace);
+        await expect(chat.getByText(messageA, {exact: true})).toBeVisible();
+        await login(companyPage, f.client.email);
+        await companyPage.goto(workspace);
+        await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
         await expect(
-            examRegion(company).getByRole("option", {
+            examRegion(companyPage).getByRole("option", {
                 name: "Lösungsschlüssel für das Kursteam",
                 exact: true,
             }),
         ).toHaveCount(0);
-        await changeRequirement(company, true);
-        await expect(examRegion(company).getByText(/sofort herunterladen/)).toBeVisible();
-        await upload(company, "Invalid fictional exam.pdf", Buffer.from("Not a PDF."));
+        await changeRequirement(companyPage, true);
+        await expect(examRegion(companyPage).getByText(/sofort herunterladen/)).toBeVisible();
+        await upload(companyPage, "Invalid fictional exam.pdf", Buffer.from("Not a PDF."));
         await expect(
-            examRegion(company).getByText(/Die Dateiprüfung konnte nicht bestätigt werden/),
+            examRegion(companyPage).getByText(/Die Dateiprüfung konnte nicht bestätigt werden/),
         ).toBeVisible({timeout: 45_000});
         expect((await exams()).documents).toEqual([]);
         const bytes = accountingTestPdf();
         const paper = `Fictional exam ${f.token}.pdf`;
-        await upload(company, paper, bytes);
-        await expect(examRegion(company).getByText(paper, {exact: true})).toBeVisible({
+        await upload(companyPage, paper, bytes);
+        await expect(examRegion(companyPage).getByText(paper, {exact: true})).toBeVisible({
             timeout: 45_000,
         });
         const [published] = (await exams()).documents;
@@ -279,9 +349,9 @@ test("Premium exam switching and scanned bytes follow real company, lecturer and
         );
         expect(restricted.audience).toBe("exam_staff");
         expect((await requestPaper(restricted.id)).status()).toBe(403);
-        await company.reload();
-        await expect(examRegion(company).getByText(paper, {exact: true})).toBeVisible();
-        await expect(examRegion(company).getByText(answer, {exact: true})).toHaveCount(0);
+        await companyPage.reload();
+        await expect(examRegion(companyPage).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(companyPage).getByText(answer, {exact: true})).toHaveCount(0);
         expect((await exams()).documents.map((document: {id: string}) => document.id)).toEqual([
             published.id,
         ]);
@@ -298,24 +368,72 @@ test("Premium exam switching and scanned bytes follow real company, lecturer and
         await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
         await expect(examRegion(page).getByText(answer, {exact: true})).toHaveCount(0);
 
-        const togglePremium = (enabled: boolean, version: number) =>
-            checked(
-                f.adminClient.rpc("set_company_premium", {
-                    p_organisation_id: f.org,
-                    p_enabled: enabled,
-                    p_expected_version: version,
-                    p_request_id: randomUUID(),
-                }),
-            );
-        await togglePremium(false, 1);
+        await page.context().setOffline(true);
+        const workspaceRequest = "**/rest/v1/rpc/course_workspace";
+        let releaseRead!: () => void;
+        const holdRead = new Promise<void>((resolve) => { releaseRead = resolve; });
+        await page.route(workspaceRequest, async (route) => {
+            await holdRead;
+            await route.continue();
+        });
+        try {
+            await expect(page.getByText(/Verbinde dich mit dem Internet, um den aktuellen Zugriff/)).toBeVisible();
+            await expect(examRegion(page)).toHaveCount(0);
+            await expect(chat).toHaveCount(0);
+            await togglePremium(f, false, 1);
+            // Delay delivery of the real response and check the warm content while waiting.
+            const recheck = page.waitForRequest(workspaceRequest);
+            await page.context().setOffline(false);
+            await recheck;
+            await expect(examRegion(page)).toHaveCount(0);
+            await expect(chat).toHaveCount(0);
+        } finally {
+            releaseRead();
+            await page.context().setOffline(false);
+        }
+        await expect(page.getByRole("alert").getByRole("button", {name: "Erneut versuchen"})).toBeVisible({timeout: 30_000});
+        await page.unroute(workspaceRequest);
+        await expect(examRegion(page)).toHaveCount(0);
         expect((await requestPaper(published.id)).status()).toBe(403);
-        await togglePremium(true, 2);
+        expect((await learner.rpc("course_chat_messages", {p_room_id: roomA})).error?.code).toBe("42501");
+        expect((await register(company)).error?.code).toBe("42501");
+        await companyPage.reload();
+        await expect(companyPage.getByRole("heading", {name: "Lernarbeitsbereich deaktiviert", exact: true})).toBeVisible();
+        await expect(companyAttendance).toHaveCount(0);
+        await expect(examRegion(companyPage)).toHaveCount(0);
+
+        await page.goto("/learning");
+        await expect(page.getByRole("heading", {name: other.title, exact: true})).toBeVisible();
+        await expect(page.getByRole("heading", {name: f.title, exact: true})).toHaveCount(0);
+        await page.getByRole("link", {name: other.title, exact: true}).click();
+        await expect(page.getByRole("heading", {name: other.title, exact: true})).toBeVisible();
+        await expect(chat.getByText(messageB, {exact: true})).toBeVisible();
+        await expect(chat.getByText(messageA, {exact: true})).toHaveCount(0);
+        const reply = "Fictional learner reply while company A is OFF";
+        await chat.getByRole("textbox", {name: "Nachricht", exact: true}).fill(reply);
+        await chat.getByRole("button", {name: "Nachricht senden", exact: true}).click();
+        await expect(chat.getByText(reply, {exact: true})).toBeVisible();
+        await expect(examRegion(page).getByText(paper, {exact: true})).toHaveCount(0);
+        expect(await enrolments()).toEqual(originalEnrolments);
+
+        await togglePremium(f, true, 2);
         const restored = await requestPaper(published.id);
         expect(restored.status()).toBe(200);
         expect(await restored.body()).toEqual(bytes);
         expect((await exams()).documents.map((document: {id: string}) => document.id)).toEqual([
             published.id,
         ]);
+        expect((await checked(register(company), {requireData: true})).rows).toEqual(attendanceBefore.rows);
+        expect(await enrolments()).toEqual(originalEnrolments);
+        await companyPage.reload();
+        await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
+        await page.goto("/learning");
+        for (const target of [f, other]) {
+            await expect(page.getByRole("heading", {name: target.title, exact: true})).toBeVisible();
+        }
+        await page.getByRole("link", {name: f.title, exact: true}).click();
+        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        await expect(chat.getByText(messageA, {exact: true})).toBeVisible();
     } finally {
         await companyContext.close();
         await teachingContext.close();

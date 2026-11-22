@@ -1,9 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, type ImgHTMLAttributes } from "react";
-import { installationBrand } from "../../lib/installation-brand";
-import { useOnline } from "../../lib/online";
-import { isConfigured } from "../../lib/supabase";
-import { useAcademyLogoQuery } from "./academy-logo";
+import { useAcademyLogoPng } from "./academy-logo";
 
 type LogoImageProps = Pick<
   ImgHTMLAttributes<HTMLImageElement>,
@@ -41,13 +37,7 @@ export function AcademyLogoImage({
 }
 
 export function AcademyBrandImage(props: LogoImageProps) {
-  const online = useOnline();
-  const query = useQuery({
-    ...useAcademyLogoQuery(),
-    enabled:
-      online && isConfigured && Boolean(installationBrand.installationId),
-  });
-  const encoded = online && !query.isError ? query.data?.png_base64 : null;
+  const encoded = useAcademyLogoPng();
   const blob = useMemo(() => {
     if (!encoded) return undefined;
     try {

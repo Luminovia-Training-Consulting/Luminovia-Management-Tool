@@ -22,6 +22,7 @@ const fake = vi.hoisted(() => ({
   error: null as unknown,
   meetingError: null as unknown,
   pending: undefined as Promise<unknown> | undefined,
+  workspaceRead: undefined as Promise<void> | undefined,
   shareError: null as Error | null,
 }));
 vi.mock("../auth/auth-context", () => ({
@@ -97,6 +98,7 @@ beforeEach(async () => {
   fake.error = null;
   fake.meetingError = null;
   fake.pending = undefined;
+  fake.workspaceRead = undefined;
   fake.shareError = null;
   fake.rpc
     .mockReset()
@@ -116,10 +118,12 @@ beforeEach(async () => {
                 error: null,
               }).then(resolve)
             : name === "course_workspace"
-              ? Promise.resolve({
-                  data: fake.workspace,
-                  error: fake.error,
-                }).then(resolve)
+              ? Promise.resolve(fake.workspaceRead).then(() =>
+                  resolve({
+                    data: fake.workspace,
+                    error: fake.error,
+                  }),
+                )
               : name === "set_course_meeting_link"
                 ? Promise.resolve(fake.pending).then((data) => {
                     if (!fake.meetingError && data) {
@@ -857,8 +861,16 @@ it("hides the loaded Premium workspace offline and rechecks it on reconnect", as
       screen.queryByText("Shared safe description"),
     ).not.toBeInTheDocument();
     fake.error = new Error("company_premium_lms_off");
+    let completeRead!: () => void;
+    fake.workspaceRead = new Promise((resolve) => {
+      completeRead = resolve;
+    });
     connectivity.mockReturnValue(true);
     act(() => window.dispatchEvent(new Event("online")));
+    expect(
+      screen.queryByText("Shared safe description"),
+    ).not.toBeInTheDocument();
+    await act(async () => completeRead());
     expect(
       await screen.findByRole("heading", {
         name: "Lernarbeitsbereich deaktiviert",

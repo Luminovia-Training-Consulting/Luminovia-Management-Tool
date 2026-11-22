@@ -268,6 +268,6 @@ In Academy administration, select the organisation under Course integrations and
 
 ## Academy issuer on generated course documents
 
-The preparation command reads the name, short name and accent colour from the staged signed web manifest and pins them to the exact licensed release. Use `PORTAL_ACADEMY_STAGED_BROWSER_ROOT` with the equivalent private runtime root if the operator connects through private libpq. Administrators can override the presentation under **Academy administration → Academy branding**.
+The preparation command reads the name, short name and accent colour from the staged signed web manifest and pins them to the exact licensed release. Use `PORTAL_ACADEMY_STAGED_BROWSER_ROOT` with the equivalent private runtime root if the operator connects through private libpq. Administrators can override the presentation under **Academy administration → Academy branding**. A published PNG also supplies the browser tab icon. Resetting the logo restores the signed favicon. Installed app icons come from the signed browser package.
 
 A new completion document records the issuer at issuance. Attendance PDFs use the current academy presentation. Retained completion records with no issuer snapshot keep their original facts and use the current academy brand when exported. File uploads are delivered as their exact approved bytes.

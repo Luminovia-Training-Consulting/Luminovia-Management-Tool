@@ -1,3 +1,17 @@
+# 22 November 2026 — Premium lifecycle and reconnect
+
+A native browser scenario starts with Premium OFF, enables it, disables it while the learner is offline and enables it again. The same participant belongs to both companies. Desktop and mobile Chromium checked the still-open second course and chat, refusal of the original exact exam download while OFF, denied company-register access and restoration of the same exam bytes, attendance and two original enrolments. The test held the real access response during reconnect and reproduced a stale-course display on the prior build. The learning list, invitations and workspace now wait for the current response. All 128 focused learning and offline component tests and four Premium notification SQL checks passed.
+
+# 22 November 2026 — Academy tab icon and scoped integration examples
+
+The public Academy logo also updates the browser tab before sign-in. Removing the logo restores the signed favicon. The installed PWA continues to use the signed package's icons. Both branding component suites passed, including the live query transition from a published logo back to the package icon. The built self-hosted and managed editions each verified PNG decoding under the production image policy, the reset and the retained manifest icons in desktop and mobile Chromium with fictional branding responses.
+
+A fresh managed installation started Envoy under its container user and failed to open the staged policy after the operator used `umask 077`. The installer now gives the public policy and signed browser bytes explicit read and traversal permissions. The browser stage root and private receipt retain their owner-only modes. The renewal CLI also completes module evaluation before loading its database adapter. All 33 packaging and installer tests passed, including first install, replacement and renewal under the restrictive umask. A live renewal of the disposable managed installation used the same signed revision and restart. Exact file modes, TLS, branded manifest and login passed afterward.
+
+Both independent Docker installations passed local TLS, branded manifest, password login and local administration. Cross-installation session tokens, internal finance routes and public Auth administration failed at the customer ingress as expected. The TLS trust roots and fixture identities belonged to the disposable installations.
+
+The curl integration example runs enrolment and aggregate reporting with separate scoped keys. A temporary HTTP listener runs the production Edge handler and verifies the unchanged course-index commands in curl, Python and TypeScript. The enrolment example receives the same receipt on an exact retry. The report uses its own key and confirms one enrolment. Rejected credentials, invalid client input and an unavailable course exercise exit status and the response body.
+
 # 22 November 2026 — Roadmap completion pass and independent acceptance
 
 The internal delivery overview now supports a bilingual CSV download for the selected page. Its fresh read rechecks the current scope. The file includes the original timestamp offsets, IANA zone, duration and current evidence revision. Component tests cover offline and revoked access, stale page changes and formula-safe cells. Both Chromium profiles exercised download, correction and outsider denial against native Auth and REST.

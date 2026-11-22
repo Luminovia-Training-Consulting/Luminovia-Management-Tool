@@ -35,8 +35,8 @@ The internal course API test now crosses the live WebSocket and authenticated do
 
 The internal portal and dedicated Academy expose searchable German and English guides for sign-in, recovery, learning, teaching, enrolment, Premium and course integrations. The Academy adds branding guidance. The Wiki keeps guide and troubleshooting navigation within the selected help section. The work log records focused desktop, mobile and keyboard evidence for this guide surface.
 
-- Complete the learner, lecturer and company journeys across Premium OFF/ON and both dedicated editions, including native Realtime revocation and exact document delivery. The Linux desktop PWA is installed and verified in an isolated profile. Physical mobile installation remains open. Published welcome content, permission checks and licence-grace checks are recorded in the work log.
-- Reconcile financial reports and exports against the customer settlement and lecturer repayment journals. Implement customer-origin shared proposals and coordinated commercial-term changes with distinct approval and evidence handling.
+- The native two-company Premium lifecycle verifies the course, chat, exact exam bytes and attendance on desktop and mobile. The UI waits for current permissions after reconnect. Finish active Realtime, provider and target acceptance across the applicable editions. The Linux desktop PWA already passed install, launch, offline and removal. Physical mobile installation remains open.
+- Expand retained-data and browser acceptance for the implemented settlement exports, customer proposals and coordinated commercial amendments. Include the original executed agreement, corrected evidence and any later settlement in the same rehearsal.
 - Connect the public Website sender separately and complete notification delivery, exact HTTP contract acceptance, the browser matrix and accessibility acceptance.
 - Coordinate White-Label branding, installer, provider delivery, signed webhooks and customer upgrade/restore with the separate operations task. Retain independent managed and self-hosted acceptance in the White-Label roadmap.
 - Vendor onboarding records now support initial trial and licensed terms, registration of an existing signed licence, trial conversion, renewal and exact envelope export. The customer edition, installation ID and scope stay bound to the approved draft. Commercial fulfilment and the independent target installation remain open in the [White-Label roadmap](../WHITELABEL_ROADMAP.md#wl-06--licence-sales--fulfilment-operations-p1).
@@ -56,7 +56,7 @@ The internal portal and dedicated Academy expose searchable German and English g
 - [x] Validate, scan, publish and remove the local academy header and sign-in logo. Native Chromium covered the dedicated administrator and learner roles, exact stored PNG bytes and restoration of the signed installation logo in both editions.
 - [x] Publish versioned local support, privacy, legal notice and terms links in the anonymous sign-in and authenticated academy footer. Verify both editions with native PostgreSQL, GoTrue, PostgREST and Chromium, including stale saves and missing authority.
 - [x] Deliver scoped course webhooks in both dedicated academies through the private shared worker. Local PostgreSQL, HTTP and Chromium witnessed revocation, retry and exact release fencing. External receiver onboarding remains operational.
-- [x] Publish the 69-path Academy API and organisation-scoped, rotating course-index credentials. Browser, Edge and real PostgreSQL tests cover current issuer, exact organisation, published rows, rotation and revocation.
+- [x] Publish the edition-specific Academy API and organisation-scoped, rotating course-index credentials. Browser, Edge and real PostgreSQL tests cover current issuer, exact organisation, published rows, rotation and revocation.
 - [x] Provide opt-in course notice email via the private, initially disabled SMTP worker. Verify current recipient, course and licence, quiet hours, provider version and delivery lease.
 - [x] Read the exact installation, database licence and migration ledger over the private operator connection. The status receipt contains operational metadata and preserves read-only access.
 - [x] Produce DE/EN CSV participation reports with per-course attendance counts and completion states. The dedicated API rechecks learner cohort, course scope and licence on each page.
@@ -64,7 +64,8 @@ The internal portal and dedicated Academy expose searchable German and English g
 - [x] Put dedicated public ingress on a course-only Edge route list, protect file access through the course gateways, and keep raw Storage and PostgreSQL table paths private. The native Caddy/Envoy check covers accepted routes, rejected commercial routes, WebSocket and the signed request budget.
 - [x] Build dedicated edition packages without internal jobs, contracts, pricing, accounting or the internal RPC inventory. Verify retired navigation links and the dedicated package dependency graph. Schedule and release local instructors without commercial prerequisites or marketplace events.
 - [x] Retain confirmed live writes across an explicitly retried Hostinger release failure. Verify the exact immutable release and current migration history before taking a fresh checkpoint. A repeated failure keeps maintenance active. The isolated historical PostgreSQL rehearsal checks records and unchanged second application.
-- [ ] Boot each fresh dedicated target with all pinned services, apply migrations, pin its licence, confirm first-admin, and repeat course, SMTP, PWA and backup/restore acceptance on the explicit target.
+- [x] Boot both fresh dedicated editions with the pinned private services, replay migrations, activate the signed licence and confirm the first administrator and enabled course profile in separate owned Docker projects.
+- [ ] Repeat commissioning on each independent customer target with its actual SMTP, public PWA, backup and recovery.
 
 - [x] Bind the first dedicated administrator to an existing confirmed Auth identity and the exact licensed release. PostgreSQL proves one successful grant under concurrent requests. Native GoTrue and PostgREST verify password sign-in and the current scoped API session.
 - [x] Enable active-licence meeting links with scoped editing and participant reads for the dedicated course-access profile. Verify read-only grace, expiry and retained data.
@@ -113,7 +114,7 @@ The internal portal and dedicated Academy expose searchable German and English g
 - [x] Mount the exact branded API catalogue and the protected Swagger RPC profile. Verify real same-backend learner calls, opt-out and desktop/mobile geometry in both editions.
 - [x] Exercise native branded PWA installability diagnostics, offline API refusal, account cleanup and read-state persistence in both editions. Physical device installation remains pending.
 - [x] Pair two independently generated academy runtimes with their exact signed releases. Verify staging, first-admin SQL, local TLS and the signed public API allowance.
-- [ ] Exercise full isolated Compose boot, provider TLS/domain, customer mail and a complete upgrade with retained data on the dedicated target.
+- [ ] Verify public TLS and DNS, customer mail and a retained-data update on the independent dedicated target.
 - [ ] Finish complete CI on the current commit and verify remaining role browsers, customer runtime transports and the hosted recovery/release sequence.
 
 ## Participant and company onboarding

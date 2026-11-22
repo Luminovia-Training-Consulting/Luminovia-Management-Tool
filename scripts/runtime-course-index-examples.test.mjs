@@ -18,7 +18,7 @@ const clients = {
   TypeScript: [process.execPath, "--experimental-strip-types", example("ts")],
 };
 
-test("course-index quickstarts authenticate, paginate and report the same errors", async (t) => {
+test("course integration quickstarts use the scoped Edge routes and surface failures", async (t) => {
   const id = randomUUID();
   const secret = randomBytes(32).toString("hex");
   const activeCredential = `lvi_${id}_${secret}`;
@@ -41,22 +41,52 @@ test("course-index quickstarts authenticate, paginate and report the same errors
     { course: fictionalCourse(27), company: "own", published: false },
     { course: fictionalCourse(28), company: "other", published: true },
   ];
-  const handler = createCompanyIntegrationHandler(async (query) => {
-    if (query.p_id !== id || query.p_secret_hash !== digest)
-      return { status: "denied" };
-    const remaining = courses
-      .filter(
-        ({ company, published, course }) =>
-          company === "own" && published && course.id > (query.p_after ?? ""),
-      )
-      .map(({ course }) => course);
-    const items = remaining.slice(0, query.p_limit);
-    return {
-      status: "ok",
-      items,
-      next_cursor: remaining.length > items.length ? items.at(-1).id : null,
-    };
-  });
+  const enrolKey = randomUUID();
+  const reportKey = randomUUID();
+  const courseId = ownCourses[0].id;
+  const participantId = "LV-1111-2222-3333-4444-5555";
+  const enrolments = new Set();
+  const handler = createCompanyIntegrationHandler(
+    async (query) => {
+      if (query.p_id !== id || query.p_secret_hash !== digest)
+        return { status: "denied" };
+      const remaining = courses
+        .filter(
+          ({ company, published, course }) =>
+            company === "own" && published && course.id > (query.p_after ?? ""),
+        )
+        .map(({ course }) => course);
+      const items = remaining.slice(0, query.p_limit);
+      return {
+        status: "ok",
+        items,
+        next_cursor: remaining.length > items.length ? items.at(-1).id : null,
+      };
+    },
+    async (query) => {
+      const allowedId = query.p_action === "enrol" ? enrolKey : reportKey;
+      if (query.p_id !== allowedId || query.p_secret_hash !== digest)
+        return { status: "denied" };
+      if (query.p_course_id !== courseId) return { status: "not_found" };
+      if (query.p_action === "enrol") {
+        if (query.p_participant_id !== participantId)
+          return { status: "conflict" };
+        enrolments.add(query.p_participant_id);
+        return {
+          status: "ok",
+          course_id: courseId,
+          participant_id: participantId,
+        };
+      }
+      return {
+        status: "ok",
+        course_id: courseId,
+        session_count: 2,
+        enrolled_count: enrolments.size,
+        completed_count: 0,
+      };
+    },
+  );
 
   let requestCount = 0;
   const server = createServer(async (request, reply) => {
@@ -68,10 +98,13 @@ test("course-index quickstarts authenticate, paginate and report the same errors
     }
     try {
       // Match the portal gateway's removal of /backend before dispatch.
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
       const result = await handler(
         new Request(origin + request.url.replace(/^\/backend(?=\/)/, ""), {
           method: request.method,
           headers: request.headers,
+          ...(chunks.length && { body: Buffer.concat(chunks) }),
         }),
       );
       reply.writeHead(result.status, Object.fromEntries(result.headers));
@@ -123,4 +156,63 @@ test("course-index quickstarts authenticate, paginate and report the same errors
       assert.equal(requestCount, beforeRedirect + 1);
     });
   }
+  await t.test(
+    "curl enrols idempotently and reads the result with a separate reporting key",
+    async () => {
+      const [program, ...args] = clients.curl;
+      const run = (key, ...command) =>
+        exec(program, [...args, ...command], {
+          env: {
+            PATH: process.env.PATH,
+            LUMINOVIA_API_BASE_URL: origin + "/backend",
+            LUMINOVIA_INTEGRATION_KEY: `lvi_${key}_${secret}`,
+          },
+          timeout: 20_000,
+        });
+      const enrolled = {
+        status: "enrolled",
+        course_id: courseId,
+        participant_id: participantId,
+      };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        assert.deepEqual(
+          JSON.parse(
+            (await run(enrolKey, "enrol", courseId, participantId)).stdout,
+          ),
+          enrolled,
+        );
+      }
+      assert.deepEqual(
+        JSON.parse((await run(reportKey, "report", courseId)).stdout),
+        {
+          course_id: courseId,
+          session_count: 2,
+          enrolled_count: 1,
+          completed_count: 0,
+        },
+      );
+      await assert.rejects(run(enrolKey, "report", courseId), (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stderr, /HTTP 401/);
+        assert.deepEqual(JSON.parse(error.stdout), {
+          error: "invalid_credential",
+        });
+        return true;
+      });
+      const beforeInvalidInput = requestCount;
+      await assert.rejects(run(enrolKey, "enrol", courseId, "invalid-id"), {
+        code: 2,
+      });
+      assert.equal(requestCount, beforeInvalidInput);
+      await assert.rejects(
+        run(reportKey, "report", ownCourses[1].id),
+        (error) => {
+          assert.equal(error.code, 1);
+          assert.match(error.stderr, /HTTP 404/);
+          assert.deepEqual(JSON.parse(error.stdout), { error: "not_found" });
+          return true;
+        },
+      );
+    },
+  );
 });

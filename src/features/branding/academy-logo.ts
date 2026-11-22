@@ -1,7 +1,7 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { installationBrand } from "../../lib/installation-brand";
-import { requireOnline } from "../../lib/online";
-import { db } from "../../lib/supabase";
+import { requireOnline, useOnline } from "../../lib/online";
+import { db, isConfigured } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import {
@@ -36,6 +36,17 @@ export function useAcademyLogoQuery() {
       return verifyLogo(data);
     },
   });
+}
+
+/** The public branding surfaces share the same checked installation logo. */
+export function useAcademyLogoPng() {
+  const online = useOnline();
+  const query = useQuery({
+    ...useAcademyLogoQuery(),
+    enabled:
+      online && isConfigured && Boolean(installationBrand.installationId),
+  });
+  return online && !query.isError ? query.data?.png_base64 : null;
 }
 
 export async function saveAcademyLogo(version: number, file: File | null) {

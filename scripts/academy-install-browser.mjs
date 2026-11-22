@@ -2,9 +2,11 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   closeSync,
   constants,
   copyFileSync,
+  fchmodSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -267,11 +269,16 @@ function renewIngressPolicy(bytes, installed, successor) {
   );
 }
 
-function writeIngressPolicy(staged, policy) {
-  writeFileSync(join(staged, "api-ingress.yml"), policy, {
-    flag: "wx",
-    mode: 0o644,
-  });
+/** Public read-only bind mounts must be readable by unprivileged containers,
+ * including when the operator runs the installer with a private umask. */
+function writePublicBrowserFile(path, contents) {
+  const descriptor = openSync(path, "wx", 0o644);
+  try {
+    writeFileSync(descriptor, contents);
+    fchmodSync(descriptor, 0o644);
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 async function renewRuntimeLicence(root, input) {
@@ -355,6 +362,9 @@ export async function installAcademyBrowser(
   );
   let retainPrevious = false;
   try {
+    // The stage and its private receipt stay owner-only. Allow the web
+    // runtime to read and traverse only public archive contents.
+    const directories = new Set([staged]);
     for (const [path, bytes] of files) {
       // These relative names were restricted by the signed archive verifier.
       // Hashed assets must remain outside the replaceable SPA shell in Caddy.
@@ -362,7 +372,15 @@ export async function installAcademyBrowser(
         path.startsWith("assets/") || path.startsWith("workbox-");
       const destination = join(staged, immutable ? path : "current/" + path);
       mkdirSync(dirname(destination), { recursive: true, mode: 0o755 });
-      writeFileSync(destination, bytes, { flag: "wx", mode: 0o644 });
+      for (
+        let directory = dirname(destination);
+        !directories.has(directory);
+        directory = dirname(directory)
+      ) {
+        chmodSync(directory, 0o755);
+        directories.add(directory);
+      }
+      writePublicBrowserFile(destination, bytes);
     }
     const receipt = {
       version: 1,
@@ -378,8 +396,8 @@ export async function installAcademyBrowser(
       },
     };
     if (!renewal)
-      writeIngressPolicy(
-        staged,
+      writePublicBrowserFile(
+        join(staged, "api-ingress.yml"),
         readFileSync(rateTemplate, "utf8").replaceAll(
           "ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE",
           String(throughput),
@@ -452,7 +470,7 @@ export async function installAcademyBrowser(
             ...receipt,
             release: previous.release,
           });
-          writeIngressPolicy(staged, ingress);
+          writePublicBrowserFile(join(staged, "api-ingress.yml"), ingress);
           // The DB compares its actual licence before applying the successor.
           // An inactive successor can only finish a prior commit, without a DB write.
           await renewLicence(root, renewalInput);
@@ -485,10 +503,7 @@ export async function installAcademyBrowser(
   }
 }
 
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+async function main() {
   try {
     const [
       root,
@@ -550,4 +565,12 @@ if (
     );
     process.exitCode = 1;
   }
+}
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  // Complete module evaluation before renewal loads the database adapter.
+  void main();
 }

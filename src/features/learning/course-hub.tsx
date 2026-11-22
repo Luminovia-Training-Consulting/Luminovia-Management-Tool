@@ -87,21 +87,10 @@ function CourseCard({ course }: { course: CourseOverview }) {
   );
 }
 
-/** Refresh the authorised list before displaying retained query data on a new visit. */
+/** Refresh the authorised list on navigation and reconnect before displaying any cached courses. */
 export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
-  const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
-  const query = useQuery({
-    ...courseHubQuery(actor),
-    enabled: online,
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchInterval: 10_000,
-    retry: false,
-  });
-
   return (
     <>
       <PageHeading
@@ -121,48 +110,64 @@ export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
           </Button>
         }
       />
-      {!online ? (
-        <Notice>{t("workspaceOffline")}</Notice>
+      {online ? (
+        <ConnectedLearningHub academy={academy} />
       ) : (
-        <>
-          {academy === "active" && <AcademyCourseDraft actor={actor} />}
-          {!academy && roles.data?.includes("participant") && (
-            <CompanyInvitations actor={actor} />
-          )}
-          {query.isPending ||
-          (query.isFetching && !query.isFetchedAfterMount) ? (
-            <Loading />
-          ) : query.isError ? (
-            <ErrorState retry={() => void query.refetch()} />
-          ) : query.data.length === 0 ? (
-            <div className="empty-state">{t("noCourses")}</div>
-          ) : (
-            <div className="course-hub-groups">
-              {phases.map((group) => {
-                const courses = query.data.filter(
-                  (course) => phase(course, query.dataUpdatedAt) === group,
-                );
-                if (courses.length === 0) return null;
-                if (group === "upcoming") courses.reverse();
-                return (
-                  <section
-                    className="course-hub-group"
-                    data-phase={group}
-                    aria-labelledby={`course-phase-${group}`}
-                    key={group}
-                  >
-                    <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
-                    <div className="learning-grid">
-                      {courses.map((course) => (
-                        <CourseCard key={course.id} course={course} />
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          )}
-        </>
+        <Notice>{t("workspaceOffline")}</Notice>
+      )}
+    </>
+  );
+}
+
+function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
+  const actor = useAuth().session!.user.id;
+  const { t } = useTranslation("learning");
+  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
+  const query = useQuery({
+    ...courseHubQuery(actor),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchInterval: 10_000,
+    retry: false,
+  });
+
+  return (
+    <>
+      {academy === "active" && <AcademyCourseDraft actor={actor} />}
+      {!academy && roles.data?.includes("participant") && (
+        <CompanyInvitations actor={actor} />
+      )}
+      {query.isPending || !query.isFetchedAfterMount ? (
+        <Loading />
+      ) : query.isError ? (
+        <ErrorState retry={() => void query.refetch()} />
+      ) : query.data.length === 0 ? (
+        <div className="empty-state">{t("noCourses")}</div>
+      ) : (
+        <div className="course-hub-groups">
+          {phases.map((group) => {
+            const courses = query.data.filter(
+              (course) => phase(course, query.dataUpdatedAt) === group,
+            );
+            if (courses.length === 0) return null;
+            if (group === "upcoming") courses.reverse();
+            return (
+              <section
+                className="course-hub-group"
+                data-phase={group}
+                aria-labelledby={`course-phase-${group}`}
+                key={group}
+              >
+                <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
+                <div className="learning-grid">
+                  {courses.map((course) => (
+                    <CourseCard key={course.id} course={course} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       )}
     </>
   );

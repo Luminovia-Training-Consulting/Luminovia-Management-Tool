@@ -24,11 +24,12 @@ export function CompanyInvitations({ actor }: { actor: string }) {
   const invitations = useQuery({
     queryKey: key,
     enabled: online,
+    refetchOnMount: "always",
     retry: false,
-    queryFn: async () => {
-      const { data, error } = await db().rpc(
-        "my_company_participant_invitations",
-      );
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("my_company_participant_invitations")
+        .abortSignal(signal);
       if (error) throw error;
       return data as Invitation[];
     },
@@ -64,7 +65,8 @@ export function CompanyInvitations({ actor }: { actor: string }) {
     },
   });
   if (!online) return null;
-  if (invitations.isPending) return <Loading />;
+  if (invitations.isPending || !invitations.isFetchedAfterMount)
+    return <Loading />;
   if (invitations.isError)
     return <ErrorState retry={() => void invitations.refetch()} />;
   if (!invitations.data.length && !accept.isSuccess && !accept.isError)

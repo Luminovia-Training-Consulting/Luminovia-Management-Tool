@@ -28,31 +28,24 @@ Node.js 22.12+ · curl 7.55+ · Python 3.8+
 
 ## Enrolment and reports · Einschreibung und Berichte
 
-Use a separate key for each operation. Enrolment requires an existing confirmed organisation membership, the participant's Luminovia User ID and a published course. An enrolled participant returns the same receipt on retry. A removed or completed enrolment returns HTTP 409. The reporting key returns only the course ID and aggregate counts.
+Use a separate key for each operation. Enrolment requires an existing confirmed organisation membership, the participant's account identifier and a published course. An enrolled participant returns the same receipt on retry. A removed or completed enrolment returns HTTP 409. The reporting key returns only the course ID and aggregate counts.
 
-Verwende pro Vorgang einen eigenen Schlüssel. Für die Einschreibung braucht der Teilnehmer eine bereits bestätigte Mitgliedschaft, eine Luminovia User ID und einen veröffentlichten Kurs. Bei Wiederholung liefert eine bestehende Einschreibung dieselbe Bestätigung. Zurückgenommene oder abgeschlossene Einschreibungen liefern HTTP 409. Der Bericht enthält nur die Kurs-ID und zusammengefasste Zahlen.
+Verwende pro Vorgang einen eigenen Schlüssel. Für die Einschreibung braucht der Teilnehmer eine bereits bestätigte Mitgliedschaft, eine Konto-ID und einen veröffentlichten Kurs. Bei Wiederholung liefert eine bestehende Einschreibung dieselbe Bestätigung. Zurückgenommene oder abgeschlossene Einschreibungen liefern HTTP 409. Der Bericht enthält nur die Kurs-ID und zusammengefasste Zahlen.
 
 ```bash
 export LUMINOVIA_API_BASE_URL='https://academy.example.invalid/backend'
 course_id='9c0c48a1-8bde-41d4-835a-f66a4cfbe378'
 participant_id='LV-1111-2222-3333-4444-5555'
 
-# Paste the enrolments.write key.
-read -rs enrolment_key
-payload="$(jq -cn --arg course "$course_id" --arg participant "$participant_id" '{course_id:$course,participant_id:$participant}')"
-printf 'Authorization: Bearer %s\n' "$enrolment_key" |
-  curl --fail --silent --show-error --header @- \
-    --header 'Content-Type: application/json' \
-    --data-binary "$payload" \
-    "$LUMINOVIA_API_BASE_URL/functions/v1/company-integration/enrolments"
-unset enrolment_key payload
+# Use the enrolments.write key for this command.
+read -rs LUMINOVIA_INTEGRATION_KEY
+export LUMINOVIA_INTEGRATION_KEY
+bash scripts/examples/course-index.sh enrol "$course_id" "$participant_id"
 
-# Paste the reports.read key.
-read -rs report_key
-printf 'Authorization: Bearer %s\n' "$report_key" |
-  curl --fail --silent --show-error --header @- \
-    "$LUMINOVIA_API_BASE_URL/functions/v1/company-integration/participation?course_id=$course_id"
-unset report_key
+# Replace it with the reports.read key for this command.
+read -rs LUMINOVIA_INTEGRATION_KEY
+bash scripts/examples/course-index.sh report "$course_id"
+unset LUMINOVIA_INTEGRATION_KEY
 ```
 
 ## Local verification · Lokale Prüfung
@@ -61,9 +54,9 @@ unset report_key
 node --test scripts/runtime-course-index-examples.test.mjs
 ```
 
-The test runs all three clients on a temporary loopback listener with the Edge request handler and fictional course and credential fixtures. The [database tests](../academy-course-index-db-tests.mjs) cover the persisted organisation boundaries and actual key lifecycle.
+The test runs all three index clients, plus the curl enrolment and report commands, on a temporary loopback listener with the Edge request handler and fictional credentials. The scripts print the exact JSON body and return a nonzero exit status for HTTP errors. The [database tests](../academy-course-index-db-tests.mjs) cover the persisted organisation boundaries and actual key lifecycle.
 
-Der Test führt alle drei Clients über einen temporären lokalen Listener mit dem Edge-Handler und fiktiven Kursen und Schlüsseln aus. Die [Datenbanktests](../academy-course-index-db-tests.mjs) prüfen die gespeicherten Organisationsgrenzen sowie den tatsächlichen Lebenszyklus der Schlüssel.
+Der Test führt alle drei Katalog-Clients und die curl-Befehle für Einschreibung und Bericht über einen lokalen Listener mit dem Edge-Handler und fiktiven Schlüsseln aus. Die Skripte geben die JSON-Antwort aus und melden HTTP-Fehler über den Exit-Code. Die [Datenbanktests](../academy-course-index-db-tests.mjs) prüfen die gespeicherten Organisationsgrenzen sowie den tatsächlichen Lebenszyklus der Schlüssel.
 
 ## Signed course webhook receiver
 

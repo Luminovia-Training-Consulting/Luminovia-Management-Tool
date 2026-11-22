@@ -1118,9 +1118,43 @@ async function installFixture(t, now, buildMetadata = metadata) {
   return { ...fixture, root, browser, archive, inputs };
 }
 
+async function withPrivateUmask(run) {
+  const previous = process.umask(0o077);
+  try {
+    return await run();
+  } finally {
+    process.umask(previous);
+  }
+}
+
+function assertBrowserRuntimeModes(browser) {
+  const mode = (file) => lstatSync(join(browser, file)).mode & 0o777;
+  assert.equal(
+    mode(""),
+    0o700,
+    "the installation keeps its browser root private",
+  );
+  assert.equal(
+    mode("release.json"),
+    0o600,
+    "the operator receipt stays private",
+  );
+  assert.equal(
+    mode("api-ingress.yml"),
+    0o644,
+    "Envoy must be able to read its public policy",
+  );
+  assert.equal(mode("current"), 0o755);
+  assert.equal(mode("assets"), 0o755);
+  assert.equal(mode("current/index.html"), 0o644);
+  assert.equal(mode("current/manifest.webmanifest"), 0o644);
+  assert.equal(mode(runtimePath), 0o644);
+}
+
 test("publishes exactly the verified bytes using the dedicated Caddy layout and preserves an installed release", async (t) => {
   const { root, browser, archive, dist, inputs } = await installFixture(t);
-  const receipt = await installAcademyBrowser(inputs);
+  const receipt = await withPrivateUmask(() => installAcademyBrowser(inputs));
+  assertBrowserRuntimeModes(browser);
   assert.equal(receipt.state, "browser-staged");
   assert.equal(receipt.customer_ready, false);
   assert.equal(receipt.release.archive_sha256, archive.archive.sha256);
@@ -1280,7 +1314,10 @@ test("an explicit signed replacement retains previous browser bytes and never wr
     assert.equal(actualRoot, root);
     assert.equal(project, inputs.config.compose_project);
   };
-  const receipt = await installAcademyBrowser(replacement, check);
+  const receipt = await withPrivateUmask(() =>
+    installAcademyBrowser(replacement, check),
+  );
+  assertBrowserRuntimeModes(browser);
   assert.equal(receipt.release.source_revision, revision);
   assert.equal(receipt.customer_ready, false);
   assert.match(
@@ -1428,7 +1465,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(readFileSync(receiptFile), originalReceipt);
     assert.equal(readFileSync(ingressFile, "utf8"), installedPolicy);
 
-    const receipt = await installAcademyBrowser(expired, () => {}, apply);
+    const receipt = await withPrivateUmask(() =>
+      installAcademyBrowser(expired, () => {}, apply),
+    );
+    assertBrowserRuntimeModes(browser);
     assert.equal(
       receipt.release.source_revision,
       original.release.source_revision,
@@ -1499,6 +1539,75 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
   });
 }
+
+test("the renewal CLI reaches the database adapter and publishes the signed successor", async (t) => {
+  const { root, browser, inputs, issuer, signer, terms, signRelease } =
+    await installFixture(t, Date.now());
+  const original = await installAcademyBrowser(inputs);
+  const licence = signAcademyLicence(
+    {
+      ...terms,
+      issued_at: terms.starts_at,
+      limits: { ...terms.limits, api_requests_per_minute: 95 },
+    },
+    issuer.privateKey,
+  );
+  const write = (name, contents) => {
+    const path = join(root, name);
+    writeFileSync(path, contents, { mode: 0o600 });
+    return path;
+  };
+  const docker = join(root, "docker");
+  writeFileSync(
+    docker,
+    `#!/bin/sh
+[ "$1" = "compose" ] || exit 1
+case " $* " in
+  *" ps --all --services "*) exit 0 ;;
+  *" exec -T db psql "*) grep -Fq private.apply_verified_installation_licence && printf 't\\n' ;;
+  *) exit 1 ;;
+esac
+`,
+    { mode: 0o700 },
+  );
+  const cli = fileURLToPath(
+    new URL("./academy-install-browser.mjs", import.meta.url),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      cli,
+      root,
+      write("target.json", JSON.stringify(inputs.config)),
+      inputs.directory,
+      write("release.sig", await signRelease({ licence })),
+      write("next.licence", licence),
+      write(
+        "issuer.pub",
+        issuer.publicKey.export({ type: "spki", format: "pem" }),
+      ),
+      write(
+        "signer.pub",
+        signer.publicKey.export({ type: "spki", format: "pem" }),
+      ),
+      "--renew-licence",
+      write("previous.licence", inputs.licence),
+    ],
+    {
+      encoding: "utf8",
+      env: { PATH: root + ":" + process.env.PATH },
+      timeout: 10000,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const renewed = JSON.parse(result.stdout);
+  assert.deepEqual(renewed.release, original.release);
+  assert.equal(renewed.licence.api_requests_per_minute, 95);
+  assert.deepEqual(
+    JSON.parse(readFileSync(join(browser, "release.json"), "utf8")),
+    renewed,
+  );
+});
 
 test("the browser maintenance lock recovers from SIGKILL and retains mutual exclusion with the old installer", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "academy-maintenance-lock-"));

@@ -1,6 +1,11 @@
 /** Regression coverage for the own-course dashboard, phases and protected cache. */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -13,17 +18,31 @@ import i18n from "../../lib/i18n";
 import type { CourseOverview } from "./api";
 import { LearningHubPage } from "./course-hub";
 
-const fixture = vi.hoisted(() => ({ courses: [] as CourseOverview[] }));
+const fixture = vi.hoisted(() => ({
+  courses: [] as CourseOverview[],
+  invitations: [] as {
+    organisation_id: string;
+    organisation_name: string;
+    version: number;
+  }[],
+  courseRead: undefined as Promise<void> | undefined,
+}));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "fictional-learner" } } }),
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: (name: string) => ({
-      abortSignal: async () => ({
-        data: name === "my_course_workspaces" ? fixture.courses : [],
-        error: null,
-      }),
+      abortSignal: async () => {
+        await fixture.courseRead;
+        return {
+          data:
+            name === "my_course_workspaces"
+              ? fixture.courses
+              : fixture.invitations,
+          error: null,
+        };
+      },
     }),
     from: () => ({
       select: () => ({
@@ -40,6 +59,8 @@ function date(offset: number) {
 
 beforeEach(async () => {
   await i18n.changeLanguage("de");
+  fixture.courseRead = undefined;
+  fixture.invitations = [];
   const base = {
     description: "",
     syllabus: "",
@@ -88,6 +109,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  onlineManager.setOnline(true);
 });
 
 it("groups current, next and past courses and preserves a direct scoped chat destination", async () => {
@@ -125,4 +147,56 @@ it("groups current, next and past courses and preserves a direct scoped chat des
   fireEvent(window, new Event("offline"));
   expect(await screen.findByText(/Verbinde dich|Offline/)).toBeVisible();
   expect(screen.queryByText("Fictional company A")).toBeNull();
+});
+
+it("waits for current company courses and invitations after reconnecting with a warm cache", async () => {
+  fixture.invitations = [
+    {
+      organisation_id: "invitation-company",
+      organisation_name: "Fictional invitation",
+      version: 1,
+    },
+  ];
+  const connectivity = vi
+    .spyOn(navigator, "onLine", "get")
+    .mockReturnValue(true);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Fictional company A")).toBeVisible();
+  expect(
+    await screen.findByRole("button", { name: /Fictional invitation/ }),
+  ).toBeVisible();
+  connectivity.mockReturnValue(false);
+  fireEvent(window, new Event("offline"));
+  expect(screen.queryByText("Fictional company A")).toBeNull();
+
+  let completeRead!: () => void;
+  fixture.courseRead = new Promise((resolve) => {
+    completeRead = resolve;
+  });
+  fixture.courses = fixture.courses.filter((course) => course.id !== "now");
+  fixture.invitations = [];
+  connectivity.mockReturnValue(true);
+  fireEvent(window, new Event("online"));
+  expect(screen.queryByText("Fictional company A")).toBeNull();
+  expect(screen.queryByText("Fictional company B")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Fictional invitation/ }),
+  ).toBeNull();
+  await act(async () => completeRead());
+  expect(await screen.findByText("Fictional company B")).toBeVisible();
+  expect(screen.queryByText("Fictional company A")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Fictional invitation/ }),
+  ).toBeNull();
+  cleanup();
+  queryClient.clear();
 });
