@@ -73,6 +73,9 @@ const personalPaths = [
   "/rest/v1/rpc/academy_save_appearance",
 ] as const;
 const academyParityPaths = [
+  "/rest/v1/rpc/company_lecturer_blocks",
+  "/rest/v1/rpc/set_company_lecturer_block",
+  "/rest/v1/rpc/academy_lecturer_block_organisations",
   "/rest/v1/rpc/course_evaluations",
   "/rest/v1/rpc/course_evaluation_comments",
   "/rest/v1/rpc/save_course_evaluation",

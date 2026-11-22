@@ -34,6 +34,7 @@ import {
 } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
+import { companyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import {
   contractRecordsSchema,
   invoicePaymentsSchema,
@@ -1419,6 +1420,7 @@ const nativePaths = {
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...courseEvaluationPaths(false),
+  ...companyLecturerBlockPaths,
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,

@@ -57,6 +57,7 @@ import {
   courseParticipationReportSchema,
 } from "../learning/course-participation-report-schema.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
+import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { humanAuthPaths } from "./human-auth-contract.ts";
@@ -905,6 +906,7 @@ const coursePaths = {
   ...academyClassPaths,
   ...academyChatProtectionPaths,
   ...courseEvaluationPaths(true),
+  ...academyCompanyLecturerBlockPaths,
   ...academyMailPaths,
   ...academyPersonalSettingsPaths,
   "/rest/v1/rpc/academy_timetable": courseOperation(

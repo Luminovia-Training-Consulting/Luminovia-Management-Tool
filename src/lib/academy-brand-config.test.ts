@@ -136,7 +136,7 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
     },
   });
   const paths = Object.keys(document.paths);
-  expect(paths).toHaveLength(93);
+  expect(paths).toHaveLength(96);
   expect(paths).toContain("/rest/v1/rpc/course_submissions");
   expect(paths).toContain("/rest/v1/rpc/academy_licence_receipt");
   expect(paths).toContain("/rest/v1/rpc/installation_capabilities");
