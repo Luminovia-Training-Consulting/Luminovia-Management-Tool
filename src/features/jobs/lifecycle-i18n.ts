@@ -26,7 +26,7 @@ const en = {
   perPosition: "per lecturer position",
   perPositionHint:
     "Each quoted fee covers the entire teaching block for one lecturer position. The maximum budget is the number of positions × that fee.",
-  maxGrossBudget: "Maximum customer budget",
+  maxGrossBudget: "Maximum company budget",
   maxNetBudget: "Maximum lecturer compensation",
   filledPositions_one: "{{count}} position confirmed",
   filledPositions_other: "{{count}} positions confirmed",
@@ -102,7 +102,7 @@ const de: typeof en = {
   perPosition: "je Dozierendenplatz",
   perPositionHint:
     "Das angegebene Honorar gilt je Dozierendenplatz für den gesamten Unterrichtsblock. Das maximale Budget ergibt sich aus der Anzahl der Plätze × Honorar.",
-  maxGrossBudget: "Maximales Auftraggeberbudget",
+  maxGrossBudget: "Maximales Unternehmensbudget",
   maxNetBudget: "Maximale Dozierendenvergütung",
   filledPositions_one: "{{count}} Platz bestätigt",
   filledPositions_other: "{{count}} Plätze bestätigt",

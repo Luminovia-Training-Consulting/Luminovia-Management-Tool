@@ -106,7 +106,7 @@ test("management assigns only subordinate roles while only administration sees a
         ]);
         await page.getByLabel("Kontorolle", {exact: true}).selectOption("client");
         await expect(
-            page.getByLabel("Auftraggeber-Organisation", {exact: true}),
+            page.getByLabel("Unternehmen", {exact: true}),
         ).toHaveCount(0);
         await expect(
             page.getByRole("button", {name: "Organisation zuordnen", exact: true}),
@@ -176,7 +176,7 @@ test("management assigns only subordinate roles while only administration sees a
         const compensation = page
             .getByRole("heading", {name: "Dozentenhonorar", exact: true})
             .locator("..");
-        const percentage = compensation.getByLabel("Anteil am Kundenbudget (%)", {
+        const percentage = compensation.getByLabel("Anteil am Unternehmensbudget (%)", {
             exact: true,
         });
         await expect(percentage).toHaveValue(String(policy.senior_lecturer_percent));
@@ -202,7 +202,7 @@ test("management assigns only subordinate roles while only administration sees a
             .getByRole("heading", {name: "Dozentenhonorar", exact: true})
             .locator("..");
         await expect(
-            reloadedCompensation.getByLabel("Anteil am Kundenbudget (%)", {
+            reloadedCompensation.getByLabel("Anteil am Unternehmensbudget (%)", {
                 exact: true,
             }),
         ).toHaveValue(String(customPercent));

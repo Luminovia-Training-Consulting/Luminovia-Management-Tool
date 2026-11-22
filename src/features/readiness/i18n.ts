@@ -38,8 +38,8 @@ const de = {
     qualification: "Erforderliche Qualifikationen gültig bestätigt",
     materials: "Saubere Lehrmaterialien für zugeteilte Dozent:innen verfügbar",
     delivery: "Meeting-Link oder Unterrichtsort hinterlegt",
-    customer: "Aktive Kundenorganisation vorhanden",
-    contact: "Aktiver Kundenkontakt mit E-Mail oder Telefon",
+    customer: "Aktives Unternehmen vorhanden",
+    contact: "Aktiver Unternehmenskontakt mit E-Mail oder Telefon",
     sessions: "Aktuellen Unterrichtsplan ausdrücklich bestätigt",
     instructions:
       "Aktuelle Hinweise von allen zugeteilten Dozent:innen bestätigt",
@@ -59,8 +59,8 @@ const de = {
   offline:
     "Du bist offline. Statusänderungen benötigen eine bestätigte Serverantwort.",
   materials_required: "Lehrmaterialien sind erforderlich",
-  customer_required: "Kundenorganisation ist erforderlich",
-  contact_required: "Kundenkontakt ist erforderlich",
+  customer_required: "Unternehmen ist erforderlich",
+  contact_required: "Unternehmenskontakt ist erforderlich",
   agreement_required: "Dokumentierte Vereinbarung ist erforderlich",
   instructions_required: "Bestätigung der Kurshinweise ist erforderlich",
   policyHint:
@@ -148,8 +148,8 @@ const en = {
     qualification: "Required qualifications verified and valid",
     materials: "Clean teaching materials available to assigned lecturers",
     delivery: "Meeting link or teaching venue configured",
-    customer: "Active customer organisation recorded",
-    contact: "Active customer contact with email or phone",
+    customer: "Active company recorded",
+    contact: "Active company contact with email or phone",
     sessions: "Current teaching schedule explicitly confirmed",
     instructions:
       "Current instructions acknowledged by every assigned lecturer",
@@ -167,8 +167,8 @@ const en = {
     "These records have changed. Load the current version and review your input again.",
   offline: "You are offline. Changes require a confirmed server response.",
   materials_required: "Teaching materials are required",
-  customer_required: "A customer organisation is required",
-  contact_required: "A customer contact is required",
+  customer_required: "A company is required",
+  contact_required: "A company contact is required",
   agreement_required: "A documented agreement is required",
   instructions_required: "Course instructions must be acknowledged",
   policyHint:

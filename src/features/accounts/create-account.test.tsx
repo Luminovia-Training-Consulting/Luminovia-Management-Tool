@@ -79,7 +79,7 @@ it("creates a company with an explicit organisation and accepts the eight-charac
   await userEvent.selectOptions(screen.getByLabelText("Kontorolle"), "client");
   await screen.findByRole("option", { name: "Fictional company" });
   await userEvent.selectOptions(
-    screen.getByLabelText("Auftraggeber-Organisation"),
+    screen.getByLabelText("Zugeordnetes Unternehmen"),
     "org-a",
   );
   await userEvent.type(screen.getByLabelText(/Startpasswort/), "Aa1!aaaa");

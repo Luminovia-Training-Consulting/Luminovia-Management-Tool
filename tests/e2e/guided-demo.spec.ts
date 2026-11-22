@@ -431,6 +431,9 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     : desktopNavigation;
     await expect(navigation).toBeVisible();
     await expect(navigation.getByRole("link")).toHaveCount(26);
+    await expect(
+      navigation.getByRole("link", { name: "Unternehmen", exact: true }),
+    ).toHaveAttribute("href", "/demo/clients");
     const paths = await navigation
         .getByRole("link")
         .evaluateAll((links) =>
@@ -772,7 +775,7 @@ test("company and management analytics work with fictional data", async ({ page 
   await page.getByLabel("Demo role").selectOption("lecturer");
   await expect(main.getByRole("heading", { name: "My assignments" })).toBeVisible();
   await expect(main.getByRole("option", { name: "Lecturer compensation" })).toHaveCount(1);
-  await expect(main.getByRole("option", { name: "Customer fees" })).toHaveCount(0);
+  await expect(main.getByRole("option", { name: "Contract fees" })).toHaveCount(0);
   await page.getByLabel("Demo role").selectOption("participant");
   await expect(page).toHaveURL(/\/demo\/learning/);
   await expect(page.getByRole("link", { name: "Analytics", exact: true })).toHaveCount(0);

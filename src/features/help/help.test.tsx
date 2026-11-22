@@ -187,7 +187,11 @@ describe("public bilingual help", () => {
   });
   it("documents internal Premium activation and both sign-in identifiers", async () => {
     const router = page("/help?topic=premium-lms");
-    expect(screen.getByText(/wähle das aktive Unternehmen/)).toBeVisible();
+    expect(
+      screen.getByText(
+        /Verwaltung → Unternehmen und wähle das aktive Unternehmen/,
+      ),
+    ).toBeVisible();
     expect(
       screen.queryByRole("link", { name: "Diesen Bereich in der Demo üben" }),
     ).toBeNull();

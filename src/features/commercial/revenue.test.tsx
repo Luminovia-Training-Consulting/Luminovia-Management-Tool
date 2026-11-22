@@ -30,7 +30,7 @@ it("never renders or fetches gross report data for an actor without that capabil
   });
   client.setQueryData(
     [...commissionKeys.report("lecturer"), null],
-    [{ title: "Confidential full client fee", gross_total_amount: 2500 }],
+    [{ title: "Confidential full contract fee", gross_total_amount: 2500 }],
   );
   render(
     <QueryClientProvider client={client}>
@@ -40,7 +40,7 @@ it("never renders or fetches gross report data for an actor without that capabil
     </QueryClientProvider>,
   );
   expect(
-    screen.queryByText("Confidential full client fee"),
+    screen.queryByText("Confidential full contract fee"),
   ).not.toBeInTheDocument();
   expect(screen.queryByText(/Plattformerlöse/)).not.toBeInTheDocument();
   expect(rpc).not.toHaveBeenCalled();

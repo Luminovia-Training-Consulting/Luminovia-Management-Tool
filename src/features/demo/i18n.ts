@@ -82,7 +82,7 @@ const pairs = {
   lecturer: ["Dozentin / Dozent", "Lecturer"],
   management: ["Verwaltung", "Management"],
   roleAdmin: ["Administration", "Administration"],
-  client: ["Auftraggeber", "Client"],
+  client: ["Unternehmen", "Company"],
   roleCompany: ["Unternehmen", "Company"],
   participant: ["Teilnehmende", "Participant"],
   roleLecturer: [
@@ -94,8 +94,8 @@ const pairs = {
     "Management organises courses and offers within explicitly granted permissions. Private messages and calendars stay protected.",
   ],
   roleClient: [
-    "Auftraggeber sehen ihre eigenen Kursanfragen und freigegebenen Informationen. Andere Kunden und Dozentenhonorare bleiben verborgen.",
-    "Clients see their own course requests and shared information. Other clients and lecturer fees remain private.",
+    "Unternehmen sehen ihre eigenen Kursanfragen und freigegebenen Informationen. Andere Unternehmen und Dozentenhonorare bleiben verborgen.",
+    "Companies see their own course requests and shared information. Other companies and lecturer fees remain private.",
   ],
   roleParticipant: [
     "Teilnehmende nutzen freigegebene Kursinformationen und eigene Bewertungen. Interne Aufträge und Finanzen gehören nicht zu ihrer Ansicht.",

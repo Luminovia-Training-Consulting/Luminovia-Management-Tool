@@ -2,12 +2,12 @@
 import i18n from "../../lib/i18n";
 
 const en = {
-  title: "Customer enquiries",
+  title: "Company enquiries",
   description:
     "Requests received through the connected website appear here. Assign a contact, create or link the company, then plan the requested course.",
   connection:
     "The Website connection is configured separately. This inbox does not confirm that the public Website is connected.",
-  denied: "Enquiries require current customer-management permission.",
+  denied: "Enquiries require current company-management permission.",
   search: "Search company, topic or contact email",
   status: "Status",
   all: "All statuses",
@@ -18,7 +18,7 @@ const en = {
   empty: "No incoming enquiries match these filters.",
   received: "Received",
   reviewing: "Under review",
-  awaiting_customer: "Awaiting customer",
+  awaiting_customer: "Awaiting company",
   converted: "Converted to course planning",
   closed: "Closed",
   unassigned: "Unassigned",
@@ -47,13 +47,13 @@ const en = {
     "Opens your email application. The Portal does not send an email or claim delivery.",
   statusAction: "Change status",
   assignAction: "Assign responsibility",
-  linkAction: "Link existing customer",
-  createAction: "Create customer and contact",
+  linkAction: "Link existing company",
+  createAction: "Create company and contact",
   convertAction: "Create course run",
   noteAction: "Add management note",
   reason: "Reason",
   note: "Management note",
-  customer: "Customer organisation",
+  customer: "Company",
   none: "None selected",
   createHelp:
     "Review the submitted company and contact details above. Confirm to create a new directory organisation and contact from those values. Link an existing organisation when appropriate to avoid duplicates.",
@@ -72,7 +72,7 @@ const en = {
   history: "Enquiry history",
   integration: "Website integration",
   link: "Open course planning",
-  linkedCustomer: "Linked customer",
+  linkedCustomer: "Linked company",
   saved: "The server confirmed this action.",
   save: "Confirm",
   error:
@@ -82,19 +82,19 @@ const en = {
   event_received: "Enquiry received",
   event_status: "Status changed",
   event_assign: "Responsibility changed",
-  event_link_customer: "Customer linked",
-  event_create_customer: "Customer and contact created",
+  event_link_customer: "Company linked",
+  event_create_customer: "Company and contact created",
   event_convert: "Course run created",
   event_note: "Management note added",
 };
 const de: typeof en = {
-  title: "Kundenanfragen",
+  title: "Unternehmensanfragen",
   description:
-    "Prüfe eingegangene Trainingsanfragen, ordne den Auftraggeber zu und fahre mit der Kursplanung fort.",
+    "Prüfe eingegangene Trainingsanfragen, ordne das Unternehmen zu und fahre mit der Kursplanung fort.",
   connection:
     "Die Website-Anbindung wird separat eingerichtet. Dieser Eingang bestätigt nicht, dass die öffentliche Website bereits verbunden ist.",
   denied:
-    "Anfragen erfordern die aktuelle Berechtigung zur Auftraggeberverwaltung.",
+    "Anfragen erfordern die aktuelle Berechtigung zur Unternehmensverwaltung.",
   search: "Unternehmen, Thema oder Kontakt-E-Mail suchen",
   status: "Status",
   all: "Alle Status",
@@ -105,7 +105,7 @@ const de: typeof en = {
   empty: "Keine eingegangenen Anfragen passen zu diesen Filtern.",
   received: "Eingegangen",
   reviewing: "In Prüfung",
-  awaiting_customer: "Warten auf Auftraggeber",
+  awaiting_customer: "Warten auf Unternehmen",
   converted: "In Kursplanung übernommen",
   closed: "Geschlossen",
   unassigned: "Nicht zugewiesen",
@@ -134,13 +134,13 @@ const de: typeof en = {
     "Öffnet dein E-Mail-Programm. Das Portal versendet keine E-Mail und behauptet keine Zustellung.",
   statusAction: "Status ändern",
   assignAction: "Verantwortung zuweisen",
-  linkAction: "Bestehenden Auftraggeber zuordnen",
-  createAction: "Auftraggeber und Kontakt anlegen",
+  linkAction: "Bestehendes Unternehmen zuordnen",
+  createAction: "Unternehmen und Kontakt anlegen",
   convertAction: "Kursdurchlauf erstellen",
   noteAction: "Verwaltungsnotiz ergänzen",
   reason: "Begründung",
   note: "Verwaltungsnotiz",
-  customer: "Auftraggeberorganisation",
+  customer: "Unternehmen",
   none: "Keine Auswahl",
   createHelp:
     "Prüfe die übermittelten Unternehmens- und Kontaktdaten oben. Die Bestätigung legt daraus eine neue Organisation mit Kontaktperson im Verzeichnis an. Ordne gegebenenfalls eine bestehende Organisation zu, um Duplikate zu vermeiden.",
@@ -159,7 +159,7 @@ const de: typeof en = {
   history: "Anfrageverlauf",
   integration: "Website-Anbindung",
   link: "Kursplanung öffnen",
-  linkedCustomer: "Zugeordneter Auftraggeber",
+  linkedCustomer: "Zugeordnetes Unternehmen",
   saved: "Der Server hat diese Aktion bestätigt.",
   save: "Bestätigen",
   error:
@@ -169,8 +169,8 @@ const de: typeof en = {
   event_received: "Anfrage eingegangen",
   event_status: "Status geändert",
   event_assign: "Verantwortung geändert",
-  event_link_customer: "Auftraggeber zugeordnet",
-  event_create_customer: "Auftraggeber und Kontakt angelegt",
+  event_link_customer: "Unternehmen zugeordnet",
+  event_create_customer: "Unternehmen und Kontakt angelegt",
   event_convert: "Kursdurchlauf erstellt",
   event_note: "Verwaltungsnotiz ergänzt",
 };

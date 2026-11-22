@@ -371,7 +371,7 @@ export function SettingsPage() {
             )}
             {permissions.data.includes("organisations.manage") && (
               <Link to="/enquiries">
-                {de ? "Neue Kundenanfragen" : "New customer enquiries"}
+                {de ? "Neue Unternehmensanfragen" : "New company enquiries"}
               </Link>
             )}
           </div>

@@ -17,7 +17,7 @@ const de = {
   chats: "Chatnachrichten",
   people: "Personen",
   courses: "Kurse",
-  clients: "Kunden",
+  clients: "Unternehmen",
   contracts: "Verträge",
   finance: "Rechnungen",
 };
@@ -37,7 +37,7 @@ const en: Record<keyof typeof de, string> = {
   chats: "Chat messages",
   people: "People",
   courses: "Courses",
-  clients: "Customers",
+  clients: "Companies",
   contracts: "Contracts",
   finance: "Invoices",
 };

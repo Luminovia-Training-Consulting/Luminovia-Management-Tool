@@ -8,7 +8,7 @@ const de = {
   feeHelp:
     "Preisfilter und Sortierung verwenden dein aktuell berechtigtes Honorar. Geschützte Honorare bleiben leer und werden bei Preissortierung zuletzt angezeigt.",
   text: "Suchtext",
-  customer: "Auftraggeber enthält",
+  customer: "Unternehmen enthält",
   topics:
     "Fachgebiete (ODER innerhalb der Themen; weitere Filter gelten zusätzlich)",
   includeHistory: "Vergangene, abgelaufene und belegte Aufträge einbeziehen",
@@ -29,7 +29,7 @@ const de = {
   rate_desc: "Einheitshonorar absteigend",
   duration_asc: "Unterrichtsdauer aufsteigend",
   titleSort: "Titel A–Z",
-  customer_asc: "Auftraggeber A–Z",
+  customer_asc: "Unternehmen A–Z",
   topic_de_asc: "Erstes Thema A–Z (deutsche Bezeichnung; ohne Thema zuerst)",
   topic_en_asc: "Erstes Thema A–Z (englische Bezeichnung; ohne Thema zuerst)",
   minTotal: "Gesamthonorar ab",
@@ -79,7 +79,7 @@ const en: Record<keyof typeof de, string> = {
   feeHelp:
     "Price filters and sorting use your currently authorized compensation. Restricted fees remain empty and sort last by price.",
   text: "Search text",
-  customer: "Customer contains",
+  customer: "Company contains",
   topics: "Expertise (OR within topics; other filters still apply)",
   includeHistory: "Include past, expired and filled offers",
   historyHint:
@@ -99,7 +99,7 @@ const en: Record<keyof typeof de, string> = {
   rate_desc: "Unit fee descending",
   duration_asc: "Teaching duration ascending",
   titleSort: "Title A–Z",
-  customer_asc: "Customer A–Z",
+  customer_asc: "Company A–Z",
   topic_de_asc: "First topic A–Z (German label; no topic first)",
   topic_en_asc: "First topic A–Z (English label; no topic first)",
   minTotal: "Minimum total fee",

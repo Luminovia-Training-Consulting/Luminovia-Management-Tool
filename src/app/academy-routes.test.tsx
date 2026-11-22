@@ -963,7 +963,7 @@ it("documents included Premium LMS and Academy integration separately from the v
       /does not have a separate per-company Premium switch/,
     ),
   ).toBeVisible();
-  expect(screen.queryByText(/Administration → Customers/)).toBeNull();
+  expect(screen.queryByText(/Administration → Companies/)).toBeNull();
   await userEvent.selectOptions(
     screen.getByRole("combobox", { name: "Topic area" }),
     "integrations",

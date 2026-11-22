@@ -1,6 +1,13 @@
+# 23 November 2026 — Company terminology
+
+The administration and management views consistently use Unternehmen in German and Company or Companies in English. The same wording is used by the company directory, role preview, search, reporting, course forms, shared workflows, Premium LMS guidance and the public demo. Account forms distinguish the Company role from the Linked company field. Existing URLs, role identifiers and API contracts remain compatible.
+
+All 1,562 Vitest cases and all 26 guided demo and help journeys passed in desktop and mobile Chromium, including the Companies navigation entry and the bilingual analytics interaction. The internal production build and bundle budget passed.
+
 # 23 November 2026 — Shared chat and forum navigation
 
 The internal sidebar and mobile menu use one Communication entry. Chats and the authorized Forum have adjacent links. Existing room links keep their URL, and old forum URLs retain the thread query and fragment when redirected. The existing knowledge access check gates Forum before it loads. All 28 focused navigation and shell tests passed.
+
 
 # 23 November 2026 — Company reporting, role preview and public demo
 

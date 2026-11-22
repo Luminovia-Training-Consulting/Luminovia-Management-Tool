@@ -1,5 +1,5 @@
 /**
- * Browser workflows for the customer directory, course templates and safe unpublished copies.
+ * Browser workflows for the company directory, course templates and safe unpublished copies.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import {expect, type Page, test} from "@playwright/test";

@@ -124,12 +124,12 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await page.goto("/accounting");
   await page
     .getByRole("button", {
-      name: "Externe Kundenrechnung erfassen",
+      name: "Externe Rechnung an ein Unternehmen erfassen",
       exact: true,
     })
     .click();
   const form = page.getByRole("dialog", {
-    name: "Externe Kundenrechnung erfassen",
+    name: "Externe Rechnung an ein Unternehmen erfassen",
     exact: true,
   });
   await form.getByRole("checkbox", { name: new RegExp(title) }).check();
@@ -141,7 +141,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     .fill("200.03");
   const bytes = accountingTestPdf();
   await form
-    .getByLabel("PDF der ausgestellten Kundenrechnung hochladen", {
+    .getByLabel("PDF der an das Unternehmen ausgestellten Rechnung hochladen", {
       exact: true,
     })
     .setInputFiles({
@@ -200,12 +200,12 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     Buffer.from("% Fictional issued credit note\n"),
   ]);
   const creditAction = card.getByRole("button", {
-    name: "Kundengutschriften",
+    name: "Gutschriften für Unternehmen",
     exact: true,
   });
   await creditAction.click();
   const credit = page.getByRole("dialog", {
-    name: "Kundengutschriften",
+    name: "Gutschriften für Unternehmen",
     exact: true,
   });
   await credit
@@ -262,11 +262,11 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await expect(card.getByText("166.69 AUD", { exact: true })).toBeVisible();
 
   const settlementAction = card.getByRole("button", {
-    name: "Kundensaldo",
+    name: "Unternehmenssaldo",
     exact: true,
   });
   const settlement = page.getByRole("dialog", {
-    name: "Kundensaldo",
+    name: "Unternehmenssaldo",
     exact: true,
   });
   await settlementAction.click();
@@ -471,7 +471,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     expect(
       await clientPage
         .getByRole("button", {
-          name: "Externe Kundenrechnung erfassen",
+          name: "Externe Rechnung an ein Unternehmen erfassen",
           exact: true,
         })
         .count(),
@@ -487,15 +487,15 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     });
     await expect(
       clientCard.getByRole("button", {
-        name: "Kundengutschriften",
+        name: "Gutschriften für Unternehmen",
         exact: true,
       }),
     ).toHaveCount(0);
     await clientCard
-      .getByRole("button", { name: "Kundensaldo", exact: true })
+      .getByRole("button", { name: "Unternehmenssaldo", exact: true })
       .click();
     const customerBalance = clientPage.getByRole("dialog", {
-      name: "Kundensaldo",
+      name: "Unternehmenssaldo",
       exact: true,
     });
     await expect(

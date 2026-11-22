@@ -137,10 +137,10 @@ it("keeps company finance separate from teaching income and uses original curren
     screen.getByRole("option", { name: "Lecturer compensation" }),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("option", { name: "Customer fees" }),
+    screen.queryByRole("option", { name: "Contract fees" }),
   ).not.toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("View"), "company");
-  await screen.findByRole("option", { name: "Customer fees" });
+  await screen.findByRole("option", { name: "Contract fees" });
   expect(
     screen.getByText("Reporting time zone: Australia/Brisbane"),
   ).toBeInTheDocument();
@@ -295,7 +295,7 @@ it("opens the company report from a deep link for an administrator who belongs t
     false,
     "/analytics?scope=company",
   );
-  await screen.findByRole("option", { name: "Customer fees" });
+  await screen.findByRole("option", { name: "Contract fees" });
   expect(screen.getByLabelText("View")).toHaveValue("company");
   expect(
     rpc.mock.calls.filter(([name]) => name === "analytics_report"),

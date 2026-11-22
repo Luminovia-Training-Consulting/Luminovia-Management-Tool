@@ -706,7 +706,7 @@ export function AdminPage() {
         }
         description={
           de
-            ? "Kursdurchführungen planen, Kunden zuordnen und vollständige Lehrblöcke vergeben."
+            ? "Kursdurchführungen planen, Unternehmen zuordnen und vollständige Lehrblöcke vergeben."
             : "Plan course runs, link customers and allocate complete teaching blocks."
         }
       />
@@ -809,19 +809,15 @@ export function AdminPage() {
           )}
           {permissions.data.includes("organisations.manage") && (
             <section className="panel">
-              <h2>
-                {de
-                  ? "Kunden & Unternehmenszugänge"
-                  : "Customers & company access"}
-              </h2>
+              <h2>{de ? "Unternehmen und Zugänge" : "Companies and access"}</h2>
               <p>
                 {de
-                  ? "Unternehmen anlegen, dem Kurs zuordnen und freigegebene Kundenkonten mit dem Unternehmen verknüpfen. Die Unternehmenszuordnung bestimmt den Kundenzugriff."
-                  : "Create companies, link them to courses and grant customer accounts access to their company. Company membership determines customer access."}
+                  ? "Unternehmen anlegen, dem Kurs zuordnen und berechtigte Unternehmenskonten mit dem Unternehmen verknüpfen. Die Unternehmenszuordnung bestimmt, welche Kurse und Daten das Konto sehen darf."
+                  : "Create companies, link them to courses and link authorised accounts to their company. Company membership determines which courses and data an account can access."}
               </p>
               <Button asChild variant="secondary">
                 <Link to="/clients">
-                  {de ? "Kunden verwalten" : "Manage customers"}
+                  {de ? "Unternehmen verwalten" : "Manage companies"}
                 </Link>
               </Button>
             </section>

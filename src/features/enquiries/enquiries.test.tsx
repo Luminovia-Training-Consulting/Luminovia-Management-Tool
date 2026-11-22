@@ -133,11 +133,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("private connected website enquiry management", () => {
-  it("does not call private enquiry APIs without current customer-management permission", async () => {
+  it("does not call private enquiry APIs without current company-management permission", async () => {
     state.allowed = false;
     mount();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /Auftraggeberverwaltung/,
+      /Unternehmensverwaltung/,
     );
     expect(state.rpc).not.toHaveBeenCalled();
   });
@@ -161,7 +161,7 @@ describe("private connected website enquiry management", () => {
     await screen.findByRole("heading", { name: enquiry.payload.topic });
     const user = userEvent.setup();
     await user.click(
-      screen.getByRole("button", { name: "Auftraggeber und Kontakt anlegen" }),
+      screen.getByRole("button", { name: "Unternehmen und Kontakt anlegen" }),
     );
     expect(
       state.rpc.mock.calls.some(([name]) => name === "manage_enquiry"),
@@ -250,7 +250,7 @@ describe("private connected website enquiry management", () => {
     state.online = false;
     view.rerender(view.element());
     expect(
-      screen.getByRole("button", { name: "Auftraggeber und Kontakt anlegen" }),
+      screen.getByRole("button", { name: "Unternehmen und Kontakt anlegen" }),
     ).toBeDisabled();
     state.online = true;
     view.rerender(view.element());
@@ -268,7 +268,7 @@ describe("private connected website enquiry management", () => {
       expect(screen.queryByText(enquiry.payload.email)).not.toBeInTheDocument(),
     );
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /Auftraggeberverwaltung/,
+      /Unternehmensverwaltung/,
     );
   });
   it("normalises planning instants in the intended zone and rejects DST gaps, ambiguity and overlapping sessions", () => {

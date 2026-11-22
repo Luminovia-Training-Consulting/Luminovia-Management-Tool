@@ -72,7 +72,7 @@ it("saves only this actor's versioned palette and displays confirmation", async 
     "#E6E0F0",
   );
   await user.selectOptions(
-    screen.getByLabelText("Kundenerstellte Kurse und Aufträge"),
+    screen.getByLabelText("Von Unternehmen erstellte Kurse und Aufträge"),
     "#F5DDE7",
   );
   await user.click(
@@ -101,7 +101,7 @@ it("keeps the saved choices private to its actor and reloads the same swatches",
   const selected = screen.getByLabelText("Eigene private Termine");
   expect(selected).toHaveValue("#E1EDDA");
   await user.selectOptions(
-    screen.getByLabelText("Bestätigte Aufträge ohne Auftraggeber"),
+    screen.getByLabelText("Bestätigte Aufträge ohne Unternehmen"),
     "#DFE6EA",
   );
   await user.click(
@@ -111,6 +111,6 @@ it("keeps the saved choices private to its actor and reloads the same swatches",
   expect(fake.settings.assignment_event_color).toBe("#DFE6EA");
   expect(selected).toHaveValue("#E1EDDA");
   expect(
-    screen.getByLabelText("Kundenerstellte Kurse und Aufträge"),
+    screen.getByLabelText("Von Unternehmen erstellte Kurse und Aufträge"),
   ).toHaveValue("#FFF0C5");
 });

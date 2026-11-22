@@ -1171,13 +1171,13 @@ it("filters confirmed course sessions by customer and any selected topic while r
   );
   const user = userEvent.setup();
   await screen.findByRole("link", { name: "Python course" });
-  await user.selectOptions(screen.getByLabelText("Kunde"), customerA);
+  await user.selectOptions(screen.getByLabelText("Unternehmen"), customerA);
   expect(screen.getByRole("link", { name: "Python course" })).toBeVisible();
   expect(
     screen.queryByRole("link", { name: "Linux course" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
-  await user.selectOptions(screen.getByLabelText("Kunde"), "");
+  await user.selectOptions(screen.getByLabelText("Unternehmen"), "");
   await user.selectOptions(screen.getByLabelText("Themen & Tags"), topicB);
   expect(screen.getByRole("link", { name: "Linux course" })).toBeVisible();
   expect(

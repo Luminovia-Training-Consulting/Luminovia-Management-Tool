@@ -95,7 +95,7 @@ const pairs: Record<string, [string, string]> = {
   senior_lecturer: ["Senior-Dozierende", "Senior lecturer"],
   lecturer: ["Dozierende", "Lecturer"],
   participant: ["Kursteilnehmende", "Course participant"],
-  client: ["Auftraggeber", "Client"],
+  client: ["Unternehmen", "Company"],
 };
 for (const language of ["de", "en"] as const)
   i18n.addResourceBundle(

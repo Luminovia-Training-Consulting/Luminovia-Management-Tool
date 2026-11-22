@@ -5,7 +5,7 @@ const de = {
   journal: {
     title: "Abrechnungsjournal",
     description:
-      "Angerechnete Kundengutschriften, Kundenerstattungen und Rückzahlungen von Dozierenden im gewählten Zeitraum. Gutschriften und Gegenbuchungen zählen am UTC-Buchungstag. Bei Zahlungen zählt das tatsächliche Zahlungsdatum.",
+      "Angerechnete Gutschriften für Unternehmen, Erstattungen an Unternehmen und Rückzahlungen von Dozierenden im gewählten Zeitraum. Gutschriften und Gegenbuchungen zählen am UTC-Buchungstag. Bei Zahlungen zählt das tatsächliche Zahlungsdatum.",
     from: "Von (einschließlich)",
     to: "Bis (einschließlich)",
     load: "Journal anzeigen",
@@ -35,8 +35,8 @@ const de = {
     more: "Weitere Buchungen anzeigen",
     reversalAmount: "Gegenbuchung −{{amount}} {{currency}}",
     kind: {
-      customer_credit: "Angerechnete Kundengutschrift",
-      customer_refund: "Rückzahlung an Kunden",
+      customer_credit: "Angerechnete Gutschrift für ein Unternehmen",
+      customer_refund: "Rückzahlung an ein Unternehmen",
       lecturer_repayment: "Rückzahlung von Dozierenden",
     },
   },
@@ -46,7 +46,7 @@ const de = {
   source: "Rechnungsquelle",
   own: "Meine Dozierendenrechnungen",
   lecturer_all: "Alle Dozierendenrechnungen",
-  customer: "Kundenrechnungen",
+  customer: "Rechnungen an Unternehmen",
   empty: "Keine freigegebenen Rechnungen vorhanden.",
   select: "Rechnung {{number}} auswählen",
   number: "Rechnungsnummer",
@@ -54,7 +54,7 @@ const de = {
   due: "Fällig am",
   currency: "Währung",
   total: "Dokumentierter Rechnungsbetrag",
-  accepted: "Vereinbarter Kundenpreis",
+  accepted: "Vereinbarter Auftragspreis",
   paid: "Erfasste Zahlungen",
   outstanding: "Offener Betrag",
   exportJson: "JSON-Export erstellen",
@@ -75,15 +75,16 @@ const de = {
     "XRechnung und ZUGFeRD können noch nicht erzeugt werden. Es fehlen verifizierte Verkäufer-/Käuferdaten, Steueraufschlüsselungen, Rechnungspositionen, elektronische Adressen und die eingerichtete Standardvalidierung.",
   canonical:
     "JSON und CSV verwenden das dokumentierte Portal-Austauschschema. Ein Import in DATEV oder eine andere Fremdsoftware ist noch nicht verifiziert.",
-  register: "Externe Kundenrechnung erfassen",
+  register: "Externe Rechnung an ein Unternehmen erfassen",
   registerHint:
-    "Erfasse eine bereits ausgestellte Rechnung mit einer eigenen, geprüften PDF und ihren tatsächlichen Werten. Die zugehörigen akzeptierten Kundenvereinbarungen bleiben unverändert.",
-  claims: "Akzeptierte Kundenvereinbarungen",
-  noClaims: "Keine noch nicht zugeordneten Kundenvereinbarungen vorhanden.",
-  pdf: "PDF der ausgestellten Kundenrechnung hochladen",
+    "Erfasse eine bereits ausgestellte Rechnung mit einer eigenen, geprüften PDF und ihren tatsächlichen Werten. Die zugehörigen angenommenen Vereinbarungen mit Unternehmen bleiben unverändert.",
+  claims: "Angenommene Vereinbarungen mit Unternehmen",
+  noClaims:
+    "Keine noch nicht zugeordneten Vereinbarungen mit Unternehmen vorhanden.",
+  pdf: "PDF der an das Unternehmen ausgestellten Rechnung hochladen",
   difference: "Begründung einer Abweichung",
   differenceHint:
-    "Erforderlich, wenn der tatsächliche Rechnungsbetrag vom vereinbarten Kundenpreis abweicht. Eine steuerliche Behandlung wird nicht abgeleitet.",
+    "Erforderlich, wenn der tatsächliche Rechnungsbetrag vom vereinbarten Auftragspreis abweicht. Eine steuerliche Behandlung wird nicht abgeleitet.",
   confirmDocument:
     "Ich habe Nummer, Daten, Betrag und Währung mit dieser ausgestellten PDF abgeglichen.",
   saveInvoice: "Rechnung dokumentieren",
@@ -112,7 +113,7 @@ const de = {
   exportReady: "Export {{id}} bestätigt · {{count}} Rechnungen",
   hash: "Prüfsumme",
   noTaxClaim:
-    "Der vereinbarte volle Kundenpreis ist kein Nachweis eines steuerlichen Bruttobetrags.",
+    "Der vereinbarte volle Auftragspreis ist kein Nachweis eines steuerlichen Bruttobetrags.",
   original:
     "Werte bleiben in der ursprünglichen Währung; es findet keine Umrechnung statt.",
   paymentHistory: "Zahlungsverlauf",
@@ -120,13 +121,13 @@ const de = {
   exportHistory:
     "Ein Export bleibt eine Aufnahme zum Erstellungszeitpunkt. Später erfasste Zahlungen erzeugen einen neuen Stand.",
   credits:
-    "Ausgestellte Kundengutschriften stehen als separate Nachweise bei der zugehörigen Rechnung.",
-  creditNotes: "Kundengutschriften",
+    "Ausgestellte Gutschriften für Unternehmen stehen als separate Nachweise bei der zugehörigen Rechnung.",
+  creditNotes: "Gutschriften für Unternehmen",
   creditHint:
     "Eine bereits ausgestellte Gutschrift zur Originalrechnung erfassen oder den geprüften Beleg herunterladen.",
   creditInvoice: "Rechnung {{number}} über {{amount}} {{currency}}",
   creditEvidenceOnly:
-    "Hier dokumentierst du Gutschriftbelege. Im Kundensaldo kannst du erfasste Gutschriften anrechnen und Rückzahlungen dokumentieren.",
+    "Hier dokumentierst du Gutschriftbelege. Im Unternehmenssaldo kannst du erfasste Gutschriften anrechnen und Rückzahlungen dokumentieren.",
   creditReference: "Gutschriftnummer",
   creditIssued: "Ausstellungsdatum der Gutschrift",
   creditAmount: "Betrag der Gutschrift in {{currency}}",
@@ -144,7 +145,7 @@ const de = {
   creditEmpty: "Zu dieser Rechnung wurden noch keine Gutschriften erfasst.",
   creditDownload: "PDF für Gutschrift {{reference}} herunterladen",
   creditMore: "Weitere Gutschriften laden",
-  customerSettlement: "Kundensaldo",
+  customerSettlement: "Unternehmenssaldo",
   customerSettlementHint:
     "Verrechnete Gutschriften, Zahlungseingänge und Rückzahlungen zur Originalrechnung.",
   originalInvoiceOutstanding: "Offen vor Verrechnung",
@@ -190,7 +191,7 @@ const en: typeof de = {
   journal: {
     title: "Settlement journal",
     description:
-      "Applied customer credits, customer refunds and lecturer repayments for the selected period. Credits and reversals use the UTC posting date. Payments use the actual payment date.",
+      "Applied credits for companies, refunds to companies and lecturer repayments for the selected period. Credits and reversals use the UTC posting date. Payments use the actual payment date.",
     from: "From (inclusive)",
     to: "To (inclusive)",
     load: "Show journal",
@@ -221,8 +222,8 @@ const en: typeof de = {
     more: "Show more entries",
     reversalAmount: "Reversal −{{amount}} {{currency}}",
     kind: {
-      customer_credit: "Applied customer credit",
-      customer_refund: "Customer refund",
+      customer_credit: "Applied credit for a company",
+      customer_refund: "Refund to a company",
       lecturer_repayment: "Lecturer repayment",
     },
   },
@@ -232,7 +233,7 @@ const en: typeof de = {
   source: "Invoice source",
   own: "My lecturer invoices",
   lecturer_all: "All lecturer invoices",
-  customer: "Customer invoices",
+  customer: "Invoices to companies",
   empty: "No authorized invoices available.",
   select: "Select invoice {{number}}",
   number: "Invoice number",
@@ -240,7 +241,7 @@ const en: typeof de = {
   due: "Due on",
   currency: "Currency",
   total: "Recorded invoice total",
-  accepted: "Agreed customer charge",
+  accepted: "Agreed contract charge",
   paid: "Recorded payments",
   outstanding: "Outstanding amount",
   exportJson: "Create JSON export",
@@ -260,15 +261,15 @@ const en: typeof de = {
     "XRechnung and ZUGFeRD generation is not yet available. Verified seller/buyer details, tax breakdowns, invoice lines, electronic addresses and configured standard validation are missing.",
   canonical:
     "JSON and CSV use the documented Portal interchange schema. Import into DATEV or another third-party system has not been verified.",
-  register: "Record an external customer invoice",
+  register: "Record an external invoice to a company",
   registerHint:
-    "Record an already issued invoice with a dedicated scanned PDF and its actual values. Associated accepted customer agreements remain unchanged.",
-  claims: "Accepted customer agreements",
-  noClaims: "No uninvoiced accepted customer agreements are available.",
-  pdf: "Upload the issued customer invoice PDF",
+    "Record an already issued invoice with a dedicated scanned PDF and its actual values. Associated accepted agreements with companies remain unchanged.",
+  claims: "Accepted agreements with companies",
+  noClaims: "No uninvoiced accepted agreements with companies are available.",
+  pdf: "Upload the PDF of the invoice issued to the company",
   difference: "Explanation of a difference",
   differenceHint:
-    "Required when the actual invoice total differs from the agreed customer charge. No tax treatment is inferred.",
+    "Required when the actual invoice total differs from the agreed contract charge. No tax treatment is inferred.",
   confirmDocument:
     "I checked the number, dates, amount and currency against this issued PDF.",
   saveInvoice: "Record invoice",
@@ -297,20 +298,20 @@ const en: typeof de = {
   exportReady: "Export {{id}} confirmed · {{count}} invoices",
   hash: "Checksum",
   noTaxClaim:
-    "An agreed full customer charge does not establish a tax gross amount.",
+    "An agreed full contract charge does not establish a tax gross amount.",
   original: "Values retain their original currency; no conversion is applied.",
   paymentHistory: "Payment history",
   reversed: "Reversal",
   exportHistory:
     "An export remains a snapshot at its creation time. Payments recorded later produce a new snapshot.",
   credits:
-    "Issued customer credit notes are available as separate evidence on the associated invoice.",
-  creditNotes: "Customer credit notes",
+    "Issued credit notes for companies are available as separate evidence on the associated invoice.",
+  creditNotes: "Credit notes for companies",
   creditHint:
     "Record an already-issued credit note against its original invoice or download the verified PDF.",
   creditInvoice: "Invoice {{number}} for {{amount}} {{currency}}",
   creditEvidenceOnly:
-    "This section records credit note documents. Use Customer balance to apply recorded credits and document refunds.",
+    "This section records credit note documents. Use Company balance to apply recorded credits and document refunds.",
   creditReference: "Credit note number",
   creditIssued: "Credit note issue date",
   creditAmount: "Credit note amount in {{currency}}",
@@ -327,7 +328,7 @@ const en: typeof de = {
   creditEmpty: "No credit notes have been recorded for this invoice.",
   creditDownload: "Download PDF for credit note {{reference}}",
   creditMore: "Load more credit notes",
-  customerSettlement: "Customer balance",
+  customerSettlement: "Company balance",
   customerSettlementHint:
     "Applied credits, received payments and refunds for the original invoice.",
   originalInvoiceOutstanding: "Outstanding before credits",

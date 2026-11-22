@@ -34,7 +34,7 @@ const de = {
   alreadyInvited:
     "Die Einladung wurde bereits versandt. Es wurde keine weitere E-Mail gesendet.",
   manageProfile: "Profil, Nachweise und Kontostatus verwalten",
-  hint: "Eigene Konten, nachvollziehbare Rollen und klar zugeordnete Auftraggeber.",
+  hint: "Eigene Konten, nachvollziehbare Rollen und klar zugeordnete Unternehmen.",
   search: "Konten suchen",
   roles: "Rollen bearbeiten",
   save: "Rollen speichern",
@@ -72,7 +72,7 @@ const de = {
       "An eingeschriebenen Kursen teilnehmen und die eigenen Lerninhalte nutzen.",
     guest: "Das eigene Profil und persönliche Einstellungen öffnen.",
   },
-  organisation: "Auftraggeber-Organisation",
+  organisation: "Zugeordnetes Unternehmen",
   organisationHint:
     "Die Unternehmensrolle gilt für die zugeordneten Organisationen.",
   organisationAdmin:
@@ -127,7 +127,7 @@ const en: typeof de = {
   alreadyInvited:
     "The invitation was already sent. No additional email was sent.",
   manageProfile: "Manage profile, evidence and account status",
-  hint: "Individual accounts, audited roles and clearly assigned clients.",
+  hint: "Individual accounts, audited roles and clearly assigned companies.",
   search: "Search accounts",
   roles: "Edit roles",
   save: "Save roles",
@@ -162,7 +162,7 @@ const en: typeof de = {
       "Take part in courses you are enrolled in and use your own learning materials.",
     guest: "Open your own profile and personal settings.",
   },
-  organisation: "Client organisation",
+  organisation: "Linked company",
   organisationHint: "The company role applies to linked organisations.",
   organisationAdmin:
     "Administration will assign an organisation to this account afterwards.",

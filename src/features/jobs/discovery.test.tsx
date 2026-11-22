@@ -729,14 +729,14 @@ it.each([
     "de",
     "Sortieren",
     "Filter anwenden",
-    "Auftraggeber A–Z",
+    "Unternehmen A–Z",
     "Erstes Thema A–Z (deutsche Bezeichnung; ohne Thema zuerst)",
   ],
   [
     "en",
     "Sort",
     "Apply filters",
-    "Customer A–Z",
+    "Company A–Z",
     "First topic A–Z (German label; no topic first)",
   ],
 ])(

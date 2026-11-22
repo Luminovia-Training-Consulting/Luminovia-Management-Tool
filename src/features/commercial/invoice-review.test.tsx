@@ -327,7 +327,7 @@ it("only shares checked lecturer amounts and clears them when the evidence chang
     "142.37",
   );
   await user.type(
-    screen.getByLabelText("Agreed customer fee for this unit"),
+    screen.getByLabelText("Agreed contract fee for this unit"),
     "332.12",
   );
   await user.type(
@@ -398,7 +398,7 @@ it("only shares checked lecturer amounts and clears them when the evidence chang
   ).toBe(true);
 });
 
-it("shows customer-funded non-teaching days separately and keeps customer amounts out of the note", async () => {
+it("shows customer-funded non-teaching days separately and keeps contract amounts out of the note", async () => {
   render(
     <QueryClientProvider client={client}>
       <InvoiceReviewQueue actor="fictional-manager" />
@@ -415,9 +415,9 @@ it("shows customer-funded non-teaching days separately and keeps customer amount
   expect(outcome).not.toHaveValue("delivered");
   await user.selectOptions(outcome, "customerNonTeaching");
   write("Vereinbartes Honorar je Einheit (EUR)", "200");
-  write("Vereinbartes Kundenhonorar für diese Einheit", "512.42");
+  write("Vereinbartes Auftragshonorar für diese Einheit", "512.42");
   write(
-    "Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag",
+    "Tatsächlich erhaltene Zahlung des Unternehmens für den unterrichtsfreien Tag",
     "256.21",
   );
   await user.click(screen.getByRole("button", { name: "Berechnen" }));

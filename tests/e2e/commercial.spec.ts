@@ -567,7 +567,7 @@ test("settlement for a cancelled assignment shares only verified lecturer totals
         await financeCase.getByLabel("Datum der Leistung").fill("2035-05-04");
         await financeCase.getByLabel("Ergebnis der Prüfung").selectOption("customer");
         await financeCase.getByLabel("Vereinbartes Honorar je Einheit (EUR)").fill("200");
-        await financeCase.getByLabel("Vereinbartes Kundenhonorar für diese Einheit").fill("512.42");
+        await financeCase.getByLabel("Vereinbartes Auftragshonorar für diese Einheit").fill("512.42");
         await financeCase.getByLabel("Tatsächlich erhaltene Stornozahlung für diese Einheit").fill("256.21");
         await financeCase.getByRole("button", {name: "Einheit hinzufügen", exact: true}).click();
         const holiday = financeCase.getByRole("group", {name: "Vergütungseinheit 2"});
@@ -575,8 +575,8 @@ test("settlement for a cancelled assignment shares only verified lecturer totals
         await holiday.getByLabel("Datum der Leistung").fill("2035-05-05");
         await holiday.getByLabel("Ergebnis der Prüfung").selectOption("customerNonTeaching");
         await holiday.getByLabel("Vereinbartes Honorar je Einheit (EUR)").fill("200");
-        await holiday.getByLabel("Vereinbartes Kundenhonorar für diese Einheit").fill("404.20");
-        await holiday.getByLabel("Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag").fill("101.05");
+        await holiday.getByLabel("Vereinbartes Auftragshonorar für diese Einheit").fill("404.20");
+        await holiday.getByLabel("Tatsächlich erhaltene Zahlung des Unternehmens für den unterrichtsfreien Tag").fill("101.05");
         await financeCase.getByRole("button", {name: "Berechnen", exact: true}).click();
         const attach = financeCase.getByRole("button", {name: "Beträge in die Prüfnotiz übernehmen"});
         await expect(attach).toBeDisabled();

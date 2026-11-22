@@ -305,7 +305,7 @@ describe("Account administration", () => {
       screen.getByRole("button", { name: "Rollen speichern" }),
     ).toBeDisabled();
     await userEvent.selectOptions(
-      await screen.findByLabelText("Auftraggeber-Organisation"),
+      await screen.findByLabelText("Zugeordnetes Unternehmen"),
       "company-a",
     );
     await userEvent.click(

@@ -350,15 +350,15 @@ const pairs: Record<string, [string, string]> = {
   ],
   preparation: ["Gemeinsame Kursvorbereitung", "Shared course preparation"],
   preparationHelp: [
-    "Verbindliche Vorbereitungspunkte für das Lehrteam. Auftraggeber sehen nur ausdrücklich für sie sichtbare Punkte.",
-    "Preparation items for the teaching team. Clients see only items explicitly shared with them.",
+    "Verbindliche Vorbereitungspunkte für das Lehrteam. Unternehmen sehen nur ausdrücklich für sie sichtbare Punkte.",
+    "Preparation items for the teaching team. Companies see only items explicitly shared with them.",
   ],
   preparationCount: [
     "{{done}} von {{total}} Punkten erledigt",
     "{{done}} of {{total}} items completed",
   ],
   newPreparation: ["Neuer Vorbereitungspunkt", "New preparation item"],
-  clientVisible: ["Für den Auftraggeber sichtbar", "Visible to the client"],
+  clientVisible: ["Für das Unternehmen sichtbar", "Visible to the company"],
   add: ["Hinzufügen", "Add"],
   courseInfo: ["Kursinformationen & Kontakt", "Course information & contact"],
   contact: ["Ansprechperson dieses Kurses", "Contact for this course"],
@@ -367,12 +367,12 @@ const pairs: Record<string, [string, string]> = {
     "No course contact shared",
   ],
   selectContact: [
-    "Kundenkontakt für diesen Kurs freigeben",
-    "Share a customer contact for this course",
+    "Unternehmenskontakt für diesen Kurs freigeben",
+    "Share a company contact for this course",
   ],
   contactHelp: [
-    "Nur ein Kontakt der zugeordneten Organisation wird im Kurs für berechtigte Kursmitglieder sichtbar. Interne Kundennotizen bleiben privat.",
-    "Only a contact from the linked organisation is shared with authorised course members. Internal customer notes stay private.",
+    "Nur ein Kontakt der zugeordneten Organisation wird im Kurs für berechtigte Kursmitglieder sichtbar. Interne Unternehmensnotizen bleiben privat.",
+    "Only a contact from the linked organisation is shared with authorised course members. Internal company notes stay private.",
   ],
   teachingLink: ["Unterrichtslink öffnen", "Open teaching link"],
   copyTeachingLink: ["Unterrichtslink kopieren", "Copy teaching link"],
@@ -502,7 +502,7 @@ const pairs: Record<string, [string, string]> = {
   ],
   all: ["Alle berechtigten Kursmitglieder", "All authorised course members"],
   staff: ["Lehrteam", "Teaching team"],
-  client: ["Auftraggeber", "Client"],
+  client: ["Unternehmen", "Company"],
   participants: ["Teilnehmende", "Participants"],
   share: ["Fassung freigeben", "Share version"],
   attendance: ["Digitale Anwesenheit", "Digital attendance"],
@@ -511,7 +511,7 @@ const pairs: Record<string, [string, string]> = {
     "Attendance register by session",
   ],
   sessionRegisterHelp: [
-    "Nur berechtigtes Lehrteam, Kursverwaltung und Auftraggeber sehen diese Liste. Jede Änderung wird versioniert und protokolliert.",
+    "Nur berechtigtes Lehrteam, Kursverwaltung und Unternehmen sehen diese Liste. Jede Änderung wird versioniert und protokolliert.",
     "Only authorised teaching staff, course management and company contacts can see this register. Every change is versioned and recorded.",
   ],
   attendanceSession: ["Kurstermin", "Course session"],
@@ -699,8 +699,8 @@ const pairs: Record<string, [string, string]> = {
   academyNotebookBody: ["Private Kursnotizen", "Private course notes"],
   academySaveNotebook: ["Kursnotizen speichern", "Save course notes"],
   notebookHelp: [
-    "Diese Notizen sieht ausschließlich dein Konto. Lehrteam und Auftraggeber erhalten keinen allgemeinen Zugriff.",
-    "Only your account can read these notes. Teaching staff and clients have no general access.",
+    "Diese Notizen sieht ausschließlich dein Konto. Lehrteam und Unternehmen erhalten keinen allgemeinen Zugriff.",
+    "Only your account can read these notes. Teaching staff and companies have no general access.",
   ],
   notes: ["Persönliche Kursnotizen", "Personal course notes"],
   questions: ["Fragen & Antworten", "Questions & answers"],
@@ -774,8 +774,8 @@ const pairs: Record<string, [string, string]> = {
   ends_at: ["Ende", "End"],
   requestRepeat: ["Neue Kursanfrage senden", "Submit new course request"],
   viewRequest: [
-    "Anfrage im Auftraggeberportal ansehen",
-    "View request in client portal",
+    "Anfrage im Unternehmensportal ansehen",
+    "View request in company portal",
   ],
 };
 for (const [language, index] of [

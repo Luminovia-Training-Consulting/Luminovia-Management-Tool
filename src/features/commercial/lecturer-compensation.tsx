@@ -105,7 +105,9 @@ function Editor({
           <Field
             id={`pay-percent-${userId}`}
             label={
-              de ? "Anteil am Kundenbudget (%)" : "Share of customer budget (%)"
+              de
+                ? "Anteil am Unternehmensbudget (%)"
+                : "Share of company budget (%)"
             }
           >
             <input
@@ -160,8 +162,8 @@ function Editor({
       {mode === "daily" && (
         <p className="muted">
           {de
-            ? "Der Tagessatz wird für jeden Unterrichtstag des gesamten Auftrags berechnet. Währung und Kundenbudget müssen dazu passen."
-            : "The daily rate applies to each teaching day in the complete assignment. Currency and customer budget must match."}
+            ? "Der Tagessatz wird für jeden Unterrichtstag des gesamten Auftrags berechnet. Währung und Unternehmensbudget müssen dazu passen."
+            : "The daily rate applies to each teaching day in the complete assignment. Currency and company budget must match."}
         </p>
       )}
       <Button disabled={!online || !valid || save.isPending}>

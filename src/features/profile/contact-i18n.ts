@@ -3,8 +3,8 @@ import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
   title: ["Kontaktmöglichkeiten im Team", "Team contact options"],
   help: [
-    "Du entscheidest, ob aktive Dozierende und Teammitglieder deine gespeicherte E-Mail-Adresse oder Telefonnummer im internen Profil sehen. Beide Angaben bleiben hier standardmäßig verborgen. Auftraggeber- und Teilnahmekonten erhalten sie nicht. Bestehende Berechtigungen für die Kontoverwaltung bleiben davon unberührt.",
-    "Choose whether active lecturers and staff can see your saved email address or phone number on your internal profile. Both are hidden here by default. Client and participant accounts do not receive them. Existing account-administration permissions remain separate.",
+    "Du entscheidest, ob aktive Dozierende und Teammitglieder deine gespeicherte E-Mail-Adresse oder Telefonnummer im internen Profil sehen. Beide Angaben bleiben hier standardmäßig verborgen. Unternehmens- und Teilnahmekonten erhalten sie nicht. Bestehende Berechtigungen für die Kontoverwaltung bleiben davon unberührt.",
+    "Choose whether active lecturers and staff can see your saved email address or phone number on your internal profile. Both are hidden here by default. Company and participant accounts do not receive them. Existing account-administration permissions remain separate.",
   ],
   email: [
     "E-Mail-Adresse für das Team anzeigen",

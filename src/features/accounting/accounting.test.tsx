@@ -83,7 +83,9 @@ it("does not expose customer registration, gross data or management export to or
     screen.getByRole("heading", { level: 1, name: "Buchhaltungsexporte" }),
   ).toBeVisible();
   expect(
-    screen.queryByRole("button", { name: "Externe Kundenrechnung erfassen" }),
+    screen.queryByRole("button", {
+      name: "Externe Rechnung an ein Unternehmen erfassen",
+    }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("option", { name: "Alle Dozierendenrechnungen" }),
@@ -126,11 +128,13 @@ it("provides English format boundaries and accessible external-document confirma
   show(true);
   await userEvent.click(
     screen.getByRole("button", {
-      name: "Record an external customer invoice",
+      name: "Record an external invoice to a company",
     }),
   );
   expect(
-    screen.getByRole("dialog", { name: "Record an external customer invoice" }),
+    screen.getByRole("dialog", {
+      name: "Record an external invoice to a company",
+    }),
   ).toBeVisible();
   expect(screen.getByLabelText("Recorded invoice total")).toBeVisible();
   expect(
@@ -243,7 +247,9 @@ async function reviewedForm() {
     error: { code: "08006", message: "Fictional response lost" },
   });
   await user.click(
-    screen.getByRole("button", { name: "Record an external customer invoice" }),
+    screen.getByRole("button", {
+      name: "Record an external invoice to a company",
+    }),
   );
   await user.click(
     screen.getByRole("checkbox", { name: /Fictional reviewed agreement A/ }),

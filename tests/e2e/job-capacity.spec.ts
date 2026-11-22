@@ -43,7 +43,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     const title = `Fictional capacity UI ${testInfo.project.name}`;
     await page.getByLabel("Titel", {exact: true}).fill(title);
     await page
-        .getByLabel("Kunde", {exact: true})
+        .getByLabel("Unternehmen", {exact: true})
         .fill("Fictional capacity UI academy");
     await page.getByLabel("Dozierendenplätze", {exact: true}).fill("3");
     await page
@@ -53,7 +53,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
         .getByLabel("Konditionen", {exact: true})
         .fill("Fictional per-position terms for the entire teaching block");
     await expect(
-        page.getByText(/Maximales Auftraggeberbudget:.*300,03/),
+        page.getByText(/Maximales Unternehmensbudget:.*300,03/),
     ).toBeVisible();
     await page
         .getByRole("button", {name: "Auftrag speichern", exact: true})

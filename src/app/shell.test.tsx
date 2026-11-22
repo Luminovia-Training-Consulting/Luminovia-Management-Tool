@@ -303,6 +303,12 @@ it("previews management views with fictional cards without mounting the live rou
   const mode = await screen.findByRole("combobox", {
     name: "Navigationsvorschau",
   });
+  await user.selectOptions(mode, "management");
+  expect(
+    within(screen.getByRole("complementary")).getByRole("link", {
+      name: "Unternehmen",
+    }),
+  ).toHaveAttribute("href", "/clients");
   await user.selectOptions(mode, "lecturer");
   await expect(
     screen.findByRole("heading", { name: "Beispielansicht: Dozent:in" }),
@@ -577,7 +583,7 @@ it("combines enterprise, participant and teaching navigation on one account", ()
     within(sidebar).getByRole("link", { name: "Stellenbörse" }),
   ).toHaveAttribute("href", "/jobs");
   expect(
-    within(sidebar).getByRole("link", { name: "Auftraggeber" }),
+    within(sidebar).getByRole("link", { name: "Unternehmensportal" }),
   ).toHaveAttribute("href", "/client");
   expect(
     within(sidebar).getByRole("link", { name: "Lernbereich" }),
@@ -611,7 +617,9 @@ it("opens synthetic company analytics through the admin navigation preview", asy
     screen.getByRole("heading", { name: "Unternehmensansicht" }),
   ).toBeVisible();
   expect(screen.getByText(/Fiktive Beispieldaten/)).toBeVisible();
-  expect(screen.getByRole("option", { name: "Kundenhonorare" })).toBeVisible();
+  expect(
+    screen.getByRole("option", { name: "Auftragshonorare" }),
+  ).toBeVisible();
   expect(
     screen.queryByRole("option", { name: "Dozentenvergütung" }),
   ).toBeNull();

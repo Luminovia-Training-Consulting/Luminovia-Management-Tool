@@ -16,21 +16,21 @@ const values = {
     "Seitlich scrollen, um alle Wochentage zu sehen.",
     "Scroll horizontally to see all days of the week.",
   ],
-  customer: ["Kunde", "Customer"],
-  allCustomers: ["Alle Kunden", "All customers"],
+  customer: ["Unternehmen", "Company"],
+  allCustomers: ["Alle Unternehmen", "All companies"],
   calendarColors: ["Kalenderfarben", "Calendar colors"],
   calendarColorsHelp: [
-    "Diese privaten Farben gelten nur für dein Kalenderkonto. Kundenerstellte Einträge behalten einen gut lesbaren hellen Hintergrund.",
-    "These private colors apply only to your calendar account. Customer-created entries retain a readable light background.",
+    "Diese privaten Farben gelten nur für dein Kalenderkonto. Von Unternehmen erstellte Einträge behalten einen gut lesbaren hellen Hintergrund.",
+    "These private colors apply only to your calendar account. Entries created by companies retain a readable light background.",
   ],
   personalColor: ["Eigene private Termine", "Private appointments"],
   assignmentColor: [
-    "Bestätigte Aufträge ohne Auftraggeber",
-    "Confirmed assignments without a customer",
+    "Bestätigte Aufträge ohne Unternehmen",
+    "Confirmed assignments without a company",
   ],
   customerColor: [
-    "Kundenerstellte Kurse und Aufträge",
-    "Customer-created courses and assignments",
+    "Von Unternehmen erstellte Kurse und Aufträge",
+    "Courses and assignments created by companies",
   ],
   calendarColorsSave: ["Kalenderfarben speichern", "Save calendar colors"],
   calendarColorsSaving: ["Speichern …", "Saving …"],
@@ -67,8 +67,8 @@ const values = {
   global: ["Globale Termine", "Global events"],
   course: ["Kurstermine", "Course sessions"],
   scope: [
-    "Kunden und Themen filtern die geladenen Kurstermine. Mehrere Themen gelten alternativ. Die Suche filtert Titel; globale Termine umfassen nur geladene Seiten des sichtbaren Zeitraums.",
-    "Customer and topic filters apply to loaded course sessions. Multiple topics match any selected topic. Search filters titles; global events cover only loaded pages in the visible range.",
+    "Unternehmen und Themen filtern die geladenen Kurstermine. Mehrere Themen gelten alternativ. Die Suche filtert Titel; globale Termine umfassen nur geladene Seiten des sichtbaren Zeitraums.",
+    "Company and topic filters apply to loaded course sessions. Multiple topics match any selected topic. Search filters titles; global events cover only loaded pages in the visible range.",
   ],
 } as const;
 for (const [language, index] of [

@@ -674,7 +674,7 @@ it("an authorised own commissioned net proposal keeps customer pricing fixed and
     screen.getByLabelText("Vergütungseinheit").querySelectorAll("option"),
   ).toHaveLength(1);
   expect(
-    screen.getByText(/Der vereinbarte Kundenpreis bleibt unverändert/),
+    screen.getByText(/Der vereinbarte Auftragspreis bleibt unverändert/),
   ).toBeVisible();
   await userEvent.type(
     screen.getByLabelText("Begründung"),
@@ -726,7 +726,7 @@ it("customer proposals expose and submit only operational values without invente
   ).not.toBeInTheDocument();
   await user.type(
     screen.getByLabelText("Begründung"),
-    "Fictional customer request reason",
+    "Fictional company request reason",
   );
   await user.click(
     screen.getByRole("button", { name: "Entwurf online speichern" }),
@@ -808,7 +808,7 @@ it("offline mutation controls are disabled and denied refresh clears the retaine
   );
 });
 
-it("requires reviewed-version confirmation before coordinating a customer request", async () => {
+it("requires reviewed-version confirmation before coordinating a company request", async () => {
   await i18n.changeLanguage("en");
   data = [
     {
@@ -837,7 +837,7 @@ it("requires reviewed-version confirmation before coordinating a customer reques
   ).not.toBeInTheDocument();
   await user.click(
     screen.getByRole("checkbox", {
-      name: /I have reviewed the customer request/,
+      name: /I have reviewed the company request/,
     }),
   );
   await user.click(coordinate);

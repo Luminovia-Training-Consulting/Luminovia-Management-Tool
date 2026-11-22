@@ -22,7 +22,7 @@ const de = {
   afterClaim: "Erst nach bestätigter Übernahme",
   offerViewers: "Bereits für berechtigte Angebotsansichten",
   visibilityHint:
-    "Diese Freigabe betrifft nur die hier eingetragenen Angaben, nicht das interne Auftraggeberverzeichnis.",
+    "Diese Freigabe betrifft nur die hier eingetragenen Angaben, nicht das interne Unternehmensverzeichnis.",
   hidden: "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
   save: "Angaben speichern",
   saving: "Wird gespeichert …",
@@ -67,7 +67,7 @@ const en: Record<keyof typeof de, string> = {
   afterClaim: "Only after a confirmed claim",
   offerViewers: "Already for authorised offer viewers",
   visibilityHint:
-    "This shares only the details entered here, not the internal customer directory.",
+    "This shares only the details entered here, not the internal company directory.",
   hidden: "Contact details become available after a confirmed claim.",
   save: "Save details",
   saving: "Saving …",

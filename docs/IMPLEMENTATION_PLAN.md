@@ -42,6 +42,7 @@
 
 ## Premium LMS course analytics
 
+- Use Unternehmen in German and Company or Companies in English for the organisation role, company directory, permissions and reports in the portal, Premium LMS, role preview and demo. Public URLs and machine-readable role and API identifiers retain their established names.
 - The internal Analytics page links to LMS analytics when the server confirms a reporting scope. Both dedicated Academy editions link directly from Learning. Internal reports select enabled Premium companies. Dedicated reports use the signed LMS licence in active or read-only grace state.
 - The aggregates cover unique active learners, enrolments, completions, valid completion records, scheduled sessions and teaching time, status by month, and verified present, absent and excused counts. Reports show monthly cohorts and a paginated course table. An instructor sees their own assignments, a company sees its own courses, and course management can filter the companies it administers. Archived course runs remain visible to course management for historical reporting.
 - The report uses the first session or the draft creation date in the caller's reporting zone. Learner counts reflect current enrolment and membership. Verified attendance uses finished sessions. Learner identities, notes and grades stay out of the report. The Internal and Academy interactive APIs publish both read operations.

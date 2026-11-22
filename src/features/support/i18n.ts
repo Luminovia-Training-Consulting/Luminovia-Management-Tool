@@ -76,7 +76,7 @@ const en = {
     "Choose a record you can already access. Linking a ticket never grants access to that record.",
   course: "Course run",
   claim: "Assignment",
-  organisation: "Customer organisation",
+  organisation: "Company",
   attachment: "Upload scanned attachment",
   attachmentHint:
     "A new dedicated file is scanned by the existing file service, then linked to this ticket. Linked evidence cannot be replaced or deleted through ordinary document controls.",
@@ -175,7 +175,7 @@ const de: typeof en = {
     "Wähle einen Eintrag, auf den du bereits Zugriff hast. Eine Verknüpfung erteilt keinen Zugriff auf den Eintrag.",
   course: "Kursdurchlauf",
   claim: "Auftragszuweisung",
-  organisation: "Auftraggeberorganisation",
+  organisation: "Unternehmen",
   attachment: "Geprüften Anhang hochladen",
   attachmentHint:
     "Ein neuer, eigener Upload wird vom vorhandenen Dateidienst geprüft und dann mit diesem Ticket verbunden. Verknüpfte Nachweise lassen sich nicht über die normalen Dateifunktionen ersetzen oder löschen.",

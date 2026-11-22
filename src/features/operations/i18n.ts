@@ -251,7 +251,7 @@ const pairs: Record<string, [string, string]> = {
   webhookPremium: ["Premium-Ereignisse", "Premium events"],
   webhookScope: ["Ereignisse", "Events"],
   webhookCourses: ["Kursereignisse", "Course events"],
-  webhookAccounting: ["Kundenabrechnung", "Customer accounting"],
+  webhookAccounting: ["Unternehmensabrechnung", "Company accounting"],
   webhookIncludePremium: [
     "Premium-Kursereignisse einbeziehen",
     "Include Premium course events",
@@ -305,8 +305,8 @@ const pairs: Record<string, [string, string]> = {
     "Course schedule changed",
   ],
   "webhookEvent.invoice.registered": [
-    "Kundenrechnung erfasst",
-    "Customer invoice registered",
+    "Rechnung an ein Unternehmen erfasst",
+    "Invoice to a company recorded",
   ],
   "webhookEvent.payment.recorded": ["Zahlung erfasst", "Payment recorded"],
   "webhookEvent.payment.reversed": ["Zahlung storniert", "Payment reversed"],
@@ -333,8 +333,8 @@ const pairs: Record<string, [string, string]> = {
   planRun: ["Durchführung planen", "Plan course run"],
   createRunOffer: ["Auftrag daraus erstellen", "Create teaching offer"],
   reusableBlock: [
-    "Inhalte und Quellenbezug wiederverwenden; Kundenzuordnung, Termine und Honorar für jede Durchführung festlegen.",
-    "Reuse content and source references; set the customer, sessions and fee for each run.",
+    "Inhalte und Quellenbezug wiederverwenden; Unternehmenszuordnung, Termine und Honorar für jede Durchführung festlegen.",
+    "Reuse content and source references; set the company, sessions and fee for each run.",
   ],
   sourceReference: ["Quellenreferenz", "Source reference"],
   sourceDuration: [
@@ -372,7 +372,7 @@ const pairs: Record<string, [string, string]> = {
     "Bitte prüfe Startdatum, tägliche Uhrzeiten und Dauer. Das Ende muss nach dem Beginn liegen.",
     "Check the start date, daily times and duration. End must follow start.",
   ],
-  clients: ["Kunden & Kontakte", "Clients & contacts"],
+  clients: ["Unternehmen", "Companies"],
   clientsIntro: [
     "Organisationen, geschäftliche Kontakte und interne Notizen verwalten.",
     "Manage organisations, business contacts and internal notes.",

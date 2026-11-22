@@ -279,7 +279,7 @@ async function sharedSchedule(
       await expect(coordinate).toBeDisabled();
       await page
         .getByRole("checkbox", {
-          name: /^(Ich habe den Kundenantrag geprüft|I have reviewed the customer request)/,
+          name: /^(Ich habe den Antrag des Unternehmens geprüft|I have reviewed the company request)/,
         })
         .check();
       await coordinate.click();

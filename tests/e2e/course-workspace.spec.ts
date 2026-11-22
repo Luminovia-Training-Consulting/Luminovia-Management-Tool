@@ -720,7 +720,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
         exact: true,
     });
     await contact
-        .getByLabel("Kundenkontakt für diesen Kurs freigeben", {exact: true})
+        .getByLabel("Unternehmenskontakt für diesen Kurs freigeben", {exact: true})
         .selectOption(f.contact);
     await contact.getByRole("button", {name: "Speichern", exact: true}).click();
     await expect(

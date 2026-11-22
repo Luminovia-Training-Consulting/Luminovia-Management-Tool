@@ -100,7 +100,7 @@ test("calendar secret links and explicit minimal offline schedule survive reload
             .getByLabel("Eigene private Termine", {exact: true})
             .selectOption("#E6E0F0");
         await page
-            .getByLabel("Kundenerstellte Kurse und Aufträge", {exact: true})
+            .getByLabel("Von Unternehmen erstellte Kurse und Aufträge", {exact: true})
             .selectOption("#F5DDE7");
         await page
             .getByRole("button", {name: "Kalenderfarben speichern", exact: true})
@@ -140,7 +140,7 @@ test("calendar secret links and explicit minimal offline schedule survive reload
             page.getByLabel("Eigene private Termine", {exact: true}),
         ).toHaveValue("#E6E0F0");
         await expect(
-            page.getByLabel("Kundenerstellte Kurse und Aufträge", {exact: true}),
+            page.getByLabel("Von Unternehmen erstellte Kurse und Aufträge", {exact: true}),
         ).toHaveValue("#F5DDE7");
         await page.getByText("Kalenderfarben", {exact: true}).click();
         const tools = page.locator(".calendar-tools"),

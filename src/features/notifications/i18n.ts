@@ -103,7 +103,7 @@ const de = {
   delivery_confirmed: "Leistungsnachweis bestätigt",
   delivery_disputed: "Leistungsnachweis beanstandet",
   delivery_correction_requested: "Korrektur des Leistungsnachweises angefragt",
-  delivery_customer_confirmed: "Leistung durch Auftraggeber bestätigt",
+  delivery_customer_confirmed: "Leistung durch das Unternehmen bestätigt",
   job_waitlist_available: "Ein Auftrag auf deiner Warteliste ist wieder offen",
   substitution_proposed: "Vertretung angefragt",
   substitution_closed: "Vertretungsanfrage abgeschlossen",
@@ -164,7 +164,7 @@ const en: Record<keyof typeof de, string> = {
   delivery_confirmed: "Delivery confirmation approved",
   delivery_disputed: "Delivery confirmation disputed",
   delivery_correction_requested: "Delivery correction requested",
-  delivery_customer_confirmed: "Delivery confirmed by customer",
+  delivery_customer_confirmed: "Delivery confirmed by the company",
   title: "Notifications",
   description:
     "Your updates and reminders, with links checked against your current access.",

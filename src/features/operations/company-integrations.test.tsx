@@ -157,7 +157,7 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
   expect(premium).not.toBeChecked();
   expect(
     screen.queryByRole("option", {
-      name: /Kundenabrechnung|Customer accounting/,
+      name: /Unternehmensabrechnung|Company accounting/,
     }),
   ).toBeNull();
   await user.click(premium);

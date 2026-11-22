@@ -174,7 +174,7 @@ const pairs: Record<string, [string, string]> = {
     "Wähle Aufträge in einer gemeinsamen Währung.",
     "Select assignments in the same currency.",
   ],
-  client: ["Kunde", "Client"],
+  client: ["Unternehmen", "Company"],
   assignment: ["Auftrag", "Assignment"],
   lecturer: ["Dozent:in", "Lecturer"],
   total: ["Gesamtbetrag", "Total"],

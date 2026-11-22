@@ -7,7 +7,7 @@ import i18n from "../../lib/i18n";
 const en = {
   fromCourse: "Teaching offer from this course",
   sourceHelp:
-    "Content, customer and sessions come from the selected course. Set the fee and assignment terms here. Adjust delivery and scheduling in course planning.",
+    "Content, company and sessions come from the selected course. Set the fee and assignment terms here. Adjust delivery and scheduling in course planning.",
   plan: "Open course planning",
   openJob: "Open created teaching offer",
   sourceChanged:
@@ -15,12 +15,12 @@ const en = {
   exists:
     "This course already has an active teaching offer. Open its existing offer instead of creating another one.",
   customerRequired:
-    "Assign an active customer to the course before creating its teaching offer.",
+    "Assign an active company to the course before creating its teaching offer.",
 };
 const de: typeof en = {
   fromCourse: "Auftrag aus diesem Kurs",
   sourceHelp:
-    "Inhalte, Auftraggeber und Termine stammen aus dem gewählten Kurs. Ergänze hier das Honorar und die Auftragsbedingungen. Durchführung und Zeitplan passen sich in der Kursplanung an.",
+    "Inhalte, Unternehmen und Termine stammen aus dem gewählten Kurs. Ergänze hier das Honorar und die Auftragsbedingungen. Durchführung und Zeitplan passen sich in der Kursplanung an.",
   plan: "Kursplanung öffnen",
   openJob: "Erstellten Auftrag öffnen",
   sourceChanged:
@@ -28,7 +28,7 @@ const de: typeof en = {
   exists:
     "Für diesen Kurs gibt es bereits einen aktiven Auftrag. Öffne den vorhandenen Auftrag, statt einen weiteren anzulegen.",
   customerRequired:
-    "Ordne dem Kurs vor der Auftragserstellung einen aktiven Auftraggeber zu.",
+    "Ordne dem Kurs vor der Auftragserstellung ein aktives Unternehmen zu.",
 };
 i18n.addResourceBundle("de", "courseOffer", de, true, true);
 i18n.addResourceBundle("en", "courseOffer", en, true, true);

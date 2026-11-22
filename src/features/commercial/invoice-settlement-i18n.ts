@@ -5,8 +5,8 @@ const pairs: Record<string, [string, string]> = {
   title: ["Abrechnung berechnen", "Calculate settlement"],
   paymentDates: ["Zahlungsfristen berechnen", "Calculate payment deadlines"],
   paymentDatesScope: [
-    "Verwende diese Fristen, wenn der allgemeine Rahmenvertrag für den Auftrag gilt. Gib die Daten in der vereinbarten Auftragszeitzone ein. Berechne jeden Kundenzahlungseingang separat. Die Daten werden nicht gespeichert.",
-    "Use these deadlines when the standard framework governs the assignment. Enter calendar dates in the agreed assignment time zone. Calculate each customer receipt separately. These dates are not saved.",
+    "Verwende diese Fristen, wenn der allgemeine Rahmenvertrag für den Auftrag gilt. Gib die Daten in der vereinbarten Auftragszeitzone ein. Berechne jeden Zahlungseingang vom Unternehmen separat. Die Daten werden nicht gespeichert.",
+    "Use these deadlines when the standard framework governs the assignment. Enter calendar dates in the agreed assignment time zone. Calculate each payment from the company separately. These dates are not saved.",
   ],
   firstDelivered: [
     "Erste tatsächlich erbrachte Einheit",
@@ -17,8 +17,8 @@ const pairs: Record<string, [string, string]> = {
     "Last agreed service unit in the assignment",
   ],
   customerReceipt: [
-    "Eingang der Kundenzahlung für Absage oder unterrichtsfreien Tag",
-    "Customer payment received for cancellation or a non-teaching day",
+    "Eingang der Zahlung des Unternehmens für Absage oder unterrichtsfreien Tag",
+    "Company payment received for cancellation or a non-teaching day",
   ],
   correctInvoice: [
     "Eingang der korrekten Rechnung bei unberechtigter Kurzfristabsage",
@@ -31,8 +31,8 @@ const pairs: Record<string, [string, string]> = {
   deadline_final: ["Schlusszahlung bis", "Final payment by"],
   deadline_interim: ["Abschlagszahlung bis", "Interim payment by"],
   deadline_customer: [
-    "Kundenfinanzierte Vergütung bis",
-    "Customer-funded payment by",
+    "Vom Unternehmen finanzierte Vergütung bis",
+    "Company-funded payment by",
   ],
   deadline_shortNotice: [
     "Entschädigung für Kurzfristabsage bis",
@@ -74,16 +74,16 @@ const pairs: Record<string, [string, string]> = {
     "Short-notice Luminovia cancellation without an applicable exception",
   ],
   customer: [
-    "Eigenständige Absage des Kunden",
-    "Independent customer cancellation",
+    "Eigenständige Absage des Unternehmens",
+    "Independent cancellation by the company",
   ],
   customerNonTeaching: [
-    "Kundenvergütung für den unterrichtsfreien Tag prüfen",
-    "Review customer payment for the non-teaching day",
+    "Zahlung des Unternehmens für den unterrichtsfreien Tag prüfen",
+    "Review company payment for the non-teaching day",
   ],
   excused: [
-    "Entschuldigter Ausfall ohne zugeordnete Kundenzahlung",
-    "Excused absence with no associated customer payment",
+    "Entschuldigter Ausfall ohne zugeordnete Zahlung des Unternehmens",
+    "Excused absence with no associated company payment",
   ],
   manual: [
     "Teilweise erbrachte Einheit, Einzelvereinbarung oder Streitfall",
@@ -110,24 +110,24 @@ const pairs: Record<string, [string, string]> = {
     "Notice received with UTC offset",
   ],
   originalCustomerFee: [
-    "Vereinbartes Kundenhonorar für diese Einheit",
-    "Agreed customer fee for this unit",
+    "Vereinbartes Auftragshonorar für diese Einheit",
+    "Agreed contract fee for this unit",
   ],
   receivedCustomerCompensation: [
     "Tatsächlich erhaltene Stornozahlung für diese Einheit",
     "Cancellation payment actually received for this unit",
   ],
   receivedNonTeachingCompensation: [
-    "Tatsächlich erhaltene Kundenzahlung für den unterrichtsfreien Tag",
-    "Customer payment actually received for the non-teaching day",
+    "Tatsächlich erhaltene Zahlung des Unternehmens für den unterrichtsfreien Tag",
+    "Company payment actually received for the non-teaching day",
   ],
   customerHint: [
-    "Gib den kumulierten Zahlungseingang für dieselbe ausgefallene Einheit in der Währung des Kundenhonorars an. Ziehe Unterrichtszahlungen und Kostenersatz ab. Bei 0 Zahlungseingang kannst du das Kundenhonorar leer lassen.",
-    "Enter cumulative receipts for the same cancelled unit in the currency of the agreed customer fee. Exclude teaching payments and expense reimbursements. With a zero receipt, you may leave the agreed customer fee blank.",
+    "Gib den kumulierten Zahlungseingang für dieselbe ausgefallene Einheit in der Währung des Auftragshonorars an. Ziehe Unterrichtszahlungen und Kostenersatz ab. Bei 0 Zahlungseingang kannst du das Auftragshonorar leer lassen.",
+    "Enter cumulative receipts for the same cancelled unit in the currency of the agreed contract fee. Exclude teaching payments and expense reimbursements. With a zero receipt, you may leave the agreed contract fee blank.",
   ],
   nonTeachingHint: [
-    "Erfasse den kumulierten Eingang für diesen Tag in der Währung des Kundenhonorars. Bei 0 Zahlungseingang kannst du das Kundenhonorar leer lassen. Unterricht, Prüfungen und bereits zugeordnete Stornozahlungen bleiben separat.",
-    "Enter cumulative receipts for this day in the currency of the agreed customer fee. With a zero receipt, you may leave the agreed customer fee blank. Keep teaching, assessment and previously allocated cancellation payments separate.",
+    "Erfasse den kumulierten Eingang für diesen Tag in der Währung des Auftragshonorars. Bei 0 Zahlungseingang kannst du das Auftragshonorar leer lassen. Unterricht, Prüfungen und bereits zugeordnete Stornozahlungen bleiben separat.",
+    "Enter cumulative receipts for this day in the currency of the agreed contract fee. With a zero receipt, you may leave the agreed contract fee blank. Keep teaching, assessment and previously allocated cancellation payments separate.",
   ],
   offsetHint: [
     "ISO-Format, etwa 2030-04-01T09:30:00+02:00",
@@ -170,8 +170,8 @@ const pairs: Record<string, [string, string]> = {
     "The timestamps and selected outcome do not match the 168-hour notice period.",
   ],
   customerAmountsInvalid: [
-    "Prüfe das vereinbarte Kundenhonorar und den zugeordneten Zahlungseingang. Abweichende Zahlungen erfordern eine Einzelprüfung.",
-    "Check the agreed customer fee and the matching receipt. Exceptions require manual review.",
+    "Prüfe das vereinbarte Auftragshonorar und den zugeordneten Zahlungseingang. Abweichende Zahlungen erfordern eine Einzelprüfung.",
+    "Check the agreed contract fee and the matching receipt. Exceptions require manual review.",
   ],
   excessCredit: [
     "Der bereits berücksichtigte Betrag übersteigt die Berechnung. Prüfe diese Einheit separat.",
@@ -205,8 +205,8 @@ const pairs: Record<string, [string, string]> = {
     "Remove amounts from the review note",
   ],
   sharedNote: [
-    "Die dozierende Person sieht diese Prüfnotiz. Halte Kundenhonorare und interne Angaben hier vertraulich.",
-    "The lecturer can see this review note. Keep customer fees and internal information out of it.",
+    "Die dozierende Person sieht diese Prüfnotiz. Halte Auftragshonorare und interne Angaben hier vertraulich.",
+    "The lecturer can see this review note. Keep contract fees and internal information out of it.",
   ],
   noteTooLong: [
     "Kürze die Prüfnotiz, damit die Beträge mitgespeichert werden können.",

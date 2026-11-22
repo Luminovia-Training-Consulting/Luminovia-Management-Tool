@@ -100,7 +100,7 @@ const pairs: Record<string, [string, string]> = {
     "Check the number and length of the labels.",
   ],
 
-  clientPortal: ["Kundenportal", "Client portal"],
+  clientPortal: ["Unternehmensportal", "Company portal"],
   clientIntro: [
     "Kurse und Lehraufträge anfragen, volle Auftragspreise prüfen und dein Team im Blick behalten.",
     "Request courses and teaching assignments, review full assignment fees and see your teaching team.",
@@ -120,8 +120,8 @@ const pairs: Record<string, [string, string]> = {
     "Deinem Konto ist noch keine aktive Organisation zugeordnet.",
     "Your account has no active organisation membership yet.",
   ],
-  grossRate: ["Voller Auftragspreis je Einheit", "Full client fee per unit"],
-  grossTotal: ["Voller Auftragspreis gesamt", "Full total client fee"],
+  grossRate: ["Voller Auftragspreis je Einheit", "Full contract fee per unit"],
+  grossTotal: ["Voller Auftragspreis gesamt", "Full total contract fee"],
   platformPercent: ["Plattformanteil (%)", "Platform share (%)"],
   lecturerShare: ["Dozierendenhonorar", "Lecturer compensation"],
   regularLecturer: ["Dozent:in", "Lecturer"],
@@ -138,11 +138,11 @@ const pairs: Record<string, [string, string]> = {
   ],
   regularPercent: [
     "Dozent:in – Honorar vom Auftragspreis (%)",
-    "Lecturer – compensation from client fee (%)",
+    "Lecturer – compensation from contract fee (%)",
   ],
   seniorPercent: [
     "Senior-Dozent:in – Honorar vom Auftragspreis (%)",
-    "Senior lecturer – compensation from client fee (%)",
+    "Senior lecturer – compensation from contract fee (%)",
   ],
   savePolicy: ["Vergütungsregeln speichern", "Save compensation policy"],
   reloadPolicy: ["Aktuelle Regeln laden", "Load current policy"],
@@ -179,7 +179,7 @@ const pairs: Record<string, [string, string]> = {
   ],
   publishHint: [
     "Prüfe alle Termine und den vollen Auftragspreis. Dozierende sehen ausschließlich ihr eigenes Honorar.",
-    "Review every session and the full client fee. Lecturers see only their compensation.",
+    "Review every session and the full contract fee. Lecturers see only their compensation.",
   ],
   assignedTeacher: ["Zugewiesene Lehrkraft", "Assigned lecturer"],
   unassigned: ["Noch keine Lehrkraft zugeteilt", "No lecturer assigned yet"],
@@ -225,7 +225,7 @@ const pairs: Record<string, [string, string]> = {
   offeredGross: ["Bekanntes volles Angebotsvolumen", "Known full offer fees"],
   acceptedGross: [
     "Bekannte angenommene Auftragssumme",
-    "Known accepted full client fees",
+    "Known accepted full contract fees",
   ],
   acceptedNet: [
     "Vereinbarte Dozierendenhonorare",
@@ -268,10 +268,10 @@ const pairs: Record<string, [string, string]> = {
     "The request was not confirmed. Your entries are retained.",
   ],
   addSession: ["Termin hinzufügen", "Add session"],
-  newCustomer: ["Neuen Kunden anlegen", "Create a new client"],
+  newCustomer: ["Neues Unternehmen anlegen", "Create a company"],
   existingCustomer: [
-    "Vorhandener Kunde (optional)",
-    "Existing client (optional)",
+    "Vorhandenes Unternehmen (optional)",
+    "Existing company (optional)",
   ],
   invoiceSearch: ["Rechnungen durchsuchen", "Search invoices"],
   invoiceStatus: ["Rechnungsstatus", "Invoice status"],
@@ -280,7 +280,7 @@ const pairs: Record<string, [string, string]> = {
   requestStatus: ["Anfragestatus", "Request status"],
   platformVisibility: [
     "Volle Auftragspreise und Plattformanteile sind nur für die autorisierten Rollen sichtbar.",
-    "Full client fees and platform shares are shown only to authorised roles.",
+    "Full contract fees and platform shares are shown only to authorised roles.",
   ],
 };
 for (const [language, index] of [

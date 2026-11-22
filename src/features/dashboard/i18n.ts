@@ -47,7 +47,10 @@ const pairs: Record<string, [string, string]> = {
     "No confirmed teaching sessions today.",
   ],
   openTeachingLink: ["Unterrichtslink öffnen", "Open teaching link"],
-  courseContact: ["Freigegebener Kundenkontakt", "Shared customer contact"],
+  courseContact: [
+    "Freigegebener Unternehmenskontakt",
+    "Shared company contact",
+  ],
   noSelectedCourseContact: [
     "Für diesen Kurs wurde noch kein Kontakt freigegeben.",
     "No contact has been selected for this course.",
@@ -100,8 +103,8 @@ const pairs: Record<string, [string, string]> = {
   ],
   personalPreparation: ["Meine Vorbereitung", "My preparation"],
   personalPreparationHint: [
-    "Persönliche Checkliste für diesen Lehrauftrag. Diese Häkchen sind keine Freigabe oder Fortschrittsmeldung an den Auftraggeber.",
-    "Personal checklist for this assignment. These checks do not approve materials or report progress to the client.",
+    "Persönliche Checkliste für diesen Lehrauftrag. Diese Häkchen sind keine Freigabe oder Fortschrittsmeldung an das Unternehmen.",
+    "Personal checklist for this assignment. These checks do not approve materials or report progress to the company.",
   ],
   materials_ready: [
     "Unterlagen geprüft und vorbereitet",

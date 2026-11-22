@@ -124,7 +124,7 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 ).toBe(0);
                 await page
                     .getByRole("button", {
-                        name: "Auftraggeber und Kontakt anlegen",
+                        name: "Unternehmen und Kontakt anlegen",
                         exact: true,
                     })
                     .click();
@@ -216,7 +216,7 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 await login(peer, outsider.email);
                 await peer.goto(`/enquiries/${id}`);
                 await expect(peer.getByRole("alert")).toContainText(
-                    "Auftraggeberverwaltung",
+                    "Unternehmensverwaltung",
                 );
                 await expect(
                     peer.getByText(payload.email, {exact: true}),

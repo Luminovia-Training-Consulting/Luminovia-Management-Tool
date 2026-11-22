@@ -54,7 +54,9 @@ it("defaults to50percent and EUR200daily, confirms save only after server respon
   show();
   expect(await screen.findByLabelText("Honorarart")).toHaveValue("percent");
   expect(screen.getByText(/rollenabhängige Standard/)).toBeVisible();
-  expect(screen.getByLabelText("Anteil am Kundenbudget (%)")).toHaveValue(50);
+  expect(screen.getByLabelText("Anteil am Unternehmensbudget (%)")).toHaveValue(
+    50,
+  );
   await user.selectOptions(screen.getByLabelText("Honorarart"), "daily");
   expect(screen.getByLabelText("Honorar pro Unterrichtstag")).toHaveValue(200);
   await user.click(screen.getByRole("button", { name: "Honorar speichern" }));

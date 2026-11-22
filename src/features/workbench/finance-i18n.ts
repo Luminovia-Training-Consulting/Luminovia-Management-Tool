@@ -76,7 +76,7 @@ const de = {
   missing_documents: "Fehlende Kursunterlagen",
   cancellations: "Stornierungen und Übergaben",
   overdue_tasks: "Überfällige Aufgaben",
-  requests: "Kundenanfragen",
+  requests: "Unternehmensanfragen",
   contracts_expiring: "Auslaufende Verträge",
   qualifications_expiring: "Auslaufende Qualifikationen",
   preparation: "Kursvorbereitung",
@@ -113,7 +113,7 @@ const de = {
   forecastHelp:
     "Ein Szenario ist eine Annahme, keine Zusage. Beträge bleiben in ihrer Originalwährung. Bekannte Bruttowerte und Margen erscheinen nur mit gesonderter Berechtigung; unbekannte Werte werden nicht geschätzt.",
   paymentsHelp:
-    "Zahlungen zeigen erfasste Dozentenrechnungen. Sie belegen keine Zahlung des Kunden an Luminovia.",
+    "Zahlungen zeigen erfasste Dozentenrechnungen. Sie belegen keine Zahlung des Unternehmens an Luminovia.",
   month: "Monat",
   currency: "Währung",
   acceptedCost: "Vereinbarte Dozentenkosten",
@@ -201,7 +201,7 @@ const en: Record<keyof typeof de, string> = {
   missing_documents: "Missing course materials",
   cancellations: "Cancellations and handovers",
   overdue_tasks: "Overdue tasks",
-  requests: "Customer requests",
+  requests: "Company requests",
   contracts_expiring: "Expiring contracts",
   qualifications_expiring: "Expiring qualifications",
   preparation: "Course preparation",
@@ -235,7 +235,7 @@ const en: Record<keyof typeof de, string> = {
   forecastHelp:
     "A scenario is an assumption, not a commitment. Amounts remain in their original currency. Known gross values and margins require separate permission; unknown values are not estimated.",
   paymentsHelp:
-    "Payments show recorded lecturer invoices. They are not evidence of a customer payment to Luminovia.",
+    "Payments show recorded lecturer invoices. They are not evidence of a company payment to Luminovia.",
   month: "Month",
   currency: "Currency",
   acceptedCost: "Accepted lecturer cost",

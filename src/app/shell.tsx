@@ -277,7 +277,7 @@ export function Shell() {
               ]
             : []),
           ...(permissions.data?.includes("organisations.manage")
-            ? [{ to: "/clients", icon: Building2, label: "clients" }]
+            ? [{ to: "/clients", icon: Building2, label: "companies" }]
             : []),
           { to: "/people", icon: Users, label: "staffDirectory" },
           { to: "/chats", icon: MessagesSquare, label: "communication" },
@@ -322,7 +322,7 @@ export function Shell() {
       { to: "/calendar", icon: CalendarDays, label: "calendar" },
       analyticsNavItem,
       { to: "/courses", icon: GraduationCap, label: "coursesManage" },
-      { to: "/clients", icon: Building2, label: "clients" },
+      { to: "/clients", icon: Building2, label: "companies" },
       { to: "/people", icon: Users, label: "staffDirectory" },
       { to: "/chats", icon: MessagesSquare, label: "communication" },
       { to: "/files", icon: FolderOpen, label: "files" },

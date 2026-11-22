@@ -6,7 +6,7 @@ import i18n from "../../lib/i18n";
 
 const en = {
   title: "Comments & teaching notes",
-  help: "Discuss this resource with the teaching team. Client and learner accounts do not see this discussion. Comments do not change the accepted assignment terms.",
+  help: "Discuss this resource with the teaching team. Company and learner accounts do not see this discussion. Comments do not change the accepted assignment terms.",
   denied: "This discussion is restricted to the authorised teaching team.",
   empty: "No comments yet. Add a question or a useful teaching note.",
   body: "Your comment",
@@ -43,7 +43,7 @@ const en = {
 };
 const de: typeof en = {
   title: "Kommentare & Unterrichtsnotizen",
-  help: "Tausche dich mit dem Lehrteam über diesen Eintrag aus. Auftraggeber- und Lernkonten sehen diese Diskussion nicht. Kommentare ändern keine angenommenen Auftragsbedingungen.",
+  help: "Tausche dich mit dem Lehrteam über diesen Eintrag aus. Unternehmens- und Lernkonten sehen diese Diskussion nicht. Kommentare ändern keine angenommenen Auftragsbedingungen.",
   denied: "Diese Diskussion ist dem berechtigten Lehrteam vorbehalten.",
   empty:
     "Noch keine Kommentare. Ergänze eine Frage oder eine hilfreiche Unterrichtsnotiz.",

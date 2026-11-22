@@ -370,7 +370,7 @@ test("admin uses password-only access and publishes a five-session job through t
     await page
         .getByLabel("Beschreibung", {exact: true})
         .fill("Fiktiver über die echte Adminoberfläche angelegter Testauftrag.");
-    await page.getByLabel("Kunde", {exact: true}).fill("QA Beispielkunde");
+    await page.getByLabel("Unternehmen", {exact: true}).fill("QA Beispielunternehmen");
     await page
         .getByLabel("Voller Auftragspreis je Einheit", {exact: true})
         .fill("450");

@@ -21,7 +21,7 @@ const de = {
   awaitingCoordination: "Das Management prüft die vorgeschlagenen Termine.",
   coordinationStatus: "In Prüfung",
   coordinateConsent:
-    "Ich habe den Kundenantrag geprüft und möchte die betroffenen Lehrkräfte um ihre Zustimmung bitten.",
+    "Ich habe den Antrag des Unternehmens geprüft und möchte die betroffenen Lehrkräfte um ihre Zustimmung bitten.",
   submitForCoordination: "Zur Prüfung einreichen",
   coordinate: "Zustimmungen einholen",
   sharedSessionCount:
@@ -71,9 +71,9 @@ const de = {
   cancelHint:
     "Eine Stornierung braucht ebenfalls die Zustimmung von Management und Dozent:in. Sie setzt Vergütungen weder auf null noch erlässt sie Zahlungen; eine finanzielle Einigung wird gesondert dokumentiert.",
   commissioned:
-    "Die persönliche Nettovergütung kann mit einem ausdrücklichen Nachtrag geändert werden. Der vereinbarte Kundenpreis bleibt unverändert; die Finanzverantwortlichen prüfen und bestätigen die neue Aufteilung gemeinsam mit der Lehrkraft.",
+    "Die persönliche Nettovergütung kann mit einem ausdrücklichen Nachtrag geändert werden. Der vereinbarte Auftragspreis bleibt unverändert; die Finanzverantwortlichen prüfen und bestätigen die neue Aufteilung gemeinsam mit der Lehrkraft.",
   customerScope:
-    "Du schlägst nur Termine, Ort oder Leistungsumfang für deinen eigenen Kundenauftrag vor. Vertrauliche Vergütung und Vertragsbedingungen bleiben verborgen. Management und Lehrkraft müssen unabhängig zustimmen; du kannst die Änderung nicht selbst anwenden.",
+    "Du schlägst nur Termine, Ort oder Leistungsumfang für deinen eigenen Unternehmensauftrag vor. Vertrauliche Vergütung und Vertragsbedingungen bleiben verborgen. Management und Lehrkraft müssen unabhängig zustimmen; du kannst die Änderung nicht selbst anwenden.",
   dateHint:
     "Alle Eingaben gelten in {{zone}}. Mehrdeutige Sommerzeitangaben werden abgelehnt.",
   save: "Entwurf online speichern",
@@ -110,7 +110,7 @@ const de = {
   stale:
     "Antrag oder Originalauftrag wurden geändert. Lade den aktuellen Stand; eine veraltete Zustimmung wird nicht angewendet.",
   unsupported:
-    "Dieser Antrag erfüllt die Voraussetzungen nicht. Prüfe Termine und Angaben sowie bei Vergütungsentscheidungen den Kundenpreis und die ursprüngliche Einheit. Bereits geleistete oder abgerechnete Aufträge benötigen eine gesonderte Prüfung.",
+    "Dieser Antrag erfüllt die Voraussetzungen nicht. Prüfe Termine und Angaben sowie bei Vergütungsentscheidungen den Auftragspreis und die ursprüngliche Einheit. Bereits geleistete oder abgerechnete Aufträge benötigen eine gesonderte Prüfung.",
   offline: "Offline: Änderungen erfordern eine bestätigte Serverantwort.",
   notVisible: "Vertraulich",
   open: "Antrag öffnen",
@@ -149,7 +149,7 @@ const en = {
   awaitingCoordination: "Management is reviewing the proposed dates.",
   coordinationStatus: "Under review",
   coordinateConsent:
-    "I have reviewed the customer request and want to ask the affected lecturers to consent.",
+    "I have reviewed the company request and want to ask the affected lecturers to consent.",
   submitForCoordination: "Submit for review",
   coordinate: "Request consent",
   sharedSessionCount:
@@ -199,9 +199,9 @@ const en = {
   cancelHint:
     "Cancellation also requires management and lecturer consent. It does not set compensation to zero or waive payment; any financial settlement is documented separately.",
   commissioned:
-    "Personal net compensation can change through an explicit amendment. The agreed customer charge stays unchanged; authorised finance staff review and confirm the revised allocation together with the lecturer.",
+    "Personal net compensation can change through an explicit amendment. The agreed contract charge stays unchanged; authorised finance staff review and confirm the revised allocation together with the lecturer.",
   customerScope:
-    "Propose dates, location or scope for your own customer assignment. Private compensation and contract terms remain hidden. Management and the lecturer must consent independently; you cannot apply the change yourself.",
+    "Propose dates, location or scope for your own company assignment. Private compensation and contract terms remain hidden. Management and the lecturer must consent independently; you cannot apply the change yourself.",
   dateHint:
     "All entries use {{zone}}. Ambiguous daylight-saving times are rejected.",
   save: "Save draft online",
@@ -237,7 +237,7 @@ const en = {
   stale:
     "The request or original assignment has changed. Load current records; stale consent cannot be applied.",
   unsupported:
-    "This request does not meet the prerequisites. Check dates and values and, for compensation decisions, the customer charge and original unit. Delivered or invoiced assignments require separate review.",
+    "This request does not meet the prerequisites. Check dates and values and, for compensation decisions, the contract charge and original unit. Delivered or invoiced assignments require separate review.",
   offline: "Offline: changes require a confirmed server response.",
   notVisible: "Confidential",
   open: "Open request",

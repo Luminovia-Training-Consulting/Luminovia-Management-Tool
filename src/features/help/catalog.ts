@@ -494,9 +494,9 @@ export const guideModules: GuideModule[] = [
     id: "client",
     path: "/client",
     roles: ["owner", "admin", "client"],
-    title: { de: "Auftraggeberbereich", en: "Client portal" },
+    title: { de: "Unternehmensportal", en: "Company portal" },
     summary: {
-      de: "Prüfe die für dein Auftraggeberkonto freigegebenen Kurs- und Auftragsinformationen.",
+      de: "Prüfe die für dein Unternehmenskonto freigegebenen Kurs- und Auftragsinformationen.",
       en: "Review course and commission information shared with your client account.",
     },
     steps: {
@@ -512,17 +512,17 @@ export const guideModules: GuideModule[] = [
       ],
     },
     problem: {
-      de: "Eine erwartete Kundenbeauftragung fehlt.",
+      de: "Ein erwarteter Kursauftrag des Unternehmens fehlt.",
       en: "An expected client commission is missing.",
     },
     resolution: {
       de: [
-        "Prüfe, ob du mit dem richtigen eingeladenen Auftraggeberkonto angemeldet bist.",
-        "Bitte die zuständige Verwaltung um Prüfung der Organisationszuordnung. Andere Kunden und private Dozierendenunterlagen bleiben geschützt.",
+        "Prüfe, ob du mit dem richtigen eingeladenen Unternehmenskonto angemeldet bist.",
+        "Bitte die zuständige Verwaltung um Prüfung der Organisationszuordnung. Andere Unternehmen und private Dozierendenunterlagen bleiben geschützt.",
       ],
       en: [
         "Check that you signed in with the correct invited client account.",
-        "Ask the responsible administrator to check your organisation assignment. Other clients and lecturers' private documents remain protected.",
+        "Ask the responsible administrator to check your organisation assignment. Other companies and lecturers' private documents remain protected.",
       ],
     },
     keywords: ["auftraggeber", "client", "commission", "beauftragung", "kunde"],
@@ -640,11 +640,11 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Die Unternehmensansicht zeigt die eigenen Aufträge, Kundenhonorare und erfassten Kundenzahlungen.",
+        "Die Unternehmensansicht zeigt die eigenen Aufträge, Auftragshonorare und die eigenen erfassten Zahlungen.",
         "Wähle die Währung des Auftrags, um die zugehörigen Beträge zu sehen.",
       ],
       en: [
-        "The company view shows its own assignments, customer fees and recorded customer payments.",
+        "The company view shows its own assignments, contract fees and its recorded payments.",
         "Choose the contract currency to see the corresponding amounts.",
       ],
     },
@@ -700,7 +700,7 @@ export const guideModules: GuideModule[] = [
     id: "clients",
     path: "/clients",
     permission: "organisations.manage",
-    title: { de: "Kundenverwaltung", en: "Client directory" },
+    title: { de: "Unternehmen", en: "Companies" },
     summary: {
       de: "Verwalte Organisationen und geschäftliche Kontakte mit entsprechender Berechtigung.",
       en: "Manage organisations and business contacts with the required permission.",
@@ -718,17 +718,17 @@ export const guideModules: GuideModule[] = [
       ],
     },
     problem: {
-      de: "Die Kundenverwaltung ist nicht verfügbar.",
-      en: "The client directory is unavailable.",
+      de: "Die Unternehmensverwaltung ist nicht verfügbar.",
+      en: "The company directory is unavailable.",
     },
     resolution: {
       de: [
         "Prüfe, ob dein Konto die Organisationsverwaltung ausführen darf.",
-        "Bitte die zuständige Verwaltung um Prüfung. Ein Dozierendenzugang gewährt keinen allgemeinen Zugriff auf Kundenkontakte.",
+        "Bitte die zuständige Verwaltung um Prüfung. Ein Dozierendenzugang gewährt keinen allgemeinen Zugriff auf Unternehmenskontakte.",
       ],
       en: [
         "Check whether your account may manage organisations.",
-        "Ask the responsible administrator to check. Lecturer access does not grant general access to client contacts.",
+        "Ask the responsible administrator to check. Lecturer access does not grant general access to company contacts.",
       ],
     },
     keywords: [

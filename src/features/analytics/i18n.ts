@@ -76,9 +76,12 @@ const labels = {
   financialTrend: ["Finanzverlauf", "Financial trend"],
   financeMetric: ["Kennzahl", "Metric"],
   fees: ["Dozentenvergütung", "Lecturer compensation"],
-  gross: ["Kundenhonorare", "Customer fees"],
+  gross: ["Auftragshonorare", "Contract fees"],
   lecturerCash: ["Erfasste Dozentenzahlungen", "Recorded lecturer payments"],
-  customerCash: ["Erfasste Kundenzahlungen", "Recorded customer payments"],
+  customerCash: [
+    "Erfasste Zahlungen von Unternehmen",
+    "Recorded payments from companies",
+  ],
   cash: ["Erfasst", "Recorded"],
   pastConfirmed: ["Bestätigt, vergangen", "Confirmed, past"],
   futureConfirmed: ["Bestätigt, bevorstehend", "Confirmed, upcoming"],
@@ -91,12 +94,12 @@ const labels = {
     "Monthly totals include recorded payments, repayments and reversals by their effective dates.",
   ],
   unknownGross_one: [
-    "Bei einem bestätigten Auftrag in dieser Währung fehlt der Kundenbetrag. Die Anzeige summiert die bekannten Beträge.",
-    "One confirmed assignment in this currency has no customer amount on record. The figures sum the known amounts.",
+    "Bei einem bestätigten Auftrag in dieser Währung fehlt der Auftragsbetrag. Die Anzeige summiert die bekannten Beträge.",
+    "One confirmed assignment in this currency has no contract amount on record. The figures sum the known amounts.",
   ],
   unknownGross_other: [
-    "Bei {{count}} bestätigten Aufträgen in dieser Währung fehlt der Kundenbetrag. Die Anzeige summiert die bekannten Beträge.",
-    "{{count}} confirmed assignments in this currency have no customer amount on record. The figures sum the known amounts.",
+    "Bei {{count}} bestätigten Aufträgen in dieser Währung fehlt der Auftragsbetrag. Die Anzeige summiert die bekannten Beträge.",
+    "{{count}} confirmed assignments in this currency have no contract amount on record. The figures sum the known amounts.",
   ],
   cashScope: [
     "Dozentenzahlungen stehen in der Gesamtansicht zur Verfügung, da eine Rechnung mehrere Unternehmen betreffen kann.",
@@ -104,14 +107,14 @@ const labels = {
   ],
   scenario: ["Vorschau für offene Aufträge", "Open work scenario"],
   scenarioBasis: [
-    "Für alle Unternehmen und die nächsten 90 Tage. Die Annahmewahrscheinlichkeit gewichtet offene Plätze. Vorliegende Kundenanfragen fließen bei freigegebener Bruttosicht in die Kundenhonorare ein.",
-    "Across all companies for the next 90 days. The acceptance probability weights open positions. With gross finance access, submitted requests also contribute to estimated customer fees.",
+    "Für alle Unternehmen und die nächsten 90 Tage. Die Annahmewahrscheinlichkeit gewichtet offene Plätze. Vorliegende Unternehmensanfragen fließen bei freigegebener Bruttosicht in die Auftragshonorare ein.",
+    "Across all companies for the next 90 days. The acceptance probability weights open positions. With gross finance access, submitted requests also contribute to estimated contract fees.",
   ],
   probability: ["Annahmewahrscheinlichkeit", "Acceptance probability"],
   scenarioFees: ["Geschätzte Dozentenkosten", "Estimated lecturer costs"],
   scenarioGross: [
-    "Geschätzte bekannte Kundenhonorare",
-    "Estimated known customer fees",
+    "Geschätzte bekannte Auftragshonorare",
+    "Estimated known contract fees",
   ],
   unknownPipeline_one: [
     "Für einen offenen Platz ist die Vergütung noch unbestimmt.",

@@ -163,12 +163,12 @@ const lmsHelpGuides: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne als Admin Verwaltung → Kunden / Unternehmen und wähle das aktive Unternehmen.",
+        "Öffne als Admin Verwaltung → Unternehmen und wähle das aktive Unternehmen.",
         "Wähle den Schalter Premium LMS, prüfe die Auswirkungen und bestätige den Wechsel. Kontrolliere anschließend den Status Premium LMS EIN.",
         "Öffne die Teilnehmendenliste oder den betroffenen Kurs und prüfe die freigegebenen Aktionen mit dem vorgesehenen Konto.",
       ],
       en: [
-        "As an admin, open Administration → Customers / Companies and select the active company.",
+        "As an admin, open Administration → Companies and select the active company.",
         "Choose the Premium LMS switch, review the effect and confirm the change. Check that the resulting status is Premium LMS ON.",
         "Open the participant roster or affected course and verify the available actions with the intended account.",
       ],
@@ -212,14 +212,14 @@ const lmsHelpGuides: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne mit einem Admin- oder Owner-Konto das Unternehmen unter Verwaltung → Kunden / Unternehmen. Erstelle unter API-Integrationen einen benannten Schlüssel mit Ablaufdatum.",
+        "Öffne mit einem Admin- oder Owner-Konto das Unternehmen unter Verwaltung → Unternehmen. Erstelle unter API-Integrationen einen benannten Schlüssel mit Ablaufdatum.",
         "Wähle genau eine Berechtigung für den Kurskatalog, die Einschreibung bestätigter Teilnehmender oder zusammengefasste Kurszahlen. Einschreibung und Bericht setzen aktives Premium LMS für das Unternehmen voraus.",
         "Kopiere den einmal angezeigten Schlüssel in den Geheimnisspeicher des empfangenden Servers. Entnimm dem OpenAPI-Dokument die Basis-URL und den zur Berechtigung passenden Aufruf.",
         "Richte mit dem Betreiber zuerst den HTTPS-Empfänger und seinen Alias ein. Wähle unter Unternehmens-Webhooks den aktiven Integrationsschlüssel und Kursereignisse aus, lege das Abonnement an und hinterlege den Signaturschlüssel sicher beim Empfänger.",
         "Prüfe im Zustellverlauf einen bestätigten Test. Empfänger prüfen Signatur und Zeitstempel und verarbeiten bereits bekannte Ereignis-IDs nur einmal.",
       ],
       en: [
-        "With an admin or owner account, open the company under Administration → Customers / Companies. Create a named, expiring key under API integrations.",
+        "With an admin or owner account, open the company under Administration → Companies. Create a named, expiring key under API integrations.",
         "Choose one permission for the course index, enrolment of confirmed participants or aggregate course counts. Enrolment and reporting require Premium LMS for the company.",
         "Copy the one-time credential into the consuming server's secret store. Use the base URL and operation from the OpenAPI document for the selected permission.",
         "Have the operator configure the HTTPS receiver and its alias first. Under Company webhooks, select the active integration key and course events, add a subscription and store its signing key securely on the receiver.",
