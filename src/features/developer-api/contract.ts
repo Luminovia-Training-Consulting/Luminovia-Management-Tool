@@ -1,3 +1,4 @@
+import { legacyHandoverOperations } from "../jobs/handover-schema.ts";
 import {
   searchKinds,
   unifiedSearchPageSchema,
@@ -2540,6 +2541,22 @@ const nativePaths = {
     },
     withdrawalReceipt,
   ),
+  "/rest/v1/rpc/report_assignment_sick_day": rpc(
+    "native_report_assignment_sick_day",
+    "Jobs",
+    "Release the upcoming sessions of an own teaching day",
+    "Requires an own confirmed assignment. The selected session identifies the date in the job time zone. The database atomically reopens the upcoming sessions on that date as one urgent ordinary job, stores a retry receipt, and retains the other teaching days.",
+    {
+      p_claim_id: uuid,
+      p_session_id: uuid,
+      ...idempotency,
+    },
+    object({
+      job_id: uuid,
+      released_sessions: { type: "integer", minimum: 1 },
+      teaching_date: { type: "string", format: "date" },
+    }),
+  ),
   "/rest/v1/rpc/review_assignment_withdrawal": rpc(
     "native_review_assignment_withdrawal",
     "Jobs",
@@ -4434,6 +4451,10 @@ const paths: Record<string, Record<string, unknown>> = {
   },
 };
 
+const legacyHandover = new Set(
+  legacyHandoverOperations.map((name) => `/rest/v1/rpc/${name}`),
+);
+
 const legacyInvitationResponse = (
   description: string,
   properties: Record<string, unknown>,
@@ -4598,7 +4619,14 @@ function internalOpenApi(
   const documentedPaths: typeof paths = includeNonInteractive
     ? {
         ...nativeDownloadPaths,
-        ...paths,
+        ...Object.fromEntries(
+          Object.entries(paths).map(([path, operations]) => [
+            path,
+            legacyHandover.has(path)
+              ? { post: { ...(operations.post as object), deprecated: true } }
+              : operations,
+          ]),
+        ),
         ...credentialPaths,
         "/functions/v1/website-enquiries": websiteEnquiryIntakePath,
         "/rest/v1/rpc/issue_company_integration_key": {
@@ -4625,12 +4653,14 @@ function internalOpenApi(
         "/functions/v1/company-integration": companyCourseIndexPath,
         ...companyCourseOperationPaths,
       }
-    : paths;
+    : Object.fromEntries(
+        Object.entries(paths).filter(([path]) => !legacyHandover.has(path)),
+      );
   return {
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.10.0",
+      version: "1.11.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },
@@ -4698,6 +4728,7 @@ export function isDocumentedRequest(
       Object.hasOwn(operations, route) && Object.hasOwn(operations[route], verb)
     );
   }
+  if (legacyHandover.has(route)) return false;
   if (Object.hasOwn(paths, route)) return Object.hasOwn(paths[route], verb);
   return Object.entries(paths).some(([path, operations]) => {
     if (!path.includes("{") || !Object.hasOwn(operations, verb)) return false;

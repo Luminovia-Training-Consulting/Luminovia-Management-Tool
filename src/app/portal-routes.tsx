@@ -175,11 +175,6 @@ const SupportDeskPage = lazy(() =>
     default: module.SupportDeskPage,
   })),
 );
-const ReplacementMarketplacePage = lazy(() =>
-  import("../features/replacements/replacements").then((module) => ({
-    default: module.ReplacementMarketplacePage,
-  })),
-);
 const EnquiriesPage = lazy(() =>
   import("../features/enquiries/enquiries").then((module) => ({
     default: module.EnquiriesPage,
@@ -288,7 +283,10 @@ export default function PortalRoutes() {
           <Route path="delivery" element={<DeliveryPage />} />
           <Route path="support" element={<SupportDeskPage />} />
           <Route path="support/:id" element={<SupportDeskPage />} />
-          <Route path="replacements" element={<ReplacementMarketplacePage />} />
+          <Route
+            path="replacements"
+            element={<Navigate to="/jobs" replace />}
+          />
           <Route path="enquiries" element={<EnquiriesPage />} />
           <Route path="enquiries/:id" element={<EnquiriesPage />} />
           <Route path="learning" element={<LearningHubPage />} />

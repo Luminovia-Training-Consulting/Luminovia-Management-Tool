@@ -357,9 +357,3 @@
 .help-embedded .help-hero {
   margin-top: 0;
 }
-
-.replacement-discovery > summary {
-  padding: 0.7rem;
-  cursor: pointer;
-  font-weight: 700;
-}

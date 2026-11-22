@@ -107,3 +107,16 @@ export const substitutionReceiptSchema = z.discriminatedUnion("status", [
     ]),
   }),
 ]);
+
+/** Reviewed integration operations superseded by ordinary urgent job discovery. */
+export const legacyHandoverOperations = [
+  "replacement_marketplace",
+  "replacement_assignments",
+  "request_replacement",
+  "claim_replacement",
+  "cancel_replacement",
+  "job_substitutions",
+  "substitution_candidates",
+  "propose_job_substitution",
+  "respond_job_substitution",
+] as const;

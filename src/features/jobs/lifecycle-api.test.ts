@@ -6,10 +6,6 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readinessQuery } from "../readiness/api";
-import {
-  replacementAssignmentsQuery,
-  replacementQuery,
-} from "../replacements/api";
 import { supportContextQuery, supportTicketQuery } from "../support/api";
 import {
   cancelAssignment,
@@ -247,14 +243,8 @@ describe("lifecycle reads and connected cache refresh", () => {
       ["chat-members", "actor-a", "room-a"],
       ["chat-messages", "actor-a", "room-a"],
       ["operations", "actor-a", "courses"],
-      // Accepted handovers affect both the recipient inbox and the per-job
-      // projection; waitlist availability and teaching-day allocations must
-      // also become stale after a confirmed lifecycle mutation.
-      ["job-substitutions", "actor-a", "inbox"],
-      ["job-substitutions", "actor-a", "job-a"],
       ["job-waitlist", "actor-a", "job-a"],
       ["my-job-waitlist", "actor-a"],
-      ["substitution-candidates", "actor-a", "claim-a", "Fictional lecturer"],
       ["teaching-day", "actor-a"],
     ];
     const unrelated = [
@@ -274,7 +264,7 @@ describe("lifecycle reads and connected cache refresh", () => {
       expect(cache.getQueryState(key)?.isInvalidated).toBe(false);
   });
 
-  it("refreshes actual preparation and replacement views while retaining private support state", async () => {
+  it("refreshes actual preparation views while retaining private support state", async () => {
     const cache = client();
     // Build the released modules' actual keys, including nested detail/history
     // views. Merely calling invalidateQueries with a new prefix must not count
@@ -283,8 +273,6 @@ describe("lifecycle reads and connected cache refresh", () => {
     const affected: QueryKey[] = [
       readinessQuery("actor-a").queryKey,
       readinessQuery("actor-a", resource).queryKey,
-      replacementQuery("actor-a").queryKey,
-      replacementAssignmentsQuery("actor-a").queryKey,
     ];
     const unrelated: QueryKey[] = [
       supportContextQuery("actor-a").queryKey,

@@ -5,6 +5,7 @@ import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { Job } from "../../lib/types";
 import { dateTime, money } from "../../lib/dates";
 import "./lifecycle-i18n";
+import "./sick-day-i18n";
 import "./card.css";
 import "../commercial/platform-i18n";
 
@@ -20,7 +21,11 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
     <article className={`job-card accent-${index % 4}`}>
       <div className="job-card-top">
         <span className="badge">{t(job.delivery_type)}</span>
-        <span className={`status status-${job.status}`}>{t(job.status)}</span>
+        {job.urgent_reopened_at && job.status === "published" ? (
+          <span className="status job-urgent">{t("sickDay:urgent")}</span>
+        ) : (
+          <span className={`status status-${job.status}`}>{t(job.status)}</span>
+        )}
       </div>
       <p className="job-customer">{job.customer_name}</p>
       <h2>

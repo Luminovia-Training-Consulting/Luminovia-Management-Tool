@@ -141,12 +141,8 @@ export async function refreshJobState(client: QueryClient) {
       "operations",
       "readiness",
       "delivery",
-      "replacements",
-      "replacement-assignments",
-      "job-substitutions",
       "job-waitlist",
       "my-job-waitlist",
-      "substitution-candidates",
       "teaching-day",
     ].map((key) => client.invalidateQueries({ queryKey: [key] })),
   );

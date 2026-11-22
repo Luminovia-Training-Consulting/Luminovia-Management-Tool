@@ -7,6 +7,7 @@ import {randomUUID} from "node:crypto";
 import {readFile, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
+import {legacyHandoverOperations} from "../src/features/jobs/handover-schema.ts";
 import {scanFrontendRpcReferences} from "./code-integrity.mjs";
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
 
@@ -136,6 +137,12 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
         const feature = featureFor(file);
         const former = browserCalls.get(name);
         if (!former || feature < former) browserCalls.set(name, feature);
+    }
+    // The full download retains deprecated integration contracts after the
+    // portal removes their interactive call sites.
+    for (const name of legacyHandoverOperations) {
+        if (allByName.has(name) && !browserCalls.has(name))
+            browserCalls.set(name, "jobs");
     }
     const names = [...browserCalls.keys()];
     const access = await probeRestGates(sql, names);

@@ -117,6 +117,7 @@ export const jobSchema = z.object({
   capacity: z.number().int().min(1).max(20),
   capacity_basis: z.enum(["single_position", "per_position"]),
   created_at: instant,
+  urgent_reopened_at: instant.nullable().optional(),
   job_sessions: z.array(
     z.object({
       id: z.uuid(),
@@ -135,6 +136,7 @@ export const cursorSchema = z
     number: z.string().regex(/^-?\d+(?:\.\d+)?$/),
     text: z.string().max(400),
     fingerprint: z.string().regex(/^[a-f0-9]{32}$/),
+    urgent: z.boolean().optional(),
   })
   .strict();
 export type JobCursor = z.infer<typeof cursorSchema>;

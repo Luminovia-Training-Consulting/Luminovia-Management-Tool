@@ -18,9 +18,6 @@ vi.mock("@tanstack/react-query", async (original) => ({
 vi.mock("../features/operations/courses", () => ({
   CoursesPage: () => <p>Course catalogue</p>,
 }));
-vi.mock("../features/replacements/replacements", () => ({
-  ReplacementMarketplacePage: () => <p>Available replacements</p>,
-}));
 vi.mock("../features/knowledge/wiki", () => ({
   WikiPage: () => <p>Wiki articles</p>,
 }));
@@ -44,33 +41,24 @@ afterEach(() => {
   cleanup();
   state.roles = ["lecturer"];
 });
-it("keeps replacement discovery within the course catalogue", async () => {
-  render(
-    <MemoryRouter>
-      <SectionHub kind="courses" />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByText("Course catalogue")).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: /Vertretungen|Replacements/ }),
-  ).not.toBeInTheDocument();
-  await userEvent.click(
-    screen.getByText(/Vertretung für einen Kurs|Find or claim a course/),
-  );
-  expect(await screen.findByText("Available replacements")).toBeVisible();
-});
-it("keeps a company account in its course catalogue without offering to take a replacement", async () => {
-  state.roles = ["client"];
-  render(
-    <MemoryRouter>
-      <SectionHub kind="courses" />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByText("Course catalogue")).toBeVisible();
-  expect(
-    screen.queryByText(/Vertretung für einen Kurs|Find or claim a course/),
-  ).not.toBeInTheDocument();
-});
+it.each(["lecturer", "client"])(
+  "shows the course catalogue with no separate replacement controls for %s",
+  async (role) => {
+    state.roles = [role];
+    render(
+      <MemoryRouter>
+        <SectionHub kind="courses" />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Course catalogue")).toBeVisible();
+    expect(
+      screen.queryByText(/Vertretung für einen Kurs|Find or claim a course/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Vertretungen|Replacements/ }),
+    ).not.toBeInTheDocument();
+  },
+);
 it("embeds help without losing the active knowledge section on topic navigation", async () => {
   render(
     <MemoryRouter initialEntries={["/wiki?section=help"]}>

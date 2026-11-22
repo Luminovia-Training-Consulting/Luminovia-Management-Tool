@@ -65,6 +65,7 @@ export interface Job {
   terms_version: number;
   requires_contract: boolean;
   claim_deadline: string | null;
+  urgent_reopened_at?: string | null;
   job_sessions: JobSession[];
   job_requirements: { topic_id: string }[];
 }

@@ -42,10 +42,9 @@ Consolidated reference. Source and tests remain authoritative for current behavi
 At `/enquiries`, authorised organisation management can review private training requests, assign responsibility, link or create the configured customer and convert reviewed dates into a course run. Requests are preferences until management confirms a plan; no commercial quote is invented. The trusted-server endpoint is disabled by default and the public marketing site is unchanged. See [website enquiries](GUIDE.md#section-website-enquiries) for configuration and remaining activation
 requirements.
 
-Course preparation is available from the course workspace; replacement discovery is in the course catalogue. Support lives in Knowledge & Help. Historical standalone readiness, delivery and replacement routes and their API records remain documented in the dated feature sections below; they are not current primary navigation. The [course readiness](GUIDE.md#section-course-readiness), [replacement](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk) sections
-explain their underlying contracts. Current release status is separate from source availability.
+Course preparation is available from the course workspace. Urgent teaching cover appears at the top of the normal assignment list. Old replacement links open that list. Support lives in Knowledge & Help. See [course readiness](GUIDE.md#section-course-readiness), [urgent teaching cover](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk).
 
-This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists/substitution, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
+This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists, urgent teaching cover, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
 feature or that native/device/hosting acceptance has passed.
 
 Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](DEVELOPMENT.md#section-github-local-preview). A mock/demo result or captured local
@@ -169,12 +168,11 @@ Management can explicitly reopen remaining future positions with a reason and an
 
 <a id="section-user-guide-waitlists-and-explicit-substitutes"></a>
 
-## Waitlists and explicit substitutes
+## Waitlists and urgent teaching cover
 
 On an eligible full or closed offer, join or leave your own waitlist and review your entries from `/jobs`. A reopening/availability notice expresses an opportunity to make the normal current online claim; joining never reserves a place or gives priority over another valid complete claim.
 
-For your already accepted assignment, the replacement panel lets you choose a currently qualified/available target and explain the proposal. The target reviews their own quoted full-block compensation and terms and explicitly accepts or declines. A changed quote, role, agreement, interval conflict or expired proposal requires a current review rather than bypassing consent. Only a confirmed atomic response transfers the entire block and updates access; the original accepted deal remains
-historical. Until then, the original assignment remains yours. Management has only its separately authorised actions. This targeted workflow is not an automatic open/emergency marketplace. See [Assignment handover](GUIDE.md#section-assignment-handover).
+For an assigned teaching day affected by illness, report the day directly in the assignment. Other lecturers find [urgent teaching cover](GUIDE.md#section-replacement-marketplace) in the regular assignment list.
 
 <a id="section-user-guide-calendar-and-availability"></a>
 
@@ -936,11 +934,7 @@ lecturer's assignment. The legacy cancellation RPC also enforces the short-notic
 rule for an actor's own assignment, so a direct API call cannot bypass review.
 Started blocks and **any** invoice-item history are refused and require separate
 financial review. These workflows record no bank payment, refund or credit note.
-Directed and marketplace replacement paths likewise refuse short-notice
-self-initiated transfers; a distinct current authorized manager can explicitly
-initiate a replacement. Offers created earlier do not bypass the policy by aging
-into the protected window. See [withdrawal operations](GUIDE.md#section-assignment-withdrawals) for the RPC, retry and
-migration boundaries.
+For sickness that affects a specific teaching day, use [urgent teaching cover](GUIDE.md#section-replacement-marketplace). See [withdrawal operations](GUIDE.md#section-assignment-withdrawals) for ordinary withdrawal, retry and migration boundaries.
 
 Cancellation:
 
@@ -1184,7 +1178,7 @@ QA results; no production or external delivery is claimed here.
 
 <a id="section-assignment-handover-assignment-waitlists-and-consented-substitution"></a>
 
-# Assignment waitlists and consented substitution
+# Assignment waitlists
 
 Migration `20261116091012_assignment_waitlist_and_substitution.sql` adds private, permissioned workflow data without rewriting existing migration history or accepted deals.
 
@@ -1196,27 +1190,13 @@ Waitlist interest grants no enduring read access to private job metadata. If an 
 Withdrawal rechecks current account activation after the profile lock. A suspended request cannot mutate a waitlist using an earlier pre-lock permission result. Joining additionally requires current lecturer authority; an active former lecturer may still withdraw their own prior interest. Every successful leave receipt has an empty title. A caller without own interest receives the same idempotent, metadata-free receipt for a private or missing non-null UUID before any foreign job lookup or row
 lock; withdrawal is not an existence or title oracle. Null IDs are denied. The additive corrections are [current post-lock authority](supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql) and [private withdrawal receipts](supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql); earlier SQL files and public API/grant identities remain unchanged.
 
-The current assignee or management with current `jobs.manage` and MFA can request a qualified, available replacement. Candidate results contain names and IDs only, never private calendar rows, contact data or blocked-out reasons. The server freezes the complete source teaching block, currency, unit and terms, and captures the recipient's own net compensation from the job's private role-pricing policy. It does not copy another lecturer's protected fee. See role-aware integration for the current
-quote/hash and ledger rules. The recipient reviews that concrete offer in their jobs-page inbox and explicitly accepts every session and the quoted terms online. Their hash/consent, active lecturer status, qualification validity through the last session, own applicable contract, personal calendar, unavailable windows and current source assignment are all rechecked at acceptance.
-
-An offer itself does not cancel or reserve anything. The atomic acceptance releases every old allocation and creates every new allocation in one transaction. It retains the original cancelled claim, original immutable commercial snapshot and original released intervals, creates a new immutable accepted claim and preserves the original customer gross/currency while recording the successor's accepted net/platform split. A private pricing-ledger mismatch requires financial review. The source
-course-chat membership and assignment-derived participant-channel access are revoked; independent enrolment or another accepted course assignment keeps its own rights. Current document and realtime authorisation then determine access. The replacement does not receive the former lecturer's private contract, messages or personal preparation notes.
-
-Started work, any invoice-item history (including inactive/cancelled invoices), partial release history, unavailable candidates, altered quotes and expired offers prevent transfer. Decline, withdrawal and cancellation are explicit. An ordinary cancellation supersedes pending replacement offers. Repeated successful acceptance returns the same replacement claim. A failed final exclusion check rolls back all intermediate changes, including source releases. The RPCs follow the existing lecturer →
-job → claim → offer lock order; two lecturer locks use a stable UUID order.
-
-The public APIs are `job_waitlist`, `my_job_waitlist`, `set_job_waitlist`, `substitution_candidates`, `propose_job_substitution`, `job_substitutions` and `respond_job_substitution`. Invoker wrappers delegate to reviewed private implementations with fixed empty search paths. Private tables have RLS and no direct browser or service-role table grants. There is no editable actor ID, approval queue, partial allocation or administrative acceptance on another recipient's behalf.
-
-Notification kinds are `job_waitlist_available` (optional job updates), `substitution_proposed` and `substitution_closed`. External mail/push contains generic portal notices; exact offer details stay behind login. The notification target resolver checks current ownership and availability before returning a link or title. A withdrawn or expired proposal no longer exposes a live proposal target.
+The current waitlist APIs are `job_waitlist`, `my_job_waitlist` and `set_job_waitlist`. Availability notifications use `job_waitlist_available`, subject to the optional job update preference. See [urgent teaching cover](GUIDE.md#section-replacement-marketplace) for illness affecting an accepted teaching day.
 
 <a id="section-assignment-handover-evidence"></a>
 
-## Evidence
+## Waitlist verification
 
-`scripts/assignment-handover-db-tests.mjs` passed 15 native PostgreSQL groups, including 20 parallel waitlist joins, 50 simultaneous acceptance retries, whole-block immutable transfer, current qualifications/calendar/availability, source cancellation and recipient decline races, invoice-submission serialization, retained revenue snapshots, cancelled invoice history and former chat/file access revocation. Existing jobs/lifecycle component tests and three new workflow component cases passed.
-REST/MFA acceptance and desktop/mobile DE/EN workflows are defined in `scripts/assignment-handover-api-check.mjs` and `tests/e2e/assignment-handover.spec.ts`; actual combined-run acceptance must be recorded separately.
-
-The focused [waitlist authority/privacy suite](scripts/waitlist-authority-db-tests.mjs) covers profile-lock races, current lecturer join authority, permitted former-lecturer withdrawal, private-title redaction and guessed-ID cleanup without foreign row locking. Current observed suite results are recorded in the relevant pull request checks; authored checks and historical passes do not establish combined native/UI acceptance.
+The [waitlist browser regression](tests/e2e/job-waitlist.spec.ts) exercises joining, reloading and leaving a real full offer without creating an allocation. The older native handover fixtures record the transactional behavior of the former substitution flow.
 
 <a id="section-assignment-withdrawals"></a>
 
@@ -1288,13 +1268,7 @@ The command ledger binds actor, operation and payload; a changed payload cannot
 reuse an old command. A rejected application needs a fresh explicit operation.
 The existing lecturer/job/claim locks also serialize invoices, substitutions and
 competing decisions. The old cancellation RPC refuses own short-notice attempts,
-including actors who also have a management role. Directed substitutions and the
-replacement marketplace enforce the same rule: an own proposal cannot be created
-inside the window, and an older own proposal cannot release its source after aging
-into it. Short-notice transfers remain possible when a different current authorized
-manager explicitly initiated them. Their immutable server-written proposer ID and
-current management role are checked under profile locks before release; a revoked
-or suspended proposer no longer authorizes the transfer.
+including actors who also have a management role. See [urgent teaching cover](GUIDE.md#section-replacement-marketplace) for reporting a specific teaching day affected by illness.
 
 <a id="section-assignment-withdrawals-migration-and-operations"></a>
 
@@ -1316,89 +1290,13 @@ or production readiness.
 
 <a id="section-replacement-marketplace"></a>
 
-<a id="section-replacement-marketplace-transactional-replacement-marketplace"></a>
+# Urgent teaching cover
 
-# Transactional replacement marketplace
+Open your confirmed assignment and select **Für einen Unterrichtstag krankmelden / Report sick for a teaching day**. Pick the day in the assignment's time zone and confirm. Its upcoming sessions appear together as **Notfall / Urgent cover** at the top of the regular **Assignments** list. Sessions that have already started and the other teaching days keep their existing allocation. The form requires only the teaching day.
 
-This extension preserves the existing job/claim/calendar/chat/finance architecture. A lecturer or current MFA job manager may publish a reasoned replacement search for an existing confirmed, future, uninvoiced assignment. The original claim and every calendar allocation stay confirmed while the search is open. The private reason is visible only to that original lecturer and authorised management.
+Another available lecturer can accept the offer through the usual terms confirmation. The first database-confirmed claim reserves the released sessions. A company restriction removes the offer from the restricted lecturer's list and prevents a direct claim. An assignment with an existing invoice or a reserved invoice series requires course management review.
 
-At `/replacements`, eligible lecturers see the entire block, original IANA time zone, their own current compensation quote and exact terms. Explicit consent binds all quote fields and session instants. Changing any of them clears consent. Open and selected-invitation modes and emergency marking are implemented. Selected invitations reject currently ineligible lecturers; eligibility is recomputed on every read and claim. No private appointment details, other lecturer's prices or contract records
-are returned.
-
-Replacement requests and claims recheck active status after profile-lock waits. A retained successful claim receipt is returned only after the current caller profile is locked and lecturer authority is checked again after the request-gate wait. Winning role withdrawal or suspension refuses the retry without changing the historical receipt, accepted compensation or confirmed successor.
-
-<a id="section-replacement-marketplace-short-notice-withdrawal-policy"></a>
-
-## Short-notice withdrawal policy
-
-With less than 168 hours before the first session, a lecturer uses the reasoned
-withdrawal application in the assigned job. Own replacement searches are no longer
-available in that window, including direct API calls. An own offer created earlier
-cannot release the assignment after it ages into this window. A different current
-MFA-authorized job manager may explicitly initiate the replacement; current
-management authority and active status of that server-recorded requester are
-rechecked before a short-notice handover. Losing that role before acceptance blocks
-the transfer. The original assignment remains confirmed after any refusal. The
-same rule applies to directed substitute invitations. See
-[assignment withdrawals](GUIDE.md#section-assignment-withdrawals).
-
-<a id="section-replacement-marketplace-atomic-handover"></a>
-
-## Atomic handover
-
-`claim_replacement` locks both involved profiles/lecturers in a deterministic order, then the job, original claim and replacement. It checks current active roles, original allocation/version, complete future block, qualifications through the last session, applicable contract, calendar/private-event/unavailable-window conflicts and invoice history. The existing `private.claim_job` is the authoritative new-claim operation, preserving current quote/contract/revenue rules rather than duplicating
-those rules.
-
-Within a database subtransaction, the original claim is cancelled and its allocation rows marked released, and the existing claim routine reserves every session for the replacement. Any unsuccessful result or exception rolls back that entire subtransaction. Successful handover also transfers lecturer-course and run-associated participant-course chat membership, which controls room materials, and changes current `job_after` document access through the existing confirmed-claim predicate. Accepted
-original prices, currencies, terms, revenue history, allocation rows and audit history remain intact. A replacement accepts a new immutable compensation snapshot.
-
-Participant rooms have no job association; their `course_run_id` determines the
-matching course. The transaction locks both relevant room kinds in room-ID order
-before changing members. It revokes the old lecturer's participant membership
-only when no other confirmed assignment in that run and no genuine enrolled or
-completed enrolment remains. Removed enrolments and the cancelled source claim
-retain no rights. The replacement receives membership, and room ownership moves
-only when the previous owner was the old lecturer; another owner's role is
-preserved. The same current-membership policy controls messages and room files,
-including files originally uploaded by the removed lecturer.
-
-The original vacancy deadline is temporarily removed inside the handover transaction and restored before commit. That historical recruitment deadline cannot make a new authorised replacement impossible; the entire block must still be in the future. The ordinary publication notifier is deferred and evaluates final committed job state. An unchanged filled job is never exposed as an available vacancy outside this transaction.
-
-Exactly repeated actor/request inputs return the same successful result. Reusing a key for other inputs rejects. The whole-block database claim, constraints and actor locks remain the final guards against concurrent winners, duplicate calendars and booking conflicts. The public wrappers use SECURITY INVOKER; private RLS-enabled tables have no browser table grants. Minimal inbox targets recheck current authority; no real email is sent by this module.
-
-<a id="section-replacement-marketplace-boundaries-still-required"></a>
-
-## Boundaries still required
-
-Already started, partly completed or invoiced work is explicitly refused and sent to contractual/financial review. This is a deliberate incomplete part of the full requested marketplace: partial delivery needs an approved amendment allocating remaining sessions and compensation, not guessed prorating or overwritten accepted fees. Waitlists, directed substitute invitations and external notification channels belong to the independently owned smart-operations source; they must be preserved and
-jointly verified when integrated. The UI states this module's limits. Management cannot use the marketplace to bypass eligibility or assign a lecturer without that lecturer accepting the current offer.
-
-The role-pricing compatibility path calls the inspected private `role_net` / `role_quote_version` helpers only when a captured `role_split` offer exists. Legacy net-only jobs keep their existing quote. The independently owned pricing PR must pass integrated exact-source tests before this compatibility is claimed accepted. No business percentages are added to public source or defaults.
-
-<a id="section-replacement-marketplace-evidence"></a>
-
-## Evidence
-
-`PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/replacements-db-tests.mjs` passed **13 real PostgreSQL groups** in randomly named disposable databases with no published network ports. Tests cover ownership/MFA/suspension, no release at publication, private reasons, exact retries, two concurrent claimants, immutable original agreement, complete calendars/chat, current conflicts/expired or revoked qualifications/contracts, selected invitations, cancellation
-CAS, injected handover failure rollback, stale terms, started work, old recruitment deadlines and concurrent original cancellation.
-
-`npm test -- src/features/replacements` passed **4 component/business tests** for bound consent, real server-result handling, stable retries and offline/English rendering. The whole-source checkpoint passed 257 tests and the unchanged coverage gates (52.04% statements, 47.09% branches, 42.28% functions, 53.86% lines). These are focused source results, not browser/backend acceptance.
-
-The actual Auth/HTTP test is `scripts/replacements-api-check.mjs`; browser DE/EN/dark/axe/mobile and real online handover are in `tests/e2e/replacements.spec.ts`. They are authored and remain pending until the canonical `./portal test` and exact PR CI are observed passing. Shared local QA ownership must be respected. No merge, development VPS installation, production approval or physical PWA acceptance follows from the source checkpoint alone.
-
-The access-composition correction passed all 13 existing replacement SQL groups
-and zero-warning/error body diagnostics for 30 operational implementations.
-`scripts/support-replacement-access-db-tests.mjs` passed 24 actual SQL groups:
-eight each for current main plus operations, a stricter predecessor fixture, and
-the chronological union with exact PR17 source
-`00eaa5249a163618887f72683da362e785a5957f`. Each mode verifies raw message RLS,
-protected chat history, document metadata and clean-version reads before and
-after handover; sole assignment, another same-run assignment, enrolled/completed
-enrolment and removed enrolment; source/recipient/outsider separation; owner
-transfer; retained immutable original terms; complete calendars and exact retry.
-Only disposable databases in the explicitly owned networkless fixture are used.
-These SQL checks do not replace native Auth, HTTP/Storage-byte, browser or full
-combined acceptance.
+The old replacement link redirects to **Assignments**. Completed handovers are retained in the assignment history.
 
 <a id="section-course-building-blocks"></a>
 

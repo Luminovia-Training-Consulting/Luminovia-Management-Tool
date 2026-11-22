@@ -20,3 +20,8 @@
 .job-card .round-link {
   flex-shrink: 0;
 }
+
+.job-urgent {
+  background: var(--coral);
+  color: var(--navy);
+}

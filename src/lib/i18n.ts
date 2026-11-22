@@ -18,7 +18,6 @@ const pairs: Record<string, [string, string]> = {
   courseReadiness: ["Kursbereitschaft", "Course readiness"],
   knowledgeHelp: ["Wissen & Hilfe", "Knowledge & help"],
   teachingDelivery: ["Leistungsnachweise", "Teaching delivery"],
-  replacements: ["Ersatzbörse", "Replacements"],
   supportDesk: ["Support", "Support desk"],
   websiteEnquiries: ["Website-Anfragen", "Website enquiries"],
   announcements: ["Ankündigungen", "Announcements"],

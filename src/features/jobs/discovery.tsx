@@ -1,8 +1,8 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { MyJobWaitlist, SubstitutionOffers } from "./lifecycle-extra";
+import { MyJobWaitlist } from "./lifecycle-extra";
 import { useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -487,6 +487,7 @@ export function JobDiscovery() {
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const [params, setParams] = useSearchParams();
+  const sickDayReleased = useLocation().state?.sickDayReleased === true;
   const parsed = filtersFromParams(params),
     filters = parsed.success ? parsed.data : null;
   const query = useInfiniteQuery({
@@ -517,7 +518,7 @@ export function JobDiscovery() {
   return (
     <>
       <PageHeading title={t("title")} description={t("help")} />
-      <SubstitutionOffers />
+      {sickDayReleased && <Notice>{common("sickDay:released")}</Notice>}
       {teaching && <MyJobWaitlist />}
       <details className="panel discovery-filter-disclosure" open={!filters}>
         <summary>{t("filterOptions")}</summary>

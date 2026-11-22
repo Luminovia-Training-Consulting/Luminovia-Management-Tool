@@ -61,7 +61,7 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 63 former generic operations in both published documents", () => {
+  it("covers the 63 former generic operations and keeps deprecated operations download-only", () => {
     expect(new Set(definitions.map(([name]) => name)).size).toBe(63);
     expect(definitions).toHaveLength(63);
     for (const includeNonInteractive of [true, false]) {
@@ -80,6 +80,13 @@ describe("internal operation documentation", () => {
       for (const [name, documentation] of definitions) {
         const entry = native[name];
         expect(entry, name).toBeDefined();
+        if (
+          !includeNonInteractive &&
+          (operation(name) as Operation & { deprecated?: boolean }).deprecated
+        ) {
+          expect(document.paths[path(name)], name).toBeUndefined();
+          continue;
+        }
         const current = document.paths[path(name)].post as Operation;
         expect(current).toMatchObject({
           operationId: `native_${name}`,

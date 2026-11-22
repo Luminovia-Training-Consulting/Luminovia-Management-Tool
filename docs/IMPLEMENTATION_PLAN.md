@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Urgent teaching cover
+
+- A lecturer can report a selected teaching day on their confirmed assignment. The ordinary job list ranks the released future sessions first as an urgent single-position offer. The original assignment keeps its other days and historical terms. A concurrent legacy whole-block handover cannot re-advertise the released sessions.
+- Preserve company lecturer restrictions in discovery, direct access and the atomic claim. Urgent claims do not require verified topic matches. The server still checks the active teaching role, contract and scheduling rules. An existing invoice or reserved invoice series requires manual review.
+- The legacy replacement URL redirects to job discovery. The interactive portal and API explorer no longer provide the old exchange actions. The downloadable contract marks retained integration endpoints as deprecated.
+
 ## Communication workspace
 
 - Keep chats and authorized forum discussion under one main navigation item. Preserve room links and forward older forum links with their selected thread.

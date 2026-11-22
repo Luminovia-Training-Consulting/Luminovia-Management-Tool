@@ -14,7 +14,7 @@ const budgets = {
 const explorerEntries = [
   "src/features/developer-api/portal-explorer.tsx",
   "src/features/developer-api/academy-explorer.tsx",
-  "src/features/developer-api/swagger-view.tsx",
+  "src/features/developer-api/standalone-swagger.tsx",
 ];
 
 function staticAssets(manifest, entry) {
@@ -111,14 +111,16 @@ export function checkBundleBudget(directory, limits = budgets) {
   let explorerBytes = 0;
   for (const entry of explorers) {
     const { file, css = [] } = manifest[entry];
-    for (const asset of [file, ...css]) {
+    const dependencies = [...staticAssets(manifest, entry)];
+    const swaggerAssets = dependencies.filter((asset) =>
+      asset.startsWith("assets/swagger-view-"),
+    );
+    for (const asset of [file, ...css, ...swaggerAssets]) {
       if (startup.has(asset) || precache.has(asset)) {
         throw new Error(`API explorer asset must load on demand: ${asset}`);
       }
     }
-    const incremental = [...staticAssets(manifest, entry)].filter(
-      (file) => !startup.has(file),
-    );
+    const incremental = dependencies.filter((file) => !startup.has(file));
     explorerBytes = Math.max(
       explorerBytes,
       incremental.reduce((sum, file) => sum + gzip(file), 0),

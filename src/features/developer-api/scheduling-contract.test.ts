@@ -1,4 +1,4 @@
-/** Check the published waitlist and substitution wire contracts in both API views. */
+/** Check interactive waitlists and retained legacy handover contracts. */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
@@ -9,6 +9,9 @@ const operations = [
   "job_waitlist",
   "my_job_waitlist",
   "set_job_waitlist",
+  "report_assignment_sick_day",
+] as const;
+const legacy = [
   "substitution_candidates",
   "propose_job_substitution",
   "job_substitutions",
@@ -25,7 +28,7 @@ type DocumentedPost = {
 };
 const post = (operation: string) =>
   (
-    publish(false)[
+    publish(true)[
       `${prefix}${operation}` as keyof ReturnType<typeof publish>
     ] as {
       post: DocumentedPost;
@@ -50,6 +53,16 @@ describe("waitlist and direct handover contracts", () => {
         post(operation).responses["200"].content["application/json"].schema,
       ).not.toHaveProperty("x-postgresql-type");
       expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(true);
+    },
+  );
+
+  it.each(legacy)(
+    "keeps %s only in the downloadable legacy contract",
+    (operation) => {
+      const path = `${prefix}${operation}` as keyof ReturnType<typeof publish>;
+      expect(post(operation)).toHaveProperty("deprecated", true);
+      expect(publish(false)).not.toHaveProperty([path]);
+      expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
     },
   );
 

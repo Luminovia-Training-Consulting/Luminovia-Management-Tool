@@ -7,9 +7,10 @@ import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { JobWithdrawalPanel } from "./withdrawal";
+import { JobSickDay } from "./sick-day";
 import { JobBriefing } from "./briefing";
 import { JobRelatedNavigation } from "./related-navigation";
-import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
+import { JobWaitlist } from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
 import { jobDetailQuery } from "./discovery-api";
 import { ResourceComments } from "../comments/comments";
@@ -182,7 +183,11 @@ export function JobDetail() {
         eyebrow={job.customer_name}
         title={job.title}
         action={
-          <span className={`status status-${job.status}`}>{t(job.status)}</span>
+          <span className={`status status-${job.status}`}>
+            {job.urgent_reopened_at && job.status === "published"
+              ? t("sickDay:urgent")
+              : t(job.status)}
+          </span>
         }
       />
       {permissions.data?.includes("jobs.manage") && (
@@ -190,11 +195,9 @@ export function JobDetail() {
       )}
       <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
       <JobLifecyclePanel job={job} />
-      <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
-      {teaching && <JobWaitlist jobId={job.id} />}
-      <JobSubstitutionPanel jobId={job.id} />
       {teaching && ownClaim?.status === "confirmed" && (
         <div className="form-actions">
+          <JobSickDay key={ownClaim.id} claim={ownClaim} zone={job.time_zone} />
           <Button asChild variant="secondary">
             <Link to={`/finance?claim=${encodeURIComponent(ownClaim.id)}`}>
               {t("submitInvoice")}
@@ -202,6 +205,8 @@ export function JobDetail() {
           </Button>
         </div>
       )}
+      <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
+      {teaching && <JobWaitlist jobId={job.id} />}
       <div className="detail-layout">
         <div>
           <section className="panel">

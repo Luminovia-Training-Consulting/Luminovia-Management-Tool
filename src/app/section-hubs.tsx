@@ -13,10 +13,7 @@ import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../features/auth/auth-context";
 import { isGuestOnly } from "../features/auth/guest-navigation";
-import {
-  hasJobStaffRole,
-  hasTeachingRole,
-} from "../features/auth/internal-capabilities";
+import { hasJobStaffRole } from "../features/auth/internal-capabilities";
 import { knowledgeAccessQuery } from "../features/knowledge/api";
 import { userRolesQuery } from "../lib/queries";
 
@@ -28,11 +25,6 @@ const Courses = lazy(() =>
 const Readiness = lazy(() =>
   import("../features/readiness/readiness").then((m) => ({
     default: m.CourseReadinessPage,
-  })),
-);
-const Replacements = lazy(() =>
-  import("../features/replacements/replacements").then((m) => ({
-    default: m.ReplacementMarketplacePage,
   })),
 );
 const Wiki = lazy(() =>
@@ -78,7 +70,6 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
     enabled: kind === "knowledge",
   });
   const staff = hasJobStaffRole(roles.data);
-  const teaching = hasTeachingRole(roles.data);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const items = sections[kind].filter((item) => {
@@ -122,20 +113,6 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
           <Help embedded />
         ) : (
           <Page />
-        )}
-        {kind === "courses" && selected[0] === "catalogue" && staff && (
-          <details className="panel replacement-discovery">
-            <summary>
-              {teaching
-                ? i18n.language.startsWith("de")
-                  ? "Vertretung für einen Kurs finden oder übernehmen"
-                  : "Find or claim a course replacement"
-                : i18n.language.startsWith("de")
-                  ? "Vertretung für einen Kurs finden"
-                  : "Find a course replacement"}
-            </summary>
-            <Replacements />
-          </details>
         )}
       </Suspense>
     </>

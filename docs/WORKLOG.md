@@ -1,3 +1,11 @@
+# 23 November 2026 — Report an unavailable teaching day
+
+An assigned lecturer can report a teaching day without entering medical details. The transaction releases only the upcoming sessions whose start is on that date in the assignment's time zone. The ordinary job list shows the resulting urgent offer ahead of normal results across sort modes and pages. Company lecturer restrictions still apply to discovery, deep links and claims. Current lecturers can claim urgent cover without a verified topic match, subject to the contract and schedule rules. The first confirmed claim wins.
+
+The old replacement and directed-exchange interfaces have been removed. Their route redirects to job discovery. Existing integration records remain available, and the former operations are deprecated in the downloadable API. The separate waitlist remains available. Released source sessions and accepted terms are retained for reconciliation. Existing invoices and reserved invoice series require review. Pending whole-block handovers are superseded so they cannot release the same sessions again.
+
+In the isolated stack, PostgreSQL verified local dates across UTC midnight, idempotency, unrelated days, cursor order, company restrictions, atomic competition to claim and invoice boundaries. Desktop and mobile Chromium confirmed the sick-day form, ranking, regular claim controls, legacy redirect and waitlist. The actual discovery checks also paged 1,057 offers. The 348 focused frontend and API tests, source integrity, build budgets and 11 API surface checks passed.
+
 # 23 November 2026 — Company terminology
 
 The administration and management views consistently use Unternehmen in German and Company or Companies in English. The same wording is used by the company directory, role preview, search, reporting, course forms, shared workflows, Premium LMS guidance and the public demo. Account forms distinguish the Company role from the Linked company field. Existing URLs, role identifiers and API contracts remain compatible.
