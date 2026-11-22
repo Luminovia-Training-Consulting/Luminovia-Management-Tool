@@ -147,6 +147,7 @@ try {
     PATH: process.env.PATH,
     XDG_DATA_HOME: root,
     XDG_CONFIG_HOME: root,
+    PORTAL_CADDY_ALIAS_PROFILE: "academy_no_aliases",
   };
   await exec(
     resolve(binary),

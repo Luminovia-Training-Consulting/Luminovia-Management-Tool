@@ -53,6 +53,7 @@ services:
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the academy domain}
       PORTAL_API_UPSTREAM: api-ingress:8001
+      PORTAL_CADDY_ALIAS_PROFILE: academy_no_aliases
     depends_on:
       api-ingress:
         condition: service_started

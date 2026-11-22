@@ -330,6 +330,10 @@ test(
         new URL(identity.portal_origin).hostname,
       );
       assert.equal(web.environment.PORTAL_API_UPSTREAM, "api-ingress:8001");
+      assert.equal(
+        web.environment.PORTAL_CADDY_ALIAS_PROFILE,
+        "academy_no_aliases",
+      );
       assert.equal(ingress.image, gateway.image);
       assert.ok(
         ingress.volumes.some(

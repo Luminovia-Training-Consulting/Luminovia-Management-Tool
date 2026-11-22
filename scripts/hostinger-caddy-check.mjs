@@ -12,8 +12,8 @@ import {setTimeout as delay} from "node:timers/promises";
 import {assertLocalDocker, cleanEnvironment, root} from "./runtime-lib.mjs";
 
 // Real Caddy routing regression, entirely separate from app/database containers.
-// The only config change replaces the HTTPS listener with local HTTP; route
-// adaptation, path handling, response headers and logging are the actual file.
+// The live fixture uses local HTTP; the unmodified input is also adapted
+// separately without starting Caddy or accessing the network.
 const caddyImage =
     "caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0";
 const nodeImage =
@@ -62,6 +62,33 @@ try {
     const source = readFileSync(join(root, "deploy/hostinger/Caddyfile"), "utf8");
     assert.equal(source.split("{$PORTAL_DOMAIN} {").length, 2);
     file("Caddyfile", source.replace("{$PORTAL_DOMAIN} {", "http://:8080 {"));
+    file("Reviewed.Caddyfile", source);
+    await check("Dedicated Academy never provisions internal CMS aliases", () => {
+        const adapt = (aliasProfile) => Object.values(JSON.parse(docker([
+            "run", "--rm", "--network", "none",
+            "-e", "PORTAL_DOMAIN=training.example.invalid",
+            ...(aliasProfile ? ["-e", `PORTAL_CADDY_ALIAS_PROFILE=${aliasProfile}`] : []),
+            "--mount", `type=bind,src=${join(directory, "Reviewed.Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
+            caddyImage, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile",
+            "--adapter", "caddyfile",
+        ])).apps.http.servers);
+        const hosts = (route) => (route.match ?? []).flatMap((entry) => entry.host ?? []);
+        const aliases = ["lms.luminovia.org", "portal.luminovia.org"];
+        const academy = adapt("academy_no_aliases");
+        assert.deepEqual(academy.flatMap((server) => server.routes.flatMap(hosts)), ["training.example.invalid"]);
+        const cms = adapt();
+        for (const port of [":80", ":443"]) {
+            const redirects = cms.filter((server) => server.listen.includes(port))
+                .flatMap((server) => server.routes)
+                .filter((route) => hosts(route).some((host) => aliases.includes(host)));
+            assert.deepEqual(redirects.flatMap(hosts).sort(), aliases);
+            for (const redirect of redirects) {
+                const response = redirect.handle[0].routes[0].handle[0];
+                assert.equal(response.status_code, 308);
+                assert.deepEqual(response.headers.Location, ["https://cms.luminovia.org{http.request.uri}"]);
+            }
+        }
+    });
     file(
         "site/releases/first/index.html",
         "<!doctype html><title>Fictional portal shell</title>",
@@ -142,6 +169,8 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         "127.0.0.1::8080",
         "-e",
         "PORTAL_DOMAIN=portal.test",
+        "-e",
+        "PORTAL_CADDY_ALIAS_PROFILE=academy_no_aliases",
         "--mount",
         `type=bind,src=${join(directory, "Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
         "--mount",

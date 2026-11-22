@@ -98,10 +98,18 @@
 }
 
 # Legacy public entry points for the Luminovia instance.
-lms.luminovia.org, portal.luminovia.org {
-	redir https://cms.luminovia.org{uri} 308
+(cms_legacy_aliases) {
+	lms.luminovia.org, portal.luminovia.org {
+		redir https://cms.luminovia.org{uri} 308
+	}
+
+	http://lms.luminovia.org, http://portal.luminovia.org {
+		redir https://cms.luminovia.org{uri} 308
+	}
 }
 
-http://lms.luminovia.org, http://portal.luminovia.org {
-	redir https://cms.luminovia.org{uri} 308
+(academy_no_aliases) {
+	# A dedicated installation serves only its configured Academy domain.
 }
+
+import {$PORTAL_CADDY_ALIAS_PROFILE:cms_legacy_aliases}
