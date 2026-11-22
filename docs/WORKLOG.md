@@ -1,3 +1,17 @@
+# 22 November 2026 — Roadmap completion pass and independent acceptance
+
+The internal delivery overview now supports a bilingual CSV download for the selected page. Its fresh read rechecks the current scope. The file includes the original timestamp offsets, IANA zone, duration and current evidence revision. Component tests cover offline and revoked access, stale page changes and formula-safe cells. Both Chromium profiles exercised download, correction and outsider denial against native Auth and REST.
+
+The private vendor registry's `fulfilment-status`, `preview-fulfilment` and `confirm-fulfilment` commands bind operator acknowledgement and the reviewed agreement reference to the exact approved licence and signed runtime handoff. The shared workflow retains the receipt across later renewal.
+
+The webhook worker can check one reviewed receiver alias before delivery. The operator preflight shares the delivery worker's DNS and public address checks. It verifies the receiver certificate against the pinned address and configured hostname without contacting the database or sending an HTTP event. Tests use a genuine local TLS connection, a hostname mismatch, a refused mixed DNS answer and the CLI without backend credentials.
+
+Internal exam uploads now reuse the exact scanned version when publication needs to be retried. The SQL readers in all editions show learners only the newest explicitly shared version of each paper. Separate papers remain available. An older version cannot reappear after revoking its replacement. Internal Premium and both dedicated exam SQL suites passed with retained versions, current display settings and scoped access.
+
+Both dedicated editions independently staged signed browser packages on `ef8a724f`, booted all ten private Compose services, replayed 259 migrations and enabled the licensed course profile after binding first administrators from real GoTrue. The rehearsal exposed inherited CMS domain aliases in the shared Caddyfile. The internal Compose profile now explicitly enables those aliases, while the dedicated profiles load the neutral configuration. The pinned Caddy adapter verified both route sets with networking disabled.
+
+The built internal portal on baseline `ef8a724f` installed on an actual Linux desktop in headed Chromium using an isolated browser profile. It created an XDG launcher, opened its standalone window, loaded its app shell offline and removed the installation and launcher. The public CMS responded over HTTPS and the two aliases redirected to the canonical URL with the tested path and query. The served shell and entry bundle differed from the published `ef8a724f` manifest. A physical Android/iOS install, provider delivery, the installed server revision and independent customer handover still require their own evidence.
+
 # 22 November 2026 — Build budgets and dedicated Academy operations
 
 Production build verification now measures emitted gzip bytes for the startup graph and on-demand API explorer, plus the uncompressed offline precache. The initial observed sizes were 486.3, 499.6 and 4,053.4 KiB against budgets of 525, 530 and 4,352 KiB. Tests cover a shared dependency, every violated budget, missing build artifacts and accidental eager loading or precaching of the API explorer. Main verification still runs the full native test and Chromium matrix.

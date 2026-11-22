@@ -1,6 +1,7 @@
 /** Real role-scoped browser correction of historical evidence on a released allocation. */
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { actor, api, checked, login } from "./helpers/accounts-support";
 
 test.skip(
@@ -196,6 +197,24 @@ test("reviewer reopens exact evidence and lecturer submits a retained correction
         (event: { action: string }) => event.action === "confirmed",
       )?.submission_id,
     ).toBe(corrected.submissions[0].id);
+
+    await teaching.goto("/delivery");
+    await expect(teaching.getByRole("link", { name: title })).toBeVisible();
+    const csvEvent = teaching.waitForEvent("download");
+    await teaching
+      .getByRole("button", {
+        name: /^(Diese Seite als CSV herunterladen|Download this page as CSV)$/,
+      })
+      .click();
+    const csvFile = await csvEvent;
+    expect(csvFile.suggestedFilename()).toBe(
+      "luminovia-delivery-evidence-own.csv",
+    );
+    const csv = await readFile((await csvFile.path())!, "utf8");
+    expect(csv).toContain(title);
+    expect(csv).toContain('"44.5","completed","confirmed","2"');
+    expect(csv).not.toContain("Fictional original evidence");
+    expect(csv).not.toContain("Verified shorter teaching time");
     const viewport = await teaching.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
       width: document.documentElement.clientWidth,
@@ -208,6 +227,17 @@ test("reviewer reopens exact evidence and lecturer submits a retained correction
     await expect(other.getByRole("heading", { name: title })).toHaveCount(0);
     await expect(
       other.getByText("Fictional original evidence", { exact: true }),
+    ).toHaveCount(0);
+    await other.goto("/delivery");
+    await expect(
+      other.getByText(
+        /^(Für diese Ansicht liegen keine Termine vor|This view has no sessions)\.$/,
+      ),
+    ).toBeVisible();
+    await expect(
+      other.getByRole("button", {
+        name: /^(Diese Seite als CSV herunterladen|Download this page as CSV)$/,
+      }),
     ).toHaveCount(0);
   } finally {
     await Promise.all([context.close(), outsiderContext.close()]);

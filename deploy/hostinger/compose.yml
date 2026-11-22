@@ -7,6 +7,7 @@ services:
     ports: [ "80:80", "443:443" ]
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
+      PORTAL_CADDY_ALIAS_PROFILE: cms_legacy_aliases
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${PORTAL_WWW_DIR:-/opt/luminovia-portal/www}:/srv:ro

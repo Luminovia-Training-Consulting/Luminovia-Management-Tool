@@ -74,9 +74,11 @@ try {
         ])).apps.http.servers);
         const hosts = (route) => (route.match ?? []).flatMap((entry) => entry.host ?? []);
         const aliases = ["lms.luminovia.org", "portal.luminovia.org"];
-        const academy = adapt("academy_no_aliases");
-        assert.deepEqual(academy.flatMap((server) => server.routes.flatMap(hosts)), ["training.example.invalid"]);
-        const cms = adapt();
+        for (const profile of [undefined, "academy_no_aliases"]) {
+            const academy = adapt(profile);
+            assert.deepEqual(academy.flatMap((server) => server.routes.flatMap(hosts)), ["training.example.invalid"]);
+        }
+        const cms = adapt("cms_legacy_aliases");
         for (const port of [":80", ":443"]) {
             const redirects = cms.filter((server) => server.listen.includes(port))
                 .flatMap((server) => server.routes)

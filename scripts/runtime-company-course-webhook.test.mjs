@@ -1,12 +1,17 @@
 /** Checks the worker contract without sending requests to a real receiver. */
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { connect, createServer as createTlsServer } from "node:tls";
 import { fileURLToPath } from "node:url";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import {
+  checkWebhookDestination,
   dispatchCompanyWebhooks,
   signedWebhook,
   watchCompanyWebhooks,
@@ -68,6 +73,131 @@ test("an operator must bind a tenant and alias to one exact HTTPS receiver", () 
         PORTAL_WEBHOOK_DESTINATIONS: JSON.stringify({ [destination]: invalid }),
       }),
     );
+  }
+});
+
+test("the receiver check never opens a socket for an unknown alias or a private DNS answer", async () => {
+  const noSocket = () => assert.fail("An unapproved address reached TLS");
+  assert.deepEqual(
+    await checkWebhookDestination(env, "unconfigured", { connect: noSocket }),
+    { status: "unknown_destination" },
+  );
+  for (const [addresses, status] of [
+    [[], "dns_unavailable"],
+    [[publicIp, { address: "::1", family: 6 }], "address_denied"],
+  ]) {
+    assert.deepEqual(
+      await checkWebhookDestination(env, destination, {
+        resolve: async () => addresses,
+        connect: noSocket,
+      }),
+      { status },
+    );
+  }
+  assert.deepEqual(
+    await checkWebhookDestination(env, destination, {
+      resolve: async () => {
+        throw new Error("Fictional DNS failure");
+      },
+      connect: noSocket,
+    }),
+    { status: "dns_unavailable" },
+  );
+});
+
+test("the CLI checks an alias without any backend configuration", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      fileURLToPath(
+        new URL("./company-course-webhook-worker.mjs", import.meta.url),
+      ),
+      "--check-destination",
+      "unconfigured",
+    ],
+    {
+      env: { PORTAL_WEBHOOK_DESTINATIONS: env.PORTAL_WEBHOOK_DESTINATIONS },
+      encoding: "utf8",
+      timeout: 2000,
+    },
+  );
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr, "");
+  assert.deepEqual(JSON.parse(result.stdout), {
+    status: "unknown_destination",
+  });
+});
+
+test("the receiver check verifies a pinned TLS peer and independently checks the hostname", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "luminovia-webhook-tls-"));
+  try {
+    const keyPath = join(directory, "receiver.key");
+    const certPath = join(directory, "receiver.pem");
+    execFileSync(
+      "openssl",
+      [
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "1",
+        "-subj",
+        "/CN=example.invalid",
+        "-addext",
+        "subjectAltName=DNS:example.invalid",
+        "-keyout",
+        keyPath,
+        "-out",
+        certPath,
+      ],
+      { stdio: "ignore" },
+    );
+    const [key, cert] = await Promise.all([
+      readFile(keyPath),
+      readFile(certPath),
+    ]);
+    const server = createTlsServer({ key, cert });
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    try {
+      const { port } = server.address();
+      const resolver = {
+        resolve: async () => [publicIp],
+        connect(options) {
+          assert.equal(options.host, publicIp.address);
+          assert.equal(options.port, 443);
+          assert.equal(options.rejectUnauthorized, true);
+          return connect({ ...options, host: "127.0.0.1", port, ca: cert });
+        },
+      };
+      const destinationsOnly = {
+        PORTAL_WEBHOOK_DESTINATIONS: env.PORTAL_WEBHOOK_DESTINATIONS,
+      };
+      assert.deepEqual(
+        await checkWebhookDestination(destinationsOnly, destination, resolver),
+        {
+          status: "tls_verified",
+        },
+      );
+      assert.deepEqual(
+        await checkWebhookDestination(
+          {
+            PORTAL_WEBHOOK_DESTINATIONS: JSON.stringify({
+              [destination]: "https://other.example.invalid/course-events",
+            }),
+          },
+          destination,
+          resolver,
+        ),
+        { status: "tls_failed" },
+      );
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 });
 

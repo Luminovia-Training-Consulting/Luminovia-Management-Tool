@@ -1,14 +1,33 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { csvText } from "../../lib/csv";
 import i18n from "../../lib/i18n";
 import { DeliveryPage } from "./delivery";
 import type { DeliverySession } from "./delivery-schema";
 
-const state = vi.hoisted(() => ({ rpc: vi.fn(), online: true }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
+const state = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  download: vi.fn(),
+  roles: ["lecturer"],
+  online: true,
+}));
+vi.mock("../../lib/csv", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/csv")>()),
+  downloadCsv: state.download,
+}));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: state.rpc,
+    from: () => ({
+      select: () => ({
+        eq: () => response(state.roles.map((role) => ({ role }))),
+      }),
+    }),
+  }),
+}));
 vi.mock("../../lib/online", () => ({
   useOnline: () => state.online,
   requireOnline: () => {
@@ -66,11 +85,11 @@ function response(data: unknown, error: unknown = null) {
     },
   });
 }
-function mount() {
+function mount(path = `/delivery?session=${session}`) {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/delivery?session=${session}`]}>
+      <MemoryRouter initialEntries={[path]}>
         <DeliveryPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -79,9 +98,12 @@ function mount() {
 beforeEach(async () => {
   await i18n.changeLanguage("en");
   item = { ...initial };
+  state.roles = ["lecturer"];
   state.online = true;
+  state.download.mockReset();
   state.rpc.mockReset();
   state.rpc.mockImplementation((name: string) => {
+    if (name === "get_my_permissions") return response([]);
     if (name === "delivery_session") return response(item);
     if (name === "delivery_history")
       return response({
@@ -211,4 +233,158 @@ it("hides retained evidence if the server denies the exact session", async () =>
   expect(
     screen.queryByRole("button", { name: "Request a correction" }),
   ).not.toBeInTheDocument();
+});
+
+it("downloads a fresh authorized page with exact times, stable codes and escaped cells", async () => {
+  const user = userEvent.setup();
+  state.roles.push("client");
+  const respond = state.rpc.getMockImplementation()!;
+  const secondPageId = "ed000000-0000-4000-8000-000000000031";
+  const firstPage = { ...item, status: "confirmed" };
+  const secondPage = {
+    ...firstPage,
+    session_id: secondPageId,
+    title: "Fictional older session",
+  };
+  const refreshed = {
+    ...secondPage,
+    title: '=Fictional "course", revised',
+    lecturer_name: "+Fictional name",
+    submission: {
+      ...submission,
+      revision: 2,
+      correction_reason: "Confidential correction",
+    },
+    invoice_id: "ed000000-0000-4000-8000-000000000034",
+  };
+  let refresh = false;
+  state.rpc.mockImplementation(
+    (name: string, args: { p_before_id?: string }) => {
+      if (name !== "delivery_sessions") return respond(name);
+      if (args.p_before_id === session)
+        return response({
+          items: [refresh ? refreshed : secondPage],
+          has_more: false,
+        });
+      return response({ items: [firstPage], has_more: true });
+    },
+  );
+  mount("/delivery");
+  await user.selectOptions(
+    await screen.findByRole("combobox", { name: "View" }),
+    "customer",
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "More sessions" }),
+  );
+  expect(
+    await screen.findByRole("link", { name: secondPage.title }),
+  ).toBeVisible();
+  refresh = true;
+  await user.click(
+    screen.getByRole("button", { name: "Download this page as CSV" }),
+  );
+  await waitFor(() => expect(state.download).toHaveBeenCalledOnce());
+  expect(state.rpc).toHaveBeenLastCalledWith("delivery_sessions", {
+    p_scope: "customer",
+    p_before_at: start,
+    p_before_id: session,
+    p_limit: 25,
+  });
+  const [[filename, rows]] = state.download.mock.calls;
+  expect(filename).toBe("luminovia-delivery-evidence-customer.csv");
+  expect(rows).toHaveLength(2);
+  const csv = csvText(rows);
+  expect(csv).toContain(
+    `"'=Fictional ""course"", revised","'+Fictional name","${start}","${end}","Australia/Brisbane"`,
+  );
+  expect(csv).toContain('"119","completed","confirmed","2"');
+  expect(csv).not.toContain("Fictional older session");
+  expect(csv).not.toContain(firstPage.title);
+  expect(csv).not.toContain("Confidential correction");
+  expect(csv).not.toContain(submission.notes);
+  expect(csv).not.toContain(refreshed.invoice_id);
+});
+
+it("discards the cached list if the current export read is denied", async () => {
+  const user = userEvent.setup();
+  const respond = state.rpc.getMockImplementation()!;
+  let revoked = false;
+  state.rpc.mockImplementation((name: string) => {
+    if (name !== "delivery_sessions") return respond(name);
+    return revoked
+      ? response(null, { code: "42501" })
+      : response({ items: [item], has_more: false });
+  });
+  mount("/delivery");
+  const download = await screen.findByRole("button", {
+    name: "Download this page as CSV",
+  });
+  revoked = true;
+  await user.click(download);
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: item.title }),
+  ).not.toBeInTheDocument();
+  expect(state.download).not.toHaveBeenCalled();
+});
+
+it("does not download a delayed response after switching views", async () => {
+  const user = userEvent.setup();
+  state.roles.push("client");
+  const respond = state.rpc.getMockImplementation()!;
+  let delay = false;
+  let resolve!: (result: { data: unknown; error: null }) => void;
+  let signal: AbortSignal | undefined;
+  const pending = new Promise<{ data: unknown; error: null }>((done) => {
+    resolve = done;
+  });
+  const page = { items: [item], has_more: false };
+  state.rpc.mockImplementation((name: string, args: { p_scope?: string }) => {
+    if (name !== "delivery_sessions") return respond(name);
+    if (args.p_scope === "customer")
+      return response({ items: [], has_more: false });
+    if (!delay) return response(page);
+    return {
+      abortSignal(value: AbortSignal) {
+        signal = value;
+        return pending;
+      },
+    };
+  });
+  mount("/delivery");
+  const download = await screen.findByRole("button", {
+    name: "Download this page as CSV",
+  });
+  delay = true;
+  await user.click(download);
+  expect(
+    await screen.findByRole("button", { name: "Refreshing the current page" }),
+  ).toBeDisabled();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "View" }),
+    "customer",
+  );
+  expect(await screen.findByText("This view has no sessions.")).toBeVisible();
+  expect(signal?.aborted).toBe(true);
+  await act(async () => resolve({ data: page, error: null }));
+  expect(state.download).not.toHaveBeenCalled();
+});
+
+it("labels the export in German and disables it while offline", async () => {
+  await i18n.changeLanguage("de");
+  const respond = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name: string) =>
+    name === "delivery_sessions"
+      ? response({ items: [item], has_more: false })
+      : respond(name),
+  );
+  state.online = false;
+  mount("/delivery");
+  expect(
+    await screen.findByRole("button", {
+      name: "Diese Seite als CSV herunterladen",
+    }),
+  ).toBeDisabled();
+  expect(state.download).not.toHaveBeenCalled();
 });

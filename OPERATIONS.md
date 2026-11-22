@@ -803,6 +803,7 @@ Use a private environment for the worker:
 - `PORTAL_WEBHOOK_API_URL` is the backend base URL directly exposing `/rest/v1`, or the portal's `/backend` reverse proxy. Use HTTPS or the localhost development API.
 - `PORTAL_WEBHOOK_SERVICE_KEY` is the corresponding server-only Supabase service-role credential.
 - `PORTAL_WEBHOOK_DESTINATIONS` maps `<organisation-uuid>/<alias>` to a reviewed exact HTTPS URL. For example, use `{"11111111-2222-3333-4444-555555555555/course-sync":"https://example.invalid/webhooks/courses"}` in fictional configuration. Receivers must resolve only to public IPs. Redirects are not followed.
+- Before starting delivery, run `node --env-file=/absolute/private/webhooks.env scripts/company-course-webhook-worker.mjs --check-destination '<organisation-uuid>/<alias>'`. The check uses the worker's exact destination map and DNS rules, pins a public address and verifies the certificate for the configured hostname. It needs the destination map alone. It opens a TLS connection and sends no HTTP request, event or credential. An unknown alias, unavailable DNS, private address or failed TLS check returns a status and exits nonzero. After `tls_verified`, use a fictional event on an approved staging installation to verify the receiver's signed HTTP acknowledgement and retry behaviour.
 
 Install the checkout's locked dependencies. Run a single batch with `node scripts/company-course-webhook-worker.mjs`, or run the private worker in the foreground under a local supervisor:
 

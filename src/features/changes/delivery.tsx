@@ -14,8 +14,9 @@ import {
   TextLink,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { downloadCsv } from "../../lib/csv";
 import { dateTime, zonedInstantForEdit } from "../../lib/dates";
-import { useOnline } from "../../lib/online";
+import { requireOnline, useOnline } from "../../lib/online";
 import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import {
   deliveryDetailQuery,
@@ -44,16 +45,13 @@ function DeliveryList({
   actor: string;
   scopes: DeliveryScope[];
 }) {
-  const { t, i18n } = useTranslation("teachingDelivery");
+  const { t } = useTranslation("teachingDelivery");
   const [view, setView] = useState({
     scope: scopes[0],
     cursors: [] as Cursor[],
   });
   const scope = scopes.includes(view.scope) ? view.scope : scopes[0];
   const cursors = scope === view.scope ? view.cursors : [];
-  const query = useQuery(deliveryListQuery(actor, scope, cursors.at(-1)));
-  const items = query.data?.items ?? [];
-
   return (
     <section className="panel delivery-stack">
       {scopes.length > 1 && (
@@ -76,64 +74,138 @@ function DeliveryList({
           </select>
         </Field>
       )}
-      {query.isError && <ErrorState retry={() => void query.refetch()} />}
-      {query.isPending && <Loading />}
-      {!query.isError && query.data && (
-        <>
-          {!items.length && <p>{t("empty")}</p>}
-          <ul className="delivery-items">
-            {items.map((item) => (
-              <li key={item.session_id}>
-                <TextLink to={`/delivery?session=${item.session_id}`}>
-                  {item.title}
-                </TextLink>
-                <p className="muted">
-                  {dateTime(
-                    item.scheduled_start,
-                    i18n.language,
-                    item.time_zone,
-                  )}{" "}
-                  · {item.lecturer_name} · {t(item.status)}
-                </p>
-              </li>
-            ))}
-          </ul>
-          <div className="changes-controls">
-            {cursors.length > 0 && (
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  setView({ scope, cursors: cursors.slice(0, -1) })
-                }
-              >
-                {t("previous")}
-              </Button>
-            )}
-            {query.data.has_more && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const last = items.at(-1);
-                  if (last)
-                    setView({
-                      scope,
-                      cursors: [
-                        ...cursors,
-                        {
-                          session_id: last.session_id,
-                          scheduled_start: last.scheduled_start,
-                        },
-                      ],
-                    });
-                }}
-              >
-                {t("next")}
-              </Button>
-            )}
-          </div>
-        </>
-      )}
+      <DeliveryListPage
+        key={JSON.stringify([actor, scope, cursors.at(-1)])}
+        actor={actor}
+        scope={scope}
+        cursors={cursors}
+        onCursorsChange={(next) => setView({ scope, cursors: next })}
+      />
     </section>
+  );
+}
+
+/** Export through a fresh read of the active page and cancel the download when the view changes. */
+function DeliveryListPage({
+  actor,
+  scope,
+  cursors,
+  onCursorsChange,
+}: {
+  actor: string;
+  scope: DeliveryScope;
+  cursors: Cursor[];
+  onCursorsChange: (next: Cursor[]) => void;
+}) {
+  const { t, i18n } = useTranslation("teachingDelivery");
+  const online = useOnline();
+  const query = useQuery(deliveryListQuery(actor, scope, cursors.at(-1)));
+  const exportPage = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      const { data } = await query.refetch({ throwOnError: true });
+      return data?.items ?? [];
+    },
+  });
+
+  function downloadPage(items: DeliverySession[]) {
+    if (!items.length) return;
+    // List columns explicitly. Drafts, private notes and invoice IDs never
+    // become columns, even for a current reviewer who can read them.
+    downloadCsv(`luminovia-delivery-evidence-${scope}.csv`, [
+      [
+        t("csvCourse"),
+        t("csvLecturer"),
+        t("csvScheduledStart"),
+        t("csvScheduledEnd"),
+        t("csvScheduledZone"),
+        t("csvScheduledMinutes"),
+        t("start"),
+        t("end"),
+        t("csvActualZone"),
+        t("csvActualMinutes"),
+        t("outcome"),
+        t("csvStatus"),
+        t("csvRevision"),
+      ],
+      ...items.map((item) => [
+        item.title,
+        item.lecturer_name,
+        item.scheduled_start,
+        item.scheduled_end,
+        item.time_zone,
+        item.scheduled_minutes,
+        item.submission?.actual_start,
+        item.submission?.actual_end,
+        item.submission?.time_zone,
+        item.submission ? item.actual_minutes : null,
+        item.submission?.outcome,
+        item.status,
+        item.submission?.revision,
+      ]),
+    ]);
+  }
+
+  if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+  if (query.isPending) return <Loading />;
+  const { items, has_more: hasMore } = query.data;
+  const last = items.at(-1);
+
+  return (
+    <>
+      {!last && <p>{t("empty")}</p>}
+      <ul className="delivery-items">
+        {items.map((item) => (
+          <li key={item.session_id}>
+            <TextLink to={`/delivery?session=${item.session_id}`}>
+              {item.title}
+            </TextLink>
+            <p className="muted">
+              {dateTime(item.scheduled_start, i18n.language, item.time_zone)} ·{" "}
+              {item.lecturer_name} · {t(item.status)}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <div className="changes-controls">
+        {cursors.length > 0 && (
+          <Button
+            variant="secondary"
+            onClick={() => onCursorsChange(cursors.slice(0, -1))}
+          >
+            {t("previous")}
+          </Button>
+        )}
+        {hasMore && last && (
+          <Button
+            variant="secondary"
+            onClick={() =>
+              onCursorsChange([
+                ...cursors,
+                {
+                  session_id: last.session_id,
+                  scheduled_start: last.scheduled_start,
+                },
+              ])
+            }
+          >
+            {t("next")}
+          </Button>
+        )}
+        {last && (
+          <Button
+            variant="secondary"
+            disabled={!online || exportPage.isPending}
+            onClick={() =>
+              exportPage.mutate(undefined, { onSuccess: downloadPage })
+            }
+          >
+            {exportPage.isPending ? t("csvExporting") : t("csvExport")}
+          </Button>
+        )}
+      </div>
+      {exportPage.isError && <Notice kind="error">{t("csvError")}</Notice>}
+    </>
   );
 }
 

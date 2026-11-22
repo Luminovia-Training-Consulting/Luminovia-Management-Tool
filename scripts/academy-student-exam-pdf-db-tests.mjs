@@ -293,7 +293,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(share(teacher, version, "exam_staff"), /42501/);
     const published = await share(teacher, version);
     assert.equal(await share(teacher, version), published);
-    assert.ok(await share(client, companyVersion));
+    const companyLegacyShare = await share(client, companyVersion);
+    assert.ok(companyLegacyShare);
     await assert.rejects(share(stranger, version), /42501/);
     assert.deepEqual(
       (await list(teacher)).map(({ id }) => id),
@@ -621,6 +622,41 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(
       actor(teacher, gate("remove_course_exam_pdf", "GET")),
       /42501/,
+    );
+
+    const updatedCompanyVersion = randomUUID();
+    await sql(`insert into public.document_versions
+      (id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256,scanner_version)
+      values(${q(updatedCompanyVersion)},${q(companyDoc)},${q(client)},${q(randomUUID())},
+        2,'fictional/company-updated.pdf','company-updated.pdf','application/pdf',32,'clean',${q("e".repeat(64))},${q(scanner)});
+      update public.documents set current_version_id=${q(updatedCompanyVersion)} where id=${q(companyDoc)};`);
+    const learnerPublications = async () =>
+      (await workspace(learner)).exams.documents.map(({ id }) => id);
+    assert.equal((await facts(learner, companyLegacyShare)).id, companyVersion);
+    const updatedCompanyShare = await share(client, updatedCompanyVersion);
+    assert.equal(
+      (await facts(learner, updatedCompanyShare)).id,
+      updatedCompanyVersion,
+    );
+    assert.equal((await facts(learner, published)).id, version);
+    assert.equal((await facts(client, companyLegacyShare)).id, companyVersion);
+    assert.ok(!(await learnerPublications()).includes(companyLegacyShare));
+    await assert.rejects(facts(learner, companyLegacyShare), /42501/);
+    await set(client, false, 3);
+    assert.deepEqual(await learnerPublications(), []);
+    await assert.rejects(facts(learner, updatedCompanyShare), /42501/);
+    await set(teacher, true, 4);
+    assert.ok((await learnerPublications()).includes(updatedCompanyShare));
+    assert.ok(!(await learnerPublications()).includes(companyLegacyShare));
+    await withdraw(client, updatedCompanyShare);
+    await assert.rejects(facts(learner, companyLegacyShare), /42501/);
+    await assert.rejects(facts(learner, updatedCompanyShare), /42501/);
+    assert.ok((await learnerPublications()).includes(published));
+    assert.equal(
+      await sql(
+        `select status from public.document_versions where id=${q(companyVersion)}`,
+      ),
+      "clean",
     );
 
     const nextRelease = "cd".repeat(20);

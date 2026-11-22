@@ -112,4 +112,4 @@
 	# A dedicated installation serves only its configured Academy domain.
 }
 
-import {$PORTAL_CADDY_ALIAS_PROFILE:cms_legacy_aliases}
+import {$PORTAL_CADDY_ALIAS_PROFILE:academy_no_aliases}

@@ -34,7 +34,6 @@ export function CourseExams({
   const [audience, setAudience] = useState<"students" | "exam_staff">(
     "students",
   );
-  const [file, setFile] = useState<File | null>(null);
   const [version, setVersion] = useState("");
   const [examFile, setExamFile] = useState<{
     bytes: File;
@@ -47,6 +46,7 @@ export function CourseExams({
   const canEdit = course.exams.can_edit && academy !== "grace";
   const canPublishStudentPaper =
     academy === "active" && canEdit && course.exams.required;
+  const canUploadExam = academy ? canPublishStudentPaper : canEdit;
   const options = useQuery({
     queryKey: ["academy-student-exam-pdf-options", actor, course.id],
     enabled: Boolean(canPublishStudentPaper && online),
@@ -83,35 +83,13 @@ export function CourseExams({
     },
     onSuccess: refresh,
   });
-  const share = useMutation({
-    mutationFn: async () => {
-      if (!file || file.type !== "application/pdf")
-        throw new Error("pdf_required");
-      const document = await uploadDocument(file, {
-        scope: "personal",
-        kind: "material",
-      });
-      if (!document.current_version_id)
-        throw new Error("clean_version_required");
-      const { error } = await db().rpc("share_course_exam_pdf", {
-        p_run_id: course.id,
-        p_version_id: document.current_version_id,
-        p_audience: audience,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setFile(null);
-      void refresh();
-    },
-  });
   const publishVersion = async (
     selected: string,
     target: "students" | "exam_staff" = "students",
   ) => {
     if (
       !online ||
-      !canPublishStudentPaper ||
+      !canUploadExam ||
       (target === "exam_staff" && !course.access.staff)
     )
       throw new Error("exam_editor_required");
@@ -136,8 +114,9 @@ export function CourseExams({
   });
   const uploadExam = useMutation({
     mutationFn: async () => {
-      if (!online || !canPublishStudentPaper || !examFile)
+      if (!online || !canUploadExam || !examFile)
         throw new Error("exam_editor_required");
+      const { bytes, uploadId } = examFile;
       const upload =
         audience === "exam_staff"
           ? uploadAcademyAnswerKeyPdf
@@ -147,16 +126,20 @@ export function CourseExams({
       let approved = scannedExamVersion;
       if (!approved) {
         if (
-          !examFile.bytes.name.toLowerCase().endsWith(".pdf") ||
-          examFile.bytes.size < 1 ||
-          examFile.bytes.size > 10 * 1024 * 1024
+          !bytes.name.toLowerCase().endsWith(".pdf") ||
+          bytes.size < 1 ||
+          (academy
+            ? bytes.size > 10 * 1024 * 1024
+            : bytes.type !== "" && bytes.type !== "application/pdf")
         )
           throw new Error("pdf_required");
-        const document = await upload(
-          examFile.bytes,
-          course.id,
-          examFile.uploadId,
-        );
+        const document = academy
+          ? await upload(bytes, course.id, uploadId)
+          : await uploadDocument(bytes, {
+              scope: "personal",
+              kind: "material",
+              clientId: uploadId,
+            });
         if (document.status !== "clean" || !document.current_version_id)
           throw new Error("clean_version_required");
         approved = document.current_version_id;
@@ -168,9 +151,21 @@ export function CourseExams({
       setExamFile(null);
       setScannedExamVersion(null);
       setFileInputRevision((value) => value + 1);
-      await Promise.all([refresh(), options.refetch()]);
+      if (academy) await Promise.all([refresh(), options.refetch()]);
+      else await refresh();
     },
   });
+  const uploadPending = uploadExam.isPending || publish.isPending;
+  const nextFile = (bytes?: File) => {
+    uploadExam.reset();
+    setScannedExamVersion(null);
+    setExamFile(bytes ? { bytes, uploadId: crypto.randomUUID() } : null);
+  };
+  const changeAudience = (selected: string) => {
+    setAudience(selected === "exam_staff" ? "exam_staff" : "students");
+    nextFile();
+    setFileInputRevision((value) => value + 1);
+  };
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await db().rpc("remove_course_exam_pdf", {
@@ -189,6 +184,14 @@ export function CourseExams({
     setting.isError &&
     "code" in setting.error &&
     setting.error.code === "PT409";
+  const uploadBlocked = !online || uploadPending || setting.isPending || stale;
+  const uploadLabel = scannedExamVersion
+    ? "retryStudentPublication"
+    : !academy
+      ? "upload"
+      : audience === "exam_staff"
+        ? "scanAnswerKey"
+        : "scanStudentPdf";
   const documents = academy
     ? course.exams.documents.filter((item) =>
         item.audience === "students"
@@ -216,11 +219,7 @@ export function CourseExams({
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              if (
-                !stale &&
-                !setting.isPending &&
-                required !== course.exams.required
-              )
+              if (!uploadBlocked && required !== course.exams.required)
                 setting.mutate(required);
             }}
           >
@@ -229,147 +228,77 @@ export function CourseExams({
                 id="exam-required"
                 value={required ? "yes" : "no"}
                 onChange={(event) => setRequired(event.target.value === "yes")}
-                disabled={!online || setting.isPending || stale}
+                disabled={uploadBlocked}
               >
                 <option value="yes">{t("required")}</option>
                 <option value="no">{t("notRequired")}</option>
               </select>
             </Field>
             <Button
-              disabled={
-                !online ||
-                setting.isPending ||
-                stale ||
-                required === course.exams.required
-              }
+              disabled={uploadBlocked || required === course.exams.required}
             >
               {t("saveSetting")}
             </Button>
           </form>
-          {!academy && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                share.mutate();
-              }}
-            >
-              <Field id="exam-file" label={t("file")}>
-                <input
-                  id="exam-file"
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                  disabled={!online || share.isPending}
-                />
-              </Field>
-              <Field id="exam-audience" label={t("audience")}>
-                <select
-                  id="exam-audience"
-                  value={audience}
-                  onChange={(event) =>
-                    setAudience(event.target.value as "students" | "exam_staff")
-                  }
-                  disabled={!online || share.isPending}
-                >
-                  <option value="students">{t("students")}</option>
-                  {course.access.staff && (
-                    <option value="exam_staff">{t("exam_staff")}</option>
-                  )}
-                </select>
-              </Field>
-              <Button disabled={!online || share.isPending || !file}>
-                {t("upload")}
-              </Button>
-            </form>
-          )}
         </>
+      )}
+      {canUploadExam && (!academy || online) && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (examFile && !uploadBlocked) uploadExam.mutate();
+          }}
+        >
+          {(!academy || course.access.staff) && (
+            <Field id="exam-audience" label={t("audience")}>
+              <select
+                id="exam-audience"
+                value={audience}
+                disabled={uploadBlocked}
+                onChange={(event) => changeAudience(event.target.value)}
+              >
+                <option value="students">{t("students")}</option>
+                {course.access.staff && (
+                  <option value="exam_staff">{t("exam_staff")}</option>
+                )}
+              </select>
+            </Field>
+          )}
+          <Field
+            id="exam-file"
+            label={t(
+              !academy
+                ? "file"
+                : audience === "exam_staff"
+                  ? "answerKeyFile"
+                  : "studentUploadFile",
+            )}
+          >
+            <input
+              id="exam-file"
+              key={fileInputRevision}
+              type="file"
+              accept=".pdf,application/pdf"
+              disabled={uploadBlocked}
+              onChange={(event) => nextFile(event.target.files?.[0])}
+            />
+          </Field>
+          {audience === "students" && (
+            <p>
+              {t(
+                course.exams.required
+                  ? "learnerPublication"
+                  : "learnerPublicationOff",
+              )}
+            </p>
+          )}
+          <Button disabled={!examFile || uploadBlocked}>
+            {t(uploadLabel)}
+          </Button>
+        </form>
       )}
       {canPublishStudentPaper && online && (
         <>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (examFile && !uploadExam.isPending && !publish.isPending)
-                uploadExam.mutate();
-            }}
-          >
-            {course.access.staff && (
-              <Field id="academy-exam-audience" label={t("audience")}>
-                <select
-                  id="academy-exam-audience"
-                  value={audience}
-                  disabled={uploadExam.isPending || publish.isPending}
-                  onChange={(event) => {
-                    setAudience(
-                      event.target.value === "exam_staff"
-                        ? "exam_staff"
-                        : "students",
-                    );
-                    setExamFile(null);
-                    setScannedExamVersion(null);
-                    setFileInputRevision((value) => value + 1);
-                    uploadExam.reset();
-                  }}
-                >
-                  <option value="students">{t("students")}</option>
-                  <option value="exam_staff">{t("exam_staff")}</option>
-                </select>
-              </Field>
-            )}
-            <Field
-              id="academy-new-exam-pdf"
-              label={t(
-                audience === "exam_staff"
-                  ? "answerKeyFile"
-                  : "studentUploadFile",
-              )}
-            >
-              <input
-                id="academy-new-exam-pdf"
-                key={fileInputRevision}
-                type="file"
-                accept=".pdf,application/pdf"
-                disabled={uploadExam.isPending || publish.isPending}
-                onChange={(event) => {
-                  const bytes = event.target.files?.[0];
-                  uploadExam.reset();
-                  setScannedExamVersion(null);
-                  setExamFile(
-                    bytes ? { bytes, uploadId: crypto.randomUUID() } : null,
-                  );
-                }}
-              />
-            </Field>
-            <Button
-              disabled={!examFile || uploadExam.isPending || publish.isPending}
-            >
-              {t(
-                scannedExamVersion
-                  ? "retryStudentPublication"
-                  : audience === "exam_staff"
-                    ? "scanAnswerKey"
-                    : "scanStudentPdf",
-              )}
-            </Button>
-            {uploadExam.isPending && (
-              <p role="status">
-                {t(
-                  scannedExamVersion
-                    ? "publishingStudentPdf"
-                    : "scanningStudentPdf",
-                )}
-              </p>
-            )}
-            {uploadExam.isError && (
-              <Notice kind="error">
-                {t(
-                  scannedExamVersion
-                    ? "studentPublicationFailed"
-                    : "studentScanFailed",
-                )}
-              </Notice>
-            )}
-          </form>
           {options.isPending && <Loading />}
           {options.isError && (
             <ErrorState retry={() => void options.refetch()} />
@@ -381,8 +310,7 @@ export function CourseExams({
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                if (version && !publish.isPending && !uploadExam.isPending)
-                  publish.mutate(version);
+                if (version && !uploadBlocked) publish.mutate(version);
               }}
             >
               <Field id="academy-exam-pdf" label={t("retainedPdf")}>
@@ -390,7 +318,7 @@ export function CourseExams({
                   id="academy-exam-pdf"
                   value={version}
                   onChange={(event) => setVersion(event.target.value)}
-                  disabled={publish.isPending || uploadExam.isPending}
+                  disabled={uploadBlocked}
                 >
                   <option value="">{t("selectRetainedPdf")}</option>
                   {options.data.map((option) => (
@@ -401,9 +329,7 @@ export function CourseExams({
                   ))}
                 </select>
               </Field>
-              <Button
-                disabled={!version || publish.isPending || uploadExam.isPending}
-              >
+              <Button disabled={!version || uploadBlocked}>
                 {t("publishRetainedPdf")}
               </Button>
             </form>
@@ -451,13 +377,27 @@ export function CourseExams({
           ))}
         </ul>
       )}
+      {uploadExam.isPending && (
+        <p role="status">
+          {t(
+            scannedExamVersion ? "publishingStudentPdf" : "scanningStudentPdf",
+          )}
+        </p>
+      )}
+      {uploadExam.isError && (
+        <Notice kind="error">
+          {t(
+            scannedExamVersion
+              ? "studentPublicationFailed"
+              : "studentScanFailed",
+          )}
+        </Notice>
+      )}
       {(setting.isSuccess ||
-        share.isSuccess ||
         remove.isSuccess ||
         publish.isSuccess ||
         uploadExam.isSuccess) && <Notice>{t("saved")}</Notice>}
       {(setting.isError ||
-        share.isError ||
         publish.isError ||
         remove.isError ||
         download.isError) && (

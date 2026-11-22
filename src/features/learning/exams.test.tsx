@@ -116,7 +116,11 @@ it("lets a company editor share student papers without offering staff answer key
 
 it("publishes only the scanner-confirmed exact version through the editor RPC", async () => {
   const user = userEvent.setup();
+  fake.rpc.mockResolvedValue({ data: "published-exam", error: null });
   show(course(false, true));
+  expect(
+    screen.getByText(/participants can see it once the exam is required/i),
+  ).toBeVisible();
   await user.upload(
     screen.getByLabelText("Exam file (PDF)"),
     new File(["%PDF-1.7 fictional"], "Fictional exam.pdf", {
@@ -133,6 +137,113 @@ it("publishes only the scanner-confirmed exact version through the editor RPC", 
       p_audience: "students",
     }),
   );
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+});
+
+it("retries internal publication without uploading the PDF a second time", async () => {
+  const user = userEvent.setup();
+  fake.rpc
+    .mockResolvedValueOnce({ data: null, error: { code: "network_error" } })
+    .mockResolvedValueOnce({ data: "published-exam", error: null });
+  show(course(true, true, false));
+  expect(screen.getByText(/as soon as its scan succeeds/i)).toBeVisible();
+  const paper = new File(["%PDF-1.7 fictional"], "Retry exam.pdf", {
+    type: "application/pdf",
+  });
+  await user.upload(screen.getByLabelText("Exam file (PDF)"), paper);
+  await user.click(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  );
+  expect(
+    await screen.findByText(/retry publishing the same version/i),
+  ).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Retry publishing scanned exam paper" }),
+  );
+  expect(await screen.findByText("Change confirmed.")).toBeVisible();
+  expect(fake.upload).toHaveBeenCalledExactlyOnceWith(paper, {
+    scope: "personal",
+    kind: "material",
+    clientId: expect.any(String),
+  });
+  expect(fake.rpc.mock.calls).toEqual([
+    [
+      "share_course_exam_pdf",
+      {
+        p_run_id: "fictional-course",
+        p_version_id: "clean-version",
+        p_audience: "students",
+      },
+    ],
+    [
+      "share_course_exam_pdf",
+      {
+        p_run_id: "fictional-course",
+        p_version_id: "clean-version",
+        p_audience: "students",
+      },
+    ],
+  ]);
+  expect(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  ).toBeDisabled();
+});
+
+it("requires replacing the internal attachment when changing its publication audience", async () => {
+  const user = userEvent.setup();
+  fake.rpc.mockResolvedValue({ data: null, error: { code: "network_error" } });
+  show(course(true, true));
+  await user.selectOptions(
+    screen.getByLabelText("Document type"),
+    "exam_staff",
+  );
+  await user.upload(
+    screen.getByLabelText("Exam file (PDF)"),
+    new File(["%PDF-1.7 staff"], "Staff only.pdf", { type: "application/pdf" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  );
+  expect(
+    await screen.findByText(/retry publishing the same version/i),
+  ).toBeVisible();
+  await user.selectOptions(screen.getByLabelText("Document type"), "students");
+  expect(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  ).toBeDisabled();
+  expect(fake.rpc).toHaveBeenCalledExactlyOnceWith("share_course_exam_pdf", {
+    p_run_id: "fictional-course",
+    p_version_id: "clean-version",
+    p_audience: "exam_staff",
+  });
+});
+
+it("keeps the internal reservation on a scan retry and rejects a quarantined scan", async () => {
+  const user = userEvent.setup();
+  fake.upload
+    .mockRejectedValueOnce(new Error("scan response lost"))
+    .mockResolvedValueOnce({
+      status: "quarantined",
+      current_version_id: "quarantine-version",
+    });
+  show(course(true, true));
+  await user.upload(
+    screen.getByLabelText("Exam file (PDF)"),
+    new File(["%PDF-1.7 fictional"], "Unconfirmed exam.pdf", {
+      type: "application/pdf",
+    }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  );
+  expect(await screen.findByText(/scan could not be confirmed/i)).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  );
+  await waitFor(() => expect(fake.upload).toHaveBeenCalledTimes(2));
+  expect(fake.upload.mock.calls[1]).toEqual(fake.upload.mock.calls[0]);
+  expect(await screen.findByText(/scan could not be confirmed/i)).toBeVisible();
+  expect(fake.rpc).not.toHaveBeenCalled();
 });
 
 it("submits only the exact academy setting and never offers PDF actions", async () => {

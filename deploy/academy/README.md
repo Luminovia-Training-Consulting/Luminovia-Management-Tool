@@ -250,6 +250,13 @@ Open **Academy administration → Signed course webhooks** as a local administra
 On the installation host, keep the [webhook worker environment](webhook-worker.env.example) in a root-owned file with mode 0600 outside the browser and source directories. Use the academy's own `api_base_url` and read the service-role key from its private runtime environment. Map only reviewed aliases for this installation to exact, public HTTPS receiver URLs with trusted certificates. A different company needs a different `<organisation-id>/<alias>` entry. Delivery is inactive until the operator starts the worker with a destination map.
 
 ```sh
+node --env-file="$runtime_root/runtime.env.webhooks.env" scripts/company-course-webhook-worker.mjs \
+  --check-destination '<organisation-id>/course-sync'
+```
+
+The receiver check verifies the configured hostname and certificate over a pinned public address. It opens only a TLS connection and consumes no delivery. After it returns `tls_verified`, verify a signed request from an approved staging academy with fictional records before enabling normal delivery.
+
+```sh
 node --env-file="$runtime_root/runtime.env.webhooks.env" scripts/company-course-webhook-worker.mjs --watch
 ```
 

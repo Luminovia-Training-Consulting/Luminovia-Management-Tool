@@ -251,6 +251,37 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await rpc(lecturer, "set_course_exam_required", [runA, true, 2]);
             assert.deepEqual((await rpc(lecturer, "course_workspace", [runA])).exams.documents.map((item) => item.id), [examPaperId, examKeyId]);
             await assert.rejects(rpc(lecturer, "set_course_exam_required", [runB, false, 0]), /42501/);
+            const revisedPaper = randomUUID(), separatePaper = randomUUID(), separateVersion = randomUUID();
+            await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+                values (${q(separatePaper)},${q(admin)},${q(admin)},'personal','material','Fictional separate paper.pdf','application/pdf',20,'clean',${q(randomUUID())});
+                insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+                values (${q(revisedPaper)},${q(examPaperDocument)},${q(admin)},${q(randomUUID())},2,'fictional/revised.pdf','Fictional revised exam.pdf','application/pdf',20,'clean',${q("d".repeat(64))}),
+                  (${q(separateVersion)},${q(separatePaper)},${q(admin)},${q(randomUUID())},1,'fictional/separate.pdf','Fictional separate paper.pdf','application/pdf',20,'clean',${q("e".repeat(64))});
+                update public.documents set current_version_id=${q(revisedPaper)} where id=${q(examPaperDocument)};
+                update public.documents set current_version_id=${q(separateVersion)} where id=${q(separatePaper)};`);
+            const readPaper = (who, id) => rpc(who, "course_document_access", ["exam", id]);
+            const learnerPapers = async () => new Set(
+                (await rpc(participant, "course_workspace", [runA])).exams.documents.map(({id}) => id),
+            );
+            // Even a newer scanner-confirmed upload leaves the older published
+            // bytes in place until an editor explicitly publishes the update.
+            assert.equal((await readPaper(participant, examPaperId)).id, examPaperVersion);
+            const revisedShare = await rpc(admin, "share_course_exam_pdf", [runA, revisedPaper, "students"]);
+            const separateShare = await rpc(admin, "share_course_exam_pdf", [runA, separateVersion, "students"]);
+            assert.deepEqual(await learnerPapers(), new Set([revisedShare, separateShare]));
+            await assert.rejects(readPaper(participant, examPaperId), /42501/);
+            assert.equal((await readPaper(admin, examPaperId)).id, examPaperVersion);
+            assert.equal((await readPaper(participant, revisedShare)).id, revisedPaper);
+            await rpc(client, "set_course_exam_required", [runA, false, 3]);
+            assert.deepEqual(await learnerPapers(), new Set());
+            await assert.rejects(readPaper(participant, revisedShare), /42501/);
+            await rpc(lecturer, "set_course_exam_required", [runA, true, 4]);
+            assert.deepEqual(await learnerPapers(), new Set([revisedShare, separateShare]));
+            await rpc(admin, "remove_course_exam_pdf", [runA, revisedShare]);
+            assert.deepEqual(await learnerPapers(), new Set([separateShare]));
+            await assert.rejects(readPaper(participant, examPaperId), /42501/);
+            await assert.rejects(readPaper(participant, revisedShare), /42501/);
+            assert.equal(await sql(`select status from public.document_versions where id=${q(examPaperVersion)}`), "clean");
             // Reuse the fixture's scanned-byte metadata to exercise the legacy
             // learner dispatcher without sharing the exam's actual attachment.
             const document = randomUUID(), version = randomUUID();

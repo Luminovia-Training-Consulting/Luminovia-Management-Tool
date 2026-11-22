@@ -1723,30 +1723,23 @@ Public RPCs are invokers around isolated, empty-search-path private authority fu
 
 ## Cross-module integration
 
-The UI links the existing assignment and, when already present and authorized, its active invoice. The delivery feature does not generate invoices or modify accepted fees, original currency, tax, claim terms, invoice PDFs or payment history. An invoiced claim can retain additional corrected delivery evidence while its accepted invoice stays byte-identical. Any financial amendment remains the explicit commercial workflow's responsibility.
+The delivery feature does not generate invoices or modify accepted fees, original currency, tax, claim terms, invoice PDFs or payment history. An invoiced claim can retain additional corrected delivery evidence while its accepted invoice stays byte-identical. Any financial amendment remains the explicit commercial workflow's responsibility.
 
 Submitted and reviewed evidence creates minimal committed inbox notifications and audit entries without copying private notes. `private.delivery_notification_target()` resolves event destinations under current permissions; the shared notification resolver must include it. SMTP delivery remains subject to the separately owned notification-outbox/provider setup, never inferred from insertion of an inbox row.
 
-The CSV export reuses existing formula-safe serialization and includes the visibly loaded authorized session records, original canonical timestamps/zone, minutes and status/revision codes. Its text explains pagination; it does not falsely call a partially loaded list a full-period export. API responses, history and CSV contain no compensation amounts. No private delivery response is added to the PWA's public app-shell cache.
+Use **Diese Seite als CSV herunterladen / Download this page as CSV** in the delivery overview. The server refreshes the selected page under the current account and view before the download. The formula-safe file contains the returned sessions, original timestamps and time zones, scheduled and reported minutes, and stable outcome, status and revision codes. Missing submissions have blank evidence columns. Use the paging controls to export another page. Drafts, notes, correction reasons and invoice identifiers are excluded from the download.
 
 <a id="section-teaching-delivery-acceptance-and-continuation"></a>
 
 ## Acceptance and continuation
 
-Executed focused checks: `npx vitest run src/features/delivery` passes **7 tests across 2 files**; TypeScript and scoped ESLint pass. The owned networkless/no-published-port PostgreSQL container and UUID database pass **12 real groups** after the invoice linkage check, covering direct/anonymous/foreign denial, malformed fields, exact retry, immutable submissions, independent MFA review, concurrent CAS, customer isolation/revocation, explicit corrections, cancelled/interrupted delivery, stale
-versions, pagination, future evidence, suspension, historical access and preserved invoice/accepted AUD terms.
-
-Commands:
-
 ```bash
-PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/delivery-db-tests.mjs
-npx vitest run src/features/delivery
-npx tsc -b
-npx eslint src/features/delivery scripts/delivery*.mjs tests/e2e/delivery.spec.ts --max-warnings 0
+npx vitest run src/features/changes/delivery.test.tsx
+./portal test --phase system
+./portal test --phase browser
 ```
 
-`scripts/delivery-api-check.mjs` exercises actual fictional Auth/MFA/REST submission, concurrent review, customer redaction, correction history and inactive-token denial. `tests/e2e/delivery.spec.ts` exercises saved-draft submission, independent correction/review, original revision history, DE/EN, dark mode, keyboard CSV export, axe and horizontal-overflow checks on both configured browser projects. Those scripts are authored, not reported as executed by the focused SQL/unit results. The
-canonical runner's shared lock must be respected; no foreign stack may be stopped to acquire it.
+`scripts/delivery-db-tests.mjs` covers the authority, versioning and evidence rules. `scripts/delivery-api-check.mjs` exercises actual fictional Auth/MFA/REST submission, concurrent review, customer redaction, correction history and inactive-token denial. `tests/e2e/delivery-correction.spec.ts` follows notification links through review and revision, checks a downloaded CSV and tests access by an unrelated lecturer in both Chromium projects. The work log records which revisions passed the checks. The canonical runner's shared lock protects independent stacks.
 
 Remaining gates: exact combined `./portal test`, actual native retained-data/security CI, independent review, eligible merge and merged-source verification. Physical PWA platforms, other browsers and manual accessibility acceptance remain separate product-wide checks. Evidence identifies freelance teaching delivery; it does not assert employment, tax treatment or legal signature sufficiency.
 

@@ -17,8 +17,8 @@ This is the **Luminovia core platform roadmap**, NOT the commercial white-label 
 ### Current local acceptance
 
 - The public LMS demo and the optional signed Academy sandbox open at `/demo`. They use fictional courses, support role selection and keep business actions in the sandbox. See the [internal demo requirements](#a1-retained-luminovia-demo--mandatory-redesign-and-acceptance) and the [Academy packaging options](deploy/academy/README.md).
-- Real desktop and mobile Chromium exercised all eight internal roles and a combined-role account with responsive checks from 320 to 1920 px. Tests cover current access after a role change, email and username sign-in, explicit invitation roles and protected controls. The help and Wiki cover both German and English. Physical-device acceptance remains open.
-- The downloadable OpenAPI catalogues cover 363 internal paths and 82 for each dedicated Academy edition. The source and database contract checks cover the application RPC inventory. Live response and denial sampling across HTTP, Realtime and Storage remains tracked in [API acceptance](#109-api-08--ci-integration-and-definition-of-done).
+- Real desktop and mobile Chromium exercised all eight internal roles and a combined-role account from 320 to 1920 px. Tests cover current access after a role change, email and username sign-in, explicit invitation roles and protected controls. Headed Chromium on an actual Linux desktop also installed the built portal, created a system launcher, opened the standalone window, loaded its offline shell and removed the installation. Physical Android and iOS acceptance remains open.
+- The downloadable OpenAPI catalogues cover 375 internal paths and 85 for each dedicated Academy edition. The source and database contract checks cover the application RPC inventory. Live response and denial sampling across HTTP, Realtime and Storage remains tracked in [API acceptance](#109-api-08--ci-integration-and-definition-of-done).
 - The [local test record](docs/WORKLOG.md) covers current source, Docker and browser results. Public Website changes, Hostinger and real provider delivery are separate acceptance items.
 - `./portal reset` can rebuild a confirmed local installation and its Supabase and scanner state from the migrations and fictional bootstrap. The isolated Docker test covered PostgreSQL, Auth, Storage, Mailpit and the scanner volume. The Build gate now checks the emitted startup, on-demand API explorer and PWA precache sizes.
 
@@ -48,7 +48,7 @@ See the [current implementation matrix](docs/IMPLEMENTATION_PLAN.md#requested-ch
 
 Current administrators can choose management, lecturer, company and learner previews beside the notification bell. Management sees company and learner previews. The browser remembers the visibility choices for that account and installation. Throughout a preview the shell displays fictional scope and leaves protected live views unmounted.
 
-The owner deferred Hostinger migration and provider acceptance for this source pass.
+The public development CMS returned HTTP 200 and both public aliases returned HTTP 308 to the canonical host, preserving the tested request path and query. Installed revision, provider SMTP, backup freshness and real customer acceptance require access to the intended installation.
 
 ### Core workflow progress
 
@@ -125,28 +125,29 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 ### R0 — Reconcile scope and verify source baseline (`P0`, first)
 
-- [ ] Record exact current `main` commit, open PR overlap, CI status, current self-host installation revision, migration inventory and relevant security findings without changing live data.
+- [x] Establish the source baseline and isolated acceptance evidence. On `ef8a724f`, application and security CI passed with 1,478 unit and component tests, 160 database suites, 59 API suites, 260 Chromium cases and four PWA cases. The separate self-host job passed 60 integration suites and replayed 259 migrations. The current production-target revision remains an operations check.
 - [ ] Reconcile `PRODUCT.md`, `ROADMAP.md`, `AGENTS.md`, guides, account/role model and tests against the renewed **participant-only** decision; make ownership of legacy features explicit.
 - [ ] Map each FC-01–FC-58 and LMS-01–LMS-11 to existing code, required delta, tests, responsible branch/PR and source status (`present`, `partial`, `missing`, `blocked`, `accepted`).
 - [ ] Preserve current working repository functionality; no broad rewrite, history overwrite or duplicate subsystem.
 
 ### R1 — Production-critical platform and finance (`P0`, before any real-user launch)
 
-- [ ] FC-14–17: individual lecturer compensation, differentiated roles, 8-character minimum, safe account controls and strict elevated-role delegation.
-- [ ] FC-19, FC-22–24: verified-qualification separation, controlled contract upload on behalf, secure outbound mail settings, IDs for all users.
-- [ ] FC-26, FC-28–29: reopening/reassignment of jobs with notifications, atomic one-winner claim, correct assigned/company/management views.
-- [ ] FC-34–35: invoices only after course completion (according to explicit business rules), confirmed PDF ownership, management review and real payment-record statuses.
+- [x] FC-14–17: individual lecturer compensation, differentiated roles, eight-character minimum and scoped account controls. Saving compensation defaults requires current gross-finance authority. Management can enter permitted net offer rates. The pricing, accounts and role tests exercise both boundaries.
+- [x] FC-19, FC-22–24: verified qualifications, scoped contract upload on behalf, private outbound mail settings and User IDs. Provider delivery has a separate release check.
+- [x] FC-26, FC-28–29: scoped reopening and reassignment with inbox events, atomic claims and role-aware views. Native tests exercise concurrent requests, current eligibility and exact retry.
+- [x] FC-34–35: post-course billing, reviewed exceptions and instalments, scanned invoice documents and recorded payment states. Database, HTTP and browser fixtures exercise permissions and the corresponding retained financial history.
 - [ ] FC-04–07: no blocked workflows or overlapping essential controls at supported mobile and desktop sizes.
 - [ ] FC-55–57: existing required GitHub CI/security checks, full persistence/migrations/backup/recovery and actual scoped customer privacy tested.
-- [ ] API-01–API-04: username **or** email/password login and secure token-based API authentication, password minimum eight characters, existing Auth accounts preserved; deny password-as-static-API-key shortcuts.
+- [x] API-01–API-04 sign-in and session boundary: username or email and password login, an eight-character minimum for new passwords and token-based requests against the existing Auth identity. Separate coverage remains for the full operation inventory and contracts.
 - [ ] Activate and prove real authorised transactional email on the intended production target; staging Mailpit does not count as external delivery.
 
 ### R2 — General product/UX completion (`P1/P2`, parallel, but without jeopardising P0)
 
-- [ ] FC-01–03, FC-08–13: separate website footer translation approval; **keep and comprehensively redesign `/demo` to match the real portal**, improve dark colour composition while protecting light theme, improve Forum/Contracts links, role-specific Courses and safe preview switch.
-- [ ] FC-18, FC-20–21: expertise UX, fictional demo customers and demo courses inside the **fictional, isolated demo and development/test bootstrap only**, direct contract file picker/drag-drop. Never seed real production records.
-- [ ] FC-25, FC-27, FC-30–33: accessible topic filters, chronological jobs, archive toggles, customer calendar colours, role-scope course sections and finance trends.
-- [ ] FC-36–37: default 30-day payment term, true due-date sorting and accessible green/amber/red/purple status logic.
+- [ ] FC-01: public Website footer and translations belong to the separate Website project.
+- [x] FC-02–03, FC-08–13: the fictional demo, dark/light themes, scoped Courses, Forum and Contracts links, and role preview. Current browser journeys cover these flows. The cross-browser and per-page visual audit remains below.
+- [x] FC-18, FC-20–21: direct expertise editing, fictional demo customers/courses and the scoped contract file picker and drop area. The demo and contract browser checks exercise the active interfaces.
+- [x] FC-25, FC-27, FC-30–33: accessible topic/history filters, chronological offer sorting, calendar source colours, role-scoped course sections and original-currency finance trends.
+- [x] FC-36–37: default 30-day terms with explicit overrides, due-date sorting and text/icon statuses with colour. Accounting fixtures verify actual due and payment states.
 - [ ] Validate every page in DE/EN, both themes, keyboard, 390/768/1280/1920px, Safari/Firefox where required and installed PWA behaviour.
 
 ### R2.1 — Complete product API, Swagger and integration tooling (`P1`, with security-critical parts `P0`)
@@ -161,25 +162,25 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 The current owner priority is to complete the independent LMS before the installer, customer-specific branding and distribution. The dedicated academy acceptance and work log are tracked in the [White-label roadmap](WHITELABEL_ROADMAP.md#9-customer-learning-workflows-independent-of-brokerage) and the [implementation plan](docs/IMPLEMENTATION_PLAN.md). The internal Premium acceptance matrix below still applies to the internal edition.
 
-- [ ] **LMS-01:** re-enable participant-only Auth/role, invitation, route and database permissions without exposing the operational lecturer/admin portal.
-- [ ] **LMS-02:** add human-readable IDs to all existing/future users; build secure multi-company participant relationship and verified association flow. Company-created accounts receive only the participant role. Linking an existing participant uses verified consent and preserves all account roles.
-- [ ] **LMS-03:** add organisation Premium default-OFF flag, admin-only red/green accessible switch, explicit confirmation for ON/OFF, audited CAS transaction, required server-side enforcement. Management can see but cannot toggle.
-- [ ] **LMS-04:** company participant directory, invitation/create/link by User ID, company-scoped enrolments/removals and multi-company rules.
+- [x] **LMS-01:** participant-only Auth, invitation, course routes and scoped database access. The isolated account, role and course checks cover boundaries outside the teaching and administration areas.
+- [x] **LMS-02:** stable public User IDs and verified multi-company membership. Company-created accounts start with the participant role. Linking an existing participant preserves their roles. The SQL account and membership suites verify stable IDs, isolation and current scope.
+- [x] **LMS-03:** default-OFF, organisation-scoped Premium with admin-only audited version checks. Desktop and mobile Chromium verify the two explicit confirmations and refusal for management.
+- [x] **LMS-04:** company-scoped participant directory, invitation, User ID linking and enrolment/removal. Current tests exercise the account, membership and course transactions.
 - [ ] Confirm OFF blocks **UI + API/RLS + Storage bytes + WebSockets + notifications + old links + caches** for the company while retaining records and other-company access.
 
 ### R4 — Premium LMS course experience and collaboration (`P1`, after R3)
 
-- [ ] **LMS-05:** participant dashboard, current/upcoming/completed courses, assigned lecturer, dates, online location, versioned Welcome Content Management, published course info and permitted learning materials.
-- [ ] **LMS-06:** automatic course-room participant/lecturer membership, realtime message delivery and revocation, notifications, file uploads/downloads and company/staff visibility; preserve private-DM boundary.
-- [ ] **LMS-07:** separate company-controlled course materials from lecturer/participant contributions; safe delete/replace/version/scanning, exact byte access and admin LMS review.
-- [ ] Reuse existing quiz, feedback, completion and course-workspace code under the new organisation entitlement instead of building independent duplicates.
+- [x] **LMS-05:** participant dashboard, assigned courses, versioned welcome content, published meeting details and permitted resources. The course, welcome and meeting fixtures verify current role, publication and retained history.
+- [x] **LMS-06:** scoped automatic room membership, chat posts and files, current revocation and notification paths. Existing native Realtime, HTTP and SQL witnesses cover revocation, exact file access and separation from private conversations.
+- [x] **LMS-07:** separate course-owned and member-contributed materials, with scanned versions and scoped file delivery. The actual file and workspace fixtures cover owner, instructor, learner and revoked access.
+- [x] Reuse the existing quiz, feedback, completion and course workspace under the organisation entitlement.
 
 ### R5 — Premium LMS exams and attendance (`P1`, after R3–R4)
 
-- [ ] **LMS-08:** lecturer **and** authorised company may set `Exam required / No exam required`; exam window hidden for learners when not required, with direct API denial. Clean public exam PDFs uploaded by either become immediately student-visible when required. Staff solutions never auto-publish; all versions retained.
+- [x] **LMS-08:** assigned lecturers and authorised companies can enable or disable exams. Learner lists and direct downloads enforce the current setting and current clean publication of each paper. Staff solutions, withdrawn versions and superseded papers retain their separate access rules. Internal and both dedicated PostgreSQL suites exercise those boundaries.
 - [x] **LMS-09:** one course-session/day attendance record per enrolled student. Authorised staff and company contacts can see counts, filter by name and status, and mark a filtered group of previously untouched entries after confirmation. An edit conflict rolls back the group. Single-row arrival/departure, notes and corrections remain available. Learners cannot read the class register.
 - [x] Authorised course staff can download PDF and CSV reports for the exact selected session. The internal edition offers the explicit `attendance_session` document operation. Both dedicated editions continue to export through their licensed session document operation.
-- [ ] Allow scanned PDF attendance evidence and, where offered, previewed/validated CSV/XLSX import; preserve audit/corrections and exact-file permissions.
+- [x] Allow scanned PDF attendance evidence and previewed CSV/XLSX import. Native checks exercise exact-session access, stale import rollback, scoped retained files and the separate learner projection.
 - [ ] Check exam/attendance UI and storage disappear to an OFF company without deleting existing history, and reappear only to permitted actors when ON.
 
 ### R6 — Integrated acceptance and release (`P0 for real users; P1-specific gates for Premium ON`)

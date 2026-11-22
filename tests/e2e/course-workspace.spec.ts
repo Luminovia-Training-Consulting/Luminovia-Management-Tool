@@ -4,6 +4,7 @@ import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
+import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -121,6 +122,205 @@ async function fixture({ upcoming = false } = {}) {
         token,
     };
 }
+
+async function linkWorkspaceLearner(f: Awaited<ReturnType<typeof fixture>>) {
+    const learner = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(
+        learner.auth.signInWithPassword({
+            email: f.learner.email,
+            password: process.env.E2E_PASSWORD!,
+        }),
+    );
+    const profile = await checked(
+        f.service.from("profiles").select("luminovia_user_id").eq("id", f.learner.id).single(),
+        {requireData: true},
+    );
+    await checked(
+        f.adminClient.rpc("request_company_participant_link", {
+            p_organisation_id: f.org,
+            p_luminovia_user_id: profile.luminovia_user_id,
+            p_request_id: randomUUID(),
+        }),
+    );
+    const invitations: CompanyInvitation[] = await checked(
+        learner.rpc("my_company_participant_invitations"),
+        {requireData: true},
+    );
+    const invite = invitations.find((entry) => entry.organisation_id === f.org);
+    if (!invite) throw new Error("Fictional course invitation was not received");
+    await checked(
+        learner.rpc("accept_company_participant_invitation", {
+            p_organisation_id: f.org,
+            p_expected_version: invite.version,
+            p_request_id: randomUUID(),
+        }),
+    );
+    return learner;
+}
+
+test("Premium exam switching and scanned bytes follow real company, lecturer and learner access", async ({
+    page,
+    browser,
+}, info) => {
+    test.setTimeout(120_000);
+    const f = await fixture({upcoming: true});
+    const learner = await linkWorkspaceLearner(f);
+    await checked(
+        f.adminClient.rpc("manage_course_enrolment", {
+            p_course_run_id: f.run,
+            p_user_id: f.learner.id,
+            p_status: "enrolled",
+        }),
+    );
+    const learnerSession = await checked(learner.auth.getSession(), {requireData: true});
+    expect(learnerSession.session).toBeTruthy();
+    const workspace = `/courses/${f.run}/workspace`;
+    const exams = async (client = learner) =>
+        (await checked(client.rpc("course_workspace", {p_run_id: f.run}), {requireData: true}))
+            .exams;
+    const examRegion = (actorPage: Page) =>
+        actorPage.getByRole("region", {name: "Kursprüfung", exact: true});
+    const requestPaper = async (id: string) =>
+        page.request.post(`${process.env.SUPABASE_URL}/functions/v1/course-documents`, {
+            data: {kind: "exam", id},
+            headers: {
+                apikey: process.env.SUPABASE_ANON_KEY!,
+                Authorization: `Bearer ${learnerSession.session!.access_token}`,
+                Origin: new URL(process.env.E2E_BASE_URL!).origin,
+            },
+        });
+    const changeRequirement = async (actorPage: Page, required: boolean) => {
+        const panel = examRegion(actorPage);
+        await panel
+            .getByRole("combobox", {name: "Kursprüfung", exact: true})
+            .selectOption(required ? "yes" : "no");
+        await panel
+            .getByRole("button", {name: "Prüfungseinstellung speichern", exact: true})
+            .click();
+        await expect.poll(async () => (await exams()).required).toBe(required);
+    };
+    const upload = async (actorPage: Page, name: string, bytes: Buffer) => {
+        const panel = examRegion(actorPage);
+        await panel.getByLabel("Prüfungsdatei (PDF)", {exact: true}).setInputFiles({
+            name,
+            mimeType: "application/pdf",
+            buffer: bytes,
+        });
+        await panel.getByRole("button", {name: "PDF hochladen und freigeben", exact: true}).click();
+    };
+    const context = {
+        baseURL: process.env.E2E_BASE_URL,
+        viewport: info.project.use.viewport,
+        isMobile: info.project.use.isMobile,
+        hasTouch: info.project.use.hasTouch,
+        deviceScaleFactor: info.project.use.deviceScaleFactor,
+    };
+    const companyContext = await browser.newContext(context);
+    const teachingContext = await browser.newContext(context);
+    try {
+        const company = await companyContext.newPage();
+        const teacher = await teachingContext.newPage();
+        await login(page, f.learner.email, /\/learning$/);
+        await page.goto(workspace);
+        await expect(page.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
+        await expect(examRegion(page)).toHaveCount(0);
+        await login(company, f.client.email);
+        await company.goto(workspace);
+        await expect(
+            examRegion(company).getByRole("option", {
+                name: "Lösungsschlüssel für das Kursteam",
+                exact: true,
+            }),
+        ).toHaveCount(0);
+        await changeRequirement(company, true);
+        await expect(examRegion(company).getByText(/sofort herunterladen/)).toBeVisible();
+        await upload(company, "Invalid fictional exam.pdf", Buffer.from("Not a PDF."));
+        await expect(
+            examRegion(company).getByText(/Die Dateiprüfung konnte nicht bestätigt werden/),
+        ).toBeVisible({timeout: 45_000});
+        expect((await exams()).documents).toEqual([]);
+        const bytes = accountingTestPdf();
+        const paper = `Fictional exam ${f.token}.pdf`;
+        await upload(company, paper, bytes);
+        await expect(examRegion(company).getByText(paper, {exact: true})).toBeVisible({
+            timeout: 45_000,
+        });
+        const [published] = (await exams()).documents;
+        expect(published.name).toBe(paper);
+        await page.reload();
+        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        const downloaded = page.waitForEvent("download");
+        await examRegion(page)
+            .getByRole("button", {name: "PDF herunterladen", exact: true})
+            .click();
+        const download = await downloaded;
+        expect(download.suggestedFilename()).toBe(paper);
+        expect(await readFile((await download.path())!)).toEqual(bytes);
+
+        await login(teacher, f.teacher.email);
+        await teacher.goto(workspace);
+        await examRegion(teacher)
+            .getByLabel("Dokumenttyp", {exact: true})
+            .selectOption("exam_staff");
+        const answer = `Fictional answer key ${f.token}.pdf`;
+        await upload(teacher, answer, bytes);
+        await expect(examRegion(teacher).getByText(answer, {exact: true})).toBeVisible({
+            timeout: 45_000,
+        });
+        const teachingClient = api(process.env.SUPABASE_ANON_KEY!);
+        await checked(
+            teachingClient.auth.signInWithPassword({
+                email: f.teacher.email,
+                password: process.env.E2E_PASSWORD!,
+            }),
+        );
+        const restricted = (await exams(teachingClient)).documents.find(
+            (document: {name: string}) => document.name === answer,
+        );
+        expect(restricted.audience).toBe("exam_staff");
+        expect((await requestPaper(restricted.id)).status()).toBe(403);
+        await company.reload();
+        await expect(examRegion(company).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(company).getByText(answer, {exact: true})).toHaveCount(0);
+        expect((await exams()).documents.map((document: {id: string}) => document.id)).toEqual([
+            published.id,
+        ]);
+        await changeRequirement(teacher, false);
+        await expect(examRegion(teacher).getByText(paper, {exact: true})).toBeVisible();
+        const hidden = await requestPaper(published.id);
+        expect(hidden.status()).toBe(403);
+        expect(await hidden.json()).toMatchObject({error: "document_unavailable"});
+        await page.reload();
+        await expect(page.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
+        await expect(examRegion(page)).toHaveCount(0);
+        await changeRequirement(teacher, true);
+        await page.reload();
+        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(page).getByText(answer, {exact: true})).toHaveCount(0);
+
+        const togglePremium = (enabled: boolean, version: number) =>
+            checked(
+                f.adminClient.rpc("set_company_premium", {
+                    p_organisation_id: f.org,
+                    p_enabled: enabled,
+                    p_expected_version: version,
+                    p_request_id: randomUUID(),
+                }),
+            );
+        await togglePremium(false, 1);
+        expect((await requestPaper(published.id)).status()).toBe(403);
+        await togglePremium(true, 2);
+        const restored = await requestPaper(published.id);
+        expect(restored.status()).toBe(200);
+        expect(await restored.body()).toEqual(bytes);
+        expect((await exams()).documents.map((document: {id: string}) => document.id)).toEqual([
+            published.id,
+        ]);
+    } finally {
+        await companyContext.close();
+        await teachingContext.close();
+    }
+});
 
 async function a11y(page: Page) {
     await page.evaluate(() => document.fonts.ready);
@@ -586,20 +786,7 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
         starts_at: new Date(secondEnd - 3_600_000).toISOString(),
         ends_at: new Date(secondEnd).toISOString(),
     }));
-    const learner = api(process.env.SUPABASE_ANON_KEY!);
-    await checked(learner.auth.signInWithPassword({email:f.learner.email,password:process.env.E2E_PASSWORD!}));
-    const profile = await checked(f.service.from("profiles").select("luminovia_user_id").eq("id",f.learner.id).single(),
-        {requireData: true});
-    await checked(f.adminClient.rpc("request_company_participant_link", {
-        p_organisation_id:f.org,p_luminovia_user_id:profile.luminovia_user_id,p_request_id:randomUUID(),
-    }));
-    const invites: CompanyInvitation[] =
-        await checked(learner.rpc("my_company_participant_invitations"), {requireData: true});
-    const invite = invites.find((entry) => entry.organisation_id === f.org);
-    if (!invite) throw new Error("Fictional course invitation was not received");
-    await checked(learner.rpc("accept_company_participant_invitation", {
-        p_organisation_id:f.org,p_expected_version:invite.version,p_request_id:randomUUID(),
-    }));
+    await linkWorkspaceLearner(f);
 
     await adminLogin(page,f.manager);
     await page.goto(`/courses/${f.run}/workspace#course-enrolments`);

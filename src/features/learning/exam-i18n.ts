@@ -5,8 +5,16 @@ const pairs: Record<string, [string, string]> = {
   required: ["Prüfung erforderlich", "Exam required"],
   notRequired: ["Keine Prüfung erforderlich", "No exam required"],
   settingHelp: [
-    "Die Einstellung gilt für diesen Kurs. Prüfungs-PDFs werden nach erfolgreicher Prüfung der Datei für Teilnehmende sichtbar; Lösungsschlüssel bleiben dem berechtigten Kursteam vorbehalten.",
-    "This setting applies to this course. Exam PDFs appear to participants after the file scan succeeds; answer keys remain with the authorised course team.",
+    "Mit dieser Einstellung legst du fest, ob Teilnehmende die Prüfungsdateien des Kurses sehen.",
+    "This setting controls whether participants can see the course exam files.",
+  ],
+  learnerPublication: [
+    "Nach erfolgreicher Dateiprüfung können eingeschriebene Teilnehmende diese PDF sofort herunterladen.",
+    "Enrolled participants can download this PDF as soon as its scan succeeds.",
+  ],
+  learnerPublicationOff: [
+    "Die geprüfte PDF wird für diesen Kurs gespeichert. Teilnehmende sehen sie, sobald eine Prüfung erforderlich ist.",
+    "The scanned PDF is saved for this course. Participants can see it once the exam is required.",
   ],
   saveSetting: ["Prüfungseinstellung speichern", "Save exam setting"],
   upload: ["PDF hochladen und freigeben", "Upload and share PDF"],

@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import https from "node:https";
 import { isIP } from "node:net";
+import { connect as connectTls } from "node:tls";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { publicAddress } from "./notification-push-worker.mjs";
@@ -29,7 +30,15 @@ export function webhookConfiguration(env) {
     /\s/.test(serviceKey)
   )
     throw new Error("invalid_webhook_configuration");
-  const encoded = env.PORTAL_WEBHOOK_DESTINATIONS ?? "{}";
+  return {
+    api: api.href.replace(/\/$/, ""),
+    serviceKey,
+    destinations: webhookDestinations(env.PORTAL_WEBHOOK_DESTINATIONS),
+  };
+}
+
+/** Keep the operator preflight and the delivery worker on the same allowlist. */
+function webhookDestinations(encoded = "{}") {
   if (encoded.length > 65536) throw new Error("invalid_webhook_destinations");
   const destinationMap = JSON.parse(encoded);
   if (
@@ -40,7 +49,7 @@ export function webhookConfiguration(env) {
     throw new Error("invalid_webhook_destinations");
   const entries = Object.entries(destinationMap);
   if (entries.length > 100) throw new Error("invalid_webhook_destinations");
-  const destinations = new Map(
+  return new Map(
     entries.map(([name, value]) => {
       if (
         !destinationName.test(name) ||
@@ -64,7 +73,6 @@ export function webhookConfiguration(env) {
       return [name, url];
     }),
   );
-  return { api: api.href.replace(/\/$/, ""), serviceKey, destinations };
 }
 
 /** Build the exact bytes signed with the per-subscription key. */
@@ -136,6 +144,54 @@ async function resolveWebhook(hostname) {
   }
 }
 
+/** Reject a mixed public and private answer before using any of its addresses. */
+async function resolveDestination(url, resolve) {
+  let addresses;
+  try {
+    addresses = await resolve(url.hostname);
+  } catch {
+    return { status: "dns_unavailable" };
+  }
+  if (!addresses.length) return { status: "dns_unavailable" };
+  if (addresses.some(({ address }) => !publicAddress(address)))
+    return { status: "address_denied" };
+  return { status: "resolved", address: addresses[0] };
+}
+
+/** Check the receiver certificate through the same pinned public address used for delivery. */
+function verifyReceiverTls(url, address, connect) {
+  return new Promise((resolve) => {
+    const socket = connect({
+      host: address.address,
+      family: address.family,
+      port: 443,
+      servername: url.hostname,
+      rejectUnauthorized: true,
+      signal: AbortSignal.timeout(10_000),
+    });
+    const finish = (verified) => {
+      socket.destroy();
+      resolve(verified);
+    };
+    socket.once("secureConnect", () => finish(socket.authorized));
+    socket.once("error", () => finish(false));
+  });
+}
+
+/** Check one configured receiver without creating or consuming a delivery. */
+export async function checkWebhookDestination(
+  env,
+  alias,
+  { resolve = resolveWebhook, connect = connectTls } = {},
+) {
+  const url = webhookDestinations(env.PORTAL_WEBHOOK_DESTINATIONS).get(alias);
+  if (!url) return { status: "unknown_destination" };
+  const destination = await resolveDestination(url, resolve);
+  if (destination.status !== "resolved") return { status: destination.status };
+  const verified = await verifyReceiverTls(url, destination.address, connect);
+  return { status: verified ? "tls_verified" : "tls_failed" };
+}
+
 /** Service credentials are sent only to the configured REST backend. */
 async function callBackend(config, action, arguments_) {
   const response = await fetch(config.api + "/rest/v1/rpc/" + action, {
@@ -178,29 +234,21 @@ export async function dispatchCompanyWebhooks(
     const url = config.destinations.get(lease.destination);
     let outcome = "cancelled";
     if (url) {
-      let addresses;
-      try {
-        addresses = await resolve(url.hostname);
-      } catch {
-        outcome = "retry";
-      }
-      if (addresses) {
-        if (!addresses.length) outcome = "retry";
-        else if (addresses.some(({ address }) => !publicAddress(address)))
-          outcome = "failed";
-        else {
-          const prepared = await call(
-            config,
-            "prepare_company_course_webhook",
-            reference,
+      const destination = await resolveDestination(url, resolve);
+      if (destination.status === "dns_unavailable") outcome = "retry";
+      if (destination.status === "address_denied") outcome = "failed";
+      if (destination.status === "resolved") {
+        const prepared = await call(
+          config,
+          "prepare_company_course_webhook",
+          reference,
+        );
+        if (prepared?.destination === lease.destination) {
+          const message = signedWebhook(
+            prepared.event,
+            prepared.signing_secret,
           );
-          if (prepared?.destination === lease.destination) {
-            const message = signedWebhook(
-              prepared.event,
-              prepared.signing_secret,
-            );
-            outcome = await send(url, addresses[0], message);
-          }
+          outcome = await send(url, destination.address, message);
         }
       }
     }
@@ -247,6 +295,12 @@ export async function watchCompanyWebhooks(
 
 /** The private foreground runner is opt-in and stops cleanly under a supervisor. */
 async function runCommand(args, env) {
+  if (args.length === 2 && args[0] === "--check-destination") {
+    const result = await checkWebhookDestination(env, args[1]);
+    console.log(JSON.stringify(result));
+    if (result.status !== "tls_verified") process.exitCode = 1;
+    return;
+  }
   if (args.length > 1 || (args.length === 1 && args[0] !== "--watch"))
     throw new Error("invalid_webhook_arguments");
   const config = webhookConfiguration(env);
