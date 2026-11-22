@@ -2,10 +2,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice } from "../../components/common";
-import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { useAuth } from "./auth-context";
 import { Password } from "./password";
+import { SignOutButton } from "./sign-out-button";
 import { AuthenticatorGate, authenticatorRequired } from "./authenticator";
 import { sessionCacheBoundary } from "./session-cache-boundary";
 import { useOnline } from "../../lib/online";
@@ -62,9 +62,7 @@ export function PortalAccess({ children }: { children: ReactNode }) {
               ? "Dein Konto hat keinen Zugang zu dieser Akademie."
               : "Your account does not have access to this academy."}
         </Notice>
-        <Button onClick={() => void db().auth.signOut()}>
-          {de ? "Abmelden" : "Sign out"}
-        </Button>
+        <SignOutButton />
       </main>
     );
   }

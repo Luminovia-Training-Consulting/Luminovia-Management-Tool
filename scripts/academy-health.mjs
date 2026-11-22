@@ -316,13 +316,16 @@ export async function monitorAcademy(
     ...ingressServices,
     ...optionalServices,
   ];
-  const topology = records.every(
-    (record) =>
-      expectedServices.includes(record.service) &&
-      record.project === context.project,
-  )
-    ? "recognised"
-    : "ownership_mismatch";
+  // Optional profiles may be stopped, but an observed ownership or network
+  // violation must degrade the whole installation even in those profiles.
+  const topology =
+    records.every(
+      (record) =>
+        expectedServices.includes(record.service) &&
+        record.project === context.project,
+    ) && !Object.values(services).includes("ownership_mismatch")
+      ? "recognised"
+      : "ownership_mismatch";
   let database = {
     state: "unavailable",
     migration_ledger: null,

@@ -201,6 +201,8 @@ The pinned Deno package needs its reviewed postinstall script to copy the platfo
 
 The first start needs Docker image downloads and may take several minutes. The scanner needs additional RAM for signature loading; see the scanner documentation. Ports must be free; the launcher does not kill an unrelated process occupying a port.
 
+Disk-constrained local QA can opt into the smaller images selected by the locked Supabase CLI with `SUPABASE_USE_SLIM_IMAGES=1 ./portal test`. The acceptance JSON records the CLI image profile. The self-hosted compatibility checks use their separately pinned deployment images.
+
 The launcher creates only its own labelled `portal_network_<project>` Docker bridge with `com.docker.network.bridge.host_binding_ipv4=127.0.0.1`, then passes that network explicitly to Supabase startup and Edge Functions. It inspects the effective container port bindings before reporting readiness: PostgreSQL, the API and Mailpit must publish only to loopback; ClamAV publishes no host port. It refuses an unowned network and never changes the Docker daemon configuration. The legacy
 `scripts/local-start.sh` and `scripts/local-functions.sh` both delegate to the same managed launcher. This uses the documented [Docker bridge binding option](https://docs.docker.com/engine/network/drivers/bridge/#default-host-binding-address) and [Supabase CLI network flag](https://supabase.com/docs/reference/cli/introduction#global-flags).
 
@@ -3645,6 +3647,8 @@ A default build uses the Luminovia internal edition. To preview a customer brand
 Use `customer-self-hosted` or `customer-managed`. Keep every raster file adjacent to the JSON. Use PNGs with edges no larger than 2048 × 1024 for the logo, and exact square dimensions matching the icon names (180 px for the Apple touch icon). The build validates the format, sizes and chunk checksums, strips ancillary metadata outside the render allowlist and rejects symlinks and traversal. Use self-assembled brand assets with rights appropriate for the chosen installation.
 
 The build sets the customer logos, browser and PWA metadata, default language and appearance, and the public API title. Customer builds omit vendor brand images. Set the optional `"publicDemo": true` in this brand file to include a customer-branded, fictional `/demo` on that installation. Both managed and self-hosted builds accept this option. Omit it or set it to `false` to leave out the public demo. Change the option for an existing installation with its next signed source release. The course area requires the same configured backend to confirm the installation ID, edition, current licence and exact operator-enabled course profile. The customer API document describes that profile's scoped calls, including material upload and publication. The general customer readiness flag remains false while the full edition is in acceptance.
+
+The public demo uses the signed package's logo, page title and theme. When a visitor opens it from the Academy, the branding provider restores the packaged browser metadata and styles, and the demo makes no branding requests to the live backend.
 
 ### Verify an offline browser package
 

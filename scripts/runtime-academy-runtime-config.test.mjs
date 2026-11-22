@@ -233,6 +233,16 @@ test(
       join(repository, "deploy/hostinger/compose.yml"),
       "utf8",
     );
+    const academy = readFileSync(
+      join(repository, "deploy/academy/compose.override.yml"),
+      "utf8",
+    );
+    // Independently require the explicit reviewed option in source even if
+    // Compose omits the false field when reporting its resolved JSON.
+    assert.match(
+      academy,
+      /- type: bind\s+source: [^\n]+\/api-ingress\.yml\s+target: \/etc\/envoy\/academy-ingress\.yml\s+read_only: true\s+bind: \{ create_host_path: false \}/,
+    );
     for (const identity of [selfHosted, managed]) {
       const root = join(identity.data_directory, "..");
       const privateOnly = compose(root, []);
@@ -335,13 +345,18 @@ test(
         "academy_no_aliases",
       );
       assert.equal(ingress.image, gateway.image);
+      // Compose versions can serialize false bind flags as an empty object.
+      // In every version, a bind that can create the source is rejected here.
       assert.ok(
         ingress.volumes.some(
           (volume) =>
+            volume.type === "bind" &&
             volume.source ===
               join(identity.browser_directory, "api-ingress.yml") &&
+            volume.target === "/etc/envoy/academy-ingress.yml" &&
             volume.read_only === true &&
-            volume.bind.create_host_path === false,
+            volume.bind &&
+            (volume.bind.create_host_path ?? false) === false,
         ),
       );
       assert.ok(

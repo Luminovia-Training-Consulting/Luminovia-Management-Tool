@@ -65,6 +65,7 @@ let localDockerReady = false;
 const cancellation = new AbortController();
 const evidence = {
     version: 1,
+    supabaseImageProfile: env.SUPABASE_USE_SLIM_IMAGES === "1" ? "slim" : "standard",
     // A passed selected phase is not a claim that the other phase ran.
     phase: phase.phase,
     // PR CI may delegate only gates that run independently and are required by
@@ -97,7 +98,7 @@ try {
     delete env.DOCKER_CONTEXT;
     localDockerReady = true;
     console.log(
-        `Isolated test environment ${project}. Phase: ${phase.phase}. Development data remains unchanged.`,
+        `Isolated test environment ${project}. Phase: ${phase.phase}. Supabase CLI image profile: ${evidence.supabaseImageProfile}. Development data remains unchanged.`,
     );
     cpSync(root, scratch, {
         recursive: true,

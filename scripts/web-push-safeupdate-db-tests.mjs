@@ -39,38 +39,10 @@ await withTestDatabase(
                 routine[0].replace("create function", "create or replace function"),
             );
         }
-        // These pinned Supabase images install extensions in the Nix store.
-        // Discover the actual module rather than assuming the CLI/native image
-        // share a safeupdate version, loader alias or store hash.
-        const discovered = await execute("docker", [
-            "exec",
-            container,
-            "find",
-            "/nix/store",
-            "-maxdepth",
-            "3",
-            "-name",
-            "safeupdate*.so",
-            "-type",
-            "f",
-        ]);
-        const libraries = discovered.stdout
-            .trim()
-            .split("\n")
-            .filter(Boolean)
-            .sort();
-        for (const candidate of libraries)
-            assert.match(
-                candidate,
-                /^\/nix\/store\/[A-Za-z0-9_.-]+\/lib\/safeupdate(?:-[0-9.]+)?\.so$/,
-            );
-        const safeupdate = libraries[0];
-        assert.ok(
-            safeupdate,
-            "The actual installed safeupdate hook must exist; it may not be skipped",
-        );
         /** Supabase's operator loads its actual hook before assuming the same service
-         * role as PostgREST. The service identity still faces its original RPC ACLs. */
+         * role as PostgREST. PostgreSQL resolves the installed library via its
+         * own module directory across the standard and slim image layouts.
+         * The transaction still exercises the requested role's original RPC grants. */
         const guarded = async (statement, role = "service_role") => {
             try {
                 const result = await execute("docker", [
@@ -88,7 +60,7 @@ await withTestDatabase(
                     "-v",
                     "VERBOSITY=verbose",
                     "-c",
-                    `load ${q(safeupdate)};set safeupdate.enabled=on;begin;set local role ${role};${statement};commit;`,
+                    `load '$libdir/safeupdate';set safeupdate.enabled=on;begin;set local role ${role};${statement};commit;`,
                 ]);
                 return result.stdout.trim();
             } catch (error) {

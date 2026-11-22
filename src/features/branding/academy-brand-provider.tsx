@@ -27,18 +27,29 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
     [branding.data],
   );
   useEffect(() => {
+    const { style } = document.documentElement;
+    const theme = document.querySelector('meta[name="theme-color"]');
+    const previousTitle = document.title;
+    const previousTheme = theme?.getAttribute("content");
+    const previousStyles = ["--portal-mobile-brand", "--academy-accent"].map(
+      (name) => [
+        name,
+        style.getPropertyValue(name),
+        style.getPropertyPriority(name),
+      ],
+    );
     document.title = brand.name;
-    document.documentElement.style.setProperty(
-      "--portal-mobile-brand",
-      JSON.stringify(brand.shortName),
-    );
-    document.documentElement.style.setProperty(
-      "--academy-accent",
-      brand.themeColor,
-    );
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", brand.themeColor);
+    style.setProperty("--portal-mobile-brand", JSON.stringify(brand.shortName));
+    style.setProperty("--academy-accent", brand.themeColor);
+    theme?.setAttribute("content", brand.themeColor);
+    // The public demo lives outside this provider and uses the signed package styling.
+    return () => {
+      document.title = previousTitle;
+      if (previousTheme == null) theme?.removeAttribute("content");
+      else theme?.setAttribute("content", previousTheme);
+      for (const [name, value, priority] of previousStyles)
+        style.setProperty(name, value, priority);
+    };
   }, [brand]);
   useEffect(() => {
     const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
