@@ -33,6 +33,7 @@ The internal portal and dedicated Academy expose searchable German and English g
 - Reconcile financial reports and exports against the customer settlement and lecturer repayment journals. Implement customer-origin shared proposals and coordinated commercial-term changes with distinct approval and evidence handling.
 - Connect the public Website sender separately and complete notification delivery, exact HTTP contract acceptance, the browser matrix and accessibility acceptance.
 - Coordinate White-Label branding, installer, provider delivery, signed webhooks and customer upgrade/restore with the separate operations task. Retain independent managed and self-hosted acceptance in the White-Label roadmap.
+- Vendor onboarding records now support initial trial and licensed terms, registration of an existing signed licence, trial conversion, renewal and exact envelope export. The customer edition, installation ID and scope stay bound to the approved draft. Commercial fulfilment and the independent target installation remain open in the [White-Label roadmap](../WHITELABEL_ROADMAP.md#wl-06--licence-sales--fulfilment-operations-p1).
 
 ## Academy bootstrap, release packaging and restored CI verification
 

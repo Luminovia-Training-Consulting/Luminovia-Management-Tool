@@ -25,7 +25,9 @@ The product must be **customer branded end to end**, use an authentic course/par
 - A single shared multi-tenant SaaS database as the default. Start with **one installation / isolated data plane per customer**; design shared-tenancy only after an independently reviewed isolation project.
 - Automatic exposure of the Luminovia brokerage business model to the customer or making the customer pay for their own LMS through the **company Premium LMS switch**.
 
-### Source status versus requested behaviour
+### Implementation starting points
+
+This table records the reusable baseline and intended design. Use the current implementation summary and release sequence below to track delivery and acceptance.
 
 | Current repository capability (source observed)                                             | Reusable foundation                          | White-label gap to implement                                                                                                  |
 | ------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |

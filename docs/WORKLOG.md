@@ -1,3 +1,9 @@
+# 22 November 2026 — Academy licence issuance and roadmap reconciliation
+
+The private Academy registry accepts approved initial trial and licensed terms, imports an existing trusted envelope, converts a trial and records renewals. Each action binds to the original approved customer and the exact preceding licence. The issuer uses the established Ed25519 envelope and validator. The registry keeps the review receipt and makes the matching envelope available through an explicit private export. The first action reads the previous draft-only registry without a migration. Hosted fulfilment and commercial approval remain separate steps.
+
+The operator fixtures approved and issued a managed trial, converted it with revised quotas, renewed it on another source revision and checked the exact signed export. The self-hosted fixture verified that concurrent renewals produce one successor and that a file already present is preserved. A third fixture registered an existing licence and confirmed byte-for-byte export. All 45 licence, browser-package and runtime-configuration Node checks passed before integrating the same-revision renewal changes. All 140 Edge runtime tests passed.
+
 # 22 November 2026 — Scoped LMS integrations and full verification
 
 The local scanner now reads the owned configuration through open file handles and atomically replaces its private configuration. Restore manifests and reviewed historical sources are validated and read through the same bounded handle. The migration hash pins are unchanged. A deterministic restore fixture confirmed that a directory-entry change does not redirect the read. The scanner change passed 402 runtime and integration tests. The restore and migration change passed 19 offline checks.
