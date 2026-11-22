@@ -85,7 +85,7 @@ def identity_for(root, identifier, revision):
     }
 
 
-def runtime_configuration(directory, expected):
+def runtime_configuration(directory, expected, *, database_stopped=True):
     for name in RUNTIME_FILES:
         plain(directory / name, stat.S_ISREG, private=True)
     for name in RUNTIME_DIRS:
@@ -141,7 +141,7 @@ def runtime_configuration(directory, expected):
     plain(postgres / "PG_VERSION", stat.S_ISREG)
     if (postgres / "PG_VERSION").read_text(encoding="ascii").strip() != "17":
         fail("unsupported PostgreSQL data format")
-    if optional_exists(postgres / "postmaster.pid"):
+    if database_stopped and optional_exists(postgres / "postmaster.pid"):
         fail("PostgreSQL must be cleanly shut down")
     return edition
 
