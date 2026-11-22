@@ -22,7 +22,7 @@ services:
       driver: json-file
       options: { max-size: "5m", max-file: "2" }
   clamav:
-    image: clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3
+    image: clamav/clamav@sha256:12177441d1b40cef3c47b44c4090d59d4babc4c67bedd5af0fa315e603aa6dd8
     restart: unless-stopped
     environment:
       CLAMD_STARTUP_TIMEOUT: "180"

@@ -10,7 +10,7 @@ import {setTimeout as delay} from "node:timers/promises";
 import {networkName} from "./runtime-network.mjs";
 
 const image =
-    "clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3";
+    "clamav/clamav@sha256:12177441d1b40cef3c47b44c4090d59d4babc4c67bedd5af0fa315e603aa6dd8";
 // Version the owned container configuration so fixes also reach an existing local stack.
 const configVersion = "4";
 const configLabel = "org.luminovia.portal.scanner-config";
