@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import SwaggerUI from "swagger-ui-react";
-import "swagger-ui-react/swagger-ui.css";
+import { SwaggerView } from "./swagger-view";
 import "./explorer.css";
 import { Button } from "../../components/ui/button";
 import { Field, PageHeading } from "../../components/common";
@@ -25,6 +24,10 @@ type ExplorerProperties = {
     brand: InstallationBrand,
   ) => boolean;
 };
+
+const disabledMethods = [] as const;
+const academyMethods = ["get", "post"] as const;
+const portalMethods = ["get", "post", "patch", "put", "delete"] as const;
 
 const methods = new Set([
   "get",
@@ -235,21 +238,16 @@ function ExplorerSession({
         )}
         {/* Remount when disabling requests so responses do not linger in the viewer. */}
         {hasResults && (
-          <SwaggerUI
+          <SwaggerView
             key={String(authorized)}
             spec={spec}
-            filter={false}
-            queryConfigEnabled={false}
-            requestSnippetsEnabled={false}
             supportedSubmitMethods={
               authorized
                 ? academy
-                  ? ["get", "post"]
-                  : ["get", "post", "patch", "put", "delete"]
-                : []
+                  ? academyMethods
+                  : portalMethods
+                : disabledMethods
             }
-            showMutatedRequest={false}
-            persistAuthorization={false}
             requestInterceptor={async (request) => {
               if (!approval || !actor || permit.current !== approval)
                 throw new Error("api_session_required");

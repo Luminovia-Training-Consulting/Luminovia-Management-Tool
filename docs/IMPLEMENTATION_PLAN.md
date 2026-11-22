@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Local dependency installation
+
+- The interactive API explorer uses the pinned standalone Swagger UI renderer in a lazy route. A clean lockfile installation no longer resolves Swagger's legacy React peers or deprecated AbortController dependency. The npm lifecycle policy explicitly denies Scarf and retains the pinned Deno approval. The explorer has its own bundle limit to account for the bundled renderer.
+
 ## Code integrity and workflow cleanup
 
 - Resolve edited times for announcements, global events and course schedules through the shared date utilities. Retain the exact stored instant while its displayed minute and original zone are unchanged.

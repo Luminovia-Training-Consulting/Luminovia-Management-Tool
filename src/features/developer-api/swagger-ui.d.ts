@@ -1,17 +1,27 @@
-declare module "swagger-ui-react" {
-  import type { ComponentType } from "react";
+declare module "swagger-ui-dist/swagger-ui-bundle.js" {
+  type Request = import("./request-boundary").ExplorerRequest;
 
-  const SwaggerUI: ComponentType<{
-    spec: object;
-    filter: boolean;
-    queryConfigEnabled: boolean;
-    requestSnippetsEnabled: boolean;
-    supportedSubmitMethods: string[];
-    showMutatedRequest: boolean;
-    persistAuthorization: boolean;
-    requestInterceptor: (
-      request: import("./requests").ExplorerRequest,
-    ) => Promise<import("./requests").ExplorerRequest>;
-  }>;
-  export default SwaggerUI;
+  export default function SwaggerUI(options: {
+    domNode: HTMLElement;
+    plugins: (() => {
+      wrapComponents: {
+        App: (
+          app: import("react").ComponentType<Record<string, unknown>>,
+          system: { React: typeof import("react") },
+        ) => import("react").ComponentType<Record<string, unknown>>;
+      };
+    })[];
+    validatorUrl: null;
+    queryConfigEnabled: false;
+    requestSnippetsEnabled: false;
+    showMutatedRequest: false;
+    persistAuthorization: false;
+    supportedSubmitMethods: readonly string[];
+    requestInterceptor: (request: Request) => Promise<Request>;
+  }): {
+    specActions: {
+      updateSpec(spec: string): void;
+      updateLoadingStatus(status: "success"): void;
+    };
+  };
 }

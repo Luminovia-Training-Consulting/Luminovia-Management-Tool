@@ -29,8 +29,8 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../../lib/supabase", () => ({
   db: () => ({ auth: { getSession: fake.getSession } }),
 }));
-vi.mock("swagger-ui-react", () => ({
-  default: (props: unknown) => {
+vi.mock("./swagger-view", () => ({
+  SwaggerView: (props: unknown) => {
     fake.swagger(props);
     return <div aria-label="Swagger" />;
   },

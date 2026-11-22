@@ -7,7 +7,8 @@ import ts from "typescript";
 const kib = 1024;
 const budgets = {
   startup: 525 * kib,
-  explorer: 530 * kib,
+  // Swagger's standalone renderer carries its own React runtime.
+  explorer: 570 * kib,
   precache: 4352 * kib,
 };
 const explorerEntries = [

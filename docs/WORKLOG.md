@@ -1,3 +1,9 @@
+# 23 November 2026 — Clean dependency installation for the local portal
+
+The API explorer now mounts the official Swagger UI standalone browser distribution, pinned to 5.35.1. Its React runtime is isolated from the portal's React 19 tree. This drops the legacy direct transitive peer conflicts, the deprecated AbortController polyfill and unused native parser install scripts from the npm tree. The remaining Scarf postinstall is explicitly denied. Deno retains its existing pinned lifecycle approval.
+
+A clean npm 12.2.3 install with Node 26.13.1 completed without warnings. The developer API suite passed 196 cases and the launcher and bundle-budget tests passed eight cases. Six desktop and mobile Chromium journeys passed on the isolated portal, including explicit authorization, successful REST and RPC requests, actor permissions and response cleanup. The internal and both Academy builds passed their limits. The internal explorer measured 555.1 KiB gzip and remains lazy. Its separate limit is 570 KiB to account for the standalone renderer.
+
 # 23 November 2026 — Shared account, RPC and test helpers
 
 Account creation, invitations and role editing now share the active-company query and its actor-scoped cache. Account creation uses the existing request identity hook. Comments and people use the same RPC transport, invoice and credit-note lists share continuation logic, and the job picker uses the shared permission-denial check. The commercial gateway checks reuse the fictional PDF generator and session headers.
