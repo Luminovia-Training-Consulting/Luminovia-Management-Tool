@@ -86,9 +86,6 @@ vi.mock("@tanstack/react-query", async (original) => {
 afterEach(() => {
   cleanup();
   localStorage.removeItem("luminovia.sidebar-collapsed");
-  for (const key of Object.keys(localStorage))
-    if (key.startsWith("portal.role-preview.hidden."))
-      localStorage.removeItem(key);
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
   access.roles = [];
@@ -169,7 +166,6 @@ function setup(
               <Route path="courses" element={<p>Live courses route</p>} />
               <Route path="client" element={<p>Live company route</p>} />
               <Route path="jobs/:id" element={<p>Live job detail route</p>} />
-              <Route path="analytics" element={<p>Live analytics route</p>} />
               <Route path="finance" element={<p>Live finance route</p>} />
               <Route path="learning" element={<p>Live learning route</p>} />
               <Route path="search" element={<NavigationTarget />} />
@@ -297,89 +293,19 @@ it("guest-only navigation exposes own profile/settings/help and no operational c
   ).toBeInTheDocument();
   expect(document.querySelector(".portal-tour")).toBeNull();
 });
-it("previews management views with fictional cards without mounting the live route or changing identity", async () => {
-  access.roles = ["admin"];
-  const { user } = setup("/", false);
-  const mode = await screen.findByRole("combobox", {
-    name: "Navigationsvorschau",
-  });
-  await user.selectOptions(mode, "management");
-  expect(
-    within(screen.getByRole("complementary")).getByRole("link", {
-      name: "Unternehmen",
-    }),
-  ).toHaveAttribute("href", "/clients");
-  await user.selectOptions(mode, "lecturer");
-  await expect(
-    screen.findByRole("heading", { name: "Beispielansicht: Dozent:in" }),
-  ).resolves.toBeVisible();
-  expect(
-    screen.getByText("Fiktiver Unterrichtsplan mit bestätigten Terminen."),
-  ).toBeVisible();
-  expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
-  expect(screen.queryByRole("search")).not.toBeInTheDocument();
-  expect(document.querySelector(".notification-menu")).toBeNull();
-  expect(screen.getByText("Fictional User")).toBeVisible();
-
-  await user.click(
-    within(screen.getByRole("complementary")).getByRole("link", {
-      name: "Meine Kurse",
-    }),
-  );
-  expect(
-    screen.getByRole("heading", { name: "Beispielansicht: Dozent:in" }),
-  ).toBeVisible();
-  expect(screen.getByText(/Aktiver Beispielbereich/)).toBeVisible();
-  expect(screen.queryByText("Live courses route")).not.toBeInTheDocument();
-  expect(access.roles).toEqual(["admin"]);
-
-  await user.selectOptions(mode, "live");
-  expect(await screen.findByText("Live courses route")).toBeVisible();
-});
-
-it("lets administrators customise previews and stops a selected view when role authority changes", async () => {
-  access.roles = ["admin"];
-  const { user, rerender } = setup();
-  const select = screen.getByRole("combobox", { name: "Navigationsvorschau" });
-  await user.selectOptions(select, "lecturer");
-  await user.click(screen.getByLabelText("Ansichten auswählen"));
-  await user.click(screen.getByRole("checkbox", { name: "Dozent:in" }));
-  expect(screen.getByText(/Die Vorschau ist pausiert/)).toBeVisible();
-  expect(screen.queryByText("Private workspace")).toBeNull();
-  expect(
-    within(select).queryByRole("option", { name: "Dozent:in" }),
-  ).toBeNull();
-  await user.selectOptions(select, "participant");
-  expect(
-    screen.getByRole("heading", { name: "Beispielansicht: Teilnehmende" }),
-  ).toBeVisible();
-  expect(
-    within(screen.getByRole("complementary")).queryByRole("link", {
-      name: "Verwaltung",
-    }),
-  ).toBeNull();
-
-  access.roles = ["lecturer"];
-  rerender();
-  expect(screen.getByText(/Die Vorschau ist pausiert/)).toBeVisible();
-  expect(screen.queryByText("Private workspace")).toBeNull();
-  await user.selectOptions(select, "live");
-  expect(screen.getByText("Private workspace")).toBeVisible();
-  expect(
-    screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
-  ).toBeNull();
-});
-
-it("offers management only company and learner previews", () => {
-  access.roles = ["management"];
-  setup();
-  const select = screen.getByRole("combobox", { name: "Navigationsvorschau" });
-  expect(
-    within(select)
-      .getAllByRole("option")
-      .map((option) => option.getAttribute("value")),
-  ).toEqual(["live", "company", "participant"]);
-});
+it.each(["admin", "management"])(
+  "keeps %s on live routes with ordinary header controls",
+  (role) => {
+    access.roles = [role];
+    setup("/courses", false);
+    expect(screen.getByText("Live courses route")).toBeVisible();
+    expect(screen.getByRole("search")).toBeVisible();
+    expect(document.querySelector(".account-menu")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
+    ).toBeNull();
+  },
+);
 
 /** Observe real router transitions; the history action is outside the More disclosure. */
 function NavigationTarget() {
@@ -592,40 +518,4 @@ it("combines enterprise, participant and teaching navigation on one account", ()
     within(sidebar).getByRole("link", { name: "Kursbewertungen" }),
   ).toHaveAttribute("href", "/my-reviews");
   expect(screen.getByText("Live finance route")).toBeVisible();
-});
-
-it("opens synthetic company analytics through the admin navigation preview", async () => {
-  access.roles = ["admin"];
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      disconnect() {}
-    },
-  );
-  const { user } = setup("/", false);
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: "Navigationsvorschau" }),
-    "company",
-  );
-  await user.click(
-    within(screen.getByRole("complementary")).getByRole("link", {
-      name: "Analysen",
-    }),
-  );
-  expect(
-    screen.getByRole("heading", { name: "Unternehmensansicht" }),
-  ).toBeVisible();
-  expect(screen.getByText(/Fiktive Beispieldaten/)).toBeVisible();
-  expect(
-    screen.getByRole("option", { name: "Auftragshonorare" }),
-  ).toBeVisible();
-  expect(
-    screen.queryByRole("option", { name: "Dozentenvergütung" }),
-  ).toBeNull();
-  expect(screen.queryByText("Live analytics route")).toBeNull();
-  expect(
-    document.querySelector('a[href="/demo/analytics?role=client"]'),
-  ).toBeInTheDocument();
-  expect(access.roles).toEqual(["admin"]);
 });

@@ -588,50 +588,6 @@ legend {
   margin: 9px 0 28px;
 }
 
-.role-preview {
-  min-width: 0;
-}
-
-.role-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-  gap: 18px;
-}
-
-.role-preview-card {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  min-width: 0;
-  min-height: 190px;
-}
-
-.role-preview-card-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
-  color: var(--brand);
-}
-
-.role-preview-card-heading h2 {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--ink);
-  font-size: 1.2rem;
-}
-
-.role-preview-card p {
-  margin: 0;
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-
-.role-preview > .button {
-  margin-block-start: 1rem;
-}
-
 .page-heading p {
   color: var(--muted);
   font-size: 14px;
@@ -818,95 +774,6 @@ legend {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.role-preview-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
-}
-
-.role-preview-switch select {
-  max-width: 180px;
-  min-width: 0;
-  padding: 7px 9px;
-}
-
-.role-preview-controls,
-.academy-preview-navigation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.role-preview-options {
-  position: relative;
-}
-
-.role-preview-options summary {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: 0.65rem;
-  color: var(--ink);
-  cursor: pointer;
-  list-style: none;
-}
-
-.role-preview-options summary::-webkit-details-marker {
-  display: none;
-}
-
-.role-preview-options summary:hover,
-.role-preview-options[open] summary {
-  background: var(--blue-soft);
-}
-
-.role-preview-options fieldset {
-  position: absolute;
-  z-index: 10;
-  inset-inline-end: 0;
-  min-inline-size: min(13rem, 55vw);
-  width: max-content;
-  max-inline-size: 55vw;
-  margin: 0;
-  padding: 0.65rem;
-  border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.role-preview-options legend {
-  padding-inline: 0.3rem;
-  background: var(--surface);
-  font-weight: 650;
-}
-
-.role-preview-options label {
-  min-block-size: 44px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.role-preview-options input {
-  inline-size: 1rem;
-  block-size: 1rem;
-  flex: none;
-}
-
-.role-preview-identity {
-  max-inline-size: 12rem;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .preferences {
@@ -1944,10 +1811,6 @@ legend {
 
   .topbar-actions {
     gap: 2px;
-  }
-
-  .role-preview-identity {
-    display: none;
   }
 
   .topbar-actions .preferences select {
@@ -3703,27 +3566,6 @@ tr + tr td {
   overflow: auto;
 }
 
-@media (max-width: 1000px) {
-  .role-preview-switch > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .role-preview-switch select {
-    max-width: 112px;
-    min-height: 44px;
-    padding: 5px;
-    font-size: 10px;
-  }
-}
-
 @media (max-width: 1000px) and (min-width: 761px) {
   .topbar {
     gap: 10px;
@@ -3765,33 +3607,13 @@ tr + tr td {
     gap: 8px;
   }
 
-  .topbar-actions:has(> .role-preview-controls) {
-    flex-wrap: wrap;
-  }
-
-  .role-preview-options {
-    position: static;
-  }
-
-  .role-preview-options fieldset {
-    inset-block-start: 100%;
-    inset-inline: 0.75rem;
-    width: auto;
-    max-inline-size: none;
-  }
-
   .topbar-actions > :is(.account-menu, .mobile-more, .notification-menu) {
     position: static;
   }
 
   /* A wrapped toolbar and its search row form one anchor for every panel. */
   .topbar-actions > .notification-menu > .notification-popover,
-  .topbar
-    :is(
-      .account-menu-panel,
-      .mobile-menu-panel,
-      .role-preview-options > fieldset
-    ) {
+  .topbar :is(.account-menu-panel, .mobile-menu-panel) {
     position: absolute;
     inset: calc(100% + 0.375rem) 0.75rem auto;
     inline-size: auto;

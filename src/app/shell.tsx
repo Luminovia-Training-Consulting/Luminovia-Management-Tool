@@ -38,16 +38,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
-import {
-  RolePreview,
-  RolePreviewControls,
-  RolePreviewUnavailable,
-} from "./role-preview";
-import {
-  availableRolePreviews,
-  type PreviewRole,
-  useRolePreview,
-} from "./role-preview-state";
 import { PortalNavigation } from "../components/portal-navigation";
 import { useDismissibleDisclosure } from "../components/use-dismissible-disclosure";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
@@ -189,10 +179,9 @@ export function Shell() {
         // Keep the current shell usable when browser storage is unavailable.
       }
       setUiSaveFailed(false);
-      if (!previewActive)
-        void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
-          setUiSaveFailed(true),
-        );
+      void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
+        setUiSaveFailed(true),
+      );
       return next;
     });
   }
@@ -223,22 +212,6 @@ export function Shell() {
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
   );
-  const confirmedRoles =
-    online && profile.isSuccess && profile.data?.active && roles.isSuccess
-      ? roles.data
-      : [];
-  const previews = useRolePreview(
-    actor,
-    availableRolePreviews(
-      confirmedRoles?.some((role) => role === "owner" || role === "admin")
-        ? "administrator"
-        : confirmedRoles?.includes("management")
-          ? "management"
-          : null,
-    ),
-  );
-  const previewActive = previews.requested !== null;
-  const previewMode = previews.current;
   const navigation = participantOnly
     ? [
         { to: "/learning", icon: GraduationCap, label: "myCourses" },
@@ -315,64 +288,6 @@ export function Shell() {
           { to: "/settings", icon: Settings2, label: "settings" },
           { to: "/profile", icon: UserRound, label: "profile" },
         ];
-  const previewNavigation = {
-    management: [
-      { to: "/", icon: Home, label: "home" },
-      { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
-      { to: "/calendar", icon: CalendarDays, label: "calendar" },
-      analyticsNavItem,
-      { to: "/courses", icon: GraduationCap, label: "coursesManage" },
-      { to: "/clients", icon: Building2, label: "companies" },
-      { to: "/people", icon: Users, label: "staffDirectory" },
-      { to: "/chats", icon: MessagesSquare, label: "communication" },
-      { to: "/files", icon: FolderOpen, label: "files" },
-      { to: "/contracts", icon: FileCheck2, label: "contracts" },
-      { to: "/finance", icon: Wallet, label: "finance" },
-      { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
-      { to: "/topics", icon: BookOpen, label: "topics" },
-      { to: "/settings", icon: Settings2, label: "settings" },
-      { to: "/profile", icon: UserRound, label: "profile" },
-    ],
-    lecturer: [
-      { to: "/", icon: Home, label: "home" },
-      { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
-      { to: "/calendar", icon: CalendarDays, label: "calendar" },
-      analyticsNavItem,
-      { to: "/courses", icon: GraduationCap, label: "myCourses" },
-      { to: "/chats", icon: MessagesSquare, label: "communication" },
-      { to: "/files", icon: FolderOpen, label: "files" },
-      { to: "/contracts", icon: FileCheck2, label: "contracts" },
-      { to: "/finance", icon: Wallet, label: "finance" },
-      { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
-      { to: "/topics", icon: BookOpen, label: "topics" },
-      { to: "/settings", icon: Settings2, label: "settings" },
-      { to: "/profile", icon: UserRound, label: "profile" },
-    ],
-    company: [
-      { to: "/", icon: Home, label: "home" },
-      { to: "/calendar", icon: CalendarDays, label: "calendar" },
-      analyticsNavItem,
-      { to: "/courses", icon: GraduationCap, label: "clientCourses" },
-      { to: "/client", icon: Building2, label: "clientPortal" },
-      { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
-      { to: "/chats", icon: MessagesSquare, label: "communication" },
-      { to: "/files", icon: FolderOpen, label: "files" },
-      { to: "/settings", icon: Settings2, label: "settings" },
-      { to: "/profile", icon: UserRound, label: "profile" },
-    ],
-    participant: [
-      { to: "/learning", icon: GraduationCap, label: "myCourses" },
-      { to: "/my-reviews", icon: FileCheck2, label: "myReviews" },
-      { to: "/notifications", icon: Bell, label: "notifications" },
-      { to: "/profile", icon: UserRound, label: "profile" },
-    ],
-  } satisfies Record<PreviewRole, typeof navigation>;
-  const visibleNavigation = previewMode
-    ? previewNavigation[previewMode]
-    : previewActive
-      ? []
-      : navigation;
-
   /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
   function showRailTooltip(label: string, element: HTMLElement) {
     if (!collapsed) return;
@@ -386,40 +301,21 @@ export function Shell() {
 
   // Paused role reads cannot replace the existing actor-scoped offline schedule
   // fallback or conceal a profile already known to be inactive/missing.
-  if (
-    !previewActive &&
-    online &&
-    !profileDenied &&
-    !profile.isError &&
-    roles.isPending
-  )
+  if (online && !profileDenied && !profile.isError && roles.isPending)
     return <Loading />;
-  if (
-    !previewActive &&
-    online &&
-    !profileDenied &&
-    !profile.isError &&
-    roles.isError
-  )
+  if (online && !profileDenied && !profile.isError && roles.isError)
     return <ErrorState retry={() => void roles.refetch()} />;
-  if (!previewActive && guestOnly && !guestRouteAllowed(location.pathname))
+  if (guestOnly && !guestRouteAllowed(location.pathname))
     return <Navigate to="/profile" replace />;
   // Keep standalone learners out of operational page loaders, including on direct links.
   if (
-    !previewActive &&
     participantOnly &&
     !/^\/(?:learning|my-reviews|notifications|profile|api\/docs|auth\/password|courses\/[^/]+\/workspace)\/?$/.test(
       location.pathname,
     )
   )
     return <Navigate to="/learning" replace />;
-  if (
-    !previewActive &&
-    online &&
-    !profileDenied &&
-    !profile.isError &&
-    !limitedAccount
-  ) {
+  if (online && !profileDenied && !profile.isError && !limitedAccount) {
     if (
       !staff &&
       /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
@@ -496,7 +392,7 @@ export function Shell() {
           <span>{t(collapsed ? "expand" : "collapse")}</span>
         </Button>
         <PortalNavigation
-          items={visibleNavigation.filter(
+          items={navigation.filter(
             ({ to }) => guestOnly || !["/settings", "/profile"].includes(to),
           )}
           ariaLabel={t("menu")}
@@ -538,7 +434,7 @@ export function Shell() {
       </aside>
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
-          {!limitedAccount && !previewActive && (
+          {!limitedAccount && (
             <form
               className="global-search header-global-search"
               role="search"
@@ -560,60 +456,51 @@ export function Shell() {
             </form>
           )}
           <div className="topbar-actions">
-            <RolePreviewControls state={previews} />
-            {profile.data?.active && online && !guestOnly && !previewActive && (
+            {profile.data?.active && online && !guestOnly && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
-            <Preferences
-              onSave={previewActive ? undefined : saveUiPreferences}
-            />
-            {previewActive ? (
-              <span className="role-preview-identity">
-                {profile.data?.display_name}
-              </span>
-            ) : (
-              <details className="account-menu" {...accountDisclosure}>
-                <summary title={t("profile")}>
-                  {limitedAccount ? (
-                    <span
-                      className="profile-avatar profile-avatar-small"
-                      aria-hidden="true"
-                    >
-                      {profile.data?.display_name?.slice(0, 1) || "G"}
-                    </span>
-                  ) : (
-                    <Avatar
-                      userId={actor}
-                      name={profile.data?.display_name ?? ""}
-                      decorative
-                    />
-                  )}
-                  <span className="account-menu-label">
-                    <span
-                      className="account-menu-name"
-                      title={profile.data?.display_name}
-                    >
-                      {profile.data?.display_name}
-                    </span>
-                    <small>{t("profile")}</small>
-                  </span>
-                  <span aria-hidden="true">⌄</span>
-                </summary>
-                <div className="account-menu-panel">
-                  <NavLink to="/profile">{t("profile")}</NavLink>
-                  {!participantOnly && (
-                    <NavLink to="/settings">{t("settings")}</NavLink>
-                  )}
-                  <button
-                    type="button"
-                    disabled={signoutPending}
-                    onClick={() => void logout()}
+            <Preferences onSave={saveUiPreferences} />
+            <details className="account-menu" {...accountDisclosure}>
+              <summary title={t("profile")}>
+                {limitedAccount ? (
+                  <span
+                    className="profile-avatar profile-avatar-small"
+                    aria-hidden="true"
                   >
-                    {t("logout")}
-                  </button>
-                </div>
-              </details>
-            )}
+                    {profile.data?.display_name?.slice(0, 1) || "G"}
+                  </span>
+                ) : (
+                  <Avatar
+                    userId={actor}
+                    name={profile.data?.display_name ?? ""}
+                    decorative
+                  />
+                )}
+                <span className="account-menu-label">
+                  <span
+                    className="account-menu-name"
+                    title={profile.data?.display_name}
+                  >
+                    {profile.data?.display_name}
+                  </span>
+                  <small>{t("profile")}</small>
+                </span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
+              <div className="account-menu-panel">
+                <NavLink to="/profile">{t("profile")}</NavLink>
+                {!participantOnly && (
+                  <NavLink to="/settings">{t("settings")}</NavLink>
+                )}
+                <button
+                  type="button"
+                  disabled={signoutPending}
+                  onClick={() => void logout()}
+                >
+                  {t("logout")}
+                </button>
+              </div>
+            </details>
             <Button
               variant="ghost"
               className="mobile-signout"
@@ -633,7 +520,7 @@ export function Shell() {
               <div className="mobile-menu-panel">
                 <PortalNavigation
                   id="mobile-shell-navigation"
-                  items={visibleNavigation}
+                  items={navigation}
                   ariaLabel={t("menu")}
                   renderLabel={t}
                   onItemClick={() => closeMobileMore(true)}
@@ -647,13 +534,7 @@ export function Shell() {
           {uiSaveFailed && (
             <Notice kind="error">{t("uiPreferenceNotSaved")}</Notice>
           )}
-          {previewActive ? (
-            previewMode ? (
-              <RolePreview role={previewMode} path={location.pathname} />
-            ) : (
-              <RolePreviewUnavailable />
-            )
-          ) : profileDenied ? (
+          {profileDenied ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : minimalOffline ? (
             <>

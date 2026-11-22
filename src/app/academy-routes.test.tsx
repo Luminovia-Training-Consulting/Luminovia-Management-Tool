@@ -645,10 +645,13 @@ it("opens the course hub without activating the full edition and reuses scoped a
   expect(screen.queryByRole("button", { name: /unshare/i })).toBeNull();
   const chatPicker = screen.getByLabelText("Attach file");
   const materialPicker = screen.getByLabelText("Choose file");
+  const participantImportPicker = screen.getByLabelText("CSV or XLSX file");
+  expect(participantImportPicker).toHaveAttribute("accept", ".csv,.xlsx");
   expect(chatPicker).toBeVisible();
   expect(materialPicker).toBeVisible();
   expect([...document.querySelectorAll('input[type="file"]')]).toEqual([
     materialPicker,
+    participantImportPicker,
     chatPicker,
   ]);
   expect(fake.from).not.toHaveBeenCalled();
@@ -1076,53 +1079,20 @@ it("does not show administration or its navigation link to a learner", async () 
   ).toBeNull();
 });
 
-it("opens scoped fictional academy previews and restores the same live course", async () => {
-  fake.administration = true;
-  open(`/courses/${id}/workspace`);
-  expect(await screen.findByText("Protected course briefing")).toBeVisible();
-  const select = await screen.findByRole("combobox", {
-    name: "Navigation preview",
-  });
-  await userEvent.selectOptions(select, "lecturer");
-  expect(
-    screen.getByRole("heading", { name: "Sample view: Lecturer" }),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("heading", { name: "Course materials and attendance" }),
-  ).toBeVisible();
-  expect(screen.queryByText("Protected course briefing")).toBeNull();
-  expect(
-    screen.queryByRole("heading", { name: "Earnings overview" }),
-  ).toBeNull();
-  await userEvent.selectOptions(select, "participant");
-  expect(
-    screen.getByRole("heading", { name: "Sample view: Participant" }),
-  ).toBeVisible();
-  expect(
-    screen.queryByRole("link", { name: "Academy administration" }),
-  ).toBeNull();
-  await userEvent.selectOptions(select, "live");
-  expect(await screen.findByText("Protected course briefing")).toBeVisible();
-});
-
-it("uses local authority and active licence for the academy preview list", async () => {
-  fake.administration = "management";
-  const view = open("/learning");
-  const select = await screen.findByRole("combobox", {
-    name: "Navigation preview",
-  });
-  expect(
-    within(select)
-      .getAllByRole("option")
-      .map((option) => option.getAttribute("value")),
-  ).toEqual(["live", "company", "participant"]);
-  fake.administration = false;
-  await userEvent.selectOptions(select, "company");
-  await act(async () =>
-    view.client.invalidateQueries({ queryKey: ["academy-administration"] }),
-  );
-  expect(await screen.findByText(/Your preview is paused/)).toBeVisible();
-});
+it.each([true, "management"] as const)(
+  "keeps authorised Academy staff in the live course workspace (%s)",
+  async (authority) => {
+    fake.administration = authority;
+    open(`/courses/${id}/workspace`);
+    expect(await screen.findByText("Protected course briefing")).toBeVisible();
+    expect(
+      await screen.findByRole("link", { name: "Academy administration" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Navigation preview" }),
+    ).toBeNull();
+  },
+);
 
 it("keeps the public academy demo disabled unless its build opted in", async () => {
   fake.actor = null;

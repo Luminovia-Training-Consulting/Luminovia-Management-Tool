@@ -34,7 +34,6 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
     const language = header.getByLabel(/^(Sprache|Language)$/);
     const theme = header.getByLabel(/^(Farbschema|Theme)$/);
     const account = header.locator(".account-menu");
-    const preview = header.locator(".role-preview-options");
     const more = header.locator(".mobile-more");
     const bell = header.locator(".notification-menu");
 
@@ -58,13 +57,11 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
       await expect(accountTrigger).toBeFocused();
       await expect(account).toHaveJSProperty("open", false);
 
-      const previewTrigger = preview.locator("summary");
-      await previewTrigger.click();
-      await expectInsideViewport(preview.locator("fieldset"));
-      await preview.getByRole("checkbox").first().focus();
-      await page.keyboard.press("Escape");
-      await expect(previewTrigger).toBeFocused();
-      await expect(preview).toHaveJSProperty("open", false);
+      await expect(
+        header.getByRole("combobox", {
+          name: /^(Navigationsvorschau|Navigation preview)$/,
+        }),
+      ).toHaveCount(0);
 
       await bell.locator("summary").click();
       await expectInsideViewport(bell.locator(".notification-popover"));

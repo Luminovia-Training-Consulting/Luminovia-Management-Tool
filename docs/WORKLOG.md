@@ -1,3 +1,7 @@
+# 23 November 2026 — Signed-in navigation follows account permissions
+
+Removed the signed-in navigation preview from the internal portal and both Academy editions, including its role switch, browser preference handling, sample pages, styles and translations. The public demo remains the place to explore fictional roles and sample analytics. Portal and Academy tests cover the real staff routes and ordinary header controls. All 1,543 Vitest cases and 26 guided demo and help journeys passed in desktop and mobile Chromium. The internal and both Academy builds passed the bundle budgets. The Academy workspace test includes the participant CSV/XLSX picker introduced on the updated base.
+
 # 23 November 2026 — CSV and XLSX data import templates
 
 The internal company directory and contacts, course templates and draft sessions, eligible course enrolments, taxonomy and personal calendar now offer data-specific CSV and XLSX templates and a local preview before saving. Attendance has equivalent roster templates in both formats. The bounded workbook reader is shared and keeps formula evaluation disabled. Directory imports use the existing scoped create operations and report partial progress; calendar and attendance keep their atomic batch operations. TypeScript, targeted lint, a production build and all 58 focused tests passed.

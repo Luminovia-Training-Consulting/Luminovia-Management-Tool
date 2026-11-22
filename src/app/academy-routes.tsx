@@ -42,12 +42,6 @@ import { useOnline } from "../lib/online";
 import { isConfigured } from "../lib/supabase";
 import { publicDemoEnabled } from "../lib/installation-brand";
 import {
-  RolePreview,
-  RolePreviewControls,
-  RolePreviewUnavailable,
-} from "./role-preview";
-import { availableRolePreviews, useRolePreview } from "./role-preview-state";
-import {
   hasLearningAnalytics,
   learningAnalyticsAccessQuery,
 } from "../features/analytics/learning-api";
@@ -171,7 +165,6 @@ function AcademyWorkspaceFrame({
 }) {
   const brand = useAcademyBrand();
   const online = useOnline();
-  const { pathname } = useLocation();
   const { t, i18n } = useTranslation();
   const administration = useQuery({
     ...academyAdministrationQuery(actor),
@@ -186,16 +179,6 @@ function AcademyWorkspaceFrame({
     online && administration.isFetchedAfterMount && administration.isSuccess
       ? administration.data
       : null;
-  const previews = useRolePreview(
-    actor,
-    availableRolePreviews(
-      access === "active" && authority?.can_write
-        ? authority.can_create_management
-          ? "administrator"
-          : "management"
-        : null,
-    ),
-  );
   return (
     <>
       <a href="#academy-main" className="skip-link">
@@ -207,79 +190,42 @@ function AcademyWorkspaceFrame({
           <span>{brand.name}</span>
         </Link>
         <div className="academy-header-actions">
-          <RolePreviewControls state={previews} />
-          {previews.requested ? (
-            previews.current && (
-              <nav
-                className="academy-preview-navigation"
-                aria-label={t("viewPreview")}
-              >
-                <Button asChild variant="secondary">
-                  <Link to="/learning">{t("myCourses")}</Link>
-                </Button>
-                <AcademyTimetableLink />
-                {previews.current === "management" && (
-                  <Button asChild variant="secondary">
-                    <Link to="/administration">
-                      {t("academyAdministration")}
-                    </Link>
-                  </Button>
-                )}
-                <Button asChild variant="secondary">
-                  <Link to="/notifications">{t("notifications")}</Link>
-                </Button>
-              </nav>
-            )
-          ) : (
-            <>
-              <AcademyTimetableLink />
-              {online &&
-                learningAnalytics.isSuccess &&
-                hasLearningAnalytics(learningAnalytics.data) && (
-                  <Button variant="secondary" asChild>
-                    <Link to="/analytics/learning">
-                      {t("learningAnalytics:title")}
-                    </Link>
-                  </Button>
-                )}
-              {authority && (
-                <Button variant="secondary" asChild>
-                  <Link to="/administration">{t("academyAdministration")}</Link>
-                </Button>
-              )}
-              <NotificationsMenu
-                id={actor}
-                zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-                academy={access}
-              />
-              <Button asChild variant="secondary">
-                <Link to="/settings">{t("academySettings")}</Link>
+          <AcademyTimetableLink />
+          {online &&
+            learningAnalytics.isSuccess &&
+            hasLearningAnalytics(learningAnalytics.data) && (
+              <Button variant="secondary" asChild>
+                <Link to="/analytics/learning">
+                  {t("learningAnalytics:title")}
+                </Link>
               </Button>
-              <AcademyAppearancePreferences actor={actor} access={access} />
-            </>
+            )}
+          {authority && (
+            <Button variant="secondary" asChild>
+              <Link to="/administration">{t("academyAdministration")}</Link>
+            </Button>
           )}
+          <NotificationsMenu
+            id={actor}
+            zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
+            academy={access}
+          />
+          <Button asChild variant="secondary">
+            <Link to="/settings">{t("academySettings")}</Link>
+          </Button>
+          <AcademyAppearancePreferences actor={actor} access={access} />
           <SignOutButton variant="secondary" />
         </div>
       </header>
       <main id="academy-main" className="academy-main" tabIndex={-1}>
-        {previews.requested ? (
-          previews.current ? (
-            <RolePreview academy role={previews.current} path={pathname} />
-          ) : (
-            <RolePreviewUnavailable />
-          )
-        ) : (
-          <>
-            {access === "grace" && (
-              <Notice>
-                {i18n.language.startsWith("de")
-                  ? "Während der Lizenz-Kulanzfrist ist der Kursbereich schreibgeschützt."
-                  : "Course workspaces are read-only during the licence grace period."}
-              </Notice>
-            )}
-            <Outlet context={access} />
-          </>
+        {access === "grace" && (
+          <Notice>
+            {i18n.language.startsWith("de")
+              ? "Während der Lizenz-Kulanzfrist ist der Kursbereich schreibgeschützt."
+              : "Course workspaces are read-only during the licence grace period."}
+          </Notice>
         )}
+        <Outlet context={access} />
       </main>
     </>
   );

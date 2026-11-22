@@ -284,12 +284,12 @@ const academyGuides: GuideModule[] = [
       de: [
         "Der Betreiber richtet das Kursprofil der Installation für die passende Lizenz und den installierten Versionsstand ein.",
         "Prüfe in der Akademieverwaltung die Lizenz und die verfügbaren Kontoplätze. Lege Konten, Rollen und Organisationseinheiten fest. In der Akademie gibt es keinen separaten Premium-Schalter pro Unternehmen.",
-        "Prüfe den Zugriff im vorgesehenen Konto und für den richtigen Kurs. Die Rollenvorschau zeigt Beispieldaten. Reale Aktionen richten sich nach dem Konto und seiner Kurszuordnung.",
+        "Prüfe den Zugriff im vorgesehenen Konto und für den richtigen Kurs. Die Kontorolle und die Kurszuordnung bestimmen die verfügbaren Aktionen.",
       ],
       en: [
         "The operator sets up the installation's course profile for the matching licence and installed release.",
         "Check the licence and available seats in Academy administration. Assign accounts, roles and organisational units. The academy does not have a separate per-company Premium switch.",
-        "Check access using the intended account and course. Role previews use sample data. Real actions follow the account and its course assignment.",
+        "Check access using the intended account and course. The account role and its course assignment determine the available actions.",
       ],
     },
     problem: {
