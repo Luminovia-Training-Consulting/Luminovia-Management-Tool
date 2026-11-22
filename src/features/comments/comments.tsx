@@ -3,6 +3,7 @@
  * context separately; access errors must not present retained comments as still authorized.
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { callRpc } from "../../lib/rpc";
 import { orderedCursorRows } from "../../lib/cursor-rows";
 import { useId, useRef, useState } from "react";
 import {
@@ -24,7 +25,6 @@ import {
   commentError,
   commentKeys,
   type CommentResource,
-  commentRpc,
   type ResourceComment,
   resourceCommentsQuery,
 } from "./api";
@@ -56,18 +56,18 @@ function CommentEntry({
     mutationFn: async () => {
       requireOnline();
       if (action === "edit") {
-        await commentRpc("edit_resource_comment", {
+        await callRpc("edit_resource_comment", {
           p_comment_id: snapshot.id,
           p_body: text,
           p_version: snapshot.version,
         });
       } else if (action === "withdraw") {
-        await commentRpc("withdraw_resource_comment", {
+        await callRpc("withdraw_resource_comment", {
           p_comment_id: snapshot.id,
           p_version: snapshot.version,
         });
       } else if (action === "moderate") {
-        await commentRpc("moderate_resource_comment", {
+        await callRpc("moderate_resource_comment", {
           p_comment_id: snapshot.id,
           p_hidden: !snapshot.hidden,
           p_reason: reason,
@@ -264,7 +264,7 @@ function CommentThread({
       if (!text.trim()) throw new Error("comment_required");
       if (!retry.current || retry.current.text !== text)
         retry.current = { text, key: crypto.randomUUID() };
-      return await commentRpc<string>("add_resource_comment", {
+      return await callRpc<string>("add_resource_comment", {
         p_kind: kind,
         p_id: resourceId,
         p_body: text,

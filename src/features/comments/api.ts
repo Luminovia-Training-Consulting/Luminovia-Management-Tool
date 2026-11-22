@@ -4,7 +4,7 @@
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { db } from "../../lib/supabase";
+import { callRpc } from "../../lib/rpc";
 
 /** The two explicitly supported comment resource types. */
 export type CommentResource = "job" | "template";
@@ -44,16 +44,6 @@ export const commentKeys = {
     ["resource-comments", actor, kind, id] as const,
 };
 
-/** Call a comment RPC with the native session and propagate PostgreSQL errors unchanged. */
-export async function commentRpc<T>(
-  name: string,
-  parameters: Record<string, unknown>,
-): Promise<T> {
-  const { data, error } = await db().rpc(name, parameters);
-  if (error) throw error;
-  return data as T;
-}
-
 /** Load current permissions for this resource and do not automatically retry access denial. */
 export const commentContextQuery = (
   actor: string,
@@ -63,7 +53,7 @@ export const commentContextQuery = (
   queryOptions({
     queryKey: commentKeys.context(actor, kind, id),
     queryFn: () =>
-      commentRpc<CommentContext>("comment_context", { p_kind: kind, p_id: id }),
+      callRpc<CommentContext>("comment_context", { p_kind: kind, p_id: id }),
     retry: (count, error) => !isDatabasePermissionDenied(error) && count < 2,
     refetchInterval: 15000,
   });
@@ -77,7 +67,7 @@ export const resourceCommentsQuery = (
     queryKey: commentKeys.list(actor, kind, id),
     initialPageParam: null as CommentCursor | null,
     queryFn: ({ pageParam }) =>
-      commentRpc<ResourceComment[]>("resource_comments", {
+      callRpc<ResourceComment[]>("resource_comments", {
         p_kind: kind,
         p_id: id,
         p_before_at: pageParam?.at ?? null,

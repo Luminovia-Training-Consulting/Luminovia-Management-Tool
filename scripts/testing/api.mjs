@@ -18,6 +18,16 @@ async function checked(request, label = "API operation") {
     return data;
 }
 
+/** Use the current fictional actor session for an authenticated gateway request. */
+export async function testActorHeaders(actor, origin) {
+    const data = await checked(actor.client.auth.getSession(), "Read local session");
+    return {
+        Origin: origin,
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${data.session.access_token}`,
+    };
+}
+
 /** Checks test mode, random project and API port before mutation, separating assertion failures from cleanup errors. */
 export async function withApiFixture(run) {
     assert.equal(

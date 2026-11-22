@@ -1,3 +1,11 @@
+# 23 November 2026 — Shared account, RPC and test helpers
+
+Account creation, invitations and role editing now share the active-company query and its actor-scoped cache. Account creation uses the existing request identity hook. Comments and people use the same RPC transport, invoice and credit-note lists share continuation logic, and the job picker uses the shared permission-denial check. The commercial gateway checks reuse the fictional PDF generator and session headers.
+
+The earlier Portal checks run stopped on stale Academy fixtures. The branded catalogue check is current on main. The Academy instructor suite now covers both reporting RPCs, with additional checks for the published response schemas in the dedicated analytics fixture. The commission gateway test now compares the captured offer policy with the configured or default policy and still checks the separate individual quotes.
+
+The source integrity scan covered 491 modules with no unreachable callable or unused runtime export. TypeScript, ESLint, formatting, the production build and its budgets, 1,557 frontend tests and 12 integrity regressions passed. Live commercial and commission checks passed with local Auth, REST and ClamAV.
+
 # 23 November 2026 — Academy analytics response coverage
 
 The Academy instructor fixture now calls both LMS analytics operations as an authorized administrator. It validates their live PostgreSQL responses against the edition's OpenAPI schema and keeps the exhaustive operation coverage assertion.

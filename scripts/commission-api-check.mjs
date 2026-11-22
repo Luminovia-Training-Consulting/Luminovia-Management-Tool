@@ -8,6 +8,8 @@ import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
 import {createClient} from "@supabase/supabase-js";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {accountingTestPdf} from "./testing/accounting-pdf.mjs";
+import {testActorHeaders} from "./testing/api.mjs";
 
 if (process.env.PORTAL_TEST_MODE !== "1")
     throw new Error("Commission API mutations require isolated ./portal test.");
@@ -116,47 +118,6 @@ const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
     topic_ids: [],
 });
 
-/** Creates synthetic PDF bytes for the real file-validation path without personal source documents. */
-function pdf(label) {
-    const objects = [
-        "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 100] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-        null,
-        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    ];
-    const stream = `BT /F1 9 Tf 10 50 Td (${label}) Tj ET`;
-    objects[3] = `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`;
-    let body = "%PDF-1.4\n";
-    const offsets = [0];
-    for (const [index, object] of objects.entries()) {
-        offsets.push(Buffer.byteLength(body));
-        body += `${index + 1} 0 obj\n${object}\nendobj\n`;
-    }
-    const xref = Buffer.byteLength(body);
-    body +=
-        `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n` +
-        offsets
-            .slice(1)
-            .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
-            .join("") +
-        `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-    return new TextEncoder().encode(body);
-}
-
-/** Reads the test actor's current session token for actual authenticated gateway requests. */
-async function headers(actor) {
-    const data = await checked(
-        actor.client.auth.getSession(),
-        "Read local session",
-    );
-    return {
-        Origin: origin,
-        apikey: process.env.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${data.session.access_token}`,
-    };
-}
-
 /** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
 async function upload(actor, bytes, kind, owner, replace, expectedStatus = 200) {
     const form = new FormData();
@@ -171,7 +132,7 @@ async function upload(actor, bytes, kind, owner, replace, expectedStatus = 200) 
     if (replace) form.set("replace_id", replace);
     const response = await fetch(`${url}/functions/v1/files`, {
         method: "POST",
-        headers: await headers(actor),
+        headers: await testActorHeaders(actor, origin),
         body: form,
         signal: AbortSignal.timeout(90000),
     });
@@ -416,6 +377,10 @@ try {
         ).error,
         "Client cannot set lecturer offer/commission",
     );
+    const defaultPolicy = await checked(
+        admin.client.rpc("commission_access"),
+        "Read the configured default offer policy before publication",
+    );
     const job = await checked(
         admin.client.rpc("publish_client_request", {
             p_request_id: request,
@@ -457,8 +422,11 @@ try {
         admin.client.rpc("commission_offer_policy", {p_job_id: job}),
         "Captured administrative offer policy",
     );
-    assert.equal(adminPolicy.regular_lecturer_percent, 31);
-    assert.equal(adminPolicy.senior_lecturer_percent, 73);
+    assert.deepEqual(adminPolicy, {
+        regular_lecturer_percent: defaultPolicy.regular_lecturer_percent ?? 50,
+        senior_lecturer_percent: defaultPolicy.senior_lecturer_percent ?? 50,
+        policy_version: defaultPolicy.policy_version || 1,
+    });
     for (const who of [management, lecturer, senior, client, other]) {
         const privateAccess = await checked(
             who.client.rpc("commission_access"),
@@ -610,7 +578,7 @@ try {
     );
     const invoiceDoc = await upload(
         winner,
-        pdf("Fictional net-fee invoice - QA only."),
+        accountingTestPdf("Fictional net-fee invoice - QA only."),
         "invoice",
     );
     const issued = new Date().toISOString().slice(0, 10),
@@ -706,7 +674,7 @@ try {
             p_idempotency_key: randomUUID(),
             p_terms_version: 1,
         });
-    const roleBoundaryPdf = pdf("Fictional role boundary invoice");
+    const roleBoundaryPdf = accountingTestPdf("Fictional role boundary invoice");
     for (const [role, actor] of [
         ["owner", owner],
         ["admin", admin],

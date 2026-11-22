@@ -15,6 +15,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
   accountRequest,
+  accountOrganisationsQuery,
   accountRoleCatalogQuery,
   accountRoles,
 } from "../accounts/api";
@@ -111,17 +112,8 @@ export function InviteForm({
     ) ?? [];
   const accountText = useTranslation("accounts").t;
   const organisations = useQuery({
-    queryKey: ["invite-organisations", actor],
+    ...accountOrganisationsQuery(actor),
     enabled: allRoles && canLinkOrganisations,
-    queryFn: async () => {
-      const result = await db()
-        .from("organisations")
-        .select("id,name")
-        .is("archived_at", null)
-        .order("name");
-      if (result.error) throw result.error;
-      return result.data as { id: string; name: string }[];
-    },
   });
   const online = useOnline();
   const retry = useRequestKey();

@@ -3,7 +3,7 @@
  * profiles remain separate; target person IDs are not proof of permission.
  */
 import { queryOptions } from "@tanstack/react-query";
-import { db } from "../../lib/supabase";
+import { callRpc } from "../../lib/rpc";
 
 /** Intentionally shared expertise projection with verification status. */
 export interface PublicTopic {
@@ -102,16 +102,6 @@ export interface Enrolment {
   updated_at: string;
 }
 
-/** Use the shared native client and propagate business/access errors from people RPCs. */
-export async function peopleRpc<T>(
-  name: string,
-  parameters: Record<string, unknown> = {},
-): Promise<T> {
-  const { data, error } = await db().rpc(name, parameters);
-  if (error) throw error;
-  return data as T;
-}
-
 /** Read the permitted directory by search, label and topic with actor-scoped caching. */
 export const peopleDirectoryQuery = (
   actor: string,
@@ -122,7 +112,7 @@ export const peopleDirectoryQuery = (
   queryOptions({
     queryKey: ["people-directory", actor, search, label, topic],
     queryFn: () =>
-      peopleRpc<PersonSummary[]>("people_directory", {
+      callRpc<PersonSummary[]>("people_directory", {
         p_search: search,
         p_label: label,
         p_topic_id: topic || null,
@@ -133,21 +123,21 @@ export const personQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["person", actor, target],
     queryFn: () =>
-      peopleRpc<PersonDetails>("person_profile", { p_user_id: target }),
+      callRpc<PersonDetails>("person_profile", { p_user_id: target }),
   });
 /** Read only the selected person's teaching history permitted for the caller. */
 export const profileCoursesQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["profile-courses", actor, target],
     queryFn: () =>
-      peopleRpc<TaughtCourse[]>("profile_courses", { p_user_id: target }),
+      callRpc<TaughtCourse[]>("profile_courses", { p_user_id: target }),
   });
 /** Read visible reviews without exposing private course relationships. */
 export const reviewsQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["lecturer-reviews", actor, target],
     queryFn: () =>
-      peopleRpc<CourseReview[]>("lecturer_reviews", { p_user_id: target }),
+      callRpc<CourseReview[]>("lecturer_reviews", { p_user_id: target }),
   });
 
 /** Split comma lists, bound count/length and reject controls before saving own profile labels. */

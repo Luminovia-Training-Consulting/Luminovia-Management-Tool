@@ -1,7 +1,9 @@
 /** Small structurally valid PDF containing fictional test data only. */
-export function accountingTestPdf() {
-  const stream =
-    "BT /F1 10 Tf 20 60 Td (Fictional accounting evidence - no real invoice.) Tj ET";
+export function accountingTestPdf(
+  label = "Fictional accounting evidence - no real invoice.",
+) {
+  const text = label.replace(/[()\\]/g, "\\$&");
+  const stream = `BT /F1 10 Tf 20 60 Td (${text}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",

@@ -4,6 +4,7 @@
 
 - Resolve edited times for announcements, global events and course schedules through the shared date utilities. Retain the exact stored instant while its displayed minute and original zone are unchanged.
 - Trace callable reachability from executable entry points in both browser editions. The integrity regression preserves real recursion and rejects a cycle whose only callers are within the unused group.
+- Reuse the actor-scoped active-company lookup across account creation, invitations and role editing. Keep the RPC binding, account retry identity and invoice continuation logic centralised while preserving each caller's current authority and payload.
 - Keep shared retry identities tied to the input reviewed by the user and retain separate request IDs for workflows with multiple distinct writes. Refresh the file list and contract-registration picker when the gateway confirms a clean PDF.
 - The local source, API surface, browser demo, packaging and edition-build checks are recorded in the work log. The separate release inventory tracks the external provider and hosted acceptance checks.
 

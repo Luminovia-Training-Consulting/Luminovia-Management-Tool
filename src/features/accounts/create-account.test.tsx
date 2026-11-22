@@ -8,7 +8,10 @@ import i18n from "../../lib/i18n";
 import { CreateAccountForm } from "./create-account";
 
 const fake = vi.hoisted(() => ({ request: vi.fn() }));
-vi.mock("./api", () => ({ accountRequest: fake.request }));
+vi.mock("./api", async (original) => ({
+  ...(await original<typeof import("./api")>()),
+  accountRequest: fake.request,
+}));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     from: () => ({

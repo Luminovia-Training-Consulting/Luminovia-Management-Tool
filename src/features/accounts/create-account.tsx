@@ -1,13 +1,17 @@
 /** Direct account creation uses the privileged Edge facade after current role reservation. */
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
-import { accountRequest, type AccountRoleCapability } from "./api";
+import {
+  accountOrganisationsQuery,
+  accountRequest,
+  type AccountRoleCapability,
+} from "./api";
 import "./i18n";
 
 /** Create one account through the caller-authorized facade; password input is transient and never retained after confirmation. */
@@ -42,19 +46,10 @@ export function CreateAccountForm({
     /[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/.test(password);
   const [role, setRole] = useState("");
   const [organisation, setOrganisation] = useState("");
-  const request = useRef({ signature: "", id: "" });
+  const request = useRequestKey();
   const organisations = useQuery({
-    queryKey: ["account-create-organisations", actor],
+    ...accountOrganisationsQuery(actor),
     enabled: role === "client" && canLinkOrganisations,
-    queryFn: async () => {
-      const result = await db()
-        .from("organisations")
-        .select("id,name")
-        .is("archived_at", null)
-        .order("name");
-      if (result.error) throw result.error;
-      return result.data as { id: string; name: string }[];
-    },
   });
   const create = useMutation({
     mutationFn: async () => {
@@ -66,23 +61,23 @@ export function CreateAccountForm({
         role,
         organisation_id: role === "client" ? organisation : null,
       };
-      const signature = JSON.stringify(values);
-      if (request.current.signature !== signature)
-        request.current = { signature, id: crypto.randomUUID() };
       return accountRequest<{ status: string; user_id?: string }>(
         "users",
         "POST",
-        { ...values, idempotency_key: request.current.id },
+        {
+          ...values,
+          idempotency_key: request.forInput(JSON.stringify(values)),
+        },
       );
     },
     onError: (error) => {
       if (error instanceof Error && error.message === "creation_failed")
-        request.current = { signature: "", id: "" };
+        request.clear();
     },
     onSuccess: async (result) => {
       if (result.status === "created") {
         setPassword("");
-        request.current = { signature: "", id: "" };
+        request.clear();
         await cache.invalidateQueries({ queryKey: ["accounts", actor] });
       }
     },

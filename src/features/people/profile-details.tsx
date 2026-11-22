@@ -2,6 +2,7 @@
  * Own country, language, experience and label fields. Keep drafts local, confirm saves only
  * after server success and retain the backend's publication projections.
  */
+import { callRpc } from "../../lib/rpc";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -9,7 +10,7 @@ import { useAuth } from "../auth/auth-context";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
-import { labelText, peopleRpc, type ProfileDetails } from "./api";
+import { labelText, type ProfileDetails } from "./api";
 import "./i18n";
 import "./people.css";
 
@@ -36,7 +37,7 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
         labels: details.labels,
         teaching_experience: experience || details.teaching_experience,
       };
-      await peopleRpc("save_profile_details", { p_payload: payload });
+      await callRpc("save_profile_details", { p_payload: payload });
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["own-profile-details"] });
@@ -109,7 +110,7 @@ export function OwnProfileDetails() {
   const { session } = useAuth();
   const query = useQuery({
     queryKey: ["own-profile-details", session!.user.id],
-    queryFn: () => peopleRpc<ProfileDetails>("own_profile_details"),
+    queryFn: () => callRpc<ProfileDetails>("own_profile_details"),
   });
   return (
     <div className="people-profile-extra">

@@ -49,6 +49,21 @@ export const accountRoleCatalogQuery = (actor: string) =>
     staleTime: 0,
   });
 
+/** Account creation, invitation and role editing use the same active-company picker. */
+export const accountOrganisationsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["account-organisations", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("organisations")
+        .select("id,name")
+        .is("archived_at", null)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
 /** Account page with total count and the actual applied pagination bounds. */
 export interface AccountList {
   items: AccountPerson[];

@@ -2,6 +2,7 @@
  * Own reviews for courses the server marks reviewable. Server eligibility and existing-review
  * state govern editing; confirm save/withdrawal only after a successful response.
  */
+import { callRpc } from "../../lib/rpc";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,7 +21,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import { peopleRpc, type ReviewableCourse } from "./api";
+import { type ReviewableCourse } from "./api";
 import "./i18n";
 import "./people.css";
 
@@ -49,7 +50,7 @@ function ReviewForm({
   const save = useMutation({
     mutationFn: async () => {
       requireOnline();
-      await peopleRpc("submit_course_review", {
+      await callRpc("submit_course_review", {
         p_course_run_id: course.course_run_id,
         p_lecturer_id: course.lecturer_id,
         p_rating: Number(rating),
@@ -63,7 +64,7 @@ function ReviewForm({
     mutationFn: async () => {
       requireOnline();
       if (!previous) throw new Error("missing_review");
-      await peopleRpc("delete_course_review", {
+      await callRpc("delete_course_review", {
         p_review_id: previous.id,
         p_version: previous.version,
       });
@@ -179,7 +180,7 @@ export function MyCourseReviews() {
   const online = useOnline();
   const query = useQuery({
     queryKey: ["reviewable-courses", session!.user.id],
-    queryFn: () => peopleRpc<ReviewableCourse[]>("reviewable_courses"),
+    queryFn: () => callRpc<ReviewableCourse[]>("reviewable_courses"),
     enabled: online,
     refetchInterval: 5000,
   });

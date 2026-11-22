@@ -61,6 +61,15 @@ interface Cursor {
   at: string;
   id: string;
 }
+function nextInvoiceCursor(page: {
+  has_more: boolean;
+  items: readonly { id: string; created_at: string }[];
+}): Cursor | undefined {
+  const last = page.items.at(-1);
+  return page.has_more && last
+    ? { at: last.created_at, id: last.id }
+    : undefined;
+}
 /** Cursor pages keep discovery bounded without silently truncating old invoices. */
 export const accountingInvoicesQuery = (
   actor: string,
@@ -81,12 +90,7 @@ export const accountingInvoicesQuery = (
       if (error) throw error;
       return accountingPageSchema.parse(data);
     },
-    getNextPageParam: (page) => {
-      const last = page.items.at(-1);
-      return page.has_more && last
-        ? { at: last.created_at, id: last.id }
-        : undefined;
-    },
+    getNextPageParam: nextInvoiceCursor,
     staleTime: 10000,
   });
 export const customerCreditNotesQuery = (actor: string, invoice: string) =>
@@ -109,12 +113,7 @@ export const customerCreditNotesQuery = (actor: string, invoice: string) =>
       }
       return page;
     },
-    getNextPageParam: (page) => {
-      const last = page.items.at(-1);
-      return page.has_more && last
-        ? { at: last.created_at, id: last.id }
-        : undefined;
-    },
+    getNextPageParam: nextInvoiceCursor,
     retry: false,
   });
 export const customerSettlementQuery = (actor: string, invoice: string) =>

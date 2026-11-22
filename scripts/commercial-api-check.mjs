@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {accountingTestPdf} from "./testing/accounting-pdf.mjs";
+import {testActorHeaders} from "./testing/api.mjs";
 import {assertLmsResponse as assertRpcResponse} from "./testing/premium-lms-contract.mjs";
 
 process.loadEnvFile(".env.test.local");
@@ -81,47 +83,6 @@ async function fixture(name, role) {
     return {client, id: auth.user.id};
 }
 
-/** Creates synthetic PDF bytes for the real file-validation path without personal source documents. */
-function pdf(label) {
-    const objects = [
-        "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 100] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-        null,
-        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    ];
-    const stream = `BT /F1 9 Tf 10 50 Td (${label}) Tj ET`;
-    objects[3] = `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`;
-    let body = "%PDF-1.4\n";
-    const offsets = [0];
-    for (const [index, object] of objects.entries()) {
-        offsets.push(Buffer.byteLength(body));
-        body += `${index + 1} 0 obj\n${object}\nendobj\n`;
-    }
-    const xref = Buffer.byteLength(body);
-    body +=
-        `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n` +
-        offsets
-            .slice(1)
-            .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
-            .join("") +
-        `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-    return new TextEncoder().encode(body);
-}
-
-/** Reads the test actor's current session token for actual authenticated gateway requests. */
-async function headers(actor) {
-    const data = await checked(
-        actor.client.auth.getSession(),
-        "Read local session",
-    );
-    return {
-        Origin: origin,
-        apikey: process.env.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${data.session.access_token}`,
-    };
-}
-
 /** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
 async function upload(actor, bytes, kind, owner, replace) {
     const form = new FormData();
@@ -136,7 +97,7 @@ async function upload(actor, bytes, kind, owner, replace) {
     if (replace) form.set("replace_id", replace);
     const response = await fetch(`${url}/functions/v1/files`, {
         method: "POST",
-        headers: await headers(actor),
+        headers: await testActorHeaders(actor, origin),
         body: form,
         signal: AbortSignal.timeout(90000),
     });
@@ -154,7 +115,7 @@ async function upload(actor, bytes, kind, owner, replace) {
 async function download(actor, id, versionId) {
     return fetch(`${url}/functions/v1/files`, {
         method: "POST",
-        headers: {...(await headers(actor)), "Content-Type": "application/json"},
+        headers: {...(await testActorHeaders(actor, origin)), "Content-Type": "application/json"},
         body: JSON.stringify({action: "download", id, version_id: versionId}),
     });
 }
@@ -260,7 +221,7 @@ try {
         ),
         "Commercial picker reveals names and IDs only",
     );
-    const original = pdf("Fictional externally executed contract - QA only.");
+    const original = accountingTestPdf("Fictional externally executed contract - QA only.");
     const contractDoc = await upload(a, original, "contract", a.id);
     assert.equal(
         (await download(admin, contractDoc.id, contractDoc.current_version_id))
@@ -274,7 +235,7 @@ try {
         contractDoc.current_version_id,
     );
     assert.equal(ownerBytes.status, 200);
-    assert.deepEqual(new Uint8Array(await ownerBytes.arrayBuffer()), original);
+    assert.deepEqual(Buffer.from(await ownerBytes.arrayBuffer()), original);
     const candidates = await checked(
         admin.client.rpc("contract_registration_candidates", {p_user_id: a.id}),
         "Read bounded contract candidates",
@@ -553,7 +514,7 @@ try {
         ]),
         "Seed both exact assigned sessions",
     );
-    const invoiceBytes = pdf(
+    const invoiceBytes = accountingTestPdf(
         "Fictional compensation statement - no tax calculation.",
     );
     const invoiceDoc = await upload(a, invoiceBytes, "invoice");
@@ -721,13 +682,13 @@ try {
     });
     assert.equal(privatePayments.status, 403);
     assert.equal(privatePayments.error?.code, "42501");
-    const replacement = pdf(
+    const replacement = accountingTestPdf(
         "Future replacement must not modify accepted contract evidence.",
     );
     await upload(a, replacement, "contract", a.id, contractDoc.id);
     const oldDownload = await download(a, contractDoc.id, version.id);
     assert.equal(oldDownload.status, 200);
-    assert.deepEqual(new Uint8Array(await oldDownload.arrayBuffer()), original);
+    assert.deepEqual(Buffer.from(await oldDownload.arrayBuffer()), original);
     assert.equal(
         (
             await checkedRpc(a, "contract_records", "Exact original contract version")

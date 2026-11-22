@@ -29,6 +29,7 @@ import {
   type AccountPerson,
   accountRequest,
   type AccountRole,
+  accountOrganisationsQuery,
   accountRoleCatalogQuery,
 } from "./api";
 import "./i18n";
@@ -70,17 +71,8 @@ function AccountsDirectory({
       (entry) => entry.assignable && entry.role !== "owner",
     ) ?? [];
   const organisations = useQuery({
-    queryKey: ["account-organisations", actorId],
+    ...accountOrganisationsQuery(actorId),
     enabled: canLinkOrganisations && selected !== null,
-    queryFn: async () => {
-      const result = await db()
-        .from("organisations")
-        .select("id,name")
-        .is("archived_at", null)
-        .order("name");
-      if (result.error) throw result.error;
-      return result.data as { id: string; name: string }[];
-    },
   });
   const membership = useQuery({
     queryKey: ["account-memberships", actorId, selected?.id],

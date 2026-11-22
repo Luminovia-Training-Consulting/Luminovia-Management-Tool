@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -11,14 +12,6 @@ import {
 } from "./picker-api";
 import "./picker-i18n";
 import "./picker.css";
-
-const forbidden = (error: unknown) =>
-  Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
 
 export function JobPicker({
   actor,
@@ -40,7 +33,9 @@ export function JobPicker({
   const [search, setSearch] = useState("");
   const [denied, setDenied] = useState(false);
   const query = useInfiniteQuery(jobPickerQuery(actor, purpose, search, value));
-  const accessDenied = forbidden(query.error) || forbidden(query.failureReason);
+  const accessDenied =
+    isDatabasePermissionDenied(query.error) ||
+    isDatabasePermissionDenied(query.failureReason);
   if (!denied && accessDenied) setDenied(true);
   useEffect(() => {
     // An authoritative denial also refreshes the caller's surrounding controls;

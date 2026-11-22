@@ -2,6 +2,7 @@
  * Searchable people directory and permitted profiles with courses/reviews. Start DMs through the
  * existing RPC; moderation remains a separate reasoned action.
  */
+import { callRpc } from "../../lib/rpc";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,7 +28,6 @@ import {
 import {
   type CourseReview,
   peopleDirectoryQuery,
-  peopleRpc,
   personQuery,
   profileCoursesQuery,
   reviewsQuery,
@@ -137,7 +137,7 @@ function ModerateReview({ review }: { review: CourseReview }) {
   const mutation = useMutation({
     mutationFn: async () => {
       requireOnline();
-      await peopleRpc("moderate_course_review", {
+      await callRpc("moderate_course_review", {
         p_review_id: review.id,
         p_hidden: !review.hidden,
         p_reason: reason,
@@ -204,7 +204,7 @@ export function PersonProfile() {
   });
   const contacts = useQuery({
     queryKey: ["profile-chat-contacts", actor],
-    queryFn: () => peopleRpc<{ id: string }[]>("chat_contacts"),
+    queryFn: () => callRpc<{ id: string }[]>("chat_contacts"),
   });
   const [state, setState] = useState("");
   if (person.isPending) return <Loading />;
