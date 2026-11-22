@@ -5,6 +5,13 @@ import {passportLines} from "./passport.ts";
 import {academyPdfBrand} from "./brand.ts";
 
 type Facts = Record<string, unknown>;
+let packagedFont: Promise<Uint8Array> | undefined;
+
+export async function renderPackagedFactPdf(kind: string, facts: Facts) {
+    packagedFont ??= Deno.readFile(new URL("./assets/DejaVuSans.ttf", import.meta.url));
+    return await renderFactPdf(kind, facts, await packagedFont);
+}
+
 const titles: Record<string, string> = {
     completion: "Teilnahmebestätigung / Completion record",
     attendance: "Anwesenheitsbericht / Attendance report",
