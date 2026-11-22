@@ -2,7 +2,7 @@
  * DE/EN UI resources for the accounts namespace. Module import registers these strings with
  * i18next; authored business content is not translated.
  */
-import i18n from "../../lib/i18n";
+import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
@@ -95,7 +95,7 @@ const de = {
   apiHint:
     "Anmeldung erfolgt über Supabase Auth. Konten, Rollen und Einladungen sind über die versionierte Account-API nutzbar; weitere Fachfunktionen über die dokumentierten Datenbank-RPCs.",
   active: "Aktiv",
-  userId: "Luminovia User ID",
+  userId: accountIdentifierLabels[0],
   inactive: "Gesperrt",
 };
 const en: typeof de = {
@@ -183,7 +183,7 @@ const en: typeof de = {
   apiHint:
     "Sign in through Supabase Auth. Accounts, roles and invitations are available through the versioned Account API; other domain features use the documented database RPCs.",
   active: "Active",
-  userId: "Luminovia User ID",
+  userId: accountIdentifierLabels[1],
   inactive: "Suspended",
 };
 i18n.addResourceBundle("de", "accounts", de);

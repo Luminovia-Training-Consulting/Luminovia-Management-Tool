@@ -262,7 +262,13 @@ try {
                     checkout: root,
                     confirmed,
                     docker: (args) => command("docker", args, {quiet: true, timeoutMs: 30000}),
-                    ownsRuntime: () => processIsOurs(readState()),
+                    ownsRuntime: () => {
+                        const state = readState();
+                        if (!processIsOurs(state)) return false;
+                        if (state.projectId !== confirmed.id)
+                            throw new Error("The running supervisor owns another local project.");
+                        return true;
+                    },
                     stop,
                     start,
                 });

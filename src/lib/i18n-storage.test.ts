@@ -6,9 +6,38 @@ import { afterEach, expect, it, vi } from "vitest";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.doUnmock("./installation-brand");
   vi.resetModules();
   localStorage.clear();
 });
+
+it.each([true, false])(
+  "keeps account identifier labels consistent across edition namespaces (internal=%s)",
+  async (internal) => {
+    vi.doMock("./installation-brand", async (load) => ({
+      ...(await load<typeof import("./installation-brand")>()),
+      portalInternalEdition: internal,
+    }));
+    const { default: i18n } = await import("./i18n");
+    await import("../features/accounts/i18n");
+    await import("../features/people/i18n");
+    await import("../features/operations/i18n");
+    const rows = [
+      ["translation", "luminoviaUserId"],
+      ["accounts", "userId"],
+      ["people", "publicId"],
+      ["operations", "participantUserId"],
+    ];
+    for (const [ns, key] of rows) {
+      expect(i18n.t(key, { lng: "de", ns })).toBe(
+        internal ? "Luminovia User ID" : "Benutzer-ID",
+      );
+      expect(i18n.t(key, { lng: "en", ns })).toBe(
+        internal ? "Luminovia User ID" : "User ID",
+      );
+    }
+  },
+);
 
 it("initialises the interface when browser preference storage is blocked", async () => {
   vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {

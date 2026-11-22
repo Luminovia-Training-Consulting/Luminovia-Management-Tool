@@ -2,10 +2,14 @@
  * Shared DE/EN dictionary and active-language initialization. Translation keys affect UI text
  * only; authored business content keeps its original language.
  */
-import { installationBrand } from "./installation-brand";
+import { installationBrand, portalInternalEdition } from "./installation-brand";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { readPreference, writePreference } from "./preferences";
+
+export const accountIdentifierLabels: [string, string] = portalInternalEdition
+  ? ["Luminovia User ID", "Luminovia User ID"]
+  : ["Benutzer-ID", "User ID"];
 
 const pairs: Record<string, [string, string]> = {
   appInstallation: ["App-Installation", "App installation"],
@@ -522,7 +526,7 @@ const pairs: Record<string, [string, string]> = {
   amount: ["Honorar", "Fee"],
   status: ["Status", "Status"],
   apiDocumentation: ["API-Dokumentation", "API documentation"],
-  luminoviaUserId: ["Luminovia User ID", "Luminovia User ID"],
+  luminoviaUserId: accountIdentifierLabels,
   noAccess: [
     "Für diesen Bereich fehlt dir die Berechtigung.",
     "You do not have permission to access this area.",

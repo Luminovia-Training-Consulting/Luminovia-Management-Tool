@@ -2,7 +2,7 @@
  * DE/EN UI resources for the operations namespace. Module import registers these strings with
  * i18next; authored business content is not translated.
  */
-import i18n from "../../lib/i18n";
+import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
   participantOpenDetails: ["Kurse und Teilnahme", "Courses and attendance"],
@@ -439,7 +439,7 @@ const pairs: Record<string, [string, string]> = {
     "Nur Premium-Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
     "Only Premium participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",
   ],
-  participantUserId: ["Luminovia User-ID", "Luminovia User ID"],
+  participantUserId: accountIdentifierLabels,
   requestParticipantLink: ["Verknüpfung anfragen", "Request participant link"],
   participantLinkRequested: [
     "Anfrage verarbeitet. Falls die Person geeignet ist, erscheint die Einladung in ihrem Konto.",

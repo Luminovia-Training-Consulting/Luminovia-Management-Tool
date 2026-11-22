@@ -2,7 +2,7 @@
  * DE/EN UI resources for the people namespace. Module import registers these strings with
  * i18next; authored business content is not translated.
  */
-import i18n from "../../lib/i18n";
+import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
@@ -16,7 +16,7 @@ const de = {
   allLabels: "Alle Labels",
   empty: "Keine passenden Profile gefunden.",
   open: "Profil öffnen",
-  publicId: "Luminovia User ID",
+  publicId: accountIdentifierLabels[0],
   details: "Öffentliche Profilangaben",
   detailsHelp:
     "Diese Angaben sind für berechtigte Mitglieder sichtbar. Gib deine Lehrerfahrung in Jahren an.",
@@ -102,7 +102,7 @@ const en: typeof de = {
   allLabels: "All labels",
   empty: "No matching profiles.",
   open: "Open profile",
-  publicId: "Luminovia User ID",
+  publicId: accountIdentifierLabels[1],
   details: "Public profile details",
   detailsHelp:
     "These details are visible to authorised members. Enter your teaching experience in years.",
