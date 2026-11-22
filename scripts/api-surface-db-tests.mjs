@@ -110,7 +110,42 @@ await withTestDatabase("api_surface", async ({sql}) => {
     console.log(
         "PASS Every privileged application implementation has an explicitly empty search path",
     );
+    // The migration retires historical implementations while current entry
+    // points and their live fallback routines remain registered.
+    assert.deepEqual(
+        JSON.parse(await sql(`
+          select jsonb_build_object(
+            'retained_obsolete', array(
+              select signature from unnest(array[
+                'private.course_workspace_action_obsolete(uuid,text,jsonb,integer)',
+                'private.notification_target_before_extensions(text,uuid)',
+                'private.course_document_access_obsolete(text,uuid)',
+                'private.manage_course_enrolment_before_origins(uuid,uuid,text)',
+                'private.job_lifecycle_before_withdrawals(uuid)'
+              ]) routine(signature) where to_regprocedure(signature) is not null
+            ),
+            'missing_active', array(
+              select signature from unnest(array[
+                'public.course_workspace_action(uuid,text,jsonb,integer)',
+                'private.course_workspace_action_before_premium(uuid,text,jsonb,integer)',
+                'private.notification_target(text,uuid)',
+                'private.notification_target_integrated_fallback(text,uuid)',
+                'public.course_document_access(text,uuid)',
+                'private.course_document_access(text,uuid)',
+                'public.manage_course_enrolment(uuid,uuid,text)',
+                'private.manage_course_enrolment(uuid,uuid,text)',
+                'public.job_lifecycle(uuid)',
+                'private.job_lifecycle(uuid)'
+              ]) routine(signature) where to_regprocedure(signature) is null
+            )
+          )`)),
+        {
+            retained_obsolete: [],
+            missing_active: [],
+        },
+    );
+    console.log("PASS Five obsolete private routines are absent and their active entry points remain registered");
     console.log(
-        "\n10 API-surface PostgreSQL checks passed (source binding, OpenAPI catalogue, payload keys, invoker boundaries, public/private RLS, anonymous grants and definer search paths).",
+        "\n11 API-surface PostgreSQL checks passed (source binding, OpenAPI catalogue, payload keys, invoker boundaries, public/private RLS, anonymous grants, definer search paths and routine cleanup).",
     );
 });

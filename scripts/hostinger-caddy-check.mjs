@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {execFileSync, spawnSync} from "node:child_process";
 import {randomBytes} from "node:crypto";
 import {mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync,} from "node:fs";
+import {get} from "node:http";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
@@ -143,6 +144,8 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         network,
         "-p",
         "127.0.0.1::8080",
+        "-p",
+        "127.0.0.1::80",
         "-e",
         "PORTAL_DOMAIN=portal.test",
         // The upstream exists only on this owned Docker network. A client-side
@@ -184,6 +187,25 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         await delay(100);
     }
     assert.equal(readinessStatus, 200, "Caddy must proxy the allowed backend before its 404 fallback");
+
+    await check("legacy HTTP hostnames preserve deep links and query strings", async () => {
+        const aliasBinding = docker(["port", caddy, "80/tcp"]);
+        assert.match(aliasBinding, /^127\.0\.0\.1:\d+$/);
+        const path = "/demo/profile?source=fictional%20bookmark";
+        for (const host of ["lms.luminovia.org", "portal.luminovia.org"]) {
+            // The TCP destination is owned loopback. Send the legacy authority
+            // on the wire without fetch rewriting it or following redirects.
+            const response = await new Promise((resolve, reject) => {
+                get(`http://${aliasBinding}${path}`, {
+                    headers: {Host: host},
+                    signal: AbortSignal.timeout(5000),
+                }, resolve).once("error", reject);
+            });
+            response.resume();
+            assert.equal(response.statusCode, 308);
+            assert.equal(response.headers.location, `https://cms.luminovia.org${path}`);
+        }
+    });
 
     await check(
         "allowed APIs strip exactly one backend prefix and preserve method/body/query",
