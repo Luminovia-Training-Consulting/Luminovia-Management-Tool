@@ -153,6 +153,9 @@ test("real private DM persists, delivers realtime, edits/deletes safely and deni
         await connected(page);
         const initial = `Hallo ${b.name}, dies ist eine echte private Nachricht.`;
         await send(page, initial);
+        await receiver.getByLabel("Filtern nach", { exact: true }).selectOption("lecturer");
+        const lecturerFilter = receiver.getByLabel("Dozierende auswählen", { exact: true });
+        await lecturerFilter.selectOption({ label: a.name });
         await receiver
             .locator(".chat-room-row")
             .filter({hasText: a.name})

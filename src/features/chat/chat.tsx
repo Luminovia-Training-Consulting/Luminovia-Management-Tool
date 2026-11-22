@@ -28,13 +28,13 @@ import {
   userRolesQuery,
 } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import {
-  ErrorState,
-  Loading,
-  Notice,
-  PageHeading,
-} from "../../components/common";
-import { chatKeys, chatRoomsQuery } from "./api";
+  chatDirectoryFiltersQuery,
+  chatKeys,
+  chatRoomsQuery,
+  type ChatDirectoryFacet,
+} from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import { RoomActivity } from "./room-activity";
@@ -56,11 +56,16 @@ export function ChatPage() {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("room");
   const rooms = useQuery(chatRoomsQuery(actor));
+  const directoryFilters = useQuery(chatDirectoryFiltersQuery(actor));
   // The shell owns the profile request; observe its cached zone without initiating another request.
   const profile = useQuery({ ...profileQuery(actor), enabled: false });
   const permissions = useQuery(permissionsQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<{
+    category: ChatDirectoryFacet["category"] | "";
+    key: string;
+  }>({ category: "", key: "" });
   const [showArchived, setShowArchived] = useState(false);
   const archiveText = useTranslation("chatRoomArchive").t;
   const [contactsOpen, setContactsOpen] = useState(false);
@@ -180,290 +185,395 @@ export function ChatPage() {
     onSettled: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
-  const filtered =
-    rooms.data
-      ?.filter((room) => Boolean(room.personal_archived) === showArchived)
-      .filter((room) =>
-        room.title
-          .toLocaleLowerCase(i18n.language)
-          .includes(search.toLocaleLowerCase(i18n.language)),
-      )
-      .sort(
-        (a, b) =>
-          Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
-          (a.pinned && b.pinned ? (a.pinOrder ?? 0) - (b.pinOrder ?? 0) : 0),
-      ) ?? [];
+  const directoryRooms = (rooms.data ?? []).filter(
+    (room) => Boolean(room.personal_archived) === showArchived,
+  );
+  const directoryIds = new Set(directoryRooms.map(({ id }) => id));
+  const facetsByRoom = new Map<string, ChatDirectoryFacet[]>();
+  const options = new Map<string, string>();
+  const category = directoryFilters.isSuccess ? filter.category : "";
+  for (const facet of directoryFilters.isSuccess ? directoryFilters.data : []) {
+    if (!directoryIds.has(facet.room_id)) continue;
+    const facets = facetsByRoom.get(facet.room_id) ?? [];
+    facets.push(facet);
+    facetsByRoom.set(facet.room_id, facets);
+    if (facet.category === category) options.set(facet.facet_key, facet.label);
+  }
+  const key = options.has(filter.key) ? filter.key : "";
+  const needle = search.trim().toLocaleLowerCase(i18n.language);
+  const filtered = directoryRooms
+    .filter((room) => {
+      const facets = facetsByRoom.get(room.id) ?? [];
+      const title = room.kind === "general" ? t("kind_general") : room.title;
+      return (
+        (!category ||
+          facets.some(
+            (facet) =>
+              facet.category === category && (!key || facet.facet_key === key),
+          )) &&
+        (!needle ||
+          [title, ...facets.map(({ label }) => label)].some((label) =>
+            label.toLocaleLowerCase(i18n.language).includes(needle),
+          ))
+      );
+    })
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
+        (a.pinned && b.pinned ? (a.pinOrder ?? 0) - (b.pinOrder ?? 0) : 0),
+    );
+  const hasFilter = Boolean(needle || category);
+  const filterCategories = ["company", "staff", "course", "lecturer"] as const;
   return (
-    <>
+    <section
+      className={`chat-page ${selectedId ? "chat-page-has-selection" : ""}`}
+    >
       {contactFailed && <Notice kind="error">{t("error")}</Notice>}
-      <PageHeading
-        title={t("title")}
-        description={t("intro")}
-        action={
-          <div className="chat-page-actions">
-            <Button
-              variant="secondary"
-              onClick={() => setContactsOpen(true)}
-              disabled={!online}
-            >
-              <MessageCirclePlus size={17} />
-              {t("newMessage")}
+      <header className="chat-page-heading">
+        <h1>{t("title")}</h1>
+        <div className="chat-page-actions">
+          <Button
+            variant="secondary"
+            onClick={() => setContactsOpen(true)}
+            disabled={!online}
+          >
+            <MessageCirclePlus size={17} aria-hidden="true" />
+            {t("newMessage")}
+          </Button>
+          {staff && (
+            <Button onClick={() => setGroupOpen(true)} disabled={!online}>
+              <Plus size={17} aria-hidden="true" />
+              {t("newGroup")}
             </Button>
-            {staff && (
-              <Button onClick={() => setGroupOpen(true)} disabled={!online}>
-                <Plus size={17} />
-                {t("newGroup")}
-              </Button>
-            )}
-          </div>
-        }
-      />
+          )}
+        </div>
+      </header>
       <div
         className={`chat-workspace ${selectedId ? "chat-has-selection" : ""}`}
       >
         <aside className="chat-directory" aria-label={t("rooms")}>
-          <div className="chat-directory-heading">
-            <h2>{t("rooms")}</h2>
-            <span className="badge">
-              {rooms.data?.filter(
-                (room) => Boolean(room.personal_archived) === showArchived,
-              ).length ?? 0}
-            </span>
-          </div>
-          <div className="chat-room-search">
-            <Search size={17} />
-            <label className="sr-only" htmlFor="chat-room-search">
-              {t("searchRooms")}
-            </label>
-            <input
-              id="chat-room-search"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("searchRooms")}
-            />
-          </div>
-          <div
-            className="chat-room-tabs"
-            role="group"
-            aria-label={archiveText("filter")}
-          >
-            <Button
-              type="button"
-              variant={!showArchived ? "default" : "secondary"}
-              aria-pressed={!showArchived}
-              onClick={() => setShowArchived(false)}
-            >
-              {archiveText("active")}
-            </Button>
-            <Button
-              type="button"
-              variant={showArchived ? "default" : "secondary"}
-              aria-pressed={showArchived}
-              onClick={() => setShowArchived(true)}
-            >
-              {archiveText("archived")}
-            </Button>
-          </div>
-          {lecturer && (
-            <button
-              className="chat-lounge"
-              type="button"
-              onClick={() => general.mutate()}
-              disabled={!online || general.isPending}
-            >
-              <span aria-hidden="true">✳</span>
-              <span>
-                <strong>{t("lecturerLounge")}</strong>
-                <small>{t("lecturerLoungeHint")}</small>
+          <div className="chat-directory-tools">
+            <div className="chat-directory-heading">
+              <h2>{t("rooms")}</h2>
+              <span className="badge" aria-live="polite">
+                {filtered.length}
               </span>
-            </button>
-          )}
-          {general.isError && <Notice kind="error">{t("actionError")}</Notice>}
-          {staff && <TopicInvitationInbox actor={actor} onRoom={selectRoom} />}
-          {archive.isError && (
-            <Notice kind="error">{archiveText("failed")}</Notice>
-          )}
-          {(pin.isError || movePin.isError) && (
-            <Notice kind="error">{t("pinError")}</Notice>
-          )}
-          {rooms.isPending ? (
-            <Loading />
-          ) : rooms.isError ? (
-            <ErrorState retry={() => void rooms.refetch()} />
-          ) : filtered.length ? (
-            <ul className="chat-room-list">
-              {filtered.map((room) => (
-                <li key={room.id} className="chat-room-row">
-                  <button
-                    type="button"
-                    className={`chat-room-button ${room.id === selectedId ? "is-selected" : ""}`}
-                    aria-pressed={room.id === selectedId}
-                    onClick={() => selectRoom(room.id)}
-                  >
-                    <span
-                      className={`chat-room-symbol chat-kind-${room.kind}`}
-                      aria-hidden="true"
-                    >
-                      <RoomIcon kind={room.kind} />
-                    </span>
-                    <span className="chat-room-copy">
-                      <strong>
-                        {room.kind === "general"
-                          ? t("kind_general")
-                          : room.title || t(`kind_${room.kind}`)}
-                      </strong>
-                      <small>{t(`kind_${room.kind}`)}</small>
-                      {room.last_message_preview && (
-                        <small
-                          className="chat-room-preview"
-                          title={room.last_message_preview}
-                        >
-                          <span className="sr-only">
-                            {t("lastMessagePreview")}:
-                          </span>
-                          {room.last_message_preview}
-                        </small>
-                      )}
-                      <RoomActivity
-                        instant={room.last_message_at}
-                        zone={profile.data?.time_zone}
-                      />
-                    </span>
-                    <span className="chat-room-indicators">
-                      {room.unread_count > 0 && (
-                        <span
-                          className="chat-unread"
-                          aria-label={t("unread", {
-                            count: Number(room.unread_count),
-                          })}
-                        >
-                          {room.unread_count}
-                        </span>
-                      )}
-                      {room.manual_unread && (
-                        <span
-                          className="chat-unread"
-                          aria-label={i18n.t("marked", {
-                            ns: "chatRoomUnread",
-                          })}
-                          title={i18n.t("marked", { ns: "chatRoomUnread" })}
-                        >
-                          ●
-                        </span>
-                      )}
-                      {room.muted && (
-                        <BellOff size={13} aria-label={t("muted")} />
-                      )}
-                    </span>
-                  </button>
-                  {(room.kind === "dm" || room.kind === "topic") && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={archiveText(
-                        room.personal_archived ? "restore" : "archive",
-                        { title: room.title },
-                      )}
-                      title={
-                        room.id === selectedId && !room.personal_archived
-                          ? archiveText("closeFirst")
-                          : archiveText(
-                              room.personal_archived ? "restore" : "archive",
-                              { title: room.title },
-                            )
-                      }
-                      disabled={
-                        !online ||
-                        archive.isPending ||
-                        (room.id === selectedId && !room.personal_archived)
-                      }
-                      onClick={() =>
-                        archive.mutate({
-                          room: room.id,
-                          archived: !room.personal_archived,
-                        })
-                      }
-                    >
-                      {room.personal_archived ? (
-                        <ArchiveRestore size={16} />
-                      ) : (
-                        <Archive size={16} />
-                      )}
-                    </Button>
-                  )}
-                  <RoomUnread
-                    actor={actor}
-                    room={room}
-                    selected={room.id === selectedId}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t(room.pinned ? "unpinRoom" : "pinRoom", {
-                      title: room.title || t(`kind_${room.kind}`),
-                    })}
-                    aria-pressed={Boolean(room.pinned)}
-                    disabled={!online || pin.isPending || movePin.isPending}
-                    onClick={() =>
-                      pin.mutate({ room: room.id, pinned: !room.pinned })
+            </div>
+            <div className="chat-room-search">
+              <Search size={17} />
+              <label className="sr-only" htmlFor="chat-room-search">
+                {t("searchRooms")}
+              </label>
+              <input
+                id="chat-room-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("searchRooms")}
+              />
+            </div>
+            <div className="chat-directory-filters">
+              <Field id="chat-directory-category" label={t("filterCategory")}>
+                <select
+                  value={category}
+                  disabled={!directoryFilters.isSuccess}
+                  onChange={(event) => {
+                    const category =
+                      filterCategories.find(
+                        (item) => item === event.target.value,
+                      ) ?? "";
+                    setFilter({ category, key: "" });
+                  }}
+                >
+                  <option value="">{t("filterAll")}</option>
+                  {filterCategories.map((item) => (
+                    <option key={item} value={item}>
+                      {t(`filter_${item}`)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {category && options.size > 0 && (
+                <Field
+                  id="chat-directory-value"
+                  label={t(`filterValue_${category}`)}
+                >
+                  <select
+                    value={key}
+                    onChange={(event) =>
+                      setFilter({ category, key: event.target.value })
                     }
                   >
-                    {room.pinned ? <PinOff size={16} /> : <Pin size={16} />}
-                  </Button>
-                  {room.pinned && (
-                    <div className="chat-pin-reorder">
-                      {(["up", "down"] as const).map((direction) => (
-                        <Button
-                          key={direction}
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t(
-                            direction === "up" ? "movePinUp" : "movePinDown",
-                            { title: room.title || t(`kind_${room.kind}`) },
-                          )}
-                          disabled={
-                            !online ||
-                            pin.isPending ||
-                            movePin.isPending ||
-                            !filtered.some(
-                              (item) =>
-                                item.id ===
-                                pinnedOrder[
-                                  pinnedOrder.indexOf(room.id) +
-                                    (direction === "up" ? -1 : 1)
-                                ],
-                            ) ||
-                            (direction === "up"
-                              ? pinnedOrder[0] === room.id
-                              : pinnedOrder.at(-1) === room.id)
-                          }
-                          onClick={() =>
-                            movePin.mutate({ room: room.id, direction })
-                          }
-                        >
-                          {direction === "up" ? (
-                            <ArrowUp size={14} />
-                          ) : (
-                            <ArrowDown size={14} />
-                          )}
-                        </Button>
+                    <option value="">{t("filterAllMatches")}</option>
+                    {[...options]
+                      .sort(([, a], [, b]) => a.localeCompare(b, i18n.language))
+                      .map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
                       ))}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="chat-list-empty">
-              <MessagesSquare size={28} />
-              <h3>{showArchived ? archiveText("empty") : t("noRooms")}</h3>
-              <p>
-                {showArchived ? archiveText("emptyHint") : t("noRoomsHint")}
-              </p>
+                  </select>
+                </Field>
+              )}
             </div>
-          )}
+            {directoryFilters.isError && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void directoryFilters.refetch()}
+              >
+                {t("retryFilters")}
+              </Button>
+            )}
+            <div
+              className="chat-room-tabs"
+              role="group"
+              aria-label={archiveText("filter")}
+            >
+              <Button
+                type="button"
+                variant={!showArchived ? "default" : "secondary"}
+                aria-pressed={!showArchived}
+                onClick={() => setShowArchived(false)}
+              >
+                {archiveText("active")}
+              </Button>
+              <Button
+                type="button"
+                variant={showArchived ? "default" : "secondary"}
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived(true)}
+              >
+                {archiveText("archived")}
+              </Button>
+            </div>
+          </div>
+          <div className="chat-directory-results">
+            {lecturer && !hasFilter && !showArchived && (
+              <button
+                className="chat-lounge"
+                type="button"
+                onClick={() => general.mutate()}
+                disabled={!online || general.isPending}
+              >
+                <span aria-hidden="true">✳</span>
+                <span>
+                  <strong>{t("lecturerLounge")}</strong>
+                  <small>{t("lecturerLoungeHint")}</small>
+                </span>
+              </button>
+            )}
+            {general.isError && (
+              <Notice kind="error">{t("actionError")}</Notice>
+            )}
+            {staff && (
+              <TopicInvitationInbox actor={actor} onRoom={selectRoom} />
+            )}
+            {archive.isError && (
+              <Notice kind="error">{archiveText("failed")}</Notice>
+            )}
+            {(pin.isError || movePin.isError) && (
+              <Notice kind="error">{t("pinError")}</Notice>
+            )}
+            {rooms.isPending ? (
+              <Loading />
+            ) : rooms.isError ? (
+              <ErrorState retry={() => void rooms.refetch()} />
+            ) : filtered.length ? (
+              <ul className="chat-room-list">
+                {filtered.map((room) => (
+                  <li key={room.id} className="chat-room-row">
+                    <button
+                      type="button"
+                      className={`chat-room-button ${room.id === selectedId ? "is-selected" : ""}`}
+                      aria-pressed={room.id === selectedId}
+                      onClick={() => selectRoom(room.id)}
+                    >
+                      <span
+                        className={`chat-room-symbol chat-kind-${room.kind}`}
+                        aria-hidden="true"
+                      >
+                        <RoomIcon kind={room.kind} />
+                      </span>
+                      <span className="chat-room-copy">
+                        <strong>
+                          {room.kind === "general"
+                            ? t("kind_general")
+                            : room.title || t(`kind_${room.kind}`)}
+                        </strong>
+                        <small>{t(`kind_${room.kind}`)}</small>
+                        {room.last_message_preview && (
+                          <small
+                            className="chat-room-preview"
+                            title={room.last_message_preview}
+                          >
+                            <span className="sr-only">
+                              {t("lastMessagePreview")}:
+                            </span>
+                            {room.last_message_preview}
+                          </small>
+                        )}
+                        <RoomActivity
+                          instant={room.last_message_at}
+                          zone={profile.data?.time_zone}
+                        />
+                      </span>
+                      <span className="chat-room-indicators">
+                        {room.unread_count > 0 && (
+                          <span
+                            className="chat-unread"
+                            aria-label={t("unread", {
+                              count: Number(room.unread_count),
+                            })}
+                          >
+                            {room.unread_count}
+                          </span>
+                        )}
+                        {room.manual_unread && (
+                          <span
+                            className="chat-unread"
+                            aria-label={i18n.t("marked", {
+                              ns: "chatRoomUnread",
+                            })}
+                            title={i18n.t("marked", { ns: "chatRoomUnread" })}
+                          >
+                            ●
+                          </span>
+                        )}
+                        {room.muted && (
+                          <BellOff size={13} aria-label={t("muted")} />
+                        )}
+                      </span>
+                    </button>
+                    {(room.kind === "dm" || room.kind === "topic") && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={archiveText(
+                          room.personal_archived ? "restore" : "archive",
+                          { title: room.title },
+                        )}
+                        title={
+                          room.id === selectedId && !room.personal_archived
+                            ? archiveText("closeFirst")
+                            : archiveText(
+                                room.personal_archived ? "restore" : "archive",
+                                { title: room.title },
+                              )
+                        }
+                        disabled={
+                          !online ||
+                          archive.isPending ||
+                          (room.id === selectedId && !room.personal_archived)
+                        }
+                        onClick={() =>
+                          archive.mutate({
+                            room: room.id,
+                            archived: !room.personal_archived,
+                          })
+                        }
+                      >
+                        {room.personal_archived ? (
+                          <ArchiveRestore size={16} />
+                        ) : (
+                          <Archive size={16} />
+                        )}
+                      </Button>
+                    )}
+                    <RoomUnread
+                      actor={actor}
+                      room={room}
+                      selected={room.id === selectedId}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t(room.pinned ? "unpinRoom" : "pinRoom", {
+                        title: room.title || t(`kind_${room.kind}`),
+                      })}
+                      aria-pressed={Boolean(room.pinned)}
+                      disabled={!online || pin.isPending || movePin.isPending}
+                      onClick={() =>
+                        pin.mutate({ room: room.id, pinned: !room.pinned })
+                      }
+                    >
+                      {room.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                    </Button>
+                    {room.pinned && (
+                      <div className="chat-pin-reorder">
+                        {(["up", "down"] as const).map((direction) => (
+                          <Button
+                            key={direction}
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t(
+                              direction === "up" ? "movePinUp" : "movePinDown",
+                              { title: room.title || t(`kind_${room.kind}`) },
+                            )}
+                            disabled={
+                              !online ||
+                              pin.isPending ||
+                              movePin.isPending ||
+                              !filtered.some(
+                                (item) =>
+                                  item.id ===
+                                  pinnedOrder[
+                                    pinnedOrder.indexOf(room.id) +
+                                      (direction === "up" ? -1 : 1)
+                                  ],
+                              ) ||
+                              (direction === "up"
+                                ? pinnedOrder[0] === room.id
+                                : pinnedOrder.at(-1) === room.id)
+                            }
+                            onClick={() =>
+                              movePin.mutate({ room: room.id, direction })
+                            }
+                          >
+                            {direction === "up" ? (
+                              <ArrowUp size={14} />
+                            ) : (
+                              <ArrowDown size={14} />
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="chat-list-empty">
+                <MessagesSquare size={28} />
+                {hasFilter ? (
+                  <>
+                    <h3>{t("noFilterMatches")}</h3>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setSearch("");
+                        setFilter({ category: "", key: "" });
+                      }}
+                    >
+                      {t("clearFilters")}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <h3>
+                      {showArchived ? archiveText("empty") : t("noRooms")}
+                    </h3>
+                    <p>
+                      {showArchived
+                        ? archiveText("emptyHint")
+                        : t("noRoomsHint")}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </aside>
         <div className="chat-conversation">
           {rooms.isPending ? (
@@ -510,6 +620,6 @@ export function ChatPage() {
           onRoom={selectRoom}
         />
       )}
-    </>
+    </section>
   );
 }

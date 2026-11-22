@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { ChatPage } from "./chat";
+import { chatDirectoryFiltersQuery } from "./api";
 import { knowledgeKeys } from "../knowledge/api";
 import { RoomActivity } from "./room-activity";
 
@@ -22,6 +23,7 @@ it("renders the existing server message time using the cached preferred zone and
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity, retry: false } },
   });
+  client.setQueryData(chatDirectoryFiltersQuery("actor").queryKey, []);
   client.setQueryData(["profile", "actor"], { time_zone: "Europe/Berlin" });
   client.setQueryData(["permissions", "actor"], []);
   client.setQueryData(["user-roles", "actor"], []);

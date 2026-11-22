@@ -3,6 +3,7 @@
  * Realtime supplements revalidation and never replaces RPC access checks.
  */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { z } from "zod";
 import { db } from "../../lib/supabase";
 import type {
   ChatContact,
@@ -46,6 +47,27 @@ export const chatRoomsQuery = (actor: string) =>
     refetchInterval: 3000,
     staleTime: 1000,
   });
+const chatFacet = z.object({
+  room_id: z.uuid(),
+  category: z.enum(["company", "staff", "course", "lecturer"]),
+  facet_key: z.string().min(1),
+  label: z.string().min(1),
+});
+export type ChatDirectoryFacet = z.infer<typeof chatFacet>;
+
+export const chatDirectoryFiltersQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["chat-directory-filters", actor],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("chat_directory_filters");
+      if (error) throw error;
+      return z.array(chatFacet).parse(data);
+    },
+    staleTime: 3000,
+    refetchInterval: 5000,
+    retry: false,
+  });
+
 /** Read the chat_contacts server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const chatContactsQuery = (actor: string) =>
   queryOptions({

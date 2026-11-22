@@ -32,6 +32,7 @@
 ## Communication workspace
 
 - Keep chats and authorized forum discussion under one main navigation item. Preserve room links and forward older forum links with their selected thread.
+- The chat directory supports company, staff, course and lecturer filters within the current actor’s accessible rooms. Keep the search and filters visible while the directory scrolls and give the conversation more viewport space.
 
 ## Standalone Swagger UI
 

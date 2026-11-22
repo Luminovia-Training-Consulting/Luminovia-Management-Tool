@@ -170,6 +170,24 @@ try {
         },
     );
     await check(
+        "Chat filters show only current rooms and authorized contact labels",
+        async () => {
+            const facets = (id) => value(id, "chat_directory_filters").then(JSON.parse);
+            assert.deepEqual(await facets(a), [{
+                room_id: dm,
+                category: "lecturer",
+                facet_key: b,
+                label: "Fictional Beta",
+            }]);
+            assert.deepEqual(await facets(admin), []);
+            assert.deepEqual(await facets(outsider), []);
+            assert.equal(
+                await sql("select has_function_privilege('anon', 'public.chat_directory_filters()', 'execute')"),
+                "f",
+            );
+        },
+    );
+    await check(
         "Pins are personal, persist server-side and reject forged room access",
         async () => {
             assert.deepEqual(await value(a, "chat_pinned_rooms"), "{}");
@@ -564,6 +582,12 @@ try {
                 value(b, "set_chat_pin", [group, false]),
                 /access denied/i,
             );
+            assert.ok(!JSON.parse(await value(b, "chat_directory_filters")).some(
+                (facet) => facet.room_id === group,
+            ));
+            assert.ok(!JSON.parse(await value(a, "chat_directory_filters")).some(
+                (facet) => facet.room_id === group && facet.facet_key === b,
+            ));
             await assert.rejects(rows(b, "chat_messages", [group]), /access denied/);
             await assert.rejects(msg(b, group, "After removal"), /access denied/);
             await assert.rejects(value(b, "hide_chat_message", [m]), /access denied/);
@@ -661,6 +685,16 @@ try {
             );
             assert.equal(commercial.kind, "lecturer_course");
             assert.equal(commercial.owner_id, a);
+            const commercialFacets = JSON.parse(await value(a, "chat_directory_filters")).filter(
+                (facet) => facet.room_id === commercial.id,
+            );
+            assert.ok(commercialFacets.some(
+                (facet) => facet.category === "course" && facet.facet_key === courseRun,
+            ));
+            assert.ok(commercialFacets.some(
+                (facet) => facet.category === "company" && facet.facet_key === courseOrganisation
+                    && facet.label === "Fictional participant academy",
+            ));
             await assert.rejects(rows(participant, "chat_messages", [commercial.id]));
             await assert.rejects(
                 value(a, "manage_chat_member", [commercial.id, participant, false]),

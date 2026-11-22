@@ -308,6 +308,8 @@ Archive rather than deleting a used identity. Active children must be archived f
 
 At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. An eligible lecturer can join the general lecturer room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
 
+Use **Filtern nach / Filter by** to show conversations by company, staff member, course or lecturer. Choose a specific entry when available. Text search matches names and course or company labels from your accessible rooms. The filters work in both the active list and the archive. On mobile, use the back arrow in a conversation to return to the same filtered list.
+
 Write the message and choose **Nachricht senden / Send message** while connected. A failed request leaves the draft available to retry. A message is shown as sent only after server confirmation. Search the room’s text, load earlier messages, mark it read or mute it through the available controls. Reactions use the displayed emoji choices. Your own messages can be edited within the server’s 15-minute window; deletion asks for confirmation and leaves a tombstone. Safe web links open as links;
 pasted HTML remains text.
 

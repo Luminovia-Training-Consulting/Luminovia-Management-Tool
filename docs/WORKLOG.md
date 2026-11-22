@@ -1,3 +1,9 @@
+# 23 November 2026 — Chat directory filters and larger conversation area
+
+The internal chat directory filters by company, staff member, course and lecturer. Each category can be narrowed to a specific entry. Search covers the visible room titles and permitted labels, and works with the active and archive lists. Directory controls stay visible while rooms scroll. The compact heading increases the transcript area, including the single-pane mobile reading view.
+
+Filter metadata comes from a private projection guarded by current room membership and existing course, job and contact permissions. The public invoker RPC is recorded in the generated API reference and OpenAPI contract. The 128 focused component and contract tests and 21 PostgreSQL chat checks passed. Chromium verified the rendered chat with fictional data at 390, 768 and 1440 pixels in German and English. The production bundle budget passed.
+
 # 23 November 2026 — Profile expertise spacing
 
 The profile leaves 16 pixels between the expertise management button and a populated list at the default text size. A Chromium layout fixture verified the gap at 390 and 1440 pixels. All 22 profile tests passed.

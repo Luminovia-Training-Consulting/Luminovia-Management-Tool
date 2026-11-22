@@ -2,6 +2,20 @@
  * Room/thread layout, messages, composer and mobile single-pane chat, using shared brand colours
  * and surface variables.
  */
+.chat-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block-end: 12px;
+}
+
+.chat-page-heading h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+
 .chat-page-actions {
   display: flex;
   flex-wrap: wrap;
@@ -12,8 +26,8 @@
 .chat-workspace {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
-  min-height: 650px;
-  height: min(760px, calc(100dvh - 215px));
+  min-height: 540px;
+  height: calc(100dvh - 175px);
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--surface);
@@ -22,11 +36,48 @@
 }
 
 .chat-directory {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   background: var(--paper);
   border-right: 1px solid var(--line);
   padding: 23px 14px;
+}
+
+.chat-directory-tools {
+  flex: none;
+}
+
+.chat-directory-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chat-directory-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 4px 8px;
+}
+
+.chat-directory-filters > .field {
+  gap: 3px;
+  margin: 0;
+}
+
+.chat-directory-filters > .field:only-child {
+  grid-column: 1 / -1;
+}
+
+.chat-directory-filters select {
+  min-width: 0;
+  padding: 7px 8px;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
 }
 
 .chat-directory-heading {
@@ -923,8 +974,8 @@
 @media (max-width: 760px) {
   .chat-workspace {
     display: block;
-    min-height: 560px;
-    height: calc(100dvh - 300px);
+    min-height: 460px;
+    height: calc(100dvh - 208px);
   }
 
   .chat-directory {
@@ -1174,13 +1225,6 @@
   margin: 0.25rem 0;
 }
 
-/* The transcript owns available height; optional tools no longer consume its default reading area. */
-.chat-workspace {
-  height: max(640px, calc(100dvh - 230px));
-  min-height: 640px;
-  max-height: none;
-}
-
 .chat-thread-header {
   flex-shrink: 0;
   padding: 15px 18px;
@@ -1256,7 +1300,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   padding: 4px;
-  margin: 0 4px 18px;
+  margin: 0 4px 8px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -1283,7 +1327,7 @@
 }
 
 .chat-room-search {
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .chat-room-button {
@@ -1305,9 +1349,21 @@
 }
 
 @media (max-width: 760px) {
-  .chat-workspace {
-    height: max(650px, calc(100dvh - 190px));
-    min-height: 650px;
+  .chat-page-has-selection .chat-page-heading {
+    /* Keep the page heading in the accessibility tree while reading a conversation. */
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .chat-page-has-selection .chat-page-actions {
+    display: none;
+  }
+
+  .chat-has-selection {
+    height: calc(100dvh - 158px);
   }
 
   .chat-thread-header {
@@ -1343,10 +1399,6 @@
 
   .chat-thread-tools > summary {
     padding-inline: 12px;
-  }
-
-  .chat-room-tabs {
-    margin-bottom: 18px;
   }
 }
 

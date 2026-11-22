@@ -2893,6 +2893,22 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/chat_directory_filters": rpc(
+    "native_chat_directory_filters",
+    "Chat",
+    "List filter options for accessible chat rooms",
+    "Returns categories and display labels for the caller’s accessible rooms. Course and job data require their own read access. Staff and lecturer labels come from current room members eligible as contacts. Company affiliation in direct messages follows existing membership permissions.",
+    {},
+    {
+      type: "array",
+      items: object({
+        room_id: uuid,
+        category: { enum: ["company", "staff", "course", "lecturer"] },
+        facet_key: text,
+        label: text,
+      }),
+    },
+  ),
   "/rest/v1/rpc/chat_contacts": rpc(
     "native_chat_contacts",
     "Chat",

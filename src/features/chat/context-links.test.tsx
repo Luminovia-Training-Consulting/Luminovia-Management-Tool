@@ -1,6 +1,7 @@
 /** Check communication navigation and legacy links against the existing knowledge permissions. */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import {
@@ -8,10 +9,15 @@ import {
   LegacyForumRoute,
 } from "../../app/section-hubs";
 import { ChatPage } from "./chat";
+import type { ChatDirectoryFacet } from "./api";
+import type { ChatRoom } from "./types";
+import i18n from "../../lib/i18n";
 
 const state = vi.hoisted(() => ({
   canAuthor: true,
   roles: ["client"] as string[],
+  rooms: [] as ChatRoom[],
+  facets: [] as ChatDirectoryFacet[],
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "fictional-forum-contact" } } }),
@@ -46,6 +52,10 @@ vi.mock("../knowledge/api", () => ({
   }),
 }));
 vi.mock("./api", () => ({
+  chatDirectoryFiltersQuery: (actor: string) => ({
+    queryKey: ["directory-filters", actor],
+    queryFn: async () => state.facets,
+  }),
   chatContactsQuery: (actor: string) => ({
     queryKey: ["chat-contacts", actor],
     queryFn: async () => [],
@@ -53,8 +63,12 @@ vi.mock("./api", () => ({
   chatKeys: { rooms: (actor: string) => ["chat-rooms", actor] },
   chatRoomsQuery: (actor: string) => ({
     queryKey: ["chat-rooms", actor],
-    queryFn: async () => [],
+    queryFn: async () => state.rooms,
   }),
+}));
+
+vi.mock("./thread", () => ({
+  ChatThread: ({ room }: { room: ChatRoom }) => <h2>Open: {room.title}</h2>,
 }));
 
 const clients: QueryClient[] = [];
@@ -62,6 +76,8 @@ afterEach(() => {
   cleanup();
   clients.forEach((client) => client.clear());
   clients.length = 0;
+  state.rooms = [];
+  state.facets = [];
   vi.clearAllMocks();
 });
 
@@ -121,4 +137,106 @@ it("returns to chats when forum access is unavailable", async () => {
   renderPage("/chats/forum?thread=fixture");
   await screen.findByRole("heading", { name: "Chats" });
   expect(screen.queryByRole("link", { name: "Forum" })).not.toBeInTheDocument();
+});
+
+it("filters active or archived chats by category and identity without replacing the open conversation", async () => {
+  await i18n.changeLanguage("en");
+  const makeRoom = (
+    id: string,
+    title: string,
+    kind: ChatRoom["kind"],
+    archived = false,
+  ): ChatRoom => ({
+    id,
+    title,
+    kind,
+    personal_archived: archived,
+    job_id: null,
+    owner_id: null,
+    unread_count: 0,
+    muted: false,
+    last_message_at: null,
+  });
+  state.rooms = [
+    makeRoom("course-room", "Room A", "lecturer_course"),
+    makeRoom("staff-room", "Room B", "dm"),
+    makeRoom("lecturer-room", "Room C", "dm", true),
+    makeRoom("other-room", "Room D", "lecturer_course"),
+  ];
+  state.facets = [
+    {
+      room_id: "course-room",
+      category: "course",
+      facet_key: "one",
+      label: "Network basics",
+    },
+    {
+      room_id: "course-room",
+      category: "company",
+      facet_key: "org-a",
+      label: "Fictional Training",
+    },
+    {
+      room_id: "other-room",
+      category: "course",
+      facet_key: "two",
+      label: "Linux basics",
+    },
+    {
+      room_id: "other-room",
+      category: "company",
+      facet_key: "org-b",
+      label: "Fictional Academy",
+    },
+    {
+      room_id: "staff-room",
+      category: "staff",
+      facet_key: "sam",
+      label: "Sam Example",
+    },
+    {
+      room_id: "lecturer-room",
+      category: "lecturer",
+      facet_key: "alex",
+      label: "Alex Example",
+    },
+    {
+      room_id: "revoked-room",
+      category: "company",
+      facet_key: "hidden",
+      label: "Unlisted company",
+    },
+  ];
+  renderPage("/chats?room=course-room");
+  const user = userEvent.setup();
+  const category = await screen.findByRole("combobox", { name: "Filter by" });
+  await waitFor(() => expect(category).toBeEnabled());
+  await user.selectOptions(category, "company");
+  expect(screen.queryByRole("option", { name: "Unlisted company" })).toBeNull();
+  await user.selectOptions(screen.getByLabelText("Select company"), "org-b");
+  expect(screen.getByRole("button", { name: /^Room D/ })).toBeVisible();
+  expect(screen.queryByRole("button", { name: /^Room A/ })).toBeNull();
+  expect(screen.getByRole("heading", { name: "Open: Room A" })).toBeVisible();
+
+  await user.selectOptions(category, "course");
+  await user.selectOptions(screen.getByLabelText("Select course"), "one");
+  expect(screen.getByRole("button", { name: /^Room A/ })).toBeVisible();
+  expect(screen.queryByRole("button", { name: /^Room D/ })).toBeNull();
+
+  await user.selectOptions(category, "staff");
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search conversations" }),
+    "Sam Example",
+  );
+  expect(screen.getByRole("button", { name: /^Room B/ })).toBeVisible();
+  await user.selectOptions(category, "lecturer");
+  expect(
+    screen.getByRole("heading", { name: "No matching conversations" }),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  await user.click(screen.getByRole("button", { name: "Archived" }));
+  await user.selectOptions(category, "lecturer");
+  await user.selectOptions(screen.getByLabelText("Select lecturer"), "alex");
+  expect(screen.getByRole("button", { name: /^Room C/ })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Open: Room A" })).toBeVisible();
 });
