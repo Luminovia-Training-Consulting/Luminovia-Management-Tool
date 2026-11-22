@@ -171,6 +171,7 @@ test("demo More opens beside the bottom navigation and restores keyboard focus",
   await expect(trigger).toHaveCount(1);
   await trigger.click();
   await expect(panel).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
   expect(await page.evaluate(() => window.scrollY)).toBe(offset);
   await expect(panel.locator('a[href="/help"]')).toHaveCount(1);
   await expect(panel.locator('a[href="/login"]')).toHaveCount(1);
@@ -188,6 +189,7 @@ test("demo More opens beside the bottom navigation and restores keyboard focus",
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await trigger.click();
   await page.locator(".demo-mobile-primary-nav a[href='/demo/calendar']").click();
   await expect(page).toHaveURL(/\/demo\/calendar$/);

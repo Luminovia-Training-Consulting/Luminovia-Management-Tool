@@ -196,6 +196,7 @@ export function DemoPage() {
   const launcher = useRef<HTMLButtonElement>(null);
   const { attributes: mobileNavigation, close: closeMobileNavigation } =
     useDismissibleDisclosure(location.key);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const restoreLauncherFocus = useRef(false);
   const [role, setRole] = useState<DemoRole>(() => {
     const requested = new URLSearchParams(location.search).get("role");
@@ -1081,12 +1082,19 @@ export function DemoPage() {
           ariaLabel={t("navigation")}
           onItemClick={() => report("")}
         />
-        <details className="demo-mobile-more" {...mobileNavigation}>
+        <details
+          className="demo-mobile-more"
+          {...mobileNavigation}
+          onToggle={(event) =>
+            setMobileNavigationOpen(event.currentTarget.open)
+          }
+        >
           <summary
             className="demo-mobile-more-button"
             role="button"
             aria-label={t("navigationMore")}
             aria-controls="demo-mobile-panel"
+            aria-expanded={mobileNavigationOpen}
           >
             <Menu size={20} aria-hidden="true" />
             <span>{t("compactMore")}</span>
