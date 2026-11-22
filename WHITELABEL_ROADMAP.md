@@ -330,7 +330,9 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] The private vendor registry records approved customers, editions, domains, capacity, support agreement references and the exact terms and signed envelope for each issuance. A serialised approval ledger supports initial trial and licensed terms, registration of an existing trusted licence, trial conversion and renewal. The seller can export the exact recorded licence for delivery. [Issuer runbook](deploy/academy/README.md#issue-convert-or-renew-a-customer-licence)
 - [ ] Connect reviewed agreements, provisioning progress, authorised commercial fulfilment and the external handover to the private vendor process.
 - [x] Signed licence validation on the exact release with active, read-only grace and expiry gates. Local administrators can review validity, occupied and available seats, retained storage and the signed API allowance. Seat, Storage and ingress limits apply at their owning server boundary.
-- [ ] Apply a renewed licence and revised ingress policy to a retained installation, and verify customer export/offboarding on the final target.
+- [x] Apply a renewed licence and revised ingress allowance while keeping the exact browser release, existing course profile and retained customer data. Both editions passed the local licence and fresh PostgreSQL replacement checks. [Renewal runbook](deploy/academy/README.md#apply-a-renewed-licence-on-the-same-release)
+- [x] Export a portable encrypted course, participant and approved-file archive after licence expiry. PostgreSQL and pinned Storage verify private role denial, isolation, direct attendance evidence and actual file bytes. [Customer export runbook](deploy/academy/OFFBOARDING.md)
+- [ ] Rehearse issuance, renewal and offboarding with the customer's independent installation, operator and publication policy.
 - [ ] Written customer licence/terms, third-party/GPL history legal review, security/privacy/retention/processor responsibilities and support agreement.
 
 ### WL-07 — Managed branded hosting (P1)

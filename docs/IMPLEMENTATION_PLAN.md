@@ -34,6 +34,8 @@ The internal portal and dedicated Academy expose searchable German and English g
 - Connect the public Website sender separately and complete notification delivery, exact HTTP contract acceptance, the browser matrix and accessibility acceptance.
 - Coordinate White-Label branding, installer, provider delivery, signed webhooks and customer upgrade/restore with the separate operations task. Retain independent managed and self-hosted acceptance in the White-Label roadmap.
 - Vendor onboarding records now support initial trial and licensed terms, registration of an existing signed licence, trial conversion, renewal and exact envelope export. The customer edition, installation ID and scope stay bound to the approved draft. Commercial fulfilment and the independent target installation remain open in the [White-Label roadmap](../WHITELABEL_ROADMAP.md#wl-06--licence-sales--fulfilment-operations-p1).
+- The operator can apply a renewed licence and API allowance on the same release. The dedicated Academy also exports an encrypted archive with scoped course and learner data after expiry, including the approved versions of attendance and learning files. The recovery archive remains the workflow for restoring an entire installation.
+- The attendance register counts and filters each session. Confirmed bulk marking uses the same atomic, version-checked writer as CSV and XLSX import. It leaves saved records and existing learner check-ins out of the bulk selection.
 
 ## Academy bootstrap, release packaging and restored CI verification
 

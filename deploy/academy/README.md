@@ -149,7 +149,7 @@ node scripts/testing/academy-ingress-check.mjs "$caddy_binary" \
 
 Use the Caddy and Envoy binaries from the images pinned in `compose.override.yml`. The second command checks every signed browser file through a private local TLS certificate. It confirms deep links, PWA caching, the Realtime WebSocket handshake, the maintenance fence and the dedicated API surface. It also spends the entire test licence's API allowance and expects HTTP 429 with `Retry-After` on the next request. Use a staging licence with 31–1,000 requests per minute and reserve the chosen local port plus the port 10 higher. Repeat the browser and transport checks against the actual independently provisioned backend before public activation.
 
-The dedicated public API has one shared allowance per Envoy instance. The signed amount is the burst size and the bucket refills each minute. Requests for static files and private service-to-service calls stay outside this allowance. Review occupancy, storage and mail limits alongside ingress when renewing a licence or planning an upgrade.
+The dedicated public API has one shared allowance per Envoy instance. The signed amount is the burst size and the bucket refills each minute. Requests for static files and private service-to-service calls stay outside this allowance. Review occupancy, storage and mail limits alongside ingress when [renewing a licence](#apply-a-renewed-licence-on-the-same-release) or planning an upgrade.
 
 The dedicated gateway forwards the course and local administration functions, approved Auth requests, database RPCs and the Realtime WebSocket. Server integrations can read the published course index with a scoped key. The database checks each RPC against the dedicated licence and the caller's current role. Legacy marketplace, public-website intake and external lecturer endpoints return HTTP 404. Course files and the academy logo use the existing scan gateway. Direct Storage and table routes stay private.
 
@@ -165,6 +165,22 @@ node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
 ```
 
 The read-only receipt reports the exact licensed release, licence dates and current course access. It includes the applied migration count and last version when the operator ledger is present. A disabled course profile or an absent ledger is shown as a null value. The command requires the matching dedicated database and works with a licence in grace or after expiry. It does not print configuration, accounts or licence secrets.
+
+## Apply a renewed licence on the same release
+
+Keep the previous signed licence, target JSON and exact installed browser package. The issuer supplies a new currently active licence for the same installation, edition and source revision. Obtain a new detached signature for the exact existing package using the [release signing command](../../DEVELOPMENT.md#sign-and-verify-an-offline-browser-release). Verify the new licence and signature with the independently trusted keys and retain the previous receipt before maintenance. A release change uses the [separate upgrade steps](#upgrade-an-existing-academy).
+
+Stop ingress using the installed release's Compose configuration. Keep the private database running. Execute the renewal with the current reviewed operator tooling and the existing runtime and target paths. The Linux host needs `flock` for the maintenance lock.
+
+```sh
+academy_compose --profile ingress stop web api-ingress
+node scripts/academy-install-browser.mjs "$runtime_root" "$target_json" \
+  "$package_directory" "$new_release_signature" "$new_licence" \
+  "$licence_public_key" "$release_public_key" --renew-licence "$previous_licence"
+academy_compose --profile ingress up -d --no-deps --force-recreate --wait api-ingress web
+```
+
+Wait for both ingress services to be ready and confirm the new licence receipt, current course access and API allowance. The command updates the exact currently recorded licence and atomically replaces the private Envoy policy with the allowance from the new signature. It preserves any existing maintenance marker, accounts, courses, file objects and release. If execution stops after updating the database, leave ingress stopped and repeat the same command with both signed licences to finish the replacement.
 
 ## Encrypted recovery for a dedicated installation
 
@@ -190,6 +206,8 @@ sudo python3 deploy/academy/recovery.py restore \
 ```
 
 Restoration verifies the archive against the independently recorded SHA-256 and authenticates its encrypted bytes before publishing the new runtime. It refuses existing runtimes, Compose services, networks and volumes. The receipt records the exact database and Storage image references. Start the restored backend using the original reviewed source and these exact images, first in isolation. Verify the migration ledger, an existing user's password, course permissions and a protected file's bytes. Verify scanner, SMTP, licences and ingress on the particular target before serving traffic. A change to PostgreSQL, the public domain or the database release uses a separate upgrade procedure after this exact recovery.
+
+For a portable handover, the [Academy data export](OFFBOARDING.md) provides course records, participant data and the verified bytes of approved learning files in an independently encrypted format. It works during licence grace and after expiry. Use the recovery workflow above for restoring the exact application, configuration and Auth data on a separate host.
 
 ## Upgrade an existing academy
 

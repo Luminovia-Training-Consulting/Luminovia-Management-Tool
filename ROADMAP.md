@@ -173,7 +173,7 @@ The current owner priority is to complete the independent LMS before the install
 ### R5 — Premium LMS exams and attendance (`P1`, after R3–R4)
 
 - [ ] **LMS-08:** lecturer **and** authorised company may set `Exam required / No exam required`; exam window hidden for learners when not required, with direct API denial. Clean public exam PDFs uploaded by either become immediately student-visible when required. Staff solutions never auto-publish; all versions retained.
-- [ ] **LMS-09:** one course-session/day attendance record per enrolled student, `present/absent/excused`, optional arrival/departure and note; staff/company can view and edit, participants cannot see the class register.
+- [x] **LMS-09:** one course-session/day attendance record per enrolled student. Authorised staff and company contacts can see counts, filter by name and status, and mark a filtered group of previously untouched entries after confirmation. An edit conflict rolls back the group. Single-row arrival/departure, notes and corrections remain available. Learners cannot read the class register.
 - [ ] Allow scanned PDF attendance evidence and, where offered, previewed/validated CSV/XLSX import; preserve audit/corrections and exact-file permissions.
 - [ ] Check exam/attendance UI and storage disappear to an OFF company without deleting existing history, and reappear only to permitted actors when ON.
 
