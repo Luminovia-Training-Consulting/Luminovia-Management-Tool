@@ -7,6 +7,31 @@
   align-items: end;
   margin-block: 1rem;
 }
+/* The labelled source and its action group share one control baseline. */
+.accounting-toolbar > .field {
+  margin-block-end: 0;
+  max-inline-size: 100%;
+}
+.accounting-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: inherit;
+  max-inline-size: 100%;
+}
+.accounting-toolbar select,
+.accounting-toolbar-actions > .button {
+  min-block-size: 44px;
+  padding-block: 0.5rem;
+}
+@media (max-width: 760px) {
+  .accounting-toolbar > .field,
+  .accounting-toolbar-actions {
+    flex-basis: 100%;
+  }
+  .accounting-toolbar-actions > .button {
+    flex: 1 1 auto;
+  }
+}
 .accounting-grid {
   display: grid;
   gap: 1rem;

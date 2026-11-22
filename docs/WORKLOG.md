@@ -1,3 +1,7 @@
+# 23 November 2026 — Accounting export toolbar alignment
+
+The invoice source and its two actions now share the same control height and align on one row when space allows. The action group wraps below the source on narrower screens. All 29 accounting component tests passed. Chromium rendered the actual accounting page with fictional data in German and English at 320, 390, 768, 1280 and 1920 pixels. The existing isolated accounting journey now also asserts desktop alignment and mobile wrapping.
+
 # 23 November 2026 — Report an unavailable teaching day
 
 An assigned lecturer can report a teaching day without entering medical details. The transaction releases only the upcoming sessions whose start is on that date in the assignment's time zone. The ordinary job list shows the resulting urgent offer ahead of normal results across sort modes and pages. Company lecturer restrictions still apply to discovery, deep links and claims. Current lecturers can claim urgent cover without a verified topic match, subject to the contract and schedule rules. The first confirmed claim wins.

@@ -122,6 +122,35 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   );
   await adminLogin(page, owner);
   await page.goto("/accounting");
+  const toolbar = page.locator(".accounting-toolbar");
+  await expect(toolbar.getByRole("combobox")).toBeVisible();
+  const layout = await toolbar.evaluate((element) => {
+    const { left, right } = element.getBoundingClientRect();
+    const controls = Array.from(
+      element.querySelectorAll("select, button"),
+      (control) => {
+        const box = control.getBoundingClientRect();
+        return {
+          top: box.top,
+          bottom: box.bottom,
+          height: box.height,
+          fits: box.left >= left && box.right <= right + 1,
+        };
+      },
+    );
+    return controls;
+  });
+  expect(layout).toHaveLength(3);
+  expect(layout.every(({ height, fits }) => fits && height >= 44)).toBe(true);
+  if (isMobile) {
+    expect(layout[1].top).toBeGreaterThan(layout[0].bottom);
+  } else {
+    for (const button of layout.slice(1)) {
+      expect(Math.abs(button.top - layout[0].top)).toBeLessThan(1);
+      expect(Math.abs(button.height - layout[0].height)).toBeLessThan(1);
+    }
+  }
+
   await page
     .getByRole("button", {
       name: "Externe Rechnung an ein Unternehmen erfassen",

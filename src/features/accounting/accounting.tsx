@@ -645,24 +645,26 @@ export function AccountingPage() {
             )}
           </select>
         </Field>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            retry.clear();
-            setSnapshot(null);
-            void client.invalidateQueries({
-              queryKey: accountingKeys.all(actor),
-            });
-          }}
-        >
-          {t("refresh")}
-        </Button>
-        {(access.data.can_manage_customer_invoices ||
-          access.data.can_export_all_lecturers) && (
-          <SettlementJournalButton
-            key={`${actor}:${access.data.can_manage_customer_invoices}:${access.data.can_export_all_lecturers}`}
-          />
-        )}
+        <div className="accounting-toolbar-actions">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              retry.clear();
+              setSnapshot(null);
+              void client.invalidateQueries({
+                queryKey: accountingKeys.all(actor),
+              });
+            }}
+          >
+            {t("refresh")}
+          </Button>
+          {(access.data.can_manage_customer_invoices ||
+            access.data.can_export_all_lecturers) && (
+            <SettlementJournalButton
+              key={`${actor}:${access.data.can_manage_customer_invoices}:${access.data.can_export_all_lecturers}`}
+            />
+          )}
+        </div>
       </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
       {saved && <Notice>{t("saved")}</Notice>}
