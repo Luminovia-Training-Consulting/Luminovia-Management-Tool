@@ -5,6 +5,7 @@ import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
 import {eventually, subscribeToRoom} from "./testing/realtime.mjs";
 import {setTimeout as delay} from "node:timers/promises";
+import {checkPrivateCourseSubmissions} from "./testing/private-course-submission-check.mjs";
 import {documentedRpc, portalJsonResponse} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
@@ -274,6 +275,10 @@ await withApiFixture(
                 signal: AbortSignal.timeout(30000),
             });
         }
+
+        await checkPrivateCourseSubmissions({
+            admin, teacher, learner, client, peer, run, otherRun, checked, url, headers, download, bytes,
+        });
 
         const material = await download(learner, "resource", resource);
         assert.equal(material.status, 200);
@@ -661,5 +666,5 @@ await withApiFixture(
     },
 );
 console.log(
-    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
+    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, private scanned submissions, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
 );

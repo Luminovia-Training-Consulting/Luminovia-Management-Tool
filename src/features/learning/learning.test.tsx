@@ -134,23 +134,34 @@ beforeEach(async () => {
                     }
                     return resolve({ data, error: fake.meetingError });
                   })
-                : [
-                      "course_chat_rooms",
-                      "course_enrolments",
-                      "course_enrolment_candidates",
-                    ].includes(name)
-                  ? Promise.resolve({ data: [], error: null }).then(resolve)
-                  : Promise.resolve(
-                      fake.pending ?? { id: null, saved: true },
-                    ).then((data) =>
-                      resolve({
-                        data,
-                        error:
-                          args?.p_action === "resource_share"
-                            ? fake.shareError
-                            : fake.error,
-                      }),
-                    ),
+                : name === "course_submissions"
+                  ? Promise.resolve({
+                      data: {
+                        enabled: false,
+                        can_manage: false,
+                        can_upload: false,
+                        entries: [],
+                        next: null,
+                      },
+                      error: null,
+                    }).then(resolve)
+                  : [
+                        "course_chat_rooms",
+                        "course_enrolments",
+                        "course_enrolment_candidates",
+                      ].includes(name)
+                    ? Promise.resolve({ data: [], error: null }).then(resolve)
+                    : Promise.resolve(
+                        fake.pending ?? { id: null, saved: true },
+                      ).then((data) =>
+                        resolve({
+                          data,
+                          error:
+                            args?.p_action === "resource_share"
+                              ? fake.shareError
+                              : fake.error,
+                        }),
+                      ),
       };
       return request;
     });
