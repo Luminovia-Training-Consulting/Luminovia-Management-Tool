@@ -1,3 +1,7 @@
+# 23 November 2026 — Profile expertise spacing
+
+The profile leaves 16 pixels between the expertise management button and a populated list at the default text size. A Chromium layout fixture verified the gap at 390 and 1440 pixels. All 22 profile tests passed.
+
 # 23 November 2026 — Accounting export toolbar alignment
 
 The invoice source label sits above the control row. The selector and action buttons share their height and text sizing, with the actions grouped under the selector on narrow screens. Isolated Chromium verified the control bounds and completed the invoice and export journey in both desktop and mobile layouts. TypeScript, lint and all 32 focused tests passed.

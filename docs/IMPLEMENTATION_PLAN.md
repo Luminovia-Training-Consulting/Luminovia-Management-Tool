@@ -2,6 +2,7 @@
 
 ## Profile settings
 
+- Give the expertise management action space above the list of selected topics.
 - Use the browser's IANA zone catalogue for profile, calendar display and private event dropdowns. Keep valid saved aliases available and reuse the profile default and existing calendar time conversion.
 - Show the profile picture size limit as 1 MB in upload instructions and validation feedback.
 

@@ -1,3 +1,7 @@
+.profile-layout .button + .expertise-list:not(:empty) {
+  margin-block-start: 1rem;
+}
+
 /** Own profile preferences share a compact responsive row without changing publication semantics. */
 .profile-privacy-grid {
   display: grid;
