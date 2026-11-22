@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Finance workspace
+
+- Keep the finance overview, accounting exports and analytics together, with tabs driven by the current account and existing server authority. Retain old route links and keep the standalone Academy scoped to learning.
+
 ## Spreadsheet imports
 
 - Provide CSV and XLSX starter files, local validation and a confirmed preview in each owning workspace. Keep existing per-record permission checks and atomic calendar and attendance batches.

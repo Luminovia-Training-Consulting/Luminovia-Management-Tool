@@ -17,7 +17,6 @@ import { PermanentDeletionProvider } from "../features/deletions/deletions";
 import { AnnouncementBanners } from "../features/announcements/announcement-banners";
 import {
   Bell,
-  ChartNoAxesCombined,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -59,6 +58,7 @@ import {
   installationBrand,
   portalInternalEdition,
 } from "../lib/installation-brand";
+import { financeWorkspaceAccess } from "./finance-access";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import "../features/learning/i18n";
@@ -82,11 +82,7 @@ import { uiLocalChangeEvent } from "../lib/preferences";
  * named focus/hover tooltips, a compact action toolbar and a complete mobile disclosure. React
  * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
  */
-const analyticsNavItem = {
-  to: "/analytics",
-  icon: ChartNoAxesCombined,
-  label: "analytics",
-};
+const financeNavItem = { to: "/finance", icon: Wallet, label: "finance" };
 
 export function Shell() {
   const { t } = useTranslation();
@@ -202,12 +198,7 @@ export function Shell() {
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const clientPortalAccess = roles.data?.includes("client") ?? false;
   const learnerAccess = roles.data?.includes("participant") ?? false;
-  const financeAccess =
-    teaching ||
-    Boolean(
-      permissions.data?.includes("finance.manage") ||
-      permissions.data?.includes("finance.gross.read"),
-    );
+  const financeAccess = financeWorkspaceAccess(roles.data, permissions.data);
   const manage = Boolean(
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
@@ -259,20 +250,10 @@ export function Shell() {
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
             : []),
           ...(portalInternalEdition &&
-          (teaching ||
-            clientPortalAccess ||
-            permissions.data?.includes("jobs.manage") ||
-            permissions.data?.includes("courses.manage") ||
-            permissions.data?.includes("finance.manage"))
-            ? [analyticsNavItem]
-            : []),
-          ...(financeAccess
-            ? [{ to: "/finance", icon: Wallet, label: "finance" }]
-            : []),
-          ...(teaching ||
-          clientPortalAccess ||
-          permissions.data?.includes("finance.manage")
-            ? [{ to: "/accounting", icon: Wallet, label: "accountingExports" }]
+          (financeAccess.overview ||
+            financeAccess.accounting ||
+            financeAccess.analytics)
+            ? [financeNavItem]
             : []),
           ...(staff || clientPortalAccess
             ? [{ to: "/changes", icon: FileCheck2, label: "assignmentChanges" }]
@@ -321,11 +302,16 @@ export function Shell() {
       /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
     )
       return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
-    if (!teaching && /^\/finance\/?$/.test(location.pathname)) {
+    if (
+      /^\/finance\/?$/.test(location.pathname) &&
+      ["claim", "series"].some((key) =>
+        new URLSearchParams(location.search).has(key),
+      )
+    ) {
       if (permissions.isPending) return <Loading />;
       if (permissions.isError)
         return <ErrorState retry={() => void permissions.refetch()} />;
-      if (!financeAccess)
+      if (!financeAccess.overview)
         return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
     }
   }

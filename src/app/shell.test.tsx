@@ -501,6 +501,19 @@ it.each(["/jobs/fictional-offer", "/finance?claim=fictional-claim"])(
   },
 );
 
+it("uses one finance link for company invoices and analytics", () => {
+  access.roles = ["client"];
+  setup("/client", false);
+  const sidebar = screen.getByRole("complementary", { name: "Menü" });
+  expect(
+    within(sidebar).getByRole("link", { name: "Finanzen" }),
+  ).toHaveAttribute("href", "/finance");
+  expect(within(sidebar).queryByRole("link", { name: "Analysen" })).toBeNull();
+  expect(
+    within(sidebar).queryByRole("link", { name: "Buchhaltung und Exporte" }),
+  ).toBeNull();
+});
+
 it("combines enterprise, participant and teaching navigation on one account", () => {
   access.roles = ["client", "participant", "lecturer"];
   setup("/finance", false);

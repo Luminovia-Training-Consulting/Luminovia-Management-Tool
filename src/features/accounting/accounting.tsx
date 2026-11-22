@@ -512,14 +512,19 @@ function CustomerPaymentForm({
 
 /** Actor-bound accounting route. Capability changes suppress stale restricted
  * sources; every export and PDF still checks current database permission. */
-export function AccountingPage() {
+export function AccountingPage({
+  preferCustomer = false,
+}: { preferCustomer?: boolean } = {}) {
   const { session } = useAuth();
   const actor = session!.user.id;
   const { t } = useTranslation("accounting");
   const online = useOnline();
   const client = useQueryClient();
   const access = useQuery(accountingAccessQuery(actor));
-  const [source, setSource] = useState<AccountingSource>("own");
+  const [selectedSource, setSource] = useState<AccountingSource>();
+  const source =
+    selectedSource ??
+    (preferCustomer && access.data?.can_export_customer ? "customer" : "own");
   const [selected, setSelected] = useState<string[]>([]);
   const [register, setRegister] = useState(false);
   const [payment, setPayment] = useState<AccountingInvoice | null>(null);
@@ -538,7 +543,7 @@ export function AccountingPage() {
     (source === "customer" && access.data?.can_export_customer === true);
   const invoices = useInfiniteQuery({
     ...accountingInvoicesQuery(actor, source),
-    enabled: sourceAllowed,
+    enabled: sourceAllowed && (!preferCustomer || access.isSuccess),
   });
   const rows =
     sourceAllowed && !invoices.isError

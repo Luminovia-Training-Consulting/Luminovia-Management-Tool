@@ -1,3 +1,7 @@
+# 23 November 2026 — Unified finance workspace
+
+The internal portal groups the finance overview, accounting exports and analytics under one sidebar and mobile entry. Company accounts open company invoices by default when authorised. Old accounting and analytics links preserve their query and fragment. The separate learning-only Academy retains its scoped learning analytics and has no commercial routes. TypeScript, targeted lint and all 89 finance, accounting and shell tests passed.
+
 # 23 November 2026 — Signed-in navigation follows account permissions
 
 Removed the signed-in navigation preview from the internal portal and both Academy editions, including its role switch, browser preference handling, sample pages, styles and translations. The public demo remains the place to explore fictional roles and sample analytics. Portal and Academy tests cover the real staff routes and ordinary header controls. All 1,543 Vitest cases and 26 guided demo and help journeys passed in desktop and mobile Chromium. The internal and both Academy builds passed the bundle budgets. The Academy workspace test includes the participant CSV/XLSX picker introduced on the updated base.

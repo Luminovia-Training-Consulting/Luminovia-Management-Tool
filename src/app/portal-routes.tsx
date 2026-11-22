@@ -3,13 +3,21 @@
  * stay outside the protected user-keyed subtree.
  */
 import { lazy } from "react";
+import { FinanceWorkspace, LegacyFinanceRoute } from "./finance-workspace";
 import {
   CommunicationForum,
   CommunicationWorkspace,
   LegacyForumRoute,
   SectionHub,
 } from "./section-hubs";
-import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
 import { PortalAccess } from "../features/auth/portal-access";
@@ -158,6 +166,11 @@ const AccountingPage = lazy(() =>
   })),
 );
 
+function FinanceAccounting() {
+  const { preferCustomer } = useOutletContext<{ preferCustomer: boolean }>();
+  return <AccountingPage preferCustomer={preferCustomer} />;
+}
+
 const ClientsPage = lazy(() =>
   import("../features/operations/clients").then((module) => ({
     default: module.ClientsPage,
@@ -301,13 +314,27 @@ export default function PortalRoutes() {
             element={<CourseWorkspacePage />}
           />
           <Route path="contracts" element={<ContractsPage />} />
-          <Route path="finance" element={<FinancePage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="finance" element={<FinanceWorkspace />}>
+            <Route index element={<FinancePage />} />
+            <Route path="accounting" element={<FinanceAccounting />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route
+              path="analytics/learning"
+              element={<LearningAnalyticsPage />}
+            />
+          </Route>
+          <Route
+            path="analytics"
+            element={<LegacyFinanceRoute to="/finance/analytics" />}
+          />
           <Route
             path="analytics/learning"
-            element={<LearningAnalyticsPage />}
+            element={<LegacyFinanceRoute to="/finance/analytics/learning" />}
           />
-          <Route path="accounting" element={<AccountingPage />} />
+          <Route
+            path="accounting"
+            element={<LegacyFinanceRoute to="/finance/accounting" />}
+          />
           <Route path="changes" element={<ChangeRequestsPage />} />
           <Route path="changes/:id" element={<ChangeRequestsPage />} />
           <Route path="wiki" element={<SectionHub kind="knowledge" />} />

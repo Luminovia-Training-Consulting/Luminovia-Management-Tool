@@ -286,7 +286,9 @@ export function AnalyticsPage() {
       {online && learning.isSuccess && hasLearningAnalytics(learning.data) && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/analytics/learning">{t("learningAnalytics:title")}</Link>
+            <Link to="/finance/analytics/learning">
+              {t("learningAnalytics:title")}
+            </Link>
           </Button>
         </div>
       )}

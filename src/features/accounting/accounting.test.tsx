@@ -36,7 +36,7 @@ vi.mock("../files/api", () => ({
 }));
 /** Seed only the current actor's cache; no mocked business mutation is accepted
  * as evidence that a server-side invoice or export was created. */
-function show(gross = false) {
+function show(gross = false, companyView = false) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -46,7 +46,7 @@ function show(gross = false) {
   client.setQueryData([...accountingKeys.all("teacher"), "access"], {
     can_export_all_lecturers: false,
     can_manage_customer_invoices: gross,
-    can_export_customer: gross,
+    can_export_customer: gross || companyView,
   });
   client.setQueryData([...accountingKeys.all("teacher"), "invoices", "own"], {
     pages: [{ items: [], has_more: false }],
@@ -59,7 +59,7 @@ function show(gross = false) {
   const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <AccountingPage />
+        <AccountingPage preferCustomer={companyView} />
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -77,6 +77,16 @@ afterEach(async () => {
   onlineManager.setOnline(true);
   await i18n.changeLanguage("de");
 });
+it("starts company accounts on company invoices without unlocking invoice registration", () => {
+  show(false, true);
+  expect(document.getElementById("accounting-source")).toHaveValue("customer");
+  expect(
+    screen.queryByRole("button", {
+      name: "Externe Rechnung an ein Unternehmen erfassen",
+    }),
+  ).not.toBeInTheDocument();
+});
+
 it("does not expose customer registration, gross data or management export to ordinary lecturers", () => {
   show();
   expect(

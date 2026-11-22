@@ -440,7 +440,7 @@ export function LearningAnalyticsPage() {
       {portalInternalEdition && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/analytics">{t("general")}</Link>
+            <Link to="/finance/analytics">{t("general")}</Link>
           </Button>
         </div>
       )}
