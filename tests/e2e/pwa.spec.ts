@@ -1,10 +1,10 @@
 /**
  * Browser checks for the built public offline shell without private API caches.
  * Chromium covers authenticated offline use. The explicit WebKit lane checks
- * a cold worker installation and offline navigation in a built preview.
+ * a cold worker installation, offline navigation and native push refusal.
  */
 import {expect, test, type Page} from "@playwright/test";
-import {randomUUID} from "node:crypto";
+import {createECDH, randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
 test.skip(
@@ -59,6 +59,57 @@ test("built PWA WebKit activates the app worker and serves an offline deep link"
         expect(privateReply).toBe("network unavailable");
     } finally {
         await context.setOffline(false);
+    }
+});
+
+test("built PWA WebKit refuses notification permission without registering a device", {tag: "@pwa-webkit"}, async ({page}) => {
+    const lecturer = await actor("Fictional WebKit push lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const viewer = api(process.env.SUPABASE_ANON_KEY!);
+    try {
+        await checked(viewer.auth.signInWithPassword({
+            email: lecturer.email,
+            password: process.env.E2E_PASSWORD!,
+        }), {requireData: true});
+        const previous = await checked(viewer.rpc("my_push_devices"), {requireData: true});
+        const key = previous.public_key ?? createECDH("prime256v1").generateKeys().toString("base64url");
+        await checked(service.rpc("configure_web_push", {p_public_key: key, p_enabled: true}));
+        try {
+            await page.addInitScript(() => {
+                const requestPermission = Notification.requestPermission.bind(Notification);
+                Notification.requestPermission = async () => {
+                    const decision = await requestPermission();
+                    document.documentElement.setAttribute("data-push-decision", decision);
+                    return decision;
+                };
+            });
+            await page.goto("/login");
+            await controlWithBuiltWorker(page);
+            await login(page, lecturer.email);
+            const registrations: string[] = [];
+            page.on("request", (request) => {
+                if (new URL(request.url()).pathname.endsWith("/rpc/register_push_device"))
+                    registrations.push(request.method());
+            });
+            await page.goto("/settings");
+            const delivery = page.locator("details.settings-section").filter({
+                hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/,
+            });
+            await delivery.locator("summary").press("Enter");
+            await expect(delivery).toHaveJSProperty("open", true);
+            const enable = page.getByRole("button", {name: /Push auf diesem Gerät aktivieren|Enable push on this device/});
+            await expect(enable).toBeEnabled();
+            await enable.click();
+            await expect(page.locator("html")).toHaveAttribute("data-push-decision", "denied");
+            await expect(page.getByText(/Push konnte nicht geändert werden|Push could not be changed/)).toBeVisible();
+            expect(registrations).toEqual([]);
+            const devices = await checked(viewer.rpc("my_push_devices"), {requireData: true});
+            expect(devices.devices).toEqual([]);
+        } finally {
+            await checked(service.rpc("configure_web_push", {p_public_key: previous.public_key ?? key, p_enabled: previous.enabled}));
+        }
+    } finally {
+        await checked(service.auth.admin.deleteUser(lecturer.id));
     }
 });
 
