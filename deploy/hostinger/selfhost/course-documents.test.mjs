@@ -43,7 +43,7 @@ test(
             );
             writeFileSync(
                 join(temporary, "probe/index.ts"),
-                `import{renderFactPdf}from'../course-documents/pdf.ts';const font=await Deno.readFile(new URL('../course-documents/assets/DejaVuSans.ttf',import.meta.url));Deno.serve(async()=>{const bytes=await renderFactPdf('completion',{id:'fictional-runtime-proof',participant:'Fictional Müller Μαρία Мария',course:'Linux Übung',time_zone:'Europe/Berlin',verified_minutes:60,quiz_passed:true,issued_at:'2026-11-01T12:00:00Z'},font);return new Response(bytes,{headers:{'Content-Type':'application/pdf'}});});`,
+                `Deno.serve(async()=>{const{renderPackagedFactPdf}=await import('../course-documents/pdf.ts');const bytes=await renderPackagedFactPdf('completion',{id:'fictional-runtime-proof',participant:'Fictional Müller Μαρία Мария',course:'Linux Übung',time_zone:'Europe/Berlin',verified_minutes:60,quiz_passed:true,issued_at:'2026-11-01T12:00:00Z'});return new Response(bytes,{headers:{'Content-Type':'application/pdf'}});});`,
             );
             container = String(
                 docker([

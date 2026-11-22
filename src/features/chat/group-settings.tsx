@@ -59,6 +59,7 @@ export function GroupSettings({
       }}
       title={t("title")}
       description={t("hint")}
+      closeDisabled={pending}
     >
       {settings.isPending ? (
         <Loading />

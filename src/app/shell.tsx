@@ -62,7 +62,7 @@ import {
 } from "../features/auth/internal-capabilities";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
-import { db } from "../lib/supabase";
+import { useSignOut } from "../features/auth/sign-out-state";
 import i18n from "../lib/i18n";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import {
@@ -149,8 +149,14 @@ export function Shell() {
     previousActor.current = actor;
     setSearch("");
   }, [actor]);
-  const [signoutFailed, setSignoutFailed] = useState(false);
-  const [signoutPending, setSignoutPending] = useState(false);
+  const {
+    signOut: logout,
+    pending: signoutPending,
+    failed: signoutFailed,
+  } = useSignOut(() => {
+    client.clear();
+    navigate("/login", { replace: true });
+  });
   const profile = useQuery(profileQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
   const guestOnly = isGuestOnly(roles.data);
@@ -353,23 +359,6 @@ export function Shell() {
     : previewActive
       ? []
       : navigation;
-
-  async function logout() {
-    setSignoutFailed(false);
-    setSignoutPending(true);
-    try {
-      const { error } = await db().auth.signOut();
-      if (error) throw error;
-      client.clear();
-      navigate("/login", { replace: true });
-    } catch {
-      // A rejected SDK/network promise is not a confirmed sign-out. Keep the
-      // current screen and private queries available for an explicit retry.
-      setSignoutFailed(true);
-    } finally {
-      setSignoutPending(false);
-    }
-  }
 
   /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
   function showRailTooltip(label: string, element: HTMLElement) {
@@ -641,7 +630,7 @@ export function Shell() {
           </div>
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
-          {signoutFailed && <Notice kind="error">{t("error")}</Notice>}
+          {signoutFailed && <Notice kind="error">{t("signOutFailed")}</Notice>}
           {uiSaveFailed && (
             <Notice kind="error">{t("uiPreferenceNotSaved")}</Notice>
           )}

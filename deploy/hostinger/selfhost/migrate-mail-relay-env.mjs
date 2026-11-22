@@ -77,16 +77,16 @@ function updateEnvironmentAtomically(path, original, updated, info) {
     const backup = `${path}.pre-mail-relay`;
     if (existsSync(backup)) {
         assertPrivatePath(backup, {requireRoot: process.getuid?.() === 0});
-        assert.equal(readFileSync(backup, "utf8"), original, "Existing mail migration backup does not match.");
+        // Comparison failures must carry neither copy of the private file.
+        assert(readFileSync(backup, "utf8") === original, "Existing mail migration backup does not match.");
     } else {
         writeExclusive(backup, original);
     }
     const current = assertPrivatePath(path, {requireRoot: process.getuid?.() === 0});
     assert.equal(current.dev, info.dev, "The server environment changed during migration.");
     assert.equal(current.ino, info.ino, "The server environment changed during migration.");
-    assert.equal(
-        readFileSync(path, "utf8"),
-        original,
+    assert(
+        readFileSync(path, "utf8") === original,
         "The server environment changed during migration.",
     );
     const temporary = `${path}.${process.pid}.mail-relay.tmp`;
@@ -129,9 +129,12 @@ export function migrateMailRelayEnvironment(envFile, {apply = false, requireRoot
             MAIL_RELAY_PASSWORD: randomBytes(32).toString("base64url"),
             PORTAL_MAIL_RELAY_CONTROL_TOKEN: randomBytes(32).toString("base64url"),
         };
-    assert.match(relay.MAIL_RELAY_USERNAME, /^relay-[a-f0-9]{24}@internal\.invalid$/);
-    assert(relay.MAIL_RELAY_PASSWORD.length >= 40);
-    assert(relay.PORTAL_MAIL_RELAY_CONTROL_TOKEN.length >= 40);
+    assert(
+        /^relay-[a-f0-9]{24}@internal\.invalid$/.test(relay.MAIL_RELAY_USERNAME) &&
+        relay.MAIL_RELAY_PASSWORD.length >= 40 &&
+        relay.PORTAL_MAIL_RELAY_CONTROL_TOKEN.length >= 40,
+        "Existing relay settings are invalid.",
+    );
     const serverUpdates = {
         ...relay,
         PORTAL_MAIL_RELAY_CAPTURE_PENDING:
@@ -181,7 +184,7 @@ export function migrateMailRelayEnvironment(envFile, {apply = false, requireRoot
         const currentNotification = parseEnvironment(readFileSync(notificationPath, "utf8"));
         for (const [key, value] of Object.entries(notification))
             if (key !== "PORTAL_NOTIFICATION_MAIL_ENABLED")
-                assert.equal(currentNotification[key], value, "Existing worker configuration does not match relay settings.");
+                assert(currentNotification[key] === value, "Existing worker configuration does not match relay settings.");
     }
     const backup = serverChanges.length ? `${path}.pre-mail-relay` : null;
     const changed = serverChanges.length > 0 || !existsSync(notificationPath);

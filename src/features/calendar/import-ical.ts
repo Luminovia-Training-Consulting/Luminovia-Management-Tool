@@ -12,36 +12,7 @@ export interface ImportedAppointment {
   time_zone: string;
 }
 
-/** All-day DTEND stays exclusive; floating wall times use the user's explicit import zone. */
-function instant(
-  time: ICAL.Time,
-  component: ICAL.Component,
-  property: string,
-  fallback: string,
-) {
-  const tzid = component.getFirstProperty(property)?.getParameter("tzid");
-  const zone =
-    time.zone.tzid === "UTC"
-      ? "UTC"
-      : typeof tzid === "string"
-        ? tzid
-        : fallback;
-  if (!validZone(zone)) throw new Error("unsupported_zone");
-  const value = DateTime.fromObject(
-    {
-      year: time.year,
-      month: time.month,
-      day: time.day,
-      hour: time.hour,
-      minute: time.minute,
-      second: time.second,
-    },
-    { zone },
-  );
-  if (!value.isValid) throw new Error("invalid_time");
-  return { value, zone };
-}
-
+/** Return the bounded, reviewed import preview using the file's explicit zones. */
 export function parseCalendarImport(
   source: string,
   zone: string,
@@ -65,15 +36,54 @@ export function parseCalendarImport(
   const components = calendar.getAllSubcomponents("vevent");
   if (!components.length || components.length > 500)
     throw new Error("invalid_file");
+  const validatedZones = new Set([zone]);
+
+  /** All-day DTEND stays exclusive. Validate each distinct zone once per file. */
+  function instant(
+    time: ICAL.Time,
+    component: ICAL.Component,
+    property: string,
+    fallback = zone,
+  ) {
+    const tzid = component.getFirstProperty(property)?.getParameter("tzid");
+    const timeZone =
+      time.zone.tzid === "UTC"
+        ? "UTC"
+        : typeof tzid === "string"
+          ? tzid
+          : fallback;
+    if (!validatedZones.has(timeZone)) {
+      if (!validZone(timeZone)) throw new Error("unsupported_zone");
+      validatedZones.add(timeZone);
+    }
+    const value = DateTime.fromObject(
+      {
+        year: time.year,
+        month: time.month,
+        day: time.day,
+        hour: time.hour,
+        minute: time.minute,
+        second: time.second,
+      },
+      { zone: timeZone },
+    );
+    if (!value.isValid) throw new Error("invalid_time");
+    return { value, zone: timeZone };
+  }
+
   const result = new Map<string, ImportedAppointment>();
   for (const component of components) {
     if (component.hasProperty("recurrence-id")) continue;
     const event = new ICAL.Event(component);
     if (!event.uid || event.uid.length > 800) throw new Error("invalid_file");
-    const append = (start: ICAL.Time, end: ICAL.Time, item: ICAL.Event) => {
+    /** Store one confirmed occurrence using its already resolved start instant. */
+    const append = (
+      begins: ReturnType<typeof instant>,
+      end: ICAL.Time,
+      item: ICAL.Event,
+    ) => {
       if (item.component.getFirstPropertyValue("status") === "CANCELLED")
         return;
-      const begins = instant(start, item.component, "dtstart", zone);
       const finishes = instant(end, item.component, "dtend", begins.zone);
       if (finishes.value <= begins.value) throw new Error("invalid_time");
       const starts = begins.value.toUTC().toISO()!;
@@ -95,8 +105,14 @@ export function parseCalendarImport(
       });
       if (result.size > 500) throw new Error("too_many");
     };
-    if (!event.isRecurring()) append(event.startDate, event.endDate, event);
-    else {
+    if (!event.isRecurring()) {
+      if (component.getFirstPropertyValue("status") === "CANCELLED") continue;
+      append(
+        instant(event.startDate, component, "dtstart"),
+        event.endDate,
+        event,
+      );
+    } else {
       // An exception can move a later recurrence into the review window. Extend
       // the original-time horizon before stopping the ordered iterator. A range
       // exception may shift subsequent occurrences as well; keep the existing
@@ -108,13 +124,11 @@ export function parseCalendarImport(
           exception.recurrenceId,
           exception.component,
           "recurrence-id",
-          zone,
         ).value;
         const adjusted = instant(
           exception.startDate,
           exception.component,
           "dtstart",
-          zone,
         ).value;
         if (
           adjusted >= windowStart &&
@@ -140,23 +154,25 @@ export function parseCalendarImport(
           exhausted = true;
           break;
         }
-        const occurrence = event.getOccurrenceDetails(next);
-        const start = instant(
-          occurrence.startDate,
-          occurrence.item.component,
-          "dtstart",
-          zone,
-        ).value;
         // Exceptions can move an occurrence forward past the window while
         // subsequent original occurrences still fall inside it. The iterator
         // is ordered by the original recurrence, not by the adjusted start.
-        const scheduled = instant(next, event.component, "dtstart", zone).value;
-        if (scheduled > horizon && start >= windowEnd) {
+        const scheduled = instant(next, component, "dtstart");
+        const occurrence = event.getOccurrenceDetails(next);
+        const begins =
+          occurrence.item === event && occurrence.startDate === next
+            ? scheduled
+            : instant(
+                occurrence.startDate,
+                occurrence.item.component,
+                "dtstart",
+              );
+        if (scheduled.value > horizon && begins.value >= windowEnd) {
           exhausted = true;
           break;
         }
-        if (start >= windowStart && start < windowEnd)
-          append(occurrence.startDate, occurrence.endDate, occurrence.item);
+        if (begins.value >= windowStart && begins.value < windowEnd)
+          append(begins, occurrence.endDate, occurrence.item);
       }
       if (!exhausted) throw new Error("too_many");
     }

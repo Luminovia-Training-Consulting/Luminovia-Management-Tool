@@ -113,10 +113,15 @@ it("shows saved information only when the dialog can be closed", async () => {
     ).toMatchObject({ title: "Neuer Kurs", version: 2 }),
   );
   expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+  const close = screen.getByRole("button", { name: "Schließen" });
+  expect(close).toBeDisabled();
+  await user.click(close);
+  expect(onOpenChange).not.toHaveBeenCalled();
   expect(screen.queryByText("Neuer Kurs")).not.toBeInTheDocument();
   await act(async () => finishRefresh());
   expect(await screen.findByText("Neuer Kurs")).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Schließen" }));
+  expect(close).toBeEnabled();
+  await user.click(close);
   expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
 });
 

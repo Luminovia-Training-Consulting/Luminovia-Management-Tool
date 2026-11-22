@@ -9,10 +9,14 @@ import {resolve} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
 import {networkName} from "./runtime-network.mjs";
 
-const image =
-    "clamav/clamav@sha256:12177441d1b40cef3c47b44c4090d59d4babc4c67bedd5af0fa315e603aa6dd8";
+// Use the same digest updated by self-host maintenance for disposable acceptance.
+const composePath = new URL("../deploy/hostinger/compose.yml", import.meta.url);
+const image = /^ {2}clamav:\r?\n {4}image: (clamav\/clamav@sha256:[a-f0-9]{64})\r?$/m.exec(
+    readFileSync(composePath, "utf8"),
+)?.[1];
+if (!image) throw new Error("The self-host ClamAV image must be digest-pinned.");
 // Version the owned container configuration so fixes also reach an existing local stack.
-const configVersion = "4";
+const configVersion = "5";
 const configLabel = "org.luminovia.portal.scanner-config";
 const healthCommand = "clamdscan --config-file=/etc/clamav/clamd.conf --ping=1";
 const project = /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(
@@ -181,6 +185,8 @@ async function start(runtime) {
             `type=bind,src=${resolve(".local/clamd.conf")},dst=/etc/clamav/clamd.conf,readonly`,
             "--env",
             "CLAMD_STARTUP_TIMEOUT=180",
+            "--env",
+            "TZ=UTC",
             image,
         ]);
     }

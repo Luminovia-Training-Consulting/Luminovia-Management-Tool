@@ -118,6 +118,17 @@ test("built PWA registers its shell, supports offline deep links and never cache
                                                                                                                      context,
                                                                                                                  }) => {
     await page.goto("/login");
+    await page.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+    });
+    await page.reload();
+    await expect
+        .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+        .toBe(true);
+}
+
+test("built PWA serves the public demo deep link offline without a session", async ({page, context}) => {
+    await openControlledPwa(page);
     const manifest = await page.evaluate(async () => {
         const href = document.querySelector<HTMLLinkElement>(
             'link[rel="manifest"]',
@@ -132,15 +143,18 @@ test("built PWA registers its shell, supports offline deep links and never cache
                 icon.sizes === "512x512" && icon.purpose === "maskable",
         ),
     ).toBe(true);
-    await page.evaluate(async () => {
-        await navigator.serviceWorker.ready;
-    });
-    await page.reload();
-    await expect
-        .poll(() =>
-            page.evaluate(() => Boolean(navigator.serviceWorker.controller)),
-        )
-        .toBe(true);
+    await context.setOffline(true);
+    try {
+        await page.goto("/demo/profile");
+        await expect(page.getByRole("heading", {name: "Mein Profil", exact: true})).toBeVisible();
+        await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+    } finally {
+        await context.setOffline(false);
+    }
+});
+
+test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({page, context}) => {
+    await openControlledPwa(page);
     // Authenticated application tests may persist a different locale for the
     // shared seed user. This PWA check owns one account and its default locale.
     const lecturer = await actor("Fictional PWA shell lecturer", "lecturer");

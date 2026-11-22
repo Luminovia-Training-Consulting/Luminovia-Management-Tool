@@ -1,6 +1,5 @@
 import {createClient} from "npm:@supabase/supabase-js@2.119.0";
 import {createCourseDocumentHandler} from "./handler.ts";
-import {renderFactPdf} from "./pdf.ts";
 
 const url = Deno.env.get("SUPABASE_URL") ?? "",
     key = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -14,7 +13,6 @@ const caller = (token: string) =>
         global: {headers: {Authorization: `Bearer ${token}`}},
         auth: {persistSession: false, autoRefreshToken: false},
     });
-const font = Deno.readFile(new URL("./assets/DejaVuSans.ttf", import.meta.url));
 Deno.serve(
     createCourseDocumentHandler({
         origins: (Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "")
@@ -60,6 +58,10 @@ Deno.serve(
             if (result.error || !result.data) throw new Error("resource_unavailable");
             return new Uint8Array(await result.data.arrayBuffer());
         },
-        render: async (kind, facts) => await renderFactPdf(kind, facts, await font),
+        render: async (kind, facts) => {
+            // Attachment downloads and CSV requests do not need the PDF runtime.
+            const {renderPackagedFactPdf} = await import("./pdf.ts");
+            return await renderPackagedFactPdf(kind, facts);
+        },
     }),
 );

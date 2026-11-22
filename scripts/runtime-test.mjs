@@ -63,6 +63,7 @@ let localDockerReady = false;
 const cancellation = new AbortController();
 const evidence = {
     version: 1,
+    supabaseImageProfile: env.SUPABASE_USE_SLIM_IMAGES === "1" ? "slim" : "standard",
     // A passed selected phase is not a claim that the other phase ran.
     phase: phase.phase,
     // PR CI may delegate only gates that run independently and are required by
@@ -95,7 +96,7 @@ try {
     delete env.DOCKER_CONTEXT;
     localDockerReady = true;
     console.log(
-        `Isolated test environment ${project}. Phase: ${phase.phase}. Development data remains unchanged.`,
+        `Isolated test environment ${project}. Phase: ${phase.phase}. Supabase CLI image profile: ${evidence.supabaseImageProfile}. Development data remains unchanged.`,
     );
     cpSync(root, scratch, {
         recursive: true,
@@ -145,7 +146,6 @@ try {
         .replaceAll("543", "553")
         .replaceAll(":5173", ":5273");
     writeFileSync(configPath, config);
-    /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
     /** Run one required child command; cancellation/failure cannot be recorded as success. */
     const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
         console.log(`\n[TEST] ${label}`);
@@ -257,6 +257,12 @@ try {
             await step("Lint", "npm", ["run", "lint"]);
             await step("TypeScript", "npm", ["run", "typecheck"]);
             await step("Formatting", "npm", ["run", "format:check"]);
+            await step("GitHub configuration formatting", "npx", [
+                "--no-install", "prettier", "--check", ".github",
+            ]);
+            await step("Code quality", process.execPath, [
+                "scripts/code-integrity.mjs", "--exports",
+            ]);
         }
         const runtimeTests = readdirSync(join(scratch, "scripts"))
             .filter(
@@ -419,6 +425,10 @@ try {
                 "deploy/hostinger/selfhost/validate.mjs",
                 "--gateway-routing",
             ]);
+            // Exercise the shipped font in the pinned, read-only Edge Runtime.
+            await step("Self-hosted Edge Runtime course PDF", process.execPath, [
+                "--test", "deploy/hostinger/selfhost/course-documents.test.mjs",
+            ]);
             await step("Caddy access and private boundaries", process.execPath, [
                 "scripts/hostinger-caddy-check.mjs",
             ]);
@@ -508,14 +518,14 @@ try {
             "chromium",
             ...(includeWebKit ? ["webkit"] : []),
         ]);
-        // Preserve the measured whole-command budget; individual browser tests
-        // remain bounded and strict discovery/results still reject incomplete runs.
+        // Projects run sequentially against one Auth service. Give each one
+        // the same aggregate budget CI uses for a single browser project.
         await browserStage(
             "application",
             "Desktop and mobile browsers",
             ["--grep-invert", "built PWA"],
             {},
-            1800000,
+            30 * 60 * 1000 * browserProjects.length,
         );
         // The required parallel Typecheck gate covers these exact source bytes.
         await step("Production build", "npx", ["--no-install", "vite", "build"]);

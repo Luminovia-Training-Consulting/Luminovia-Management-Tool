@@ -121,6 +121,7 @@ test("group owner changes information and a member can only read it", async ({
         await dialog
             .getByRole("button", {name: "Schließen", exact: true})
             .click();
+        await expect(dialog).toBeHidden();
         await expect(page.getByRole("heading", {name: updated})).toBeVisible();
         await other
             .locator(".chat-room-row")

@@ -6,14 +6,15 @@ import assert from "node:assert/strict";
 import {execFileSync, spawnSync} from "node:child_process";
 import {randomBytes} from "node:crypto";
 import {mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync,} from "node:fs";
+import {get} from "node:http";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
 import {assertLocalDocker, cleanEnvironment, root} from "./runtime-lib.mjs";
 
 // Real Caddy routing regression, entirely separate from app/database containers.
-// The live fixture uses local HTTP; the unmodified input is also adapted
-// separately without starting Caddy or accessing the network.
+// The live fixture uses local HTTP without certificate issuance. The unchanged
+// deployment configuration is also adapted without network access.
 const caddyImage =
     "caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0";
 const nodeImage =
@@ -61,7 +62,10 @@ try {
     await assertLocalDocker();
     const source = readFileSync(join(root, "deploy/hostinger/Caddyfile"), "utf8");
     assert.equal(source.split("{$PORTAL_DOMAIN} {").length, 2);
-    file("Caddyfile", source.replace("{$PORTAL_DOMAIN} {", "http://:8080 {"));
+    assert.equal(source.split("\tadmin off").length, 2);
+    file("Caddyfile", source
+        .replace("\tadmin off", "\tadmin off\n\tauto_https off")
+        .replace("{$PORTAL_DOMAIN} {", "http://:8080 {"));
     file("Reviewed.Caddyfile", source);
     await check("Dedicated Academy never provisions internal CMS aliases", () => {
         const adapt = (aliasProfile) => Object.values(JSON.parse(docker([
@@ -169,10 +173,18 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         network,
         "-p",
         "127.0.0.1::8080",
+        "-p",
+        "127.0.0.1::80",
         "-e",
         "PORTAL_DOMAIN=portal.test",
         "-e",
-        "PORTAL_CADDY_ALIAS_PROFILE=academy_no_aliases",
+        "PORTAL_CADDY_ALIAS_PROFILE=cms_legacy_aliases",
+        // The upstream exists only on this owned Docker network. A client-side
+        // proxy injected into the container cannot resolve that service alias.
+        "-e",
+        "NO_PROXY=api",
+        "-e",
+        "no_proxy=api",
         "--mount",
         `type=bind,src=${join(directory, "Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
         "--mount",
@@ -192,14 +204,12 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
             redirect: "manual",
             signal: AbortSignal.timeout(5000),
         });
-    let ready = false;
+    let readinessStatus;
     for (let n = 0; n < 60; n++) {
         try {
             const response = await request("/backend/rest/v1/readiness");
-            if (response.status === 200) {
-                ready = true;
-                break;
-            }
+            readinessStatus = response.status;
+            if (readinessStatus === 200) break;
             // A stable 404 is itself the route-ordering failure; avoid a long poll.
             if (response.status === 404 && n > 2) break;
         } catch {
@@ -207,7 +217,26 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
         }
         await delay(100);
     }
-    assert(ready, "Caddy must proxy the allowed backend before its 404 fallback");
+    assert.equal(readinessStatus, 200, "Caddy must proxy the allowed backend before its 404 fallback");
+
+    await check("legacy HTTP hostnames preserve deep links and query strings", async () => {
+        const aliasBinding = docker(["port", caddy, "80/tcp"]);
+        assert.match(aliasBinding, /^127\.0\.0\.1:\d+$/);
+        const path = "/demo/profile?source=fictional%20bookmark";
+        for (const host of ["lms.luminovia.org", "portal.luminovia.org"]) {
+            // The TCP destination is owned loopback. Send the legacy authority
+            // on the wire without fetch rewriting it or following redirects.
+            const response = await new Promise((resolve, reject) => {
+                get(`http://${aliasBinding}${path}`, {
+                    headers: {Host: host},
+                    signal: AbortSignal.timeout(5000),
+                }, resolve).once("error", reject);
+            });
+            response.resume();
+            assert.equal(response.statusCode, 308);
+            assert.equal(response.headers.location, `https://cms.luminovia.org${path}`);
+        }
+    });
 
     await check(
         "allowed APIs strip exactly one backend prefix and preserve method/body/query",

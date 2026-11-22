@@ -587,21 +587,15 @@ Deno.test(
                 .status,
             413,
         );
-        assert.equal(
-            (
-                await handler(
-                    new Request("http://localhost/accounts/v1/me", {
-                        method: "PATCH",
-                        headers: {
-                            Authorization: "Bearer token",
-                            "Content-Type": "text/plain",
-                        },
-                        body: "{}",
-                    }),
-                )
-            ).status,
-            415,
-        );
+        for (const contentType of ["text/plain", "application/json-invalid"]) {
+            const reply = await handler(new Request("http://localhost/accounts/v1/me", {
+                method: "PATCH",
+                headers: {Authorization: "Bearer token", "Content-Type": contentType},
+                body: "{}",
+            }));
+            assert.equal(reply.status, 415);
+            assert.deepEqual(await reply.json(), {error: "json_required"});
+        }
         assert.equal(
             (
                 await handler(

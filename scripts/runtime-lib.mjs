@@ -86,14 +86,13 @@ export function processIsOurs(state) {
     }
 }
 
-/** Removes inherited service/cloud credentials before local subprocesses, then adds only explicit values. */
+/** Removes inherited service/cloud credentials before local subprocesses and preserves the pinned CLI's image selector. */
 export function cleanEnvironment(extra = {}) {
     const env = Object.fromEntries(
         Object.entries(process.env).filter(
-            ([key]) =>
-                !/^(SUPABASE_|VITE_|E2E_|PORTAL_|S3_|AWS_|SMTP_|OPENAI_|RESEND_|DATABASE_URL$|PGPASSWORD$)/.test(
-                    key,
-                ),
+            ([key, value]) =>
+                (key === "SUPABASE_USE_SLIM_IMAGES" && value === "1") ||
+                !/^(SUPABASE_|VITE_|E2E_|PORTAL_|S3_|AWS_|SMTP_|OPENAI_|RESEND_|DATABASE_URL$|PGPASSWORD$)/.test(key),
         ),
     );
     return {...env, ...extra};

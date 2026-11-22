@@ -1,4 +1,4 @@
-import { boundedJson } from "../_shared/bounded-json.ts";
+import { boundedJson } from "../_shared/bounded-body.ts";
 
 /** Credential exchange: only Supabase Auth verifies passwords and issues sessions. */
 export interface LoginDependencies {

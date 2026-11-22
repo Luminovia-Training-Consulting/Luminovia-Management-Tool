@@ -370,9 +370,19 @@ export function scanFrontendRpcReferences(root) {
     const direct = (call) =>
         ts.isPropertyAccessExpression(call.expression) &&
         call.expression.name.text === "rpc";
-    /** Finds the wrapper parameter position that forwards the RPC name. */
-    const argumentIndex = (call) =>
-        direct(call) ? 0 : wrappers.get(symbol(call.expression));
+
+    /** Finds both the RPC name and the body bound by a direct or forwarding call. */
+    function binding(call) {
+        if (direct(call)) return {name: call.arguments[0], body: call.arguments[1]};
+        const wrapper = wrappers.get(symbol(call.expression));
+        if (!wrapper) return null;
+        return {
+            name: call.arguments[wrapper.index],
+            body: wrapper.parameter
+                ? call.arguments[wrapper.parameter.index] ?? wrapper.parameter.initializer
+                : wrapper.body,
+        };
+    }
 
     /** Finds the function context that actually forwards this RPC reference. */
     function forwardingFunction(argument) {
@@ -387,7 +397,9 @@ export function scanFrontendRpcReferences(root) {
             const name =
                 parent.name ??
                 (ts.isVariableDeclaration(parent.parent) ? parent.parent.name : null);
-            return name ? {symbol: symbol(name), index} : null;
+            return name
+                ? {symbol: symbol(name), index, owner: parent}
+                : null;
         }
         return null;
     }
@@ -398,19 +410,44 @@ export function scanFrontendRpcReferences(root) {
     while (changed) {
         changed = false;
         for (const {node} of calls) {
-            const index = argumentIndex(node);
-            const argument = index === undefined ? null : node.arguments[index];
-            const owner = argument ? forwardingFunction(argument) : null;
-            if (owner?.symbol && !wrappers.has(owner.symbol)) {
-                wrappers.set(owner.symbol, owner.index);
+            const bound = binding(node);
+            const forward = bound?.name ? forwardingFunction(bound.name) : null;
+            if (forward?.symbol && !wrappers.has(forward.symbol)) {
+                const body = bound.body ? forwardingFunction(bound.body) : null;
+                wrappers.set(forward.symbol, {
+                    index: forward.index,
+                    body: bound.body,
+                    parameter: body?.owner === forward.owner
+                        ? {index: body.index, initializer: body.owner.parameters[body.index].initializer}
+                        : null,
+                });
                 changed = true;
             }
         }
     }
+
+    /** Keep finite payload shapes and leave unbounded keys for runtime verification. */
+    function argumentShapes(body) {
+        if (!body || body.kind === ts.SyntaxKind.NullKeyword || body.getText() === "undefined")
+            return [{required: [], possible: []}];
+        const type = checker.getTypeAtLocation(body);
+        const choices = type.isUnion() ? type.types : [type];
+        return choices.map((choice) => {
+            if (!(choice.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) ||
+                checker.getIndexInfosOfType(choice).length)
+                return null;
+            const properties = checker.getPropertiesOfType(choice);
+            return {
+                required: properties.filter((key) => !(key.flags & ts.SymbolFlags.Optional)).map((key) => key.name).sort(),
+                possible: properties.map((key) => key.name).sort(),
+            };
+        });
+    }
+
     const references = [];
     for (const {node, source} of calls) {
-        const index = argumentIndex(node);
-        const argument = index === undefined ? null : node.arguments[index];
+        const bound = binding(node);
+        const argument = bound?.name;
         if (!argument || forwardingFunction(argument)) continue;
         const type = checker.getTypeAtLocation(argument);
         const choices = type.isUnion() ? type.types : [type];
@@ -426,6 +463,9 @@ export function scanFrontendRpcReferences(root) {
                 name,
                 file: relative(root, source.fileName),
                 line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+                // Several dispatchers derive the name and payload from the same
+                // action. A union of names alone cannot pair those branches.
+                argumentShapes: names.length === 1 ? argumentShapes(bound.body) : [],
             });
     }
     return references;

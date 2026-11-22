@@ -112,6 +112,23 @@ test("inherited hosted or development credentials cannot redirect isolated subpr
         else process.env.SUPABASE_URL = prior;
     }
 });
+test("the pinned CLI can select slim images without inheriting Supabase credentials or custom values", () => {
+    const keys = ["SUPABASE_USE_SLIM_IMAGES", "SUPABASE_ACCESS_TOKEN"];
+    const original = keys.map((key) => process.env[key]);
+    try {
+        process.env.SUPABASE_ACCESS_TOKEN = "fictional-hosted-access-token";
+        process.env.SUPABASE_USE_SLIM_IMAGES = "1";
+        assert.equal(cleanEnvironment().SUPABASE_USE_SLIM_IMAGES, "1");
+        assert.equal(cleanEnvironment().SUPABASE_ACCESS_TOKEN, undefined);
+        process.env.SUPABASE_USE_SLIM_IMAGES = "fictional-unapproved-override";
+        assert.equal(cleanEnvironment().SUPABASE_USE_SLIM_IMAGES, undefined);
+    } finally {
+        keys.forEach((key, index) => {
+            if (original[index] === undefined) delete process.env[key];
+            else process.env[key] = original[index];
+        });
+    }
+});
 test("only credential-free loopback HTTP URLs are accepted", () => {
     assert.equal(localUrl("http://127.0.0.1:55321").port, "55321");
     for (const url of [

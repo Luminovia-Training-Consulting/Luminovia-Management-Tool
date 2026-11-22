@@ -14,14 +14,9 @@ const test = base.extend<{ isolatedDemo: void }>({
     isolatedDemo: [
         async ({page}, use) => {
             const attempted: string[] = [];
-            await page.route("**/*", async (route) => {
-                const path = new URL(route.request().url()).pathname;
-                if (backendPath.test(path)) {
-                    attempted.push(path);
-                    await route.abort("blockedbyclient");
-                } else {
-                    await route.continue();
-                }
+            await page.route((url) => backendPath.test(url.pathname), async (route) => {
+                attempted.push(new URL(route.request().url()).pathname);
+                await route.abort("blockedbyclient");
             });
             page.on("websocket", (socket) => {
                 const path = new URL(socket.url()).pathname;
@@ -479,6 +474,14 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     for (let index = 0; index < paths.length; index++) {
         await expect(page).toHaveURL((url) => url.pathname === paths[index]);
         await expect(page.getByRole("heading", {level: 1})).toBeVisible();
+        // URL changes can arrive before React commits the next tour controls.
+        // Check the displayed step before clicking the reused Next button.
+        await expect(page.getByText(
+            index < 3
+                ? `Bereich ${index + 1} von ${paths.length}`
+                : `Section ${index + 1} of ${paths.length}`,
+            {exact: true},
+        )).toBeVisible();
         if (index === 2) {
             await page
                 .getByRole("button", {name: "Rundgang pausieren", exact: true})
@@ -518,11 +521,9 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     await accessibleWithoutOverflow(page);
 });
 
-// A deep-linked help topic survives translation; searching filters topic links
-// and choosing a result updates the shareable URL without backend interaction.
-test("public help searches practical recovery instructions and keeps the selected topic across language changes", async ({
-                                                                                                                             page,
-                                                                                                                         }, testInfo) => {
+test("a deep-linked public help topic stays accessible and selected after translation", async ({
+    page,
+}, testInfo) => {
     await page.goto("/help?topic=jobs");
     await expect(
         page.getByRole("heading", {name: "Hilfe & Anleitungen", exact: true}),
@@ -558,6 +559,11 @@ test("public help searches practical recovery instructions and keeps the selecte
         path: testInfo.outputPath("help-jobs-en-light.png"),
         fullPage: true,
     });
+});
+
+test("public help filters topics and updates the shareable URL when choosing a result", async ({page}) => {
+    await page.goto("/help?topic=jobs");
+    await page.getByLabel("Sprache", {exact: true}).selectOption("en");
     const search = page.getByRole("searchbox", {
         name: "Search help",
         exact: true,

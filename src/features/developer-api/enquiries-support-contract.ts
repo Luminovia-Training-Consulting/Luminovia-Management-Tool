@@ -1,6 +1,10 @@
 /** Reviewed internal native contracts for institution enquiries and support. */
 import { z } from "zod";
 import {
+  jsonContent as json,
+  postgrestErrorResponse as error,
+} from "./postgrest-content.ts";
+import {
   enquiryContextSchema,
   enquiryDetailSchema,
   enquiryPageSchema,
@@ -154,22 +158,6 @@ const supportDetailsByRole = z.discriminatedUnion("can_manage", [
   }),
 ]);
 
-const postgrestError = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.string().nullable().optional(),
-  hint: z.string().nullable().optional(),
-});
-const json = (schema: z.ZodType) => ({
-  "application/json": { schema: z.toJSONSchema(schema) },
-});
-const error = (description: string, code?: string) => ({
-  description,
-  content: json(
-    code ? postgrestError.extend({ code: z.literal(code) }) : postgrestError,
-  ),
-});
-
 function operation(
   operationId: string,
   tag: "Institution enquiries" | "Support",
@@ -201,11 +189,13 @@ function operation(
           ? {
               "409": error(
                 "The expected version is stale. Reload before editing.",
-                "PT409",
+                z.literal("PT409"),
               ),
             }
           : {}),
-        ...(options.budget ? { "500": error(options.budget, "54000") } : {}),
+        ...(options.budget
+          ? { "500": error(options.budget, z.literal("54000")) }
+          : {}),
       },
     },
   };

@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import shutil
-import stat
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -28,12 +27,18 @@ def unpack(backup, identity, output, *, age="age"):
     backup, identity, output = Path(backup).absolute(), Path(identity).absolute(), Path(output).absolute()
     private_file(identity)
     verify_complete(backup)
-    if output.exists() or output.is_symlink():
-        raise BackupError("recovery_output_must_be_new")
+    if any(parent.is_symlink() for parent in output.parents):
+        raise BackupError("unsafe_private_directory")
     if shutil.disk_usage(output.parent).free < 1024 ** 3:
         raise BackupError("insufficient_desktop_recovery_space")
-    private_dir(output)
+    # Claim the directory in one operation. Another recovery using the same
+    # destination must fail before reaching the cleanup that removes it.
     try:
+        output.mkdir(mode=0o700)
+    except FileExistsError as error:
+        raise BackupError("recovery_output_must_be_new") from error
+    try:
+        output.chmod(0o700)
         result = subprocess.run([age, "--decrypt", "--identity", str(identity), str(backup / "catalog.json.age")], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
         if result.returncode or len(result.stdout) > 128 * 1024 ** 2:
             raise BackupError("catalog_authenticated_decryption_failed")

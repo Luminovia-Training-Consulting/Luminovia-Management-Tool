@@ -201,6 +201,7 @@ beforeEach(async () => {
   fake.edition = "customer-self-hosted";
   fake.licence = "active";
   fake.actor = "fictional-admin";
+  fake.signOut.mockReset().mockResolvedValue({ error: null });
   fake.returnedInstallation = fake.installation;
   fake.foreignCourse = false;
   fake.registerAvailable = false;
@@ -841,6 +842,91 @@ it("updates the signed-out Academy tab icon and restores the signed fallback", a
     touchIcon.remove();
   }
 });
+
+it("restores the packaged browser branding when a visitor opens the demo from login", async () => {
+  fake.actor = null;
+  fake.publicDemo = true;
+  fake.brandName = "Fictional runtime branding";
+  const root = document.documentElement;
+  const originalTitle = document.title;
+  const originalStyle = root.getAttribute("style");
+  const theme = document.createElement("meta");
+  theme.name = "theme-color";
+  theme.content = "#172b4b";
+  document.head.append(theme);
+  document.title = "Fictional Academy";
+  root.style.setProperty("--portal-mobile-brand", '"Fictional"');
+  root.style.removeProperty("--academy-accent");
+  try {
+    open("/login");
+    await waitFor(() => expect(document.title).toBe(fake.brandName));
+    expect(theme.content).toBe("#284554");
+    expect(root.style.getPropertyValue("--portal-mobile-brand")).toBe(
+      '"Training"',
+    );
+    expect(root.style.getPropertyValue("--academy-accent")).toBe("#284554");
+
+    fake.rpc.mockClear();
+    await userEvent.click(screen.getByRole("link", { name: "Open LMS demo" }));
+    await waitFor(() =>
+      expect(document.querySelector(".demo-safety")).not.toBeNull(),
+    );
+    expect(fake.rpc).not.toHaveBeenCalled();
+    expect(document.title).toBe("Fictional Academy");
+    expect(theme.content).toBe("#172b4b");
+    expect(root.style.getPropertyValue("--portal-mobile-brand")).toBe(
+      '"Fictional"',
+    );
+    expect(root.style.getPropertyValue("--academy-accent")).toBe("");
+  } finally {
+    cleanup();
+    theme.remove();
+    document.title = originalTitle;
+    if (originalStyle === null) root.removeAttribute("style");
+    else root.setAttribute("style", originalStyle);
+  }
+});
+
+it.each(["returned", "rejected"] as const)(
+  "keeps the Academy session retryable after a %s sign-out failure",
+  async (mode) => {
+    // Only the native session transition may redirect away from protected data.
+    const user = userEvent.setup();
+    const view = open(`/courses/${id}/workspace`);
+    expect(await screen.findByText("Protected course briefing")).toBeVisible();
+    const button = screen.getByRole("button", { name: "Sign out" });
+    if (mode === "returned")
+      fake.signOut.mockResolvedValueOnce({ error: new Error("Unavailable") });
+    else fake.signOut.mockRejectedValueOnce(new Error("Network unavailable"));
+
+    await user.click(button);
+    expect(
+      await screen.findByText("Sign-out failed. Try again."),
+    ).toBeVisible();
+    expect(screen.getByText("Protected course briefing")).toBeVisible();
+    expect(button).toBeEnabled();
+
+    let complete!: (result: { error: null }) => void;
+    fake.signOut.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    await user.click(button);
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(fake.signOut).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      fake.actor = null;
+      view.rerender();
+      complete({ error: null });
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Fictional Academy" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Protected course briefing")).toBeNull();
+  },
+);
 
 it("documents included Premium LMS and Academy integration separately from the vendor portal", async () => {
   open("/help?area=administration&topic=academy-lms-access");

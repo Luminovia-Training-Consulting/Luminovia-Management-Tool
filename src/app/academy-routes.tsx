@@ -26,6 +26,7 @@ import { AuthCallback } from "../features/auth/callback";
 import { AcademyCourseAccess } from "../features/auth/installation-access";
 import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
+import { SignOutButton } from "../features/auth/sign-out-button";
 import { HelpCenter } from "../features/help/help";
 import { AcademyAdministrationPage } from "../features/learning/academy-administration";
 import { AcademyTimetable } from "../features/learning/academy-timetable";
@@ -38,7 +39,7 @@ import { AcademyBrandImage } from "../features/branding/academy-logo-image";
 import { AcademyBrandProvider } from "../features/branding/academy-brand-provider";
 import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
-import { db, isConfigured } from "../lib/supabase";
+import { isConfigured } from "../lib/supabase";
 import { publicDemoEnabled } from "../lib/installation-brand";
 import {
   RolePreview,
@@ -223,9 +224,7 @@ function AcademyWorkspaceFrame({
               <AcademyAppearancePreferences actor={actor} access={access} />
             </>
           )}
-          <Button variant="secondary" onClick={() => void db().auth.signOut()}>
-            {t("logout")}
-          </Button>
+          <SignOutButton variant="secondary" />
         </div>
       </header>
       <main id="academy-main" className="academy-main" tabIndex={-1}>

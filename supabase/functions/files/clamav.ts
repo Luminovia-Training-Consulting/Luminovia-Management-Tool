@@ -5,6 +5,7 @@ const encoder = new TextEncoder();
 const MAX_SCAN_BYTES = 100 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4096;
 const SIGNATURE_MAX_AGE = 14 * 86400000;
+const nativeSignatureDate = /^[A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$/;
 
 // Server-side HTTPS gateway configuration, never supplied by a browser upload.
 export interface HttpsScannerConfig {
@@ -28,7 +29,12 @@ export function validateClamAvVersion(value: unknown, now = Date.now()): string 
             character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127
         )
     ) throw new Error("scanner_version");
-    const stamp = Date.parse(value.slice(value.lastIndexOf("/") + 1));
+    const signatureDate = value.slice(value.lastIndexOf("/") + 1);
+    // clamd VERSION uses ctime, which has no zone. The managed daemons run in
+    // UTC so an operator's host zone must not change the scanner verdict.
+    const stamp = Date.parse(nativeSignatureDate.test(signatureDate)
+        ? signatureDate + " UTC"
+        : signatureDate);
     const age = now - stamp;
     if (!Number.isFinite(stamp) || age > SIGNATURE_MAX_AGE || age < -86400000) {
         throw new Error("scanner_definitions_stale");

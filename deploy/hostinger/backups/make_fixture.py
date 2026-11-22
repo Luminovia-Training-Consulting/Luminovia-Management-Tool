@@ -3,7 +3,6 @@
 """Test fixture only: accepts an owned networkless recovery container, never VPS."""
 import argparse
 import json
-import os
 import re
 import subprocess
 from pathlib import Path

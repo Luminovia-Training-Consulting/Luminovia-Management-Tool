@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { useId } from "react";
-import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import { useAuth } from "../auth/auth-context";
@@ -15,6 +14,7 @@ import {
   attentionSchema,
   saveAttentionPreferences,
 } from "./attention-api";
+import { PreferenceSaveControls } from "./preference-save-controls";
 import "./attention-i18n";
 
 function QuietHoursForm({
@@ -49,12 +49,6 @@ function QuietHoursForm({
       await client.invalidateQueries(inbox);
     },
   });
-  const conflict = Boolean(
-    save.error &&
-    typeof save.error === "object" &&
-    "code" in save.error &&
-    (save.error.code === "PT409" || save.error.code === "40001"),
-  );
   return (
     <form
       className="panel notification-preferences"
@@ -84,32 +78,14 @@ function QuietHoursForm({
       {Object.keys(formState.errors).length > 0 && (
         <Notice kind="error">{t("invalid")}</Notice>
       )}
-      {save.isError && (
-        <Notice kind="error">{t(conflict ? "conflict" : "error")}</Notice>
-      )}
-      {conflict && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() =>
-            void reload().then((data) => {
-              if (data) {
-                reset(data);
-                save.reset();
-              }
-            })
-          }
-        >
-          {t("reload")}
-        </Button>
-      )}
-      {save.isSuccess && !formState.isDirty && <Notice>{t("saved")}</Notice>}
-      <Button
-        type="submit"
-        disabled={!online || save.isPending || !formState.isDirty}
-      >
-        {t("save")}
-      </Button>
+      <PreferenceSaveControls
+        namespace="attention"
+        online={online}
+        dirty={formState.isDirty}
+        save={save}
+        reload={reload}
+        reset={reset}
+      />
     </form>
   );
 }

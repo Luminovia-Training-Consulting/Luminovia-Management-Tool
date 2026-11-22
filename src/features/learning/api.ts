@@ -1,5 +1,6 @@
 /** Permission-scoped course DTOs and online mutation/download boundaries for the learning workspace. */
 import { queryOptions } from "@tanstack/react-query";
+import { saveBlob } from "../../lib/blob-download";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import type { WorkspaceAttendanceHistory } from "./attendance-schema";
@@ -338,13 +339,7 @@ export async function downloadPortalDocument(
   const after = (await client.auth.getSession()).data.session;
   if (signal?.aborted || after?.user.id !== before.user.id)
     throw new Error("account_changed");
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name.replace(/[\\/]/g, "-").slice(0, 160);
-  link.rel = "noopener";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(blob, name.replace(/[\\/]/g, "-").slice(0, 160));
 }
 
 /** Adapts course document kinds to the common protected download boundary. */

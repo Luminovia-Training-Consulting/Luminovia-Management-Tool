@@ -131,7 +131,8 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
     }
 
     const browserCalls = new Map();
-    for (const {name, file} of references) {
+    for (const {name, file, line} of references) {
+        assert.ok(allByName.has(name), `${file}:${line} calls ${name} without an authenticated invoker signature`);
         const feature = featureFor(file);
         const former = browserCalls.get(name);
         if (!former || feature < former) browserCalls.set(name, feature);
@@ -141,7 +142,6 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
     return Object.fromEntries([...browserCalls].sort(([a], [b]) => a.localeCompare(b, "en")).map(([name, feature]) => {
         assert.match(name, /^[a-z][a-z0-9_]*$/);
         const signatures = allByName.get(name);
-        assert.ok(signatures?.length, `Browser RPC ${name} has no authenticated invoker signature`);
         const overloads = signatures.map((signature) => {
             const args = signature.args.filter(({mode}) => inputModes.has(mode));
             assert.ok(args.every((arg) => arg.name), `Unnamed arguments need a reviewed HTTP contract: ${name}`);
@@ -229,11 +229,29 @@ function serialize(entries) {
 
 /** Standard SQL gate catches changes in calls, signatures, grants and gates. */
 export async function assertNativeRpcCatalogue(sql, references) {
+    const entries = await buildNativeRpcCatalogue(sql, references);
     assert.equal(
         await readFile(catalogue, "utf8"),
-        serialize(await buildNativeRpcCatalogue(sql, references)),
+        serialize(entries),
         "Native Swagger catalogue is stale. Regenerate with node scripts/native-rpc-catalogue.mjs.",
     );
+    return entries;
+}
+
+/** Match finite browser payload keys to a migrated PostgREST named-call signature. */
+export function assertRpcArgumentShapes(entries, references) {
+    for (const {name, file, line, argumentShapes} of references) {
+        for (const shape of argumentShapes) {
+            if (!shape) continue;
+            assert.ok(
+                entries[name].overloads.some(({request}) =>
+                    request.required.every((key) => shape.required.includes(key)) &&
+                    shape.possible.every((key) => Object.hasOwn(request.properties, key)),
+                ),
+                `${file}:${line} cannot call ${name} with these RPC arguments: ${shape.possible.join(", ") || "(none)"}`,
+            );
+        }
+    }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -1,26 +1,16 @@
 /** Native course authoring and course-backed administrative offer contracts. */
 import { z } from "zod";
 import {
+  jsonContent as json,
+  postgrestErrorResponse as error,
+} from "./postgrest-content.ts";
+import {
   courseRecordId,
   courseRunJobDefaultsSchema,
   courseTemplatePayloadSchema,
   createCourseRunJobRequestSchema,
   jobBuildingBlockReferenceSchema,
 } from "../operations/course-building-block-schema.ts";
-
-const errorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.string().nullable().optional(),
-  hint: z.string().nullable().optional(),
-});
-const json = (schema: z.ZodType) => ({
-  "application/json": { schema: z.toJSONSchema(schema) },
-});
-const error = (description: string) => ({
-  description,
-  content: json(errorSchema),
-});
 
 function operation(
   operationId: string,

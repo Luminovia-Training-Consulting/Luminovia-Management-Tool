@@ -96,6 +96,8 @@ services:
     restart: unless-stopped
     environment:
       CLAMD_STARTUP_TIMEOUT: "180"
+      # Native clamd VERSION timestamps omit a zone; the shared validator reads UTC.
+      TZ: UTC
     volumes:
       - clamav_signatures:/var/lib/clamav
       - ../clamd.conf:/etc/clamav/clamd.conf:ro

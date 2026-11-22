@@ -72,7 +72,7 @@ eight characters, including uppercase and lowercase letters, a number and a symb
 
 Account invitations and recovery rely on Supabase Auth. A local captured test email is not a message sent to a real lecturer. If sign-in or account setup fails, use the visible error and contact the responsible administrator; do not reuse test credentials outside local development.
 
-Account security uses password and recovery controls. Management operations require current database permissions and resource scope. A role label alone does not grant access and a screen cannot override backend denial. Sign out after using a shared device.
+Account security uses password and recovery controls. Management operations require current database permissions and resource scope. A role label alone does not grant access and a screen cannot override backend denial. Sign out after using a shared device. If the portal reports a sign-out failure, the current session remains open so you can retry before leaving the device.
 
 ### Mail transport administration
 

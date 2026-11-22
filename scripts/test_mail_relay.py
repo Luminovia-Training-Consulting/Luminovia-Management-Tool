@@ -325,6 +325,34 @@ class RelaySmtpTests(unittest.TestCase):
         context.wrap_socket.assert_called_once_with(raw, server_hostname="smtp.example.com")
         self.assertIs(secured, context.wrap_socket.return_value)
 
+    def test_smtp_probe_authenticates_only_after_starttls_and_fresh_greeting(self):
+        settings = {
+            "host": "smtp.example.com",
+            "port": 587,
+            "security": "starttls",
+            "username": "mailbox@example.com",
+            "password": "fictional-upstream-secret",
+        }
+        for after_tls in (250, 421):
+            with self.subTest(after_tls=after_tls):
+                connection = Mock()
+                connection.ehlo.side_effect = [(250, b""), (after_tls, b"")]
+                connection.noop.return_value = (250, b"")
+                with (
+                    patch.object(relay_module, "PinnedSMTP", return_value=connection),
+                    patch.object(relay_module.ssl, "create_default_context") as context,
+                ):
+                    calls = [call.ehlo(), call.has_extn("starttls"),
+                             call.starttls(context=context.return_value), call.ehlo()]
+                    if after_tls == 250:
+                        self.relay.check_smtp(settings)
+                        calls.extend([call.login(settings["username"], settings["password"]),
+                                      call.noop()])
+                    else:
+                        with self.assertRaisesRegex(relay_module.RelayFailure, "protocol_failed"):
+                            self.relay.check_smtp(settings)
+                    self.assertEqual(connection.mock_calls, [*calls, call.close()])
+
 
 class RelayControlTests(unittest.TestCase):
     """Exercise the internal test endpoint with local HTTP and no database or provider access."""

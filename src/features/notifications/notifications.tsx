@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { notificationCategory, type NotificationCategory } from "./categories";
 import { isGuestOnly, isParticipantOnly } from "../auth/guest-navigation";
 import { PushSettings } from "./push-settings";
+import { PreferenceSaveControls } from "./preference-save-controls";
 import { useAuth } from "../auth/auth-context";
 import { AuthenticatorSettings } from "../auth/authenticator";
 import { Button } from "../../components/ui/button";
@@ -234,12 +235,6 @@ function PreferencesForm({
       reset(data);
     },
   });
-  const conflict = Boolean(
-    save.error &&
-    typeof save.error === "object" &&
-    "code" in save.error &&
-    (save.error.code === "PT409" || save.error.code === "40001"),
-  );
   return (
     <form
       className="panel notification-preferences"
@@ -256,32 +251,14 @@ function PreferencesForm({
         ))}
       </fieldset>
       <p>{t("preferenceHelp")}</p>
-      {save.isError && (
-        <Notice kind="error">{t(conflict ? "conflict" : "error")}</Notice>
-      )}
-      {conflict && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() =>
-            void reload().then((data) => {
-              if (data) {
-                reset(data);
-                save.reset();
-              }
-            })
-          }
-        >
-          {t("reload")}
-        </Button>
-      )}
-      {save.isSuccess && !formState.isDirty && <Notice>{t("saved")}</Notice>}
-      <Button
-        type="submit"
-        disabled={!online || save.isPending || !formState.isDirty}
-      >
-        {t("save")}
-      </Button>
+      <PreferenceSaveControls
+        namespace="inbox"
+        online={online}
+        dirty={formState.isDirty}
+        save={save}
+        reload={reload}
+        reset={reset}
+      />
     </form>
   );
 }

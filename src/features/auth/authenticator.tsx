@@ -13,6 +13,7 @@ import { Button } from "../../components/ui/button";
 import { installationBrand } from "../../lib/installation-brand";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { SignOutButton } from "./sign-out-button";
 import "./authenticator.css";
 
 export const authenticatorRequired = "PT412";
@@ -228,14 +229,11 @@ export function AuthenticatorGate({
   actor: string;
   onVerified: () => Promise<unknown>;
 }) {
-  const { t } = useTranslation();
   return (
     <main className="password-setup">
       <div className="password-setup-actions">
         <Preferences />
-        <Button variant="secondary" onClick={() => void db().auth.signOut()}>
-          {t("logout")}
-        </Button>
+        <SignOutButton variant="secondary" />
       </div>
       <div className="narrow">
         <AuthenticatorForm actor={actor} gate onVerified={onVerified} />

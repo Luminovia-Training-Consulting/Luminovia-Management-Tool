@@ -1,6 +1,10 @@
 /** Internal native contracts for scoped discovery and personal file organisation. */
 import { z } from "zod";
 import {
+  jsonContent as json,
+  postgrestErrorResponse as error,
+} from "./postgrest-content.ts";
+import {
   archivedPersonalMaterialPageSchema,
   documentDiscoveryWireSchema,
   documentKind,
@@ -48,20 +52,6 @@ function pageRequest(
   ]);
 }
 
-const errorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.string().nullable().optional(),
-  hint: z.string().nullable().optional(),
-});
-const json = (schema: z.ZodType) => ({
-  "application/json": { schema: z.toJSONSchema(schema) },
-});
-const error = (description: string, schema: z.ZodType = errorSchema) => ({
-  description,
-  content: json(schema),
-});
-
 function operation(
   operationId: string,
   summary: string,
@@ -98,7 +88,7 @@ function operation(
           ? {
               "409": error(
                 "The personal organisation version has changed. Reload before editing.",
-                errorSchema.extend({ code: z.literal("PT409") }),
+                z.literal("PT409"),
               ),
             }
           : {}),

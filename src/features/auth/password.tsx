@@ -12,6 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
+import { SignOutButton } from "./sign-out-button";
 import {
   ErrorState,
   Field,
@@ -149,9 +150,7 @@ export function Password({
     <main className="password-setup">
       <div className="password-setup-actions">
         <Preferences />
-        <Button variant="secondary" onClick={() => void db().auth.signOut()}>
-          {t("logout")}
-        </Button>
+        <SignOutButton variant="secondary" />
       </div>
       {form}
     </main>

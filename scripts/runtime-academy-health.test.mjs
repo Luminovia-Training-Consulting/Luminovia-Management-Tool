@@ -290,6 +290,30 @@ test("missing ingress, out-of-date definitions and unapproved sidecars produce a
   assert.equal(report.status, "degraded");
 });
 
+test("optional services may be stopped but must keep their private topology when running", async (t) => {
+  const fixture = setup(t);
+  const mailpit = {
+    ...fixture.observed[0],
+    id: "e".repeat(64),
+    service: "mailpit",
+    status: "exited",
+  };
+  fixture.observed.push(mailpit);
+  const stopped = await fixture.monitor();
+  assert.equal(stopped.services.mailpit, "stopped");
+  assert.equal(stopped.status, "healthy");
+
+  // A synthetic Docker observation models unintended public mail capture.
+  mailpit.status = "running";
+  mailpit.ports = {
+    "8025/tcp": [{ HostIp: "0.0.0.0", HostPort: "8025" }],
+  };
+  const exposed = await fixture.monitor();
+  assert.equal(exposed.services.mailpit, "ownership_mismatch");
+  assert.equal(exposed.topology, "ownership_mismatch");
+  assert.equal(exposed.status, "degraded");
+});
+
 test("archive check declines missing receipts, old and mismatched data, symlinks and a wrong digest", async (t) => {
   const fixture = setup(t);
   assert.equal(

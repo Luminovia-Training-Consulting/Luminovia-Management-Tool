@@ -3,11 +3,11 @@ import { type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice } from "../../components/common";
-import { Button } from "../../components/ui/button";
 import { db } from "../../lib/supabase";
 import { installationBrand } from "../../lib/installation-brand";
 import { useOnline } from "../../lib/online";
 import { Password } from "./password";
+import { SignOutButton } from "./sign-out-button";
 import { AuthenticatorGate, authenticatorRequired } from "./authenticator";
 import { sessionCacheBoundary } from "./session-cache-boundary";
 import { useAuth } from "./auth-context";
@@ -108,9 +108,7 @@ function OnlineAcademyCourseAccess({
             ? "Der Kursbereich dieser Akademie ist nicht freigegeben. Wende dich an die Administration deiner Akademie."
             : "This academy’s course area is unavailable. Contact your academy administrator."}
         </Notice>
-        <Button onClick={() => void db().auth.signOut()}>
-          {de ? "Abmelden" : "Sign out"}
-        </Button>
+        <SignOutButton />
       </main>
     );
   return children(query.data);

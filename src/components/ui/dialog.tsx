@@ -14,6 +14,7 @@ export function Dialog({
   title,
   description,
   returnFocusTo,
+  closeDisabled,
   children,
 }: {
   open: boolean;
@@ -21,6 +22,7 @@ export function Dialog({
   title: string;
   description: string;
   returnFocusTo?: HTMLElement | null;
+  closeDisabled?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -44,6 +46,7 @@ export function Dialog({
           <DialogPrimitive.Close
             className="dialog-close"
             aria-label={t("close")}
+            disabled={closeDisabled}
           >
             <X size={20} />
           </DialogPrimitive.Close>

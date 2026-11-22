@@ -461,7 +461,8 @@ export class GitHubPreview {
             {
                 cwd: directory,
                 env: runtimeEnvironment(),
-                timeoutMs: action === "test" ? 1800000 : 720000,
+                // Full acceptance includes the database matrix and two serial browser projects.
+                timeoutMs: action === "test" ? 2 * 60 * 60 * 1000 : 720000,
             },
         );
     }

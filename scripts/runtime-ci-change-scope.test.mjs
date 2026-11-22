@@ -576,7 +576,8 @@ test("independent acceptance phases upload distinct safe evidence only after act
                 "",
                 "Review unsupported upload-condition syntax before executing it",
             );
-            return runInNewContext(expression, Object.create(null), {timeout: 100});
+            // The VM limit uses wall time, including time waiting for a worker CPU.
+            return runInNewContext(expression, Object.create(null), {timeout: 1000});
         };
         for (const [profile, outcome, expected] of [
             ["docs", "skipped", false],

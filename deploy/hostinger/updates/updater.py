@@ -45,6 +45,9 @@ MAINTENANCE_LOCK = Path("/run/lock/luminovia-maintenance.lock")
 REVIEWED_ROOT_UID = 0
 REVIEWED_PLAN_FORMAT = "luminovia-reviewed-migration-plan-v1"
 REVIEWED_PLAN_MAX_TTL = 7200
+MIGRATION_BEGIN = re.compile(r"\s*(?:--[^\n]*\n\s*)*begin(?:\s+transaction)?\s*;", re.I)
+MIGRATION_COMMIT = re.compile(r"^\s*commit;\s*\Z", re.I | re.M)
+TRANSACTION_COMMANDS = {"BEGIN", "START", "COMMIT", "END", "ROLLBACK", "ABORT", "SAVEPOINT", "RELEASE", "PREPARE"}
 
 
 # Stable operator error; keep internal output and secrets out of the public reason.
@@ -293,18 +296,23 @@ def visible_sql(source):
     return "".join(result)
 
 
-# Reject destructive or ambiguous migrations in the automatic path; retain separate operator review.
-def compatible_migration(source):
+def migration_statements(source):
+    """Validate the envelope shared by automatic and reviewed migration paths."""
     visible = visible_sql(source)
     statements = [part.strip() for part in visible.split(";") if part.strip()]
     if len(statements) < 2 or statements[0].lower() not in ("begin", "begin transaction") or statements[-1].lower() != "commit":
         raise UpdateError("migration_requires_single_transaction")
-    if not re.match(r"\s*(?:--[^\n]*\n\s*)*begin(?:\s+transaction)?\s*;", source, re.I) or not re.search(r"(?m)^\s*commit;\s*\Z", source, re.I):
+    if not MIGRATION_BEGIN.match(source) or not MIGRATION_COMMIT.search(source):
         raise UpdateError("migration_transaction_delimiters_require_own_lines")
-    for statement in statements[1:-1]:
+    return statements[1:-1]
+
+
+# Reject destructive or ambiguous migrations in the automatic path; retain separate operator review.
+def compatible_migration(source):
+    for statement in migration_statements(source):
         upper = statement.upper()
         first = upper.split()[0]
-        if first in {"DROP", "TRUNCATE", "DELETE", "UPDATE", "MERGE", "EXECUTE", "DO", "CALL", "COPY", "ROLLBACK", "COMMIT", "BEGIN", "VACUUM", "REINDEX", "CLUSTER"}:
+        if first in TRANSACTION_COMMANDS or first in {"DROP", "TRUNCATE", "DELETE", "UPDATE", "MERGE", "EXECUTE", "DO", "CALL", "COPY", "VACUUM", "REINDEX", "CLUSTER"}:
             raise UpdateError("migration_requires_operator_review")
         if first == "ALTER" and re.search(r"\b(DROP|RENAME|SYSTEM)\b|\bALTER\s+COLUMN\b", upper):
             raise UpdateError("migration_requires_operator_review")
@@ -322,15 +330,9 @@ def reviewed_transaction(source):
     Review is not permission to escape the one-transaction/history envelope or
     alter the parser's string semantics. The ordinary classifier stays intact.
     """
-    visible = visible_sql(source)
-    statements = [part.strip() for part in visible.split(";") if part.strip()]
-    if len(statements) < 2 or statements[0].lower() not in ("begin", "begin transaction") or statements[-1].lower() != "commit":
-        raise UpdateError("migration_requires_single_transaction")
-    if not re.match(r"\s*(?:--[^\n]*\n\s*)*begin(?:\s+transaction)?\s*;", source, re.I) or not re.search(r"(?m)^\s*commit;\s*\Z", source, re.I):
-        raise UpdateError("migration_transaction_delimiters_require_own_lines")
-    for statement in statements[1:-1]:
+    for statement in migration_statements(source):
         upper = statement.upper()
-        if upper.split()[0] in {"BEGIN", "COMMIT", "ROLLBACK", "ABORT", "END", "SAVEPOINT", "RELEASE", "PREPARE"} or re.search(r"\bSTANDARD_CONFORMING_STRINGS\b|\bALTER\s+SYSTEM\b|\bCOPY\b.*\bPROGRAM\b", upper):
+        if upper.split()[0] in TRANSACTION_COMMANDS or re.search(r"\bSTANDARD_CONFORMING_STRINGS\b|\bALTER\s+SYSTEM\b|\bCOPY\b.*\bPROGRAM\b", upper):
             raise UpdateError("reviewed_migration_transaction_escape")
 
 
@@ -399,9 +401,9 @@ def migration_sql(source, version, name, *, operator_reviewed=False):
     if delimiter in source:
         raise UpdateError("invalid_migration_delimiter")
     record = "INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES ('" + version + "','" + name + "',ARRAY[" + delimiter + source + delimiter + "]);\n"
-    ending = re.search(r"(?m)^\s*commit;\s*\Z", source, re.I)
+    ending = MIGRATION_COMMIT.search(source)
     command = source[:ending.start()] + "\n" + record + "COMMIT;\n"
-    opening = re.match(r"\s*(?:--[^\n]*\n\s*)*begin(?:\s+transaction)?\s*;", command, re.I)
+    opening = MIGRATION_BEGIN.match(command)
     return command[:opening.end()] + "\nSELECT pg_advisory_xact_lock(hashtext('luminovia.schema_migrations'));\n" + command[opening.end():]
 
 

@@ -144,6 +144,27 @@ class BackupSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(b.BackupError, "missing_database"):
             b.verify_complete(directory)
 
+    def test_recovery_never_cleans_a_concurrently_created_output(self):
+        directory = synthetic_set(self.destination, 1)
+        identity = self.root / "test.agekey"
+        identity.touch(mode=0o600)
+        output = self.root / "restored"
+        keep = output / "another-recovery"
+        disk_usage = shutil.disk_usage
+
+        # Simulate a competing recovery claiming the name during the space check.
+        def space_check(parent):
+            output.mkdir(mode=0o700)
+            keep.write_text("belongs to the other recovery")
+            return disk_usage(parent)._replace(free=2 * 1024**3)
+
+        with patch.object(recovery.shutil, "disk_usage", side_effect=space_check):
+            with patch.object(recovery.subprocess, "run") as decrypt:
+                with self.assertRaisesRegex(b.BackupError, "recovery_output_must_be_new"):
+                    recovery.unpack(directory, identity, output)
+                decrypt.assert_not_called()
+        self.assertEqual(keep.read_text(), "belongs to the other recovery")
+
     def test_adaptive_retention_keeps_last_valid_set(self):
         for n in [1, 2, 3]:
             synthetic_set(self.destination, n)

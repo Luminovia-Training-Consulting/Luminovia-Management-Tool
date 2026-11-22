@@ -1,3 +1,4 @@
+/** Course document boundary regressions use fictional facts and injected Auth, RPC and Storage. */
 import {createCourseDocumentHandler} from "./handler.ts";
 
 Deno.test(
@@ -75,6 +76,7 @@ function fixture() {
         rpcCalls = 0;
     const state = {
         active: true,
+        authUnavailable: false,
         revoked: false,
         changed: false,
         unsupported: false,
@@ -84,6 +86,7 @@ function fixture() {
         origins: [origin],
         authenticate: async () => {
             authCalls++;
+            if (state.authUnavailable) throw new Error("private provider detail");
             return state.active;
         },
         rpc: async (_token, name, args) => {
@@ -136,6 +139,17 @@ Deno.test(
         assert(f.rpcCalls() === 0);
     },
 );
+// An Auth outage must return the protected response envelope before any fact lookup.
+Deno.test("course documents return a no-store CORS error if Auth is unavailable", async () => {
+    const f = fixture();
+    f.state.authUnavailable = true;
+    const response = await f.handler(request({kind: "completion", id}));
+    assert(response.status === 503);
+    assert(response.headers.get("access-control-allow-origin") === origin);
+    assert(response.headers.get("cache-control") === "no-store, private");
+    assert((await response.json()).error === "document_unavailable");
+    assert(f.authCalls() === 1 && f.rpcCalls() === 0);
+});
 Deno.test(
     "completion PDF rechecks actual Auth and same authorised facts after rendering",
     async () => {
