@@ -91,7 +91,9 @@ export function candidateDatabaseOptions(database, hostedCi) {
     const bytes = typeof configured === "string" && /^[1-9][0-9]*$/.test(configured)
         ? Number(configured)
         : configured;
-    const ciMinimum = 640 * 1024 ** 2;
+    // The full native matrix reached the previous 640 MiB cgroup cap
+    // while Auth, REST and cleanup still had simultaneous connections.
+    const ciMinimum = 1024 * 1024 ** 2;
     if (hostedCi && Number.isSafeInteger(bytes) && bytes > 0 && bytes < ciMinimum)
         options.mem_limit = ciMinimum;
     return options;
