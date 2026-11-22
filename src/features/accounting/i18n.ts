@@ -70,11 +70,6 @@ const de = {
   refresh: "Aktuellen Stand laden",
   taxUnknown:
     "Steuerliche Netto-/Bruttobeträge und Umsatzsteuer sind nicht erfasst. Der dokumentierte Betrag wird unverändert exportiert; fehlende Steuerdaten bleiben leer.",
-  einvoice: "Elektronische Rechnungsformate",
-  einvoiceUnavailable:
-    "XRechnung und ZUGFeRD können noch nicht erzeugt werden. Es fehlen verifizierte Verkäufer-/Käuferdaten, Steueraufschlüsselungen, Rechnungspositionen, elektronische Adressen und die eingerichtete Standardvalidierung.",
-  canonical:
-    "JSON und CSV verwenden das dokumentierte Portal-Austauschschema. Ein Import in DATEV oder eine andere Fremdsoftware ist noch nicht verifiziert.",
   register: "Externe Rechnung an ein Unternehmen erfassen",
   registerHint:
     "Erfasse eine bereits ausgestellte Rechnung mit einer eigenen, geprüften PDF und ihren tatsächlichen Werten. Die zugehörigen angenommenen Vereinbarungen mit Unternehmen bleiben unverändert.",
@@ -118,10 +113,6 @@ const de = {
     "Werte bleiben in der ursprünglichen Währung; es findet keine Umrechnung statt.",
   paymentHistory: "Zahlungsverlauf",
   reversed: "Gegenbuchung",
-  exportHistory:
-    "Ein Export bleibt eine Aufnahme zum Erstellungszeitpunkt. Später erfasste Zahlungen erzeugen einen neuen Stand.",
-  credits:
-    "Ausgestellte Gutschriften für Unternehmen stehen als separate Nachweise bei der zugehörigen Rechnung.",
   creditNotes: "Gutschriften für Unternehmen",
   creditHint:
     "Eine bereits ausgestellte Gutschrift zur Originalrechnung erfassen oder den geprüften Beleg herunterladen.",
@@ -256,11 +247,6 @@ const en: typeof de = {
   refresh: "Reload current records",
   taxUnknown:
     "Tax net/gross amounts and VAT have not been recorded. The recorded total is exported unchanged; missing tax fields remain empty.",
-  einvoice: "Electronic invoice formats",
-  einvoiceUnavailable:
-    "XRechnung and ZUGFeRD generation is not yet available. Verified seller/buyer details, tax breakdowns, invoice lines, electronic addresses and configured standard validation are missing.",
-  canonical:
-    "JSON and CSV use the documented Portal interchange schema. Import into DATEV or another third-party system has not been verified.",
   register: "Record an external invoice to a company",
   registerHint:
     "Record an already issued invoice with a dedicated scanned PDF and its actual values. Associated accepted agreements with companies remain unchanged.",
@@ -302,10 +288,6 @@ const en: typeof de = {
   original: "Values retain their original currency; no conversion is applied.",
   paymentHistory: "Payment history",
   reversed: "Reversal",
-  exportHistory:
-    "An export remains a snapshot at its creation time. Payments recorded later produce a new snapshot.",
-  credits:
-    "Issued credit notes for companies are available as separate evidence on the associated invoice.",
   creditNotes: "Credit notes for companies",
   creditHint:
     "Record an already-issued credit note against its original invoice or download the verified PDF.",

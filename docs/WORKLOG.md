@@ -1,3 +1,7 @@
+# 23 November 2026 — Accounting export scope
+
+The accounting page lists the supported export actions without the placeholder for additional formats. The guide and operational brief document the existing CSV and JSON exports. All 29 accounting tests, TypeScript, lint and the production bundle budget passed. Chromium verified the actual accounting component with fictional data in German and English at mobile and desktop widths.
+
 # 23 November 2026 — Unified finance workspace
 
 The internal portal groups the finance overview, accounting exports and analytics under one sidebar and mobile entry. Company accounts open company invoices by default when authorised. Old accounting and analytics links preserve their query and fragment. The separate learning-only Academy retains its scoped learning analytics and has no commercial routes. TypeScript, targeted lint and all 89 finance, accounting and shell tests passed.
@@ -853,7 +857,7 @@ Local verification included 1,027 frontend cases in 155 files (76.05% line cover
 
 The first broad PostgreSQL run in this pass completed 83 of 113 fixture files at an intermediate snapshot. It was followed by repairs to the unauthenticated REST pre-request wrapper, source catalogue regeneration, and targeted historical fixture updates. Some historical expectations and native-only database extension cases still need verification. The exact canonical `./portal test` stopped before startup in `.local/tests/71c584eb/RESULT.txt`. Docker cannot build its IPv4 NAT rules, and the matching kernel module tree for the running kernel is absent. Rootless helper execution is restricted in this session. Native Auth, Mailpit, scanner/Storage, active WebSockets, authenticated browser journeys and physical retained-data restore were not reached. No existing database or user data was used.
 
-Remaining product work includes business-specific coverage for the generic JSON API contracts, financial webhook scopes and actual receiver setup, XRechnung/ZUGFeRD, the separate public Website connection, schedule cases that would otherwise change shared or retained course evidence, and final release acceptance. The [implementation matrix](IMPLEMENTATION_PLAN.md) distinguishes source from acceptance.
+Remaining product work includes business-specific coverage for the generic JSON API contracts, financial webhook scopes and actual receiver setup, the separate public Website connection, schedule cases that would otherwise change shared or retained course evidence, and final release acceptance. The [implementation matrix](IMPLEMENTATION_PLAN.md) distinguishes source from acceptance.
 
 The first direct push reached GitHub `main` as `e1cf5bc3ba13c7f0ebac2bda01d92721633fb803`. Follow-up migrations restored company and participant course reviews under current Premium and author permissions, corrected two ambiguous participant-link request lookups, and allowed same-count rescheduling for an eligible single-assignment course without rewriting course or job session IDs. SQL verified company revocation, own-only learner withdrawal, disabled Premium denial, invitation consent and idempotency, retained commercial snapshots and rejection when evidence appears after approval. Six older suites were brought in line with the current entitlement and membership rules, preserving negative access checks.
 

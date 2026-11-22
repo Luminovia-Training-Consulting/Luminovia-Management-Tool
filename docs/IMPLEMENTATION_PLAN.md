@@ -931,7 +931,7 @@ The earlier PR10, PR27 and PR29 preparation notes below record their named histo
 
 ## Seven additional operational modules — current user request
 
-The exact additional [implementation prompt](../OPERATIONS_BRIEF.txt) is preserved alongside the original authoritative specification. All seven additions remain required. [Ownership/PR audit](../DEVELOPMENT.md#section-architecture), [actual status and next actions](../OPERATIONS.md#section-hostinger-development).
+The [operational brief](../OPERATIONS_BRIEF.txt) defines the scope of the seven additions. [Ownership/PR audit](../DEVELOPMENT.md#section-architecture), [actual status and next actions](../OPERATIONS.md#section-hostinger-development).
 
 - [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
 - [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.

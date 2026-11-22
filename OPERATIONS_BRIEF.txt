@@ -380,9 +380,9 @@ Verify that a valid submission creates exactly one request, malformed requests a
 
 ---
 
-## 8. FEATURE P2 — ACCOUNTING INTEGRATION
+## 8. FEATURE P2 — ACCOUNTING EXPORTS
 
-Extend existing finance functions with export and accounting interoperability.
+Provide accounting exports for existing finance records.
 
 ### Functional requirements
 
@@ -405,14 +405,6 @@ Support:
 
 - CSV
 - Structured machine-readable JSON
-- Validated accounting import formats where practically supported
-
-Evaluate German electronic invoicing formats:
-
-- XRechnung
-- ZUGFeRD
-
-Use established, validated libraries or service integrations rather than producing potentially non-compliant XML from unsupported assumptions.
 
 Respect existing invoice ownership and commercial access rules.
 
@@ -426,7 +418,7 @@ Do not create or submit real invoices to customers during tests.
 
 ### Acceptance
 
-Add tests covering calculations, rounding, original currency preservation, required fields, malformed exports, access restrictions, CSV formula injection, duplicate exports and importer compatibility where supported.
+Add tests covering calculations, rounding, original currency preservation, required fields, malformed exports, access restrictions, CSV formula injection, and duplicate exports.
 
 ---
 
@@ -794,7 +786,7 @@ Implement:
 
 4. Change Request System
 5. Website-to-Portal Integration
-6. Accounting Integration
+6. Accounting Exports
 7. Internal Support Desk
 
 Deliver functioning backend, frontend and tests.

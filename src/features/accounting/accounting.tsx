@@ -850,13 +850,6 @@ export function AccountingPage({
           {t("more")}
         </Button>
       )}
-      <section className="accounting-panel">
-        <h2>{t("einvoice")}</h2>
-        <p>{t("einvoiceUnavailable")}</p>
-        <p className="accounting-hint">{t("canonical")}</p>
-        <p className="accounting-hint">{t("credits")}</p>
-        <p className="accounting-hint">{t("exportHistory")}</p>
-      </section>
       <Dialog
         open={register && access.data.can_manage_customer_invoices}
         onOpenChange={setRegister}

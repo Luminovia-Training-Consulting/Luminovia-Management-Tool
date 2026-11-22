@@ -111,8 +111,7 @@ export const accountingPageSchema = z.object({
   items: z.array(accountingInvoiceSchema.safeExtend({ created_at: instant })),
   has_more: z.boolean(),
 });
-/** A durable server snapshot is a custom interchange artifact, not an asserted
- * XRechnung/ZUGFeRD document or a validated third-party importer payload. */
+/** Durable server snapshot for the Portal CSV and JSON exports. */
 export const accountingExportSchema = z.object({
   schema_version: z.literal("luminovia.accounting/1"),
   id: uuid,

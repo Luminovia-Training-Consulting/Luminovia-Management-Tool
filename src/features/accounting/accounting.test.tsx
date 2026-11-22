@@ -133,9 +133,18 @@ it("distinguishes a fully credited closing invoice from a payment", async () => 
   ).not.toBeInTheDocument();
 });
 
-it("provides English format boundaries and accessible external-document confirmation", async () => {
+it("offers CSV and JSON exports and requires accessible external-document confirmation", async () => {
   await i18n.changeLanguage("en");
   show(true);
+  expect(
+    screen.getByRole("button", { name: "Create JSON export" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Create CSV export" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Settlement journal" }),
+  ).toBeVisible();
   await userEvent.click(
     screen.getByRole("button", {
       name: "Record an external invoice to a company",
@@ -151,9 +160,6 @@ it("provides English format boundaries and accessible external-document confirma
     screen.getByRole("checkbox", { name: /I checked the number/ }),
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Record invoice" })).toBeDisabled();
-  expect(
-    screen.getByText(/XRechnung and ZUGFeRD generation is not yet available/),
-  ).toBeInTheDocument();
 });
 it("disables online writes and new exports when connectivity is lost", async () => {
   show(true);
