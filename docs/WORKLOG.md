@@ -1,3 +1,9 @@
+# 23 November 2026 — Confirmed local reset in administration
+
+Active administrators and owners can inspect the local installation and enter DELETE and their current password before clearing its database, Auth accounts, Storage files and local mail. The development server carries out the existing owned Docker reset. A separate status page reports completion after the fresh stack starts. With an enrolled TOTP factor the server also verifies a new code. Hosted administration points to the existing guarded host procedure.
+
+An isolated Docker and Chromium run verified the lecturer access denial, exact confirmation, wrong-password rejection, completed reset receipt, removal of an Auth user, organisation and uploaded file, and successful fresh administrator login. The 97 focused Vitest cases, 15 reset and documentation checks, type checking, targeted lint and production build budget passed.
+
 # 23 November 2026 — Accounting export scope
 
 The accounting page lists the supported export actions without the placeholder for additional formats. The guide and operational brief document the existing CSV and JSON exports. All 29 accounting tests, TypeScript, lint and the production bundle budget passed. Chromium verified the actual accounting component with fictional data in German and English at mobile and desktop widths.

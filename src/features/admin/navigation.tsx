@@ -7,13 +7,22 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/auth-context";
 import "../deletions/i18n";
-import { permissionsQuery } from "../../lib/queries";
+import {
+  permissionsQuery,
+  profileQuery,
+  userRolesQuery,
+} from "../../lib/queries";
 
 /** Show sections allowed by loaded capabilities; links do not replace server permissions. */
 export function AdminNavigation() {
   const { t, i18n } = useTranslation();
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
+  const roles = useQuery(userRolesQuery(session!.user.id));
+  const profile = useQuery(profileQuery(session!.user.id));
+  const canReset =
+    profile.data?.active &&
+    roles.data?.some((role) => role === "admin" || role === "owner");
   return (
     <>
       <nav className="admin-tabs" aria-label={t("admin")}>
@@ -42,6 +51,13 @@ export function AdminNavigation() {
         )}
         {permissions.data?.includes("announcements.manage") && (
           <NavLink to="/admin/announcements">{t("announcements")}</NavLink>
+        )}
+        {canReset && (
+          <NavLink to="/admin/reset">
+            {i18n.language.startsWith("de")
+              ? "Plattform zurücksetzen"
+              : "Reset platform"}
+          </NavLink>
         )}
       </nav>
       <Outlet />

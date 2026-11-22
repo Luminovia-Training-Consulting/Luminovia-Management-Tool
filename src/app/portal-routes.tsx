@@ -79,6 +79,16 @@ const AdminAnnouncementsPage = lazy(() =>
     default: module.AdminAnnouncementsPage,
   })),
 );
+const PlatformResetPage = lazy(() =>
+  import("../features/admin/platform-reset").then((module) => ({
+    default: module.PlatformResetPage,
+  })),
+);
+const PlatformResetStatus = lazy(() =>
+  import("../features/admin/platform-reset").then((module) => ({
+    default: module.PlatformResetStatus,
+  })),
+);
 const AdminMailPage = lazy(() =>
   import("../features/admin/mail").then((module) => ({
     default: module.AdminMailPage,
@@ -272,6 +282,9 @@ export default function PortalRoutes() {
         }
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      {import.meta.env.DEV && (
+        <Route path="/reset-status" element={<PlatformResetStatus />} />
+      )}
       <Route element={<Protected />}>
         <Route path="/api/swagger" element={<StandaloneSwagger />} />
         <Route element={<Shell />}>
@@ -361,6 +374,7 @@ export default function PortalRoutes() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="mail" element={<AdminMailPage />} />
+            <Route path="reset" element={<PlatformResetPage />} />
             <Route path="deletions" element={<DeletionsPage />} />
             <Route path="audit" element={<AdminAuditPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />

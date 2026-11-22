@@ -1,0 +1,299 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Button } from "../../components/ui/button";
+import { profileQuery, userRolesQuery } from "../../lib/queries";
+import { db } from "../../lib/supabase";
+import { useAuth } from "../auth/auth-context";
+
+const endpoint = "/__portal/local-reset";
+
+const copy = {
+  title: ["Plattform zurücksetzen", "Reset platform"],
+  denied: [
+    "Diese Seite ist nur für aktive Administratoren und Owner.",
+    "This page is for active administrators and owners only.",
+  ],
+  scope: [
+    "Der Reset löscht Datenbankinhalte, Konten, Sitzungen, LMS-Kurse, Nachrichten, hochgeladene Dateien und lokale E-Mails dieser Installation. Danach startet das lokale Portal mit neuen Testdaten.",
+    "Reset deletes this installation's database contents, accounts, sessions, LMS courses, messages, uploads and local email. The local portal then starts with fresh test data.",
+  ],
+  hosted: [
+    "Für den veröffentlichten CMS-Server ist der Reset eine Host-Operation. Starte die Zielprüfung im Server-Terminal. Der anschließende interaktive Reset prüft die Sicherung, dein Admin-Konto und den Authenticator und legt einen neuen Owner an.",
+    "Resetting the hosted CMS requires host access. Start by checking the target in the server terminal. The interactive reset then checks the backup, your administrator account and authenticator, and creates a new owner.",
+  ],
+  localUnavailable: [
+    "Der Browser-Reset ist nur im eigenen lokalen Portal verfügbar. Starte die Installation mit ./portal start.",
+    "Browser reset is available in the owned local portal. Start the installation with ./portal start.",
+  ],
+  confirm: ["Zur Bestätigung DELETE eingeben", "Type DELETE to confirm"],
+  password: ["Aktuelles Passwort", "Current password"],
+  code: [
+    "Authenticator-Code, falls eingerichtet",
+    "Authenticator code, if configured",
+  ],
+  action: [
+    "Alle Daten dieser Installation löschen",
+    "Delete all data in this installation",
+  ],
+  working: [
+    "Das Portal wird zurückgesetzt und startet neu. Lass diese Seite geöffnet.",
+    "The portal is resetting and restarting. Keep this page open.",
+  ],
+  complete: [
+    "Der Reset ist abgeschlossen. Die neuen lokalen Zugangsdaten findest du mit ./portal credentials.",
+    "Reset is complete. Find the new local credentials with ./portal credentials.",
+  ],
+  login: ["Zur Anmeldung", "Go to sign-in"],
+  failed: [
+    "Der Reset konnte nicht bestätigt werden. Prüfe vor einem erneuten Versuch lokal den Portalstatus mit ./portal status.",
+    "The reset could not be confirmed. Check the local portal status using ./portal status before trying again.",
+  ],
+  invalid: [
+    "Bestätigung abgelehnt. Prüfe dein Passwort und gegebenenfalls den aktuellen Authenticator-Code.",
+    "Confirmation denied. Check your password and, if enabled, your current authenticator code.",
+  ],
+  target: ["Zielinstallation", "Target installation"],
+  checking: [
+    "Zielinstallation wird geprüft …",
+    "Checking the target installation…",
+  ],
+} as const;
+
+export function PlatformResetPage() {
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  const roles = useQuery(userRolesQuery(actor));
+  const profile = useQuery(profileQuery(actor));
+  const { i18n } = useTranslation();
+  const language = i18n.language.startsWith("de") ? 0 : 1;
+  const t = (key: keyof typeof copy) => copy[key][language];
+  const authorized =
+    profile.data?.active &&
+    roles.data?.some((role) => role === "admin" || role === "owner");
+
+  if (profile.isPending || roles.isPending)
+    return <p role="status">{t("checking")}</p>;
+  if (!authorized) return <p role="alert">{t("denied")}</p>;
+
+  return (
+    <PlatformResetForm
+      key={actor}
+      token={session!.access_token}
+      language={language}
+    />
+  );
+}
+
+function PlatformResetForm({
+  token,
+  language,
+}: {
+  token: string;
+  language: 0 | 1;
+}) {
+  const t = (key: keyof typeof copy) => copy[key][language];
+  const [confirmation, setConfirmation] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [pending, setPending] = useState(false);
+  const navigate = useNavigate();
+  const [result, setResult] = useState<"failed" | "invalid">();
+  const target = useQuery({
+    queryKey: ["local-platform-reset-target"],
+    enabled: import.meta.env.DEV,
+    retry: false,
+    queryFn: async () => {
+      const response = await fetch(endpoint, { cache: "no-store" });
+      if (
+        !response.ok ||
+        !response.headers.get("content-type")?.startsWith("application/json")
+      )
+        return null;
+      const data = await response.json();
+      return typeof data.project === "string" ? (data.project as string) : null;
+    },
+  });
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!target.data || confirmation !== "DELETE" || !password || pending)
+      return;
+    setPending(true);
+    setResult(undefined);
+    const body = JSON.stringify({ confirmation, password, code });
+    setPassword("");
+    setCode("");
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+      });
+      if (response.status === 400 || response.status === 403) {
+        setResult("invalid");
+        return;
+      }
+      if (response.status !== 202) throw new Error();
+      const data = await response.json();
+      if (typeof data.receipt !== "string") throw new Error();
+      navigate(`/reset-status#${encodeURIComponent(data.receipt)}`, {
+        replace: true,
+      });
+    } catch {
+      setResult("failed");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="card stack" aria-labelledby="platform-reset-title">
+      <h1 id="platform-reset-title">{t("title")}</h1>
+      {target.isLoading ? (
+        <p role="status">{t("checking")}</p>
+      ) : target.data ? (
+        <>
+          <p>{t("scope")}</p>
+          {target.data && (
+            <p>
+              {t("target")} <code>{target.data}</code>
+            </p>
+          )}
+          <form className="stack max-w-md" onSubmit={submit}>
+            <label className="stack" htmlFor="reset-confirmation">
+              {t("confirm")}
+              <input
+                id="reset-confirmation"
+                className="input"
+                autoComplete="off"
+                spellCheck={false}
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.currentTarget.value)}
+              />
+            </label>
+            <label className="stack" htmlFor="reset-password">
+              {t("password")}
+              <input
+                id="reset-password"
+                className="input"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={1024}
+                value={password}
+                onChange={(event) => setPassword(event.currentTarget.value)}
+              />
+            </label>
+            <label className="stack" htmlFor="reset-code">
+              {t("code")}
+              <input
+                id="reset-code"
+                className="input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.currentTarget.value)}
+              />
+            </label>
+            {result && <p role="alert">{t(result)}</p>}
+            <Button
+              className="self-start"
+              type="submit"
+              variant="danger"
+              disabled={confirmation !== "DELETE" || !password || pending}
+            >
+              {t("action")}
+            </Button>
+          </form>
+        </>
+      ) : import.meta.env.DEV ? (
+        <p>{t("localUnavailable")}</p>
+      ) : (
+        <>
+          <p>{t("hosted")}</p>
+          <code className="break-words">./portal reset-live --plan</code>
+          <code className="break-words">./portal reset-live --apply</code>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** The receipt stays usable after the server restarts and deletes the old session. */
+export function PlatformResetStatus() {
+  const receipt = useLocation().hash.slice(1);
+  const { i18n } = useTranslation();
+  const language = i18n.language.startsWith("de") ? 0 : 1;
+  const t = (key: keyof typeof copy) => copy[key][language];
+  const [result, setResult] = useState<"complete" | "failed">();
+  const valid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(receipt);
+
+  useEffect(() => {
+    if (!valid || result) return;
+    const controller = new AbortController();
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(
+          `${endpoint}?receipt=${encodeURIComponent(receipt)}`,
+          {
+            cache: "no-store",
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(2000),
+            ]),
+          },
+        );
+        if (!response.ok) return;
+        const { state } = await response.json();
+        if (
+          !controller.signal.aborted &&
+          (state === "complete" || state === "failed")
+        )
+          setResult(state);
+      } catch {
+        // The owned Vite process is temporarily offline while Docker resets.
+      }
+    }, 2500);
+    const deadline = window.setTimeout(
+      () => setResult("failed"),
+      15 * 60 * 1000,
+    );
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      window.clearTimeout(deadline);
+    };
+  }, [receipt, result, valid]);
+
+  if (!valid) return <Navigate to="/login" replace />;
+  return (
+    <main className="mx-auto max-w-lg p-4">
+      <section className="card stack">
+        <h1>{t("title")}</h1>
+        <p role={result === "failed" ? "alert" : "status"}>
+          {t(result ?? "working")}
+        </p>
+        {result === "complete" && (
+          <Button
+            className="self-start"
+            onClick={async () => {
+              await db()
+                .auth.signOut({ scope: "local" })
+                .catch(() => {});
+              window.location.replace("/login");
+            }}
+          >
+            {t("login")}
+          </Button>
+        )}
+      </section>
+    </main>
+  );
+}

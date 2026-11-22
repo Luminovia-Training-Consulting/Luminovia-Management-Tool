@@ -99,6 +99,17 @@ export default defineConfig(({ mode }) => {
       },
     }),
     plugins: [
+      {
+        name: "portal-local-reset",
+        async configureServer(server) {
+          const supervisor = process.env.PORTAL_LOCAL_RESET_SUPERVISOR;
+          const key = env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          if (!internal || !supervisor || !key) return;
+          const { configureLocalReset } =
+            await import("./scripts/admin-local-reset.mjs");
+          configureLocalReset(server, key, supervisor);
+        },
+      },
       react(),
       tailwindcss(),
       {

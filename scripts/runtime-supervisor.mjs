@@ -245,7 +245,12 @@ try {
     background(
         join(root, "node_modules/.bin/vite"),
         ["--host", "127.0.0.1", "--port", new URL(origin).port, "--strictPort"],
-        cleanEnvironment(publicEnv),
+        cleanEnvironment({
+            ...publicEnv,
+            ...(/^luminovia-portal(?:-test-[a-f0-9]{8})?$/.test(config.id)
+                ? {PORTAL_LOCAL_RESET_SUPERVISOR: session}
+                : {}),
+        }),
     );
     await waitForHttp(`${origin}/login`);
     phase = "ready";

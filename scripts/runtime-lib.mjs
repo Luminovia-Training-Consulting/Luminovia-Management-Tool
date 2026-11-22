@@ -12,7 +12,7 @@ import {setTimeout as delay} from "node:timers/promises";
 export const root = resolve(import.meta.dirname, "..");
 export const runtimeDir = join(root, ".local");
 export const stateFile = join(runtimeDir, "runtime.json");
-export const runtimeVersion = 3;
+export const runtimeVersion = 4;
 
 /** Creates the private directory and applies mode 0700 even when the path already exists. */
 export function privateDirectory(path = runtimeDir) {
