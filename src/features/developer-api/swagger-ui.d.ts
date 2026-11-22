@@ -3,6 +3,7 @@ declare module "swagger-ui-dist/swagger-ui-bundle.js" {
 
   export default function SwaggerUI(options: {
     domNode: HTMLElement;
+    filter: boolean;
     plugins: (() => {
       wrapComponents: {
         App: (

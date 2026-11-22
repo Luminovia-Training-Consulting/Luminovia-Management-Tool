@@ -170,6 +170,9 @@ function ExplorerSession({
               : "Authorize with my account"}
         </Button>
         <Button asChild variant="secondary">
+          <a href="/api/swagger">Swagger UI</a>
+        </Button>
+        <Button asChild variant="secondary">
           <a href="/api/openapi.json" download>
             OpenAPI JSON
           </a>

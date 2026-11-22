@@ -54,6 +54,12 @@ import {
 import "../features/analytics/learning-i18n";
 import "./academy-routes.css";
 
+const StandaloneSwagger = lazy(() =>
+  import("../features/developer-api/standalone-swagger").then((module) => ({
+    default: module.StandaloneSwagger,
+  })),
+);
+
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
@@ -136,17 +142,22 @@ function AcademySession() {
 }
 
 function AcademyCourseProfile() {
+  const swagger = useMatch("/api/swagger");
   const { session } = useAuth();
   if (!session) return null;
   return (
     <AcademyCourseAccess actor={session.user.id}>
-      {(access) => (
-        <AcademyWorkspaceFrame
-          key={session.user.id}
-          actor={session.user.id}
-          access={access}
-        />
-      )}
+      {(access) =>
+        swagger ? (
+          <Outlet context={access} />
+        ) : (
+          <AcademyWorkspaceFrame
+            key={session.user.id}
+            actor={session.user.id}
+            access={access}
+          />
+        )
+      }
     </AcademyCourseAccess>
   );
 }
@@ -324,6 +335,7 @@ function AcademyTimetableRoute() {
 
 export default function AcademyRoutes() {
   const signingIn = useMatch("/login");
+  const swagger = useMatch("/api/swagger");
   const openingDemo = useMatch("/demo/*");
   if (openingDemo && publicDemoEnabled && AcademyDemoPage)
     return <AcademyDemoPage />;
@@ -361,6 +373,7 @@ export default function AcademyRoutes() {
             />
             <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
             <Route path="/api/docs" element={<AcademyApiExplorer />} />
+            <Route path="/api/swagger" element={<StandaloneSwagger />} />
             <Route
               path="/courses"
               element={<Navigate to="/learning" replace />}
@@ -373,7 +386,7 @@ export default function AcademyRoutes() {
         </Route>
         <Route path="*" element={<AcademyNotFound />} />
       </Routes>
-      {!signingIn && <AcademyBrandLinksFooter />}
+      {!signingIn && !swagger && <AcademyBrandLinksFooter />}
     </AcademyBrandProvider>
   );
 }

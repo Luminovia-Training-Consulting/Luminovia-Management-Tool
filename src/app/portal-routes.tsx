@@ -29,6 +29,12 @@ import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
 
+const StandaloneSwagger = lazy(() =>
+  import("../features/developer-api/standalone-swagger").then((module) => ({
+    default: module.StandaloneSwagger,
+  })),
+);
+
 const DeliveryPage = lazy(() =>
   import("../features/changes/delivery").then((module) => ({
     default: module.DeliveryPage,
@@ -254,6 +260,7 @@ export default function PortalRoutes() {
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route element={<Protected />}>
+        <Route path="/api/swagger" element={<StandaloneSwagger />} />
         <Route element={<Shell />}>
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<WelcomeGuidePage />} />

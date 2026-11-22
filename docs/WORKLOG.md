@@ -1,3 +1,7 @@
+# 23 November 2026 — Standalone Swagger UI
+
+The signed-in portal and Academy expose `/api/swagger` without workspace navigation. Swagger UI renders the full edition OpenAPI document in read-only mode and links to the existing interactive explorer. TypeScript and all 54 focused explorer and Academy route tests passed.
+
 # 23 November 2026 — Dashboard customization in the welcome header
 
 The dashboard customization button now sits alongside the greeting and wraps below it when the available width is narrow. The editor opens in a focused dialog, leaving the layout of the cards stable. Escape and cancel return focus to the button. Saving still requires server confirmation, and layout conflicts retain the draft until the user reloads the current version.

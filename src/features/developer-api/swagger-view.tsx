@@ -5,6 +5,7 @@ import type { ExplorerRequest } from "./request-boundary";
 
 type SwaggerViewProps = {
   spec: object;
+  filter?: boolean;
   supportedSubmitMethods: readonly string[];
   requestInterceptor: (request: ExplorerRequest) => Promise<ExplorerRequest>;
 };
@@ -12,6 +13,7 @@ type SwaggerViewProps = {
 /** Mount the standalone Swagger renderer in its own DOM subtree. */
 export function SwaggerView({
   spec,
+  filter = false,
   supportedSubmitMethods,
   requestInterceptor,
 }: SwaggerViewProps) {
@@ -32,6 +34,7 @@ export function SwaggerView({
     host.append(target);
     instance.current = SwaggerUI({
       domNode: target,
+      filter,
       plugins: [
         () => ({
           wrapComponents: {
@@ -57,7 +60,7 @@ export function SwaggerView({
       lifetime.abort();
       target.remove();
     };
-  }, [supportedSubmitMethods]);
+  }, [filter, supportedSubmitMethods]);
 
   useEffect(() => {
     instance.current?.specActions.updateLoadingStatus("success");

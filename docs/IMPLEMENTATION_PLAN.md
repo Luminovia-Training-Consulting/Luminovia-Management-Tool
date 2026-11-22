@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Standalone Swagger UI
+
+- The edition-specific full OpenAPI catalogue is available in standalone Swagger UI at `/api/swagger`. The existing `/api/docs` route owns authorized interactive requests.
+
 ## Dashboard customization
 
 - Keep the customization control in the welcome header and use the dialog for editing, conflict recovery and confirmed saves. The responsive browser regression checks the header placement and keyboard focus return.
