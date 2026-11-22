@@ -1,3 +1,9 @@
+# 23 November 2026 — Dashboard customization in the welcome header
+
+The dashboard customization button now sits alongside the greeting and wraps below it when the available width is narrow. The editor opens in a focused dialog, leaving the layout of the cards stable. Escape and cancel return focus to the button. Saving still requires server confirmation, and layout conflicts retain the draft until the user reloads the current version.
+
+All 18 dashboard component tests passed. The real desktop and mobile Chromium journey verified header placement, focus recovery, saving, reload and the English dark view.
+
 # 23 November 2026 — Premium course material library
 
 The learning hub now has a bilingual Course materials view with course filtering, file-name search and protected downloads. The view uses the current workspace projection and exact document gateway. Authorized publishers can open the existing scanned upload and sharing form from the selected course. The all-course view initially loads six courses and loads additional courses on demand.

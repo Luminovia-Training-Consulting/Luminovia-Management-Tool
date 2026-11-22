@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, CalendarCheck, Settings2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import { Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
@@ -40,11 +41,15 @@ function LayoutEditor({
   initial,
   close,
   reload,
+  trigger,
+  open,
 }: {
   actor: string;
   initial: DashboardPreferences;
   close: () => void;
   reload: () => Promise<DashboardPreferences | undefined>;
+  trigger: HTMLButtonElement;
+  open: boolean;
 }) {
   const { t } = useTranslation("dashboard");
   const [draft, setDraft] = useState(initial);
@@ -73,96 +78,165 @@ function LayoutEditor({
   }
 
   return (
-    <form
-      className="panel dashboard-layout-editor"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate(draft);
+    <Dialog
+      open={open}
+      title={t("customize")}
+      description={t("customizeHelp")}
+      returnFocusTo={trigger}
+      closeDisabled={save.isPending}
+      onOpenChange={(open) => {
+        if (!open && !save.isPending) close();
       }}
     >
-      <h2>{t("customize")}</h2>
-      <p className="muted">{t("customizeHelp")}</p>
-      <fieldset disabled={save.isPending}>
-        <legend className="sr-only">{t("customize")}</legend>
-        <ol>
-          {draft.widget_order.map((id, index) => (
-            <li key={id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={!draft.hidden_widgets.includes(id)}
-                  onChange={(event) =>
-                    setDraft((value) => ({
-                      ...value,
-                      hidden_widgets: event.target.checked
-                        ? value.hidden_widgets.filter((item) => item !== id)
-                        : [...value.hidden_widgets, id],
-                    }))
-                  }
-                />
-                {t(widgetLabels[id])}
-              </label>
-              <div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === 0}
-                  aria-label={t("moveUp", { name: t(widgetLabels[id]) })}
-                  onClick={() => move(index, -1)}
-                >
-                  <ArrowUp size={16} aria-hidden="true" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === draft.widget_order.length - 1}
-                  aria-label={t("moveDown", { name: t(widgetLabels[id]) })}
-                  onClick={() => move(index, 1)}
-                >
-                  <ArrowDown size={16} aria-hidden="true" />
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </fieldset>
-      {save.isError && (
-        <Notice kind="error">
-          {t(conflict ? "layoutConflict" : "layoutError")}
-        </Notice>
-      )}
-      {conflict && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() =>
-            void reload().then((data) => {
-              if (data) {
-                setDraft(data);
-                save.reset();
-              }
-            })
+      <form
+        className="dashboard-layout-editor"
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate(draft);
+        }}
+      >
+        <fieldset disabled={save.isPending}>
+          <legend className="sr-only">{t("customize")}</legend>
+          <ol>
+            {draft.widget_order.map((id, index) => (
+              <li key={id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!draft.hidden_widgets.includes(id)}
+                    onChange={(event) =>
+                      setDraft((value) => ({
+                        ...value,
+                        hidden_widgets: event.target.checked
+                          ? value.hidden_widgets.filter((item) => item !== id)
+                          : [...value.hidden_widgets, id],
+                      }))
+                    }
+                  />
+                  {t(widgetLabels[id])}
+                </label>
+                <div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={index === 0}
+                    aria-label={t("moveUp", { name: t(widgetLabels[id]) })}
+                    onClick={() => move(index, -1)}
+                  >
+                    <ArrowUp size={16} aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={index === draft.widget_order.length - 1}
+                    aria-label={t("moveDown", { name: t(widgetLabels[id]) })}
+                    onClick={() => move(index, 1)}
+                  >
+                    <ArrowDown size={16} aria-hidden="true" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </fieldset>
+        {save.isError && (
+          <Notice kind="error">
+            {t(conflict ? "layoutConflict" : "layoutError")}
+          </Notice>
+        )}
+        {conflict && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              void reload().then((data) => {
+                if (data) {
+                  setDraft(data);
+                  save.reset();
+                }
+              })
+            }
+          >
+            {t("reloadLayout")}
+          </Button>
+        )}
+        <div className="dashboard-widget-footer">
+          <Button type="submit" disabled={!online || save.isPending}>
+            {t("saveLayout")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={save.isPending}
+            onClick={close}
+          >
+            {t("cancelLayout")}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+export function DashboardCustomization({ actor }: { actor: string }) {
+  const { t } = useTranslation("dashboard");
+  const preferences = useQuery(dashboardPreferencesQuery(actor));
+  const [editor, setEditor] = useState<{
+    initial: DashboardPreferences;
+    open: boolean;
+    attempt: number;
+    trigger: HTMLButtonElement;
+  }>();
+  return (
+    <div className="dashboard-customize">
+      <Button
+        type="button"
+        variant="secondary"
+        aria-haspopup="dialog"
+        disabled={!preferences.data || preferences.isError}
+        onClick={(event) => {
+          if (preferences.data) {
+            const initial = preferences.data;
+            const trigger = event.currentTarget;
+            setEditor((current) => ({
+              initial,
+              trigger,
+              open: true,
+              attempt: (current?.attempt ?? 0) + 1,
+            }));
           }
-        >
-          {t("reloadLayout")}
-        </Button>
+        }}
+      >
+        <Settings2 size={17} aria-hidden="true" />
+        {t("customize")}
+      </Button>
+      {preferences.isError && (
+        <div className="dashboard-layout-error">
+          <p>{t("layoutLoadError")}</p>
+          <Button variant="ghost" onClick={() => void preferences.refetch()}>
+            {t("retry")}
+          </Button>
+        </div>
       )}
-      <div className="dashboard-widget-footer">
-        <Button type="submit" disabled={!online || save.isPending}>
-          {t("saveLayout")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={save.isPending}
-          onClick={close}
-        >
-          {t("cancelLayout")}
-        </Button>
-      </div>
-    </form>
+      {editor && (
+        <LayoutEditor
+          key={editor.attempt}
+          actor={actor}
+          initial={editor.initial}
+          open={editor.open}
+          trigger={editor.trigger}
+          close={() =>
+            setEditor((current) => current && { ...current, open: false })
+          }
+          reload={async () => {
+            const result = await preferences.refetch();
+            return result.isSuccess ? result.data : undefined;
+          }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -174,56 +248,22 @@ export function PersonalizedWidgets({
   actor: string;
   widgets: Partial<Record<WidgetId, ReactNode>>;
 }) {
-  const { t } = useTranslation("dashboard");
   const preferences = useQuery(dashboardPreferencesQuery(actor));
-  const [editing, setEditing] = useState(false);
   const saved = preferences.isError
     ? defaultDashboardPreferences
     : (preferences.data ?? defaultDashboardPreferences);
   return (
-    <>
-      <div className="dashboard-customize">
-        <Button
-          variant="secondary"
-          disabled={!preferences.data || preferences.isError}
-          onClick={() => setEditing(true)}
-        >
-          <Settings2 size={17} aria-hidden="true" />
-          {t("customize")}
-        </Button>
-      </div>
-      {preferences.isError && (
-        <div className="dashboard-layout-error">
-          <p>{t("layoutLoadError")}</p>
-          <Button variant="ghost" onClick={() => void preferences.refetch()}>
-            {t("retry")}
-          </Button>
-        </div>
-      )}
-      {editing && preferences.data && (
-        <LayoutEditor
-          key={actor}
-          actor={actor}
-          initial={preferences.data}
-          close={() => setEditing(false)}
-          reload={async () => {
-            const result = await preferences.refetch();
-            return result.isSuccess ? result.data : undefined;
-          }}
-        />
-      )}
-      <div className="dashboard-widgets">
-        {saved.widget_order
-          .filter((id) => !saved.hidden_widgets.includes(id))
-          .map((id) =>
-            widgets[id] ? (
-              <div className="dashboard-widget-slot" key={id}>
-                {widgets[id]}
-              </div>
-            ) : null,
-          )}
-      </div>
-    </>
+    <div className="dashboard-widgets">
+      {saved.widget_order
+        .filter((id) => !saved.hidden_widgets.includes(id))
+        .map((id) =>
+          widgets[id] ? (
+            <div className="dashboard-widget-slot" key={id}>
+              {widgets[id]}
+            </div>
+          ) : null,
+        )}
+    </div>
   );
 }
 

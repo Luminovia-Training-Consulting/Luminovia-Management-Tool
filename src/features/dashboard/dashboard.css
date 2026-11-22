@@ -191,7 +191,11 @@
 /* Dashboard composition mirrors the reference's hero and three operational cards. */
 .dashboard-welcome {
   padding: clamp(22px, 3vw, 36px);
-  padding-right: clamp(22px, 20vw, 300px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 24px;
   border: 1px solid #fff9;
   border-radius: 22px;
   background:
@@ -214,6 +218,12 @@
     linear-gradient(110deg, #ffe0df, #fff5ec);
   color: #14233b;
   box-shadow: var(--shadow);
+}
+
+.dashboard-welcome-copy {
+  flex: 1 1 min(100%, 26rem);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .dashboard-welcome h1 {
@@ -270,10 +280,6 @@
 }
 
 .dashboard-page .dashboard-widgets {
-  margin-top: 0;
-}
-
-.dashboard-page .dashboard-customize {
   margin-top: 0;
 }
 
@@ -435,10 +441,6 @@
 
 .dashboard-page .dashboard-shortcuts a::after {
   flex-shrink: 0;
-}
-
-.dashboard-page .dashboard-customize {
-  margin-top: 0;
 }
 
 @media (max-width: 1050px) {

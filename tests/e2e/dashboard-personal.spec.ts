@@ -173,6 +173,23 @@ test("personal cards and teaching preparation persist in the real account across
         }),
     );
     await login(page, teacher.email);
+    const welcome = page.locator(".dashboard-welcome");
+    const customize = welcome.getByRole("button", {name: "Dashboard anpassen", exact: true});
+    await expect(customize).toBeEnabled();
+    const viewport = page.viewportSize()!;
+    const button = (await customize.boundingBox())!;
+    const heading = (await welcome.getByRole("heading").boundingBox())!;
+    if (viewport.width <= 520) {
+        expect(button.y).toBeGreaterThan(heading.y + heading.height);
+    } else {
+        expect(button.x).toBeGreaterThan(heading.x + heading.width);
+    }
+    await customize.click();
+    const editor = page.getByRole("dialog", {name: "Dashboard anpassen"});
+    await expect(editor).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(editor).toHaveCount(0);
+    await expect(customize).toBeFocused();
     const teachingDisclosure = page.locator(".dashboard-teaching-details");
     await teachingDisclosure.locator("summary").click();
     await expect(teachingDisclosure).toHaveJSProperty("open", true);

@@ -11,7 +11,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
-import { PersonalizedWidgets, TeachingDayWidget } from "./personal";
+import {
+  DashboardCustomization,
+  PersonalizedWidgets,
+  TeachingDayWidget,
+} from "./personal";
 import {
   defaultDashboardPreferences,
   teachingDaySchema,
@@ -165,14 +169,17 @@ describe("personal dashboard", () => {
       hidden_widgets: ["files"],
       version: 2,
     };
-    mount(<PersonalizedWidgets actor="actor-a" widgets={cards} />);
+    mount(
+      <>
+        <DashboardCustomization actor="actor-a" />
+        <PersonalizedWidgets actor="actor-a" widgets={cards} />
+      </>,
+    );
     const customize = await screen.findByRole("button", {
       name: "Dashboard anpassen",
     });
     await waitFor(() => expect(customize).toBeEnabled());
-    expect(
-      screen.queryByRole("region", { name: "Files fixture" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Files fixture")).not.toBeInTheDocument();
     await user.click(customize);
     await user.click(
       screen.getByRole("checkbox", { name: "Zuletzt hinzugefügte Dateien" }),
@@ -189,9 +196,7 @@ describe("personal dashboard", () => {
     await user.click(
       screen.getByRole("button", { name: "Dashboard speichern" }),
     );
-    expect(
-      screen.queryByRole("region", { name: "Files fixture" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Files fixture")).not.toBeInTheDocument();
     expect(fake.rpc).toHaveBeenLastCalledWith("save_dashboard_preferences", {
       p_expected_version: 2,
       p_payload: {
@@ -227,7 +232,12 @@ describe("personal dashboard", () => {
   });
   it("keeps a conflicting draft and offers explicit reload without overwriting current server state", async () => {
     const user = userEvent.setup();
-    mount(<PersonalizedWidgets actor="actor-a" widgets={cards} />);
+    mount(
+      <>
+        <DashboardCustomization actor="actor-a" />
+        <PersonalizedWidgets actor="actor-a" widgets={cards} />
+      </>,
+    );
     const customize = screen.getByRole("button", {
       name: "Dashboard anpassen",
     });
@@ -246,7 +256,7 @@ describe("personal dashboard", () => {
     expect(
       screen.getByRole("checkbox", { name: "Zuletzt hinzugefügte Dateien" }),
     ).not.toBeChecked();
-    expect(screen.getByRole("region", { name: "Files fixture" })).toBeVisible();
+    expect(screen.getByText("Files fixture")).toBeInTheDocument();
     fake.responses.dashboard_preferences = {
       ...defaultDashboardPreferences,
       hidden_widgets: ["activity"],

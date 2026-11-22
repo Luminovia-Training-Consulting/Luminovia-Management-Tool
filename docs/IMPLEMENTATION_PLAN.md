@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Dashboard customization
+
+- Keep the customization control in the welcome header and use the dialog for editing, conflict recovery and confirmed saves. The responsive browser regression checks the header placement and keyboard focus return.
+
 ## Local dependency installation
 
 - The interactive API explorer uses the pinned standalone Swagger UI renderer in a lazy route. A clean lockfile installation no longer resolves Swagger's legacy React peers or deprecated AbortController dependency. The npm lifecycle policy explicitly denies Scarf and retains the pinned Deno approval. The explorer has its own bundle limit to account for the bundled renderer.

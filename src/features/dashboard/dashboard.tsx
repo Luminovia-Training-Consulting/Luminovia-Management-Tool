@@ -29,6 +29,7 @@ import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { dateTime, validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
+import { DashboardCustomization } from "./personal";
 import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
 import "./dashboard.css";
@@ -72,12 +73,18 @@ export function Dashboard() {
   return (
     <section className="dashboard-page" aria-label={t("workspace")}>
       <header className="dashboard-welcome">
-        <h1>
-          {t("greeting", {
-            name: profile.data?.display_name.split(" ")[0] || "Luminovia",
-          })}
-        </h1>
-        <p>{dashboard("workspaceIntro")}</p>
+        <div className="dashboard-welcome-copy">
+          <h1>
+            {t("greeting", {
+              name: profile.data?.display_name.split(" ")[0] || "Luminovia",
+            })}
+          </h1>
+          <p>{dashboard("workspaceIntro")}</p>
+        </div>
+        <DashboardCustomization
+          actor={session!.user.id}
+          key={session!.user.id}
+        />
       </header>
       {staff && (
         <div className="dashboard-metrics">

@@ -24,14 +24,7 @@
 }
 
 .dashboard-customize {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.dashboard-layout-editor {
-  margin-top: 16px;
-  padding: 22px;
+  max-width: 100%;
 }
 
 .dashboard-layout-editor fieldset {
@@ -78,6 +71,7 @@
 }
 
 .dashboard-layout-error {
+  max-width: 18rem;
   margin-top: 12px;
   color: var(--muted);
 }
