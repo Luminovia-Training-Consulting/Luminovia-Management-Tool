@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   chmod,
   lstat,
@@ -51,6 +51,240 @@ async function input(root, entry, name = "input.json") {
   await writeFile(path, JSON.stringify(entry), { mode: 0o600 });
   return path;
 }
+
+async function vendorFixture(t, edition) {
+  const root = await fixture(t);
+  const entry = draft();
+  entry.target.edition = edition;
+  const draftPath = await input(root, entry);
+  const reviewed = await approveCustomerAcademyDraft(
+    root,
+    draftPath,
+    reviewToken(planCustomerAcademyDraft(entry)),
+  );
+  const keys = generateKeyPairSync("ed25519");
+  const privateKeyPath = join(root, "signing-key.pem");
+  await writeFile(
+    privateKeyPath,
+    keys.privateKey.export({ type: "pkcs8", format: "pem" }),
+    { mode: 0o600 },
+  );
+  const command = async (...args) =>
+    JSON.parse(
+      (await run(process.execPath, [cli, args[0], root, ...args.slice(1)]))
+        .stdout,
+    );
+  const request = {
+    version: 1,
+    action_id: randomUUID(),
+    draft_request_id: entry.request_id,
+    action: "initial-trial",
+    preceding_licence_sha256: null,
+    agreement_reference: "TRIAL-NEUTRAL-01",
+    ...entry.licence,
+    issued_at: "2026-11-20T00:00:00.000Z",
+    starts_at: "2026-11-23T00:00:00.000Z",
+    expires_at: "2026-12-21T00:00:00.000Z",
+    grace_until: "2026-12-28T00:00:00.000Z",
+  };
+  const stage = async (value, name = "action.json") => {
+    const path = await input(root, value, name);
+    const preview = await command("preview-licence", path);
+    return { path, preview };
+  };
+  const issue = ({ path, preview }, key = privateKeyPath, ...extra) =>
+    command("issue-licence", path, preview.approval, key, ...extra);
+  return {
+    root,
+    request,
+    stage,
+    issue,
+    command,
+    keys,
+    privateKeyPath,
+    installation: reviewed.receipt.installation_id,
+  };
+}
+
+function extend(request, receipt, overrides = {}) {
+  return {
+    ...request,
+    action_id: randomUUID(),
+    action: "renew",
+    preceding_licence_sha256: receipt.licence_sha256,
+    agreement_reference: "SUPPORT-RENEWAL-02",
+    issued_at: "2026-12-20T00:00:00.000Z",
+    starts_at: "2026-12-21T00:00:00.000Z",
+    expires_at: "2027-12-21T00:00:00.000Z",
+    grace_until: "2027-12-28T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("issues from a v1 approved draft, converts a managed trial, renews, and exports the exact recorded envelope", async (t) => {
+  const {
+    root,
+    request,
+    stage,
+    issue,
+    command,
+    keys,
+    installation,
+    privateKeyPath,
+  } = await vendorFixture(t, "customer-managed");
+  const registry = join(root, ledger);
+  const draftBytes = await readFile(registry);
+  const trial = await stage(request, "trial.json");
+  assert.deepEqual(await readFile(registry), draftBytes);
+  await assert.rejects(
+    command("issue-licence", trial.path, "ISSUE 0", privateKeyPath),
+    /Approval does not match/,
+  );
+  assert.deepEqual(await readFile(registry), draftBytes);
+  const trialReceipt = await issue(trial);
+  assert.equal(trialReceipt.tier, "trial");
+  assert.equal(trialReceipt.created, true);
+  assert.equal(trialReceipt.installation_id, installation);
+  assert.equal("envelope" in trialReceipt, false);
+
+  const convert = extend(request, trialReceipt, {
+    action: "convert-trial",
+    limits: { ...request.limits, seat_count: 50, api_requests_per_minute: 240 },
+  });
+  const conversion = await issue(await stage(convert, "convert.json"));
+  assert.equal(conversion.tier, "licensed");
+  const output = await command("export-licence", convert.action_id);
+  const signedFile = join(root, output.filename);
+  assert.equal((await lstat(signedFile)).mode & 0o777, 0o600);
+  assert.deepEqual(await command("export-licence", convert.action_id), output);
+  const envelope = (await readFile(signedFile, "utf8")).trim();
+  const verified = verifyAcademyLicence(
+    envelope,
+    keys.publicKey,
+    {
+      installation_id: installation,
+      edition: "customer-managed",
+      release_commit: convert.release_commit,
+    },
+    Date.parse(convert.starts_at),
+  );
+  assert.equal(verified.state, "active");
+  assert.deepEqual(verified.terms.limits, convert.limits);
+
+  const renewal = extend(convert, conversion, {
+    release_commit: "b".repeat(40),
+    issued_at: "2027-12-20T00:00:00.000Z",
+    starts_at: "2027-12-21T00:00:00.000Z",
+    expires_at: "2028-12-21T00:00:00.000Z",
+    grace_until: "2028-12-28T00:00:00.000Z",
+  });
+  const renewed = await issue(await stage(renewal));
+  assert.equal(renewed.tier, "licensed");
+  assert.deepEqual(await issue(trial), { ...trialReceipt, created: false });
+  assert.deepEqual(
+    (await command("licence-history", request.draft_request_id)).map(
+      (entry) => entry.action,
+    ),
+    ["initial-trial", "convert-trial", "renew"],
+  );
+  await assert.rejects(
+    stage(
+      extend(renewal, renewed, {
+        action: "convert-trial",
+        issued_at: "2028-12-20T00:00:00.000Z",
+        starts_at: "2028-12-21T00:00:00.000Z",
+        expires_at: "2029-12-21T00:00:00.000Z",
+        grace_until: "2029-12-28T00:00:00.000Z",
+      }),
+    ),
+    /unavailable for the current licence tier/,
+  );
+});
+
+test("concurrent renewals from the same receipt allow only one successor and cannot overwrite an export", async (t) => {
+  const { root, request, stage, issue, command } = await vendorFixture(
+    t,
+    "customer-self-hosted",
+  );
+  const first = await issue(
+    await stage({ ...request, action: "initial-licensed" }),
+  );
+  const rivals = await Promise.all(
+    [extend(request, first), extend(request, first)].map((value, index) =>
+      stage(value, `renewal-${index}.json`),
+    ),
+  );
+  const results = await Promise.allSettled(
+    rivals.map((candidate) => issue(candidate)),
+  );
+  assert.equal(
+    results.filter(({ status }) => status === "fulfilled").length,
+    1,
+  );
+  assert.match(
+    results.find(({ status }) => status === "rejected").reason.stderr,
+    /follow the current receipt/,
+  );
+  const winner = results.find(({ status }) => status === "fulfilled").value;
+  assert.equal(
+    (await command("licence-history", request.draft_request_id)).length,
+    2,
+  );
+  const output = join(root, "licence-" + winner.action_id + ".signed");
+  await writeFile(output, "preserve this file", { mode: 0o600 });
+  await assert.rejects(
+    command("export-licence", winner.action_id),
+    /unrelated file/,
+  );
+  assert.equal(await readFile(output, "utf8"), "preserve this file");
+});
+
+test("registers an existing trusted licence without changing its signed terms or issuing a second one", async (t) => {
+  const { root, request, stage, issue, command, keys, installation } =
+    await vendorFixture(t, "customer-self-hosted");
+  const terms = {
+    installation_id: installation,
+    edition: "customer-self-hosted",
+    modules: ["lms"],
+    release_commit: "d".repeat(40),
+    limits: { ...request.limits, seat_count: 30 },
+    issued_at: request.issued_at,
+    starts_at: request.starts_at,
+    expires_at: request.expires_at,
+    grace_until: request.grace_until,
+  };
+  const envelope = signAcademyLicence(terms, keys.privateKey);
+  const digest = createHash("sha256").update(envelope).digest("hex");
+  const envelopePath = join(root, "existing.signed");
+  await writeFile(envelopePath, envelope + "\n", { mode: 0o600 });
+  const registration = {
+    ...request,
+    ...{
+      action: "adopt-licensed",
+      existing_licence_sha256: digest,
+      release_commit: terms.release_commit,
+      limits: terms.limits,
+    },
+  };
+  const reviewed = await stage(registration, "registration.json");
+  const wrong = await stage({ ...registration, limits: request.limits });
+  await assert.rejects(
+    issue(wrong, undefined, envelopePath),
+    /differs from the reviewed terms/,
+  );
+  const imported = await issue(reviewed, undefined, envelopePath);
+  assert.equal(imported.licence_sha256, digest);
+  assert.equal(imported.tier, "licensed");
+  assert.deepEqual(await issue(reviewed, undefined, envelopePath), {
+    ...imported,
+    created: false,
+  });
+  const output = await command("export-licence", registration.action_id);
+  assert.equal(
+    await readFile(join(root, output.filename), "utf8"),
+    envelope + "\n",
+  );
+});
 
 test("plans each edition without provisioning and produces a usable unsigned licence selection", () => {
   for (const edition of ["customer-self-hosted", "customer-managed"]) {

@@ -58,7 +58,7 @@ function trustedKey(input, type) {
 }
 
 /** Use mutually agreed whole-number limits. This version binds one exact release commit. */
-function validateTerms(terms) {
+export function validateAcademyLicenceTerms(terms) {
   if (
     !exactKeys(terms, [
       "installation_id",
@@ -103,7 +103,7 @@ function validateTerms(terms) {
 
 /** Vendor-only signing. Consumers never import or obtain this private key from their portal. */
 export function signAcademyLicence(terms, privateKey) {
-  validateTerms(terms);
+  validateAcademyLicenceTerms(terms);
   const message = Buffer.from(JSON.stringify(terms), "utf8").toString(
     "base64url",
   );
@@ -149,7 +149,7 @@ export function verifyAcademyLicence(
   )
     throw new Error("academy_licence_signature");
   const terms = JSON.parse(bytes.toString("utf8"));
-  const { starts, expires, grace } = validateTerms(terms);
+  const { starts, expires, grace } = validateAcademyLicenceTerms(terms);
   if (
     !Number.isFinite(now) ||
     terms.installation_id !== expected.installation_id ||

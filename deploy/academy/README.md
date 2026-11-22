@@ -17,6 +17,26 @@ Compare the preview and original private draft before setting `exact_approval` t
 
 Carry the approved installation ID, dedicated edition, HTTPS origin and intended runtime directory forward to the runtime command below. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. The private receipt is an onboarding approval. Runtime creation, licence issuance and publication each require their own operator action.
 
+## Issue, convert or renew a customer licence
+
+Copy the [fictional licence request](customer-licence.example.json) to an operator-private file with mode 0600. Use the approved draft's `request_id` and generate a new version-4 `action_id`. Fill in the actual agreement reference, UTC dates, exact source revision and signed quotas. Review the original private file alongside the preview. The receipt binds the change to the already approved installation and edition.
+
+```sh
+node scripts/academy-customer-draft.mjs preview-licence "$private_registry" "$licence_request"
+node scripts/academy-customer-draft.mjs issue-licence "$private_registry" \
+  "$licence_request" "$exact_issuance_approval" "$private_issuer_key"
+node scripts/academy-customer-draft.mjs licence-history "$private_registry" "$draft_request_id"
+node scripts/academy-customer-draft.mjs export-licence "$private_registry" "$licence_action_id"
+```
+
+Use the full `ISSUE …` text from the preview and the trusted Ed25519 issuer key in a private file. The export writes `licence-<action_id>.signed` with mode 0600 in the registry directory. Share only this file, through the agreed fulfilment channel. Keep the registry and the signing key private. The registry records the reviewed terms, the exact signed envelope and the timestamp for every action. Retrying the same action returns its original receipt. Concurrent requests from the same previous licence can record only one successor.
+
+- Use `initial-trial` or `initial-licensed` with `preceding_licence_sha256: null` and the release and limits from the approved draft.
+- Use `renew` to extend the current tier or `convert-trial` to grant a licensed term from a trial. Set `preceding_licence_sha256` to the latest recorded envelope digest from `licence-history`. The successor must have a later issue timestamp and expiry. Enter any revised quotas in the new request and choose the release the operator will actually install. Apply the replacement once its validity starts.
+- Use `adopt-trial` or `adopt-licensed` to record an already issued licence as the first ledger entry. Use the exact signed terms and set `existing_licence_sha256` to the SHA-256 of the envelope text without its final newline. Pass its private file path as the last argument to `issue-licence`. The command verifies the trusted signature and installation binding before recording the original envelope.
+
+Commercial approval and payment take place in the agreed vendor workflow. Registration, trial conversion and renewal here record that approval and prepare a signed licence. The installation operator applies the licence separately. The runtime continues to use the same signed v1 module, validity and quota checks for both tiers.
+
 ## Prepare the runtime and signed browser
 
 Choose an installation UUID, an edition, a customer-controlled HTTPS domain, a bind address and a new directory outside the checkout. Use `127.0.0.1` for local staging. The included public ingress uses Caddy ACME and ports 80 and 443 on an explicitly chosen host address. A separate reverse proxy may terminate TLS using its own reviewed configuration.

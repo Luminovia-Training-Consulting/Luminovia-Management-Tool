@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "action_id": "31c41bdf-0399-42f3-b360-9bd60fb0a2f1",
+  "draft_request_id": "815bbe46-c413-4aec-aa72-39cfb43155ff",
+  "action": "initial-trial",
+  "preceding_licence_sha256": null,
+  "agreement_reference": "TRIAL-FICTIONAL-42",
+  "release_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "limits": {
+    "seat_count": 25,
+    "storage_bytes": 5000000000,
+    "api_requests_per_minute": 120
+  },
+  "issued_at": "2026-11-21T00:00:00.000Z",
+  "starts_at": "2026-11-23T00:00:00.000Z",
+  "expires_at": "2026-12-23T00:00:00.000Z",
+  "grace_until": "2026-12-30T00:00:00.000Z"
+}

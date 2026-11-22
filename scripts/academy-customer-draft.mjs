@@ -1,9 +1,10 @@
 /** Review and register an offline customer academy draft. No remote side effects. */
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { createHash } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import { constants } from "node:fs";
 import {
+  link,
   lstat,
   mkdtemp,
   open,
@@ -14,6 +15,7 @@ import {
 } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import {
   academyBrandColor,
@@ -22,6 +24,21 @@ import {
 } from "../src/features/branding/academy-branding-schema.ts";
 import { describeAcademyRuntime } from "./academy-runtime-config.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
+import {
+  signAcademyLicence,
+  verifyAcademyLicence,
+} from "./academy-licence.mjs";
+import {
+  digestSchema,
+  indexLicenceActions,
+  licenceLimits,
+  licenceReceiptSchema,
+  parseLicenceRequest,
+  planLicenceAction,
+  reference,
+  releaseCommit,
+  sha256,
+} from "./academy-customer-licensing.mjs";
 
 const checkout = fileURLToPath(new URL("../", import.meta.url)).replace(
   /\/$/,
@@ -34,7 +51,6 @@ const reservedRoots = [
 const registryFile = "approved-drafts.json";
 const lockFile = ".academy-drafts.lock";
 const maxRegistryBytes = 4 * 1024 * 1024;
-const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const inside = (candidate, parent) =>
   candidate === parent || candidate.startsWith(parent + "/");
 const overlaps = (a, b) => inside(a, b) || inside(b, a);
@@ -46,7 +62,6 @@ const privateLabel = (length) =>
     .min(1)
     .max(length)
     .regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}<>]+$/u);
-const reference = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/);
 const email = z.email().max(254).toLowerCase();
 const origin = z
   .string()
@@ -115,15 +130,8 @@ const draftSchema = z
       contact_email: email,
     }),
     licence: z.strictObject({
-      release_commit: z
-        .string()
-        .regex(/^[a-f0-9]{40}$/)
-        .refine((value) => /[1-9a-f]/.test(value)),
-      limits: z.strictObject({
-        seat_count: z.int().positive(),
-        storage_bytes: z.int().positive(),
-        api_requests_per_minute: z.int().positive().max(0xffff_ffff),
-      }),
+      release_commit: releaseCommit,
+      limits: licenceLimits,
     }),
   })
   .superRefine((draft, state) => {
@@ -160,6 +168,7 @@ const receiptSchema = z.strictObject({
 const registrySchema = z.strictObject({
   version: z.literal(1),
   drafts: z.array(receiptSchema),
+  licences: z.array(licenceReceiptSchema).optional(),
 });
 
 /** A random request ID fixes the installation UUID across previews and retry. */
@@ -247,7 +256,7 @@ async function requireRegistryRoot(root) {
     );
 }
 
-async function readPrivateJson(path, maxBytes) {
+async function readPrivateInput(path, maxBytes) {
   if (
     !isAbsolute(path ?? "") ||
     path !== resolve(path) ||
@@ -266,6 +275,11 @@ async function readPrivateJson(path, maxBytes) {
     before.ctimeMs !== after.ctimeMs
   )
     throw new Error("The private input changed while it was being read.");
+  return bytes;
+}
+
+async function readPrivateJson(path, maxBytes) {
+  const bytes = await readPrivateInput(path, maxBytes);
   try {
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch {
@@ -387,10 +401,7 @@ async function withRegistryLock(root, operation) {
   }
 }
 
-async function writeRegistry(root, registry) {
-  const bytes = JSON.stringify(registry, null, 2) + "\n";
-  if (Buffer.byteLength(bytes) > maxRegistryBytes)
-    throw new Error("The private draft registry is full.");
+async function writePrivateFile(root, destination, bytes, replace = false) {
   const temporary = await mkdtemp(join(root, ".academy-draft-"));
   const staged = join(temporary, "draft.json");
   try {
@@ -401,7 +412,8 @@ async function writeRegistry(root, registry) {
     } finally {
       await file.close();
     }
-    await rename(staged, join(root, registryFile));
+    if (replace) await rename(staged, destination);
+    else await link(staged, destination);
     const directory = await open(
       root,
       constants.O_DIRECTORY | constants.O_RDONLY,
@@ -417,6 +429,13 @@ async function writeRegistry(root, registry) {
     });
     await rmdir(temporary);
   }
+}
+
+async function writeRegistry(root, registry) {
+  const bytes = JSON.stringify(registry, null, 2) + "\n";
+  if (Buffer.byteLength(bytes) > maxRegistryBytes)
+    throw new Error("The private draft registry is full.");
+  await writePrivateFile(root, join(root, registryFile), bytes, true);
 }
 
 export async function approveCustomerAcademyDraft(root, sourcePath, approval) {
@@ -440,6 +459,177 @@ export async function approveCustomerAcademyDraft(root, sourcePath, approval) {
       drafts: [...registry.drafts, receipt],
     });
     return { receipt, created: true };
+  });
+}
+
+async function loadLicenceRequest(root, source) {
+  await requireRegistryRoot(root);
+  return parseLicenceRequest(await readPrivateJson(source, 16 * 1024));
+}
+
+function prepareLicenceAction(registry, request) {
+  const { actions, drafts, latest, previousByAction, termsByAction } =
+    indexLicenceActions(registry);
+  const draft = drafts.get(request.draft_request_id);
+  if (!draft)
+    throw new Error("This licence request needs an approved academy draft.");
+  const existing = actions.get(request.action_id);
+  if (existing && !isDeepStrictEqual(existing.request, request))
+    throw new Error(
+      "This licence action already has different approved terms.",
+    );
+  const previous = existing
+    ? previousByAction.get(request.action_id)
+    : latest.get(request.draft_request_id);
+  return {
+    ...planLicenceAction(draft, request, previous),
+    request,
+    existing,
+    previous,
+    previousTerms: previous && termsByAction.get(previous.request.action_id),
+  };
+}
+
+function licenceSummary(receipt) {
+  const { request, installation_id, approval_sha256, tier } = receipt;
+  const {
+    action_id,
+    draft_request_id,
+    action,
+    release_commit,
+    limits,
+    issued_at,
+    starts_at,
+    expires_at,
+    grace_until,
+  } = request;
+  return {
+    action_id,
+    draft_request_id,
+    action,
+    tier,
+    installation_id,
+    release_commit,
+    limits,
+    issued_at,
+    starts_at,
+    expires_at,
+    grace_until,
+    ...(receipt.recorded_at && {
+      recorded_at: receipt.recorded_at,
+      licence_sha256: receipt.licence_sha256,
+    }),
+    approval: "ISSUE " + approval_sha256,
+  };
+}
+
+async function previewLicence(root, source) {
+  const request = await loadLicenceRequest(root, source);
+  const plan = prepareLicenceAction(await readRegistry(root), request);
+  return licenceSummary(
+    plan.existing ?? { ...plan, installation_id: plan.terms.installation_id },
+  );
+}
+
+async function issueLicence(root, source, approval, keyPath, existingPath) {
+  const request = await loadLicenceRequest(root, source);
+  if (Boolean(existingPath) !== (request.existing_licence_sha256 !== null))
+    throw new Error(
+      "Supply an existing signed licence only when registering it.",
+    );
+  return withRegistryLock(root, async () => {
+    const registry = await readRegistry(root);
+    const plan = prepareLicenceAction(registry, request);
+    if (approval !== "ISSUE " + plan.approval_sha256)
+      throw new Error(
+        "Approval does not match this licence request. Preview it again.",
+      );
+
+    const key = createPrivateKey(await readPrivateInput(keyPath, 16 * 1024));
+    const publicKey = createPublicKey(key);
+    if (plan.previous) {
+      const { terms } = verifyAcademyLicence(
+        plan.previous.envelope,
+        publicKey,
+        plan.previousTerms,
+      );
+      if (!isDeepStrictEqual(terms, plan.previousTerms))
+        throw new Error(
+          "The preceding signed licence differs from its recorded terms.",
+        );
+    }
+    const envelope = existingPath
+      ? (await readPrivateInput(existingPath, 17 * 1024))
+          .toString("utf8")
+          .trim()
+      : signAcademyLicence(plan.terms, key);
+    const licence_sha256 = sha256(envelope);
+    if (
+      existingPath &&
+      (licence_sha256 !== request.existing_licence_sha256 ||
+        !isDeepStrictEqual(
+          verifyAcademyLicence(envelope, publicKey, plan.terms).terms,
+          plan.terms,
+        ))
+    )
+      throw new Error("The existing licence differs from the reviewed terms.");
+    if (plan.existing) {
+      if (plan.existing.licence_sha256 !== licence_sha256)
+        throw new Error(
+          "Use the original trusted issuer for this already recorded licence.",
+        );
+      return { ...licenceSummary(plan.existing), created: false };
+    }
+    const receipt = {
+      request,
+      installation_id: plan.terms.installation_id,
+      tier: plan.tier,
+      approval_sha256: plan.approval_sha256,
+      recorded_at: new Date().toISOString(),
+      licence_sha256,
+      envelope,
+    };
+    await writeRegistry(root, {
+      ...registry,
+      licences: [...(registry.licences ?? []), receipt],
+    });
+    return { ...licenceSummary(receipt), created: true };
+  });
+}
+
+async function licenceHistory(root, draftId) {
+  await requireRegistryRoot(root);
+  const registry = await readRegistry(root);
+  const { drafts, actions } = indexLicenceActions(registry);
+  if (!drafts.has(draftId))
+    throw new Error("The approved academy draft could not be found.");
+  return Array.from(actions.values())
+    .filter((receipt) => receipt.request.draft_request_id === draftId)
+    .map(licenceSummary);
+}
+
+async function exportLicence(root, actionId) {
+  await requireRegistryRoot(root);
+  return withRegistryLock(root, async () => {
+    const registry = await readRegistry(root);
+    const { actions } = indexLicenceActions(registry);
+    const receipt = actions.get(actionId);
+    if (!receipt)
+      throw new Error("The approved licence action could not be found.");
+    const filename = "licence-" + receipt.request.action_id + ".signed";
+    const output = join(root, filename);
+    const bytes = Buffer.from(receipt.envelope + "\n");
+    try {
+      await writePrivateFile(root, output, bytes);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      if (!(await readPrivateInput(output, 17 * 1024)).equals(bytes))
+        throw new Error(
+          "An unrelated file already occupies the licence output path.",
+          { cause: error },
+        );
+    }
+    return { filename, licence_sha256: receipt.licence_sha256 };
   });
 }
 
@@ -473,46 +663,64 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    const [command, root, source, approval, ...rest] = process.argv.slice(2);
+    const [command, root, source, approval, key, existing, ...rest] =
+      process.argv.slice(2);
     if (
       rest.length ||
       !root ||
       !source ||
       !(
-        (command === "preview" && approval === undefined) ||
-        (command === "approve" && approval !== undefined)
+        ([
+          "preview",
+          "preview-licence",
+          "licence-history",
+          "export-licence",
+        ].includes(command) &&
+          approval === undefined) ||
+        (command === "approve" &&
+          approval !== undefined &&
+          key === undefined) ||
+        (command === "issue-licence" &&
+          approval !== undefined &&
+          key !== undefined)
       )
     ) {
       throw new Error(
-        "Usage: node scripts/academy-customer-draft.mjs preview|approve PRIVATE_REGISTRY PRIVATE_DRAFT [APPROVAL]",
+        "Usage: academy-customer-draft.mjs preview|approve|preview-licence|issue-licence|licence-history|export-licence PRIVATE_REGISTRY INPUT [APPROVAL [PRIVATE_SIGNING_KEY [EXISTING_SIGNED_LICENCE]]]",
       );
     }
-    if (command === "preview") {
-      console.log(
-        JSON.stringify(
-          publicReview(await previewCustomerAcademyDraft(root, source)),
-          null,
-          2,
-        ),
-      );
-    } else {
-      const { receipt, created } = await approveCustomerAcademyDraft(
-        root,
-        source,
-        approval,
-      );
-      console.log(
-        JSON.stringify(
-          {
-            status: receipt.status,
-            installation_id: receipt.installation_id,
-            created,
-          },
-          null,
-          2,
-        ),
-      );
+    let result;
+    switch (command) {
+      case "preview":
+        result = publicReview(await previewCustomerAcademyDraft(root, source));
+        break;
+      case "approve": {
+        const { receipt, created } = await approveCustomerAcademyDraft(
+          root,
+          source,
+          approval,
+        );
+        result = {
+          status: receipt.status,
+          installation_id: receipt.installation_id,
+          created,
+        };
+        break;
+      }
+      case "preview-licence":
+        result = await previewLicence(root, source);
+        break;
+      case "issue-licence":
+        result = await issueLicence(root, source, approval, key, existing);
+        break;
+      case "licence-history":
+        result = await licenceHistory(root, source);
+        break;
+      case "export-licence":
+        result = await exportLicence(root, source);
+        break;
     }
+    console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     // Application errors contain fixed copy or schema-owned field labels.
     // OS errors can contain absolute private paths and are never printed.
