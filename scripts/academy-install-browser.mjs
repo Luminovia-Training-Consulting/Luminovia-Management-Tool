@@ -2,16 +2,22 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  closeSync,
   constants,
   copyFileSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -52,6 +58,65 @@ function requirePrivateDirectory(path) {
     state.uid !== process.getuid()
   )
     throw new Error("academy_install_private_directory");
+}
+
+/** Hold the kernel lock and reserve the old mkdir lock name atomically. */
+export function acquireAcademyBrowserMaintenanceLock(root) {
+  requirePrivateDirectory(root);
+  const owner = ".browser-maintenance.owner";
+  const marker = join(root, ".browser-upgrade-lock");
+  const descriptor = openSync(
+    join(root, owner),
+    constants.O_CREAT |
+      constants.O_RDWR |
+      constants.O_NOFOLLOW |
+      constants.O_NONBLOCK,
+    0o600,
+  );
+  try {
+    const file = fstatSync(descriptor);
+    if (
+      !file.isFile() ||
+      file.nlink !== 1 ||
+      file.uid !== process.getuid() ||
+      file.mode & 0o077
+    )
+      throw new Error("academy_install_upgrade_lock_file");
+    const lock = spawnSync("flock", ["--exclusive", "--nonblock", "3"], {
+      stdio: ["ignore", "ignore", "ignore", descriptor],
+      env: { PATH: process.env.PATH },
+      timeout: 5000,
+    });
+    if (lock.status === 1)
+      throw new Error("academy_install_upgrade_in_progress");
+    if (lock.status !== 0) throw new Error("academy_install_upgrade_lock_file");
+    try {
+      // The old installer can only create a directory here. A symlink
+      // created by this protocol is recoverable only once the flock is free.
+      symlinkSync(owner, marker);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      const state = lstatSync(marker, { throwIfNoEntry: false });
+      if (
+        !state?.isSymbolicLink() ||
+        state.uid !== process.getuid() ||
+        readlinkSync(marker) !== owner
+      )
+        throw new Error("academy_install_upgrade_in_progress", {
+          cause: error,
+        });
+    }
+    return () => {
+      try {
+        unlinkSync(marker);
+      } finally {
+        closeSync(descriptor);
+      }
+    };
+  } catch (error) {
+    closeSync(descriptor);
+    throw error;
+  }
 }
 
 function requireMatchingRuntime(root, config, identity, runtime, browser) {
@@ -290,15 +355,7 @@ export async function installAcademyBrowser(
       },
     );
     if (exchange) {
-      const lock = join(root, ".browser-upgrade-lock");
-      try {
-        mkdirSync(lock, { mode: 0o700 });
-      } catch (error) {
-        if (error.code !== "EEXIST") throw error;
-        throw new Error("academy_install_upgrade_in_progress", {
-          cause: error,
-        });
-      }
+      const unlock = acquireAcademyBrowserMaintenanceLock(root);
       try {
         const previous = JSON.parse(
           utf8.decode(
@@ -365,7 +422,7 @@ export async function installAcademyBrowser(
         if (swap.status !== 0)
           throw new Error("academy_install_atomic_replacement_failed");
       } finally {
-        rmSync(lock, { force: true, recursive: true });
+        unlock();
       }
     } else {
       // Concurrent first installers cannot overwrite a populated directory.

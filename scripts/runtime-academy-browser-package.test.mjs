@@ -1,9 +1,10 @@
 /** Customer artefact regressions using owned temporary static files and fictional public identifiers. */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   linkSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { once } from "node:events";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -32,7 +34,10 @@ import {
 } from "./academy-browser-package.mjs";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
-import { installAcademyBrowser } from "./academy-install-browser.mjs";
+import {
+  acquireAcademyBrowserMaintenanceLock,
+  installAcademyBrowser,
+} from "./academy-install-browser.mjs";
 import {
   academyDatabaseComposeArguments,
   readStagedAcademyDocumentBrand,
@@ -1421,6 +1426,53 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
   });
 }
+
+test("the browser maintenance lock recovers from SIGKILL and retains mutual exclusion with the old installer", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "academy-maintenance-lock-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const marker = join(root, ".browser-upgrade-lock");
+  const module = new URL("./academy-install-browser.mjs", import.meta.url).href;
+  const child = spawn(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `
+    import { acquireAcademyBrowserMaintenanceLock } from ${JSON.stringify(module)};
+    acquireAcademyBrowserMaintenanceLock(process.argv[1]);
+    console.log("Ready");
+    setInterval(() => {}, 1_000);
+  `,
+      root,
+    ],
+    { stdio: ["ignore", "pipe", "inherit"] },
+  );
+  const closed = once(child, "close");
+  try {
+    const ready = await Promise.race([
+      once(child.stdout, "data"),
+      closed.then(() => []),
+    ]);
+    assert.equal(ready[0]?.toString().trim(), "Ready");
+    assert.throws(() => mkdirSync(marker), { code: "EEXIST" });
+    assert.throws(
+      () => acquireAcademyBrowserMaintenanceLock(root),
+      /upgrade_in_progress/,
+    );
+  } finally {
+    child.kill("SIGKILL");
+    await closed;
+  }
+  assert.equal(lstatSync(marker).isSymbolicLink(), true);
+  const release = acquireAcademyBrowserMaintenanceLock(root);
+  release();
+  mkdirSync(marker);
+  assert.throws(
+    () => acquireAcademyBrowserMaintenanceLock(root),
+    /upgrade_in_progress/,
+  );
+  assert.equal(lstatSync(marker).isDirectory(), true);
+});
 
 test("points database bootstrap only at the matching private staged Compose project", async (t) => {
   const { root, inputs, expected } = await installFixture(t);
