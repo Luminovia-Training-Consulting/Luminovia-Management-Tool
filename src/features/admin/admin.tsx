@@ -263,8 +263,12 @@ function JobForm({
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data as string;
     },
-    onSuccess: async (jobId, values) => {
-      await Promise.all([
+    onSuccess: (jobId, values) => {
+      reset(values);
+      setDone(true);
+      setCreatedId(jobId);
+      // The RPC confirmed the saved job. Refresh dependent views in the background.
+      void Promise.all([
         client.invalidateQueries({ queryKey: ["jobs"] }),
         client.invalidateQueries({ queryKey: ["job-board"] }),
         client.invalidateQueries({ queryKey: ["job-lifecycle"] }),
@@ -276,9 +280,6 @@ function JobForm({
           queryKey: commissionKeys.organisations(actor),
         }),
       ]);
-      reset(values);
-      setDone(true);
-      setCreatedId(jobId);
     },
   });
   if (

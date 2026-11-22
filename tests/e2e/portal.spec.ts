@@ -362,6 +362,7 @@ async function adminSession(page: Page) {
 test("admin uses password-only access and publishes a five-session job through the UI", async ({
                                                                                                    page,
                                                                                                }, testInfo) => {
+    test.setTimeout(70_000);
     await adminSession(page);
     await page.goto("/admin?create=job");
     const title = `QA Verwaltung ${testInfo.project.name} ${randomUUID().slice(0, 8)}`;
@@ -393,9 +394,17 @@ test("admin uses password-only access and publishes a five-session job through t
             .fill(`2028-06-${String(index + 12).padStart(2, "0")}T15:00`);
     }
     await page.getByLabel("Sofort veröffentlichen", {exact: true}).check();
-    await page
-        .getByRole("button", {name: "Auftrag speichern", exact: true})
-        .click();
+    const [publication] = await Promise.all([
+        page.waitForResponse(
+            (response) =>
+                response.request().method() === "POST" &&
+                new URL(response.url()).pathname.endsWith("/rest/v1/rpc/create_capacity_job"),
+            {timeout: 25_000},
+        ),
+        page.getByRole("button", {name: "Auftrag speichern", exact: true}).click(),
+    ]);
+    expect(publication.ok(), "The server confirms the saved and published assignment").toBe(true);
+    const publishedId = await publication.json();
     await expect(
         page
             .locator('.notice[role="status"]')
@@ -407,6 +416,7 @@ test("admin uses password-only access and publishes a five-session job through t
         .eq("title", title)
         .single();
     expect(jobError).toBeNull();
+    expect(job!.id).toBe(publishedId);
     expect(job!.status).toBe("published");
     expect(job!.job_sessions).toHaveLength(5);
     // Account invitations live on their own current-authority administration page.

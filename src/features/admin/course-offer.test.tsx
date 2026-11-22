@@ -134,14 +134,25 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
   const total = screen.getByLabelText("Voller Auftragspreis gesamt");
   await user.clear(total);
   await user.type(total, "1000");
-  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
-  const link = await screen.findByRole("link", {
-    name: "Erstellten Auftrag öffnen",
-  });
-  expect(link).toHaveAttribute(
-    "href",
-    "/jobs/f4f59e7e-30c4-4599-80c3-f53341f45eb4",
-  );
+  const refresh = Promise.withResolvers<void>();
+  const invalidation = vi
+    .spyOn(cache, "invalidateQueries")
+    .mockReturnValue(refresh.promise);
+  try {
+    await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+    expect(await screen.findByText("Auftrag gespeichert.")).toBeVisible();
+    const link = screen.getByRole("link", {
+      name: "Erstellten Auftrag öffnen",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "/jobs/f4f59e7e-30c4-4599-80c3-f53341f45eb4",
+    );
+    expect(invalidation).toHaveBeenCalledWith({ queryKey: ["job-board"] });
+  } finally {
+    invalidation.mockRestore();
+    refresh.resolve();
+  }
   const calls = mock.rpc.mock.calls.filter(
     ([name]) => name === "create_course_run_job",
   );
