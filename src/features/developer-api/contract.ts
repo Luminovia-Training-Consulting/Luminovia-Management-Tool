@@ -163,6 +163,7 @@ import {
   companyPremiumSettingsSchema,
   retainedCompanyLmsSchema,
   retainedCourseAttendanceSchema,
+  retainedCourseFilesSchema,
 } from "../operations/company-premium-schema.ts";
 import {
   companyAssignableCoursesSchema,
@@ -330,7 +331,7 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes.",
     parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
@@ -390,6 +391,15 @@ const courseDocuments = {
             id: uuid,
             version_id: uuid,
             organisation_id: uuid,
+            reason: courseChatAuditReason,
+          }),
+          object({
+            kind: { const: "retained_course_file" },
+            organisation_id: uuid,
+            run_id: uuid,
+            id: uuid,
+            version_id: uuid,
+            file_kind: { enum: ["exam", "material"] },
             reason: courseChatAuditReason,
           }),
         ],
@@ -3993,6 +4003,21 @@ const nativePaths = {
     },
     z.toJSONSchema(retainedCourseAttendanceSchema),
     ["p_after_start", "p_after_session_id", "p_after_user_id"],
+  ),
+  "/rest/v1/rpc/inspect_retained_course_files": rpc(
+    "inspectRetainedCourseFiles",
+    "Administration",
+    "List retained exam and material file versions",
+    "Requires the current explicit internal admin role, a company with Premium switched off and an exact company/course match. Each page audits the inspection purpose. Up to 50 clean file versions are returned, including withdrawn course links. Omit both cursor fields on the first request and send both returned cursor fields together on the next. Use the exact returned file kind, ID and version with the course-documents gateway. This response contains no bytes or storage locations.",
+    {
+      ...organisation,
+      ...course,
+      p_reason: courseChatAuditReason,
+      p_after_kind: { enum: ["exam", "material", null] },
+      p_after_id: nullableUuid,
+    },
+    z.toJSONSchema(retainedCourseFilesSchema),
+    ["p_after_kind", "p_after_id"],
   ),
   "/rest/v1/rpc/set_company_premium": rpc(
     "setCompanyPremium",

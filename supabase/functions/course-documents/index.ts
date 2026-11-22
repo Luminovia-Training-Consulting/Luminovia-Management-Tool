@@ -41,6 +41,13 @@ Deno.serve(
                 ? null
                 : result.data;
         },
+        retainedPath: async (version, sha256) => {
+            const result = await service.from("document_versions")
+                .select("object_path")
+                .eq("id", version).eq("status", "clean").eq("sha256", sha256)
+                .maybeSingle();
+            return result.error ? null : result.data?.object_path ?? null;
+        },
         download: async (path) => {
             const result = await service.storage.from("portal-clean").download(path);
             if (result.error || !result.data) throw new Error("resource_unavailable");

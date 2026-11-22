@@ -1521,6 +1521,22 @@ describe("documented Premium course and spending operations", () => {
           properties: { kind: { const: "course_chat_attachment" } },
           required: ["kind", "id", "version_id", "organisation_id", "reason"],
         },
+        {
+          properties: {
+            kind: { const: "retained_course_file" },
+            file_kind: { enum: ["exam", "material"] },
+            reason: { minLength: 8, maxLength: 300 },
+          },
+          required: [
+            "kind",
+            "organisation_id",
+            "run_id",
+            "id",
+            "version_id",
+            "file_kind",
+            "reason",
+          ],
+        },
       ],
     );
     expect(

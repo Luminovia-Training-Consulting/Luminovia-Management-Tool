@@ -572,6 +572,32 @@ await withApiFixture(
         await documentedRpc(teacher.client, "inspect_retained_course_attendance", inspection, 403, "42501");
         await documentedRpc(admin.client, "inspect_retained_course_attendance", {...inspection, p_run_id: otherRun}, 403, "42501");
 
+        const fileInspection = {
+            ...inspection,
+            p_reason: "Review the fictional retained file after deactivation",
+        };
+        const retainedFiles = await documentedRpc(admin.client, "inspect_retained_course_files", fileInspection);
+        const retainedMaterial = retainedFiles.items.find((file) => file.id === resource);
+        assert.ok(retainedMaterial);
+        assert.equal(retainedMaterial.file_kind, "material");
+        assert.equal(retainedMaterial.version_id, document.current_version_id);
+        assert.equal(retainedMaterial.object_path, undefined);
+        const fileOptions = {
+            organisation_id: org, run_id: run, file_kind: retainedMaterial.file_kind,
+            version_id: retainedMaterial.version_id, reason: fileInspection.p_reason,
+        };
+        const archivedDownload = () => download(admin, "retained_course_file", resource, fileOptions);
+        assert.equal((await download(teacher, "retained_course_file", resource, fileOptions)).status, 403);
+        assert.equal((await download(admin, "retained_course_file", resource, {...fileOptions, run_id: otherRun})).status, 403);
+        assert.equal((await download(admin, "retained_course_file", resource, {...fileOptions, version_id: randomUUID()})).status, 403);
+        const archived = await archivedDownload();
+        assert.equal(archived.status, 200);
+        assert.equal(archived.headers.get("cache-control"), "no-store, private");
+        assert.deepEqual(new Uint8Array(await archived.arrayBuffer()), bytes);
+        assert.equal(await sql(`select count(*) from public.audit_events
+            where action = 'course.retained_file_download_authorized' and resource_id = ${q(run)}
+              and actor_id = ${q(admin.id)} and details->>'file_id' = ${q(resource)}`), "1");
+
         // Test the existing subscription's per-event check independently of the disabled posting API.
         const blockedRevision = await sql(`update public.course_chat_activity
             set revision = gen_random_uuid() where room_id = ${q(room)} returning revision`);
@@ -585,6 +611,8 @@ await withApiFixture(
 
         await setPremium(org, true, 2);
         await documentedRpc(admin.client, "inspect_retained_course_attendance", inspection, 403, "42501");
+        await documentedRpc(admin.client, "inspect_retained_course_files", fileInspection, 403, "42501");
+        assert.equal((await archivedDownload()).status, 403);
         assert.ok((await checked(history(room))).some((entry) => entry.id === message));
         const restoredFile = await download(learner, "course_chat_attachment", message, chatVersion);
         assert.equal(restoredFile.status, 200);

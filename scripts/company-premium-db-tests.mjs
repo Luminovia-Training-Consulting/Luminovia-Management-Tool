@@ -29,6 +29,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         examPaperVersion = randomUUID(), examKeyVersion = randomUUID();
     let examPaperId, examKeyId;
     const learnerResource = randomUUID(), learnerCompletion = randomUUID();
+    let learnerResourceVersion;
     let courseChatMessageId, courseChatMessageB, attachedChatMessage, attachedVersion;
     await sql(
         `insert into auth.users(id, email)
@@ -294,6 +295,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
               values (${q(learnerResource)},${q(runA)},${q(version)},'participants','material',${q(admin)});
               insert into private.course_completion_records(id,run_id,user_id,snapshot)
               values (${q(learnerCompletion)},${q(runA)},${q(participant)},'{"course":"Fictional course"}');`);
+            learnerResourceVersion = version;
             assert.equal((await rpc(participant, "course_document_access", ["resource", learnerResource])).id, version);
             assert.equal((await rpc(participant, "course_document_access", ["completion", learnerCompletion])).id, learnerCompletion);
             await assert.rejects(rpc(participant, "course_document_access", ["attendance", runA]), /42501/);
@@ -689,6 +691,61 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
           where action='course.retained_attendance_inspected' and actor_id=${q(admin)} and resource_id=${q(runA)}`));
         assert.deepEqual(audit, [50, 1].map((returned_count) => ({organisation_id: companyA, purpose: reason, returned_count})));
     });
+    await check("Retained file inspection binds current internal admin, company, course and clean exact versions", async () => {
+        const reason = "Fictional file audit";
+        const inspection = [companyA, runA, reason];
+        const exactExam = [companyA, runA, "exam", examKeyId, examKeyVersion, reason];
+        const exactMaterial = [companyA, runA, "material", learnerResource, learnerResourceVersion, reason];
+        const access = (who, args, audit = false) => rpc(who, "retained_course_file_access", [...args, audit]);
+
+        for (const who of [owner, manager, lecturer, client, participant]) {
+            await assert.rejects(rpc(who, "inspect_retained_course_files", inspection), /42501/);
+            await assert.rejects(access(who, exactExam), /42501/);
+        }
+        await sql(`update public.profiles set active=false where id=${q(secondAdmin)};`);
+        await assert.rejects(access(secondAdmin, exactExam), /42501/);
+        await sql(`update public.profiles set active=true where id=${q(secondAdmin)};`);
+        await assert.rejects(rpc(admin, "inspect_retained_course_files", [companyA, runB, reason]), /42501/);
+        await assert.rejects(rpc(admin, "inspect_retained_course_files", [...inspection, "exam"]), /22023/);
+        await assert.rejects(rpc(admin, "inspect_retained_course_files", [companyA, runA, "short"]), /22023/);
+        await assert.rejects(access(admin, [companyB, runB, ...exactExam.slice(2)]), /42501/);
+        await assert.rejects(access(admin, [companyA, runA, "material", ...exactExam.slice(3)]), /42501/);
+        await assert.rejects(access(admin, [...exactExam.slice(0, 4), examPaperVersion, reason]), /42501/);
+        await assert.rejects(rpc(admin, "course_document_access", ["resource", learnerResource]), /42501/);
+
+        await sql(`update private.course_exam_documents set removed_at=now() where id=${q(examKeyId)};
+          update public.document_versions set status='quarantined' where id=${q(examPaperVersion)};`);
+        const page = await rpc(admin, "inspect_retained_course_files", inspection);
+        assertLmsResponse("inspect_retained_course_files", page);
+        assert.equal(page.next_cursor, null);
+        assert.ok(page.items.every((file) => file.version_id !== examPaperVersion));
+        assert.deepEqual(page.items.find((file) => file.id === examKeyId), {
+            file_kind: "exam", id: examKeyId, version_id: examKeyVersion, version: 1,
+            name: "Fictional answer key.pdf", audience: "exam_staff", withdrawn: true,
+        });
+        assert.equal(page.items.find((file) => file.id === learnerResource).version_id, learnerResourceVersion);
+        const proof = await access(admin, exactExam);
+        assert.equal(proof.version_id, examKeyVersion);
+        assert.equal(proof.sha256, "b".repeat(64));
+        assert.equal(proof.object_path, undefined);
+        assert.equal((await access(admin, exactMaterial)).version_id, learnerResourceVersion);
+        assert.equal(await sql(`select count(*) from public.audit_events
+          where action='course.retained_file_download_authorized' and resource_id=${q(runA)}`), "0");
+        assert.deepEqual(await access(admin, exactExam, true), proof);
+        const audit = JSON.parse(await sql(`select details from public.audit_events
+          where action='course.retained_file_download_authorized' and actor_id=${q(admin)} and resource_id=${q(runA)}`));
+        assert.deepEqual(audit, {
+            organisation_id: companyA, purpose: reason, file_kind: "exam",
+            file_id: examKeyId, version_id: examKeyVersion,
+        });
+
+        const version = (await rpc(admin, "company_premium_settings"))
+            .find((setting) => setting.organisation_id === companyA).version;
+        await toggle(admin, companyA, true, version);
+        await assert.rejects(rpc(admin, "inspect_retained_course_files", inspection), /42501/);
+        await assert.rejects(access(admin, exactExam, true), /42501/);
+    });
+
 });
 
 console.log(`PASS: ${checks} isolated company Premium database groups.`);

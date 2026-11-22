@@ -648,6 +648,78 @@ Deno.test("course chat download checks the exact version, scan hash and post-sto
     assert(denied.status === 403 && !(await denied.text()).includes("Fictional course file"));
 });
 
+Deno.test("retained files require exact scope and are audited only after byte verification", async () => {
+    const bytes = new TextEncoder().encode("Fictional retained exam");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+        .map((value) => value.toString(16).padStart(2, "0")).join("");
+    const version = "52b7ddee-2166-485a-bcee-04d0eea958d2";
+    const company = "52b7ddee-2166-485a-bcee-04d0eea958d3";
+    const course = "52b7ddee-2166-485a-bcee-04d0eea958d4";
+    const reason = "Fictional archived exam review";
+    const facts = {
+        version_id: version, size_bytes: bytes.length,
+        name: "Fictional exam.pdf", sha256: hash, mime_type: "application/pdf",
+    };
+    const sequence: string[] = [];
+    let denied = false, revokeDuringDownload = false, integrityFailure = false;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => {
+            sequence.push("auth");
+            return true;
+        },
+        rpc: async (_token, name, args) => {
+            assert(name === "retained_course_file_access");
+            assert(args.p_organisation_id === company && args.p_run_id === course);
+            assert(args.p_file_kind === "exam" && args.p_file_id === id);
+            assert(args.p_version_id === version && args.p_reason === reason);
+            assert(typeof args.p_record_access === "boolean");
+            sequence.push(args.p_record_access ? "final audit" : "preflight");
+            return denied ? {data: null, error: true} : {data: facts, error: null};
+        },
+        retainedPath: async (requestedVersion, requestedHash) => {
+            sequence.push("path");
+            assert(requestedVersion === version && requestedHash === hash);
+            return "fictional/retained-exam";
+        },
+        download: async (path) => {
+            sequence.push("storage");
+            assert(path === "fictional/retained-exam");
+            if (revokeDuringDownload) denied = true;
+            return integrityFailure ? new Uint8Array(bytes.length) : bytes;
+        },
+        render: async () => { throw new Error("Retained files must return the scanned bytes"); },
+    });
+    const body = {
+        kind: "retained_course_file", organisation_id: company, run_id: course,
+        id, version_id: version, file_kind: "exam", reason,
+    };
+    const ok = await handler(request(body));
+    assert(ok.status === 200 && await ok.text() === "Fictional retained exam");
+    assert(ok.headers.get("Cache-Control") === "no-store, private");
+    assert(ok.headers.get("Content-Disposition") === 'attachment; filename="Fictional_exam.pdf"');
+    assert(sequence.splice(0).join(",") === "auth,preflight,path,storage,auth,final audit");
+
+    assert((await handler(request({...body, object_path: "fictional/custom"}))).status === 400);
+    assert((await handler(request({...body, reason: "short"}))).status === 400);
+    assert(sequence.splice(0).join(",") === "auth,auth");
+
+    denied = true;
+    assert((await handler(request(body))).status === 403);
+    assert(sequence.splice(0).join(",") === "auth,preflight");
+
+    denied = false;
+    integrityFailure = true;
+    assert((await handler(request(body))).status === 503);
+    assert(sequence.splice(0).join(",") === "auth,preflight,path,storage");
+
+    integrityFailure = false;
+    revokeDuringDownload = true;
+    const revoked = await handler(request(body));
+    assert(revoked.status === 403 && !(await revoked.text()).includes("Fictional retained exam"));
+    assert(sequence.join(",") === "auth,preflight,path,storage,auth,final audit");
+});
+
 Deno.test("dedicated course PDFs use database branding and reject a changing issuer or request override", async () => {
     const brand = {
         name: "Fictional academy",

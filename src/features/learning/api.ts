@@ -289,6 +289,15 @@ export type PortalDocumentRequest =
       organisation_id?: string;
       reason?: string;
     }
+  | {
+      kind: "retained_course_file";
+      organisation_id: string;
+      run_id: string;
+      id: string;
+      version_id: string;
+      file_kind: "exam" | "material";
+      reason: string;
+    }
   | { kind: "qualification_passport"; locale: "de" | "en" }
   | { kind: "earnings_statement"; from: string; until: string; all?: boolean };
 

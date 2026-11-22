@@ -79,3 +79,33 @@ export const retainedCourseAttendanceSchema = z.strictObject({
 export type RetainedCourseAttendance = z.infer<
   typeof retainedCourseAttendanceSchema
 >;
+
+const retainedFileKind = z.enum(["exam", "material"]);
+
+export const retainedCourseFilesSchema = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        file_kind: retainedFileKind,
+        id: uuid,
+        version_id: uuid,
+        version: count.min(1),
+        name: z.string(),
+        audience: z.enum([
+          "staff",
+          "client",
+          "participants",
+          "all",
+          "students",
+          "exam_staff",
+        ]),
+        withdrawn: z.boolean(),
+      }),
+    )
+    .max(50),
+  next_cursor: z
+    .strictObject({ file_kind: retainedFileKind, id: uuid })
+    .nullable(),
+});
+
+export type RetainedCourseFiles = z.infer<typeof retainedCourseFilesSchema>;

@@ -6,7 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CompanyPremiumControl } from "./company-premium";
 import type { CompanyPremiumSetting } from "./company-premium-schema";
 
-const fake = vi.hoisted(() => ({ rpc: vi.fn(), online: true }));
+const fake = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  online: true,
+  download: vi.fn(),
+}));
+vi.mock("../learning/api", () => ({ downloadPortalDocument: fake.download }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 vi.mock("../../lib/online", () => ({
   requireOnline: () => undefined,
@@ -234,6 +239,92 @@ it("opens the scoped read-only register only after an audit reason and discards 
   expect(
     screen.queryByText("Keine gespeicherten Einträge auf dieser Seite."),
   ).not.toBeInTheDocument();
+});
+
+it("inspects and downloads exact archived course files only while Premium is off", async () => {
+  const retained = retainedResponse("Fictional retained course");
+  const [course] = retained.data.courses;
+  const file = {
+    file_kind: "exam",
+    id: "af85b06a-2eaf-42b3-8fb6-376007fb3eca",
+    version_id: "2468a606-d5ee-4b97-8ad4-f54df3f6a56d",
+    version: 2,
+    name: "Fiktionale Prüfung.pdf",
+    audience: "exam_staff",
+    withdrawn: true,
+  };
+  const reason = "Fiktionale Archivprüfung";
+  fake.download.mockResolvedValue(undefined);
+  fake.rpc
+    .mockResolvedValueOnce(retained)
+    .mockResolvedValueOnce({
+      error: null,
+      data: {
+        items: [file],
+        next_cursor: { file_kind: file.file_kind, id: file.id },
+      },
+    })
+    .mockResolvedValueOnce({
+      error: null,
+      data: { items: [], next_cursor: null },
+    });
+  const user = userEvent.setup();
+  const mounted = mount(true);
+  await user.click(
+    screen.getByRole("button", { name: "Beibehaltene Kursdaten ansehen" }),
+  );
+
+  const inspect = await screen.findByRole("button", {
+    name: "Kursdateien ansehen",
+  });
+  expect(inspect).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("Grund für die Einsicht in die Kursdateien"),
+    reason,
+  );
+  await user.click(inspect);
+  const download = await screen.findByRole("button", {
+    name: file.name + " herunterladen",
+  });
+  expect(screen.getByText("Aus dem Kurs entfernt")).toBeVisible();
+  await user.click(download);
+  expect(fake.download).toHaveBeenCalledWith(
+    {
+      kind: "retained_course_file",
+      organisation_id: initial.organisation_id,
+      run_id: course.run_id,
+      file_kind: file.file_kind,
+      id: file.id,
+      version_id: file.version_id,
+      reason,
+    },
+    file.name,
+    expect.any(AbortSignal),
+  );
+  const scope = {
+    p_organisation_id: initial.organisation_id,
+    p_run_id: course.run_id,
+    p_reason: reason,
+  };
+  expect(fake.rpc).toHaveBeenNthCalledWith(2, "inspect_retained_course_files", {
+    ...scope,
+    p_after_kind: null,
+    p_after_id: null,
+  });
+
+  await user.click(screen.getByRole("button", { name: "Nächste Kursdateien" }));
+  expect(
+    await screen.findByText(
+      /keine archivierten Prüfungs- oder Materialdateien/,
+    ),
+  ).toBeVisible();
+  expect(fake.rpc).toHaveBeenNthCalledWith(3, "inspect_retained_course_files", {
+    ...scope,
+    p_after_kind: file.file_kind,
+    p_after_id: file.id,
+  });
+  mounted.rerender(control(true, { ...initial, enabled: true, version: 1 }));
+  expect(inspect).not.toBeInTheDocument();
 });
 
 it.each(["permission", "connection"] as const)(
