@@ -35,6 +35,7 @@ import {
   orgQuery,
 } from "./data";
 import { CompanyPremiumControl } from "./company-premium";
+import { CompanyLecturerBlocks } from "./company-lecturer-blocks";
 import { CompanyIntegrations } from "./company-integrations";
 import { CompanyParticipantsPanel } from "./company-participants";
 
@@ -369,6 +370,13 @@ function ClientWorkspace({
                 setting={premiumSetting}
                 isAdmin={isAdmin}
                 archived={Boolean(organisation.archived_at)}
+              />
+            )}
+            {!organisation.archived_at && (
+              <CompanyLecturerBlocks
+                key={`lecturer-blocks:${organisation.id}`}
+                actor={actor}
+                organisations={[organisation]}
               />
             )}
             {canManageIntegrations && (

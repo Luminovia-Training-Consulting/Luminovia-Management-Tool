@@ -20,6 +20,7 @@ import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
+import { AcademyCompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { courseHubQuery, type CourseOverview } from "./api";
 import { CompanyInvitations } from "./company-invitations";
 import { AcademyCourseDraft } from "./academy-draft";
@@ -134,6 +135,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   return (
     <>
       {academy === "active" && <AcademyCourseDraft actor={actor} />}
+      {academy && <AcademyCompanyLecturerBlocks actor={actor} />}
       {!academy && roles.data?.includes("participant") && (
         <CompanyInvitations actor={actor} />
       )}

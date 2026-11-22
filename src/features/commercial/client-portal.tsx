@@ -1,5 +1,6 @@
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
+import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import {
   AdditionalCompanyDecisions,
   CompanyDecisions,
@@ -738,6 +739,7 @@ export function ClientPortalPage() {
               }}
             />
           )}
+          <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
           {access.data.can_request &&
             !access.data.can_manage_gross &&
             orgs.data.map((org) => (
