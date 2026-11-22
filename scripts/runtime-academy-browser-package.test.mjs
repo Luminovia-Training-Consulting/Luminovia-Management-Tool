@@ -410,7 +410,14 @@ test("accepts an exact nonempty historical catalogue only after signature authen
   }
 });
 
-for (const version of ["1.20.0", "1.21.0", "1.27.0", "1.28.0", "1.29.0"]) {
+for (const version of [
+  "1.20.0",
+  "1.21.0",
+  "1.27.0",
+  "1.28.0",
+  "1.29.0",
+  "1.30.0",
+]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);
     const { output, signer, inputs, verifyRelease } = files;

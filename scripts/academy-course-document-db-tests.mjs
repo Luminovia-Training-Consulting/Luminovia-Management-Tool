@@ -212,9 +212,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
           scanCall(reservation, action, lease, sha256, scanner) +
           ";commit;",
       );
-    for (const who of [manager, learner, client, outside]) {
+    for (const who of [learner, otherClient, outside]) {
       await assert.rejects(reserve(who), /42501/);
     }
+    await assert.rejects(
+      reserve(client, randomUUID(), digest, otherRun),
+      /42501/,
+    );
     const staging = await reserve(teacher);
     assert.equal(staging.status, "quarantined");
     assert.deepEqual(await reserve(teacher), staging);
@@ -308,6 +312,55 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal(
       (await access(learner, newlyShared.id)).id,
       staging.version_id,
+    );
+    for (const [publisher, ownerKind] of [
+      [manager, "staff"],
+      [client, "company"],
+    ]) {
+      const draft = await reserve(publisher, randomUUID());
+      assert.equal(
+        (await uploadStatus(publisher, draft)).document.status,
+        "quarantined",
+      );
+      assert.equal(await uploadStatus(teacher, draft), null);
+      const scan = await worker(draft, "begin", null, digest);
+      await worker(draft, "clean", scan, digest, fresh);
+      await worker(draft, "end", scan);
+      const { document: exact } = await uploadStatus(publisher, draft);
+      assert.equal(exact.current_version_id, draft.version_id);
+      await assert.rejects(
+        command(publisher, shareCall(draft.version_id, otherRun)),
+        /42501/,
+      );
+      const share = await command(publisher, shareCall(draft.version_id));
+      const ownership = await sql(
+        `select ownership_kind from private.course_resources where id=${q(share.id)}`,
+      );
+      assert.equal(ownership, ownerKind);
+      assert.equal((await access(learner, share.id)).id, draft.version_id);
+      await assert.rejects(command(teacher, removeCall(share.id)), /42501/);
+      if (publisher === client)
+        await assert.rejects(command(manager, removeCall(share.id)), /42501/);
+      await command(publisher, removeCall(share.id));
+      await assert.rejects(access(learner, share.id), /42501/);
+    }
+    const fromFormerContact = await reserve(client, randomUUID());
+    const contactLease = await worker(fromFormerContact, "begin", null, digest);
+    await sql(
+      `update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`,
+    );
+    await assert.rejects(
+      worker(fromFormerContact, "clean", contactLease, digest, fresh),
+      /42501/,
+    );
+    await worker(fromFormerContact, "end", contactLease);
+    assert.equal(await uploadStatus(client, fromFormerContact), null);
+    await assert.rejects(
+      command(client, shareCall(fromFormerContact.version_id)),
+      /42501/,
+    );
+    await sql(
+      `update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`,
     );
     const rejected = await reserve(teacher, randomUUID());
     const rejectedLease = await worker(rejected, "begin", null, digest);

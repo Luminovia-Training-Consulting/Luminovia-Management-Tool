@@ -1127,7 +1127,12 @@ function CourseWorkspaceLayout({
               actor={actor}
               readOnly={Boolean(academy)}
               academy={academy === "active"}
-              academyCanUpload={academy === "active" && course.access.teacher}
+              academyCanUpload={
+                academy === "active" &&
+                (course.access.manager ||
+                  course.access.teacher ||
+                  course.access.client)
+              }
             />
           </div>
           {examVisible && (

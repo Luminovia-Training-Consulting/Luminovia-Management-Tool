@@ -263,7 +263,7 @@ const materialUpload = {
     tags: ["Licensed course profile"],
     summary:
       "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as the currently assigned lecturer. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -878,7 +878,7 @@ const coursePaths = {
   "/rest/v1/rpc/academy_course_material_action": courseOperation(
     "publishAcademyCourseMaterial",
     "Publish or withdraw a scanned course material version",
-    "Only the currently assigned lecturer can publish their own exact clean version for the selected audience. Use the returned current_version_id from the course upload. Repeating a share for the same version and audience returns the same resource ID. To withdraw your own publication, send the resource ID with resource_remove and omit the audience and category.",
+    "A current course manager, assigned lecturer or authorised contact of the exact course company can publish their own scanned version reserved for this course and release. Use the returned current_version_id from the course upload. Repeating a share for the same version and audience returns the same resource ID. To withdraw your own publication, send the resource ID with resource_remove and omit the audience and category.",
     "active",
     materialAction,
     record({ id: uuid }),
@@ -1095,7 +1095,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.30.0",
+      version: "1.31.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
