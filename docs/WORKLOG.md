@@ -16,6 +16,10 @@ The LMS register now shows per-session totals and filters. A confirmed bulk mark
 
 The coordinated settlement and amendment release on `main` was integrated before the final verification. The attendance migration follows its already published migration sequence. A fresh PostgreSQL replay regenerated the inventory from 259 migrations and 497 public functions, then passed internal exact attendance and expired Academy portability. The combined OpenAPI suite passed all 51 focused cases.
 
+# 22 November 2026 — Company integration method handling on self-hosting
+
+The native self-host acceptance exposed an HTTP discrepancy when a client sent a method outside the integration contract. The Edge dispatcher now rejects unsupported methods on the three exact company integration paths with HTTP 405, the allowed method and the same JSON error as the worker. The scoped key check still handles every valid request. The live HTTP matrix covers this response through the normal application gateway and the self-host stack.
+
 # 22 November 2026 — Coordinated amendments, teaching corrections and settlement events
 
 Current company contacts can submit shared dates for management coordination. Each affected lecturer and an authorised reviewer approve the corresponding proposal. Eligible future assignments can also carry private terms and compensation for the selected lecturer. The course dates and approved amendment apply together. The original agreements, billed units and protected teaching sessions remain available. Expected version conflicts return HTTP 409. A separate teaching evidence route lets an independent reviewer reopen an existing submission, including after allocation release. The lecturer can then submit a new revision that retains the original scheduled interval and previous evidence.

@@ -367,10 +367,25 @@ Deno.serve({onError}, async (req: Request) => {
         service_name === "calendar-feed" &&
         pathname === "/calendar-feed" &&
         req.method === "GET";
-    const companyIntegration =
-        (req.method === "GET" && ["/company-integration", "/company-integration/participation"].includes(pathname)) ||
-        (req.method === "POST" && pathname === "/company-integration/enrolments");
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegration) {
+    const companyIntegrationMethod =
+        pathname === "/company-integration" || pathname === "/company-integration/participation"
+            ? "GET"
+            : pathname === "/company-integration/enrolments"
+                ? "POST"
+                : null;
+    // Reject unsupported methods on these exact capability routes before JWT
+    // verification. Valid methods still use the worker's scoped key checks.
+    if (companyIntegrationMethod && req.method !== companyIntegrationMethod) {
+        return Response.json({error: "method_not_allowed"}, {
+            status: 405,
+            headers: {
+                "allow": companyIntegrationMethod,
+                "cache-control": "no-store",
+                "x-content-type-options": "nosniff",
+            },
+        });
+    }
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegrationMethod) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);
