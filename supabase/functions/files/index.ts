@@ -118,7 +118,7 @@ Deno.serve(async (request: Request) => {
         };
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
-            const raw = await bounded(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
+            const raw = await boundedBytes(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
@@ -313,8 +313,9 @@ Deno.serve(async (request: Request) => {
                         throw error;
                     }
                 }
-                else if (doc.kind === 'invoice') {
-                    const completed = await service.rpc('complete_invoice_upload', {
+                else {
+                    const action = doc.kind === 'invoice' ? 'complete_invoice_upload' : 'complete_document_upload';
+                    const completed = await service.rpc(action, {
                         p_document_id: doc.id, p_version_id: reservation.version_id, p_lease_id: lease,
                         p_sha256: digest, p_scanner_version: verdict.version,
                     });

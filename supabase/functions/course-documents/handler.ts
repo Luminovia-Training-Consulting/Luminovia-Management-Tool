@@ -71,6 +71,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             }
             const body = raw as Record<string, unknown>;
             const kind = body.kind;
+            if (typeof kind !== "string") return json(400, "invalid_request");
             const submission = kind === "participant_submission";
             const attendance = kind === "attendance" || kind === "attendance_session";
             const retained = kind === "retained_course_file";
@@ -207,6 +208,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 kind === "wiki_resource" ||
                 kind === "course_chat_attachment" || retained || submission
             ) {
+                const fileId = body.id;
+                if (!uuid(fileId)) return json(403, "document_unavailable");
                 const exactProtectedVersion = retained || submission;
                 if ((kind === "course_chat_attachment" || exactProtectedVersion) &&
                     (!Number.isSafeInteger(first.data.size_bytes) ||
@@ -222,12 +225,12 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                         return json(403, "document_unavailable");
                     }
                     objectPath = (submission
-                        ? await dependencies.submissionPath?.(body.id, first.data.version_id)
+                        ? await dependencies.submissionPath?.(fileId, first.data.version_id)
                         : await dependencies.retainedPath?.(first.data.version_id, first.data.sha256)) ?? null;
                 } else if (kind === "wiki_resource") {
                     if (!uuid(first.data.version_id) || !dependencies.wikiPath)
                         return json(403, "document_unavailable");
-                    objectPath = await dependencies.wikiPath(body.id, first.data.version_id);
+                    objectPath = await dependencies.wikiPath(fileId, first.data.version_id);
                 } else if (typeof first.data.object_path === "string") {
                     objectPath = first.data.object_path;
                 }

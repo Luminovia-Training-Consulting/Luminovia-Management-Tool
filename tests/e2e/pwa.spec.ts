@@ -113,18 +113,9 @@ test("built PWA WebKit refuses notification permission without registering a dev
     }
 });
 
-test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({
-                                                                                                                     page,
-                                                                                                                     context,
-                                                                                                                 }) => {
+async function openControlledPwa(page: Page) {
     await page.goto("/login");
-    await page.evaluate(async () => {
-        await navigator.serviceWorker.ready;
-    });
-    await page.reload();
-    await expect
-        .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
-        .toBe(true);
+    await controlWithBuiltWorker(page);
 }
 
 test("built PWA serves the public demo deep link offline without a session", async ({page, context}) => {
