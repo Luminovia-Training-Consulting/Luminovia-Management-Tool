@@ -13,13 +13,20 @@ export function rpcResponse(name, status = 200) {
 
 /** Exercise the actual REST endpoint and validate its documented success or error body. */
 export async function documentedRpc(client, name, args = {}, status = 200, code) {
-    if (status === 200) rpcRequest(name)(args);
+    if (status === 200 || status === 204) rpcRequest(name)(args);
     const result = await client.rpc(name, args);
     assert.equal(result.status, status, `${name}: ${result.error?.code ?? "success"}`);
     if (status === 200) {
         assert.equal(result.error, null);
         rpcResponse(name)(JSON.stringify(result.data));
         return result.data;
+    }
+    if (status === 204) {
+        assert.equal(result.error, null);
+        assert.equal(result.data, null);
+        const response = paths[`/rest/v1/rpc/${name}`].post.responses["204"];
+        assert.ok(response && !response.content, `${name}: expected a documented empty response`);
+        return null;
     }
     assert.equal(result.error?.code, code, name);
     rpcResponse(name, status)(JSON.stringify(result.error));

@@ -287,8 +287,17 @@ function voidRpc(
   summary: string,
   description: string,
   input: Record<string, unknown>,
+  optional: readonly string[] = [],
 ) {
-  const { post } = rpc(operationId, tag, summary, description, input, {});
+  const { post } = rpc(
+    operationId,
+    tag,
+    summary,
+    description,
+    input,
+    {},
+    optional,
+  );
   const { "200": success, ...errors } = post.responses;
   return {
     post: {
@@ -645,7 +654,7 @@ const wikiVersion = { ...version, minimum: 1 };
 const wikiPublishedVersion = { type: ["integer", "null"], minimum: 1 };
 const wikiLocale = { enum: ["de", "en"] };
 const wikiStatus = { enum: ["draft", "published", "archived"] };
-const wikiPage = object({
+const wikiPageFields = {
   id: uuid,
   title: text,
   locale: wikiLocale,
@@ -659,8 +668,75 @@ const wikiPage = object({
   published_version: wikiPublishedVersion,
   has_draft: boolean,
   updated_at: sessionInstant,
+};
+const wikiPage = object({
+  ...wikiPageFields,
   content: knowledgeDocument,
 });
+const knowledgeCategoryKind = { enum: ["wiki", "forum"] };
+const knowledgeCategory = object({
+  id: uuid,
+  kind: knowledgeCategoryKind,
+  slug: text,
+  label_de: text,
+  label_en: text,
+  archived: boolean,
+});
+const forumThreadFields = {
+  id: uuid,
+  title: text,
+  category_id: uuid,
+  category_label_de: text,
+  category_label_en: text,
+  owner_id: uuid,
+  owner_name: text,
+  locked: boolean,
+  pinned: boolean,
+  archived: boolean,
+  accepted_post_id: nullableUuid,
+  post_count: { type: "integer", minimum: 0 },
+  subscribed: boolean,
+  created_at: sessionInstant,
+  updated_at: sessionInstant,
+};
+const knowledgeListFilters = {
+  p_search: { type: ["string", "null"], default: "" },
+  p_category_id: { ...nullableUuid, default: null },
+  p_include_archived: { ...boolean, default: false },
+};
+const forumMetadataEdit = rpc(
+  "native_edit_forum_thread_metadata",
+  "Knowledge",
+  "Change a forum thread's title and category",
+  "Requires access to the thread. Its owner can edit an unlocked, unarchived thread. A forum moderator can also edit locked or archived threads. Select an active forum category and pass the last-read metadata version. The result is the new metadata version.",
+  {
+    p_thread_id: uuid,
+    p_title: { ...text, minLength: 1, maxLength: 200 },
+    p_category_id: uuid,
+    p_expected_version: wikiVersion,
+  },
+  wikiVersion,
+);
+const forumPostReport = rpc(
+  "native_report_forum_post",
+  "Knowledge",
+  "Report an accessible discussion post",
+  "The caller must be able to read the thread and the post must still exist without a tombstone. At most five new reports per reporter are accepted in an hour. A repeat of a valid request for the same post returns the reporter's existing report ID.",
+  { p_post_id: uuid, p_reason: { ...text, minLength: 5, maxLength: 2000 } },
+  uuid,
+);
+const wikiCourseReference = voidRpc(
+  "native_manage_wiki_course_template",
+  "Knowledge",
+  "Add or remove a visible course template on a wiki draft",
+  "Requires staff access and page ownership or wiki management permission. Only the current unpublished draft can change. The template must be readable to the actor and active when adding it. A draft supports at most 20 distinct references. Repeated additions or removals of the same reference leave the same result.",
+  {
+    p_page_id: uuid,
+    p_revision: wikiVersion,
+    p_template_id: uuid,
+    p_remove: boolean,
+  },
+);
 const jobBriefingFields = {
   reference_url: { ...text, maxLength: 2048 },
   reference_label: { ...text, maxLength: 120 },
@@ -3123,6 +3199,42 @@ const nativePaths = {
       can_moderate_forum: boolean,
     }),
   ),
+  "/rest/v1/rpc/knowledge_categories": rpc(
+    "native_knowledge_categories",
+    "Knowledge",
+    "List visible wiki or forum categories",
+    "Requires current Knowledge staff access. Categories are ordered by German label and ID. Archived wiki categories are visible to wiki managers, and archived forum categories are visible to forum moderators.",
+    { p_kind: knowledgeCategoryKind },
+    { type: "array", items: knowledgeCategory },
+  ),
+  "/rest/v1/rpc/save_knowledge_category": rpc(
+    "native_save_knowledge_category",
+    "Knowledge",
+    "Save or archive a bilingual category",
+    "Requires wiki.manage for a wiki category or forum.moderate for a forum category. Pass null as the ID to create a category. Existing categories retain their kind. The slug must be unique within its kind. Omit the archived flag to save the category as active.",
+    {
+      p_id: nullableUuid,
+      p_kind: knowledgeCategoryKind,
+      p_slug: { ...text, maxLength: 80, pattern: "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      p_label_de: { ...text, minLength: 1, maxLength: 120 },
+      p_label_en: { ...text, minLength: 1, maxLength: 120 },
+      p_archived: { ...boolean, default: false },
+    },
+    uuid,
+    ["p_archived"],
+  ),
+  "/rest/v1/rpc/wiki_pages_list": rpc(
+    "native_wiki_pages_list",
+    "Knowledge",
+    "List and search authorised wiki revisions",
+    "Requires current Knowledge staff access. Owners and wiki managers search the latest revision. Other staff search only visible published revisions. Search is a case-insensitive literal substring of the readable title or text. Archived pages require the archive flag and current owner or wiki management authority. Returns up to 200 pages, newest updated first.",
+    {
+      ...knowledgeListFilters,
+      p_locale: { enum: ["", "de", "en", null], default: "" },
+    },
+    { type: "array", maxItems: 200, items: object(wikiPageFields) },
+    [...Object.keys(knowledgeListFilters), "p_locale"],
+  ),
   "/rest/v1/rpc/wiki_page": rpc(
     "native_wiki_page",
     "Knowledge",
@@ -3183,6 +3295,28 @@ const nativePaths = {
       items: object({ id: uuid, version_id: uuid, name: text }),
     },
   ),
+  "/rest/v1/rpc/manage_wiki_course_template": {
+    post: {
+      ...wikiCourseReference.post,
+      responses: {
+        ...wikiCourseReference.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including a stale or published revision (40001) or the reference limit (54000).",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/forum_threads_list": rpc(
+    "native_forum_threads_list",
+    "Knowledge",
+    "List and search accessible staff discussions",
+    "Requires current Knowledge staff access. Search matches the thread title and text of undeleted posts as case-insensitive literal substrings. Archived threads require the archive flag and current thread ownership or forum moderation authority. Returns up to 200 threads with pinned threads first and each caller's own subscription state.",
+    knowledgeListFilters,
+    { type: "array", maxItems: 200, items: object(forumThreadFields) },
+    Object.keys(knowledgeListFilters),
+  ),
   "/rest/v1/rpc/forum_thread": rpc(
     "native_forum_thread",
     "Knowledge",
@@ -3190,21 +3324,7 @@ const nativePaths = {
     "Requires current staff forum access. Includes the caller's subscription state, current moderation flags and the metadata version needed for a reviewed edit.",
     { p_id: uuid },
     object({
-      id: uuid,
-      title: text,
-      category_id: uuid,
-      category_label_de: text,
-      category_label_en: text,
-      owner_id: uuid,
-      owner_name: text,
-      locked: boolean,
-      pinned: boolean,
-      archived: boolean,
-      accepted_post_id: nullableUuid,
-      post_count: { type: "integer", minimum: 0 },
-      subscribed: boolean,
-      created_at: sessionInstant,
-      updated_at: sessionInstant,
+      ...forumThreadFields,
       metadata_version: wikiVersion,
     }),
   ),
@@ -3260,6 +3380,93 @@ const nativePaths = {
       p_content: knowledgeDocument,
       p_expected_version: wikiVersion,
     },
+  ),
+  "/rest/v1/rpc/edit_forum_thread_metadata": {
+    post: {
+      ...forumMetadataEdit.post,
+      responses: {
+        ...forumMetadataEdit.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including a stale metadata version (40001). Read the current metadata before retrying.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/delete_forum_post": voidRpc(
+    "native_delete_forum_post",
+    "Knowledge",
+    "Remove an authored or moderated forum post",
+    "Requires access to the thread and either post authorship or forum.moderate. Only moderators can remove posts inside a locked or archived thread. The server saves a revision, replaces the visible content with a tombstone and clears any accepted-answer pointer to this post. Repeating a permitted removal of the same tombstone is safe.",
+    { p_post_id: uuid },
+  ),
+  "/rest/v1/rpc/moderate_forum_thread": voidRpc(
+    "native_moderate_forum_thread",
+    "Knowledge",
+    "Set the lock, pin or archive state of a discussion",
+    "Requires current forum.moderate permission. Send the flags to change and omit or pass null for those to retain. A missing discussion is rejected as invalid input. Changes are audited.",
+    {
+      p_thread_id: uuid,
+      p_locked: { type: ["boolean", "null"], default: null },
+      p_pinned: { type: ["boolean", "null"], default: null },
+      p_archived: { type: ["boolean", "null"], default: null },
+    },
+    ["p_locked", "p_pinned", "p_archived"],
+  ),
+  "/rest/v1/rpc/accept_forum_answer": voidRpc(
+    "native_accept_forum_answer",
+    "Knowledge",
+    "Select or clear the accepted reply to a discussion",
+    "Requires access to the thread and either thread ownership or forum.moderate. Accept a current undeleted reply belonging to the thread. Pass null to clear the accepted answer.",
+    { p_thread_id: uuid, p_post_id: nullableUuid },
+  ),
+  "/rest/v1/rpc/subscribe_forum_thread": voidRpc(
+    "native_subscribe_forum_thread",
+    "Knowledge",
+    "Set the caller's subscription to a visible thread",
+    "Requires access to the thread. The subscription belongs to the authenticated actor. Repeating the same subscription state is safe, and unsubscribing preserves previous notices.",
+    { p_thread_id: uuid, p_subscribed: boolean },
+  ),
+  "/rest/v1/rpc/report_forum_post": {
+    post: {
+      ...forumPostReport.post,
+      responses: {
+        ...forumPostReport.post.responses,
+        "500": {
+          ...error,
+          description:
+            "Database error, including the hourly report limit (54000).",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/forum_reports": rpc(
+    "native_forum_reports",
+    "Knowledge",
+    "List the caller's reports or the moderation queue",
+    "Requires current Knowledge staff access. Staff see their own reports. Forum moderators can see the queue. Returns up to 200 latest reports first.",
+    {},
+    {
+      type: "array",
+      maxItems: 200,
+      items: object({
+        id: uuid,
+        post_id: uuid,
+        thread_id: uuid,
+        reason: text,
+        status: { enum: ["open", "resolved"] },
+        reporter_name: text,
+        created_at: sessionInstant,
+      }),
+    },
+  ),
+  "/rest/v1/rpc/resolve_forum_report": voidRpc(
+    "native_resolve_forum_report",
+    "Knowledge",
+    "Resolve or reopen an existing report",
+    "Requires current forum.moderate permission. Pass true to resolve a report or false to reopen it. A missing report is rejected as invalid input. The current reviewer and an audit event are recorded.",
+    { p_report_id: uuid, p_resolved: boolean },
   ),
   "/rest/v1/rpc/job_briefing": rpc(
     "native_job_briefing",

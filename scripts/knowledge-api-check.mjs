@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {assertPasswordOnly} from "./testing/password-only.mjs";
+import {documentedRpc} from "./testing/openapi-contract.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -24,7 +25,8 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
     pages = [],
     threads = [],
     resources = [],
-    categories = [];
+    categories = [],
+    templates = [];
 const suffix = randomUUID();
 
 /** Requires actual SDK success before returning the response data. */
@@ -119,18 +121,8 @@ try {
         ),
         {can_author: true, can_publish_wiki: true, can_moderate_forum: true},
     );
-    const wiki = (
-        await checked(
-            a.client.rpc("knowledge_categories", {p_kind: "wiki"}),
-            "Wiki categories",
-        )
-    )[0].id;
-    const forum = (
-        await checked(
-            a.client.rpc("knowledge_categories", {p_kind: "forum"}),
-            "Forum categories",
-        )
-    )[0].id;
+    const wiki = (await documentedRpc(a.client, "knowledge_categories", {p_kind: "wiki"}))[0].id;
+    const forum = (await documentedRpc(a.client, "knowledge_categories", {p_kind: "forum"}))[0].id;
     const base = {
         p_title: `Knowledge test ${suffix}`,
         p_locale: "de",
@@ -164,18 +156,11 @@ try {
         p_label_en: "Fictional API teaching",
         p_archived: false,
     };
-    assert.equal(
-        (await a.client.rpc("save_knowledge_category", categoryPayload)).error
-            ?.code,
-        "42501",
-        "Ordinary staff cannot create categories",
-    );
-    const category = await checked(
-        manager.client.rpc("save_knowledge_category", categoryPayload),
-        "Password-only manager creates bilingual wiki category",
-    );
+    await documentedRpc(a.client, "save_knowledge_category", categoryPayload, 403, "42501");
+    const category = await documentedRpc(manager.client, "save_knowledge_category", categoryPayload);
     categories.push(category);
     resources.push(category);
+    await documentedRpc(manager.client, "save_knowledge_category", categoryPayload, 409, "23505");
     const categoryRow = (
         await checked(
             b.client.rpc("knowledge_categories", {p_kind: "wiki"}),
@@ -218,6 +203,19 @@ try {
     );
     base.p_category_id = category;
 
+    const template = randomUUID();
+    await checked(
+        service.from("course_templates").insert({id: template, title: "Fictional wiki reference"}),
+        "Create scoped template fixture",
+    );
+    templates.push(template);
+    const reference = {p_page_id: page, p_revision: 1, p_template_id: template, p_remove: false};
+    await documentedRpc(b.client, "manage_wiki_course_template", reference, 403, "42501");
+    await documentedRpc(manager.client, "manage_wiki_course_template", reference, 204);
+    assert.deepEqual(await documentedRpc(manager.client, "wiki_course_templates", {p_page_id: page}), [
+        {template_id: template, title: "Fictional wiki reference", archived: false},
+    ]);
+
     const published = await checked(
         manager.client.rpc("save_wiki_page", {
             ...base,
@@ -228,6 +226,7 @@ try {
         "Publish with password-only role authorization",
     );
     assert.equal(published.published_version, 2);
+    await documentedRpc(manager.client, "manage_wiki_course_template", reference, 500, "40001");
     const visible = await checked(
         b.client.rpc("wiki_page", {p_id: page}),
         "Read authoritative published page",
@@ -270,14 +269,11 @@ try {
         "Stale author revision is rejected",
     );
     // Search the actor's authorised revision: an unpublished correction must not leak through filters.
-    const publishedSearch = await checked(
-        b.client.rpc("wiki_pages_list", {
-            p_search: suffix,
-            p_locale: "de",
-            p_category_id: category,
-        }),
-        "Combine actual title, language and category filters",
-    );
+    const publishedSearch = await documentedRpc(b.client, "wiki_pages_list", {
+        p_search: suffix,
+        p_locale: "de",
+        p_category_id: category,
+    });
     assert.deepEqual(
         publishedSearch.map((item) => item.id),
         [page],
@@ -434,13 +430,10 @@ try {
         "Changed idempotent content is explicitly rejected",
     );
     // Subscription rows remain personal; unsubscribe must stop later fanout without deleting old history.
-    await checked(
-        b.client.rpc("subscribe_forum_thread", {
-            p_thread_id: thread,
-            p_subscribed: true,
-        }),
-        "Subscribe reader to actual thread",
-    );
+    await documentedRpc(b.client, "subscribe_forum_thread", {
+        p_thread_id: thread,
+        p_subscribed: true,
+    }, 204);
     await checked(
         b.client.rpc("subscribe_forum_thread", {
             p_thread_id: thread,
@@ -612,18 +605,11 @@ try {
         ),
         [],
     );
-    assert.deepEqual(
-        (
-            await checked(
-                b.client.rpc("forum_threads_list", {
-                    p_search: `searchable-correction-${suffix}`,
-                    p_category_id: forum,
-                }),
-                "Search current edited body and category",
-            )
-        ).map((item) => item.id),
-        [thread],
-    );
+    const discussionSearch = await documentedRpc(b.client, "forum_threads_list", {
+        p_search: `searchable-correction-${suffix}`,
+        p_category_id: forum,
+    });
+    assert.deepEqual(discussionSearch.map((item) => item.id), [thread]);
     assert.ok(
         !(
             await checked(
@@ -635,13 +621,10 @@ try {
             )
         ).some((item) => item.id === thread),
     );
-    await checked(
-        a.client.rpc("accept_forum_answer", {
-            p_thread_id: thread,
-            p_post_id: reply,
-        }),
-        "Author accepts actual reply",
-    );
+    await documentedRpc(a.client, "accept_forum_answer", {
+        p_thread_id: thread,
+        p_post_id: reply,
+    }, 204);
     assert.equal(
         (
             await checked(
@@ -651,14 +634,18 @@ try {
         ).accepted_post_id,
         reply,
     );
-    await checked(
-        manager.client.rpc("moderate_forum_thread", {
-            p_thread_id: thread,
-            p_locked: true,
-            p_pinned: true,
-        }),
-        "Password-only moderator locks/pins",
-    );
+    const change = {
+        p_thread_id: thread,
+        p_title: "Fictional reviewed discussion",
+        p_category_id: forum,
+        p_expected_version: 1,
+    };
+    await documentedRpc(b.client, "edit_forum_thread_metadata", change, 403, "42501");
+    assert.equal(await documentedRpc(a.client, "edit_forum_thread_metadata", change), 2);
+    await documentedRpc(a.client, "edit_forum_thread_metadata", change, 500, "40001");
+    const flags = {p_thread_id: thread, p_locked: true, p_pinned: true};
+    await documentedRpc(a.client, "moderate_forum_thread", flags, 403, "42501");
+    await documentedRpc(manager.client, "moderate_forum_thread", flags, 204);
     assert.ok(
         (
             await b.client.rpc("add_forum_post", {
@@ -675,30 +662,18 @@ try {
         }),
         "Unlock actual discussion",
     );
-    const report = await checked(
-        a.client.rpc("report_forum_post", {
-            p_post_id: reply,
-            p_reason: "Fictional review request for QA",
-        }),
-        "Create private forum report",
-    );
+    const reportArgs = {p_post_id: reply, p_reason: "Fictional review request for QA"};
+    const report = await documentedRpc(a.client, "report_forum_post", reportArgs);
+    assert.equal(await documentedRpc(a.client, "report_forum_post", reportArgs), report);
     resources.push(report);
     assert.equal(
-        (
-            await checked(
-                b.client.rpc("forum_reports"),
-                "Nonreporter cannot inspect report",
-            )
-        ).filter((r) => r.id === report).length,
+        (await documentedRpc(b.client, "forum_reports")).filter((r) => r.id === report).length,
         0,
     );
-    await checked(
-        manager.client.rpc("resolve_forum_report", {
-            p_report_id: report,
-            p_resolved: true,
-        }),
-        "Password-only moderator resolves report",
-    );
+    const resolution = {p_report_id: report, p_resolved: true};
+    await documentedRpc(a.client, "resolve_forum_report", resolution, 403, "42501");
+    await documentedRpc(manager.client, "resolve_forum_report", resolution, 204);
+    assert.equal((await documentedRpc(a.client, "forum_reports")).find((r) => r.id === report)?.status, "resolved");
     // Archiving revokes both current reads and old notification links; explicit recovery restores access.
     await checked(
         manager.client.rpc("moderate_forum_thread", {
@@ -746,10 +721,8 @@ try {
         ).archived,
         false,
     );
-    await checked(
-        b.client.rpc("delete_forum_post", {p_post_id: reply}),
-        "Delete own answer by tombstone",
-    );
+    await documentedRpc(a.client, "delete_forum_post", {p_post_id: reply}, 403, "42501");
+    await documentedRpc(b.client, "delete_forum_post", {p_post_id: reply}, 204);
     assert.equal(
         (
             await checked(
@@ -812,6 +785,11 @@ try {
         await checked(
             service.from("wiki_pages").delete().in("id", pages),
             "Remove scoped QA wiki revisions",
+        );
+    if (templates.length)
+        await checked(
+            service.from("course_templates").delete().in("id", templates),
+            "Remove scoped QA templates after their wiki references",
         );
     if (categories.length)
         await checked(
