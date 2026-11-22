@@ -320,22 +320,30 @@ describe("installation and integration credential contracts", () => {
     }
   });
 
-  it("resolves the security scheme on every published operation", () => {
-    const catalogue = portalOpenApi(backend);
-    const schemes = catalogue.components.securitySchemes;
-    for (const [path, methods] of Object.entries(catalogue.paths)) {
-      for (const method of Object.values(methods)) {
-        const { security = [] } = method as {
-          security?: Record<string, string[]>[];
-        };
-        for (const entry of security) {
-          for (const name of Object.keys(entry)) {
-            expect(schemes, path).toHaveProperty(name);
+  it.each(["internal", "customer-self-hosted", "customer-managed"] as const)(
+    "resolves the security scheme on every %s published operation",
+    (edition) => {
+      for (const includeNonInteractive of [false, true]) {
+        const catalogue = portalOpenApi(backend, includeNonInteractive, {
+          ...internalInstallationBrand,
+          edition,
+        });
+        const schemes = catalogue.components.securitySchemes;
+        for (const [path, methods] of Object.entries(catalogue.paths)) {
+          for (const method of Object.values(methods)) {
+            const { security = [] } = method as {
+              security?: Record<string, string[]>[];
+            };
+            for (const entry of security) {
+              for (const name of Object.keys(entry)) {
+                expect(schemes, path).toHaveProperty(name);
+              }
+            }
           }
         }
       }
-    }
-  });
+    },
+  );
 
   it("describes both internal mail transports while keeping secret-bearing operations download-only", () => {
     const read = "/rest/v1/rpc/get_mail_configuration";

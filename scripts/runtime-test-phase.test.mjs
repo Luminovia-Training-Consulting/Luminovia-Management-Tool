@@ -56,7 +56,7 @@ async function runFixture({
             : ["desktop-chromium", "mobile-chromium"];
         const report = {
             config: {
-                rootDir: "/owned-qa/scratch/tests/e2e",
+                rootDir: "/owned-qa/run/source/tests/e2e",
                 projects: browserNames.map((name) => ({
                     name,
                 })),
@@ -115,7 +115,7 @@ async function runFixture({
         },
         assertLocalQaMemory() {},
         localQaTempRoot: () => "/owned-qa",
-        mkdtempSync: () => "/owned-qa/scratch",
+        mkdtempSync: () => "/owned-qa/run",
         readFileSync: (path) =>
             path.endsWith("source.fixture.ts")
                 ? Buffer.from(sourceText)
@@ -127,7 +127,7 @@ async function runFixture({
                             ? browserReport(path)
                             : "",
         readdirSync(path) {
-            if (path === "/owned-qa/scratch") return [file("source.fixture.ts")];
+            if (path === "/owned-qa/run/source") return [file("source.fixture.ts")];
             if (path.endsWith("tests/e2e"))
                 return ["workflow.spec.ts", "pwa.spec.ts"];
             if (path.endsWith("scripts"))
@@ -591,10 +591,14 @@ test("system and browser phases preserve the complete command partition, duplica
         assert.ok(releaseTests);
         assert.equal(releaseTests.args[0], "--test");
         assert.equal(releaseTests.env.DOCKER_HOST, "unix:///var/run/docker.sock");
-        assert.equal(releaseTests.cwd, "/owned-qa/scratch");
+        assert.equal(releaseTests.env.TMPDIR, "/owned-qa/run/tmp");
+        assert.equal(releaseTests.cwd, "/owned-qa/run/source");
         assert(!releaseTests.args.includes("deploy/hostinger/selfhost/compose.yml"));
     }
     assert(!contains(browser, selfhostPdfTest));
+    const application = browserCommand(browser, "application");
+    assert.equal(application.env.TMPDIR, "/owned-qa/run/tmp");
+    assert.equal(application.cwd, "/owned-qa/run/source");
     const startup = (command) =>
         command[1][0] === "scripts/runtime-cli.mjs" && command[1][1] === "start";
     const bootstrap = (command) =>
@@ -696,7 +700,7 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     ]);
     assert.equal(
         discovery.env.PLAYWRIGHT_JSON_OUTPUT_NAME,
-        "/owned-qa/scratch/.local/browser/application/plan.json",
+        "/owned-qa/run/source/.local/browser/application/plan.json",
     );
     assert.ok(relevant.indexOf(discovery) < relevant.indexOf(desktop));
     const pwa = browserCommand(browser, "pwa");
@@ -718,7 +722,7 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     ]);
     assert.equal(
         pwaDiscovery.env.PLAYWRIGHT_JSON_OUTPUT_NAME,
-        "/owned-qa/scratch/.local/browser/pwa/plan.json",
+        "/owned-qa/run/source/.local/browser/pwa/plan.json",
     );
     assert.ok(relevant.indexOf(pwaDiscovery) < relevant.indexOf(pwa));
     assert.equal(pwa.timeoutMs, 1200000);
@@ -886,7 +890,7 @@ test("browser phase invokes real evidence validators and rejects skipped, partia
         });
         assert.match(result.error?.message, item.error, item.name);
         assert.equal(result.released, 1);
-        assert.ok(result.removed.includes("/owned-qa/scratch"));
+        assert.ok(result.removed.includes("/owned-qa/run"));
         assert.ok(result.calls.some(({args}) => args.includes("--no-backup")));
         assert.equal(
             browserCommand(result, "pwa", true),
@@ -967,7 +971,7 @@ test("system SQL/API failure and browser/PWA failure remain phase failures with 
         assert.match(result.error?.message, /Fictional stage failure/);
         assert(result.reports.at(-1).value.startsWith(`FAIL\nPhase: ${phase}\n`));
         assert.equal(result.released, 1);
-        assert(result.removed.includes("/owned-qa/scratch"));
+        assert(result.removed.includes("/owned-qa/run"));
         assert(result.calls.some(({args}) => args.includes("--no-backup")));
         if (phase === "system") assert(!contains(result, "chromium"));
         if (stage === "application-execution")
@@ -999,6 +1003,6 @@ test("a failed service-stop acknowledgement fails every phase while final owned 
         assert(!result.reports.some(({value}) => value.startsWith("PASS\n")));
         assert(result.calls.some(({args}) => args.includes("--no-backup")));
         assert.equal(result.released, 1);
-        assert(result.removed.includes("/owned-qa/scratch"));
+        assert(result.removed.includes("/owned-qa/run"));
     }
 });

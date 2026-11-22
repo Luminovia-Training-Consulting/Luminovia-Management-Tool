@@ -48,7 +48,7 @@ async function runFixture({
         const discovery = path.endsWith("plan.json");
         return JSON.stringify({
             config: {
-                rootDir: "/owned-qa/scratch/tests/e2e",
+                rootDir: "/owned-qa/run/source/tests/e2e",
                 projects: ["desktop-chromium", "mobile-chromium"].map((name) => ({
                     name,
                 })),
@@ -92,7 +92,7 @@ async function runFixture({
         },
         assertLocalQaMemory() {},
         localQaTempRoot: () => "/owned-qa",
-        mkdtempSync: () => "/owned-qa/scratch",
+        mkdtempSync: () => "/owned-qa/run",
         readFileSync: (path) =>
             path.endsWith("config.toml")
                 ? 'project_id = "luminovia-portal"\n[api]\nport = 54321\n'
@@ -210,7 +210,7 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
         template < api,
     );
     assert.equal(seed.file, process.execPath);
-    assert.equal(seed.cwd, "/owned-qa/scratch");
+    assert.equal(seed.cwd, "/owned-qa/run/source");
     assert.equal(seed.env.PORTAL_TEST_MODE, "1");
     assert.match(
         seed.env.PORTAL_DB_CONTAINER,

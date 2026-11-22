@@ -27,7 +27,7 @@ const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
 const lock = join(runtimeDir, "test.lock");
 const releaseSharedLock = acquireTestLock({checkout: root});
-let scratch;
+let runDirectory;
 let localLockHeld = false;
 try {
     // Fail before creating a snapshot or starting even proxy fixtures. The
@@ -45,17 +45,20 @@ try {
         );
     }
     privateWrite(join(lock, "pid"), String(process.pid));
-    scratch = mkdtempSync(join(localQaTempRoot(), "luminovia-portal-test-"));
+    runDirectory = mkdtempSync(join(localQaTempRoot(), "luminovia-portal-test-"));
+    privateDirectory(join(runDirectory, "tmp"));
     privateDirectory(artifacts);
 } catch (error) {
-    if (scratch) rmSync(scratch, {recursive: true, force: true});
+    if (runDirectory) rmSync(runDirectory, {recursive: true, force: true});
     if (localLockHeld) rmSync(lock, {recursive: true, force: true});
     releaseSharedLock();
     throw error;
 }
+const scratch = join(runDirectory, "source");
 const env = cleanEnvironment({
     PORTAL_TEST_MODE: "1",
-    TMPDIR: scratch,
+    // Private registries and stand-alone fixtures need to stay outside the source snapshot.
+    TMPDIR: join(runDirectory, "tmp"),
     PORTAL_DB_CONTAINER: `supabase_db_${project}`,
     E2E_BASE_URL: "http://127.0.0.1:5273",
     E2E_MAILPIT_URL: "http://127.0.0.1:55324",
@@ -640,7 +643,7 @@ try {
         );
     if (existsSync(join(scratch, ".local/runtime.log")))
         cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
-    rmSync(scratch, {recursive: true, force: true});
+    rmSync(runDirectory, {recursive: true, force: true});
     rmSync(lock, {recursive: true, force: true});
     releaseSharedLock();
     process.removeListener("SIGINT", cancel);

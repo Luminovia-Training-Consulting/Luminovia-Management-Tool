@@ -63,7 +63,7 @@ function operation({
       tags: ["Courses"],
       summary,
       description,
-      security: [{ apiKey: [], bearerAuth: [] }],
+      security: [{ [academy ? "apiKey" : "publicApiKey"]: [], bearerAuth: [] }],
       ...(academy
         ? { "x-portal-licence": write ? "active" : "active-or-grace" }
         : {}),

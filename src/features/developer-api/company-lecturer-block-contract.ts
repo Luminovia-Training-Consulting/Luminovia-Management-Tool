@@ -7,7 +7,8 @@ import {
   lecturerBlockVersion,
 } from "../operations/company-lecturer-block-schema.ts";
 
-const security = [{ apiKey: [], bearerAuth: [] }];
+const security = [{ publicApiKey: [], bearerAuth: [] }];
+const academySecurity = [{ apiKey: [], bearerAuth: [] }];
 const tags = ["Company lecturer restrictions"];
 const rpcError = z.strictObject({
   code: z.string(),
@@ -105,7 +106,7 @@ export const academyCompanyLecturerBlockPaths = {
       summary: "Choose a company authorised for lecturer restrictions",
       description:
         "Lists current company memberships or organisations available under current management authority.",
-      security,
+      security: academySecurity,
       "x-portal-licence": "active-or-grace",
       responses: {
         "200": response(
@@ -117,9 +118,13 @@ export const academyCompanyLecturerBlockPaths = {
     },
   },
   "/rest/v1/rpc/company_lecturer_blocks": {
-    get: { ...read, "x-portal-licence": "active-or-grace" },
+    get: {
+      ...read,
+      security: academySecurity,
+      "x-portal-licence": "active-or-grace",
+    },
   },
   "/rest/v1/rpc/set_company_lecturer_block": {
-    post: { ...write, "x-portal-licence": "active" },
+    post: { ...write, security: academySecurity, "x-portal-licence": "active" },
   },
 };

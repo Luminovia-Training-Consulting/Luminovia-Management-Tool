@@ -143,7 +143,8 @@ The original requirements for assignment amendments and Website enquiries are tr
 - [x] FC-19, FC-22–24: verified qualifications, scoped contract upload on behalf, private outbound mail settings and User IDs. Provider delivery has a separate release check.
 - [x] FC-26, FC-28–29: scoped reopening and reassignment with inbox events, atomic claims and role-aware views. Native tests exercise concurrent requests, current eligibility and exact retry.
 - [x] FC-34–35: post-course billing, reviewed exceptions and instalments, scanned invoice documents and recorded payment states. Database, HTTP and browser fixtures exercise permissions and the corresponding retained financial history.
-- [ ] FC-04–07: no blocked workflows or overlapping essential controls at supported mobile and desktop sizes.
+- [ ] FC-04–05: complete the remaining end-to-end workflows and per-page layout acceptance at supported mobile and desktop sizes.
+- [x] FC-06–07: the private calendar, subscription, ICS export and offline schedule controls are independently operable when all panels are expanded. The connected calendar checks cover keyboard focus, both languages and themes, and 390, 768, 1280 and 1920 px.
 - [ ] FC-55–57: existing required GitHub CI/security checks, full persistence/migrations/backup/recovery and actual scoped customer privacy tested.
 - [x] API-01–API-04 sign-in and session boundary: username or email and password login, an eight-character minimum for new passwords and token-based requests against the existing Auth identity. Separate coverage remains for the full operation inventory and contracts.
 - [ ] Activate and prove real authorised transactional email on the intended production target; staging Mailpit does not count as external delivery.
