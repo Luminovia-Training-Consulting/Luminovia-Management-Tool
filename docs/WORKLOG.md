@@ -1,3 +1,9 @@
+# 22 November 2026 — CMS delivery and scanner acceptance
+
+The KVM1 update controller now matches the verified release controller and accepts the explicitly packaged mail relay. The private relay configuration was prepared with its original configuration retained. On the isolated PostgreSQL fixture with the same 18 historical migration hashes, all 242 pending migrations preserved the selected accounts, courses, contracts, invoices, chats and file metadata. The live database was only read during this diagnosis.
+
+The scanner pin update's first native check inherited the expired definitions from its parent and failed during the baseline upload. The accounting and retained-file probes now report only the known gateway reason when a real upload fails. The next exact-main full run checks the refreshed scanner in both the baseline and the candidate.
+
 # 22 November 2026 — Responsive portal and Academy visual checks
 
 The native Chromium sweep used the local Docker application with administrator, lecturer, company and participant sessions. It covered 36 routes and 720 layout measurements at widths from 320 to 1440 CSS pixels across German, English, light and dark. On the baseline, the account menu extended off the left edge, the role-preview choices appeared below the viewport and the People administration page overflowed at 320 px. The same sweep after the fixes found no page-level horizontal overflow or clipped header panels. The mobile application exposes one search and one notification bell, and its header panels dismiss on Escape or when attention moves outside. The shared skip link stays visually hidden until keyboard focus, including when capturing a scrolled page.
