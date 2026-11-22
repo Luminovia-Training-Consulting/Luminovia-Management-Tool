@@ -689,6 +689,8 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
   await page.getByRole("button", {name: "Beispiel-Meeting freigeben"}).click();
   await page.getByText("Materialien", {exact: true}).click();
   await page.getByRole("button", {name: "Beispielmaterial freigeben"}).click();
+  await page.getByRole("heading", {name: "Dateiabgaben", exact: true}).click();
+  await page.getByRole("button", {name: "Beispielabgaben öffnen", exact: true}).click();
   await page.getByText("Einladungen & Einschreibung", {exact: true}).click();
   await page.getByLabel("Fiktive Person").selectOption("Kim Beispiel");
   await page.getByRole("button", {name: "Einladung in der Demo vormerken"}).click();
@@ -705,6 +707,9 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
   await expect(page.getByText("Anwesend", {exact: true})).toBeVisible();
   await expect(page.getByText("Kim Beispiel", {exact: true})).toHaveCount(0);
   await expect(page.getByText("Anwesenheitsliste", {exact: true})).toHaveCount(0);
+  await page.getByRole("button", {name: "Beispieldatei abgeben", exact: true}).click();
+  await expect(page.getByText("Fiktive Kursabgabe von Demo Alex", {exact: true})).toBeVisible();
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
   await page.getByRole("button", {name: "Beispiel-Meeting öffnen"}).click();
   await expect(page.getByRole("status")).toContainText("Kamera und Mikrofon bleiben aus");
   await page.getByLabel("Sprache", {exact: true}).selectOption("en");
@@ -713,8 +718,13 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
 
   await role.selectOption("lecturer");
   await expect(page.getByText("Invitations & enrolment", {exact: true})).toHaveCount(0);
+  await page.getByRole("heading", {name: "File submissions", exact: true}).click();
+  await expect(page.getByText("Fictional course submission by Demo Alex", {exact: true})).toBeVisible();
+  await expect(page.getByRole("button", {name: "Close sample submissions", exact: true})).toHaveCount(0);
   await page.locator(".demo-practice-section > summary").filter({hasText: /^Exam$/}).click();
   await page.getByRole("checkbox", {name: "Exam required"}).uncheck();
   await role.selectOption("participant");
   await expect(page.getByRole("link", {name: "Exam", exact: true})).toHaveCount(0);
+  await page.getByRole("button", {name: "Withdraw sample submission", exact: true}).click();
+  await expect(page.getByText("Fictional course submission by Demo Alex", {exact: true})).toHaveCount(0);
 });

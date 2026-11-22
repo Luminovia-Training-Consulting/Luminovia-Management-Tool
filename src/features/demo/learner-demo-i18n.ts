@@ -28,6 +28,27 @@ const pairs = {
   ],
   shareMaterial: ["Beispielmaterial freigeben", "Share sample material"],
   unshareMaterial: ["Material-Freigabe aufheben", "Remove material access"],
+  submissions: ["Dateiabgaben", "File submissions"],
+  submissionsOpen: [
+    "Beispielabgaben sind geöffnet.",
+    "Sample submissions are open.",
+  ],
+  submissionsClosed: [
+    "Beispielabgaben sind geschlossen.",
+    "Sample submissions are closed.",
+  ],
+  openSubmissions: ["Beispielabgaben öffnen", "Open sample submissions"],
+  closeSubmissions: ["Beispielabgaben schließen", "Close sample submissions"],
+  submitSample: ["Beispieldatei abgeben", "Submit sample file"],
+  withdrawSample: ["Beispielabgabe zurückziehen", "Withdraw sample submission"],
+  submittedSample: [
+    "Fiktive Kursabgabe von Demo Alex",
+    "Fictional course submission by Demo Alex",
+  ],
+  submittedSampleBody: [
+    "Beispielantwort: Mit pwd prüfe ich das aktuelle Verzeichnis.",
+    "Sample answer: I use pwd to check the current directory.",
+  ],
   examRequired: ["Klausur erforderlich", "Exam required"],
   publishExam: ["Beispielklausur freigeben", "Publish sample exam"],
   withdrawExam: ["Klausur-Freigabe aufheben", "Withdraw sample exam"],

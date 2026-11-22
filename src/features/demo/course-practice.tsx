@@ -73,9 +73,20 @@ export function CourseMessages({
   );
 }
 
+export function SampleSubmission() {
+  const { t } = useTranslation("learnerDemo");
+  return (
+    <details className="demo-learner-disclosure">
+      <summary>{t("submittedSample")}</summary>
+      <p>{t("submittedSampleBody")}</p>
+    </details>
+  );
+}
+
 const sections = {
   delivery: CalendarDays,
   materials: BookOpen,
+  submissions: ClipboardList,
   exam: FileCheck2,
   attendance: ClipboardList,
   enrolment: Users,
@@ -200,6 +211,30 @@ export function StaffCoursePractice({
           {t(practice.materials ? "unshareMaterial" : "shareMaterial")}
         </Button>
         {saved("materials")}
+      </PracticeSection>
+      <PracticeSection section="submissions">
+        <p>
+          {t(
+            practice.submissionsOpen ? "submissionsOpen" : "submissionsClosed",
+          )}
+        </p>
+        {canEnrol && (
+          <Button
+            variant="secondary"
+            onClick={() =>
+              change(
+                { submissionsOpen: !practice.submissionsOpen },
+                "submissions",
+              )
+            }
+          >
+            {t(
+              practice.submissionsOpen ? "closeSubmissions" : "openSubmissions",
+            )}
+          </Button>
+        )}
+        {practice.sampleSubmitted && <SampleSubmission />}
+        {saved("submissions")}
       </PracticeSection>
       <PracticeSection section="exam">
         <label className="demo-learner-choice">

@@ -319,6 +319,37 @@ describe("connected fictional workflows", () => {
     expect(screen.getByRole("link", { name: "Klausur" })).toBeVisible();
   });
 
+  it("shares only the fictional submission between appropriate demo roles", () => {
+    open("/demo/courses/linux-basics/workspace?role=client");
+    const role = screen.getByLabelText("Demo-Rolle");
+    fireEvent.click(
+      screen.getByRole("heading", { name: "Dateiabgaben" }).closest("summary")!,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispielabgaben öffnen" }),
+    );
+    fireEvent.change(role, { target: { value: "participant" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispieldatei abgeben" }),
+    );
+    expect(screen.getByText("Fiktive Kursabgabe von Demo Alex")).toBeVisible();
+    fireEvent.change(role, { target: { value: "lecturer" } });
+    fireEvent.click(
+      screen.getByRole("heading", { name: "Dateiabgaben" }).closest("summary")!,
+    );
+    expect(screen.getByText("Fiktive Kursabgabe von Demo Alex")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Beispielabgaben schließen" }),
+    ).toBeNull();
+    fireEvent.change(role, { target: { value: "participant" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beispielabgabe zurückziehen" }),
+    );
+    expect(screen.queryByText("Fiktive Kursabgabe von Demo Alex")).toBeNull();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(network).not.toHaveBeenCalled();
+  });
+
   it("makes a lecturer claim and staff management controls mutually exclusive", () => {
     open("/demo/jobs?role=management");
     expect(screen.getByLabelText("Demo-Rolle")).toHaveValue("management");

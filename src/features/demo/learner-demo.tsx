@@ -10,13 +10,19 @@ import {
   BookOpen,
   CalendarDays,
   FileCheck2,
+  ClipboardList,
   GraduationCap,
   MessagesSquare,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Field } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import { CourseMessages, SampleLesson, SampleMeeting } from "./course-practice";
+import {
+  CourseMessages,
+  SampleLesson,
+  SampleMeeting,
+  SampleSubmission,
+} from "./course-practice";
 import {
   courses,
   demoLearner,
@@ -30,6 +36,7 @@ import "./learner-demo.css";
 const workspaceSections = [
   { id: "course-overview", label: "overview", Icon: CalendarDays },
   { id: "course-materials", label: "materials", Icon: BookOpen },
+  { id: "course-submissions", label: "submissions", Icon: ClipboardList },
   { id: "course-exam", label: "exam", Icon: FileCheck2 },
   { id: "course-chat", label: "chat", Icon: MessagesSquare },
   { id: "course-learning", label: "learning", Icon: GraduationCap },
@@ -169,6 +176,34 @@ export function LearnerDemo({
               <p>{t(course.resourceBody)}</p>
             </details>
             {practice.materials && <SampleLesson />}
+          </>,
+        )}
+        {panel(
+          "course-submissions",
+          <>
+            <p>
+              {t(
+                practice.submissionsOpen
+                  ? "submissionsOpen"
+                  : "submissionsClosed",
+              )}
+            </p>
+            {practice.sampleSubmitted && <SampleSubmission />}
+            {practice.submissionsOpen && course.phase === "upcoming" && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  update((current) => ({
+                    ...current,
+                    sampleSubmitted: !current.sampleSubmitted,
+                  }))
+                }
+              >
+                {t(
+                  practice.sampleSubmitted ? "withdrawSample" : "submitSample",
+                )}
+              </Button>
+            )}
           </>,
         )}
         {examVisible &&
