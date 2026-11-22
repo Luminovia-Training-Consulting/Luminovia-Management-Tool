@@ -45,9 +45,11 @@ for (const edition of [
       nextJob,
       companyRequest,
       requestJob,
+      requestOnlyJob,
+      unlinkedJob,
       chatRoom,
       requestId,
-    ] = Array.from({ length: 19 }, randomUUID);
+    ] = Array.from({ length: 21 }, randomUUID);
     const academy = edition !== "internal";
     const docs = academy
       ? academyCompanyLecturerBlockPaths
@@ -114,6 +116,14 @@ for (const edition of [
       call(who, list, [company, search].map(q).join(","), "GET");
     const setBlock = (who, wanted, version, company = org, target = teacher) =>
       call(who, write, `${q(company)},${q(target)},${wanted},${version}`);
+    const discoverJobs = (filters) =>
+      call(teacher, "job_discovery", q(JSON.stringify({
+        customer: "Fixture Company",
+        currency: "EUR",
+        unit: "per_day",
+        include_history: true,
+        ...filters,
+      })));
     const assertSchema = (name, method, data) =>
       z
         .fromJSONSchema(
@@ -153,14 +163,14 @@ for (const edition of [
       );
     } else {
       const makeJob = (id, run = null) =>
-        `(${q(id)},${run ? q(run) : "null"},'Fixture offer','Fixture Customer','online','published',1,100,100,'EUR','per_day','Test terms')`;
+        `(${q(id)},${run ? q(run) : "null"},'Fixture offer','Fixture Company','online','published',1,100,100,'EUR','per_day','Test terms')`;
       originalClaim = randomUUID();
       await sql(`
         insert into private.company_premium_settings(organisation_id,enabled) values(${q(org)},true),(${q(other)},true);
         insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,capacity,amount,total_amount,currency,rate_unit,terms)
-        values ${[makeJob(job, course), makeJob(nextJob, nextCourse), makeJob(outsideJob, outsideCourse), makeJob(requestJob)].join(",")};
+        values ${[makeJob(job, course), makeJob(nextJob, nextCourse), makeJob(outsideJob, outsideCourse), makeJob(requestJob), makeJob(requestOnlyJob), makeJob(unlinkedJob)].join(",")};
         insert into private.client_course_requests(id,organisation_id,requested_by,client_id,payload,creation_options,job_id)
-          values(${q(companyRequest)},${q(org)},${q(contact)},${q(randomUUID())},'{}','{}',${q(requestJob)});
+          values(${q(companyRequest)},${q(org)},${q(contact)},${q(randomUUID())},'{}','{}',${q(requestOnlyJob)});
         insert into private.job_commission_offers(job_id,organisation_id,gross_amount,gross_total_amount,platform_total_amount,
           lecturer_net_amount,lecturer_net_total_amount,currency,pricing_mode,regular_percent,senior_percent,policy_version)
           values(${q(requestJob)},${q(org)},100,100,0,0,0,'EUR','role_split',50,50,1);
@@ -185,6 +195,18 @@ for (const edition of [
         ).status,
         "quote_unavailable",
       );
+      const sorted = await discoverJobs({ sort: "rate_asc" });
+      const knownUnpricedOffer = sorted.items.find(
+        (item) => item.id === requestJob,
+      );
+      assert.ok(
+        knownUnpricedOffer,
+        "Price sorting retains an authorized offer with no quote",
+      );
+      assert.equal(knownUnpricedOffer.amount, null);
+      assert.equal(knownUnpricedOffer.total_amount, null);
+      const priceBound = await discoverJobs({ sort: "rate_asc", min_rate: 0 });
+      assert.ok(!priceBound.items.some((item) => item.id === requestJob));
     }
     const initial = assertSchema(list, "get", await readBlocks(contact));
     const entry = (blocked, version) => ({
@@ -296,10 +318,17 @@ for (const edition of [
       assert.equal(
         await actor(
           teacher,
-          `select count(*) from public.jobs where id in (${q(job)},${q(nextJob)},${q(requestJob)});`,
+          `select count(*) from public.jobs where id in (${q(job)},${q(nextJob)},${q(requestJob)},${q(requestOnlyJob)});`,
         ),
         "0",
       );
+      for (const sort of ["newest", "rate_asc"]) {
+        const discovery = await discoverJobs({ sort });
+        assert.deepEqual(
+          new Set(discovery.items.map((item) => item.id)),
+          new Set([outsideJob, unlinkedJob]),
+        );
+      }
       assert.equal(
         await actor(
           teacher,

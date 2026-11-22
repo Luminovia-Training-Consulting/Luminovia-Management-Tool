@@ -1,3 +1,9 @@
+# 22 November 2026 — Assignment confirmation and catalogue query performance
+
+The Desktop Chromium run left the five-session publication form pending. A bounded native Docker rehearsal held the company-list refresh open while the database confirmed the published job and all five sessions. The previous form waited for the refresh. The corrected form displayed the confirmed job and its link before the same refresh completed.
+
+The system run reached the database statement timeout on the combined original-currency discovery filter. A local reproduction used the real Auth/REST check with 1,057 fictional offers. The indexed restriction check skips job relationships for an instructor with no active blocks. Monetary discovery uses the existing authorized quote row to check visibility once per candidate and keeps authorized offers with an unknown amount eligible for price sorting. In the same local guest, the combined request went from 3.31 to 2.56 seconds and the timed PostgreSQL candidate plan went from 1.99 to 1.29 seconds. The eight-second authenticated database limit remains in effect.
+
 # 22 November 2026 — Bound local QA memory use
 
 The systemd journal recorded a 21:46 termination of a Chromium application scope after laptop RAM and swap usage both exceeded 90 percent. Local QA processes shared the desktop application scope. The `/tmp` RAM filesystem held nearly 16 GiB, including inactive test image data. Three verified inactive artifacts moved to private disk storage, with links at their original paths.
