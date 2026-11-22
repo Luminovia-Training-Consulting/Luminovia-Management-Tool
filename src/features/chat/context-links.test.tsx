@@ -1,8 +1,12 @@
-/** Verify the Chats-to-Forum link follows the existing permission projection and opens no second store. */
+/** Check communication navigation and legacy links against the existing knowledge permissions. */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import {
+  CommunicationWorkspace,
+  LegacyForumRoute,
+} from "../../app/section-hubs";
 import { ChatPage } from "./chat";
 
 const state = vi.hoisted(() => ({
@@ -61,13 +65,24 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderPage() {
+function ForumLocation() {
+  const { pathname, search, hash } = useLocation();
+  return <h1>{pathname + search + hash}</h1>;
+}
+
+function renderPage(path = "/chats") {
   const client = new QueryClient();
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <ChatPage />
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/chats" element={<CommunicationWorkspace />}>
+            <Route index element={<ChatPage />} />
+            <Route path="forum" element={<ForumLocation />} />
+          </Route>
+          <Route path="/forum" element={<LegacyForumRoute />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -77,15 +92,33 @@ it("shows the canonical forum link only to actors allowed by knowledge_access", 
   state.canAuthor = true;
   state.roles = ["client"];
   renderPage();
-  expect(
-    await screen.findByRole("link", { name: "Forum öffnen" }),
-  ).toHaveAttribute("href", "/forum");
+  expect(await screen.findByRole("link", { name: "Forum" })).toHaveAttribute(
+    "href",
+    "/chats/forum",
+  );
 
   cleanup();
   state.canAuthor = false;
   renderPage();
   await screen.findByRole("heading", { name: "Chats" });
-  expect(
-    screen.queryByRole("link", { name: "Forum öffnen" }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Forum" })).not.toBeInTheDocument();
+});
+
+it("preserves the thread and fragment from a legacy forum link", async () => {
+  state.canAuthor = true;
+  renderPage("/forum?thread=fixture#reply");
+  await screen.findByRole("heading", {
+    name: "/chats/forum?thread=fixture#reply",
+  });
+  expect(screen.getByRole("link", { name: "Forum" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
+it("returns to chats when forum access is unavailable", async () => {
+  state.canAuthor = false;
+  renderPage("/chats/forum?thread=fixture");
+  await screen.findByRole("heading", { name: "Chats" });
+  expect(screen.queryByRole("link", { name: "Forum" })).not.toBeInTheDocument();
 });

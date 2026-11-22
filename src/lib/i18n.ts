@@ -60,6 +60,7 @@ const pairs: Record<string, [string, string]> = {
   ],
   notificationForum: ["Neue Forum-Antwort", "New forum reply"],
   chats: ["Chats", "Chats"],
+  communication: ["Austausch", "Communication"],
   files: ["Dateien", "Files"],
   more: ["Mehr", "More"],
   wiki: ["Wiki", "Wiki"],

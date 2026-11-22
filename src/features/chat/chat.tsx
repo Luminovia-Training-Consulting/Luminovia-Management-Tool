@@ -3,7 +3,7 @@
  * thread lifetime; contacts and membership come from authorized server projections.
  */
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -35,7 +35,6 @@ import {
   PageHeading,
 } from "../../components/common";
 import { chatKeys, chatRoomsQuery } from "./api";
-import { knowledgeAccessQuery } from "../knowledge/api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import { RoomActivity } from "./room-activity";
@@ -60,7 +59,6 @@ export function ChatPage() {
   // The shell owns the profile request; observe its cached zone without initiating another request.
   const profile = useQuery({ ...profileQuery(actor), enabled: false });
   const permissions = useQuery(permissionsQuery(actor));
-  const knowledgeAccess = useQuery(knowledgeAccessQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -215,11 +213,6 @@ export function ChatPage() {
               <Button onClick={() => setGroupOpen(true)} disabled={!online}>
                 <Plus size={17} />
                 {t("newGroup")}
-              </Button>
-            )}
-            {knowledgeAccess.data?.can_author && (
-              <Button asChild variant="secondary">
-                <Link to="/forum">{t("forumLink")}</Link>
               </Button>
             )}
           </div>

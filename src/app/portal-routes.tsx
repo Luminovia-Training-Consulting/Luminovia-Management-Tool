@@ -3,7 +3,12 @@
  * stay outside the protected user-keyed subtree.
  */
 import { lazy } from "react";
-import { SectionHub } from "./section-hubs";
+import {
+  CommunicationForum,
+  CommunicationWorkspace,
+  LegacyForumRoute,
+  SectionHub,
+} from "./section-hubs";
 import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
@@ -267,7 +272,10 @@ export default function PortalRoutes() {
           <Route path="jobs" element={<JobDiscovery />} />
           <Route path="jobs/:id" element={<JobDetailRoute />} />
           <Route path="calendar" element={<CalendarPage />} />
-          <Route path="chats" element={<ChatPage />} />
+          <Route path="chats" element={<CommunicationWorkspace />}>
+            <Route index element={<ChatPage />} />
+            <Route path="forum" element={<CommunicationForum />} />
+          </Route>
           <Route path="search" element={<PortalSearch />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="client" element={<ClientPortalPage />} />
@@ -305,7 +313,7 @@ export default function PortalRoutes() {
           <Route path="changes" element={<ChangeRequestsPage />} />
           <Route path="changes/:id" element={<ChangeRequestsPage />} />
           <Route path="wiki" element={<SectionHub kind="knowledge" />} />
-          <Route path="forum" element={<SectionHub kind="updates" />} />
+          <Route path="forum" element={<LegacyForumRoute />} />
           <Route path="files" element={<FilesPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />

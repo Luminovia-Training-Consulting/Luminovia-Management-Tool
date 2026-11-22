@@ -28,7 +28,6 @@ import {
   Home,
   LogOut,
   Menu,
-  MessageCircle,
   MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -281,7 +280,7 @@ export function Shell() {
             ? [{ to: "/clients", icon: Building2, label: "clients" }]
             : []),
           { to: "/people", icon: Users, label: "staffDirectory" },
-          { to: "/chats", icon: MessagesSquare, label: "chats" },
+          { to: "/chats", icon: MessagesSquare, label: "communication" },
           { to: "/files", icon: FolderOpen, label: "files" },
           ...(teaching || permissions.data?.includes("contracts.read")
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
@@ -309,9 +308,6 @@ export function Shell() {
             ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
             : []),
           { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
-          ...(staff
-            ? [{ to: "/forum", icon: MessageCircle, label: "forum" }]
-            : []),
           { to: "/topics", icon: BookOpen, label: "topics" },
           ...(manage
             ? [{ to: "/admin", icon: Settings2, label: "admin" }]
@@ -328,12 +324,11 @@ export function Shell() {
       { to: "/courses", icon: GraduationCap, label: "coursesManage" },
       { to: "/clients", icon: Building2, label: "clients" },
       { to: "/people", icon: Users, label: "staffDirectory" },
-      { to: "/chats", icon: MessagesSquare, label: "chats" },
+      { to: "/chats", icon: MessagesSquare, label: "communication" },
       { to: "/files", icon: FolderOpen, label: "files" },
       { to: "/contracts", icon: FileCheck2, label: "contracts" },
       { to: "/finance", icon: Wallet, label: "finance" },
       { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
-      { to: "/forum", icon: MessageCircle, label: "forum" },
       { to: "/topics", icon: BookOpen, label: "topics" },
       { to: "/settings", icon: Settings2, label: "settings" },
       { to: "/profile", icon: UserRound, label: "profile" },
@@ -344,7 +339,7 @@ export function Shell() {
       { to: "/calendar", icon: CalendarDays, label: "calendar" },
       analyticsNavItem,
       { to: "/courses", icon: GraduationCap, label: "myCourses" },
-      { to: "/chats", icon: MessagesSquare, label: "chats" },
+      { to: "/chats", icon: MessagesSquare, label: "communication" },
       { to: "/files", icon: FolderOpen, label: "files" },
       { to: "/contracts", icon: FileCheck2, label: "contracts" },
       { to: "/finance", icon: Wallet, label: "finance" },
@@ -360,7 +355,7 @@ export function Shell() {
       { to: "/courses", icon: GraduationCap, label: "clientCourses" },
       { to: "/client", icon: Building2, label: "clientPortal" },
       { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },
-      { to: "/chats", icon: MessagesSquare, label: "chats" },
+      { to: "/chats", icon: MessagesSquare, label: "communication" },
       { to: "/files", icon: FolderOpen, label: "files" },
       { to: "/settings", icon: Settings2, label: "settings" },
       { to: "/profile", icon: UserRound, label: "profile" },

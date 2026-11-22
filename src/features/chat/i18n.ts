@@ -61,7 +61,6 @@ const pairs: Record<string, [string, string]> = {
   ],
   rooms: ["Unterhaltungen", "Conversations"],
   newMessage: ["Neue Nachricht", "New message"],
-  forumLink: ["Forum öffnen", "Open forum"],
   newGroup: ["Gruppe erstellen", "Create group"],
   lecturerLounge: ["Dozierenden-Lounge öffnen", "Open lecturer lounge"],
   lecturerLoungeHint: [

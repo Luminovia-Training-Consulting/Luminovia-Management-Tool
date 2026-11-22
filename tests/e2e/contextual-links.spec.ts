@@ -33,9 +33,9 @@ test("Chats and Knowledge & Help reach the same Forum and outsiders cannot open 
         await login(page, administrator.email);
         await page.goto("/chats");
         await page
-            .getByRole("link", {name: "Forum öffnen", exact: true})
+            .getByRole("link", {name: "Forum", exact: true})
             .click();
-        await expect(page).toHaveURL(/\/forum$/);
+        await expect(page).toHaveURL(/\/chats\/forum$/);
         await expect(
             page.getByRole("heading", {name: "Forum", exact: true}),
         ).toBeVisible();

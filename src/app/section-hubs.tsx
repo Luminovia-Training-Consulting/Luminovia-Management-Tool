@@ -1,6 +1,13 @@
 /** Shared entry points for related workflows, retaining server-scoped module data. */
 import { lazy, Suspense } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import {
+  NavLink,
+  Navigate,
+  Outlet,
+  useLocation,
+  useMatch,
+  useSearchParams,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
@@ -42,16 +49,6 @@ const Support = lazy(() =>
 const Forum = lazy(() =>
   import("../features/knowledge/forum").then((m) => ({ default: m.ForumPage })),
 );
-const Announcements = lazy(() =>
-  import("../features/announcements/announcements").then((m) => ({
-    default: m.AnnouncementsPage,
-  })),
-);
-const Notifications = lazy(() =>
-  import("../features/notifications/notifications").then((m) => ({
-    default: m.NotificationsPage,
-  })),
-);
 const Reviews = lazy(() =>
   import("../features/people/reviews").then((m) => ({
     default: m.MyCourseReviews,
@@ -69,11 +66,6 @@ const sections = {
     ["help", "Hilfe & FAQ", "Help & FAQ", Help],
     ["support", "Support", "Support", Support],
   ],
-  updates: [
-    ["forum", "Forum", "Forum", Forum],
-    ["announcements", "Ankündigungen", "Announcements", Announcements],
-    ["notifications", "Benachrichtigungen", "Notifications", Notifications],
-  ],
 } as const;
 
 export function SectionHub({ kind }: { kind: keyof typeof sections }) {
@@ -83,7 +75,7 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   const roles = useQuery(userRolesQuery(actor));
   const knowledge = useQuery({
     ...knowledgeAccessQuery(actor),
-    enabled: kind === "knowledge" || kind === "updates",
+    enabled: kind === "knowledge",
   });
   const staff = hasJobStaffRole(roles.data);
   const teaching = hasTeachingRole(roles.data);
@@ -148,4 +140,58 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
       </Suspense>
     </>
   );
+}
+
+/** One workspace with stable URLs for rooms and discussion threads. */
+export function CommunicationWorkspace() {
+  const { i18n } = useTranslation();
+  const actor = useAuth().session!.user.id;
+  const knowledge = useQuery(knowledgeAccessQuery(actor));
+  const forum = useMatch("/chats/forum");
+  const de = i18n.language.startsWith("de");
+
+  if (forum && knowledge.isPending) return <Loading />;
+  if (forum && knowledge.isError)
+    return <ErrorState retry={() => void knowledge.refetch()} />;
+  if (forum && !knowledge.data?.can_author)
+    return <Navigate to="/chats" replace />;
+
+  return (
+    <>
+      {knowledge.data?.can_author && (
+        <nav
+          className="admin-tabs"
+          aria-label={de ? "Austausch" : "Communication"}
+        >
+          <NavLink to="/chats" end>
+            Chats
+          </NavLink>
+          <NavLink to="/chats/forum" end>
+            Forum
+          </NavLink>
+        </nav>
+      )}
+      <Outlet />
+    </>
+  );
+}
+
+export function CommunicationForum() {
+  return <Forum />;
+}
+
+export function LegacyForumRoute() {
+  const { search, hash } = useLocation();
+  const params = new URLSearchParams(search);
+  const section = params.get("section");
+  if (section === "announcements" || section === "notifications") {
+    params.delete("section");
+    return (
+      <Navigate
+        to={{ pathname: `/${section}`, search: params.toString(), hash }}
+        replace
+      />
+    );
+  }
+  return <Navigate to={{ pathname: "/chats/forum", search, hash }} replace />;
 }

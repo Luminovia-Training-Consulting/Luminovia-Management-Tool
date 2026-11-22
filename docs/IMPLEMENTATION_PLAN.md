@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Communication workspace
+
+- Keep chats and authorized forum discussion under one main navigation item. Preserve room links and forward older forum links with their selected thread.
+
 ## Standalone Swagger UI
 
 - The edition-specific full OpenAPI catalogue is available in standalone Swagger UI at `/api/swagger`. The existing `/api/docs` route owns authorized interactive requests.

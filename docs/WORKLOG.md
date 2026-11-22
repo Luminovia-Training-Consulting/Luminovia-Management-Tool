@@ -1,3 +1,7 @@
+# 23 November 2026 — Shared chat and forum navigation
+
+The internal sidebar and mobile menu use one Communication entry. Chats and the authorized Forum have adjacent links. Existing room links keep their URL, and old forum URLs retain the thread query and fragment when redirected. The existing knowledge access check gates Forum before it loads. All 28 focused navigation and shell tests passed.
+
 # 23 November 2026 — Company reporting, role preview and public demo
 
 The company portal opens the permitted company analytics view directly. The administrator navigation preview and the public demo use the same bilingual charts, tables and reporting controls with fictional data. Companies see their own sample assignments, teaching hours and customer amounts. The lecturer view shows personal activity and compensation. Management can filter companies or model open work across the fictional portfolio. Participant navigation omits the operational report.
