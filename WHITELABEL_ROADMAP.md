@@ -302,6 +302,8 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Allow each academy administrator to publish or remove local support, privacy, legal notice and terms links. Confirm safe public display before sign-in and edit denial for learners in both editions.
 - [x] Scope dedicated Caddy/Envoy routing to the installed academy domain. Both edition configurations were validated with pinned Caddy and active TLS in isolation. CMS aliases remain in the internal edition.
 - [ ] Confirm the customer's domain and DNS, public TLS and redirects, Auth callback URLs, verified sender and installed PWA cache on the independent target.
+
+A temporary external HTTPS receiver passed the pinned TLS preflight and signature validation for a real course publication from each Academy edition. The receiver and its fictional records were deleted after verification. Both editions also sent one actual fictional enrolment notice through a disposable external SMTP provider. Independent mailbox readback verified the exact message IDs, language and absence of private course data.
 - [x] Provide private SMTP administration for confirmed local administrators with encrypted credentials and exact TLS/STARTTLS connection checks. Verify saved configuration, refusal after role loss and read-only grace in both editions.
 - [x] Render academy issuer, footer, metadata and accent colour on generated completion and attendance PDFs. Confirm exact issued-brand retention and separate current report branding in both dedicated editions.
 - [x] Use neutral account identifier labels in both customer editions across profile, account and learner-management views. Keep the operational label in the CMS edition.

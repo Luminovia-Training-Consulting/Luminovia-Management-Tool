@@ -249,7 +249,6 @@ class RelaySmtpTests(unittest.TestCase):
                 {
                     "status": "running",
                     "protocol": "smtp",
-                    "enabled": True,
                     "host": "smtp.example.com",
                     "port": 465,
                     "security": "implicit_tls",
@@ -276,6 +275,24 @@ class RelaySmtpTests(unittest.TestCase):
                 },
             ),
         )
+
+    def test_claimed_imap_probe_must_remain_current_through_completion(self):
+        claim = {
+            "status": "running",
+            "protocol": "imap",
+            "host": "imap.example.com",
+            "port": 993,
+            "security": "implicit_tls",
+            "username": "mailbox@example.com",
+            "password": "fictional-upstream-secret",
+        }
+        self.relay.check_imap = Mock()
+        self.relay.rpc = Mock(side_effect=[claim, False])
+        self.assertEqual(
+            self.relay.test_connection(TEST_ID),
+            {"status": "failed", "error_code": "configuration_changed"},
+        )
+        self.relay.check_imap.assert_called_once_with(claim)
 
     def test_smtp_connection_check_authenticates_without_mail_commands(self):
         connection = Mock()

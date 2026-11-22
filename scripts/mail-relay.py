@@ -233,9 +233,9 @@ class MailRelay:
             raise RelayFailure("configuration_unavailable") from None
 
     @staticmethod
-    def check_transport(data: Any) -> dict[str, Any]:
+    def check_transport(data: Any, *, require_enabled: bool = True) -> dict[str, Any]:
         """Validate untrusted database JSON again before using host, port, TLS or credentials."""
-        if not isinstance(data, dict) or data.get("enabled") is not True:
+        if not isinstance(data, dict) or (require_enabled and data.get("enabled") is not True):
             raise RelayFailure("configuration_unavailable")
         host = data.get("host")
         username = data.get("username")
@@ -268,7 +268,9 @@ class MailRelay:
             }
         error_code = None
         try:
-            self.check_transport(claim)
+            # The version-bound claim checks enablement before decrypting
+            # credentials. Unlike the delivery response, it has no enabled field.
+            self.check_transport(claim, require_enabled=False)
             if claim.get("protocol") == "smtp":
                 self.check_smtp(claim)
             elif claim.get("protocol") == "imap":
@@ -280,7 +282,7 @@ class MailRelay:
         except (OSError, TimeoutError, socket.timeout):
             error_code = "timeout"
         try:
-            self.rpc(
+            persisted = self.rpc(
                 "complete_mail_connection_test",
                 {
                     "p_test_id": test_id,
@@ -290,6 +292,10 @@ class MailRelay:
             )
         except RelayFailure:
             return {"status": "failed", "error_code": "configuration_unavailable"}
+        if error_code is None and persisted is not True:
+            error_code = (
+                "configuration_changed" if persisted is False else "configuration_unavailable"
+            )
         return {
             "status": "succeeded" if error_code is None else "failed",
             "error_code": error_code,
