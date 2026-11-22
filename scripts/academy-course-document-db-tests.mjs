@@ -311,7 +311,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.course_submissions(${q(run)})`).then(JSON.parse);
     const setSubmissions = (who, enabled) =>
       actor(who, gate("/rpc/set_course_submissions") +
-        `select public.set_course_submissions(${q(run)},${enabled})`).then(JSON.parse);
+        `select to_jsonb(public.set_course_submissions(${q(run)},${enabled}))`).then(JSON.parse);
     const reserveSubmission = (who, bytes = incoming.length) =>
       actor(who, gate("/rpc/reserve_course_submission") +
         `select public.reserve_course_submission(${q(run)},'fictional-lab.txt','text/plain',${bytes},${q(randomUUID())},${q(digest)})`).then(JSON.parse);
