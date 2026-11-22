@@ -396,9 +396,31 @@ const pairs: Record<string, [string, string]> = {
     "Inspect retained course data",
   ],
   premiumRetainedHelp: [
-    "Diese protokollierte Übersicht enthält nur Kursdaten und Zähler, keine privaten Nachrichten oder Notizen.",
-    "This audited overview contains course data and counts, never private messages or notes.",
+    "Diese Übersicht zeigt Kursdaten und Zähler. Der gesonderte Abruf von Anwesenheit und Kurschat wird protokolliert.",
+    "This overview shows course data and counts. Separate attendance and course chat inspections are audited.",
   ],
+  inspectRetainedAttendance: [
+    "Anwesenheit im Archiv ansehen",
+    "Inspect retained attendance",
+  ],
+  retainedAttendanceReason: [
+    "Grund für die Anwesenheitseinsicht",
+    "Reason for inspecting attendance",
+  ],
+  retainedAttendanceEmpty: [
+    "Keine gespeicherten Einträge auf dieser Seite.",
+    "No retained entries on this page.",
+  ],
+  retainedAttendanceArrival: ["Ankunft · {{time}}", "Arrival · {{time}}"],
+  retainedAttendanceDeparture: ["Abgang · {{time}}", "Departure · {{time}}"],
+  retainedAttendanceNext: [
+    "Nächste Anwesenheitseinträge",
+    "Next attendance entries",
+  ],
+  "retainedAttendanceStatus.present": ["Anwesend", "Present"],
+  "retainedAttendanceStatus.absent": ["Abwesend", "Absent"],
+  "retainedAttendanceStatus.excused": ["Entschuldigt", "Excused"],
+  "retainedAttendanceStatus.reported": ["Gemeldet", "Reported"],
   premiumConfirmEnable: ["Premium LMS aktivieren?", "Enable Premium LMS?"],
   premiumConfirmDisable: ["Premium LMS deaktivieren?", "Disable Premium LMS?"],
   premiumConfirmHelp: [

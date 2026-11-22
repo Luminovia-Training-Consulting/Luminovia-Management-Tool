@@ -143,6 +143,8 @@ async function runFixture({
             if (path.endsWith("deploy/hostinger/updates"))
                 return ["package.test.mjs"];
             if (path.endsWith("deploy/hostinger/scanner")) return ["scan.test.mjs"];
+            if (path.endsWith("deploy/hostinger/selfhost"))
+                return ["compose.yml", "course-documents.test.mjs"];
             if (path.endsWith("deploy/hostinger/backups")) return ["crypto.test.mjs"];
             if (path.endsWith("deploy/hostinger/maintenance"))
                 return ["candidate.test.mjs"];
@@ -511,6 +513,16 @@ test("system and browser phases preserve the complete command partition, duplica
     const system = await runFixture({args: ["--phase", "system"]});
     const browser = await runFixture({args: ["--phase", "browser"]});
     for (const result of [system, browser]) assert.ifError(result.error);
+    const selfhostPdfTest = "deploy/hostinger/selfhost/course-documents.test.mjs";
+    for (const result of [all, system]) {
+        const releaseTests = result.calls.find(({args}) => args.includes(selfhostPdfTest));
+        assert.ok(releaseTests);
+        assert.equal(releaseTests.args[0], "--test");
+        assert.equal(releaseTests.env.DOCKER_HOST, "unix:///var/run/docker.sock");
+        assert.equal(releaseTests.cwd, "/owned-qa/scratch");
+        assert(!releaseTests.args.includes("deploy/hostinger/selfhost/compose.yml"));
+    }
+    assert(!contains(browser, selfhostPdfTest));
     const startup = (command) =>
         command[1][0] === "scripts/runtime-cli.mjs" && command[1][1] === "start";
     const bootstrap = (command) =>

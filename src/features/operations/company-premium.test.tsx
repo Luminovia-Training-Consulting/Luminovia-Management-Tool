@@ -144,6 +144,98 @@ function retainedResponse(title: string) {
   };
 }
 
+it("opens the scoped read-only register only after an audit reason and discards it on permission loss", async () => {
+  const retained = retainedResponse("Fictional retained course");
+  const [course] = retained.data.courses;
+  course.attendance_entries = 1;
+  const session = "af85b06a-2eaf-42b3-8fb6-376007fb3eca";
+  const learner = "2468a606-d5ee-4b97-8ad4-f54df3f6a56d";
+  const startsAt = "2026-05-01T10:00:00Z";
+  fake.rpc
+    .mockResolvedValueOnce(retained)
+    .mockResolvedValueOnce({
+      error: null,
+      data: {
+        time_zone: "Europe/Berlin",
+        items: [
+          {
+            session_id: session,
+            user_id: learner,
+            name: "Fictional attendee",
+            starts_at: startsAt,
+            ends_at: "2026-05-01T11:00:00Z",
+            status: "excused",
+            arrival_at: null,
+            departure_at: null,
+            note: "Fictional archived note",
+          },
+        ],
+        next_cursor: {
+          starts_at: startsAt,
+          session_id: session,
+          user_id: learner,
+        },
+      },
+    })
+    .mockResolvedValueOnce({
+      error: null,
+      data: { time_zone: "Europe/Berlin", items: [], next_cursor: null },
+    });
+  const user = userEvent.setup();
+  const mounted = mount(true);
+  await user.click(
+    screen.getByRole("button", { name: "Beibehaltene Kursdaten ansehen" }),
+  );
+  const inspect = await screen.findByRole("button", {
+    name: "Anwesenheit im Archiv ansehen",
+  });
+  expect(inspect).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("Grund für die Anwesenheitseinsicht"),
+    "Fiktionale Prüfung",
+  );
+  await user.click(inspect);
+  expect(await screen.findByText("Fictional attendee")).toBeVisible();
+  expect(screen.getByText("Fictional archived note")).toBeVisible();
+  expect(fake.rpc).toHaveBeenNthCalledWith(
+    2,
+    "inspect_retained_course_attendance",
+    {
+      p_organisation_id: initial.organisation_id,
+      p_run_id: course.run_id,
+      p_reason: "Fiktionale Prüfung",
+      p_after_start: null,
+      p_after_session_id: null,
+      p_after_user_id: null,
+    },
+  );
+  expect(
+    screen.queryByRole("button", { name: "Speichern" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Nächste Anwesenheitseinträge" }),
+  );
+  expect(
+    await screen.findByText("Keine gespeicherten Einträge auf dieser Seite."),
+  ).toBeVisible();
+  expect(fake.rpc).toHaveBeenNthCalledWith(
+    3,
+    "inspect_retained_course_attendance",
+    {
+      p_organisation_id: initial.organisation_id,
+      p_run_id: course.run_id,
+      p_reason: "Fiktionale Prüfung",
+      p_after_start: startsAt,
+      p_after_session_id: session,
+      p_after_user_id: learner,
+    },
+  );
+  mounted.rerender(control(false));
+  expect(
+    screen.queryByText("Keine gespeicherten Einträge auf dieser Seite."),
+  ).not.toBeInTheDocument();
+});
+
 it.each(["permission", "connection"] as const)(
   "discards the open retained summary when %s is lost and audits a new read on reopening",
   async (loss) => {

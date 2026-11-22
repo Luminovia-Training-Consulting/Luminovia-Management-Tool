@@ -159,6 +159,7 @@ import {
   companyPremiumCommandSchema,
   companyPremiumSettingsSchema,
   retainedCompanyLmsSchema,
+  retainedCourseAttendanceSchema,
 } from "../operations/company-premium-schema.ts";
 import {
   companyAssignableCoursesSchema,
@@ -2647,6 +2648,97 @@ const nativePaths = {
       }),
     },
   ),
+  "/rest/v1/rpc/chat_contacts": rpc(
+    "native_chat_contacts",
+    "Chat",
+    "List eligible chat contacts",
+    "Returns the names and role labels of currently eligible contacts for the authenticated portal actor. The caller is excluded. Visibility depends on current staff, course-management or shared-room authority.",
+    {},
+    {
+      type: "array",
+      items: object({
+        id: uuid,
+        display_name: text,
+        roles: { type: "array", items: text },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/chat_rooms_with_manual_unread": rpc(
+    "native_chat_rooms_with_manual_unread",
+    "Chat",
+    "List accessible rooms and personal read indicators",
+    "Returns only rooms the current caller can access, most recent first. The preview is at most 160 characters, excludes personally hidden messages and contains no deleted message body. Manual unread and mute values belong to the caller.",
+    {},
+    {
+      type: "array",
+      items: object({
+        id: uuid,
+        kind: {
+          enum: [
+            "dm",
+            "general",
+            "topic",
+            "lecturer_course",
+            "participant_course",
+          ],
+        },
+        title: text,
+        job_id: nullableUuid,
+        owner_id: nullableUuid,
+        unread_count: version,
+        last_message_at: nullableDateTime,
+        muted: boolean,
+        manual_unread: boolean,
+        last_message_preview: { type: ["string", "null"], maxLength: 160 },
+      }),
+    },
+  ),
+  "/rest/v1/rpc/chat_pinned_rooms": rpc(
+    "native_chat_pinned_rooms",
+    "Chat",
+    "List the caller's pinned rooms in display order",
+    "Returns IDs from the caller's own retained memberships, ordered by personal pin rank. Rooms that are currently inaccessible or whose membership has ended are excluded.",
+    {},
+    { type: "array", items: uuid },
+  ),
+  "/rest/v1/rpc/chat_personal_archives": rpc(
+    "native_chat_personal_archives",
+    "Chat",
+    "List the caller's personally archived chats",
+    "Returns still-accessible direct messages and topic groups archived by the caller. The personal archive never changes the shared room or another member's directory.",
+    {},
+    { type: "array", items: uuid },
+  ),
+  "/rest/v1/rpc/create_dm": rpc(
+    "native_create_dm",
+    "Chat",
+    "Open the direct message room for an eligible contact",
+    "Requires an eligible contact for the current portal actor. Repeated requests and reversed requests by the same pair return the same room ID. Current contact eligibility is checked before opening an existing room.",
+    { p_user_id: uuid },
+    uuid,
+  ),
+  "/rest/v1/rpc/ensure_general_chat": rpc(
+    "native_ensure_general_chat",
+    "Chat",
+    "Join the shared lecturer chat",
+    "Requires a current lecturer or senior lecturer role. Exact and concurrent retries return the same shared room ID and keep one membership per caller.",
+    {},
+    uuid,
+  ),
+  "/rest/v1/rpc/create_chat_group": rpc(
+    "native_create_chat_group",
+    "Chat",
+    "Create a topic group or participant course chat",
+    "A topic group requires a current staff role and eligible staff members. A participant course chat requires course-management authority and a job belonging to a valid course with Premium enabled. An existing participant course chat returns a conflict. Each eligible participant and assigned lecturer is added through current enrolment and assignment checks.",
+    {
+      p_title: { ...text, minLength: 1, maxLength: 160 },
+      p_member_ids: { type: ["array", "null"], maxItems: 100, items: uuid },
+      p_kind: { enum: ["topic", "participant_course"], default: "topic" },
+      p_job_id: nullableUuid,
+    },
+    uuid,
+    ["p_kind", "p_job_id"],
+  ),
   "/rest/v1/rpc/chat_group_settings": rpc(
     "native_chat_group_settings",
     "Chat",
@@ -2659,6 +2751,34 @@ const nativePaths = {
       version: { ...version, minimum: 1 },
     }),
   ),
+  "/rest/v1/rpc/update_chat_group_settings": (() => {
+    const operation = rpc(
+      "native_update_chat_group_settings",
+      "Chat",
+      "Update group information with its current version",
+      "Requires current group access and ownership, or course-management authority for a course room. Read the current settings version first. A stale version returns PostgreSQL code 40001. Read the settings again before retrying a reviewed change.",
+      {
+        p_room_id: uuid,
+        p_title: { ...text, minLength: 1, maxLength: 120 },
+        p_description: { ...text, maxLength: 2000 },
+        p_expected_version: { ...version, minimum: 1 },
+      },
+      { ...version, minimum: 2 },
+    );
+    return {
+      post: {
+        ...operation.post,
+        responses: {
+          ...operation.post.responses,
+          "500": {
+            ...error,
+            description:
+              "Server error, including SQLSTATE 40001 for a stale settings version",
+          },
+        },
+      },
+    };
+  })(),
   "/rest/v1/rpc/chat_mention_candidates": rpc(
     "native_chat_mention_candidates",
     "Chat",
@@ -3647,6 +3767,22 @@ const nativePaths = {
     "Requires the active admin role and records an audit event. Includes counts and resource display metadata for current and archived courses, regardless of the Premium switch. The response contains aggregate activity, never learner identities, attendance notes, message bodies, answer keys or file bytes.",
     organisation,
     z.toJSONSchema(retainedCompanyLmsSchema),
+  ),
+  "/rest/v1/rpc/inspect_retained_course_attendance": rpc(
+    "inspectRetainedCourseAttendance",
+    "Administration",
+    "Inspect recorded attendance for a retained Premium course",
+    "Requires the current explicit internal admin role, a company with Premium switched off and an exact company/course match. Each page audits the inspection purpose. The read returns up to 50 persisted attendance entries in session order. It includes only recorded marks and notes, with no learner email, evidence bytes or write authority. Omit all cursor fields on the first request and send the three returned cursor fields together on the next.",
+    {
+      ...organisation,
+      ...course,
+      p_reason: courseChatAuditReason,
+      p_after_start: nullableDateTime,
+      p_after_session_id: nullableUuid,
+      p_after_user_id: nullableUuid,
+    },
+    z.toJSONSchema(retainedCourseAttendanceSchema),
+    ["p_after_start", "p_after_session_id", "p_after_user_id"],
   ),
   "/rest/v1/rpc/set_company_premium": rpc(
     "setCompanyPremium",

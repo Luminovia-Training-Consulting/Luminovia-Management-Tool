@@ -1,3 +1,13 @@
+# 22 November 2026 — Roadmap source and acceptance audit
+
+The Core, Premium LMS and White Label roadmaps remain active. Source review found concrete open work beyond sales and customer acceptance, including participant course-file submissions, audited retained exam and material downloads, and feature-specific API contract gaps. The separate Website work and independent customer installation remain external acceptance items. The roadmap summaries now identify the current boundaries and evidence.
+
+Administrators can inspect recorded attendance after Premium deactivation, within an exact organisation and course. The archive requires a purpose for each page, records an audit event and returns up to 50 rows. Normal attendance reads and writes stay gated. Native PostgreSQL verified pagination, retained rows, actor and organisation denials and audit details. Component tests cover the exact request, cursor navigation and the permission-loss boundary.
+
+The internal chat OpenAPI now defines the actor-scoped directory, room previews, personal pins and archives, direct and shared room creation, and versioned group settings. Isolated Auth, REST and Realtime verified the documented responses and current access. Academy sample clients now cover scoped invitations, draft inputs and exact draft retry using a current human session. The example tests use the Accounts handler with fictional adapters and validate the draft transport against OpenAPI on loopback.
+
+The source reachability and runtime-export gate found no disconnected application modules or unused runtime exports. Removed the unreferenced role-pricing fixture that was superseded by the canonical replacement acceptance. The system runner now includes the pinned self-host Edge PDF test in its Docker-backed phase. The test rendered a Unicode PDF in the isolated guest using the actual worker image.
+
 # 22 November 2026 — First start from a source ZIP
 
 The first `./portal start` checks the local Docker Engine before installing locked npm dependencies. If the standard socket is unavailable, it attempts to start the system Docker service, permits systemd's terminal authentication, and probes the Engine again. The launcher reports socket access failures, unavailable custom engines and the missing running-kernel module directory with targeted recovery guidance.

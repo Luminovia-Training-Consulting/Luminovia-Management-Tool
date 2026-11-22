@@ -642,6 +642,53 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             );
         },
     );
+
+    await check("Retained attendance reads exact recorded rows while operational access stays closed", async () => {
+        const reason = "Fictional archived register review";
+        const inspection = [companyA, runA, reason];
+        await assert.rejects(rpc(admin, "inspect_retained_course_attendance", inspection), /42501/);
+
+        const version = (await rpc(admin, "company_premium_settings")).find(
+            (setting) => setting.organisation_id === companyA,
+        ).version;
+        await toggle(admin, companyA, false, version);
+        const ids = Array.from({length: 50}, () => randomUUID());
+        await sql(`insert into auth.users(id, email)
+          values ${ids.map((id) => `(${q(id)}, ${q(`${id}@example.invalid`)})`).join(",")};
+          insert into private.course_attendance(session_id,user_id,state,register_status,staff_note)
+          values ${[participant, ...ids].map((id) => `(${q(sessionA)},${q(id)},'absent','excused','Fictional retained note')`).join(",")};
+          insert into private.course_attendance(session_id,user_id,state,staff_note)
+          values (${q(sessionB)},${q(participant)},'attended','Other company note');`);
+
+        for (const who of [owner, manager, lecturer, client, participant])
+            await assert.rejects(rpc(who, "inspect_retained_course_attendance", inspection), /42501/);
+        await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runB, reason]), /42501/);
+        await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runA, "short"]), /22023/);
+        await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [...inspection, "2026-06-01T00:00:00Z", null, null]), /22023/);
+        await assert.rejects(rpc(admin, "course_session_register", [runA, sessionA]), /42501/);
+        await assert.rejects(rpc(admin, "save_course_session_attendance", [
+            runA, sessionA, participant, "present", null, null, "", "Fictional forbidden edit", 1,
+        ]), /42501/);
+
+        const page = await rpc(admin, "inspect_retained_course_attendance", inspection);
+        assertLmsResponse("inspect_retained_course_attendance", page);
+        assert.equal(page.items.length, 50);
+        const next = page.next_cursor;
+        assert.ok(next);
+        const last = await rpc(admin, "inspect_retained_course_attendance", [
+            ...inspection, next.starts_at, next.session_id, next.user_id,
+        ]);
+        assertLmsResponse("inspect_retained_course_attendance", last);
+        assert.equal(last.next_cursor, null);
+        assert.equal(last.items.length, 1);
+        const rows = [...page.items, ...last.items];
+        assert.deepEqual(rows.map((row) => row.user_id).sort(), [participant, ...ids].sort());
+        assert.ok(rows.every((row) => row.session_id === sessionA && row.status === "excused" && row.note === "Fictional retained note"));
+
+        const audit = JSON.parse(await sql(`select jsonb_agg(details order by (details->>'returned_count')::int desc) from public.audit_events
+          where action='course.retained_attendance_inspected' and actor_id=${q(admin)} and resource_id=${q(runA)}`));
+        assert.deepEqual(audit, [50, 1].map((returned_count) => ({organisation_id: companyA, purpose: reason, returned_count})));
+    });
 });
 
 console.log(`PASS: ${checks} isolated company Premium database groups.`);

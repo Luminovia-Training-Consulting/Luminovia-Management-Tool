@@ -12,6 +12,16 @@ once adopted and implemented; older descriptions of current source behaviour rem
 This is the **Luminovia core platform roadmap**, NOT the commercial white-label roadmap. Independent white-label packaging, branding and customer installations are tracked in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md). The owner included both roadmaps in current source work. Customer release remains subject to their acceptance gates. This roadmap **distinguishes source that already exists from requested work and required acceptance**. Never mark a feature complete only because an implementation file, migration or test is present. The existing
 `cms.luminovia.org` Hostinger KVM deployment is documented as development; a successful development release is not a production sign-off.
 
+### Source and acceptance review — 22 November 2026
+
+| Area | Implementation and evidence | Open acceptance or implementation |
+| --- | --- | --- |
+| Core Portal | The reachability and exported-runtime-symbol scan found no disconnected application module or unused runtime export. The isolated suite exercises the connected browser, native HTTP, PostgreSQL and retained-data paths. The pinned Edge Unicode PDF test is now part of its Docker-backed system phase. | Keep verifying the exact release, including the retained-data target and supported device matrix. A successful source scan cannot establish that every product workflow is present. |
+| Premium LMS | The retained-data view provides actual recorded attendance with an explicit audit purpose and a paged read-only archive while Premium is OFF. Learner materials, quizzes, participant chat attachments and exams have separate active-course flows. | A distinct participant course-file submission workflow and audited reads of retained exam and material bytes remain open. Quiz attempts and chat attachments have separate ownership and visibility. |
+| API | The published Chat contracts now specify eligible contacts, room previews, personal pins and archives, direct and group room creation and versioned settings. The Academy examples cover scoped invitations and course authoring. | Complete the remaining feature-specific request, response, error and permission contracts and exact-version integration examples. Inventory parity and a green CI run are separate evidence. |
+
+The owner's deferred warning and sales work is outside this implementation review. The [implementation plan](docs/IMPLEMENTATION_PLAN.md), [work log](docs/WORKLOG.md) and White-Label roadmap retain the outstanding product and target acceptance.
+
 ## 1. Product direction and non-negotiable decisions
 
 ### Current local acceptance

@@ -13,6 +13,7 @@ import {
   type CompanyPremiumSetting,
 } from "./company-premium-schema";
 import { AuditedCourseChat } from "./audited-course-chat";
+import { RetainedCourseAttendancePanel } from "./retained-course-attendance";
 import "./i18n";
 
 /** Keep every role's status readable while only a current admin receives mutation controls. */
@@ -290,6 +291,13 @@ function RetainedCompanySummary({
                     zone={zone ?? "UTC"}
                   />
                 )}
+                {!retained.data?.premium_enabled &&
+                  course.attendance_entries > 0 && (
+                    <RetainedCourseAttendancePanel
+                      organisation={organisation}
+                      course={course.run_id}
+                    />
+                  )}
               </article>
             ))}
           </div>

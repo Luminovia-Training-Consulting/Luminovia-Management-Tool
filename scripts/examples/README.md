@@ -48,6 +48,71 @@ bash scripts/examples/course-index.sh report "$course_id"
 unset LUMINOVIA_INTEGRATION_KEY
 ```
 
+## Academy invitations and course drafts · Academy-Einladungen und Kursentwürfe
+
+The [Academy client](academy-workflows.ts) uses the API base from your installation's OpenAPI document, its public API key and a short-lived access token from the documented human sign-in. Use an authorised staging Academy with active course access. Load the token for the specific actor before each command. Account invitations use an authorised Academy administrator or manager. Learner invitations from a course use a confirmed contact for the course's company. Course drafts use an authorised course manager.
+
+Der [Academy-Client](academy-workflows.ts) nutzt die Serveradresse aus dem OpenAPI-Dokument deiner Installation, den öffentlichen API-Schlüssel und ein kurzlebiges Zugriffstoken aus der dokumentierten Anmeldung. Nutze eine freigegebene Test-Academy mit aktivem Kurszugriff. Lade vor jedem Befehl das Token des passenden Kontos. Kontoeinladungen benötigen eine berechtigte Academy-Administration oder Kursverwaltung. Eine Teilnehmendeneinladung aus einem Kurs benötigt einen bestätigten Unternehmenskontakt des Kurses. Kursentwürfe benötigen die Berechtigung zur Kursverwaltung.
+
+```bash
+export LUMINOVIA_API_BASE_URL='https://academy.example.invalid/backend'
+read -rs LUMINOVIA_PUBLISHABLE_KEY
+read -rs LUMINOVIA_ACCESS_TOKEN
+export LUMINOVIA_PUBLISHABLE_KEY LUMINOVIA_ACCESS_TOKEN
+```
+
+### Invite accounts · Konten einladen
+
+Use fictional accounts and replace the example IDs with approved staging values. An administrator can invite a lecturer without an organisation. A company contact supplies the ID of their own course. The company invitation returns only `requested`. It does not confirm mail delivery or enrol anyone. Keep the same idempotency key and request when retrying either command.
+
+Verwende fiktive Konten und ersetze die Beispiel-IDs durch freigegebene Testwerte. Eine Academy-Administration kann Lehrkräfte ohne Organisationszuordnung einladen. Ein Unternehmenskontakt übergibt die ID eines eigenen Kurses. Die Unternehmenseinladung meldet nur `requested`. Sie bestätigt weder den Mailversand noch eine Einschreibung. Verwende bei einer Wiederholung denselben Schlüssel und dieselben Eingaben.
+
+```bash
+node --experimental-strip-types scripts/examples/academy-workflows.ts invite-account <<'JSON'
+{"idempotency_key":"a1111111-1111-4111-8111-111111111111","display_name":"Fictional Teacher","email":"teacher@example.invalid","mode":"invite","role":"lecturer","organisation_id":null}
+JSON
+
+# Load the company contact's access token before the next command.
+read -rs LUMINOVIA_ACCESS_TOKEN
+node --experimental-strip-types scripts/examples/academy-workflows.ts invite-learner <<'JSON'
+{"idempotency_key":"a2222222-2222-4222-8222-222222222222","display_name":"Fictional Learner","email":"learner@example.invalid","course_id":"a3333333-3333-4333-8333-333333333333"}
+JSON
+```
+
+### Author a course draft · Kursentwurf erstellen
+
+Find the organisation and template first. Use their returned IDs in the next request, or send a new template title with `p_template_id` set to `null`. Supply a time zone and offset-aware session timestamps. Creation returns the draft and template IDs without publication. Retain the request ID for an identical retry.
+
+Suche zuerst die Organisation und die Vorlage. Verwende ihre IDs im nächsten Aufruf oder übergib einen neuen Vorlagentitel mit `p_template_id` gleich `null`. Gib eine Zeitzone und Terminzeiten mit UTC-Versatz an. Der Aufruf liefert Entwurfs- und Vorlagen-ID ohne Veröffentlichung. Behalte die Anfrage-ID für eine identische Wiederholung.
+
+```bash
+# Load the course manager's access token before these commands.
+read -rs LUMINOVIA_ACCESS_TOKEN
+node --experimental-strip-types scripts/examples/academy-workflows.ts draft-options <<'JSON'
+{"p_organisation_query":"Training","p_template_query":"Intro"}
+JSON
+
+node --experimental-strip-types scripts/examples/academy-workflows.ts create-draft <<'JSON'
+{
+  "p_request_id": "a4444444-4444-4444-8444-444444444444",
+  "p_organisation_id": "a5555555-5555-4555-8555-555555555555",
+  "p_template_id": "a6666666-6666-4666-8666-666666666666",
+  "p_template_title": null,
+  "p_payload": {
+    "time_zone": "Europe/Berlin",
+    "delivery_type": "online",
+    "venue": "",
+    "sessions": [{"starts_at":"2030-05-06T10:00:00+02:00","ends_at":"2030-05-06T12:00:00+02:00"}]
+  }
+}
+JSON
+unset LUMINOVIA_ACCESS_TOKEN LUMINOVIA_PUBLISHABLE_KEY
+```
+
+Run `node --test scripts/runtime-academy-workflow-examples.test.mjs` to check the client against the real Accounts request handler and an OpenAPI-validated draft fixture on loopback. The [Academy course creation database suite](../academy-course-creation-db-tests.mjs) checks the actual draft transaction and current-role boundary.
+
+`node --test scripts/runtime-academy-workflow-examples.test.mjs` prüft den Client am echten Accounts-Handler und an einer lokalen Entwurfs-Fixture mit den OpenAPI-Schemas. Der [Datenbanktest für Academy-Kursentwürfe](../academy-course-creation-db-tests.mjs) prüft die echte Transaktion und die serverseitige Rollenprüfung.
+
 ## Local verification · Lokale Prüfung
 
 ```bash

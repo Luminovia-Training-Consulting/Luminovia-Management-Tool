@@ -395,6 +395,9 @@ try {
                 ...readdirSync(join(hosting, "scanner"))
                     .filter((name) => name.endsWith(".test.mjs"))
                     .map((name) => `deploy/hostinger/scanner/${name}`),
+                ...readdirSync(join(hosting, "selfhost"))
+                    .filter((name) => name.endsWith(".test.mjs"))
+                    .map((name) => `deploy/hostinger/selfhost/${name}`),
                 ...(existsSync(join(hosting, "backups"))
                     ? readdirSync(join(hosting, "backups"))
                         .filter((name) => name.endsWith(".test.mjs"))

@@ -5,7 +5,7 @@ import {withApiFixture} from "./testing/api.mjs";
 import {quoteSql as q} from "./testing/database.mjs";
 import {eventually, subscribeToRoom} from "./testing/realtime.mjs";
 import {setTimeout as delay} from "node:timers/promises";
-import {portalJsonResponse} from "./testing/openapi-contract.mjs";
+import {documentedRpc, portalJsonResponse} from "./testing/openapi-contract.mjs";
 
 await withApiFixture(
     async ({actor, passwordOnly, checked, service, sql, defer, url}) => {
@@ -557,6 +557,20 @@ await withApiFixture(
         assert.equal((await send(teacher, room, "Fictional denied message")).error?.code, "42501");
         assert.equal((await download(learner, "resource", resource)).status, 403);
         assert.equal((await download(learner, "course_chat_attachment", message, chatVersion)).status, 403);
+        const inspection = {
+            p_organisation_id: org,
+            p_run_id: run,
+            p_reason: "Review the retained fictional mark after deactivation",
+        };
+        const retainedAttendance = await documentedRpc(admin.client, "inspect_retained_course_attendance", inspection);
+        assert.equal(retainedAttendance.time_zone, "Europe/Berlin");
+        assert.equal(retainedAttendance.next_cursor, null);
+        assert.equal(retainedAttendance.items.length, 1);
+        assert.equal(retainedAttendance.items[0].session_id, session);
+        assert.equal(retainedAttendance.items[0].user_id, learner.id);
+        assert.equal(retainedAttendance.items[0].status, "present");
+        await documentedRpc(teacher.client, "inspect_retained_course_attendance", inspection, 403, "42501");
+        await documentedRpc(admin.client, "inspect_retained_course_attendance", {...inspection, p_run_id: otherRun}, 403, "42501");
 
         // Test the existing subscription's per-event check independently of the disabled posting API.
         const blockedRevision = await sql(`update public.course_chat_activity
@@ -570,6 +584,7 @@ await withApiFixture(
         assert.deepEqual(teacherEvents, [firstActivity]);
 
         await setPremium(org, true, 2);
+        await documentedRpc(admin.client, "inspect_retained_course_attendance", inspection, 403, "42501");
         assert.ok((await checked(history(room))).some((entry) => entry.id === message));
         const restoredFile = await download(learner, "course_chat_attachment", message, chatVersion);
         assert.equal(restoredFile.status, 200);

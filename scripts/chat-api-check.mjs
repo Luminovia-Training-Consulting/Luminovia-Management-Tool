@@ -7,6 +7,7 @@ import {randomUUID} from "node:crypto";
 import {setTimeout as delay} from "node:timers/promises";
 import {createClient} from "@supabase/supabase-js";
 import { eventually, subscribeToRoom } from "./testing/realtime.mjs";
+import {documentedRpc} from "./testing/openapi-contract.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -23,6 +24,7 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const clients = [],
     users = [],
     rooms = [];
+let generalRoom;
 const suffix = randomUUID();
 
 /** Requires actual SDK success before returning the response data. */
@@ -74,10 +76,7 @@ try {
         outsider = await fixture("outsider", "lecturer"),
         admin = await fixture("admin", "admin"),
         participant = await fixture("participant", "participant");
-    const contacts = await checked(
-        a.client.rpc("chat_contacts"),
-        "Names-only staff directory",
-    );
+    const contacts = await documentedRpc(a.client, "chat_contacts");
     assert.ok(contacts.some((p) => p.id === b.id));
     assert.ok(!contacts.some((p) => p.id === participant.id));
     assert.ok(
@@ -86,11 +85,8 @@ try {
         ),
     );
     const dms = await Promise.all([
-        checked(a.client.rpc("create_dm", {p_user_id: b.id}), "First DM"),
-        checked(
-            b.client.rpc("create_dm", {p_user_id: a.id}),
-            "Concurrent reverse DM",
-        ),
+        documentedRpc(a.client, "create_dm", {p_user_id: b.id}),
+        documentedRpc(b.client, "create_dm", {p_user_id: a.id}),
     ]);
     assert.equal(dms[0], dms[1]);
     rooms.push(dms[0]);
@@ -113,6 +109,22 @@ try {
     );
     const dm = dms[0],
         key = randomUUID();
+    const memberRooms = await documentedRpc(a.client, "chat_rooms_with_manual_unread");
+    const outsiderRooms = await documentedRpc(outsider.client, "chat_rooms_with_manual_unread");
+    assert.ok(memberRooms.some((room) => room.id === dm && room.kind === "dm"));
+    assert.ok(!outsiderRooms.some((room) => room.id === dm));
+    await checked(
+        a.client.rpc("set_chat_pin", {p_room_id: dm, p_pinned: true}),
+        "Pin the caller's room",
+    );
+    await checked(
+        a.client.rpc("set_chat_personal_archive", {p_room_id: dm, p_archived: true}),
+        "Archive the caller's room",
+    );
+    assert.deepEqual(await documentedRpc(a.client, "chat_pinned_rooms"), [dm]);
+    assert.deepEqual(await documentedRpc(a.client, "chat_personal_archives"), [dm]);
+    assert.deepEqual(await documentedRpc(b.client, "chat_pinned_rooms"), []);
+    assert.deepEqual(await documentedRpc(b.client, "chat_personal_archives"), []);
     const message = await checked(
         a.client.rpc("send_message", {
             p_room_id: dm,
@@ -196,7 +208,9 @@ try {
         ).error?.code,
         "42501",
     );
-    assert.ok((await participant.client.rpc("ensure_general_chat")).error);
+    await documentedRpc(participant.client, "ensure_general_chat", {}, 403, "42501");
+    generalRoom = await documentedRpc(a.client, "ensure_general_chat");
+    assert.equal(await documentedRpc(a.client, "ensure_general_chat"), generalRoom);
     assert.ok(
         (
             await a.client
@@ -246,13 +260,10 @@ try {
         ).length,
         0,
     );
-    const group = await checked(
-        a.client.rpc("create_chat_group", {
-            p_title: "Fictional Realtime test group",
-            p_member_ids: [b.id],
-        }),
-        "Create actual topic group",
-    );
+    const group = await documentedRpc(a.client, "create_chat_group", {
+        p_title: "Fictional Realtime test group",
+        p_member_ids: [b.id],
+    });
     rooms.push(group);
     assert.deepEqual(
         new Set(
@@ -264,6 +275,20 @@ try {
             ).map((m) => m.user_id),
         ),
         new Set([a.id, b.id]),
+    );
+    const {version} = await documentedRpc(b.client, "chat_group_settings", {p_room_id: group});
+    const settings = {
+        p_room_id: group,
+        p_title: "Fictional group with updated settings",
+        p_description: "Visible only to current members.",
+        p_expected_version: version,
+    };
+    await documentedRpc(b.client, "update_chat_group_settings", settings, 403, "42501");
+    assert.equal(await documentedRpc(a.client, "update_chat_group_settings", settings), version + 1);
+    await documentedRpc(a.client, "update_chat_group_settings", settings, 500, "40001");
+    assert.deepEqual(
+        await documentedRpc(b.client, "chat_group_settings", {p_room_id: group}),
+        {title: settings.p_title, description: settings.p_description, version: version + 1},
     );
     const ownerEvents = [],
         memberEvents = [],
@@ -409,6 +434,14 @@ try {
     );
 } finally {
     for (const client of clients) await client.removeAllChannels();
+    if (generalRoom)
+        await checked(
+            service.from("chat_members")
+                .delete()
+                .eq("room_id", generalRoom)
+                .in("user_id", users),
+            "Remove only this fixture's lecturer-room memberships",
+        );
     if (rooms.length) {
         const messages = await checked(
             service.from("messages").select("id").in("room_id", rooms),
