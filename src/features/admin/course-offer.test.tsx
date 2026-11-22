@@ -134,10 +134,13 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
   const total = screen.getByLabelText("Voller Auftragspreis gesamt");
   await user.clear(total);
   await user.type(total, "1000");
-  const refresh = Promise.withResolvers<void>();
+  let finishRefresh!: () => void;
+  const refresh = new Promise<void>((resolve) => {
+    finishRefresh = resolve;
+  });
   const invalidation = vi
     .spyOn(cache, "invalidateQueries")
-    .mockReturnValue(refresh.promise);
+    .mockReturnValue(refresh);
   try {
     await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
     expect(await screen.findByText("Auftrag gespeichert.")).toBeVisible();
@@ -151,7 +154,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
     expect(invalidation).toHaveBeenCalledWith({ queryKey: ["job-board"] });
   } finally {
     invalidation.mockRestore();
-    refresh.resolve();
+    finishRefresh();
   }
   const calls = mock.rpc.mock.calls.filter(
     ([name]) => name === "create_course_run_job",
