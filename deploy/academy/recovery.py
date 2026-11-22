@@ -332,34 +332,42 @@ def bundle_metadata(expected, edition, images, volumes):
             "images": images, "volumes": list(volumes)}
 
 
-def pack(root, output, recipient, metadata, volumes, optional_inputs):
+@contextmanager
+def encrypt_archive(output, recipient, encryption_error):
+    """Finish and sync an encrypted stream without masking a rejected archive."""
     with output.open("xb") as destination:
         os.fchmod(destination.fileno(), 0o600)
         with subprocess.Popen(["age", "-r", recipient], env=COMMAND_ENV,
                               stdin=subprocess.PIPE, stdout=destination,
                               stderr=subprocess.DEVNULL) as age:
             try:
-                with tarfile.open(fileobj=age.stdin, mode="w|gz", dereference=False) as archive:
-                    payload = json.dumps(metadata, sort_keys=True).encode("utf-8")
-                    member = tarfile.TarInfo("metadata.json")
-                    member.size, member.mode = len(payload), 0o600
-                    archive.addfile(member, io.BytesIO(payload))
-                    for name in (*RUNTIME_FILES, *optional_inputs, *RUNTIME_DIRS):
-                        archive.add(root / name, "runtime/" + name, filter=allowed_tar_type)
-                    for name, path in volumes.items():
-                        archive.add(path, "volumes/" + name, filter=allowed_tar_type)
+                yield age.stdin
                 age.stdin.close()
             except BaseException:
-                age.kill()
+                if age.poll() is None:
+                    age.kill()
                 # Closing the buffered pipe after stopping age can raise again.
                 # Preserve the archive validation error that caused the abort.
                 with suppress(BrokenPipeError):
                     age.stdin.close()
                 raise
             if age.wait() != 0:
-                fail("recovery encryption failed")
+                fail(encryption_error)
         destination.flush()
         os.fsync(destination.fileno())
+
+
+def pack(root, output, recipient, metadata, volumes, optional_inputs):
+    with encrypt_archive(output, recipient, "recovery encryption failed") as encrypted:
+        with tarfile.open(fileobj=encrypted, mode="w|gz", dereference=False) as archive:
+            payload = json.dumps(metadata, sort_keys=True).encode("utf-8")
+            member = tarfile.TarInfo("metadata.json")
+            member.size, member.mode = len(payload), 0o600
+            archive.addfile(member, io.BytesIO(payload))
+            for name in (*RUNTIME_FILES, *optional_inputs, *RUNTIME_DIRS):
+                archive.add(root / name, "runtime/" + name, filter=allowed_tar_type)
+            for name, path in volumes.items():
+                archive.add(path, "volumes/" + name, filter=allowed_tar_type)
 
 
 def validate_metadata(metadata, expected):

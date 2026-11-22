@@ -191,28 +191,13 @@ def write_file(archive, source, file):
 
 
 def pack(output, expected, edition, recipient, docker, containers):
-    with output.open("xb") as destination:
-        os.fchmod(destination.fileno(), 0o600)
-        with subprocess.Popen(
-            ["age", "-r", recipient], stdin=subprocess.PIPE, stdout=destination,
-            stderr=subprocess.DEVNULL, env=recovery.COMMAND_ENV,
-        ) as age:
-            try:
-                with ZipFile(age.stdin, "w", compression=ZIP_DEFLATED) as archive:
-                    with docker.database(containers["db"]) as source:
-                        files = list(write_snapshot(archive, source, expected, edition))
-                    for file, name in files:
-                        with docker.file(containers["storage"], name) as stream:
-                            write_file(archive, stream, file)
-                age.stdin.close()
-                if age.wait() != 0:
-                    recovery.fail("data export encryption failed")
-            except BaseException:
-                if age.poll() is None:
-                    age.kill()
-                raise
-        destination.flush()
-        os.fsync(destination.fileno())
+    with recovery.encrypt_archive(output, recipient, "data export encryption failed") as encrypted:
+        with ZipFile(encrypted, "w", compression=ZIP_DEFLATED) as archive:
+            with docker.database(containers["db"]) as source:
+                files = list(write_snapshot(archive, source, expected, edition))
+            for file, name in files:
+                with docker.file(containers["storage"], name) as stream:
+                    write_file(archive, stream, file)
 
 
 def export(root, expected, recipient, docker):

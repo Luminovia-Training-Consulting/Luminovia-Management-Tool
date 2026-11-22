@@ -238,8 +238,15 @@ class RecoveryRoundTrip(unittest.TestCase):
             recovery.backup(self.root, self.expected, self.recipient, self.docker)
         pid.unlink()
         (self.root / "data/storage/unsafe").symlink_to(self.scratch)
-        with self.assertRaisesRegex(recovery.RecoveryError, "linked"):
-            recovery.backup(self.root, self.expected, self.recipient, self.docker)
+        kill = subprocess.Popen.kill
+
+        def stop_reader_before_pipe_close(process):
+            kill(process)
+            process.wait(timeout=5)
+
+        with patch.object(subprocess.Popen, "kill", stop_reader_before_pipe_close):
+            with self.assertRaisesRegex(recovery.RecoveryError, "linked"):
+                recovery.backup(self.root, self.expected, self.recipient, self.docker)
         self.assertFalse(list((self.root / "backups").glob("recovery-*")))
 
     def test_an_authenticated_but_unsafe_archive_cannot_escape_private_extraction(self):
@@ -329,6 +336,7 @@ class RecoveryArchiveTypes(unittest.TestCase):
                                    side_effect=recovery.RecoveryError("forbidden archive member"))):
                     process = spawn.return_value
                     process.__enter__.return_value = process
+                    process.poll.return_value = None
                     process.__exit__.side_effect = lambda *_: pipe.close()
                     process.stdin = pipe
                     with self.assertRaisesRegex(recovery.RecoveryError, "forbidden archive member"):

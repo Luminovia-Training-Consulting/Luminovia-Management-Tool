@@ -2,7 +2,7 @@
 
 A real self-hosted Academy stopped its disposable Docker services, created an age-encrypted archive with PostgreSQL, Storage and the persistent Caddy volumes, then restarted. The operator verified the archive digest and freshness on the live health report. Login, manifest and edition isolation passed again. The first attempt had rejected Caddy's normal sticky directories. The updated archive policy allows those two exact Caddy directories, keeps setuid, setgid and all special or linked members rejected, and passed checks against all members of the real archive. The recovery suite passed 12 tests with real age and PostgreSQL, including restoration into a new target.
 
-GitHub's Python 3.14 runner surfaced an abort race in encryption cleanup. When the archive validator rejected a file, closing the aborted encryptor's buffered pipe could replace the original policy error with `BrokenPipeError`. The writer now closes the pipe explicitly during abort and preserves the original failure. A deterministic broken-pipe regression and the real-age recovery tests cover this case.
+GitHub’s Python 3.14 runner exposed a cleanup race after archive validation rejects a file. Closing the aborted encryptor’s buffered input could replace the policy error with `BrokenPipeError`. The backup and customer export writers now share the cleanup. The regression verifies both a closed pipe and an actually stopped encryptor, including the original rejection and the absence of a published archive.
 
 # 22 November 2026 — Premium lifecycle and reconnect
 
