@@ -22,6 +22,7 @@
 # package stays byte-exact and readable through the package query.
 (academy_pwa_asset) {
 	route {
+		vars academy_pwa_static_fallback true
 		header >Cache-Control "no-cache, no-store, must-revalidate"
 		@academyPwaMaintenance file {
 			root /srv
@@ -68,6 +69,19 @@
 
 {$PORTAL_DOMAIN} {
 	encode zstd gzip
+	handle_errors 5xx {
+		@academyPwaFallback vars academy_pwa_static_fallback true
+		route @academyPwaFallback {
+			header {
+				Cache-Control "no-cache, no-store, must-revalidate"
+				X-Content-Type-Options nosniff
+			}
+			file_server {
+				root /srv/current
+				status 200
+			}
+		}
+	}
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY

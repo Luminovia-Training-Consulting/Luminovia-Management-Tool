@@ -419,6 +419,18 @@ try {
   } finally {
     await rm(marker);
   }
+  envoy.kill();
+  await envoyExited;
+  for (const [path, expected] of [
+    ["/manifest.webmanifest", staticManifest],
+    ["/icons/apple-touch-icon.png", staticApple],
+  ]) {
+    const { bytes, headers } = await request(path, 200);
+    assert.deepEqual(bytes, expected);
+    assert.match(headers["cache-control"], /no-store/);
+    assert.equal(headers["x-content-type-options"], "nosniff");
+  }
+  await request(restProbe, 502);
   console.log(
     `Verified ${files.length} staged files, dedicated API routes and the ${allowance}-request burst allowance through local TLS.`,
   );
