@@ -111,6 +111,14 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
         assert.equal(await actor(who, `select count(*) from public.documents where id=${q(draft.document_id)}`), "0");
         assert.equal(await actor(who, `select count(*) from public.document_versions where id=${q(draft.version_id)}`), "0");
     }
+    await assert.rejects(rpc(teacher, "deletion_preview", "document", draft.document_id), denied);
+    const documentDeletion = await rpc(learner, "deletion_preview", "document", draft.document_id);
+    assert.equal(documentDeletion.counts["private.course_submissions"], 1);
+    assert.equal(documentDeletion.can_confirm, true);
+    const courseDeletion = await rpc(admin, "deletion_preview", "course_run", run);
+    assert.equal(courseDeletion.counts["private.course_submission_settings"], 1);
+    assert.ok(courseDeletion.blockers.some(({kind}) => kind === "private.course_submissions"));
+    assert.equal(courseDeletion.can_confirm, false);
     console.log("PASS immutable scanned versions, idempotency, exact scope, RLS isolation and audited staff access");
 
     const inFlight = await reserve(learner, randomUUID());
