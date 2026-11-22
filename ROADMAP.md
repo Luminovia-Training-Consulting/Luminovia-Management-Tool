@@ -161,7 +161,8 @@ The current owner priority is to complete the independent LMS before the install
 - [x] **LMS-03:** default-OFF, organisation-scoped Premium with admin-only audited version checks. Desktop and mobile Chromium verify the two explicit confirmations and refusal for management.
 - [x] **LMS-04:** company-scoped participant directory, invitation, User ID linking and enrolment/removal. Current tests exercise the account, membership and course transactions.
 - [x] Verify in desktop and mobile Chromium that OFF hides the course, still denies the old exact download and leaves the other company’s course and chat open for the same learner. While a reconnect request is pending, the learner sees no cached course content. Native SQL also tests in-app notices and an already claimed mail delivery.
-- [ ] Verify the active Realtime connection across Premium changes and cover the live provider delivery matrix.
+- [x] Verify existing Realtime subscriptions across Premium changes. The same learner socket receives company B updates while A is OFF. Reactivating A restores access and exact attachment bytes. The earlier forbidden marker is never delivered.
+- [ ] Cover the live provider delivery matrix.
 
 ### R4 — Premium LMS course experience and collaboration (`P1`, after R3)
 

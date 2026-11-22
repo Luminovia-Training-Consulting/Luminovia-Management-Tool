@@ -316,7 +316,13 @@ def operator_lock(parent, name):
 
 
 def allowed_tar_type(member):
-    if not (member.isreg() or member.isdir()) or member.mode & 0o7000:
+    # Caddy uses sticky directories in both persistent volumes. Preserve that
+    # restriction while continuing to reject setuid/setgid and special files.
+    caddy_directory = member.isdir() and member.name in (
+        "volumes/caddy_data/caddy", "volumes/caddy_config/caddy",
+    )
+    forbidden_mode = 0o6000 if caddy_directory else 0o7000
+    if not (member.isreg() or member.isdir()) or member.mode & forbidden_mode:
         fail("recovery set contains a special, linked or privileged file")
     return member
 

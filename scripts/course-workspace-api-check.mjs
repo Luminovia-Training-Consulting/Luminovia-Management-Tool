@@ -27,14 +27,20 @@ await withApiFixture(
             session = randomUUID(),
             job = randomUUID(),
             claim = randomUUID(),
-            contact = randomUUID();
-        let room;
+            contact = randomUUID(),
+            otherOrg = randomUUID(),
+            otherRun = randomUUID(),
+            otherJob = randomUUID();
+        const organisations = [org, otherOrg].map(q).join(",");
+        const runs = [run, otherRun].map(q).join(",");
+        let room, otherRoom;
         const users = [admin.id, teacher.id, learner.id, peer.id, client.id];
         defer(async () => {
-            if (room) {
+            const rooms = [room, otherRoom].filter(Boolean).map(q).join(",");
+            if (rooms) {
                 await sql(
-                    `delete from public.messages where room_id = ${q(room)};
-                     delete from public.chat_members where room_id = ${q(room)};`,
+                    `delete from public.messages where room_id in (${rooms});
+                     delete from public.chat_members where room_id in (${rooms});`,
                 );
             }
             await sql(`delete from private.course_resources where run_id = ${q(run)};`);
@@ -65,17 +71,17 @@ await withApiFixture(
                 );
                 await checked(service.from("documents").delete().eq("id", document.id));
             }
-            if (room) await sql(`delete from public.chat_rooms where id = ${q(room)};`);
+            if (rooms) await sql(`delete from public.chat_rooms where id in (${rooms});`);
             await sql(
                 `delete
            from private.company_premium_commands
-           where organisation_id = ${q(org)};
+           where organisation_id in (${organisations});
           delete
           from private.company_premium_settings
-          where organisation_id = ${q(org)};
+          where organisation_id in (${organisations});
           delete
           from private.company_premium_audit
-          where organisation_id = ${q(org)};
+          where organisation_id in (${organisations});
           delete
           from private.course_completion_records
           where run_id = ${q(run)};
@@ -96,7 +102,7 @@ await withApiFixture(
           where session_id = ${q(session)};
           delete
           from public.course_enrolments
-          where course_run_id = ${q(run)};
+          where course_run_id in (${runs});
           delete
           from public.notifications
           where user_id in (${users.map(q).join(",")});
@@ -105,13 +111,13 @@ await withApiFixture(
           where id = ${q(claim)};
           delete
           from public.jobs
-          where id = ${q(job)};
+          where id in (${q(job)}, ${q(otherJob)});
           delete
           from public.course_sessions
           where course_run_id = ${q(run)};
           delete
           from public.course_runs
-          where id = ${q(run)};
+          where id in (${runs});
           delete
           from public.course_templates
           where id = ${q(template)};
@@ -123,7 +129,7 @@ await withApiFixture(
           where organisation_id = ${q(org)};
           delete
           from public.organisations
-          where id = ${q(org)};`,
+          where id in (${organisations});`,
             );
         });
         await sql(
@@ -142,14 +148,16 @@ await withApiFixture(
             insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
             values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms', 1);`,
         );
-        await checked(
-            admin.client.rpc("set_company_premium", {
-                p_organisation_id: org,
-                p_enabled: true,
-                p_expected_version: 0,
+        const setPremium = async (organisation, enabled, version) => {
+            const result = await checked(admin.client.rpc("set_company_premium", {
+                p_organisation_id: organisation,
+                p_enabled: enabled,
+                p_expected_version: version,
                 p_request_id: randomUUID(),
-            }),
-        );
+            }));
+            assert.deepEqual(result, {status: "updated", enabled, version: version + 1});
+        };
+        await setPremium(org, true, 0);
         await checked(
             admin.client.rpc("manage_client_organisation", {
                 p_user_id: client.id,
@@ -165,28 +173,22 @@ await withApiFixture(
                 .single(),
             {requireData: true},
         );
-        await checked(
-            client.client.rpc("request_company_participant_link", {
-                p_organisation_id: org,
+        const acceptCompanyLink = async (requester, organisation) => {
+            await checked(requester.client.rpc("request_company_participant_link", {
+                p_organisation_id: organisation,
                 p_luminovia_user_id: learnerReference.luminovia_user_id,
                 p_request_id: randomUUID(),
-            }),
-        );
-        const pendingMemberships = await checked(
-            learner.client.rpc("my_company_participant_invitations"),
-            {requireData: true},
-        );
-        const companyInvitation = pendingMemberships.find(
-            (invitation) => invitation.organisation_id === org,
-        );
-        assert.ok(companyInvitation);
-        await checked(
-            learner.client.rpc("accept_company_participant_invitation", {
-                p_organisation_id: org,
-                p_expected_version: companyInvitation.version,
+            }));
+            const invitations = await checked(learner.client.rpc("my_company_participant_invitations"));
+            const invitation = invitations.find((entry) => entry.organisation_id === organisation);
+            assert.ok(invitation);
+            await checked(learner.client.rpc("accept_company_participant_invitation", {
+                p_organisation_id: organisation,
+                p_expected_version: invitation.version,
                 p_request_id: randomUUID(),
-            }),
-        );
+            }));
+        };
+        await acceptCompanyLink(client, org);
         await checked(
             admin.client.rpc("manage_course_enrolment", {
                 p_course_run_id: run,
@@ -429,41 +431,49 @@ await withApiFixture(
             (await download(learner, "completion", completion)).status,
             403,
         );
-        room = await checked(
-            admin.client.rpc("create_chat_group", {
-                p_title: "Fictional participant transport",
-                p_member_ids: [],
-                p_kind: "participant_course",
-                p_job_id: job,
-            }),
-            "Open an actual Premium participant room",
-        );
-        assert.ok(room);
-        assert.ok(
-            (
-                await checked(
-                    learner.client.rpc("course_chat_rooms", { p_run_id: run }),
-                )
-            ).some((entry) => entry.id === room),
-        );
-        const teacherEvents = [],
-            learnerEvents = [],
-            peerEvents = [];
-        for (const [who, events] of [
-            [teacher, teacherEvents],
-            [learner, learnerEvents],
-            [peer, peerEvents],
-        ]) {
-            const { session } = await checked(who.client.auth.getSession());
-            await who.client.realtime.setAuth(session.access_token);
-            await subscribeToRoom(
-                who.client,
-                room,
-                "course_chat_activity",
-                ["INSERT", "UPDATE"],
-                events,
-            );
+        await sql(`insert into public.organisations(id, name)
+            values (${q(otherOrg)}, 'Fictional second workspace academy');
+            insert into public.course_runs(id, template_id, organisation_id, time_zone)
+            values (${q(otherRun)}, ${q(template)}, ${q(otherOrg)}, 'Europe/Berlin');
+            insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+            values (${q(otherJob)}, ${q(otherRun)}, 'Fictional separate workspace job', 'Fictional second workspace academy', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms');`);
+        await setPremium(otherOrg, true, 0);
+        await acceptCompanyLink(admin, otherOrg);
+        await checked(admin.client.rpc("manage_course_enrolment", {
+            p_course_run_id: otherRun,
+            p_user_id: learner.id,
+            p_status: "enrolled",
+        }));
+        const openRoom = (title, jobId) => checked(admin.client.rpc("create_chat_group", {
+            p_title: title,
+            p_member_ids: [],
+            p_kind: "participant_course",
+            p_job_id: jobId,
+        }), "Open an actual Premium participant room");
+        room = await openRoom("Fictional participant transport", job);
+        otherRoom = await openRoom("Fictional second participant transport", otherJob);
+        assert.ok(room && otherRoom);
+        for (const [id, expectedRoom] of [[run, room], [otherRun, otherRoom]]) {
+            const rooms = await checked(learner.client.rpc("course_chat_rooms", {p_run_id: id}));
+            assert.ok(rooms.some((entry) => entry.id === expectedRoom));
         }
+        const teacherEvents = [], learnerEvents = [], peerEvents = [], otherEvents = [];
+        for (const [who, id, events] of [
+            [teacher, room, teacherEvents],
+            [learner, room, learnerEvents],
+            [peer, room, peerEvents],
+            [learner, otherRoom, otherEvents],
+        ]) {
+            const {session} = await checked(who.client.auth.getSession());
+            await who.client.realtime.setAuth(session.access_token);
+            await subscribeToRoom(who.client, id, "course_chat_activity", ["INSERT", "UPDATE"], events);
+        }
+        const send = (who, id, body) => who.client.rpc("send_course_chat_message", {
+            p_room_id: id,
+            p_body: body,
+            p_client_id: randomUUID(),
+        });
+        const history = (id) => learner.client.rpc("course_chat_messages", {p_room_id: id});
         const attachmentForm = new FormData();
         attachmentForm.set(
             "file",
@@ -540,6 +550,42 @@ await withApiFixture(
             ).status,
             403,
         );
+        await checked(send(learner, otherRoom, "Fictional first company B message"));
+        await eventually(() => otherEvents.length === 1, "The learner receives a live company B marker before deactivation");
+        await setPremium(org, false, 1);
+        assert.equal((await history(room)).error?.code, "42501");
+        assert.equal((await send(teacher, room, "Fictional denied message")).error?.code, "42501");
+        assert.equal((await download(learner, "resource", resource)).status, 403);
+        assert.equal((await download(learner, "course_chat_attachment", message, chatVersion)).status, 403);
+
+        // Test the existing subscription's per-event check independently of the disabled posting API.
+        const blockedRevision = await sql(`update public.course_chat_activity
+            set revision = gen_random_uuid() where room_id = ${q(room)} returning revision`);
+        assert.match(blockedRevision, /^[a-f0-9-]{36}$/i);
+        const otherMessage = await checked(send(learner, otherRoom, "Fictional message while company A is disabled"));
+        await eventually(() => otherEvents.length === 2, "The same learner socket still receives company B activity");
+        assert.ok(otherEvents.every((event) => event.room_id === otherRoom));
+        assert.ok((await checked(history(otherRoom))).some((entry) => entry.id === otherMessage));
+        assert.deepEqual(learnerEvents, [firstActivity]);
+        assert.deepEqual(teacherEvents, [firstActivity]);
+
+        await setPremium(org, true, 2);
+        assert.ok((await checked(history(room))).some((entry) => entry.id === message));
+        const restoredFile = await download(learner, "course_chat_attachment", message, chatVersion);
+        assert.equal(restoredFile.status, 200);
+        assert.deepEqual(new Uint8Array(await restoredFile.arrayBuffer()), bytes);
+        await checked(send(teacher, room, "Fictional message after Premium restoration"));
+        await eventually(
+            () => teacherEvents.length >= 2 && learnerEvents.length >= 2,
+            "The existing company A subscriptions resume after reactivation",
+        );
+        assert.equal(learnerEvents.length, 2);
+        assert.deepEqual(teacherEvents, learnerEvents);
+        const restoredActivity = learnerEvents[1];
+        assert.equal(restoredActivity.room_id, room);
+        assert.notEqual(restoredActivity.revision, blockedRevision);
+        assert.notEqual(restoredActivity.revision, firstActivity.revision);
+
         await checked(
             admin.client.rpc("manage_course_enrolment", {
                 p_course_run_id: run,
@@ -554,33 +600,23 @@ await withApiFixture(
             403,
         );
         assert.equal(
-            (await learner.client.rpc("course_chat_messages", { p_room_id: room }))
-                .error?.code,
+            (await history(room)).error?.code,
             "42501",
         );
-        await checked(
-            teacher.client.rpc("send_course_chat_message", {
-                p_room_id: room,
-                p_body: "Fictional note sent after withdrawal",
-                p_client_id: randomUUID(),
-            }),
-        );
+        await checked(send(teacher, room, "Fictional note sent after withdrawal"));
         await eventually(
-            () =>
-                teacherEvents.some(
-                    (event) => event.revision !== firstActivity.revision,
-                ),
+            () => teacherEvents.length === 3,
             "Teacher's existing Realtime channel receives the next revision",
         );
         await delay(1200);
         assert.deepEqual(
             learnerEvents,
-            [firstActivity],
-            "The previously connected learner receives no new event",
+            [firstActivity, restoredActivity],
+            "The previously connected learner receives neither the disabled revision nor activity after withdrawal",
         );
         assert.deepEqual(peerEvents, []);
     },
 );
 console.log(
-    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, protected Unicode PDFs, private attachments, opaque activity, and revocation of both existing live subscriptions and exact-version download rights.",
+    "PASS: actual Auth/REST/Edge/ClamAV/Storage/Realtime: reviewed material bytes, protected Unicode PDFs, private attachments, opaque activity, two-company Premium revocation and restoration on existing sockets, and enrolment withdrawal.",
 );

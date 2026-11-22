@@ -142,6 +142,11 @@ class RecoveryRoundTrip(unittest.TestCase):
         return archived
 
     def test_restores_whole_private_runtime_files_and_volumes_into_empty_target(self):
+        for kind in ("caddy_data", "caddy_config"):
+            directory = self.volumes[kind] / "caddy"
+            directory.mkdir()
+            directory.chmod(0o1777)
+            (directory / "volume.txt").write_text(kind)
         archive = self.snapshot()
         original = self.scratch / "original"
         restored = recovery.restore(self.root, self.expected, archive, self.key, digest(archive), self.docker)
@@ -157,6 +162,9 @@ class RecoveryRoundTrip(unittest.TestCase):
         self.assertFalse((self.root / "runtime-handoff.json").exists())
         for kind, path in self.docker.created.items():
             self.assertEqual((path / "volume.txt").read_text(), kind)
+            if kind in ("caddy_data", "caddy_config"):
+                self.assertEqual((path / "caddy/volume.txt").read_text(), kind)
+                self.assertEqual(stat.S_IMODE((path / "caddy").stat().st_mode), 0o1777)
         with self.assertRaisesRegex(recovery.RecoveryError, "new runtime"):
             recovery.root_directory(str(self.root), existing=False)
         with self.assertRaisesRegex(recovery.RecoveryError, "new runtime"):
@@ -306,6 +314,24 @@ class RecoveryRoundTrip(unittest.TestCase):
           || ':' || (select name from storage.objects);
         """), expected)
         self.assertEqual((self.root / "data/storage/handout").read_bytes(), b"retained-object\x00\x12")
+
+
+class RecoveryArchiveTypes(unittest.TestCase):
+    def test_sticky_bit_is_allowed_only_for_caddy_directories(self):
+        caddy = "volumes/caddy_data/caddy"
+        for path, kind, mode in (
+            (caddy, tarfile.DIRTYPE, 0o2777),
+            (caddy, tarfile.DIRTYPE, 0o4777),
+            (caddy, tarfile.REGTYPE, 0o1660),
+            (caddy, tarfile.SYMTYPE, 0o777),
+            ("runtime/data/postgres", tarfile.DIRTYPE, 0o1777),
+        ):
+            with self.subTest(path=path, kind=kind, mode=oct(mode)):
+                member = tarfile.TarInfo(path)
+                member.type = kind
+                member.mode = mode
+                with self.assertRaisesRegex(recovery.RecoveryError, "special, linked or privileged"):
+                    recovery.allowed_tar_type(member)
 
 
 class DockerOwnership(unittest.TestCase):

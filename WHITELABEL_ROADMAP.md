@@ -331,6 +331,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [ ] Independent full-stack startup and health confirmation on the final target, issuer-to-operator onboarding, DNS and ACME, real SMTP delivery and the full Docker upgrade and recovery rehearsal.
 - [x] Read the dedicated installation, exact licensed revision, licence and course-profile state and latest migration ledger entry from the private operator command.
 - [x] Provide a private local health command for either licensed edition. It checks the staged release, database licence and ledger, Docker service state, scanner signatures and encrypted recovery receipt. [Monitoring runbook](deploy/academy/README.md#monitor-a-dedicated-installation)
+- [x] Produce and check a cold encrypted archive on a running local customer installation. The real Docker health report validates the backup digest, migration ledger and scanner. Recovery tests restore the expected Caddy volume modes into an empty target.
 - [ ] Connect the report to the final target's monitor and rehearse support, maintenance and incident response.
 
 ### WL-06 — Licence sales & fulfilment operations (P1)
