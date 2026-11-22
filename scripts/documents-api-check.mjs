@@ -131,6 +131,12 @@ try {
     const retry = await upload(a, bytes, "lesson.txt", {}, key);
     assert.equal(retry.status, 200);
     assert.equal(retry.body.document.id, doc.id);
+    const promotions = await checked(
+        service.from("audit_events").select("actor_id")
+            .eq("action", "document.scan_clean").eq("resource_id", doc.id),
+        "Read the audit entry for the actual scanned document",
+    );
+    assert.deepEqual(promotions, [{actor_id: a.id}], "The successful upload and its retry record one promotion");
     const changedBytes = bytes.slice();
     changedBytes[0] = changedBytes[0] === 65 ? 66 : 65;
     const changedRetry = await upload(a, changedBytes, "lesson.txt", {}, key);
