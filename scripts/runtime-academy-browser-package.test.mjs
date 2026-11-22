@@ -43,6 +43,7 @@ import {
 import {
   academyDatabaseComposeArguments,
   readStagedAcademyDocumentBrand,
+  renewAcademyInstallationLicence,
 } from "./academy-installation.mjs";
 import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
 import { planAcademyStaging } from "./academy-staging-plan.mjs";
@@ -1323,7 +1324,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const receiptFile = join(browser, "release.json");
     const originalReceipt = readFileSync(receiptFile);
     const ingressFile = join(browser, "api-ingress.yml");
-    const originalPolicy = readFileSync(ingressFile);
+    // A reviewed older release can have different routes or defaults from the
+    // checkout running the renewal. Preserve those bytes, including comments.
+    const originalPolicy = readFileSync(ingressFile, "utf8")
+      .replace("timeout: 150s", "timeout: 120s")
+      .replaceAll("\n", "\r\n");
+    writeFileSync(ingressFile, "# Débit réseau\r\n" + originalPolicy);
+    const installedPolicy = readFileSync(ingressFile, "utf8");
     const originalScript = readFileSync(join(browser, runtimePath));
     const environment = readFileSync(join(root, "runtime.env"));
     const retained = join(root, "data", "existing-records");
@@ -1346,11 +1353,22 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       previousLicence: inputs.licence,
     };
     const renewals = [];
+    let databaseCommitted = false;
     const apply = (runtime, candidate) => {
       assert.equal(runtime, root);
       assert.equal(candidate.envelope, licence);
       assert.equal(candidate.previousEnvelope, inputs.licence);
       renewals.push(candidate);
+      return renewAcademyInstallationLicence(candidate, (statement) => {
+        if (candidate.now >= Date.parse(nextTerms.expires_at)) {
+          assert.match(statement, /begin read only;/);
+          assert.doesNotMatch(statement, /apply_verified_installation_licence/);
+          return databaseCommitted ? "t" : "f";
+        }
+        assert.match(statement, /apply_verified_installation_licence/);
+        databaseCommitted = true;
+        return "t";
+      });
     };
 
     await assert.rejects(
@@ -1378,21 +1396,39 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     assert.equal(renewals.length, 0);
 
+    writeFileSync(
+      ingressFile,
+      installedPolicy.replace("tokens_per_fill: 60", "tokens_per_fill: 95"),
+    );
+    await assert.rejects(
+      installAcademyBrowser(renewal, () => {}, apply),
+      /academy_install_renewal_policy_mismatch/,
+    );
+    assert.equal(renewals.length, 0);
+    writeFileSync(ingressFile, installedPolicy);
+
+    const expired = { ...renewal, now: Date.parse(nextTerms.grace_until) };
+    await assert.rejects(
+      installAcademyBrowser(expired, () => {}, apply),
+      /academy_install_renewal_inactive/,
+    );
+    assert.deepEqual(readFileSync(receiptFile), originalReceipt);
+
     await assert.rejects(
       installAcademyBrowser(
         renewal,
         () => {},
-        (...args) => {
-          apply(...args);
+        async (...args) => {
+          await apply(...args);
           throw new Error("interrupted after database commit");
         },
       ),
       /interrupted after database commit/,
     );
     assert.deepEqual(readFileSync(receiptFile), originalReceipt);
-    assert.deepEqual(readFileSync(ingressFile), originalPolicy);
+    assert.equal(readFileSync(ingressFile, "utf8"), installedPolicy);
 
-    const receipt = await installAcademyBrowser(renewal, () => {}, apply);
+    const receipt = await installAcademyBrowser(expired, () => {}, apply);
     assert.equal(
       receipt.release.source_revision,
       original.release.source_revision,
@@ -1407,8 +1443,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       expires_at: nextTerms.expires_at,
       api_requests_per_minute: 95,
     });
-    assert.match(readFileSync(ingressFile, "utf8"), /max_tokens: 95\b/);
-    assert.match(readFileSync(ingressFile, "utf8"), /tokens_per_fill: 95\b/);
+    assert.equal(receipt.release.licence_state, "expired");
+    assert.equal(
+      readFileSync(ingressFile, "utf8"),
+      installedPolicy
+        .replace("max_tokens: 60", "max_tokens: 95")
+        .replace("tokens_per_fill: 60", "tokens_per_fill: 95"),
+    );
     assert.deepEqual(readFileSync(join(browser, runtimePath)), originalScript);
     assert.equal(
       readFileSync(join(browser, "maintenance.enabled"), "utf8"),
@@ -1417,14 +1458,44 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(readFileSync(join(root, "runtime.env")), environment);
     assert.equal(readFileSync(retained, "utf8"), "Private retained course");
     assert.deepEqual(
-      await installAcademyBrowser(renewal, () => {}, apply),
+      await installAcademyBrowser(expired, () => {}, apply),
       receipt,
     );
-    assert.equal(renewals.length, 3);
+    assert.equal(renewals.length, 4);
     assert.equal(
       readdirSync(root).filter((file) => file.startsWith(".browser-previous-"))
         .length,
       1,
+    );
+
+    const followUpTerms = {
+      ...nextTerms,
+      issued_at: nextTerms.expires_at,
+      starts_at: nextTerms.grace_until,
+      expires_at: "2040-08-01T00:00:00.000Z",
+      grace_until: "2040-08-02T00:00:00.000Z",
+      limits: { ...nextTerms.limits, api_requests_per_minute: 110 },
+    };
+    const followUp = signAcademyLicence(followUpTerms, issuer.privateKey);
+    const active = await installAcademyBrowser(
+      {
+        ...expired,
+        licence: followUp,
+        previousLicence: licence,
+        signature: await signRelease({ licence: followUp, now: expired.now }),
+      },
+      () => {},
+      (runtime, candidate) => {
+        assert.equal(runtime, root);
+        assert.equal(candidate.previousEnvelope, licence);
+        return renewAcademyInstallationLicence(candidate, () => "t");
+      },
+    );
+    assert.equal(active.release.licence_state, "active");
+    assert.equal(active.licence.api_requests_per_minute, 110);
+    assert.equal(
+      readFileSync(join(browser, "maintenance.enabled"), "utf8"),
+      "",
     );
   });
 }

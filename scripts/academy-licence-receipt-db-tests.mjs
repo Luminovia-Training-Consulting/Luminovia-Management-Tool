@@ -185,8 +185,44 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       previousEnvelope: options.envelope,
       envelope: signAcademyLicence(renewed, key.privateKey),
     };
+    const inactiveRenewal = {
+      ...renewal,
+      now: Date.parse(renewed.grace_until),
+    };
+    await assert.rejects(
+      renewAcademyInstallationLicence(inactiveRenewal, sql),
+      /academy_install_renewal_inactive/,
+    );
+    // The DB clock also fences a candidate whose active window ended after
+    // preflight or while the maintenance process was waiting to apply it.
+    const ended = {
+      ...renewed,
+      expires_at: date(-0.5),
+      grace_until: date(-0.4),
+    };
+    await assert.rejects(
+      renewAcademyInstallationLicence(
+        {
+          ...renewal,
+          envelope: signAcademyLicence(ended, key.privateKey),
+          now: Date.parse(ended.starts_at),
+        },
+        sql,
+      ),
+      /22023|Academy licence renewal is inactive/,
+    );
+    assert.deepEqual(await read(), current);
     await renewAcademyInstallationLicence(renewal, sql);
     await renewAcademyInstallationLicence(renewal, sql);
+    const witness = () =>
+      sql("select xmin::text from private.installation_verified_licence");
+    const written = await witness();
+    await renewAcademyInstallationLicence(
+      { ...renewal, now: Date.parse(renewed.expires_at) },
+      sql,
+    );
+    await renewAcademyInstallationLicence(inactiveRenewal, sql);
+    assert.equal(await witness(), written);
     const afterRenewal = await read();
     assert.equal(afterRenewal.api_requests_per_minute, 95);
     assert.equal(

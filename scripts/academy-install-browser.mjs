@@ -35,6 +35,9 @@ const rateTemplate = new URL(
   "../deploy/academy/api-ingress.template.yml",
   import.meta.url,
 );
+// Match the one licensed bucket written by the Academy installer.
+const licenceBucket =
+  /^(?<prefix>(?<indent> +)stat_prefix: academy_licence\r?\n\k<indent>token_bucket:\r?\n\k<indent> {2}max_tokens: )(?<maximum>[0-9]+)(?<middle>\r?\n\k<indent> {2}tokens_per_fill: )(?<fill>[0-9]+)(?=\r?$)/gm;
 const revisionPattern = /^[0-9a-f]{40}$/;
 const swapBrowserDirectories = `
 import ctypes
@@ -230,10 +233,45 @@ export function verifyAcademyLicenceRenewal({
     expected,
     now,
   );
-  if (state !== "active") throw new Error("academy_install_renewal_inactive");
+  if (state === "not-yet-valid")
+    throw new Error("academy_install_renewal_inactive");
   if (terms.issued_at <= previous.issued_at)
     throw new Error("academy_install_renewal_issue_time");
-  return { previous, terms };
+  return { previous, state, terms };
+}
+
+function licensedThroughput(terms) {
+  // Envoy's local bucket uses uint32 values. Clamp the signed maximum.
+  return Math.min(terms.limits.api_requests_per_minute, 0xffff_ffff);
+}
+
+function renewIngressPolicy(bytes, installed, successor) {
+  // Latin-1 maps one byte to one code unit so everything outside the two
+  // ASCII integers stays byte-for-byte identical to the installed policy.
+  const policy = bytes.toString("latin1");
+  const [bucket, duplicate] = policy.matchAll(licenceBucket);
+  if (
+    !bucket ||
+    duplicate ||
+    bucket.groups.maximum !== String(installed) ||
+    bucket.groups.fill !== String(installed)
+  )
+    throw new Error("academy_install_renewal_policy_mismatch");
+  const { prefix, middle } = bucket.groups;
+  const updated = prefix + successor + middle + successor;
+  return Buffer.from(
+    policy.slice(0, bucket.index) +
+      updated +
+      policy.slice(bucket.index + bucket[0].length),
+    "latin1",
+  );
+}
+
+function writeIngressPolicy(staged, policy) {
+  writeFileSync(join(staged, "api-ingress.yml"), policy, {
+    flag: "wx",
+    mode: 0o644,
+  });
 }
 
 async function renewRuntimeLicence(root, input) {
@@ -287,6 +325,7 @@ export async function installAcademyBrowser(
     config,
     publicConfig: publicValues,
     includeFiles: true,
+    verifyInactiveRenewal: renewal,
   });
 
   const expected = {
@@ -301,7 +340,7 @@ export async function installAcademyBrowser(
     expected,
     now,
   };
-  const { terms } = renewal
+  const { previous: previousTerms, terms } = renewal
     ? verifyAcademyLicenceRenewal(renewalInput)
     : verifyAcademyLicence(
         release.licence,
@@ -309,12 +348,7 @@ export async function installAcademyBrowser(
         expected,
         now,
       );
-  // Envoy's local bucket uses uint32 values. A higher signed maximum must
-  // never overflow into an unlimited or larger allowance.
-  const throughput = Math.min(
-    terms.limits.api_requests_per_minute,
-    0xffff_ffff,
-  );
+  const throughput = licensedThroughput(terms);
   const exchange = replacement || renewal;
   const staged = mkdtempSync(
     join(root, exchange ? ".browser-previous-" : ".browser-stage-"),
@@ -343,14 +377,14 @@ export async function installAcademyBrowser(
         api_requests_per_minute: throughput,
       },
     };
-    const ingress = readFileSync(rateTemplate, "utf8").replaceAll(
-      "ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE",
-      String(throughput),
-    );
-    writeFileSync(join(staged, "api-ingress.yml"), ingress, {
-      flag: "wx",
-      mode: 0o644,
-    });
+    if (!renewal)
+      writeIngressPolicy(
+        staged,
+        readFileSync(rateTemplate, "utf8").replaceAll(
+          "ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE",
+          String(throughput),
+        ),
+      );
     writeFileSync(
       join(staged, "release.json"),
       JSON.stringify(receipt, null, 2) + "\n",
@@ -378,7 +412,10 @@ export async function installAcademyBrowser(
           throw new Error("academy_install_replacement_revision");
         if (
           renewal &&
-          (!isDeepStrictEqual(previous.release, receipt.release) ||
+          (!isDeepStrictEqual(previous.release, {
+            ...receipt.release,
+            licence_state: previous.release.licence_state,
+          }) ||
             (previous.brand_manifest_sha256 !== undefined &&
               previous.brand_manifest_sha256 !==
                 receipt.brand_manifest_sha256) ||
@@ -401,15 +438,23 @@ export async function installAcademyBrowser(
               constants.COPYFILE_EXCL,
             );
           }
-          const alreadyStaged =
-            isDeepStrictEqual(previous, receipt) &&
-            utf8.decode(
-              await readAcademyOperatorInput(
-                join(browserRoot, "api-ingress.yml"),
-              ),
-            ) === ingress;
+          const installedPolicy = await readAcademyOperatorInput(
+            join(browserRoot, "api-ingress.yml"),
+          );
+          const currentCandidate =
+            previous.licence?.sha256 === receipt.licence.sha256;
+          const ingress = renewIngressPolicy(
+            installedPolicy,
+            currentCandidate ? throughput : licensedThroughput(previousTerms),
+            throughput,
+          );
+          const alreadyStaged = isDeepStrictEqual(previous, {
+            ...receipt,
+            release: previous.release,
+          });
+          writeIngressPolicy(staged, ingress);
           // The DB compares its actual licence before applying the successor.
-          // If an exchange failed after DB commit, that exact successor is accepted on retry.
+          // An inactive successor can only finish a prior commit, without a DB write.
           await renewLicence(root, renewalInput);
           if (alreadyStaged) return previous;
         }

@@ -242,6 +242,7 @@ export async function planAcademyStaging({
   releasePublicKey,
   now,
   includeFiles = false,
+  verifyInactiveRenewal = false,
 }) {
   const target = configSchema.parse(config);
   const infra = infrastructurePlan(target);
@@ -265,7 +266,12 @@ export async function planAcademyStaging({
     now: verifiedAt,
     includeFiles: true,
   });
-  if (licenceState !== "active")
+  // The installer may verify historical bytes for a recovery. Publishing
+  // them still requires an exact, already committed database licence.
+  if (
+    licenceState !== "active" &&
+    !(verifyInactiveRenewal && ["grace", "expired"].includes(licenceState))
+  )
     throw new Error("academy_staging_inactive_licence");
   if (manifest.backend !== infra.api)
     throw new Error("academy_staging_signed_backend_mismatch");

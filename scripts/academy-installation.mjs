@@ -128,11 +128,28 @@ export async function prepareAcademyInstallation(
 
 /** Update only the pinned licence. A precise successor is safe to resume on retry. */
 export async function renewAcademyInstallationLicence(input, executeSql) {
-  const { previous, terms } = verifyAcademyLicenceRenewal(input);
+  const { previous, state, terms } = verifyAcademyLicenceRenewal(input);
   const installation = sqlText(terms.installation_id);
   const edition = sqlText(terms.edition);
-  const previousTerms = sqlText(JSON.stringify(previous));
   const newTerms = sqlText(JSON.stringify(terms));
+  if (state !== "active") {
+    const result = await executeSql(`
+      begin read only;
+      select exists (
+        select 1
+        from private.installation_identity identity
+        join private.installation_verified_licence licence using (installation_id)
+        where identity.installation_id = ${installation}::uuid
+          and identity.edition = ${edition}
+          and licence.terms = ${newTerms}::jsonb
+      );
+      commit;
+    `);
+    if (result.trim() !== "t")
+      throw new Error("academy_install_renewal_inactive");
+    return;
+  }
+  const previousTerms = sqlText(JSON.stringify(previous));
   const result = await executeSql(`
     begin;
     do $renewal$
@@ -146,9 +163,15 @@ export async function renewAcademyInstallationLicence(input, executeSql) {
       end if;
       select terms into current_terms from private.installation_verified_licence
       where installation_id = ${installation}::uuid;
-      if current_terms is distinct from ${previousTerms}::jsonb
-        and current_terms is distinct from ${newTerms}::jsonb then
+      if current_terms = ${newTerms}::jsonb then
+        return;
+      end if;
+      if current_terms is distinct from ${previousTerms}::jsonb then
         raise exception 'Academy licence changed concurrently' using errcode = '40001';
+      end if;
+      if clock_timestamp() < ${sqlText(terms.starts_at)}::timestamptz
+        or clock_timestamp() >= ${sqlText(terms.expires_at)}::timestamptz then
+        raise exception 'Academy licence renewal is inactive' using errcode = '22023';
       end if;
       perform private.apply_verified_installation_licence(${newTerms}::jsonb);
     end
