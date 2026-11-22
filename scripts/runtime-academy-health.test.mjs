@@ -145,7 +145,11 @@ function setup(t, changes = {}) {
         assert(args.includes(`label=com.docker.compose.project=${project}`));
         return observed.map(({ id }) => id).join("\n");
       case "inspect":
-        assert.match(args[4], /\.State\.Health\.Status/);
+        // Docker may omit Health from running Caddy/Envoy containers entirely.
+        assert.match(
+          args[4],
+          /with index \.State "Health".*json \.Status.*else}}null/,
+        );
         assert.doesNotMatch(args[4], /\.Config\.Env|\.State\.Health\.Log/);
         assert.deepEqual(
           args.slice(5),

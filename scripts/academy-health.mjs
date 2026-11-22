@@ -45,7 +45,7 @@ const inspectFormat = `{"id":{{json .Id}},
   "project":{{json (index .Config.Labels "com.docker.compose.project")}},
   "service":{{json (index .Config.Labels "com.docker.compose.service")}},
   "image":{{json .Config.Image}},"status":{{json .State.Status}},
-  "health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}},
+  "health":{{with index .State "Health"}}{{json .Status}}{{else}}null{{end}},
   "networks":{{json .NetworkSettings.Networks}},"ports":{{json .NetworkSettings.Ports}},
   "mounts":{{json .Mounts}}}`.replaceAll("\n", " ");
 

@@ -86,8 +86,14 @@ export function candidateDatabaseCommand(command) {
 /** Leave room for concurrent Auth, claims and retained-data probes on hosted CI. */
 export function candidateDatabaseOptions(database, hostedCi) {
     const options = {...database, command: candidateDatabaseCommand(database.command)};
-    if (hostedCi && Number.isSafeInteger(database.mem_limit) && database.mem_limit > 0)
-        options.mem_limit = Math.max(database.mem_limit, 640 * 1024 ** 2);
+    // Compose's JSON config may encode the normalized byte count as a string.
+    const configured = database.mem_limit;
+    const bytes = typeof configured === "string" && /^[1-9][0-9]*$/.test(configured)
+        ? Number(configured)
+        : configured;
+    const ciMinimum = 640 * 1024 ** 2;
+    if (hostedCi && Number.isSafeInteger(bytes) && bytes > 0 && bytes < ciMinimum)
+        options.mem_limit = ciMinimum;
     return options;
 }
 

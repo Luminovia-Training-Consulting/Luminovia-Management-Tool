@@ -22,6 +22,8 @@ Independent customer and commercial acceptance remain open. See the [White-Label
 
 The first exact-main run exposed two obsolete fixtures. The Academy access guard test now supplies the compiled edition with the other branding exports. The scanner startup fixture now requires the new local ownership label for the signature volume. The full workflow needs the corrected exact SHA. The earlier CodeQL run completed successfully.
 
+Docker acceptance exposed two runtime differences. Running Caddy and Envoy containers can omit Docker's optional Health field. The Academy reporter now projects it safely. The hosted CI runner also receives the database container's memory limit as a string in Compose JSON. The native compatibility job now honours the existing 640 MiB scratch-database allocation for that output format. Docker recorded an actual OOM kill at the former 384 MiB limit. The deployed configuration uses its existing limit.
+
 # 22 November 2026 — Full local portal reset
 
 `./portal reset` confirms the exact local project, checks the local Docker socket, rejects linked Supabase projects and verifies Docker container, network and volume ownership before deleting any data. It stops the existing stack, removes the verified project volumes and generated local credentials, then starts a fresh runtime using the tracked migrations and fictional seed. The existing `stop` and `restart` commands retain data as before.

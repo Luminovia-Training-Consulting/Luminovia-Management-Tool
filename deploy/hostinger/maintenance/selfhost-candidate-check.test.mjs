@@ -74,8 +74,14 @@ test("hosted CI gives the disposable database headroom without lowering larger l
         ...database,
         mem_limit: 640 * 1024 ** 2,
     });
+    const composeJson = {...database, mem_limit: String(database.mem_limit)};
+    assert.deepEqual(candidateDatabaseOptions(composeJson, false), composeJson);
+    assert.equal(candidateDatabaseOptions(composeJson, true).mem_limit, 640 * 1024 ** 2);
     const larger = {...database, mem_limit: 768 * 1024 ** 2};
     assert.deepEqual(candidateDatabaseOptions(larger, true), larger);
+    const normalizedLarger = {...larger, mem_limit: String(larger.mem_limit)};
+    assert.deepEqual(candidateDatabaseOptions(normalizedLarger, true), normalizedLarger);
+    assert.equal(candidateDatabaseOptions({...database, mem_limit: "0"}, true).mem_limit, "0");
     assert.deepEqual(candidateDatabaseOptions({command: database.command}, true), {
         command: database.command,
     });
