@@ -154,6 +154,7 @@ class RecoveryRoundTrip(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(handout.stat().st_mode), 0o640)
         self.assertEqual(list((self.root / "backups").iterdir()), [])
         self.assertFalse((self.root / "runtime.env.webhooks.env").exists())
+        self.assertFalse((self.root / "runtime-handoff.json").exists())
         for kind, path in self.docker.created.items():
             self.assertEqual((path / "volume.txt").read_text(), kind)
         with self.assertRaisesRegex(recovery.RecoveryError, "new runtime"):
@@ -168,11 +169,16 @@ class RecoveryRoundTrip(unittest.TestCase):
                    b"PORTAL_WEBHOOK_DESTINATIONS='{}'\n")
         config.write_bytes(payload)
         config.chmod(0o600)
+        handoff = self.root / "runtime-handoff.json"
+        receipt = json.dumps({"installation_id": self.identifier, "source_revision": self.revision})
+        handoff.write_text(receipt)
+        handoff.chmod(0o600)
         archive = self.snapshot()
         self.assertNotIn(payload, archive.read_bytes())
         recovery.restore(self.root, self.expected, archive, self.key, digest(archive), self.docker)
         self.assertEqual(config.read_bytes(), payload)
         self.assertEqual(stat.S_IMODE(config.stat().st_mode), 0o600)
+        self.assertEqual(handoff.read_text(), receipt)
 
     def test_rejects_an_unprotected_or_linked_optional_webhook_configuration(self):
         config = self.root / "runtime.env.webhooks.env"

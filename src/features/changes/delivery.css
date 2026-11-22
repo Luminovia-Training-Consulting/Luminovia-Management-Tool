@@ -1,0 +1,32 @@
+.delivery-stack,
+.delivery-items,
+.delivery-history {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.delivery-items,
+.delivery-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.delivery-items > li + li,
+.delivery-history > li + li {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.delivery-time-fields {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 40rem) {
+  .delivery-time-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

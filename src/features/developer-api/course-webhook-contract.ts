@@ -14,7 +14,7 @@ export const companyWebhookDestination = {
   type: "string",
   pattern: "^[a-z][a-z0-9-]{0,39}$",
 };
-const companyWebhookTypes = {
+const courseWebhookTypes = {
   enum: [
     "course.published",
     "course.updated",
@@ -28,9 +28,20 @@ const companyWebhookTypes = {
   ],
 };
 
-export const companyWebhookListSchema = {
-  type: "array",
-  items: object({
+const accountingWebhookTypes = {
+  enum: [
+    "invoice.registered",
+    "payment.recorded",
+    "payment.reversed",
+    "credit_note.applied",
+    "credit_note.reversed",
+    "refund.recorded",
+    "refund.reversed",
+  ],
+};
+
+function subscriptionSchema(eventTypes: { enum: string[] }) {
+  return object({
     id: uuid,
     destination: companyWebhookDestination,
     created_at: { type: "string", format: "date-time" },
@@ -41,13 +52,34 @@ export const companyWebhookListSchema = {
       type: "array",
       items: object({
         id: uuid,
-        event_type: companyWebhookTypes,
+        event_type: eventTypes,
         occurred_at: { type: "string", format: "date-time" },
         attempts: { type: "integer", minimum: 0, maximum: 5 },
         state: { enum: ["pending", "delivered", "failed", "cancelled"] },
       }),
     },
-  }),
+  });
+}
+
+const courseSubscription = subscriptionSchema(courseWebhookTypes);
+const internalSubscription = subscriptionSchema({
+  enum: [...courseWebhookTypes.enum, ...accountingWebhookTypes.enum],
+});
+
+export const companyWebhookListSchema = {
+  type: "array",
+  items: courseSubscription,
+};
+
+export const internalCompanyWebhookListSchema = {
+  type: "array",
+  items: {
+    ...internalSubscription,
+    properties: {
+      ...internalSubscription.properties,
+      accounting_events: { const: true },
+    },
+  },
 };
 
 /** Describe the receiver contract in the download without offering a live Swagger send. */
@@ -84,7 +116,7 @@ export const companyCourseWebhook = {
       content: json(
         object({
           id: uuid,
-          type: companyWebhookTypes,
+          type: courseWebhookTypes,
           version: { const: 1 },
           occurred_at: { type: "string", format: "date-time" },
           course_id: uuid,
@@ -99,6 +131,28 @@ export const companyCourseWebhook = {
       "5XX": {
         description: "Transient receiver failure. Delivery may be retried.",
       },
+    },
+  },
+};
+
+export const companyAccountingWebhook = {
+  post: {
+    ...companyCourseWebhook.post,
+    operationId: "receiveCompanyAccountingEvent",
+    summary: "Receive a signed customer accounting event",
+    description:
+      "An explicitly authorised internal company subscription reports changes to its customer invoice. The body contains only stable event and invoice identifiers with event metadata. Verify the same HMAC signature as a course event and deduplicate the event ID.",
+    requestBody: {
+      required: true,
+      content: json(
+        object({
+          id: uuid,
+          type: accountingWebhookTypes,
+          version: { const: 1 },
+          occurred_at: { type: "string", format: "date-time" },
+          invoice_id: uuid,
+        }),
+      ),
     },
   },
 };

@@ -305,4 +305,59 @@ await withTestDatabase("invoice_series_correction", async ({ sql, actor }) => {
   console.log(
     "PASS explicit acknowledge, partial and concurrent repayment cap, additive void/re-entry and byte-identical historic invoice and payments",
   );
+  const journal = (who, from, to = from) =>
+    rpc(who, "accounting_settlement_journal", [from, to]);
+  const report = await journal(manager, date);
+  assert.deepEqual(report.scopes, ["lecturer"]);
+  assert.equal(report.items.length, 3);
+  assert.ok(
+    report.items.every(
+      (item) =>
+        item.subject_id === current &&
+        item.effective_on === date &&
+        item.reverses_id === null,
+    ),
+  );
+  assert.equal(report.items.find(({ id }) => id === partial).amount, "20.25");
+  assert.deepEqual(report.totals, [
+    {
+      kind: "lecturer_repayment",
+      currency: "AUD",
+      recorded: "65.25",
+      reversed: "0.00",
+      net: "65.25",
+    },
+  ]);
+  const voidDay = new Date(
+    afterVoid.repayments.find(({ id }) => id === partial).voided_at,
+  )
+    .toISOString()
+    .slice(0, 10);
+  const reportVoid = await journal(manager, voidDay);
+  assert.equal(reportVoid.items.length, 1);
+  assert.equal(reportVoid.items[0].id, partial);
+  assert.equal(reportVoid.items[0].reverses_id, partial);
+  assert.equal(
+    reportVoid.items[0].reference,
+    "Fictional receipt " + receiptKey,
+  );
+  assert.deepEqual(reportVoid.totals, [
+    {
+      kind: "lecturer_repayment",
+      currency: "AUD",
+      recorded: "0.00",
+      reversed: "20.25",
+      net: "-20.25",
+    },
+  ]);
+  assert.ok(!JSON.stringify(reportVoid).includes(note));
+  assert.deepEqual((await journal(lecturer, date)).items, report.items);
+  await sql(
+    `delete from public.user_roles where user_id=${q(lecturer)} and role='management'`,
+  );
+  await assert.rejects(journal(lecturer, date), /42501/);
+  await assert.rejects(journal(outsider, date), /42501/);
+  console.log(
+    "PASS lecturer receipt dates, later void entries, exact totals and finance-only report",
+  );
 });

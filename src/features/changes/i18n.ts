@@ -7,12 +7,23 @@ const de = {
   linkedSessionCount:
     "Beim Verschieben bleiben die vorhandenen Kurstermine und ihre Anzahl erhalten.",
   title: "Änderungsanträge",
+  deliveryEvidence: "Leistungsnachweise und Korrekturen",
   intro:
     "Bestätigte Aufträge gemeinsam ändern: Original und Änderung bleiben nachvollziehbar erhalten.",
   scopeHint:
     "Einzelaufträge sind vor Beginn änderbar. Bei gemeinsamen Kursen können berechtigte Personen noch ausstehende Termine ändern, sofern alle bestätigten Lehrkräfte zustimmen und keine Rechnung vorliegt.",
   sharedScheduleHelp:
     "Beim Einreichen erhält jede betroffene Lehrkraft einen eigenen Antrag mit denselben Terminen.",
+  customerSharedScheduleHelp:
+    "Schlage neue Termine für den gemeinsamen Kurs vor. Das Management prüft den Vorschlag und holt bei jeder betroffenen Lehrkraft die Zustimmung ein.",
+  sharedCommercialHelp:
+    "Bedingungen und Vergütung gelten nur für den ausgewählten Auftrag. Die übrigen Aufträge erhalten ausschließlich die neuen Termine.",
+  awaitingCoordination: "Das Management prüft die vorgeschlagenen Termine.",
+  coordinationStatus: "In Prüfung",
+  coordinateConsent:
+    "Ich habe den Kundenantrag geprüft und möchte die betroffenen Lehrkräfte um ihre Zustimmung bitten.",
+  submitForCoordination: "Zur Prüfung einreichen",
+  coordinate: "Zustimmungen einholen",
   sharedSessionCount:
     "Du kannst Termine hinzufügen oder entfernen. Wenn sich die Anzahl ändert, bleiben Einträge mit Terminen verbunden, deren Datum und Uhrzeit gleich bleiben.",
   sharedStartedSessions:
@@ -112,6 +123,7 @@ const de = {
   fixed_total: "Pauschal",
   action_saved: "Entwurf gespeichert",
   action_submit: "Eingereicht",
+  action_coordinate: "Zustimmungen angefragt",
   action_accept: "Zugestimmt",
   action_reject: "Abgelehnt",
   action_withdraw: "Zurückgezogen",
@@ -123,12 +135,23 @@ const en = {
   linkedSessionCount:
     "Rescheduling keeps the existing course sessions and their count.",
   title: "Change requests",
+  deliveryEvidence: "Delivery evidence and corrections",
   intro:
     "Agree changes to confirmed assignments while retaining the original and its amendment history.",
   scopeHint:
     "Individual assignments can change before work starts. For shared courses, authorised staff can amend future sessions before invoicing with consent from every confirmed lecturer.",
   sharedScheduleHelp:
     "Submitting sends each affected lecturer a separate request with the same dates.",
+  customerSharedScheduleHelp:
+    "Propose new dates for the shared course. Management reviews the request and asks each affected lecturer to consent.",
+  sharedCommercialHelp:
+    "Terms and compensation apply to the selected assignment. The other assignments receive only the new dates.",
+  awaitingCoordination: "Management is reviewing the proposed dates.",
+  coordinationStatus: "Under review",
+  coordinateConsent:
+    "I have reviewed the customer request and want to ask the affected lecturers to consent.",
+  submitForCoordination: "Submit for review",
+  coordinate: "Request consent",
   sharedSessionCount:
     "You can add or remove sessions. When the session count changes, existing records stay linked to sessions with the exact same dates and times.",
   sharedStartedSessions:
@@ -227,6 +250,7 @@ const en = {
   fixed_total: "Fixed total",
   action_saved: "Draft saved",
   action_submit: "Submitted",
+  action_coordinate: "Consent requested",
   action_accept: "Accepted",
   action_reject: "Rejected",
   action_withdraw: "Withdrawn",

@@ -69,7 +69,7 @@ Der Test führt alle drei Clients über einen temporären lokalen Listener mit d
 
 ### Deutsch
 
-Der [Empfänger](company-course-webhook-receiver.mjs) startet mit der Node-Version aus [`.node-version`](../../.node-version) und legt eine persistente SQLite-Inbox für genau ein Abonnement an. Öffne **Admin → Unternehmen → API-Integrationen → Kurs-Webhooks** oder **Academy-Verwaltung → Signierte Kurs-Webhooks** und erstelle ein Abonnement mit einem vom Betreiber freigegebenen Zielalias. Kopiere den einmal angezeigten Signaturschlüssel in den privaten Secret Store des Empfängers.
+Der [Empfänger](company-course-webhook-receiver.mjs) startet mit der Node-Version aus [`.node-version`](../../.node-version) und legt eine persistente SQLite-Inbox für genau ein Abonnement an. Öffne **Admin → Unternehmen → API-Integrationen → Unternehmens-Webhooks** oder **Academy-Verwaltung → Signierte Kurs-Webhooks** und erstelle ein Abonnement mit einem vom Betreiber freigegebenen Zielalias. Für die interne Kundenabrechnung wählst du **Kundenabrechnung** und richtest dafür einen eigenen Empfänger ein. Kopiere den einmal angezeigten Signaturschlüssel in den privaten Secret Store des Empfängers.
 
 Starte den Empfänger mit dem unten gezeigten Befehl. Richte für echte Zustellungen einen HTTPS-Reverse-Proxy ein, der `POST /course-events` unverändert an den Loopback-Port weitergibt. Hinterlege die öffentliche HTTPS-Adresse einschließlich Pfad in der Zielzuordnung des [Workers](../../OPERATIONS.md#company-course-webhooks). Sieh in der Zustellhistorie im Portal nach und lies die letzten 50 Einträge mit `receipts`. Für einen Schlüsselwechsel widerrufst du das bisherige Abonnement, erstellst ein neues und startest den Empfänger mit dem neuen Signaturschlüssel.
 
@@ -77,7 +77,7 @@ Starte den Empfänger mit dem unten gezeigten Befehl. Richte für echte Zustellu
 
 ### English
 
-The [receiver](company-course-webhook-receiver.mjs) runs with the Node version in [`.node-version`](../../.node-version) and opens a durable SQLite inbox for one subscription. In **Admin → Companies → API integrations → Course webhooks** or **Academy administration → Signed course webhooks**, create a subscription for an operator-approved receiver alias. Copy the one-time subscription signing key to the receiver's private secret store.
+The [receiver](company-course-webhook-receiver.mjs) runs with the Node version in [`.node-version`](../../.node-version) and opens a durable SQLite inbox for one subscription. In **Admin → Companies → API integrations → Company webhooks** or **Academy administration → Signed course webhooks**, create a subscription for an operator-approved receiver alias. For internal customer accounting, choose **Customer accounting** and configure a separate receiver. Copy the one-time subscription signing key to the receiver's private secret store.
 
 Start the receiver with the command below. For real deliveries, configure an HTTPS reverse proxy to forward `POST /course-events` and preserve its original body and signature headers. Set the full public HTTPS URL in the [worker destination map](../../OPERATIONS.md#company-course-webhooks). Check the delivery history in the portal and use `receipts` to read the latest 50 entries. To rotate the key, revoke the old subscription, create a new subscription and restart the receiver with its signing key.
 

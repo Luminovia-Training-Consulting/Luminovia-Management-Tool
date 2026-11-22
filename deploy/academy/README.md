@@ -15,7 +15,7 @@ node scripts/academy-customer-draft.mjs approve "$private_registry" "$private_dr
 
 Compare the preview and original private draft before setting `exact_approval` to the complete `APPROVE …` text returned by the preview. Any change to the approved details requires a fresh review. Keep `approved-drafts.json` private. It records names, contact addresses and approval times. An exact retry returns the original installation ID and receipt.
 
-Carry the approved installation ID, dedicated edition, HTTPS origin and intended runtime directory forward to the runtime command below. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. The private receipt is an onboarding approval. Runtime creation, licence issuance and publication each require their own operator action.
+Use the [signed runtime handoff](RUNTIME-HANDOFF.md) to pass the approved installation and target to the customer operator. The operator confirms the local path and generates the private configuration on their own machine. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. Runtime creation, licence issuance and publication each require their own operator action.
 
 ## Issue, convert or renew a customer licence
 
@@ -194,7 +194,7 @@ sudo python3 deploy/academy/recovery.py backup \
   "$runtime_root" "$installation_id" "$release_commit" --recipient "$age_recipient"
 ```
 
-The command verifies the dedicated mounts and cold database state before encrypting files directly to an archive in the private `backups` directory. The archive contains the physical PostgreSQL 17 cluster, including Auth, roles, databases and migration ledger, Storage objects, local mail capture if present, browser release, private runtime and configuration volumes. It also preserves the optional private `runtime.env.webhooks.env` file, which supplies the worker's receiver settings. Deno and scanner signature caches are rebuilt from the reviewed images. Copy the encrypted set off the deployment machine while preserving private permissions, confirm its SHA-256 using the recorded value, then resume the approved original services.
+The command verifies the dedicated mounts and cold database state before encrypting files directly to an archive in the private `backups` directory. The archive contains the physical PostgreSQL 17 cluster, including Auth, roles, databases and migration ledger, Storage objects, local mail capture if present, browser release, private runtime and configuration volumes. It also preserves the optional private `runtime.env.webhooks.env` receiver settings and the `runtime-handoff.json` operator receipt. Deno and scanner signature caches are rebuilt from the reviewed images. Copy the encrypted set off the deployment machine while preserving private permissions, confirm its SHA-256 using the recorded value, then resume the approved original services.
 
 To rehearse or recover, use an independent host with an empty Compose namespace and the same absolute runtime path. Keep ingress closed. Use only an archive from the agreed recovery storage and make sure the original installation's Linux ownership is usable on the recovery machine.
 

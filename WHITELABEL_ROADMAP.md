@@ -296,6 +296,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [x] Local administrators can publish the name, short name and accent. Both editions verify the anonymous sign-in and responsive academy pages.
 - [x] Local administrators can preview and publish a scanned PNG for the Academy shell, sign-in and invitations. The signed package supplies the fallback logo, favicon and PWA icons.
 - [x] Provide a private offline vendor workflow to preview a dedicated academy draft and save an exact, explicitly approved receipt. The registry checks duplicate requests, domains and overlapping host paths.
+- [x] Export a signed runtime handoff from the approved draft. The customer operator confirms the path and the trusted key before generating the independent local credentials. An exact retry preserves the existing configuration. [Operator handoff](deploy/academy/RUNTIME-HANDOFF.md)
 - [ ] Connect approved drafts to authorised commercial fulfilment and live provisioning.
 - [x] Allow each academy administrator to publish or remove local support, privacy, legal notice and terms links. Confirm safe public display before sign-in and edit denial for learners in both editions.
 - [ ] Customer domain/TLS/redirects, Auth callback URLs, verified sender and domain-safe PWA/cache.

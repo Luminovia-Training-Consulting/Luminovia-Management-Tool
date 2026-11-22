@@ -92,7 +92,9 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         }),
     ]);
     assert.equal(results.filter((r) => !r.error).length, 1);
-    assert.equal(results.find((r) => r.error).error.code, "40001");
+    const stale = results.find((r) => r.error);
+    assert.equal(stale.status, 409);
+    assert.equal(stale.error.code, "PT409");
     const clientRows = await call(customer, "delivery_sessions", {
         p_scope: "customer",
     });
@@ -119,6 +121,13 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         p_expected_version: 3,
         p_request_id: randomUUID(),
     });
+    await sql(`update public.assignment_sessions set released_at=now() where id=${q(session)}`);
+    const beforeReview = await teacher.client.rpc("save_delivery_draft", {
+        ...args,
+        p_expected_version: 4,
+        p_request_id: randomUUID(),
+    });
+    assert.equal(beforeReview.status, 403);
     await call(manager, "review_delivery", {
         ...decision,
         p_expected_version: 4,
@@ -147,6 +156,10 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         p_session_id: session,
     });
     assert.equal(history.submissions.length, 2);
+    assert.equal(
+        Date.parse(history.submissions[0].scheduled_end),
+        Date.parse(history.submissions[1].scheduled_end),
+    );
     assert.equal(
         Date.parse(history.submissions[1].actual_end),
         Date.parse(args.p_payload.actual_end),

@@ -22,6 +22,7 @@ type Webhook = {
   destination: string;
   integration_label: string;
   premium_events: boolean;
+  accounting_events?: true;
   active: boolean;
   deliveries: WebhookDelivery[];
 };
@@ -34,6 +35,7 @@ export function CompanyWebhooks({
   keys = [],
   archived,
   canSubscribePremium = false,
+  canSubscribeAccounting = false,
   academy = false,
 }: {
   actor: string;
@@ -47,6 +49,7 @@ export function CompanyWebhooks({
   }[];
   archived: boolean;
   canSubscribePremium?: boolean;
+  canSubscribeAccounting?: boolean;
   academy?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
@@ -55,9 +58,12 @@ export function CompanyWebhooks({
   const [open, setOpen] = useState(false);
   const [openedAt, setOpenedAt] = useState(0);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<
+    "webhookError" | "webhookDuplicate" | "webhookLimit"
+  >();
   const [secret, setSecret] = useState("");
   const [revoke, setRevoke] = useState<Webhook>();
+  const [accounting, setAccounting] = useState(false);
   const queryKey = ["company-course-webhooks", actor, organisation];
   const subscriptions = useQuery({
     queryKey,
@@ -81,7 +87,7 @@ export function CompanyWebhooks({
     const form = event.currentTarget;
     const data = new FormData(form);
     setPending(true);
-    setError(false);
+    setError(undefined);
     setSecret("");
     try {
       requireOnline();
@@ -101,24 +107,45 @@ export function CompanyWebhooks({
         };
         const result = academy
           ? await db().rpc("academy_subscribe_course_webhook", args)
-          : await db().rpc("company_course_webhook_subscribe", {
-              ...args,
-              p_integration: String(data.get("integration")),
-              p_premium_events:
-                canSubscribePremium && data.has("premiumEvents"),
-            });
-        if (result.error || typeof result.data?.signing_secret !== "string")
+          : await subscribeCompany(args, data);
+        if (result.error) throw result.error;
+        if (typeof result.data?.signing_secret !== "string")
           throw new Error("webhook_subscription_failed");
         if (form.isConnected) setSecret(result.data.signing_secret);
       }
       setRevoke(undefined);
+      setAccounting(false);
       form.reset();
-    } catch {
-      setError(true);
+    } catch (failure) {
+      const code =
+        failure && typeof failure === "object" && "code" in failure
+          ? failure.code
+          : null;
+      setError(
+        code === "23505"
+          ? "webhookDuplicate"
+          : code === "PT429" || code === "54000"
+            ? "webhookLimit"
+            : "webhookError",
+      );
     } finally {
       await cache.invalidateQueries({ queryKey });
       setPending(false);
     }
+  }
+
+  function subscribeCompany(
+    args: { p_organisation: string; p_destination: string },
+    data: FormData,
+  ) {
+    const input = { ...args, p_integration: String(data.get("integration")) };
+    if (canSubscribeAccounting && accounting) {
+      return db().rpc("company_accounting_webhook_subscribe", input);
+    }
+    return db().rpc("company_course_webhook_subscribe", {
+      ...input,
+      p_premium_events: canSubscribePremium && data.has("premiumEvents"),
+    });
   }
 
   const fieldPrefix = "course-webhook-" + organisation;
@@ -131,13 +158,22 @@ export function CompanyWebhooks({
         if (!isOpen) {
           setSecret("");
           setRevoke(undefined);
+          setAccounting(false);
         }
       }}
     >
-      <summary>{t("webhookTitle")}</summary>
+      <summary>{t(academy ? "webhookTitle" : "webhookCompanyTitle")}</summary>
       {open && (
         <>
-          <p>{t(academy ? "webhookAcademyHelp" : "webhookHelp")}</p>
+          <p>
+            {t(
+              academy
+                ? "webhookAcademyHelp"
+                : canSubscribeAccounting
+                  ? "webhookCompanyHelp"
+                  : "webhookHelp",
+            )}
+          </p>
           {online && subscriptions.isPending && <Loading />}
           {online && subscriptions.isError && (
             <ErrorState retry={() => void subscriptions.refetch()} />
@@ -167,6 +203,9 @@ export function CompanyWebhooks({
                         )}
                         {!academy && subscription.premium_events && (
                           <> · {t("webhookPremium")}</>
+                        )}
+                        {!academy && subscription.accounting_events && (
+                          <> · {t("webhookAccounting")}</>
                         )}
                         {subscription.active && (
                           <Button
@@ -250,7 +289,30 @@ export function CompanyWebhooks({
                           autoComplete="off"
                         />
                       </Field>
-                      {canSubscribePremium && (
+                      {!academy && canSubscribeAccounting && (
+                        <Field
+                          id={fieldPrefix + "-events"}
+                          label={t("webhookScope")}
+                        >
+                          <select
+                            id={fieldPrefix + "-events"}
+                            value={accounting ? "accounting" : "course"}
+                            onChange={(event) =>
+                              setAccounting(
+                                event.currentTarget.value === "accounting",
+                              )
+                            }
+                          >
+                            <option value="course">
+                              {t("webhookCourses")}
+                            </option>
+                            <option value="accounting">
+                              {t("webhookAccounting")}
+                            </option>
+                          </select>
+                        </Field>
+                      )}
+                      {canSubscribePremium && !accounting && (
                         <label>
                           <input type="checkbox" name="premiumEvents" />{" "}
                           {t("webhookIncludePremium")}
@@ -300,7 +362,7 @@ export function CompanyWebhooks({
               )}
             </>
           )}
-          {error && <Notice kind="error">{t("webhookError")}</Notice>}
+          {error && <Notice kind="error">{t(error)}</Notice>}
         </>
       )}
     </details>

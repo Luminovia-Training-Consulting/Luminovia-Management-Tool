@@ -45,6 +45,7 @@ import {
 } from "./api";
 import { CustomerCreditNotes } from "./credit-notes";
 import { CustomerSettlementPanel } from "./customer-settlement";
+import { SettlementJournalButton } from "./settlement-journal";
 import "./i18n";
 import "./accounting.css";
 
@@ -673,6 +674,10 @@ export function AccountingPage() {
         >
           {t("refresh")}
         </Button>
+        {(access.data.can_manage_customer_invoices ||
+          access.data.can_export_all_lecturers) && (
+          <SettlementJournalButton key={actor} />
+        )}
       </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
       {saved && <Notice>{t("saved")}</Notice>}

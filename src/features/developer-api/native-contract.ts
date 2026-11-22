@@ -17,6 +17,7 @@ type NativeRpc = {
  * mail credentials in Swagger's request and response panes.
  */
 const documentOnly = new Set([
+  "company_accounting_webhook_subscribe",
   "company_course_webhook_subscribe",
   "issue_company_integration_key",
   "issue_scoped_company_integration_key",

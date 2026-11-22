@@ -223,10 +223,12 @@ function ClientWorkspace({
   actor,
   isAdmin,
   canManageIntegrations,
+  canSubscribeAccounting,
 }: {
   actor: string;
   isAdmin: boolean;
   canManageIntegrations: boolean;
+  canSubscribeAccounting: boolean;
 }) {
   const { t } = useTranslation("operations");
   const orgs = useQuery(orgQuery(actor));
@@ -379,6 +381,7 @@ function ClientWorkspace({
                 canSubscribePremium={
                   isAdmin && Boolean(premiumSetting?.enabled)
                 }
+                canSubscribeAccounting={canSubscribeAccounting}
               />
             )}
             {premiumSetting?.enabled && (
@@ -531,6 +534,7 @@ export function ClientsPage() {
       canManageIntegrations={
         roles.data.includes("admin") || roles.data.includes("owner")
       }
+      canSubscribeAccounting={permissions.data.includes("finance.gross.read")}
     />
   );
 }

@@ -17,7 +17,7 @@ afterEach(() => {
   fake.rpc.mockReset();
 });
 
-function view(canSubscribePremium = false) {
+function view(canSubscribePremium = false, canSubscribeAccounting = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -28,6 +28,7 @@ function view(canSubscribePremium = false) {
         organisation="fictional-company"
         archived={false}
         canSubscribePremium={canSubscribePremium}
+        canSubscribeAccounting={canSubscribeAccounting}
         zone="Europe/Berlin"
       />
     </QueryClientProvider>,
@@ -141,7 +142,7 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
   }));
   const { toggle, client, user } = view(true);
   toggle(true);
-  await user.click(screen.getByText(/Kurs-Webhooks|Course webhooks/));
+  await user.click(screen.getByText(/Unternehmens-Webhooks|Company webhooks/));
   const key = await screen.findByRole("combobox", {
     name: /^Integrationsschlüssel$|^Integration key$/,
   });
@@ -154,6 +155,11 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
     name: /Premium-Kursereignisse|Include Premium/,
   });
   expect(premium).not.toBeChecked();
+  expect(
+    screen.queryByRole("option", {
+      name: /Kundenabrechnung|Customer accounting/,
+    }),
+  ).toBeNull();
   await user.click(premium);
   await user.click(
     screen.getByRole("button", {
@@ -181,3 +187,97 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
   toggle(false);
   expect(screen.queryByDisplayValue(signingKey)).toBeNull();
 });
+
+it.each([
+  [null, null],
+  ["23505", /bereits verwendet|alias is already in use/],
+  ["PT429", /fünf aktive Abonnements|five active subscriptions/],
+] as const)(
+  "handles accounting-only subscription result %s without enabling course events",
+  async (code, message) => {
+    const signingKey = "c".repeat(64);
+    fake.rpc.mockImplementation(async (name) => ({
+      data:
+        name === "company_integration_keys"
+          ? [
+              {
+                id: "fictional-key",
+                label: "Training sync",
+                expires_at: "2100-01-01T00:00:00Z",
+                revoked_at: null,
+                version: 1,
+              },
+            ]
+          : name === "company_accounting_webhook_subscribe"
+            ? { signing_secret: signingKey }
+            : [
+                {
+                  id: "fictional-accounting",
+                  destination: "accounts-sync",
+                  integration_label: "Fictional accounts",
+                  active: true,
+                  accounting_events: true,
+                  deliveries: [
+                    {
+                      id: "fictional-delivery",
+                      event_type: "payment.reversed",
+                      occurred_at: "2026-11-21T09:00:00Z",
+                      attempts: 1,
+                      state: "delivered",
+                    },
+                  ],
+                },
+              ],
+      error:
+        name === "company_accounting_webhook_subscribe" && code
+          ? { code }
+          : null,
+    }));
+    const { toggle, user } = view(true, true);
+    toggle(true);
+    await user.click(
+      screen.getByText(/Unternehmens-Webhooks|Company webhooks/),
+    );
+    await user.selectOptions(
+      await screen.findByRole("combobox", { name: /^Ereignisse$|^Events$/ }),
+      "accounting",
+    );
+    expect(
+      screen.queryByRole("checkbox", {
+        name: /Premium-Kursereignisse|Include Premium/,
+      }),
+    ).toBeNull();
+    await user.selectOptions(
+      screen.getByRole("combobox", {
+        name: /^Integrationsschlüssel$|^Integration key$/,
+      }),
+      "fictional-key",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /Empfänger-Alias|Receiver alias/ }),
+      "accounts-sync",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: /Webhook abonnieren|Subscribe to webhooks/,
+      }),
+    );
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "company_accounting_webhook_subscribe",
+      {
+        p_organisation: "fictional-company",
+        p_integration: "fictional-key",
+        p_destination: "accounts-sync",
+      },
+    );
+    if (message) {
+      expect(await screen.findByText(message)).toBeVisible();
+      expect(screen.queryByDisplayValue(signingKey)).toBeNull();
+    } else {
+      expect(await screen.findByDisplayValue(signingKey)).toBeVisible();
+    }
+    expect(
+      screen.getByText(/Zahlung storniert|Payment reversed/),
+    ).toBeVisible();
+  },
+);

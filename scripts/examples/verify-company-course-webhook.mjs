@@ -5,6 +5,15 @@ const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const secretPattern = /^[0-9a-f]{64}$/;
 const signaturePattern = /^v1=([0-9a-f]{64})$/;
 const timestampPattern = /^[1-9][0-9]{0,11}$/;
+const accountingTypes = new Set([
+  "invoice.registered",
+  "payment.recorded",
+  "payment.reversed",
+  "credit_note.applied",
+  "credit_note.reversed",
+  "refund.recorded",
+  "refund.reversed",
+]);
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 export const webhookBodyLimit = 65_536;
 
@@ -14,7 +23,7 @@ export function isWebhookSigningSecret(secret) {
 }
 
 /**
- * Authenticate a course notification using a subscription-specific secret and
+ * Authenticate a company notification using a subscription-specific secret and
  * the lowercased HTTP headers provided by Node's IncomingMessage.
  * The caller must deduplicate the confirmed event ID in durable storage.
  */
@@ -50,16 +59,20 @@ export function verifyCompanyCourseWebhook({
   if (!timingSafeEqual(expected, Buffer.from(match[1], "hex"))) return null;
   try {
     const event = JSON.parse(utf8.decode(body));
-    return event?.id === eventId &&
-      event.version === 1 &&
-      typeof event.type === "string" &&
-      event.type.startsWith("course.") &&
-      typeof event.course_id === "string" &&
-      uuid.test(event.course_id) &&
-      typeof event.occurred_at === "string" &&
-      Number.isFinite(Date.parse(event.occurred_at))
-      ? event
-      : null;
+    if (
+      event?.id !== eventId ||
+      event.version !== 1 ||
+      typeof event.type !== "string" ||
+      typeof event.occurred_at !== "string" ||
+      !Number.isFinite(Date.parse(event.occurred_at))
+    )
+      return null;
+    const resource = event.type.startsWith("course.")
+      ? event.course_id
+      : accountingTypes.has(event.type)
+        ? event.invoice_id
+        : null;
+    return typeof resource === "string" && uuid.test(resource) ? event : null;
   } catch {
     return null;
   }

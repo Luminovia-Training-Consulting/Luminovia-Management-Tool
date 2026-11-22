@@ -1,5 +1,11 @@
 /** The manager and two independent lecturers share one versioned course schedule. */
-import { expect, test } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Browser,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { DateTime } from "luxon";
 import { actor, api, checked, login } from "./helpers/accounts-support";
@@ -9,10 +15,22 @@ test.skip(
   "Shared schedule writes require the disposable portal test project.",
 );
 
-test("staff and both lecturers amend the future of a started shared course", async ({
+test("staff and both lecturers amend the future of a started shared course", ({
   page,
   browser,
-}, testInfo) => {
+}, testInfo) => sharedSchedule(page, browser, testInfo, "staff"));
+
+test("company proposes shared dates and management coordinates consent", ({
+  page,
+  browser,
+}, testInfo) => sharedSchedule(page, browser, testInfo, "customer"));
+
+async function sharedSchedule(
+  page: Page,
+  browser: Browser,
+  testInfo: TestInfo,
+  author: "staff" | "customer",
+) {
   test.setTimeout(120_000);
   const manager = await actor("Fictional schedule manager", "admin");
   const first = await actor("Fictional first lecturer", "lecturer");
@@ -147,65 +165,130 @@ test("staff and both lecturers amend the future of a started shared course", asy
   );
   expect(historicalAllocations).toHaveLength(2);
 
-  await login(page, manager.email);
-  await page.goto("/changes");
-  if (testInfo.project.use.isMobile) {
-    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
-    await page.getByLabel("Theme", { exact: true }).selectOption("dark");
-  }
-  await page
-    .getByRole("button", {
-      name: /^(Änderungsantrag erstellen|Create change request)$/,
-    })
-    .click();
-  const form = page.getByRole("dialog");
-  await form
-    .getByLabel(/^(Bestätigter Auftrag|Confirmed assignment)$/)
-    .selectOption(firstClaim);
-  await expect(
-    form.getByText(/^(Beim Einreichen erhält|Submitting sends)/),
-  ).toBeVisible();
-  await expect(
-    form.getByLabel(/^(Leistungsumfang|Scope of work)$/),
-  ).toHaveCount(0);
-  await expect(
-    form.getByText(/^(Begonnene Termine|Sessions already started)/),
-  ).toBeVisible();
-  await expect(form.getByLabel(/^(Beginn|Start) 1$/)).toHaveAttribute(
-    "readonly",
-    "",
-  );
-  await expect(
-    form
-      .getByRole("button", { name: /^(Termin entfernen|Remove session)$/ })
-      .first(),
-  ).toBeDisabled();
-  await form
-    .getByLabel(/^(Begründung|Reason)$/)
-    .fill(
-      "Fictional schedule update agreed after participant availability review.",
+  const options = {
+    baseURL: process.env.E2E_BASE_URL,
+    viewport: testInfo.project.use.viewport,
+    isMobile: testInfo.project.use.isMobile,
+    hasTouch: testInfo.project.use.hasTouch,
+    deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+  };
+  const openChanges = async (at: Page, email: string) => {
+    await login(at, email);
+    await at.goto("/changes");
+    if (testInfo.project.use.isMobile) {
+      await at.getByLabel("Sprache", { exact: true }).selectOption("en");
+      await at.getByLabel("Theme", { exact: true }).selectOption("dark");
+    }
+  };
+  const propose = async (at: Page) => {
+    await at
+      .getByRole("button", {
+        name: /^(Änderungsantrag erstellen|Create change request)$/,
+      })
+      .click();
+    const form = at.getByRole("dialog");
+    await form
+      .getByLabel(/^(Bestätigter Auftrag|Confirmed assignment)$/)
+      .selectOption(firstClaim);
+    await expect(
+      form.getByText(
+        author === "customer"
+          ? /^(Schlage neue Termine|Propose new dates)/
+          : /^(Beim Einreichen erhält|Submitting sends)/,
+      ),
+    ).toBeVisible();
+    await expect(
+      form.getByLabel(/^(Leistungsumfang|Scope of work)$/),
+    ).toHaveCount(0);
+    await expect(
+      form.getByText(/^(Begonnene Termine|Sessions already started)/),
+    ).toBeVisible();
+    await expect(form.getByLabel(/^(Beginn|Start) 1$/)).toHaveAttribute(
+      "readonly",
+      "",
     );
-  await form
-    .getByRole("button", { name: /^(Termin hinzufügen|Add session)$/ })
-    .click();
-  await form
-    .getByLabel(/^(Beginn|Start) 3$/)
-    .fill(newStart.toFormat("yyyy-MM-dd'T'HH:mm"));
-  await form
-    .getByLabel(/^(Ende|Finish) 3$/)
-    .fill(newStart.plus({ hours: 1 }).toFormat("yyyy-MM-dd'T'HH:mm"));
-  await form
-    .getByRole("button", {
-      name: /^(Entwurf online speichern|Save draft online)$/,
-    })
-    .click();
-  await expect(page).toHaveURL(/\/changes\/[0-9a-f-]+$/);
-  const initialRequest = page.url();
-  await page
-    .getByRole("button", {
-      name: /^(Zur Zustimmung einreichen|Submit for consent)$/,
-    })
-    .click();
+    await expect(
+      form
+        .getByRole("button", { name: /^(Termin entfernen|Remove session)$/ })
+        .first(),
+    ).toBeDisabled();
+    await form
+      .getByLabel(/^(Begründung|Reason)$/)
+      .fill(
+        "Fictional schedule update agreed after participant availability review.",
+      );
+    await form
+      .getByRole("button", { name: /^(Termin hinzufügen|Add session)$/ })
+      .click();
+    await form
+      .getByLabel(/^(Beginn|Start) 3$/)
+      .fill(newStart.toFormat("yyyy-MM-dd'T'HH:mm"));
+    await form
+      .getByLabel(/^(Ende|Finish) 3$/)
+      .fill(newStart.plus({ hours: 1 }).toFormat("yyyy-MM-dd'T'HH:mm"));
+    await form
+      .getByRole("button", {
+        name: /^(Entwurf online speichern|Save draft online)$/,
+      })
+      .click();
+    await expect(at).toHaveURL(/\/changes\/[0-9a-f-]+$/);
+    const request = at.url();
+    await at
+      .getByRole("button", {
+        name:
+          author === "customer"
+            ? /^(Zur Prüfung einreichen|Submit for review)$/
+            : /^(Zur Zustimmung einreichen|Submit for consent)$/,
+      })
+      .click();
+    return request;
+  };
+
+  await openChanges(page, manager.email);
+  let initialRequest: string;
+  if (author === "customer") {
+    const companyContact = await actor("Fictional schedule customer", "client");
+    await checked(
+      service.from("client_organisation_memberships").insert({
+        user_id: companyContact.id,
+        organisation_id: company,
+      }),
+    );
+    const companyContext = await browser.newContext(options);
+    try {
+      const companyPage = await companyContext.newPage();
+      await openChanges(companyPage, companyContact.email);
+      initialRequest = await propose(companyPage);
+      await expect(
+        companyPage.getByText(
+          /^(Das Management prüft|Management is reviewing)/,
+        ),
+      ).toBeVisible();
+      await expect(
+        companyPage.getByText("Retained fictional terms"),
+      ).toHaveCount(0);
+      await expect(
+        companyPage.getByRole("button", {
+          name: /^(Zustimmungen einholen|Request consent)$/,
+        }),
+      ).toHaveCount(0);
+      await page.goto(initialRequest);
+      const coordinate = page.getByRole("button", {
+        name: /^(Zustimmungen einholen|Request consent)$/,
+      });
+      await expect(coordinate).toBeDisabled();
+      await page
+        .getByRole("checkbox", {
+          name: /^(Ich habe den Kundenantrag geprüft|I have reviewed the customer request)/,
+        })
+        .check();
+      await coordinate.click();
+    } finally {
+      await companyContext.close();
+    }
+  } else {
+    initialRequest = await propose(page);
+  }
   await expect(
     page.getByRole("status").filter({ hasText: /0 (von|of) 2/ }),
   ).toBeVisible();
@@ -239,13 +322,6 @@ test("staff and both lecturers amend the future of a started shared course", asy
   await accept(page, 1);
   await page.goto("/changes/" + related!.id);
   await accept(page, 1);
-  const options = {
-    baseURL: process.env.E2E_BASE_URL,
-    viewport: testInfo.project.use.viewport,
-    isMobile: testInfo.project.use.isMobile,
-    hasTouch: testInfo.project.use.hasTouch,
-    deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
-  };
   const lecturerContext = await browser.newContext(options);
   try {
     const lecturerPage = await lecturerContext.newPage();
@@ -327,4 +403,4 @@ test("staff and both lecturers amend the future of a started shared course", asy
   } finally {
     await lecturerContext.close();
   }
-});
+}

@@ -21,7 +21,7 @@ from uuid import UUID, uuid4
 FORMAT = "luminovia-academy-recovery-v1"
 RUNTIME_FILES = ("installation.json", "runtime.env", "runtime.env.public.env",
                  "runtime.env.notification.env")
-OPTIONAL_RUNTIME_FILES = ("runtime.env.webhooks.env",)
+OPTIONAL_RUNTIME_FILES = ("runtime.env.webhooks.env", "runtime-handoff.json")
 RUNTIME_DIRS = ("browser", "data")
 VOLUMES = ("db-config", "caddy_data", "caddy_config")
 CACHE_VOLUMES = ("deno-cache", "clamav_signatures")

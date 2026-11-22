@@ -1,8 +1,31 @@
 /** Native HTTP check for isolated company keys and their separate credential boundary. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
+import {
+  companyCourseIndexPath,
+  companyCourseOperationPaths,
+} from "../src/features/developer-api/company-course-index-contract.ts";
+
+const indexContract = companyCourseIndexPath.get;
+const enrolContract =
+  companyCourseOperationPaths["/functions/v1/company-integration/enrolments"]
+    .post;
+const reportContract =
+  companyCourseOperationPaths["/functions/v1/company-integration/participation"]
+    .get;
+
+async function checkResponse(contract, response, status, code) {
+  assert.equal(response.status, status, contract.operationId);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const body = await response.json();
+  const definition = contract.responses[status];
+  z.fromJSONSchema(definition.content["application/json"].schema).parse(body);
+  if (code) assert.deepEqual(body, { error: code });
+  return body;
+}
 
 await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
   const admin = await actor("integration-admin", "admin");
@@ -43,35 +66,84 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
     "Issue fictional organisation key",
   );
   const endpoint = new URL("/functions/v1/company-integration?limit=1", url);
-  const request = (credential, headers = {}) =>
-    fetch(endpoint, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${credential}`, ...headers },
-    });
-  const first = await request(initial.credential);
-  assert.equal(first.status, 200);
-  assert.equal(first.headers.get("cache-control"), "no-store");
-  assert.deepEqual(await first.json(), {
-    items: [
-      {
-        id: courseA,
-        title: "Fictional course listing",
-        time_zone: "Europe/Berlin",
+  const request = (
+    credential,
+    { path = endpoint, method = "GET", headers = {}, body } = {},
+  ) =>
+    fetch(new URL(path, url), {
+      method,
+      headers: {
+        ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
+        ...headers,
       },
-    ],
-    next_cursor: null,
-  });
-  assert.equal(
-    (await request(initial.credential, { Origin: "http://127.0.0.1:5273" }))
-      .status,
-    403,
+      body,
+      signal: AbortSignal.timeout(30_000),
+    });
+  assert.deepEqual(
+    await checkResponse(indexContract, await request(initial.credential), 200),
+    {
+      items: [
+        {
+          id: courseA,
+          title: "Fictional course listing",
+          time_zone: "Europe/Berlin",
+        },
+      ],
+      next_cursor: null,
+    },
   );
+  await checkResponse(
+    indexContract,
+    await request(initial.credential, {
+      headers: { Origin: "http://127.0.0.1:5273" },
+    }),
+    403,
+    "browser_origin_denied",
+  );
+  await checkResponse(
+    indexContract,
+    await request(),
+    401,
+    "invalid_credential",
+  );
+  const invalidMethod = await request(initial.credential, { method: "POST" });
+  assert.equal(invalidMethod.headers.get("allow"), "GET");
+  await checkResponse(indexContract, invalidMethod, 405, "method_not_allowed");
+  for (const query of [
+    "limit=0",
+    "limit=51",
+    "limit=1&limit=2",
+    "after=invalid",
+    "sort=asc",
+  ]) {
+    await checkResponse(
+      indexContract,
+      await request(initial.credential, {
+        path: `/functions/v1/company-integration?${query}`,
+      }),
+      400,
+      "invalid_query",
+    );
+  }
+  // Position the fictional key at the documented budget boundary. Both
+  // requests under test still traverse the real handler and atomic DB counter.
+  await sql(`update private.company_integration_keys
+    set window_started_at=clock_timestamp(),window_requests=59 where id=${q(initial.id)}`);
+  await checkResponse(indexContract, await request(initial.credential), 200);
+  const limited = await request(initial.credential);
+  await checkResponse(indexContract, limited, 429, "rate_limited");
+  assert.equal(limited.headers.get("retry-after"), "60");
   const rotated = await checked(
     issue(admin.client, initial),
     "Rotate fictional organisation key",
   );
-  assert.equal((await request(initial.credential)).status, 401);
-  assert.equal((await request(rotated.credential)).status, 200);
+  await checkResponse(
+    indexContract,
+    await request(initial.credential),
+    401,
+    "invalid_credential",
+  );
+  await checkResponse(indexContract, await request(rotated.credential), 200);
 
   const participant = await sql(
     `select luminovia_user_id from public.profiles where id=${q(learner.id)}`,
@@ -130,10 +202,56 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
         headers: { Authorization: `Bearer ${key.credential}` },
       },
     );
+  const enrolRoute = "/functions/v1/company-integration/enrolments";
+  const reportRoute = "/functions/v1/company-integration/participation";
+  const wrongEnrolMethod = await request(writer.credential, {
+    path: enrolRoute,
+  });
+  assert.equal(wrongEnrolMethod.headers.get("allow"), "POST");
+  await checkResponse(
+    enrolContract,
+    wrongEnrolMethod,
+    405,
+    "method_not_allowed",
+  );
+  for (const body of [
+    "{",
+    "[]",
+    JSON.stringify({
+      course_id: courseA,
+      participant_id: participant,
+      role: "admin",
+    }),
+  ]) {
+    await checkResponse(
+      enrolContract,
+      await request(writer.credential, {
+        path: enrolRoute,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      }),
+      400,
+      "invalid_request",
+    );
+  }
+  await checkResponse(
+    reportContract,
+    await request(reader.credential, {
+      path: `${reportRoute}?course_id=${courseA}&course_id=${courseB}`,
+    }),
+    400,
+    "invalid_request",
+  );
   assert.equal((await request(reader.credential)).status, 401);
   assert.equal((await report(writer)).status, 401);
   assert.equal((await enrol(rotated)).status, 401);
-  assert.equal((await report(reader, courseB)).status, 404);
+  await checkResponse(
+    reportContract,
+    await report(reader, courseB),
+    404,
+    "not_found",
+  );
   assert.equal((await report(reader)).status, 404, "Premium defaults to OFF");
   await sql(`insert into private.company_premium_settings(organisation_id,enabled)
     values (${q(companyA)},true) on conflict(organisation_id) do update set enabled=true;`);
@@ -153,8 +271,7 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
     select ${q(companyA)},${q(learner.id)},'active',id,${q(admin.id)},now() from accepted;`);
   assert.equal((await enrol(writer, courseB)).status, 404);
   for (const response of await Promise.all([enrol(writer), enrol(writer)])) {
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
+    assert.deepEqual(await checkResponse(enrolContract, response, 200), {
       course_id: courseA,
       participant_id: participant,
       status: "enrolled",
@@ -166,8 +283,7 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
     "1",
   );
   const counts = await report(reader);
-  assert.equal(counts.status, 200);
-  assert.deepEqual(await counts.json(), {
+  assert.deepEqual(await checkResponse(reportContract, counts, 200), {
     course_id: courseA,
     session_count: 0,
     enrolled_count: 1,
@@ -181,7 +297,12 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
     }),
     "Remove the enrolment using the portal workflow",
   );
-  assert.equal((await enrol(writer)).status, 409);
+  await checkResponse(
+    enrolContract,
+    await enrol(writer),
+    409,
+    "enrolment_unavailable",
+  );
   assert.equal((await (await report(reader)).json()).enrolled_count, 0);
   await sql(
     `update private.company_premium_settings set enabled=false where organisation_id=${q(companyA)};`,

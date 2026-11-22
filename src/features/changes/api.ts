@@ -6,7 +6,11 @@ import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { refreshJobState } from "../jobs/lifecycle-api";
-import { assignmentChangeSchema, candidateSchema } from "./schema";
+import {
+  assignmentChangeSchema,
+  candidateSchema,
+  type AssignmentChangeAction,
+} from "./schema";
 export type {
   AssignmentChange,
   AssignmentSnapshot,
@@ -81,7 +85,7 @@ export async function saveAssignmentChange(
  * exact server version; a rejected/invalid response never confirms a mutation. */
 export async function changeAssignmentAction(
   id: string,
-  action: "submit" | "accept" | "reject" | "withdraw" | "apply",
+  action: AssignmentChangeAction,
   version: number,
   note: string,
   request: string,

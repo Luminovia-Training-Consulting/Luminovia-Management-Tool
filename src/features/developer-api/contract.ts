@@ -15,9 +15,10 @@ import {
 } from "./company-course-index-contract.ts";
 import { companyIntegrationScopes } from "../operations/company-integration-scopes.ts";
 import {
+  companyAccountingWebhook,
   companyCourseWebhook,
   companyWebhookDestination,
-  companyWebhookListSchema,
+  internalCompanyWebhookListSchema,
 } from "./course-webhook-contract.ts";
 import {
   installationBrand,
@@ -25,6 +26,7 @@ import {
 } from "../../lib/installation-brand.ts";
 import { accountOpenApi } from "../../../supabase/functions/accounts/openapi.ts";
 import { accountingPaths } from "./accounting-contract.ts";
+import { deliveryEvidencePaths } from "./delivery-evidence-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
 import { enquiriesSupportPaths } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
@@ -113,7 +115,11 @@ import {
   readinessSettingsInputSchema,
   readinessTaskInputSchema,
 } from "../readiness/schema.ts";
-import { assignmentChangeSchema, candidateSchema } from "../changes/schema.ts";
+import {
+  assignmentChangeActions,
+  assignmentChangeSchema,
+  candidateSchema,
+} from "../changes/schema.ts";
 import {
   candidatesSchema as substitutionCandidatesSchema,
   ownWaitlistSchema,
@@ -2002,7 +2008,7 @@ const nativePaths = {
     "changeableAssignments",
     "Assignments",
     "Find assignments that can be amended",
-    "Lists scoped assignments with their current schedules and permission flags. Dedicated assignments must be unstarted. The shared-schedule-only flag identifies courses with an eligible future portion that can be changed in coordination with each affected lecturer.",
+    "Lists scoped assignments with their current schedules and permission flags. Dedicated assignments must be unstarted. Shared courses with eligible future sessions can be rescheduled with each affected lecturer's consent. The shared commercial flag identifies assignments for which finance can propose a lecturer-specific amendment.",
     {},
     changeCandidatesResult,
   ),
@@ -2012,7 +2018,7 @@ const nativePaths = {
         "saveAssignmentChange",
         "Assignments",
         "Save a versioned change proposal",
-        "Use version zero and a null ID for a new draft. Retry an uncertain request with the same request UUID and exact payload. Company contacts can propose dates, location and scope for their own course. A coordinated shared proposal changes only the schedule. Retain the exact intervals of started sessions and sessions carrying delivery evidence. Eligible additions or removals preserve surviving session references, agreed fees and billed units. A proposed first date must respect current claim deadlines and learner withdrawal rights.",
+        "Start a draft with version zero and a null ID. Retry an uncertain request with the same UUID and exact payload. Current company contacts can propose dates, location and scope for their dedicated course, or dates for a shared course. A permitted finance editor can combine shared dates with terms or compensation for the selected lecturer. Other lecturers receive their own schedule proposal. Retain the exact intervals of started sessions and sessions carrying delivery evidence. A proposed first date must respect current claim deadlines and learner withdrawal rights.",
         {
           p_id: nullableUuid,
           p_claim_id: uuid,
@@ -2038,7 +2044,7 @@ const nativePaths = {
                 amount: proposedAmount,
                 total_amount: proposedAmount,
                 rate_unit: rateUnit,
-                terms: { ...text, minLength: 1, maxLength: 8000 },
+                terms: { ...text, minLength: 1, maxLength: 12000 },
                 cancel: boolean,
               },
             },
@@ -2055,12 +2061,10 @@ const nativePaths = {
         "assignmentChangeAction",
         "Assignments",
         "Submit, respond to or apply a change proposal",
-        "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. Management submission of an eligible shared schedule creates a proposal for each affected assignment. Applying a shared schedule requires all recorded consents for the same dates and updates the whole group in one transaction. Each current confirmed position needs approval. A new position claim, changed offer, or intervening protected evidence prevents apply.",
+        "Use the current proposal version and a new request UUID for each transition. A rejection requires a reason. For a company-origin shared schedule, submit sends the request to management and coordinate opens a proposal for each affected assignment. Management submission can open its own shared proposal directly. Applying a shared schedule requires independent approval for each currently confirmed position and updates the whole group in one transaction. A new position claim, changed offer, or intervening protected evidence prevents apply.",
         {
           p_id: uuid,
-          p_action: {
-            enum: ["submit", "accept", "reject", "withdraw", "apply"],
-          },
+          p_action: { enum: assignmentChangeActions },
           p_expected_version: { ...version, minimum: 1 },
           p_note: { ...text, maxLength: 2000 },
           ...idempotency,
@@ -3679,9 +3683,9 @@ const companyWebhookList = rpc(
   "companyCourseWebhookList",
   "Server integrations",
   "List company webhook subscriptions",
-  "Active admins and owners can inspect this company's recent deliveries. Signing keys are omitted. The response includes up to 100 subscriptions with up to ten deliveries each.",
+  "Active admins and owners can inspect this company's recent deliveries. Customer accounting subscriptions additionally require gross-finance authority. Signing keys are omitted. The response includes up to 100 subscriptions with up to ten deliveries each.",
   { p_organisation: uuid },
-  companyWebhookListSchema,
+  internalCompanyWebhookListSchema,
 );
 const companyWebhookCreateBase = rpc(
   "companyCourseWebhookSubscribe",
@@ -3716,6 +3720,21 @@ const companyWebhookCreate = {
     },
   },
 };
+const companyAccountingWebhookCreate = rpc(
+  "companyAccountingWebhookSubscribe",
+  "Server integrations",
+  "Subscribe to customer accounting events",
+  "An active internal admin or owner with gross-finance authority attaches an active course-index key from the same company to an operator-configured receiver alias. Store the one-time signing key securely. Each subscription receives only its own company's customer invoice and settlement events. A duplicate receiver alias returns 409. The key can have at most five active subscriptions, including course subscriptions. At that limit, a new subscription returns 429.",
+  {
+    p_organisation: uuid,
+    p_integration: uuid,
+    p_destination: companyWebhookDestination,
+  },
+  object({
+    id: uuid,
+    signing_secret: { type: "string", pattern: "^[0-9a-f]{64}$" },
+  }),
+);
 const companyWebhookRevoke = {
   post: {
     ...rpc(
@@ -3836,6 +3855,7 @@ const internalCapabilities = {
 const paths: Record<string, Record<string, unknown>> = {
   ...nativeExplorerPaths,
   ...accountingPaths,
+  ...deliveryEvidencePaths,
   ...Object.fromEntries(
     Object.entries(accountOpenApi.paths).map(([path, methods]) => [
       "/functions/v1/accounts" + path,
@@ -4063,6 +4083,8 @@ function internalOpenApi(
           },
         },
         "/rest/v1/rpc/company_course_webhook_subscribe": companyWebhookCreate,
+        "/rest/v1/rpc/company_accounting_webhook_subscribe":
+          companyAccountingWebhookCreate,
         "/functions/v1/company-integration": companyCourseIndexPath,
         ...companyCourseOperationPaths,
       }
@@ -4095,7 +4117,12 @@ function internalOpenApi(
     },
     paths: documentedPaths,
     ...(includeNonInteractive
-      ? { webhooks: { companyCourseEvent: companyCourseWebhook } }
+      ? {
+          webhooks: {
+            companyCourseEvent: companyCourseWebhook,
+            companyAccountingEvent: companyAccountingWebhook,
+          },
+        }
       : {}),
   };
 }

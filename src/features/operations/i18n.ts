@@ -211,6 +211,11 @@ const pairs: Record<string, [string, string]> = {
     "The change could not be confirmed. Check the current key status before trying again.",
   ],
   webhookTitle: ["Kurs-Webhooks", "Course webhooks"],
+  webhookCompanyTitle: ["Unternehmens-Webhooks", "Company webhooks"],
+  webhookCompanyHelp: [
+    "Sende Kurs- oder Abrechnungsereignisse an einen für dieses Unternehmen eingerichteten Empfänger.",
+    "Send course or accounting events to a receiver configured for this company.",
+  ],
   webhookHelp: [
     "Kursveröffentlichungen und Terminänderungen an einen für dieses Unternehmen eingerichteten Empfänger senden.",
     "Deliver course publications and schedule changes to a receiver configured for this company.",
@@ -244,6 +249,9 @@ const pairs: Record<string, [string, string]> = {
     "Use the alias from the server configuration. Example: course-sync.",
   ],
   webhookPremium: ["Premium-Ereignisse", "Premium events"],
+  webhookScope: ["Ereignisse", "Events"],
+  webhookCourses: ["Kursereignisse", "Course events"],
+  webhookAccounting: ["Kundenabrechnung", "Customer accounting"],
   webhookIncludePremium: [
     "Premium-Kursereignisse einbeziehen",
     "Include Premium course events",
@@ -282,11 +290,38 @@ const pairs: Record<string, [string, string]> = {
     "Die Änderung konnte nicht bestätigt werden. Aktualisiere den Zustellstatus vor einem neuen Versuch.",
     "The change could not be confirmed. Refresh delivery status before trying again.",
   ],
+  webhookDuplicate: [
+    "Dieser Empfänger-Alias wird bereits verwendet. Wähle einen anderen Alias oder widerrufe das bestehende Abonnement.",
+    "This receiver alias is already in use. Choose another alias or revoke the existing subscription.",
+  ],
+  webhookLimit: [
+    "Dieser Schlüssel hat bereits fünf aktive Abonnements. Widerrufe eines davon oder wähle einen anderen Schlüssel.",
+    "This key already has five active subscriptions. Revoke one or choose another key.",
+  ],
   "webhookEvent.course.published": ["Kurs veröffentlicht", "Course published"],
   "webhookEvent.course.updated": ["Kurs aktualisiert", "Course updated"],
   "webhookEvent.course.schedule_changed": [
     "Kurstermine geändert",
     "Course schedule changed",
+  ],
+  "webhookEvent.invoice.registered": [
+    "Kundenrechnung erfasst",
+    "Customer invoice registered",
+  ],
+  "webhookEvent.payment.recorded": ["Zahlung erfasst", "Payment recorded"],
+  "webhookEvent.payment.reversed": ["Zahlung storniert", "Payment reversed"],
+  "webhookEvent.credit_note.applied": [
+    "Gutschrift verrechnet",
+    "Credit note applied",
+  ],
+  "webhookEvent.credit_note.reversed": [
+    "Verrechnung der Gutschrift storniert",
+    "Credit note application reversed",
+  ],
+  "webhookEvent.refund.recorded": ["Rückerstattung erfasst", "Refund recorded"],
+  "webhookEvent.refund.reversed": [
+    "Rückerstattung storniert",
+    "Refund reversed",
   ],
   "webhookState.pending": ["Ausstehend", "Pending"],
   "webhookState.delivered": ["Zugestellt", "Delivered"],

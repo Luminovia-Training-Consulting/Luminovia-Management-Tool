@@ -1,4 +1,4 @@
-/** Runnable course-event receiver for one subscription behind a TLS reverse proxy. */
+/** Runnable company-event receiver for one subscription behind a TLS reverse proxy. */
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { isAbsolute } from "node:path";
@@ -37,13 +37,15 @@ function openInbox(databasePath) {
       accept(event, received) {
         // Store only the documented envelope. Fix property order so an equivalent
         // event signed with different JSON key ordering is still a replay.
-        const { id, type, version, occurred_at, course_id } = event;
+        const { id, type, version, occurred_at } = event;
         const envelope = JSON.stringify({
           id,
           type,
           version,
           occurred_at,
-          course_id,
+          ...(type.startsWith("course.")
+            ? { course_id: event.course_id }
+            : { invoice_id: event.invoice_id }),
         });
         return (
           insert.run(id, envelope, received).changes === 1 ||

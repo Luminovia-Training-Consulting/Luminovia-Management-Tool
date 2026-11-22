@@ -54,9 +54,12 @@ export const assignmentChangeSchema = z.object({
   commissioned: z.boolean().optional(),
   schedule_editable: z.boolean().optional(),
   shared_schedule_only: z.boolean().optional(),
+  shared_commercial_editable: z.boolean().optional(),
   shared_schedule: sharedScheduleSchema.nullable().optional(),
   can_edit: z.boolean(),
   can_submit: z.boolean(),
+  awaiting_coordination: z.boolean().optional(),
+  can_coordinate: z.boolean().optional(),
   can_respond: z.boolean(),
   can_apply: z.boolean(),
   can_withdraw: z.boolean(),
@@ -84,8 +87,19 @@ export const candidateSchema = z.object({
   commissioned: z.boolean(),
   schedule_editable: z.boolean().optional(),
   shared_schedule_only: z.boolean().optional(),
+  shared_commercial_editable: z.boolean().optional(),
   current: snapshotSchema,
 });
 export type AssignmentChange = z.infer<typeof assignmentChangeSchema>;
 export type ChangeCandidate = z.infer<typeof candidateSchema>;
 export type AssignmentSnapshot = z.infer<typeof snapshotSchema>;
+
+export const assignmentChangeActions = [
+  "submit",
+  "coordinate",
+  "accept",
+  "reject",
+  "withdraw",
+  "apply",
+] as const;
+export type AssignmentChangeAction = (typeof assignmentChangeActions)[number];

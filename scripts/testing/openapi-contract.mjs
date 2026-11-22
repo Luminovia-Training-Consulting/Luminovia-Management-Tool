@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import {z} from "zod";
 import {accountOpenApi} from "../../supabase/functions/accounts/openapi.ts";
 import {portalOpenApi} from "../../src/features/developer-api/contract.ts";
@@ -5,9 +6,23 @@ import {portalOpenApi} from "../../src/features/developer-api/contract.ts";
 const {paths} = portalOpenApi("https://portal.example.invalid");
 
 /** Validate a parsed PostgREST response against the published internal contract. */
-export function rpcResponse(name) {
+export function rpcResponse(name, status = 200) {
     const operation = paths[`/rest/v1/rpc/${name}`].post;
-    return parseResponse(operation, "200");
+    return parseResponse(operation, String(status));
+}
+
+/** Exercise the actual REST endpoint and validate its documented success or error body. */
+export async function documentedRpc(client, name, args = {}, status = 200, code) {
+    if (status === 200) rpcRequest(name)(args);
+    const result = await client.rpc(name, args);
+    assert.equal(result.status, status, `${name}: ${result.error?.code ?? "success"}`);
+    if (status === 200) {
+        assert.equal(result.error, null);
+        rpcResponse(name)(JSON.stringify(result.data));
+        return result.data;
+    }
+    assert.equal(result.error?.code, code, name);
+    rpcResponse(name, status)(JSON.stringify(result.error));
 }
 
 /** Verify parsed JSON from an internal Edge or RPC operation against its published status schema. */

@@ -2,6 +2,35 @@
  * invoice text and the stable machine interchange field names are not translated. */
 import i18n from "../../lib/i18n";
 const de = {
+  journal: {
+    title: "Abrechnungsjournal",
+    description:
+      "Angerechnete Kundengutschriften und erfasste Rückzahlungen im gewählten Zeitraum. Gutschriften und Gegenbuchungen zählen am UTC-Buchungstag. Bei Zahlungen zählt das tatsächliche Zahlungsdatum.",
+    from: "Von (einschließlich)",
+    to: "Bis (einschließlich)",
+    load: "Journal anzeigen",
+    json: "Journal als JSON",
+    csv: "Journal als CSV",
+    invalidPeriod: "Wähle einen gültigen Zeitraum von höchstens 366 Tagen.",
+    loading: "Abrechnungsjournal wird geladen.",
+    denied: "Dein Konto hat aktuell keine Berechtigung für dieses Journal.",
+    tooMany:
+      "Der Zeitraum enthält mehr als 5.000 Buchungen. Wähle einen kürzeren Zeitraum.",
+    error: "Das Abrechnungsjournal konnte nicht geladen werden.",
+    count_zero: "Für diesen Zeitraum sind keine Buchungen vorhanden.",
+    count_one: "Eine Buchung im gewählten Zeitraum.",
+    count_other: "{{count}} Buchungen im gewählten Zeitraum.",
+    recorded: "Erfasst",
+    reversed: "Gegengebucht",
+    net: "Saldo im Zeitraum",
+    more: "Weitere Buchungen anzeigen",
+    reversalAmount: "Gegenbuchung −{{amount}} {{currency}}",
+    kind: {
+      customer_credit: "Angerechnete Kundengutschrift",
+      customer_refund: "Rückzahlung an Kunden",
+      lecturer_repayment: "Rückzahlung von Dozierenden",
+    },
+  },
   title: "Buchhaltungsexporte",
   description:
     "Originalwährungen, dokumentierte Rechnungen und nachvollziehbare Exportstände.",
@@ -148,7 +177,37 @@ const de = {
     "Prüfe Auswahl, Datumsangaben, exakte Dezimalbeträge, Währung und PDF.",
   selectedCount: "{{count}} ausgewählt",
 };
-const en: Record<keyof typeof de, string> = {
+const en: typeof de = {
+  journal: {
+    title: "Settlement journal",
+    description:
+      "Applied customer credits and recorded repayments for the selected period. Credits and reversals use the UTC posting date. Payments use the actual payment date.",
+    from: "From (inclusive)",
+    to: "To (inclusive)",
+    load: "Show journal",
+    json: "Download journal JSON",
+    csv: "Download journal CSV",
+    invalidPeriod: "Select a valid period of up to 366 days.",
+    loading: "Loading the settlement journal.",
+    denied:
+      "Your account does not currently have permission to read this journal.",
+    tooMany:
+      "This period contains more than 5,000 entries. Select a shorter period.",
+    error: "The settlement journal could not be loaded.",
+    count_zero: "There are no entries in this period.",
+    count_one: "One entry in this period.",
+    count_other: "{{count}} entries in this period.",
+    recorded: "Recorded",
+    reversed: "Reversed",
+    net: "Period net",
+    more: "Show more entries",
+    reversalAmount: "Reversal −{{amount}} {{currency}}",
+    kind: {
+      customer_credit: "Applied customer credit",
+      customer_refund: "Customer refund",
+      lecturer_repayment: "Lecturer repayment",
+    },
+  },
   title: "Accounting exports",
   description:
     "Original currencies, recorded invoices and auditable export snapshots.",

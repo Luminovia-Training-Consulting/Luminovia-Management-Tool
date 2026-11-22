@@ -17,6 +17,10 @@ const rateLimited = {
   ...error("Key rate limit reached", "rate_limited"),
   headers: { "Retry-After": { schema: { type: "integer" } } },
 };
+const wrongMethod = (method: "GET" | "POST") => ({
+  ...error("HTTP method not allowed", "method_not_allowed"),
+  headers: { Allow: { schema: { type: "string", const: method } } },
+});
 const scopedOperation = {
   tags: ["Server integrations"],
   security: [{ integrationKey: [] }],
@@ -70,14 +74,12 @@ export const companyCourseIndexPath = {
           }),
         ),
       },
-      "400": { description: "Invalid page parameters" },
-      "401": { description: "Missing, invalid or inactive integration key" },
-      "403": { description: "Browser origin denied" },
-      "429": {
-        description: "Key rate limit reached",
-        headers: { "Retry-After": { schema: { type: "integer" } } },
-      },
-      "503": { description: "Integration temporarily unavailable" },
+      "400": error("Invalid page parameters", "invalid_query"),
+      "401": scopedErrors["401"],
+      "403": scopedErrors["403"],
+      "405": wrongMethod("GET"),
+      "429": rateLimited,
+      "503": scopedErrors["503"],
     },
   },
 };
@@ -106,6 +108,7 @@ export const companyCourseOperationPaths = {
           ),
         },
         ...scopedErrors,
+        "405": wrongMethod("POST"),
         "409": error(
           "Capacity or the current enrolment state prevents this action",
           "enrolment_unavailable",
@@ -136,6 +139,7 @@ export const companyCourseOperationPaths = {
           ),
         },
         ...scopedErrors,
+        "405": wrongMethod("GET"),
       },
     },
   },

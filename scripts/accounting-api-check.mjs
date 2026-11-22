@@ -6,6 +6,7 @@ import { z } from "zod";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 import { accountingTestPdf } from "./testing/accounting-pdf.mjs";
+import { documentedRpc } from "./testing/openapi-contract.mjs";
 import { accountingPaths } from "../src/features/developer-api/accounting-contract.ts";
 
 await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
@@ -55,7 +56,19 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     // Guarded canonical disposable fixture only: remove exact immutable UUIDs
     // transactionally without changing trigger definitions or product grants.
     await sql(`begin;set local session_replication_role=replica;
+   delete from private.company_course_webhook_deliveries where subscription_id in (
+     select subscription.id from private.company_course_webhooks subscription
+     join private.company_integration_keys key on key.id=subscription.integration_id
+     where key.organisation_id in (${q(org)},${q(foreignOrg)})
+   );
+   delete from private.company_course_webhooks where integration_id in (
+     select id from private.company_integration_keys where organisation_id in (${q(org)},${q(foreignOrg)})
+   );
+   delete from private.company_integration_keys where organisation_id in (${q(org)},${q(foreignOrg)});
    delete from private.accounting_operations where actor_id in(${users});delete from private.accounting_exports where actor_id in(${users});
+   delete from private.accounting_customer_refunds where invoice_id in(select id from private.accounting_customer_invoices where registered_by in(${users}));
+   delete from private.accounting_customer_credit_applications where invoice_id in(select id from private.accounting_customer_invoices where registered_by in(${users}));
+   delete from private.accounting_customer_credit_notes where invoice_id in(select id from private.accounting_customer_invoices where registered_by in(${users}));
    delete from private.accounting_customer_payments where invoice_id in(select id from private.accounting_customer_invoices where registered_by in(${users}));
    delete from private.accounting_customer_items where invoice_id in(select id from private.accounting_customer_invoices where registered_by in(${users}));
    delete from private.accounting_customer_invoices where registered_by in(${users});
@@ -101,11 +114,11 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   const bytes = accountingTestPdf();
   /** Exercise the existing reservation/Storage/scanner gateway with real PDF
    * bytes. A clean metadata stub would not establish this integration. */
-  async function upload(who, kind) {
+  async function upload(who, kind, pdf = bytes) {
     const form = new FormData();
     form.set(
       "file",
-      new File([bytes], "Fictional accounting.pdf", {
+      new File([pdf], "Fictional accounting.pdf", {
         type: "application/pdf",
       }),
     );
@@ -236,6 +249,58 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
     "42501",
   );
   assert.equal(await evidence(), beforeDenied);
+  const transport = (who, name, body, status, code) =>
+    documentedRpc(who.client, name, body, status, code);
+  const issueKey = (company) =>
+    checked(
+      owner.client.rpc("issue_company_integration_key", {
+        p_organisation_id: company,
+        p_label: "Fictional accounting event key",
+        p_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+        p_rotate_id: null,
+        p_expected_version: null,
+      }),
+      "Issue fictional webhook integration key",
+    );
+  const key = await issueKey(org);
+  const foreignKey = await issueKey(foreignOrg);
+  const webhook = {
+    p_organisation: org,
+    p_integration: key.id,
+    p_destination: "fictional-accounting-events",
+  };
+  const subscribe = (who, args, status, code) =>
+    transport(who, "company_accounting_webhook_subscribe", args, status, code);
+  await subscribe(manager, webhook, 403, "42501");
+  await subscribe(customer, webhook, 403, "42501");
+  await subscribe(
+    owner,
+    { ...webhook, p_integration: foreignKey.id },
+    403,
+    "42501",
+  );
+  await subscribe(
+    owner,
+    { ...webhook, p_destination: "not an alias" },
+    400,
+    "22023",
+  );
+  const subscription = await subscribe(owner, webhook);
+  await subscribe(owner, webhook, 409, "23505");
+  const foreignSubscription = await subscribe(owner, {
+    ...webhook,
+    p_organisation: foreignOrg,
+    p_integration: foreignKey.id,
+  });
+  const courseSubscription = await transport(
+    owner,
+    "company_course_webhook_subscribe",
+    {
+      ...webhook,
+      p_destination: "fictional-course-events",
+      p_premium_events: false,
+    },
+  );
   const personalBefore = await download(owner, personalDoc);
   assert.equal(personalBefore.status, 200);
   assert.deepEqual(Buffer.from(await personalBefore.arrayBuffer()), bytes);
@@ -321,6 +386,282 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   assert.deepEqual(
     await documented(customer, "accounting_export", { p_id: exported.id }),
     exported,
+  );
+
+  const invoiceArgument = { p_invoice_id: invoice };
+  const creditDoc = await upload(
+    owner,
+    "material",
+    Buffer.concat([bytes, Buffer.from("% Fictional distinct credit note\n")]),
+  );
+  const creditArgs = {
+    ...invoiceArgument,
+    p_payload: {
+      reference: "Fictional-API-CREDIT",
+      issued_on: "2001-01-02",
+      currency: "AUD",
+      amount: "70.03",
+      reason: "Fictional credit for a reviewed charge",
+      document_version_id: creditDoc.current_version_id,
+      issued_and_reviewed: true,
+    },
+    p_request_id: randomUUID(),
+  };
+  await transport(
+    manager,
+    "register_customer_credit_note",
+    creditArgs,
+    403,
+    "42501",
+  );
+  await transport(
+    owner,
+    "register_customer_credit_note",
+    {
+      ...creditArgs,
+      p_payload: { ...creditArgs.p_payload, currency: "EUR" },
+    },
+    400,
+    "22023",
+  );
+  const credit = await transport(
+    owner,
+    "register_customer_credit_note",
+    creditArgs,
+  );
+  const applicationArgs = {
+    ...invoiceArgument,
+    p_credit_note_id: credit.id,
+    p_reason: "Fictional credit applied to original invoice",
+    p_request_id: randomUUID(),
+  };
+  const application = await transport(
+    owner,
+    "apply_customer_invoice_credit_note",
+    applicationArgs,
+  );
+  assert.deepEqual(
+    await transport(
+      owner,
+      "apply_customer_invoice_credit_note",
+      applicationArgs,
+    ),
+    application,
+  );
+  await transport(
+    owner,
+    "apply_customer_invoice_credit_note",
+    {
+      ...applicationArgs,
+      p_request_id: randomUUID(),
+    },
+    409,
+    "PT409",
+  );
+  const receipt = await transport(owner, "record_customer_invoice_payment", {
+    ...paymentArgs,
+    p_amount: "160.00",
+    p_reference: "Fictional new receipt",
+    p_request_id: randomUUID(),
+  });
+  const now = new Date();
+  const refundArgs = {
+    ...invoiceArgument,
+    p_amount: "30.00",
+    p_refunded_at: now.toISOString(),
+    p_reference: "=Fictional reviewed transfer",
+    p_request_id: randomUUID(),
+  };
+  await transport(
+    customer,
+    "record_customer_invoice_refund",
+    refundArgs,
+    403,
+    "42501",
+  );
+  await transport(
+    owner,
+    "record_customer_invoice_refund",
+    {
+      ...refundArgs,
+      p_amount: "30.01",
+    },
+    409,
+    "PT409",
+  );
+  const refund = await transport(
+    owner,
+    "record_customer_invoice_refund",
+    refundArgs,
+  );
+  assert.deepEqual(
+    await transport(owner, "record_customer_invoice_refund", refundArgs),
+    refund,
+  );
+  const customerSettlement = await transport(
+    customer,
+    "accounting_customer_settlement",
+    invoiceArgument,
+  );
+  assert.equal(customerSettlement.net_total, "130.00");
+  assert.equal(customerSettlement.refunded_total, "30.00");
+  assert.equal(customerSettlement.refunds, null);
+  assert.equal(customerSettlement.credit_applications, null);
+  await transport(
+    outsider,
+    "accounting_customer_settlement",
+    invoiceArgument,
+    403,
+    "42501",
+  );
+  const reverseCredit = {
+    ...invoiceArgument,
+    p_application_id: application.id,
+    p_reason: "Fictional correction of the credit application",
+    p_request_id: randomUUID(),
+  };
+  await transport(
+    owner,
+    "reverse_customer_invoice_credit_note",
+    reverseCredit,
+    409,
+    "PT409",
+  );
+  await transport(
+    owner,
+    "reverse_customer_invoice_payment",
+    {
+      ...reversalArgs,
+      p_payment_id: receipt.id,
+      p_request_id: randomUUID(),
+    },
+    409,
+    "PT409",
+  );
+  const refundReversal = await transport(
+    owner,
+    "reverse_customer_invoice_refund",
+    {
+      ...invoiceArgument,
+      p_refund_id: refund.id,
+      p_reason: "Fictional correction of the refund record",
+      p_request_id: randomUUID(),
+    },
+  );
+  const creditReversal = await transport(
+    owner,
+    "reverse_customer_invoice_credit_note",
+    reverseCredit,
+  );
+  const date = (days) =>
+    new Date(now.getTime() + days * 86_400_000).toISOString().slice(0, 10);
+  const journalDateRange = { p_from: date(-1), p_to: date(1) };
+  const journal = await transport(
+    owner,
+    "accounting_settlement_journal",
+    journalDateRange,
+  );
+  for (const [entry, original, amount] of [
+    [application, null, "70.03"],
+    [creditReversal, application.id, "70.03"],
+    [refund, null, "30.00"],
+    [refundReversal, refund.id, "30.00"],
+  ]) {
+    const row = journal.items.find(({ id }) => id === entry.id);
+    assert.ok(row, "Expected an exact settlement journal entry");
+    assert.equal(row.reverses_id, original);
+    assert.equal(row.amount, amount);
+    assert.equal(row.currency, "AUD");
+  }
+  const netJournal = await transport(
+    manager,
+    "accounting_settlement_journal",
+    journalDateRange,
+  );
+  assert.deepEqual(journal.scopes, ["customer", "lecturer"]);
+  assert.deepEqual(netJournal.scopes, ["lecturer"]);
+  assert.ok(
+    netJournal.items.every(({ kind }) => kind === "lecturer_repayment"),
+  );
+  for (const actor of [customer, outsider, teacher]) {
+    await transport(
+      actor,
+      "accounting_settlement_journal",
+      journalDateRange,
+      403,
+      "42501",
+    );
+  }
+  await transport(
+    owner,
+    "accounting_settlement_journal",
+    {
+      p_from: "2001-01-01",
+      p_to: date(1),
+    },
+    400,
+    "22023",
+  );
+  await transport(
+    owner,
+    "accounting_settlement_journal",
+    {
+      p_from: "not-a-date",
+      p_to: journalDateRange.p_to,
+    },
+    400,
+    "22007",
+  );
+  await transport(
+    owner,
+    "accounting_settlement_journal",
+    {
+      p_from: journalDateRange.p_from,
+    },
+    404,
+    "PGRST202",
+  );
+  const legacySnapshot = await documented(customer, "accounting_export", {
+    p_id: exported.id,
+  });
+  assert.deepEqual(legacySnapshot, exported);
+  const queued = JSON.parse(
+    await sql(`select coalesce(jsonb_agg(
+    jsonb_build_object('subscription',subscription_id,'id',event_id,'type',event_type,'invoice',invoice_id)
+    order by event_type,event_id),'[]') from private.company_course_webhook_deliveries
+    where subscription_id in (${q(subscription.id)},${q(foreignSubscription.id)},${q(courseSubscription.id)})`),
+  );
+  assert.deepEqual(
+    queued.map(({ type }) => type),
+    [
+      "credit_note.applied",
+      "credit_note.reversed",
+      "invoice.registered",
+      "payment.recorded",
+      "payment.recorded",
+      "payment.reversed",
+      "refund.recorded",
+      "refund.reversed",
+    ],
+  );
+  assert.equal(new Set(queued.map(({ id }) => id)).size, queued.length);
+  assert.ok(
+    queued.every(
+      (row) => row.subscription === subscription.id && row.invoice === invoice,
+    ),
+  );
+  for (const suffix of ["a", "b", "c"]) {
+    await transport(owner, "company_course_webhook_subscribe", {
+      ...webhook,
+      p_destination: `fictional-course-${suffix}`,
+      p_premium_events: false,
+    });
+  }
+  await subscribe(
+    owner,
+    { ...webhook, p_destination: "fictional-over-budget" },
+    429,
+    "PT429",
   );
   assert.equal(
     (
@@ -409,6 +750,22 @@ await withApiFixture(async ({ actor, checked, sql, defer, service, url }) => {
   await denyRetained("create_accounting_export", grossExportArgs);
   await denyRetained("register_customer_invoice", registrationArgs);
   await denyRetained("record_customer_invoice_payment", paymentArgs);
+  const downgradedJournal = await retainedRpc(
+    "accounting_settlement_journal",
+    journalDateRange,
+  );
+  assert.equal(downgradedJournal.status, 200);
+  const downgraded = await downgradedJournal.json();
+  assert.deepEqual(downgraded.scopes, ["lecturer"]);
+  assert.ok(
+    downgraded.items.every(({ kind }) => kind === "lecturer_repayment"),
+  );
+  const downgradedWebhook = await retainedRpc(
+    "company_accounting_webhook_subscribe",
+    webhook,
+  );
+  assert.equal(downgradedWebhook.status, 403);
+  assert.equal((await downgradedWebhook.json()).code, "42501");
   assert.equal(
     (await download(owner, customerDoc, retainedOwnerHeaders)).status,
     403,

@@ -29,6 +29,11 @@ import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
 
+const DeliveryPage = lazy(() =>
+  import("../features/changes/delivery").then((module) => ({
+    default: module.DeliveryPage,
+  })),
+);
 const AnnouncementsPage = lazy(() =>
   import("../features/announcements/announcements").then((module) => ({
     default: module.AnnouncementsPage,
@@ -253,7 +258,7 @@ export default function PortalRoutes() {
           <Route path="courses" element={<SectionHub kind="courses" />} />
           <Route path="readiness" element={<CourseReadinessPage />} />
           <Route path="readiness/:id" element={<CourseReadinessPage />} />
-          <Route path="delivery" element={<Navigate to="/courses" replace />} />
+          <Route path="delivery" element={<DeliveryPage />} />
           <Route path="support" element={<SupportDeskPage />} />
           <Route path="support/:id" element={<SupportDeskPage />} />
           <Route path="replacements" element={<ReplacementMarketplacePage />} />

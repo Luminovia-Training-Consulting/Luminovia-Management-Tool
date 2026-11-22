@@ -8,14 +8,14 @@
 | Premium multi-course enrolment | Company staff can search and enrol a participant in several complete courses in one transaction. Company, admin and learner passed both native Chromium projects, including rollback when a selection became stale and safe retry. | Continue the broader edition and browser matrix for other enrolment paths. |
 | Compensation and invoicing | Finance can approve an exceptional final invoice or several sequential, contract-backed instalments. The final invoice credits exact recorded interim payments and can close a zero balance. A fresh finance session can revoke an unused approval. Native desktop and mobile Chromium verified the exception workflow through actual PDF scanning and exact-byte download, with unrelated lecturer access denied. | Native desktop and mobile also verified two scanned interim invoices, exact credit references, the scanned final invoice and its recorded settlement. Extend browser coverage to report exports and additional historical accounting cases. External bank payment and provider delivery are outside the portal workflow. |
 | Roles and contracts | Internal and dedicated account editors support multiple explicit roles with separate organisation and course scopes. Teaching offers and own invoice uploads require an explicit teaching role. Scoped qualification verification, on-behalf uploads and private contract versions remain available. | Isolated PostgreSQL and Chromium verify role changes and scope, and the native Files endpoint verifies invoice permission. Live installation rollout remains pending. |
-| Customer credit and refunds | Gross-finance staff can link an issued, scanned credit note, apply or reverse it, and record or reverse actual refunds. The net position displays credits, cash received, remaining balance and any refund due. Scoped company contacts can read the settlement. PostgreSQL covers concurrent refunds and unchanged `luminovia.accounting/1` exports. | Verify additional report and transport cases across the supported roles. The journal records external payments and refunds. |
-| Overpaid lecturer instalments | Independent finance staff can propose a contractual correction based on the exact paid instalments. The lecturer can acknowledge or dispute it. Finance can record actual repayments and void incorrect entries with an audit reason. PostgreSQL covers historic records, scope, concurrent caps and reversals. | Confirm every financial reporting and export path reconciles against the individual journals before extending reporting scope. |
-| Finance and reporting | Due-first ordering, textual and coloured states, original currency views and period-specific forecast. Dark finance badges and typed forecast and Control Center responses are part of this change. | Reconcile full browser exports and period totals across all supported roles. |
-| Formal amendments | One group can amend future dates, add sessions or retire unused slots while preserving agreed fees, billed units and deadlines. Fully staffed courses can use the same approval process after teaching starts. Existing attendance and delivery records retain their original intervals and IDs. PostgreSQL covers both supported staffing arrangements. Desktop and mobile Chromium exercised the manager and both lecturers on the isolated application. | Corrections to protected teaching history, amendments that change shared compensation and customer-origin shared proposals remain open. |
+| Customer credit and refunds | Gross-finance staff can link a scanned credit note, apply or reverse it, and record or reverse actual refunds. Scoped company contacts can read their settlement balance. Real Auth, REST and PDF scanning verify the role boundary, excessive-refund and backed-reversal conflicts, exact retries, and the unchanged `luminovia.accounting/1` snapshot. | Accounting entries represent recorded external transactions. Test configured receiver delivery separately on the target installation. |
+| Overpaid lecturer instalments | Independent finance staff can propose a contractual correction based on the exact paid instalments. The lecturer can acknowledge or dispute it. Finance can record actual repayments and void incorrect entries with an audit reason. The settlement journal reports both movements and corrections. PostgreSQL covers historic records, scope, concurrent caps and reversals. | Review customer-specific financial rules and any required signatures outside the software workflow. |
+| Finance and reporting | The settlement journal combines authorised credits, refunds and lecturer repayments by date, original currency and reversal status. CSV and versioned JSON downloads use the same result. PostgreSQL verifies reconciliation, role-specific categories and period and row limits. Real Auth and REST verify role-separated reporting and match the original entries. | The existing fee, invoice and forecast reports remain governed by their own scope. |
+| Formal amendments | Company contacts can submit shared date changes for management coordination. Each affected lecturer and an authorised reviewer approve the corresponding version. For eligible future teaching, finance can include private, lecturer-specific terms and compensation. Started dates, evidence and billed units remain protected. The delivery workflow supports revision after independent reopening, including on released allocations with an existing submission. Real Auth and REST verify the shared customer workflow, stale versions, role denials and original agreement preservation. | Required signatures follow the applicable contract process. |
 | Website enquiries | Trusted intake, bounded validation, versioned triage and explicit conversion. `enquiries-api-check.mjs` and `enquiries.spec.ts` cover the portal side. | The separate public Website sender and its delivery remain external to this implementation. |
 | UI and PWA | The public demo, DE/EN, themes, keyboard and mobile layouts have browser coverage. The calendar has a view timezone selector and explicit UTC offsets for repeated times. Native desktop and mobile Chromium did 18 checks of all eight individual roles and one combined account, with current route, upload and workflow controls. | Complete per-page acceptance for all roles and review the wider browser and tablet matrix. Physical-device PWA installation is outside this pass. |
 | Notifications | The internal inbox covers finance review requests, exceptional approvals, instalment decisions, fully credited invoices and overpayment corrections through acknowledgement, dispute, withdrawal and repayment. The current role controls access to opaque links. German and English notices exclude private amounts and receipt data. Both native Chromium profiles verified the lecturer and finance links. Existing fixtures cover quiet hours, read state and local push and mail adapters. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
-| API and developer tools | The internal download covers 366 paths and each dedicated Academy download covers 85. Native browser RPCs use domain schemas. Internal Accounts success payloads have explicit schemas. Separate versioned and revocable keys cover the course index, confirmed enrolments and aggregate course reports. A runnable signed webhook receiver passed local worker delivery, retry and revocation in the three editions. | Complete exact-release coverage of permitted and denied payloads across HTTP, Realtime and file transports. The [generated API reference](../API_REFERENCE.md) records the migrated inventory. |
+| API and developer tools | The internal catalogue documents assignment and delivery transitions, settlement reporting, and signing subscriptions. Separate revocable keys cover the course index, enrolments and aggregate reports. Signed accounting webhooks carry customer invoice event identifiers. A local worker and receiver exercised exact JSON, retry after failure and revocation. The [generated API reference](../API_REFERENCE.md) records the migrated inventory. | Configured receiver acceptance and transport-specific coverage for the broader portal belong to their respective integration and installation checks. |
 
 The internal and dedicated portals share the role preview selector. Current administrators can open management, lecturer, company and learner views. Current management can open company and learner views. Hidden choices are stored per account and installation on the current browser. The selected view uses fictional examples. The public LMS demo accepts a role entry link and is included in dedicated packages only when explicitly enabled.
 
@@ -162,7 +162,7 @@ The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovi
 
 ## Adjacent core work continued on 21 November
 
-- Mutually approved assignment amendments preserve the original accepted fees, terms and session evidence. A completed application affects current earnings and invoice snapshots without lifting the end-of-block invoice gate. Company contacts can make scoped operational proposals. A single eligible linked assignment can reschedule the same count of future course and job sessions without changing their IDs. Shared schedules, changed session counts and retained course evidence still block replacement.
+- Mutually approved assignment amendments preserve the original accepted fees, terms and session evidence. Application can affect future earnings and invoice snapshots while preserving the end-of-block invoice gate. Company contacts can submit eligible shared dates. Management coordinates consent. Future unused slots may change when they preserve billed units and applicable deadlines. Protected session intervals remain in place and a reviewed evidence correction receives a separate revision.
 - Company and participant review journeys are restored for currently enabled Premium courses. The participant association lookup now accepts idempotent scoped requests and consent without ambiguous SQL references.
 - Accounting exposes scoped original-currency CSV/JSON exports, scanned external customer invoice registration, payment records and reversals. The forward path preserves existing reference IDs and access rules.
 - The trusted Website enquiry endpoint and administration inbox already exist. Connecting and testing an actual public marketing-site sender still belongs to the separate Website delivery, which this repository treats as read-only.
@@ -475,38 +475,6 @@ PR 35 review corrected the administrator-wide private-document deletion bypass; 
 - [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
 - [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
 - [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
-
-## PR35 private-document acceptance follow-up — 17 November 2026
-
-- [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.
-- [x] Update real Auth/Storage acceptance to assert the MFA administrator is denied and the MFA owner confirms, polls and retries deletion; keep the privacy boundary unchanged.
-- [ ] Pass focused checks and fresh full exact-head/current-base CI, including local system, browser, selfhost retained-data, security and preview gates; merge PR35 only when all required checks pass.
-
-PR 35 follow-up: cancellation-marker publication and the announcement quiet-window fixture have focused passing local checks; rerun the complete required CI on the integrated head and address remaining failures before merge. The full product scope below remains unchanged.
-
-PR 35 review corrected the administrator-wide private-document deletion bypass; the 27-group disposable SQL suite passed. Full integrated CI remains required before merge.
-
-## PR35 integration after PR31 — 17 November 2026
-
-- [x] Preserve the 70 accepted migration sources and replay the three unpublished deletion migrations after the accepted job briefing migration.
-- [x] Include job-owned briefing and request rows in the reviewed deletion scope, with bilingual impact labels; test changed-scope detection and physical deletion.
-- [ ] Complete exact-head full CI and merge under current rules; native Auth/Storage and browser acceptance are not established by the SQL fixture.
-
-## PR35 native diagnostics and accepted main38 — 17 November 2026
-
-- [x] Inspect native CI43903652814; distinguish secondary Auth/REST cleanup errors from its truncated primary failure, without claiming an unproved root cause.
-- [x] Replay exact be81819 in a separate owned native stack:72migrations,50API/invitation suites,TLS/WebSockets,retained data,50claims and checked cleanup pass; no OOM kill/restart is observed.
-- [x] Preserve bounded primary/final failure context after existing secret redaction; real failing-child regression and13candidate/lint/format guards pass.
-- [x] Integrate accepted main38 documentation/browser source, preserving user-required ledgers and all69immutable SQL bodies; retain no root changelog.
-- [x] Regenerate the complete 72-migration API with the accepted improved generator (265 functions), pass combined source checks (704 cases/92 files), 4 actual upgrade groups and 16 candidate/documentation guards; remove the exact owned SQL fixture.
-- [ ] Complete the owned canonical full-phase `d0a16dfe` snapshot (started before the documentation-only results update), push the signed integration and require fresh current-head complete CI before the authorised PR35 merge.
-
-## PR35 integration after accepted PR25 — 17 November 2026
-
-- [x] Preserve actually merged PR25/main `4f7f6c0`, all69published SQL blobs and the existing PR35 fixes through normal ancestry; resolve all three documentation conflicts without dropping ledgers or contracts.
-- [x] Upgrade the real composition fixture from the accepted69file baseline; combined72file replay passes upgrade4/deletion25/company8/support16/API6/enquiries17groups and regenerates265public API functions.
-- [x] Pass704frontend cases,173runtime and92Edge cases,29candidate/TLS and3documentation checks plus existing source/coverage/build gates. The full local command remains refused before startup by a foreign-owned shared QA lock.
-- [ ] Publish the signed integration, inspect complete fresh current-head system/browser/native/security/package CI, fix any failures and merge PR35 under existing repository rules. No production/publication operation belongs to this work.
 
 ## PR35 mergeability repair — 17 November 2026
 
@@ -1014,31 +982,6 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
 
-## Smart operations extension — current user request
-
-**Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete
-local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
-
-The entire new request is preserved in [SMART_OPERATIONS_SPEC](../PRODUCT.md#section-smart-operations-spec): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
-
-Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `0a6002a`/PR21 after `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.
-
-- [x] Implement transactional email outbox, per-account email opt-in/quiet hours and service-only finite Hostinger SMTP worker; disabled server templates, no credential in deliverables.
-- [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
-- [x] Implement fresh permission-checked personal ICS downloads, bounded periods/size, explicit private-event inclusion and UTC/zone preservation.
-- [x] Implement explicit self-opt-in staff email/phone contact visibility, current staff-only projection and versioned DE/EN controls; focused SQL/component checks pass.
-- [x] Complete local integrated acceptance on signed d7d3c58: 219 component tests, 272 SQL cases/groups, 23 actual business API suites, 80 desktop/mobile cases and two built-PWA cases; exit 0 after cleanup. [Evidence](../DEVELOPMENT.md#section-test-plan).
-- [ ] Observe separate current PR application/native retained-image CI and review status; no production acceptance is inferred from local success.
-- [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
-- [x] Implement source and focused checks for Push, waitlists/atomic substitutions, shared learning/customer workspaces, attendance/Q&A/notebook/feedback/quiz/PDF completion, timesheets/statements/forecasts/Control Center, tasks/templates/favourites/recommendations, revocable calendars/offline schedules and stable eleven-area search. These are source checkpoints, not combined acceptance.
-- [x] Complete customer teaching-hour/document briefs and immutable revision history; exact reviewed rollout controller and standalone worker distribution; integrate accepted private roles and reviewed discovery/saved-view/evidence source. Focused checks pass; installed/combined acceptance remains separate.
-- [x] Bind discovery and substitution to the recipient/current actor's captured-role quote; retain explicit monetary/terms consent, nullable private prices, role/policy-bound cursors and honest unknown forecast costs. Recheck withdrawal authority after concurrent role edits and return current assignment status on accepted retries.
-- [x] Connect Teaching Day to the current course, deliberately shared same-organisation customer contact, exact allowed materials/reports and shared preparation counts, preserving own private checklist and current confirmed-session authority.
-- [ ] Freeze and run the entire expanded source, actual Auth/API/desktop/mobile/PWA and native ten-service retained-data suites. Resolve every genuine failure; generate current API/architecture and honest acceptance records.
-- [ ] Publish signed PR17 after complete local feature acceptance, observe all15 current required exact-head checks and resolve actual merge collisions through central coordination. Verify the eventual merge/main readback; do not infer it from a push or green local tests.
-- [ ] Follow the user's explicit release preference before any CMS deployment or private SMTP/Push timer activation. Retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device and remains a separate untested acceptance step.
-- [x] Actual self-addressed Hostinger465 TLS SMTP acceptance and IMAP993 receipt; that exact test's SPF/DKIM/DMARC pass. Automatic application timers are not yet installed.
-
 ## Current joint PR10/PR13 integration with released PR18
 
 - [x] Preserve both original PR10/PR13 histories, the English roadmap/decision/index structure and the reviewed Calendar, file-menu and PWA-title corrections from the incoming source.
@@ -1340,12 +1283,6 @@ The additional PR-/check rules remain disabled until the independently prepared 
 The incoming PR17 history recorded the following earlier pending instruction when that snapshot named 14 required checks. It is retained as historical evidence; the current 15-check policy and personal Carina-only PR review exception above remain authoritative.
 
 > - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
-
-## PR13 documentation-branch acceptance history
-
-- [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
-- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
-- [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
 
 ## English documentation and repository verification continuation
 
