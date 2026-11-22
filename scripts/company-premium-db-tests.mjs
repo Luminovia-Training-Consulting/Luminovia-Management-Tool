@@ -739,6 +739,18 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             file_id: examKeyId, version_id: examKeyVersion,
         });
 
+        const fence = randomUUID();
+        const scope = [{table: "public.documents", predicate: `x.id = ${q(examKeyDocument)}`}];
+        await sql(`insert into private.deletion_operations(id, actor_id, request_id, plan_id, kind, target_id, scope, authority)
+          values (${q(fence)}, ${q(admin)}, ${q(randomUUID())}, ${q(randomUUID())}, 'document',
+            ${q(examKeyDocument)}, ${q(JSON.stringify(scope))}, 'Fictional deletion fixture')`);
+        const fenced = await rpc(admin, "inspect_retained_course_files", inspection);
+        assert.ok(fenced.items.every((file) => file.id !== examKeyId));
+        await assert.rejects(access(admin, exactExam), /42501/);
+        await assert.rejects(access(admin, exactExam, true), /42501/);
+        assert.equal((await access(admin, exactMaterial)).version_id, learnerResourceVersion);
+        await sql(`delete from private.deletion_operations where id=${q(fence)}`);
+
         const version = (await rpc(admin, "company_premium_settings"))
             .find((setting) => setting.organisation_id === companyA).version;
         await toggle(admin, companyA, true, version);

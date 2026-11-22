@@ -33,7 +33,9 @@ revoke all on function private.require_retained_course_file_authority(uuid, uuid
 
 -- The private projection exposes only course-linked retained scanner
 -- results. A soft-removed course link can still be inspected; a deleted
--- underlying document cannot. Object paths remain on the Edge server.
+-- underlying document or one with an active deletion fence cannot. Object
+-- paths remain on the Edge server. Historical clean versions are accepted
+-- independently of the optional scanner label and still need an exact hash.
 create function private.retained_course_file_rows(p_run_id uuid)
 returns table(
   file_kind text, id uuid, version_id uuid, version integer, name text,
@@ -52,7 +54,8 @@ returns table(
   ) link
   join public.document_versions version on version.id = link.version_id
   join public.documents document on document.id = version.document_id
-  where document.deleted_at is null and version.status = 'clean'
+  where document.deleted_at is null and not private.deletion_document_fenced(document.id)
+    and version.status = 'clean'
     and version.sha256 ~ '^[0-9a-f]{64}$' and version.size_bytes between 1 and 104857600
     and (link.file_kind <> 'exam' or version.mime_type = 'application/pdf');
 $$;
