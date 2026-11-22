@@ -15,6 +15,57 @@
 		}
 	}
 }
+(portal_static_pwa) {
+}
+
+# Dedicated installations may overlay these public assets while the signed
+# package stays byte-exact and readable through the package query.
+(academy_pwa_asset) {
+	route {
+		header >Cache-Control "no-cache, no-store, must-revalidate"
+		@academyPwaMaintenance file {
+			root /srv
+			try_files /maintenance.enabled
+		}
+		file_server @academyPwaMaintenance {
+			root /srv/current
+		}
+		reverse_proxy {$PORTAL_API_UPSTREAM:api:8000} {
+			rewrite {args[0]}
+			header_up -Cookie
+			header_up -Authorization
+			header_up -Referer
+			header_up -If-None-Match
+			header_up -If-Modified-Since
+			@packageFallback status 404 429 5xx
+			handle_response @packageFallback {
+				file_server {
+					root /srv/current
+				}
+			}
+		}
+	}
+}
+
+(academy_runtime_pwa) {
+	@academyManifest {
+		method GET HEAD
+		path /manifest.webmanifest
+		not query package=1
+	}
+	handle @academyManifest {
+		import academy_pwa_asset /functions/v1/files?mode=academy-pwa-manifest
+	}
+	@academyAppleIcon {
+		method GET HEAD
+		path /icons/apple-touch-icon.png
+		not query package=1
+	}
+	handle @academyAppleIcon {
+		import academy_pwa_asset /functions/v1/files?mode=academy-pwa-image&variant=icon_512
+	}
+}
+
 {$PORTAL_DOMAIN} {
 	encode zstd gzip
 	header {
@@ -26,6 +77,7 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 	}
 	route {
+		import {$PORTAL_CADDY_PWA_PROFILE:portal_static_pwa}
 		# Apply no-store to private business responses; block Auth administration routes and check maintenance before proxying.
 		handle_path /backend/* {
 			route {

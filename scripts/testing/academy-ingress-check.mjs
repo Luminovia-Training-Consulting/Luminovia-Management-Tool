@@ -12,6 +12,7 @@ import { setTimeout } from "node:timers/promises";
 import { connect as connectTls } from "node:tls";
 import { promisify } from "node:util";
 import { academyOpenApi } from "../../src/features/developer-api/academy-contract.ts";
+import { serveAcademyPwaAsset } from "../../supabase/functions/files/academy-pwa-assets.ts";
 
 const exec = promisify(execFile);
 const [binary, browser, manifestFile, origin, localPort, envoyBinary] =
@@ -30,10 +31,9 @@ const caddyfile = await readFile(
   "utf8",
 );
 // Retain only the global options and the dedicated listener in this loopback fixture.
-const template = caddyfile.match(
-  /^\{\n[\s\S]*?^\}\n^\{\$PORTAL_DOMAIN\} \{\n[\s\S]*?^\}\n/m,
-)?.[0];
-assert.ok(template, "Dedicated Caddy listener missing from the template");
+const endOfListener = caddyfile.indexOf("\n# Legacy public entry points");
+assert.ok(endOfListener > 0, "Dedicated Caddy listener missing from the template");
+const template = caddyfile.slice(0, endOfListener);
 const { edition, files, installationId, name } = JSON.parse(
   await readFile(manifestFile, "utf8"),
 );
@@ -55,6 +55,7 @@ const allowedApi = [
   "/functions/v1/files?mode=academy-attendance",
   "/functions/v1/files?mode=academy-answer-key",
   "/functions/v1/files?mode=academy-logo&expected_version=0",
+  "/functions/v1/files?mode=academy-pwa-icon&expected_version=0",
   "/functions/v1/human-login",
   "/functions/v1/human-recovery",
   "/functions/v1/mail-admin",
@@ -74,7 +75,25 @@ const blockedApi = [
   "/functions/v1/files/extra",
   "/storage/v1/object/public/portal-documents/fixture.pdf",
 ];
-const upstream = createServer((request, response) => {
+const pwaRequests = 10;
+let publishedVersion = null;
+const fixtureIcon = await readFile(join(browser, "current/icons/icon-512.png"));
+const upstream = createServer(async (request, response) => {
+  const requestUrl = new URL(request.url, "http://127.0.0.1");
+  if (requestUrl.pathname === "/functions/v1/files") {
+    const asset = await serveAcademyPwaAsset(request.method, requestUrl.searchParams, {
+      manifest: async () => publishedVersion && ({
+        version: publishedVersion, name, short_name: "Example", theme_color: "#102857",
+      }),
+      image: async (_variant, version) => publishedVersion && (version === null || version === publishedVersion)
+        ? fixtureIcon.toString("base64") : null,
+    });
+    if (asset) {
+      response.writeHead(asset.status, Object.fromEntries(asset.headers));
+      response.end(Buffer.from(await asset.arrayBuffer()));
+      return;
+    }
+  }
   response.writeHead(200, {
     "Content-Type": "application/json; charset=utf-8",
     "X-Content-Type-Options": "nosniff",
@@ -112,7 +131,7 @@ try {
   const envoyPort = Number(localPort) + 10;
   const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
   const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
-  const minimumAllowance = allowedApi.length + blockedApi.length + 1;
+  const minimumAllowance = allowedApi.length + blockedApi.length + 1 + pwaRequests;
   assert.ok(
     allowance >= minimumAllowance && allowance <= 1000,
     `Use a staging licence with ${minimumAllowance}–1,000 requests per minute`,
@@ -158,6 +177,7 @@ try {
     XDG_DATA_HOME: root,
     XDG_CONFIG_HOME: root,
     PORTAL_CADDY_ALIAS_PROFILE: "academy_no_aliases",
+    PORTAL_CADDY_PWA_PROFILE: "academy_runtime_pwa",
   };
   await exec(
     resolve(binary),
@@ -230,7 +250,8 @@ try {
   for (const { path: entry, sha256 } of files) {
     const relative = entry.replace(/^browser\//, "");
     assert.match(relative, /^(?:[a-z0-9][\w.-]*\/)*[a-z0-9][\w.-]*$/i);
-    const { bytes, headers } = await request("/" + relative, 200);
+    const path = "/" + relative + (["manifest.webmanifest", "icons/apple-touch-icon.png"].includes(relative) ? "?package=1" : "");
+    const { bytes, headers } = await request(path, 200);
     assert.equal(
       createHash("sha256").update(bytes).digest("hex"),
       sha256,
@@ -265,6 +286,29 @@ try {
     );
     assert.match(headers["cache-control"] ?? "", /no-store, private/);
   }
+  const staticManifest = await readFile(join(browser, "current/manifest.webmanifest"));
+  const staticApple = await readFile(join(browser, "current/icons/apple-touch-icon.png"));
+  assert.deepEqual((await request("/manifest.webmanifest", 200)).bytes, staticManifest);
+  assert.deepEqual((await request("/icons/apple-touch-icon.png", 200)).bytes, staticApple);
+  publishedVersion = 7;
+  const runtime = await request("/manifest.webmanifest", 200);
+  assert.match(runtime.headers["cache-control"], /no-store/);
+  const manifest = JSON.parse(runtime.bytes);
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.icons.length, 3);
+  assert.equal(manifest.icons[2].purpose, "maskable");
+  for (const icon of manifest.icons) {
+    assert.match(icon.src, /version=7$/);
+    assert.deepEqual((await request(icon.src, 200)).bytes, fixtureIcon);
+  }
+  assert.deepEqual((await request("/icons/apple-touch-icon.png", 200)).bytes, fixtureIcon);
+  publishedVersion = 8;
+  await request(manifest.icons[0].src, 404);
+  const updated = JSON.parse((await request("/manifest.webmanifest", 200)).bytes);
+  assert.match(updated.icons[0].src, /version=8$/);
+  publishedVersion = null;
+  assert.deepEqual((await request("/manifest.webmanifest", 200)).bytes, staticManifest);
+
   const socket = connectTls({
     host: "127.0.0.1",
     port: Number(localPort),
@@ -326,7 +370,7 @@ try {
     assert.match(headers["cache-control"] ?? "", /no-store, private/);
   };
   for (
-    let consumed = allowedApi.length + blockedApi.length + 1;
+    let consumed = minimumAllowance;
     consumed < allowance;
     consumed++
   )

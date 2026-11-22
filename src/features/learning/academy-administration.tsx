@@ -26,6 +26,7 @@ import type {
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
 import { AcademyBrandLinksEditor } from "../branding/academy-brand-links-panel";
+import { AcademyPwaIconEditor } from "../branding/academy-pwa-icon-editor";
 import { AcademyLogoEditor } from "../branding/academy-logo-editor";
 import { AcademyBrandEditor } from "../branding/academy-brand-editor";
 import { AcademyWebhookPanel } from "./academy-webhook-panel";
@@ -526,6 +527,7 @@ export function AcademyAdministrationPage() {
         <>
           <AcademyBrandEditor />
           <AcademyLogoEditor />
+          <AcademyPwaIconEditor />
           <AcademyBrandLinksEditor />
         </>
       )}

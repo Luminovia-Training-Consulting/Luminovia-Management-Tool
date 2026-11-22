@@ -211,6 +211,7 @@ export default defineConfig(({ mode }) => {
           // deliberately have no runtime-caching rule.
           globPatterns: ["**/*.{js,css,html,woff2,png,webp,ico}"],
           globIgnores: [
+            ...(!internal ? ["icons/apple-touch-icon.png"] : []),
             "**/explorer-*.{js,css}",
             "**/portal-explorer-*.{js,css}",
             "**/academy-explorer-*.{js,css}",

@@ -62,6 +62,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/save_academy_public_branding",
             "/rest/v1/rpc/academy_public_brand_links",
             "/rest/v1/rpc/academy_public_logo",
+            "/rest/v1/rpc/academy_pwa_icon",
+            "/rest/v1/rpc/clear_academy_pwa_icon",
             "/rest/v1/rpc/clear_academy_public_logo",
             "/rest/v1/rpc/save_academy_public_brand_links",
             "/rest/v1/rpc/academy_licence_receipt",

@@ -36,6 +36,7 @@ import {
   academyLogoVersionRequest,
   academyPublicLogo,
 } from "../branding/academy-logo-schema.ts";
+import { academyPwaIcon } from "../branding/academy-pwa-icon-schema.ts";
 import {
   companyCourseIndexPath,
   companyCourseOperationPaths,
@@ -258,13 +259,96 @@ const materialUploadResult = record({
     ],
   },
 });
+const pwaVariants = ["icon_192", "icon_512", "maskable_512"] as const;
+const pwaMultipart = record(
+  Object.fromEntries(
+    pwaVariants.map((variant) => [
+      variant,
+      {
+        type: "string",
+        format: "binary",
+        description:
+          variant === "icon_192"
+            ? "192 × 192 canonical PNG, up to 256 KiB"
+            : "512 × 512 canonical PNG, up to 1 MB",
+      },
+    ]),
+  ),
+  [...pwaVariants],
+);
+
 const materialUpload = {
+  get: {
+    operationId: "readAcademyPwaAsset",
+    tags: ["Installation"],
+    summary: "Read the published application manifest or one exact app icon",
+    description:
+      "Public installation assets. A version binds the image to the currently published revision. With no custom icon, the installation serves the signed package assets at the browser URLs.",
+    security: [],
+    parameters: [
+      {
+        name: "mode",
+        in: "query",
+        required: true,
+        schema: { enum: ["academy-pwa-manifest", "academy-pwa-image"] },
+      },
+      {
+        name: "variant",
+        in: "query",
+        description: "Required for academy-pwa-image",
+        schema: { enum: [...pwaVariants] },
+      },
+      {
+        name: "version",
+        in: "query",
+        description: "Bind an image request to the current publication",
+        schema: z.toJSONSchema(academyLogoVersion.min(1)),
+      },
+    ],
+    responses: {
+      "200": {
+        description: "Current installation asset",
+        content: {
+          "image/png": { schema: { type: "string", format: "binary" } },
+          "application/manifest+json": {
+            schema: record({
+              id: { const: "/" },
+              start_url: { const: "/" },
+              scope: { const: "/" },
+              display: { const: "standalone" },
+              name: string,
+              short_name: string,
+              description: string,
+              theme_color: string,
+              background_color: { const: "#f8f5ee" },
+              icons: {
+                type: "array",
+                minItems: 3,
+                maxItems: 3,
+                items: record(
+                  {
+                    src: string,
+                    sizes: string,
+                    type: { const: "image/png" },
+                    purpose: { const: "maskable" },
+                  },
+                  ["src", "sizes", "type"],
+                ),
+              },
+            }),
+          },
+        },
+      },
+      "404": { description: "No custom asset or the revision is unavailable" },
+      "503": { description: "Current publishing state could not be read" },
+    },
+  },
   post: {
     operationId: "uploadAcademyCourseMaterial",
     tags: ["Licensed course profile"],
     summary:
       "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan.`,
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan. Use academy-pwa-icon with expected_version and the three named PNG variants. All three are scanned before the active local administrator publishes one replacement.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -281,6 +365,7 @@ const materialUpload = {
             "academy-course-chat",
             "academy-attendance",
             "academy-logo",
+            "academy-pwa-icon",
             "course-submission",
           ],
         },
@@ -288,7 +373,7 @@ const materialUpload = {
       {
         name: "expected_version",
         in: "query",
-        description: "Required in academy-logo mode only",
+        description: "Required in academy-logo and academy-pwa-icon modes",
         schema: z.toJSONSchema(academyLogoVersion),
       },
       {
@@ -308,42 +393,47 @@ const materialUpload = {
         },
         "multipart/form-data": {
           schema: {
-            ...record(
-              {
-                academy_course_id: uuid,
-                academy_room_id: uuid,
-                academy_session_id: uuid,
-                course_run_id: uuid,
-                client_id: uuid,
-                file: {
-                  ...string,
-                  format: "binary",
-                  description: "One file of up to 10 MiB",
-                },
-              },
-              ["client_id", "file"],
-            ),
             oneOf: [
               {
-                type: "object",
-                properties: { academy_course_id: uuid },
-                required: ["academy_course_id"],
+                ...record(
+                  {
+                    academy_course_id: uuid,
+                    academy_room_id: uuid,
+                    academy_session_id: uuid,
+                    course_run_id: uuid,
+                    client_id: uuid,
+                    file: {
+                      ...string,
+                      format: "binary",
+                      description: "One file of up to 10 MiB",
+                    },
+                  },
+                  ["client_id", "file"],
+                ),
+                oneOf: [
+                  {
+                    type: "object",
+                    properties: { academy_course_id: uuid },
+                    required: ["academy_course_id"],
+                  },
+                  {
+                    type: "object",
+                    properties: { academy_room_id: uuid },
+                    required: ["academy_room_id"],
+                  },
+                  {
+                    type: "object",
+                    properties: { academy_session_id: uuid },
+                    required: ["academy_session_id"],
+                  },
+                  {
+                    type: "object",
+                    properties: { course_run_id: uuid },
+                    required: ["course_run_id"],
+                  },
+                ],
               },
-              {
-                type: "object",
-                properties: { academy_room_id: uuid },
-                required: ["academy_room_id"],
-              },
-              {
-                type: "object",
-                properties: { academy_session_id: uuid },
-                required: ["academy_session_id"],
-              },
-              {
-                type: "object",
-                properties: { course_run_id: uuid },
-                required: ["course_run_id"],
-              },
+              pwaMultipart,
             ],
           },
           encoding: { file: { contentType: fileMediaTypes.join(", ") } },
@@ -352,7 +442,11 @@ const materialUpload = {
     },
     responses: {
       "200": ok({
-        anyOf: [materialUploadResult, z.toJSONSchema(academyPublicLogo)],
+        anyOf: [
+          materialUploadResult,
+          z.toJSONSchema(academyPublicLogo),
+          z.toJSONSchema(academyPwaIcon),
+        ],
       }),
       ...commonDocumentErrors,
       "403": documentGatewayError(
@@ -361,7 +455,12 @@ const materialUpload = {
       ),
       "409": documentGatewayError(
         "The same request was used for a different file or mode, or the version changed",
-        ["idempotency_conflict", "version_superseded", "logo_changed"],
+        [
+          "idempotency_conflict",
+          "version_superseded",
+          "logo_changed",
+          "icon_changed",
+        ],
       ),
       "413": documentGatewayError(
         "The file was empty or exceeded the allowed size",
@@ -370,6 +469,7 @@ const materialUpload = {
       "415": documentGatewayError("Unsupported or inconsistent file type", [
         "unsupported_type",
         "invalid_logo",
+        "invalid_icon",
       ]),
       "422": documentGatewayError(
         "The scanner rejected the file",
@@ -1132,7 +1232,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.31.0",
+      version: "1.32.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1346,6 +1446,39 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
             "403": error(
               "Current local administrator and active licence required",
             ),
+          },
+        },
+      },
+      "/rest/v1/rpc/academy_pwa_icon": {
+        get: {
+          operationId: "readAcademyPwaIcon",
+          tags: ["Installation"],
+          summary: "Read the current public app icon selection",
+          description:
+            "Returns the installation ID and current revision. Custom is false when the signed package provides the icons.",
+          security: [{ apiKey: [] }],
+          responses: { "200": ok(z.toJSONSchema(academyPwaIcon)) },
+        },
+      },
+      "/rest/v1/rpc/clear_academy_pwa_icon": {
+        post: {
+          operationId: "clearAcademyPwaIcon",
+          tags: ["Installation"],
+          summary: "Restore the signed package app icons",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(z.toJSONSchema(academyLogoVersionRequest)),
+          },
+          responses: {
+            "200": ok(z.toJSONSchema(academyPwaIcon)),
+            "400": error("Invalid icon version"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Icon changed since the last read"),
           },
         },
       },

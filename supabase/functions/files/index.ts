@@ -11,6 +11,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
 import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
+import {serveAcademyPwaAsset} from './academy-pwa-assets.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
 import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
@@ -45,6 +46,20 @@ const scanPortalFile = (bytes: Uint8Array) =>
 
 // Each request owns its user client; never share Auth state or other sessions between requests.
 Deno.serve(async (request: Request) => {
+    const requestUrl = new URL(request.url);
+    const publicAsset = await serveAcademyPwaAsset(request.method, requestUrl.searchParams, {
+        manifest: async () => {
+            const {data, error} = await service.rpc('academy_pwa_manifest', {}, {get: true});
+            if (error) throw error;
+            return data;
+        },
+        image: async (variant, version) => {
+            const {data, error} = await service.rpc('read_academy_pwa_icon', {p_variant: variant, p_version: version});
+            if (error) throw error;
+            return data;
+        },
+    });
+    if (publicAsset) return publicAsset;
     const origin = request.headers.get('origin') ?? '';
     const headers: Record<string, string> = {'Cache-Control': 'no-store, private', 'Pragma': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Vary': 'Origin'};
     if (origins.includes(origin)) {
@@ -68,7 +83,6 @@ Deno.serve(async (request: Request) => {
             const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
             if (profile.error || !profile.data?.active) throw new Error('access_denied');
         };
-        const requestUrl = new URL(request.url);
         if (requestUrl.searchParams.get('mode') === 'academy-logo') {
             const version = academyLogoVersion(requestUrl.searchParams);
             if (version === null) return json(400, {error: 'invalid_request'});

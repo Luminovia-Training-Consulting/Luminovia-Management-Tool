@@ -417,6 +417,7 @@ for (const version of [
   "1.28.0",
   "1.29.0",
   "1.30.0",
+  "1.31.0",
 ]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);
@@ -883,7 +884,7 @@ async function publicIngressFixture(t) {
       return { status: 404, headers, body: Buffer.alloc(0) };
     const file = ["/", "/auth/callback", "/auth/password"].includes(path)
       ? "index.html"
-      : path.slice(1);
+      : path.slice(1).split("?", 1)[0];
     return { status: 200, headers, body: readFileSync(join(dist, file)) };
   };
   return {

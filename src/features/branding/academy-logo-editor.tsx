@@ -79,8 +79,8 @@ export function AcademyLogoEditor() {
       <h2 id="academy-logo">{word("Akademie-Logo", "Academy logo")}</h2>
       <p>
         {word(
-          "Das Logo erscheint bei der Anmeldung, im Kursportal und im Browser-Tab. Wähle eine RGB- oder RGBA-PNG-Datei ohne Metadaten mit höchstens 512 × 512 Pixeln und 256 KiB. App-Symbole gehören zum signierten Installationspaket.",
-          "The logo appears at sign-in, in the course portal and in the browser tab. Choose an RGB or RGBA PNG without metadata, up to 512 × 512 pixels and 256 KiB. App icons come from the signed installation package.",
+          "Das Logo erscheint bei der Anmeldung, im Kursportal und im Browser-Tab. Wähle eine RGB- oder RGBA-PNG-Datei ohne Metadaten mit höchstens 512 × 512 Pixeln und 256 KiB. App-Symbole werden separat eingestellt.",
+          "The logo appears at sign-in, in the course portal and in the browser tab. Choose an RGB or RGBA PNG without metadata, up to 512 × 512 pixels and 256 KiB. App icons have their own settings.",
         )}
       </p>
       {!online ? (

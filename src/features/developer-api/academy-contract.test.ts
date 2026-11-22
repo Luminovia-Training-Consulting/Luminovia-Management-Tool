@@ -133,6 +133,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "/rest/v1/rpc/save_academy_public_branding",
           "/rest/v1/rpc/academy_public_brand_links",
           "/rest/v1/rpc/academy_public_logo",
+          "/rest/v1/rpc/academy_pwa_icon",
+          "/rest/v1/rpc/clear_academy_pwa_icon",
           "/rest/v1/rpc/clear_academy_public_logo",
           "/rest/v1/rpc/save_academy_public_brand_links",
           upload,
@@ -194,7 +196,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.31.0");
+      expect(spec.info.version).toBe("1.32.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({
@@ -604,6 +606,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-course-chat",
                 "academy-attendance",
                 "academy-logo",
+                "academy-pwa-icon",
                 "course-submission",
               ],
             },
@@ -613,15 +616,23 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           content: {
             "multipart/form-data": {
               schema: {
-                additionalProperties: false,
-                required: ["client_id", "file"],
                 oneOf: [
-                  { required: ["academy_course_id"] },
-                  { required: ["academy_room_id"] },
-                  { required: ["academy_session_id"] },
-                  { required: ["course_run_id"] },
+                  {
+                    additionalProperties: false,
+                    required: ["client_id", "file"],
+                    oneOf: [
+                      { required: ["academy_course_id"] },
+                      { required: ["academy_room_id"] },
+                      { required: ["academy_session_id"] },
+                      { required: ["course_run_id"] },
+                    ],
+                    properties: { file: { format: "binary" } },
+                  },
+                  {
+                    additionalProperties: false,
+                    required: ["icon_192", "icon_512", "maskable_512"],
+                  },
                 ],
-                properties: { file: { format: "binary" } },
               },
             },
           },
