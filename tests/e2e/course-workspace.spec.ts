@@ -578,6 +578,14 @@ async function attendanceWorkbook(participantId: string) {
 
 test("consented participant enrolment and reviewed XLSX attendance use the native course workspace", async ({page}) => {
     const f = await fixture();
+    const secondSession = randomUUID();
+    const secondEnd = Date.now() - 86_400_000;
+    await checked(f.service.from("course_sessions").insert({
+        id: secondSession,
+        course_run_id: f.run,
+        starts_at: new Date(secondEnd - 3_600_000).toISOString(),
+        ends_at: new Date(secondEnd).toISOString(),
+    }));
     const learner = api(process.env.SUPABASE_ANON_KEY!);
     await checked(learner.auth.signInWithPassword({email:f.learner.email,password:process.env.E2E_PASSWORD!}));
     const profile = await checked(f.service.from("profiles").select("luminovia_user_id").eq("id",f.learner.id).single(),
@@ -620,5 +628,31 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
     await expect(attendance.getByText("1 Änderung gespeichert.",{exact:true})).toBeVisible();
     expect((await register()).rows[0]).toMatchObject({
         user_id:f.learner.id, status:"present", note:"Reviewed register",version:1,
+    });
+
+    // A bulk mark uses the exact selected session, leaving the XLSX result intact.
+    await attendance.getByLabel("Kurstermin", {exact: true}).selectOption(secondSession);
+    const totals = attendance.getByRole("list", {name: "Statusübersicht für diesen Termin"});
+    await expect(totals.getByText("Noch offen: 1", {exact: true})).toBeVisible();
+    await attendance.getByRole("searchbox", {name: "Nach Namen filtern"}).fill("unmatched");
+    await expect(attendance.getByText("Keine Teilnehmenden passen zu den Filtern.")).toBeVisible();
+    await expect(attendance.getByRole("button", {name: "Sammelmarkierung prüfen"})).toHaveCount(0);
+    await attendance.getByRole("searchbox", {name: "Nach Namen filtern"}).fill("MÜLLER");
+    await attendance.getByLabel("Nach Status filtern", {exact: true}).selectOption("unmarked");
+    await attendance.getByLabel("Status für sichtbare, noch nicht erfasste Personen").selectOption("excused");
+    await attendance.getByRole("button", {name: "Sammelmarkierung prüfen"}).click();
+    const preview = page.getByRole("dialog", {name: "Sammelmarkierung prüfen"});
+    await expect(preview.getByText("Fictional Müller Μαρία Мария", {exact: true})).toBeVisible();
+    const secondRegister = () => checked(f.adminClient.rpc("course_session_register", {
+        p_run_id: f.run, p_session_id: secondSession,
+    }));
+    expect((await secondRegister()).rows[0].status).toBeNull();
+    await preview.getByRole("button", {name: "1 Änderung verbindlich speichern", exact: true}).click();
+    await expect(totals.getByText("Entschuldigt: 1", {exact: true})).toBeVisible();
+    expect((await secondRegister()).rows[0]).toMatchObject({
+        user_id: f.learner.id, status: "excused", version: 1,
+    });
+    expect((await register()).rows[0]).toMatchObject({
+        user_id: f.learner.id, status: "present", note: "Reviewed register", version: 1,
     });
 });

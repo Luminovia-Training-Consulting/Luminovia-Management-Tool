@@ -15,6 +15,7 @@ import type { CourseWorkspace } from "./api";
 
 const fake = vi.hoisted(() => ({
   save: vi.fn(),
+  saveBatch: vi.fn(),
   attach: vi.fn(),
   upload: vi.fn(),
   uploadAcademy: vi.fn(),
@@ -56,6 +57,7 @@ vi.mock("./attendance-api", () => ({
     queryFn: async () => fake.register,
   }),
   saveAttendance: fake.save,
+  saveAttendanceBatch: fake.saveBatch,
   attachAttendancePdf: fake.attach,
 }));
 vi.mock("../files/api", () => ({
@@ -107,6 +109,7 @@ const view = (value = course, academy?: "active" | "grace") =>
 
 beforeEach(() => {
   fake.register.starts_at = new Date(Date.now() - 3_600_000).toISOString();
+  fake.register.rows.splice(1);
   fake.register.rows[0].name = "Fictional Learner";
   fake.register.rows[0].status = null;
   fake.register.rows[0].note = "";
@@ -115,6 +118,7 @@ beforeEach(() => {
   fake.save
     .mockReset()
     .mockResolvedValue({ status: "present", version: 1, minutes: 60 });
+  fake.saveBatch.mockReset().mockResolvedValue(1);
   fake.attach.mockReset().mockResolvedValue({
     id: "evidence",
     resource_id: "resource",
@@ -157,6 +161,144 @@ it("requires a correction reason and interprets arrival in the course time zone"
   );
 });
 afterEach(cleanup);
+
+it("filters the visible session roster without changing the status totals or discarding a draft", async () => {
+  fake.register.rows.push({
+    ...fake.register.rows[0],
+    user_id: "marked",
+    name: "Fictional Marked",
+    status: "excused",
+    version: 1,
+  });
+  view();
+  const user = userEvent.setup();
+  const totals = await screen.findByRole("list", { name: "attendanceCounts" });
+  expect(within(totals).getByText("attendanceunmarked: 1")).toBeVisible();
+  expect(within(totals).getByText("attendanceexcused: 1")).toBeVisible();
+  const note = within(
+    screen.getByRole("heading", { name: "Fictional Learner" }).closest("li")!,
+  ).getByLabelText("attendanceNote");
+  await user.type(note, "Unsaved note");
+  const filter = screen.getByLabelText("attendanceFilterStatus");
+  await user.selectOptions(filter, "excused");
+  expect(
+    screen.queryByRole("heading", { name: "Fictional Learner" }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("heading", { name: "Fictional Marked" }),
+  ).toBeVisible();
+  expect(within(totals).getByText("attendanceunmarked: 1")).toBeVisible();
+  await user.selectOptions(filter, "all");
+  expect(note).toBeVisible();
+  expect(note).toHaveValue("Unsaved note");
+  await user.type(screen.getByLabelText("attendanceFilterName"), "MARKED");
+  expect(
+    screen.queryByRole("heading", { name: "Fictional Learner" }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("heading", { name: "Fictional Marked" }),
+  ).toBeVisible();
+  expect(fake.save).not.toHaveBeenCalled();
+});
+
+it("reviews and commits only the visible unmarked rows which have no existing attendance entry", async () => {
+  fake.register.rows.push(
+    {
+      ...fake.register.rows[0],
+      user_id: "reported",
+      name: "Fictional Learner reported",
+      version: 2,
+    },
+    {
+      ...fake.register.rows[0],
+      user_id: "already-marked",
+      name: "Fictional Learner present",
+      status: "present",
+      version: 1,
+    },
+    {
+      ...fake.register.rows[0],
+      user_id: "filtered-out",
+      name: "Another participant",
+    },
+  );
+  fake.saveBatch.mockImplementation(async () => {
+    fake.register = {
+      ...fake.register,
+      rows: [
+        { ...fake.register.rows[0], status: "excused", version: 1 },
+        ...fake.register.rows.slice(1),
+      ],
+    };
+    return 1;
+  });
+  view();
+  const user = userEvent.setup();
+  await user.type(
+    await screen.findByLabelText("attendanceFilterName"),
+    "learner",
+  );
+  const filter = screen.getByLabelText("attendanceFilterStatus");
+  await user.selectOptions(filter, "unmarked");
+  await user.selectOptions(
+    screen.getByLabelText("attendanceBulkStatus"),
+    "excused",
+  );
+  const review = () =>
+    user.click(screen.getByRole("button", { name: "attendanceBulkReview" }));
+  await review();
+  let dialog = within(
+    screen.getByRole("dialog", { name: "attendanceBulkReview" }),
+  );
+  expect(dialog.getByText("Fictional Learner", { exact: true })).toBeVisible();
+  expect(dialog.queryByText("Fictional Learner reported")).toBeNull();
+  expect(dialog.queryByText("Fictional Learner present")).toBeNull();
+  expect(dialog.queryByText("Another participant")).toBeNull();
+  await user.click(dialog.getByRole("button", { name: "enrolmentCancel" }));
+  expect(fake.saveBatch).not.toHaveBeenCalled();
+  await review();
+  dialog = within(screen.getByRole("dialog", { name: "attendanceBulkReview" }));
+  await user.click(
+    dialog.getByRole("button", { name: "attendanceImportConfirm" }),
+  );
+  expect(await screen.findByText("attendanceImportSaved")).toBeVisible();
+  expect(fake.saveBatch).toHaveBeenCalledExactlyOnceWith("run", "session", [
+    {
+      user_id: "learner",
+      status: "excused",
+      arrival_at: null,
+      departure_at: null,
+      note: "",
+      reason: "",
+      expected_version: 0,
+    },
+  ]);
+  expect(
+    within(screen.getByRole("list", { name: "attendanceCounts" })).getByText(
+      "attendanceexcused: 1",
+    ),
+  ).toBeVisible();
+  expect(filter).toHaveFocus();
+});
+
+it("refreshes the register after a bulk version conflict without claiming success", async () => {
+  fake.saveBatch.mockRejectedValue({ code: "PT409" });
+  view();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "attendanceBulkReview" }),
+  );
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "attendanceImportConfirm",
+    }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "attendanceBulkChanged",
+  );
+  expect(screen.queryByText("attendanceImportSaved")).toBeNull();
+  expect(fake.saveBatch).toHaveBeenCalledTimes(1);
+});
 
 it("announces the confirmed status and keeps keyboard focus on the participant's register row", async () => {
   fake.save.mockImplementation(async () => {
@@ -232,6 +374,9 @@ it("renders the register and its notes without academy writes during grace", asy
     screen.queryByRole("button", { name: "attendancepresent" }),
   ).toBeNull();
   expect(screen.queryByText("attendanceImport")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "attendanceBulkReview" }),
+  ).toBeNull();
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(document.querySelector('input[type="file"]')).toBeNull();
   expect(fake.save).not.toHaveBeenCalled();
@@ -261,15 +406,21 @@ it("requests a protected PDF for the selected register and reports a denied down
   );
 });
 
-it("does not offer dedicated register changes before the session starts", async () => {
-  fake.register.starts_at = new Date(Date.now() + 3_600_000).toISOString();
-  view(course, "active");
-  expect(await screen.findByText("Fictional Learner")).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: "attendancepresent" }),
-  ).toBeNull();
-  expect(screen.queryByText("attendanceImport")).toBeNull();
-});
+it.each([undefined, "active"] as const)(
+  "does not offer %s register changes before the session starts",
+  async (academy) => {
+    fake.register.starts_at = new Date(Date.now() + 3_600_000).toISOString();
+    view(course, academy);
+    expect(await screen.findByText("Fictional Learner")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "attendancepresent" }),
+    ).toBeNull();
+    expect(screen.queryByText("attendanceImport")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "attendanceBulkReview" }),
+    ).toBeNull();
+  },
+);
 
 it("excludes participant-only viewers from the register", () => {
   view({

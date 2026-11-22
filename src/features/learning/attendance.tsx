@@ -1,5 +1,6 @@
 /** Staff/company session register and protected PDF evidence on the existing file path. */
 import { AttendanceImportPanel } from "./attendance-import-panel";
+import { AttendanceBulkMark } from "./attendance-bulk-mark";
 import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
@@ -23,6 +24,7 @@ import {
   type AttendanceRow,
   type AttendanceStatus,
 } from "./attendance-api";
+import { attendanceStatuses } from "./attendance-schema";
 
 function localTime(value: string | null, zone: string) {
   return value
@@ -90,13 +92,13 @@ function AttendanceExport({ register }: { register: AttendanceRegister }) {
   );
 }
 
-function RowEditor(props: RowEditorProps) {
+function RowEditor({ hidden, ...props }: RowEditorProps & { hidden: boolean }) {
   const { t } = useTranslation("learning");
   const { row } = props;
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   return (
-    <li className="panel learning-panel attendance-entry">
+    <li className="panel learning-panel attendance-entry" hidden={hidden}>
       <h4 id={headingId} ref={heading} tabIndex={-1}>
         {row.name.trim() || t("attendanceUnnamedParticipant")}
       </h4>
@@ -409,6 +411,14 @@ export function AttendancePanel({
   const online = useOnline();
   const client = useQueryClient();
   const [session, setSession] = useState(course.sessions[0]?.id ?? "");
+  const filterId = useId();
+  const [statusControl, setStatusControl] = useState<HTMLSelectElement | null>(
+    null,
+  );
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState<"all" | "unmarked" | AttendanceStatus>(
+    "all",
+  );
   const allowed =
     course.lms_enabled &&
     (course.access.manager || course.access.teacher || course.access.client);
@@ -419,10 +429,23 @@ export function AttendancePanel({
   });
   if (!allowed || !course.sessions.length) return null;
   const canEdit =
-    !academy ||
-    (academy === "active" &&
-      query.isSuccess &&
-      Date.parse(query.data.starts_at) <= query.dataUpdatedAt);
+    academy !== "grace" &&
+    query.isSuccess &&
+    Date.parse(query.data.starts_at) <= query.dataUpdatedAt;
+  const rows = query.data?.rows ?? [];
+  const counts = { unmarked: 0, present: 0, absent: 0, excused: 0 };
+  for (const row of rows) counts[row.status ?? "unmarked"]++;
+  const needle = name.trim().normalize("NFC").toLowerCase();
+  const visibleRows = rows.filter(
+    (row) =>
+      (status === "all" || (row.status ?? "unmarked") === status) &&
+      row.name.normalize("NFC").toLowerCase().includes(needle),
+  );
+  const visibleIds = new Set(visibleRows.map((row) => row.user_id));
+  const refreshRegister = () =>
+    client.invalidateQueries({
+      queryKey: attendanceRegisterKey(actor, course.id, session),
+    });
   return (
     <section
       className={`panel learning-panel${academy ? " academy-attendance-register" : ""}`}
@@ -457,9 +480,70 @@ export function AttendancePanel({
               register={query.data}
             />
           )}
-          {!query.data.rows.length && <p>{t("attendanceNoParticipants")}</p>}
+          {rows.length ? (
+            <>
+              <ul
+                aria-label={t("attendanceCounts")}
+                className="attendance-counts"
+              >
+                {(["unmarked", ...attendanceStatuses] as const).map((key) => (
+                  <li key={key} className="badge">
+                    {t(`attendance${key}`)}: {counts[key]}
+                  </li>
+                ))}
+              </ul>
+              <div className="attendance-register-filters">
+                <Field
+                  id={`${filterId}-name`}
+                  label={t("attendanceFilterName")}
+                >
+                  <input
+                    id={`${filterId}-name`}
+                    type="search"
+                    value={name}
+                    onChange={(event) => setName(event.currentTarget.value)}
+                  />
+                </Field>
+                <Field
+                  id={`${filterId}-status`}
+                  label={t("attendanceFilterStatus")}
+                >
+                  <select
+                    id={`${filterId}-status`}
+                    ref={setStatusControl}
+                    value={status}
+                    onChange={(event) =>
+                      setStatus(event.currentTarget.value as typeof status)
+                    }
+                  >
+                    <option value="all">{t("attendanceAllStatuses")}</option>
+                    {(["unmarked", ...attendanceStatuses] as const).map(
+                      (key) => (
+                        <option key={key} value={key}>
+                          {t(`attendance${key}`)}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </Field>
+              </div>
+              {!visibleRows.length && <p>{t("attendanceNoMatches")}</p>}
+              {canEdit && (
+                <AttendanceBulkMark
+                  key={`${actor}:${course.id}:${session}:${query.data.starts_at}:${query.data.ends_at}`}
+                  run={course.id}
+                  register={query.data}
+                  visibleRows={visibleRows}
+                  refreshRegister={refreshRegister}
+                  statusControl={statusControl}
+                />
+              )}
+            </>
+          ) : (
+            <p>{t("attendanceNoParticipants")}</p>
+          )}
           <ul className="learning-resources attendance-entries">
-            {query.data.rows.map((row) =>
+            {rows.map((row) =>
               canEdit ? (
                 <RowEditor
                   key={`${session}:${row.user_id}`}
@@ -467,11 +551,13 @@ export function AttendancePanel({
                   actor={actor}
                   session={session}
                   row={row}
+                  hidden={!visibleIds.has(row.user_id)}
                 />
               ) : (
                 <li
                   key={row.user_id}
                   className="panel learning-panel attendance-entry"
+                  hidden={!visibleIds.has(row.user_id)}
                 >
                   <h4>
                     {row.name.trim() || t("attendanceUnnamedParticipant")}
@@ -516,11 +602,7 @@ export function AttendancePanel({
               key={`${actor}:${course.id}:${session}:${query.data.starts_at}:${query.data.ends_at}`}
               run={course.id}
               register={query.data}
-              refreshRegister={() =>
-                client.invalidateQueries({
-                  queryKey: attendanceRegisterKey(actor, course.id, session),
-                })
-              }
+              refreshRegister={refreshRegister}
             />
           )}
           <AttendanceEvidence
@@ -529,11 +611,7 @@ export function AttendancePanel({
             courseId={course.id}
             academy={Boolean(academy)}
             canUpload={academy !== "grace"}
-            refresh={() =>
-              client.invalidateQueries({
-                queryKey: attendanceRegisterKey(actor, course.id, session),
-              })
-            }
+            refresh={refreshRegister}
           />
           <h3>{t("attendanceCorrections")}</h3>
           <ul>

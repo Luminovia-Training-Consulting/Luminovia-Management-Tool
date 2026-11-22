@@ -4,14 +4,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
-import { db } from "../../lib/supabase";
 import { dateTime } from "../../lib/dates";
-import { requireOnline, useOnline } from "../../lib/online";
-import type { AttendanceRegister } from "./attendance-api";
-import {
-  attendanceImportReceiptSchema,
-  type AttendanceImportRow,
-} from "./attendance-schema";
+import { useOnline } from "../../lib/online";
+import { saveAttendanceBatch, type AttendanceRegister } from "./attendance-api";
+import type { AttendanceImportRow } from "./attendance-schema";
 import {
   AttendanceImportError,
   attendanceCsvTemplate,
@@ -46,19 +42,12 @@ export function AttendanceImportPanel({
   const [invalidRow, setInvalidRow] = useState<number>();
   const [reading, setReading] = useState(false);
   const save = useMutation({
-    mutationFn: async (confirmed: AttendanceImportRequest) => {
-      requireOnline();
-      if (!confirmed.p_rows.length) throw new Error("attendance_import_empty");
-      const { data, error } = await db().rpc(
-        "import_course_session_attendance",
-        confirmed,
-      );
-      if (error) throw error;
-      const receipt = attendanceImportReceiptSchema.safeParse(data);
-      if (!receipt.success || receipt.data.saved !== confirmed.p_rows.length)
-        throw new Error("attendance_import_unconfirmed");
-      return receipt.data.saved;
-    },
+    mutationFn: (confirmed: AttendanceImportRequest) =>
+      saveAttendanceBatch(
+        confirmed.p_run_id,
+        confirmed.p_session_id,
+        confirmed.p_rows,
+      ),
     onSettled: async () => {
       setPreview(undefined);
       await refreshRegister();

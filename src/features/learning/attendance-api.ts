@@ -5,7 +5,9 @@ import { requireOnline } from "../../lib/online";
 
 import {
   academyAttendanceRegisterSchema,
+  attendanceImportReceiptSchema,
   attendanceRegisterSchema,
+  type AttendanceImportRow,
   type AttendanceRow,
   type AttendanceStatus,
 } from "./attendance-schema";
@@ -89,4 +91,24 @@ export async function attachAttendancePdf(
   });
   if (error) throw error;
   return data as { id: string; resource_id: string | null; version_id: string };
+}
+
+/** Confirm one atomic batch for the exact session and verify its count. */
+export async function saveAttendanceBatch(
+  run: string,
+  session: string,
+  rows: AttendanceImportRow[],
+) {
+  requireOnline();
+  if (!rows.length) throw new Error("attendance_import_empty");
+  const { data, error } = await db().rpc("import_course_session_attendance", {
+    p_run_id: run,
+    p_session_id: session,
+    p_rows: rows,
+  });
+  if (error) throw error;
+  const receipt = attendanceImportReceiptSchema.safeParse(data);
+  if (!receipt.success || receipt.data.saved !== rows.length)
+    throw new Error("attendance_import_unconfirmed");
+  return receipt.data.saved;
 }

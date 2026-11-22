@@ -420,6 +420,18 @@ const pairs: Record<string, [string, string]> = {
   attendanceSession: ["Kurstermin", "Course session"],
   attendanceUnnamedParticipant: ["Teilnehmende Person", "Participant"],
   attendanceCurrent: ["Aktueller Status", "Current status"],
+  attendanceCounts: [
+    "Statusübersicht für diesen Termin",
+    "Status totals for this session",
+  ],
+  attendanceFilterName: ["Nach Namen filtern", "Filter by name"],
+  attendanceFilterStatus: ["Nach Status filtern", "Filter by status"],
+  attendanceAllStatuses: ["Alle Status", "All statuses"],
+  attendanceNoMatches: [
+    "Keine Teilnehmenden passen zu den Filtern.",
+    "No participants match the filters.",
+  ],
+  attendanceunmarked: ["Noch offen", "Unmarked"],
   attendancepresent: ["Anwesend", "Present"],
   attendanceabsent: ["Abwesend", "Absent"],
   attendanceexcused: ["Entschuldigt", "Excused"],
@@ -507,6 +519,27 @@ const pairs: Record<string, [string, string]> = {
   attendanceNoParticipants: [
     "Keine eingeschriebenen Teilnehmenden.",
     "No enrolled participants.",
+  ],
+  attendanceBulkStatus: [
+    "Status für sichtbare, noch nicht erfasste Personen",
+    "Status for visible participants with no attendance entry",
+  ],
+  attendanceBulkReview: ["Sammelmarkierung prüfen", "Review bulk marking"],
+  attendanceBulkPreview: [
+    "Termin: {{date}}. Neuer Status für die aufgeführten Personen: {{status}}.",
+    "Session: {{date}}. New status for the listed participants: {{status}}.",
+  ],
+  attendanceBulkLimit: [
+    "Filtere die Liste auf höchstens {{count}} offene Personen pro Sammelmarkierung.",
+    "Filter the list to at most {{count}} unrecorded participants per bulk mark.",
+  ],
+  attendanceBulkChanged: [
+    "Die Liste hat sich seit der Vorschau geändert. Prüfe die aktualisierte Auswahl erneut.",
+    "The register changed after the preview. Review the refreshed selection again.",
+  ],
+  attendanceBulkFailed: [
+    "Die Sammelmarkierung konnte nicht bestätigt werden. Prüfe den aktuellen Stand und deine Berechtigung.",
+    "The bulk mark could not be confirmed. Check the current register and your access.",
   ],
   attendanceEvidence: ["PDF-Anwesenheitsnachweise", "PDF attendance evidence"],
   attendancePdfLabel: [

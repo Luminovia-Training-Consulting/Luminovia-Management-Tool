@@ -8,6 +8,7 @@ const minutes = z.number().int().nonnegative();
 const note = z.string().max(1000);
 const status = z.enum(["present", "absent", "excused"]);
 
+export const attendanceStatuses = status.options;
 export const maxAttendanceImportRows = 200;
 export const attendanceImportRowSchema = z.strictObject({
   user_id: uuid,
