@@ -539,13 +539,21 @@ test("new risky migrations require the exact current plan before any stop/update
     }
 });
 
-test("latest full test uses another exact worktree without updating or stopping preview", async () => {
+test("latest full test uses another exact worktree without updating or stopping preview", async (t) => {
     const f = fixture();
     try {
         await f.preview.apply(await f.preview.fetchLatest());
         writeFileSync(join(f.seed, "new-feature.txt"), "new-not-yet-in-preview");
         const latest = f.commit();
-        await f.preview.testLatest(await f.preview.fetchLatest());
+        const plan = await f.preview.fetchLatest();
+        const deadlines = [];
+        const schedule = globalThis.setTimeout;
+        t.mock.method(globalThis, "setTimeout", (callback, timeout, ...args) => {
+            deadlines.push(timeout);
+            return schedule(callback, timeout, ...args);
+        });
+        await f.preview.testLatest(plan);
+        assert.ok(deadlines.includes(2 * 60 * 60 * 1000));
         assert.equal(f.preview.state().sha, f.first);
         assert.equal(git(f.preview.source, "rev-parse", "HEAD"), f.first);
         assert.equal(
