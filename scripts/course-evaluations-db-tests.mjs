@@ -170,8 +170,9 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(comments(company,"lecturer","company",organisation), denied);
         assert.equal((await list(manager)).summaries.length, 6);
         assert.equal((await comments(admin,"learner","company",organisation)).items[0].comment, "Helpful coordination");
-        assert.equal(await sql("select count(*) from public.audit_events where action='course.evaluation_saved'"), "9");
-        assert.equal(await sql("select count(*) from public.audit_events where action='course.evaluation_saved' and (details ? 'comment' or details ? 'score')"), "0");
+        assert.equal(await sql("select count(*) from private.course_evaluation_revisions"), "9");
+        assert.equal(await sql("select count(*) from public.audit_events where action='course.evaluation_saved'"), "0");
+        await assert.rejects(actor(admin, "select * from private.course_evaluation_revisions"), denied);
         console.log(`PASS ${edition} completed-run evaluation roles, version conflicts, author privacy and recipient-directed feedback`);
 
         await sql(`insert into private.course_feedback(run_id,user_id,kind,rating,comment)

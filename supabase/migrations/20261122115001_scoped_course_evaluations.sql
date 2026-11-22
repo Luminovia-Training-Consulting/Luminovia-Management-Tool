@@ -28,6 +28,19 @@ revoke all on private.course_evaluations from public, anon, authenticated, servi
 create trigger permanent_deletion_fence before insert or update or delete on private.course_evaluations
   for each row execute function private.guard_permanent_deletion();
 
+-- A private append-only receipt avoids joining a public comment ID to the
+-- generic administration audit's actor-name projection.
+create table private.course_evaluation_revisions (
+  evaluation_id uuid not null references private.course_evaluations(id) on delete cascade,
+  version integer not null check (version > 0),
+  recorded_at timestamptz not null default statement_timestamp(),
+  primary key (evaluation_id, version)
+);
+alter table private.course_evaluation_revisions enable row level security;
+revoke all on private.course_evaluation_revisions from public, anon, authenticated, service_role;
+create trigger permanent_deletion_fence before insert or update or delete on private.course_evaluation_revisions
+  for each row execute function private.guard_permanent_deletion();
+
 create function private.course_evaluation_completed(p_run_id uuid)
 returns boolean language sql stable security invoker set search_path = '' as $$
   select coalesce(max(session.ends_at) < statement_timestamp(), false)
@@ -290,10 +303,8 @@ begin
   if not found then
     raise sqlstate 'PT409' using message = 'Evaluation changed. Reload the current evaluation.';
   end if;
-  insert into public.audit_events(actor_id, action, resource_id, details)
-    values (actor_id, 'course.evaluation_saved', saved.id,
-      jsonb_build_object('course_run_id', p_run_id, 'version', saved.version,
-        'rater_role', p_rater_role, 'subject_kind', p_subject_kind));
+  insert into private.course_evaluation_revisions(evaluation_id, version)
+    values (saved.id, saved.version);
   return jsonb_build_object('rater_role', p_rater_role, 'subject_kind', p_subject_kind, 'subject_id', p_subject_id,
     'label', subject_label, 'score', saved.score, 'comment', saved.comment, 'version', saved.version);
 end;
@@ -363,13 +374,6 @@ begin
 end;
 $$;
 
-alter function private.admin_audit_actions() rename to admin_audit_actions_before_course_evaluations;
-revoke all on function private.admin_audit_actions_before_course_evaluations() from public, anon, authenticated, service_role;
-create function private.admin_audit_actions()
-returns text[] language sql immutable security invoker set search_path = ''
-return private.admin_audit_actions_before_course_evaluations() || array['course.evaluation_saved'];
-revoke all on function private.admin_audit_actions() from public, anon, authenticated, service_role;
-
 alter function private.deletion_scope(text,uuid) rename to deletion_scope_before_course_evaluations;
 revoke all on function private.deletion_scope_before_course_evaluations(text,uuid) from public, anon, authenticated, service_role;
 create function private.deletion_scope(p_kind text, p_id uuid)
@@ -377,7 +381,9 @@ returns jsonb language plpgsql stable security definer set search_path = '' as $
 declare scope jsonb := private.deletion_scope_before_course_evaluations(p_kind, p_id);
 begin
   if p_kind = 'course_run' then
-    return private.deletion_add_scope(scope, 'private.course_evaluations', format('x.run_id=%L::uuid', p_id));
+    scope := private.deletion_add_scope(scope, 'private.course_evaluations', format('x.run_id=%L::uuid', p_id));
+    return private.deletion_add_scope(scope, 'private.course_evaluation_revisions',
+      format('x.evaluation_id in (select id from private.course_evaluations where run_id=%L::uuid)', p_id));
   end if;
   return scope;
 end;
