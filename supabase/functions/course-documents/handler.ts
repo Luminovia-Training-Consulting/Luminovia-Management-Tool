@@ -1,5 +1,6 @@
 /** Protected document boundary: exact caller/origin, finite inputs and a second
  * current-authorization/facts read after rendering or private byte access. */
+import {boundedJson} from "../_shared/bounded-body.ts";
 import {renderAttendanceCsv} from "./attendance-csv.ts";
 import {academyPdfBrand} from "./brand.ts";
 
@@ -19,30 +20,6 @@ interface Dependencies {
 const uuid = (value: unknown): value is string =>
     typeof value === "string" &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-
-async function boundedJson(request: Request) {
-    const reader = request.body?.getReader();
-    if (!reader) throw new Error("invalid_request");
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        size += value.length;
-        if (size > 4096) {
-            await reader.cancel();
-            throw new Error("invalid_request");
-        }
-        chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let at = 0;
-    for (const chunk of chunks) {
-        bytes.set(chunk, at);
-        at += chunk.length;
-    }
-    return JSON.parse(new TextDecoder().decode(bytes));
-}
 
 export function createCourseDocumentHandler(dependencies: Dependencies) {
     return async (request: Request): Promise<Response> => {
@@ -76,20 +53,28 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         const token = /^Bearer (\S+)$/.exec(
             request.headers.get("authorization") ?? "",
         )?.[1];
-        if (!token || !(await dependencies.authenticate(token))) {
-            return json(401, "authentication_required");
-        }
+        if (!token) return json(401, "authentication_required");
         try {
-            const body = await boundedJson(request);
-            if (!body || typeof body !== "object" || Array.isArray(body)) {
+            if (!(await dependencies.authenticate(token))) {
+                return json(401, "authentication_required");
+            }
+            let raw: unknown;
+            try {
+                raw = await boundedJson(request, 4096);
+            } catch {
                 return json(400, "invalid_request");
             }
+            if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+                return json(400, "invalid_request");
+            }
+            const body = raw as Record<string, unknown>;
             const kind = body.kind;
+            if (typeof kind !== "string") return json(400, "invalid_request");
             const attendance = kind === "attendance" || kind === "attendance_session";
             let name: string, args: Record<string, unknown>;
             if (
                 kind === "qualification_passport" &&
-                ["de", "en"].includes(body.locale) &&
+                (body.locale === "de" || body.locale === "en") &&
                 Object.keys(body).every((key) => ["kind", "locale"].includes(key))
             ) {
                 name = "own_qualification_passport";
@@ -156,6 +141,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 args = {p_claim_id: body.id};
             } else if (
                 kind === "earnings_statement" &&
+                typeof body.from === "string" && typeof body.until === "string" &&
                 /^\d{4}-\d{2}-\d{2}$/.test(body.from) &&
                 /^\d{4}-\d{2}-\d{2}$/.test(body.until) &&
                 (body.all === undefined || typeof body.all === "boolean") &&
@@ -192,10 +178,10 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             ) {
                 let objectPath: string | null = null;
                 if (kind === "wiki_resource") {
-                    if (!uuid(first.data.version_id) || !dependencies.wikiPath)
+                    if (!uuid(args.p_id) || !uuid(first.data.version_id) || !dependencies.wikiPath)
                         return json(403, "document_unavailable");
                     objectPath = await dependencies.wikiPath(
-                        body.id,
+                        args.p_id,
                         first.data.version_id,
                     );
                 } else if (typeof first.data.object_path === "string") {
@@ -256,12 +242,6 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         } catch (error) {
             if (error instanceof Error && error.message === "unsupported_glyph") {
                 return json(422, "unsupported_glyph");
-            }
-            if (
-                error instanceof SyntaxError ||
-                (error instanceof Error && error.message === "invalid_request")
-            ) {
-                return json(400, "invalid_request");
             }
             return json(503, "document_unavailable");
         }

@@ -147,7 +147,6 @@ try {
         .replaceAll("543", "553")
         .replaceAll(":5173", ":5273");
     writeFileSync(configPath, config);
-    /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
     /** Run one required child command; cancellation/failure cannot be recorded as success. */
     const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
         console.log(`\n[TEST] ${label}`);
@@ -256,6 +255,12 @@ try {
             await step("Lint", "npm", ["run", "lint"]);
             await step("TypeScript", "npm", ["run", "typecheck"]);
             await step("Formatting", "npm", ["run", "format:check"]);
+            await step("GitHub configuration formatting", "npx", [
+                "--no-install", "prettier", "--check", ".github",
+            ]);
+            await step("Code quality", process.execPath, [
+                "scripts/code-integrity.mjs", "--exports",
+            ]);
         }
         const runtimeTests = readdirSync(join(scratch, "scripts"))
             .filter(
@@ -414,6 +419,10 @@ try {
             await step("Private self-hosted gateway routes", process.execPath, [
                 "deploy/hostinger/selfhost/validate.mjs",
                 "--gateway-routing",
+            ]);
+            // Exercise the shipped font in the pinned, read-only Edge Runtime.
+            await step("Self-hosted Edge Runtime course PDF", process.execPath, [
+                "--test", "deploy/hostinger/selfhost/course-documents.test.mjs",
             ]);
             await step("Caddy access and private boundaries", process.execPath, [
                 "scripts/hostinger-caddy-check.mjs",

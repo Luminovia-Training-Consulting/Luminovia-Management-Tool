@@ -1,6 +1,10 @@
 /** Reviewed native contracts for the actor-owned notification and device APIs. */
 import { z } from "zod";
 import {
+  jsonContent as json,
+  postgrestErrorResponse as error,
+} from "./postgrest-content.ts";
+import {
   attentionPayloadSchema,
   attentionWireSchema,
   deliveryPayloadSchema,
@@ -71,22 +75,9 @@ const deviceSubscription = z.strictObject({
       .meta({ writeOnly: true }),
   }),
 });
-const errorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.string().nullable().optional(),
-  hint: z.string().nullable().optional(),
-});
-const json = (schema: z.ZodType) => ({
-  "application/json": { schema: z.toJSONSchema(schema) },
-});
-const error = (description: string, schema: z.ZodType = errorSchema) => ({
-  description,
-  content: json(schema),
-});
 const conflict = error(
   "The expected version is stale. Reload the current preferences before editing.",
-  errorSchema.extend({ code: z.literal("PT409") }),
+  z.literal("PT409"),
 );
 
 function operation(
@@ -122,7 +113,7 @@ function operation(
           ? {
               "500": error(
                 "Device registration is disabled or the account has reached five current devices.",
-                errorSchema.extend({ code: z.enum(["55000", "54000"]) }),
+                z.enum(["55000", "54000"]),
               ),
             }
           : {}),

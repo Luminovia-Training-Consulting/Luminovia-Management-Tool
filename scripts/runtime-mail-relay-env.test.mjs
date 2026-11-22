@@ -4,6 +4,7 @@ import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, w
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test from "node:test";
+import {inspect} from "node:util";
 import {migrateMailRelayEnvironment} from "../deploy/hostinger/selfhost/migrate-mail-relay-env.mjs";
 import {readPrivateFixture} from "./testing/read-private-fixture.mjs";
 
@@ -89,7 +90,11 @@ test("incomplete relay values, mismatched worker secrets and symlinks fail befor
         );
         assert.throws(
             () => migrateMailRelayEnvironment(envFile, {apply: true, requireRoot: false}),
-            /does not match/,
+            (error) => {
+                assert.match(error.message, /does not match/);
+                assert.doesNotMatch(inspect(error), /wrong-secret|fictional-service-role-key/);
+                return true;
+            },
         );
         assert.equal(readFileSync(envFile, "utf8"), original);
     });
@@ -101,5 +106,24 @@ test("incomplete relay values, mismatched worker secrets and symlinks fail befor
             () => migrateMailRelayEnvironment(envFile + ".link", {requireRoot: false}),
             /symlinked/,
         );
+    });
+});
+
+test("a conflicting pre-migration backup is retained and carries no secrets in the error", () => {
+    withPrivateEnvironment(({envFile, original}) => {
+        const backup = `${envFile}.pre-mail-relay`;
+        const previous = "POSTGRES_PASSWORD='fictional-previous-database-password'\n";
+        writeFileSync(backup, previous, {mode: 0o600});
+        assert.throws(
+            () => migrateMailRelayEnvironment(envFile, {apply: true, requireRoot: false}),
+            (error) => {
+                assert.match(error.message, /backup does not match/);
+                assert.doesNotMatch(inspect(error), /fictional-previous-database-password|fictional-database-password/);
+                return true;
+            },
+        );
+        assert.equal(readPrivateFixture(backup).toString("utf8"), previous);
+        assert.equal(readPrivateFixture(envFile).toString("utf8"), original);
+        assert.equal(existsSync(`${envFile}.notification.env`), false);
     });
 });

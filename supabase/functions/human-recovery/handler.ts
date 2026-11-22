@@ -1,4 +1,4 @@
-import { boundedJson } from "../_shared/bounded-json.ts";
+import { boundedJson } from "../_shared/bounded-body.ts";
 
 export interface RecoveryDependencies {
   reserve: (hash: string) => Promise<boolean>;

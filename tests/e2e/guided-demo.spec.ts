@@ -435,6 +435,14 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     for (let index = 0; index < paths.length; index++) {
         await expect(page).toHaveURL((url) => url.pathname === paths[index]);
         await expect(page.getByRole("heading", {level: 1})).toBeVisible();
+        // URL changes can arrive before React commits the next tour controls.
+        // Check the displayed step before clicking the reused Next button.
+        await expect(page.getByText(
+            index < 3
+                ? `Bereich ${index + 1} von ${paths.length}`
+                : `Section ${index + 1} of ${paths.length}`,
+            {exact: true},
+        )).toBeVisible();
         if (index === 2) {
             await page
                 .getByRole("button", {name: "Rundgang pausieren", exact: true})

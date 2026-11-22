@@ -4,6 +4,7 @@
  * resource access around Storage reads; qualification evidence has its own
  * exact-version authorization context.
  */
+import {boundedBytes, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
@@ -37,32 +38,6 @@ interface Document {
     status: string;
     current_version_id: string;
     deleted_at: string | null
-}
-
-// Bound upload bytes actually read; the untrusted Content-Length header is only an early check.
-async function bounded(request: Request, limit: number): Promise<Uint8Array> {
-    if (Number(request.headers.get('content-length') ?? 0) > limit) throw new Error('file_size');
-    const reader = request.body?.getReader();
-    if (!reader) return new Uint8Array();
-    let size = 0;
-    const chunks: Uint8Array[] = [];
-    while (true) {
-        const {value, done} = await reader.read();
-        if (done) break;
-        size += value.length;
-        if (size > limit) {
-            await reader.cancel();
-            throw new Error('file_size');
-        }
-        chunks.push(value);
-    }
-    const all = new Uint8Array(size);
-    let at = 0;
-    for (const part of chunks) {
-        all.set(part, at);
-        at += part.length;
-    }
-    return all;
 }
 
 const scanPortalFile = (bytes: Uint8Array) =>
@@ -104,7 +79,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'access_denied'});
             const before = await check();
             if (before.error) return authorization(before.error);
-            const bytes = await bounded(request, logoMaxBytes);
+            const bytes = await boundedBytes(request, logoMaxBytes);
             const verdict = await verifyAcademyLogo(bytes, scanPortalFile);
             if (typeof verdict === 'number') {
                 if (verdict === 503) return json(503, {error: 'scanner_unavailable'});
@@ -141,7 +116,7 @@ Deno.serve(async (request: Request) => {
         };
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
-            const raw = await bounded(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
+            const raw = await boundedBytes(request, (academyIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
@@ -210,13 +185,13 @@ Deno.serve(async (request: Request) => {
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
             const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
             const requestedVersion = scoped
-                ? {data: {sha256: scoped.sha256}, error: null}
-                : await user.from('document_versions').select('sha256').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
+                ? {data: {sha256: scoped.sha256, status: doc.status}, error: null}
+                : await user.from('document_versions').select('sha256,status').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
             if (requestedVersion.error || !requestedVersion.data) return json(503, {error: 'upload_failed'});
             // A retry must not attach different payload bytes to the same reservation.
             if (requestedVersion.data.sha256 && requestedVersion.data.sha256 !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
             if (doc.status === 'clean') {
-                if (!requestedVersion.data.sha256) return json(503, {error: 'upload_failed'});
+                if (requestedVersion.data.status !== 'clean' || !requestedVersion.data.sha256) return json(503, {error: 'upload_failed'});
                 return json(200, {document: doc});
             }
             if (doc.status === 'rejected') return json(422, {error: 'scan_rejected', document_id: doc.id});
@@ -314,8 +289,10 @@ Deno.serve(async (request: Request) => {
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
                 if (protectedUpload) await academyScan('clean', lease, digest, verdict.version);
-                else if (doc.kind === 'invoice') {
-                    const completed = await service.rpc('complete_invoice_upload', {
+                else {
+                    // Both completion RPCs commit the document, version and audit as a single unit.
+                    const complete = doc.kind === 'invoice' ? 'complete_invoice_upload' : 'complete_document_upload';
+                    const completed = await service.rpc(complete, {
                         p_document_id: doc.id, p_version_id: reservation.version_id, p_lease_id: lease,
                         p_sha256: digest, p_scanner_version: verdict.version,
                     });
@@ -323,18 +300,13 @@ Deno.serve(async (request: Request) => {
                     if (completed.error?.code === 'PT409') return json(409, {error: 'version_superseded'});
                     if (completed.error) return json(503, {error: 'upload_failed'});
                 }
-                else {
-                    const version = await service.from('document_versions').update({status: 'clean', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
-                    const update = await service.from('documents').update({status: 'clean'}).eq('id', doc.id).eq('current_version_id', reservation.version_id).select('id').maybeSingle();
-                    if (!update.data) return json(409, {error: 'version_superseded'});
-                    if (version.error || update.error) return json(503, {error: 'upload_failed'});
-                    await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_clean', resource_id: doc.id});
-                }
                 await service.storage.from('portal-quarantine').remove([reservation.object_path]);
                 return json(200, {document: await currentDocument()});
             });
         }
-        const data = JSON.parse(new TextDecoder().decode(await bounded(request, 4096))) as { action?: string; id?: string; version_id?: string; user_id?: string; evidence_id?: string };
+        const payload = await boundedJson(request, 4096);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(400, {error: 'invalid_request'});
+        const data = payload as Record<string, unknown>;
         // Avatar selection is a narrow projection, not a general grant to personal files.
         if (data.action === 'avatar') {
             if (!uuid(data.user_id)) return json(400, {error: 'invalid_request'});
@@ -390,7 +362,7 @@ Deno.serve(async (request: Request) => {
             await service.from('audit_events').insert({actor_id: actor, action: 'qualification.evidence_downloaded', resource_id: data.evidence_id});
             return new Response(new Uint8Array(selected.bytes), {headers: {...headers, 'Content-Type': selected.mime_type, 'Content-Disposition': downloadDisposition(selected.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         }
-        if (data.action !== 'download' || !uuid(data.id) || (data.version_id && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
+        if (data.action !== 'download' || !uuid(data.id) || (data.version_id !== undefined && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
         const doc = await visible(data.id);
         // Bind the requested version to the currently visible document and require clean status.
         const version = await user.from('document_versions').select('id,object_path,status,original_name,mime_type').eq('id', data.version_id ?? doc.current_version_id).eq('document_id', doc.id).maybeSingle();
@@ -402,7 +374,7 @@ Deno.serve(async (request: Request) => {
         return new Response(file.data, {headers: {...headers, 'Content-Type': version.data.mime_type, 'Content-Disposition': downloadDisposition(version.data.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         // Return only allowed stable error codes, not Storage paths, tokens or internal provider responses.
     } catch (error) {
-        const code = error instanceof Error ? error.message : '';
+        const code = error instanceof RequestBodyTooLarge ? 'file_size' : error instanceof Error ? error.message : '';
         return json(code === 'deletion_unavailable' ? 503 : code === 'access_denied' ? 403 : code === 'avatar_unavailable' ? 404 : code === 'file_size' ? 413 : code === 'unsupported_type' ? 415 : 400, {error: ['deletion_unavailable', 'access_denied', 'avatar_unavailable', 'file_size', 'unsupported_type', 'avatar_image_invalid'].includes(code) ? code : 'invalid_request'});
     }
 });

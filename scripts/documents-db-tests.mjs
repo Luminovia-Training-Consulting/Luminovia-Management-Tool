@@ -369,6 +369,70 @@ try {
         },
     );
     await check(
+        "Ordinary scan promotion atomically records the exact leased version and audit",
+        async () => {
+            const asService = (statement) =>
+                sql(`begin; set local role service_role; ${statement}; commit;`);
+            const reserveMaterial = async (replacement = null) => JSON.parse(
+                await actor(
+                    otherOwner,
+                    `select public.reserve_document('Fictional.txt','text/plain',100,'personal','material',null,null,'${randomUUID()}',${replacement ? quote(replacement) : "null"})`,
+                ),
+            );
+            const original = await reserveMaterial();
+            const document = original.document_id;
+            /** An earlier scanner may hold a lease when a new version becomes current. */
+            const startScan = async ({version_id}) => {
+                const lease = await asService(`select public.deletion_upload_begin('${document}','${version_id}')`);
+                await sql(`
+                    update public.documents set status='scanning' where id='${document}' and current_version_id='${version_id}';
+                    update public.document_versions set status='scanning' where id='${version_id}';
+                `);
+                return lease;
+            };
+            const hash = "a".repeat(64);
+            const scanner = "ClamAV fictional-catalogue";
+            const finish = (version, lease) =>
+                `select public.complete_document_upload('${document}','${version}','${lease}','${hash}','${scanner}')`;
+            const oldLease = await startScan(original);
+            const current = (await reserveMaterial(document)).version_id;
+            const lease = await startScan({version_id: current});
+            await assert.rejects(asService(finish(original.version_id, oldLease)), /Upload version is no longer current/);
+            await assert.rejects(asService(finish(current, oldLease)), /insufficient_privilege/);
+            await assert.rejects(actor(otherOwner, finish(current, lease)), /permission denied/);
+
+            // Fail after both metadata writes. The whole verdict must roll back
+            // while the exact same lease remains available for a clean retry.
+            const status = () => sql(`
+                select concat_ws(':', document.status, version.status, coalesce(version.sha256,'-'), coalesce(version.scanner_version,'-'))
+                from public.documents document join public.document_versions version on version.id=document.current_version_id
+                where document.id='${document}'`);
+            const audit = () => sql(`select actor_id from public.audit_events where resource_id='${document}' and action='document.scan_clean'`);
+            await sql(`
+                create function private.fixture_reject_scan_audit() returns trigger language plpgsql as $$
+                begin
+                    if new.resource_id = '${document}' and new.action = 'document.scan_clean' then
+                        raise exception 'Fictional audit failure';
+                    end if;
+                    return new;
+                end;
+                $$;
+                create trigger fixture_reject_scan_audit before insert on public.audit_events
+                    for each row execute function private.fixture_reject_scan_audit();
+            `);
+            await assert.rejects(asService(finish(current, lease)), /Fictional audit failure/);
+            assert.equal(await status(), "scanning:scanning:-:-");
+            assert.equal(await audit(), "");
+            await sql("drop trigger fixture_reject_scan_audit on public.audit_events");
+            await asService(finish(current, lease));
+            await asService(finish(current, lease));
+            assert.equal(await status(), `clean:clean:${hash}:${scanner}`);
+            assert.equal(await audit(), otherOwner);
+            assert.equal(await sql(`select status from public.document_versions where id='${original.version_id}'`), "scanning");
+            await asService(`select public.deletion_upload_end('${lease}'); select public.deletion_upload_end('${oldLease}')`);
+        },
+    );
+    await check(
         "Different owners cannot race beyond shared capacity, and the winning retry remains idempotent at full capacity",
         async () => {
             const before = Number(

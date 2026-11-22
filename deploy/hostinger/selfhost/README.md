@@ -49,7 +49,7 @@ For an installation that already has a private server environment, first inspect
     sudo node deploy/hostinger/selfhost/migrate-mail-relay-env.mjs \
       --env-file /opt/luminovia-portal/private/selfhost.env --apply
 
-`--apply` requires root, writes a 0600 `.pre-mail-relay` copy before atomically updating the SMTP endpoint, and creates the disabled `.notification.env`. It does not import prior provider credentials into Vault; an administrator must configure and test the upstream under Administration > Mail before Auth email delivery is enabled. Do not run the apply command against a production installation without its separately authorized upgrade and recovery procedure.
+`--apply` requires root, writes a 0600 `.pre-mail-relay` copy before atomically updating the SMTP endpoint, and creates the disabled `.notification.env`. A conflicting existing backup or worker configuration fails without exposing either credential value. It does not import prior provider credentials into Vault; an administrator must configure and test the upstream under Administration > Mail before Auth email delivery is enabled. Do not run the apply command against a production installation without its separately authorized upgrade and recovery procedure.
 
 All server variable names are listed in .env.example. The safe generator implements the key formats from official generate-keys.sh and add-new-auth-keys.sh without their credential-bearing terminal output. It generates:
 

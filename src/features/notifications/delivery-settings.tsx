@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ErrorState, Field, Loading, Notice } from "../../components/common";
-import { Button } from "../../components/ui/button";
+import { ErrorState, Field, Loading } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
   deliveryKey,
@@ -12,7 +11,9 @@ import {
   saveDeliveryPreferences,
 } from "./delivery-api";
 import "./delivery-i18n";
+import { PreferenceSaveControls } from "./preference-save-controls";
 
+/** Edit the current actor's email delivery and quiet-hour preferences. */
 function DeliveryForm({
   actor,
   initial,
@@ -43,12 +44,6 @@ function DeliveryForm({
       setSaved(data);
     },
   });
-  const conflict =
-    save.error !== null &&
-    typeof save.error === "object" &&
-    "code" in save.error &&
-    (save.error.code === "PT409" || save.error.code === "40001");
-
   function edit(values: Partial<DeliveryPreferences>) {
     setDraft((previous) => ({ ...previous, ...values }));
     setInvalid(false);
@@ -119,36 +114,23 @@ function DeliveryForm({
         </Field>
       </fieldset>
       <p>{t("help")}</p>
-      {save.isError && (
-        <Notice kind="error">
-          {t(invalid ? "validation" : conflict ? "conflict" : "error")}
-        </Notice>
-      )}
-      {conflict && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() =>
-            void reload().then((data) => {
-              if (data) {
-                setDraft(data);
-                setSaved(data);
-                save.reset();
-              }
-            })
-          }
-        >
-          {t("reload")}
-        </Button>
-      )}
-      {save.isSuccess && !dirty && <Notice>{t("saved")}</Notice>}
-      <Button type="submit" disabled={!online || save.isPending || !dirty}>
-        {t("save")}
-      </Button>
+      <PreferenceSaveControls
+        namespace="delivery"
+        online={online}
+        dirty={dirty}
+        invalid={invalid}
+        save={save}
+        reload={reload}
+        reset={(data) => {
+          setDraft(data);
+          setSaved(data);
+        }}
+      />
     </form>
   );
 }
 
+/** Bind the editor and its reload action to the current actor's query. */
 export function DeliverySettings({ actor }: { actor: string }) {
   const query = useQuery(deliveryPreferencesQuery(actor));
   return query.isPending ? (

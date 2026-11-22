@@ -14,11 +14,9 @@ import {
   PageHeading,
 } from "../../components/common";
 import { AnnouncementCard } from "./announcement-card";
-import {
-  type AnnouncementCursor,
-  announcementQuery,
-  announcementsQuery,
-} from "./api";
+import { AnnouncementPagination } from "./announcement-pagination";
+import { announcementQuery, announcementsQuery } from "./api";
+import { useAnnouncementPagination } from "./pagination-state";
 import "./i18n";
 import "./announcements.css";
 
@@ -43,11 +41,10 @@ export function AnnouncementsPage() {
         ? requested
         : null;
   const [draft, setDraft] = useState(""),
-    [search, setSearch] = useState(""),
-    [cursors, setCursors] = useState<(AnnouncementCursor | null)[]>([null]),
-    [page, setPage] = useState(0);
+    [search, setSearch] = useState("");
+  const pagination = useAnnouncementPagination();
   const query = useQuery({
-    ...announcementsQuery(actor, search, cursors[page]),
+    ...announcementsQuery(actor, search, pagination.cursor),
     enabled: online,
   });
   return (
@@ -58,8 +55,7 @@ export function AnnouncementsPage() {
         onSubmit={(event) => {
           event.preventDefault();
           setSearch(draft.trim());
-          setCursors([null]);
-          setPage(0);
+          pagination.reset();
         }}
       >
         <Field id="announcement-search" label={t("search")}>
@@ -92,28 +88,12 @@ export function AnnouncementsPage() {
           {!query.data.items.length && !selected && (
             <Notice>{t("empty")}</Notice>
           )}
-          <nav className="announcement-pagination" aria-label={t("title")}>
-            <Button
-              variant="secondary"
-              disabled={page === 0 || query.isFetching}
-              onClick={() => setPage(page - 1)}
-            >
-              {t("previous")}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!query.data.next_cursor || query.isFetching}
-              onClick={() => {
-                const cursor = query.data.next_cursor;
-                if (cursor) {
-                  setCursors([...cursors.slice(0, page + 1), cursor]);
-                  setPage(page + 1);
-                }
-              }}
-            >
-              {t("next")}
-            </Button>
-          </nav>
+          <AnnouncementPagination
+            label={t("title")}
+            pagination={pagination}
+            nextCursor={query.data.next_cursor}
+            busy={query.isFetching}
+          />
         </>
       )}
     </>

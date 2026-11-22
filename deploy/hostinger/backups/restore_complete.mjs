@@ -6,6 +6,7 @@ import {randomUUID} from "node:crypto";
 import {mkdir, readFile, rm, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath, pathToFileURL} from "node:url";
+import {isDeepStrictEqual} from "node:util";
 import {createIsolatedDatabase} from "../restore-check.mjs";
 import {collectCommand} from "../backup.mjs";
 import {canonicalizePrivileges, installExtensionRecovery, restoreExtensionFunctionSettings,} from "./extension_recovery.mjs";
@@ -245,9 +246,8 @@ export async function restoreComplete({
             );
             const expectedSummary = structuredClone(source.summary);
             await canonicalizePrivileges(database, restored, expectedSummary);
-            assert.deepEqual(
-                restored,
-                expectedSummary,
+            assert(
+                isDeepStrictEqual(restored, expectedSummary),
                 "Restored all-database table counts/RLS/policies/function permissions/database settings/extensions differ.",
             );
         }
@@ -259,9 +259,12 @@ export async function restoreComplete({
             database.operator,
             "--globals-only",
         ]);
-        assert.deepEqual(
-            normalize(actualGlobals, database.operator),
-            normalize(globals),
+        // Never attach raw SQL or role password hashes to a failed assertion.
+        assert(
+            isDeepStrictEqual(
+                normalize(actualGlobals, database.operator),
+                normalize(globals),
+            ),
             "Restored password-bearing role attributes/memberships/grantors/options differ.",
         );
         const reviewedImageWitnessBoundToRestoredMigrationSources =

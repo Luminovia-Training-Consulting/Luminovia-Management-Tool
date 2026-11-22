@@ -2,6 +2,7 @@
  * Account-management HTTP contract. Business RPCs use the caller's bearer token;
  * injected invitation and confirmed-deletion adapters hold server privileges.
  */
+import {boundedJson} from "../_shared/bounded-body.ts";
 import type {DeletionResult} from "./deletion-worker.ts";
 
 export const roles = [
@@ -174,45 +175,12 @@ export function parseCompanyParticipantInvitation(
     };
 }
 
-// Bound actual JSON bytes independently of Content-Length and reject invalid UTF-8.
-async function body(request: Request): Promise<unknown> {
-    if (
-        !request.headers
-            .get("content-type")
-            ?.toLowerCase()
-            .startsWith("application/json")
-    ) {
+// Require the JSON media type before reading at most 16 KiB of account input.
+function body(request: Request): Promise<unknown> {
+    if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
         throw new Error("json_required");
     }
-    const limit = 16 * 1024;
-    if (Number(request.headers.get("content-length") ?? 0) > limit) {
-        throw new Error("request_too_large");
-    }
-    const reader = request.body?.getReader();
-    if (!reader) throw new Error("invalid_request");
-    const parts: Uint8Array[] = [];
-    let length = 0;
-    while (true) {
-        const next = await reader.read();
-        if (next.done) break;
-        length += next.value.length;
-        if (length > limit) {
-            await reader.cancel();
-            throw new Error("request_too_large");
-        }
-        parts.push(next.value);
-    }
-    const bytes = new Uint8Array(length);
-    let at = 0;
-    for (const part of parts) {
-        bytes.set(part, at);
-        at += part.length;
-    }
-    try {
-        return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(bytes));
-    } catch {
-        throw new Error("invalid_request");
-    }
+    return boundedJson(request, 16 * 1024);
 }
 
 // Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.

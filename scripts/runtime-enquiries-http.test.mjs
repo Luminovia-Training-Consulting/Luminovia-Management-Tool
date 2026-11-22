@@ -28,11 +28,16 @@ async function listenerFixture(t, changes = {}, options = {}) {
     );
     if (options.realRuntime) {
         await symlink(join(root, "node_modules"), join(directory, "node_modules"));
-        for (const name of ["runtime.ts", "handler.ts"])
+        await mkdir(join(directory, "supabase/functions/_shared"), {recursive: true});
+        for (const name of [
+            "website-enquiries/runtime.ts",
+            "website-enquiries/handler.ts",
+            "_shared/bounded-body.ts",
+        ])
             await writeFile(
-                join(directory, "supabase/functions/website-enquiries", name),
+                join(directory, "supabase/functions", name),
                 await readFile(
-                    join(root, "supabase/functions/website-enquiries", name),
+                    join(root, "supabase/functions", name),
                 ),
             );
     } else {
@@ -57,6 +62,8 @@ async function listenerFixture(t, changes = {}, options = {}) {
         join(root, "node_modules/deno/deno"),
         [
             "run",
+            // Use the locked npm installation attached to the isolated fixture.
+            "--node-modules-dir=manual",
             ...(options.certificate ? [`--cert=${options.certificate}`] : []),
             "--allow-env",
             "--allow-read=supabase/config.toml",
@@ -239,14 +246,25 @@ for (const tlsCase of [
         );
         assert.ok(result.port, "Actual runtime reaches readiness");
         const submission = "aaaaaaaa-bbbb-4ccc-8ddd-ffffffffffff";
+        const endpoint = `http://127.0.0.1:${result.port}/website-enquiries`;
+        const headers = {
+            "content-type": "application/json",
+            "X-Luminovia-Integration-Token": token,
+        };
+        // The deployed handler must reject oversized data before calling the backend.
+        const oversized = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({message: "x".repeat(24000)}),
+        });
+        assert.equal(oversized.status, 413);
+        assert.deepEqual(await oversized.json(), {error: "invalid_request"});
+        assert.equal(received.length, 0);
         const response = await fetch(
-            `http://127.0.0.1:${result.port}/website-enquiries`,
+            endpoint,
             {
                 method: "POST",
-                headers: {
-                    "content-type": "application/json",
-                    "X-Luminovia-Integration-Token": token,
-                },
+                headers,
                 body: JSON.stringify({
                     submission_id: submission,
                     company_name: "Fictional Company",

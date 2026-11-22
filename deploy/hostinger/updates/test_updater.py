@@ -244,6 +244,18 @@ class MigrationTests(unittest.TestCase):
         self.assertIn("regexp$'", command)
         self.assertTrue(command.endswith("COMMIT;\n"))
 
+    def test_reviewed_and_automatic_paths_preserve_the_same_transaction_envelope(self):
+        opening = "-- Fictional migration\nbegin transaction;"
+        source = opening + "\nselect ';';\ncommit;\n"
+        for operator_reviewed in (False, True):
+            with self.subTest(operator_reviewed=operator_reviewed):
+                command = u.migration_sql(source, "20261116120000", "example", operator_reviewed=operator_reviewed)
+                self.assertTrue(command.startswith(opening + "\nSELECT pg_advisory_xact_lock"))
+                self.assertIn(source, command)
+                self.assertTrue(command.endswith("COMMIT;\n"))
+                with self.assertRaisesRegex(u.UpdateError, "migration_transaction_delimiters_require_own_lines"):
+                    u.migration_sql("BEGIN; SELECT 1; COMMIT;", "20261116120000", "example", operator_reviewed=operator_reviewed)
+
     def test_destructive_and_multi_transaction_sql_requires_review(self):
         commands = ["DELETE FROM profiles", "UPDATE profiles SET active=false", "TRUNCATE profiles", "DROP TABLE profiles", "ALTER TABLE profiles DROP COLUMN id", "ALTER TABLE profiles ALTER COLUMN id TYPE text", "DO $$ BEGIN DELETE FROM profiles; END $$", "WITH removed AS (DELETE FROM profiles RETURNING id) SELECT * FROM removed", "COMMIT; BEGIN", "SET standard_conforming_strings=off"]
         for command in commands:

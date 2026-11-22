@@ -2,7 +2,7 @@
  * Browser checks for the built public offline shell without private API caches.
  * Service-worker behaviour is exercised in Chromium; physical PWA installation remains separate acceptance.
  */
-import {expect, test} from "@playwright/test";
+import {expect, test, type Page} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
@@ -11,11 +11,20 @@ test.skip(
     "Run against a built preview with E2E_PWA=1 and E2E_BASE_URL.",
 );
 
-test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({
-                                                                                                                     page,
-                                                                                                                     context,
-                                                                                                                 }) => {
+/** Wait for the built service worker to control the actual login page. */
+async function openControlledPwa(page: Page) {
     await page.goto("/login");
+    await page.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+    });
+    await page.reload();
+    await expect
+        .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+        .toBe(true);
+}
+
+test("built PWA serves the public demo deep link offline without a session", async ({page, context}) => {
+    await openControlledPwa(page);
     const manifest = await page.evaluate(async () => {
         const href = document.querySelector<HTMLLinkElement>(
             'link[rel="manifest"]',
@@ -30,15 +39,18 @@ test("built PWA registers its shell, supports offline deep links and never cache
                 icon.sizes === "512x512" && icon.purpose === "maskable",
         ),
     ).toBe(true);
-    await page.evaluate(async () => {
-        await navigator.serviceWorker.ready;
-    });
-    await page.reload();
-    await expect
-        .poll(() =>
-            page.evaluate(() => Boolean(navigator.serviceWorker.controller)),
-        )
-        .toBe(true);
+    await context.setOffline(true);
+    try {
+        await page.goto("/demo/profile");
+        await expect(page.getByRole("heading", {name: "Mein Profil", exact: true})).toBeVisible();
+        await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+    } finally {
+        await context.setOffline(false);
+    }
+});
+
+test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({page, context}) => {
+    await openControlledPwa(page);
     // Authenticated application tests may persist a different locale for the
     // shared seed user. This PWA check owns one account and its default locale.
     const lecturer = await actor("Fictional PWA shell lecturer", "lecturer");

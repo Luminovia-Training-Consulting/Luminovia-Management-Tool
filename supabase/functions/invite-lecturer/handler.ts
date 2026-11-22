@@ -2,6 +2,8 @@
  * Testable invitation handler with durable database reservation before delivery. Do not automatically resend ambiguous results; the reservation distinguishes retries.
  */
 /** Dependency-injected invitation boundary. All sends require a durable DB reservation first. */
+import {boundedJson, RequestBodyTooLarge} from "../_shared/bounded-body.ts";
+
 // Validated request with normalized email and an explicit retry key.
 export type InviteBody = {
     email: string;
@@ -60,31 +62,6 @@ export function parseBody(value: unknown): InviteBody | null {
     };
 }
 
-// Read at most the small permitted invitation body and cancel oversized streams.
-async function readBoundedBody(request: Request): Promise<string | null> {
-    const reader = request.body?.getReader();
-    if (!reader) return "";
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        size += value.byteLength;
-        if (size > 2048) {
-            await reader.cancel();
-            return null;
-        }
-        chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-    }
-    return new TextDecoder("utf-8", {fatal: true}).decode(bytes);
-}
-
 // Check origin/Auth and reserve durably before sending; ambiguous delivery failures remain blocked against automatic retries.
 export function createHandler(deps: InviteDependencies) {
     return async (request: Request): Promise<Response> => {
@@ -117,14 +94,12 @@ export function createHandler(deps: InviteDependencies) {
         try {
             if (!(await deps.authorize(token)))
                 return respond(403, {error: "permission_required"});
-            if (Number(request.headers.get("Content-Length") ?? 0) > 2048)
-                return respond(413, {error: "request_too_large"});
-            const raw = await readBoundedBody(request);
-            if (raw === null) return respond(413, {error: "request_too_large"});
             let parsed: unknown;
             try {
-                parsed = JSON.parse(raw);
-            } catch {
+                parsed = await boundedJson(request, 2048);
+            } catch (error) {
+                if (error instanceof RequestBodyTooLarge)
+                    return respond(413, {error: "request_too_large"});
                 return respond(400, {error: "invalid_request"});
             }
             const body = parseBody(parsed);

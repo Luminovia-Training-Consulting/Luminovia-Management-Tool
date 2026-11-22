@@ -378,6 +378,8 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
         "lint",
         "typecheck",
         "format:check",
+        ".github",
+        "scripts/code-integrity.mjs",
         "scripts/runtime-safety.test.mjs",
         "test:coverage",
         "audit",
@@ -390,6 +392,7 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
         "deploy/academy",
         "deploy/hostinger/updates/package.test.mjs",
         "--gateway-routing",
+        "deploy/hostinger/selfhost/course-documents.test.mjs",
         "scripts/hostinger-caddy-check.mjs",
         "scripts/runtime-persistence-check.mjs",
         "scripts/local-seed.mjs",
@@ -434,6 +437,9 @@ test("system PR phase delegates only independently required quality and coverage
     assert(!npmCommands.includes("run typecheck"));
     assert(!npmCommands.includes("run format:check"));
     assert(!npmCommands.includes("run test:coverage"));
+    assert(!contains(result, ".github"));
+    assert(!contains(result, "scripts/code-integrity.mjs"));
+    assert(contains(result, "deploy/hostinger/selfhost/course-documents.test.mjs"));
     assert(contains(result, "scripts/runtime-safety.test.mjs"));
     assert(contains(result, "--audit-level=low"));
     assert(contains(result, "test:db"));
@@ -442,6 +448,17 @@ test("system PR phase delegates only independently required quality and coverage
         result.reports.at(-1).value,
         /Delegated required gates: quality, coverage/,
     );
+    assert.equal(result.released, 1);
+});
+
+test("a failed course PDF runtime rehearsal fails system acceptance before service startup", async () => {
+    const result = await runFixture({
+        args: ["--phase", "system"],
+        fail: ({args}) => args.includes("deploy/hostinger/selfhost/course-documents.test.mjs"),
+    });
+    assert.ok(result.error);
+    assert.equal(acceptance(result).status, "failed");
+    assert.equal(contains(result, "start"), false);
     assert.equal(result.released, 1);
 });
 

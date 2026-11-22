@@ -1,9 +1,10 @@
 /** Canonical accounting wire contract and actor-scoped RPC adapters. Decimal
  * strings are validated before display/download; missing tax data stays unknown. */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { saveBlob } from "../../lib/blob-download";
+import { csvText } from "../../lib/csv";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { csvText } from "../commercial/api";
 
 import {
   accountingAccessSchema,
@@ -240,17 +241,10 @@ export function downloadAccounting(
     format === "json"
       ? JSON.stringify(validated, null, 2)
       : accountingCsv(validated);
-  const url = URL.createObjectURL(
+  saveBlob(
     new Blob([text], {
       type: format === "json" ? "application/json" : "text/csv;charset=utf-8",
     }),
+    `luminovia-accounting-${validated.id}.${format}`,
   );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `luminovia-accounting-${validated.id}.${format}`;
-  link.rel = "noopener";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -9,6 +9,22 @@ import {resolve} from "node:path";
 // Quote a SQL text value only; object identifiers need a separate quoting path.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
 
+// Parse each captured environment with the same strict, non-evaluating reader.
+async function readRecoveredEnvironment(temporary, path) {
+    const environment = {};
+    const contents = await readFile(resolve(temporary, "filesystem", path), "utf8");
+    for (const line of contents.split(/\r?\n/)) {
+        if (!line || line.startsWith("#")) continue;
+        const match = /^([A-Z][A-Z0-9_]*)='([^'\r\n\0]*)'$/.exec(line);
+        assert(
+            match && !Object.hasOwn(environment, match[1]),
+            "Invalid private recovered environment format.",
+        );
+        environment[match[1]] = match[2];
+    }
+    return environment;
+}
+
 // Reconstruct SCRAM proof from the captured password and compare only derived keys.
 export function verifiesScram(password, encoded) {
     const match =
@@ -59,20 +75,8 @@ export async function verifyRecoveredCredentials(
                 "This disposable fixture has no deployed environment or Auth accounts.",
         };
     }
-    const environment = {};
-    const contents = await readFile(
-        resolve(temporary, "filesystem", environmentFile.path),
-        "utf8",
-    );
-    for (const line of contents.split(/\r?\n/)) {
-        if (!line || line.startsWith("#")) continue;
-        const match = /^([A-Z][A-Z0-9_]*)='([^'\r\n\0]*)'$/.exec(line);
-        assert(
-            match && !(match[1] in environment),
-            "Invalid private recovered environment format.",
-        );
-        environment[match[1]] = match[2];
-    }
+    const environment = await readRecoveredEnvironment(temporary, environmentFile.path);
+    assert(environment.POSTGRES_PASSWORD && environment.SERVICE_ROLE_KEY);
     const notificationFile = catalog.files.find(
         (f) =>
             f.path ===
@@ -80,40 +84,26 @@ export async function verifyRecoveredCredentials(
     );
     let notificationWorkerEnvironmentRestored = false;
     if (notificationFile) {
-        const notification = {};
-        const workerContents = await readFile(
-            resolve(temporary, "filesystem", notificationFile.path),
-            "utf8",
-        );
-        for (const line of workerContents.split(/\r?\n/)) {
-            if (!line || line.startsWith("#")) continue;
-            const match = /^([A-Z][A-Z0-9_]*)='([^'\r\n\0]*)'$/.exec(line);
-            assert(
-                match && !(match[1] in notification),
-                "Invalid private notification-worker environment format.",
-            );
-            notification[match[1]] = match[2];
-        }
-        assert.equal(
-            notification.PORTAL_NOTIFICATION_SERVICE_KEY,
-            environment.SERVICE_ROLE_KEY,
+        const notification = await readRecoveredEnvironment(temporary, notificationFile.path);
+        // Assert boolean comparisons so failures cannot carry either credential.
+        assert(
+            notification.PORTAL_NOTIFICATION_SERVICE_KEY === environment.SERVICE_ROLE_KEY,
             "The recovered mail worker must use the recovered service key.",
         );
-        assert.equal(
-            notification.PORTAL_NOTIFICATION_SMTP_USERNAME,
-            environment.MAIL_RELAY_USERNAME,
+        assert(
+            Boolean(environment.MAIL_RELAY_USERNAME) &&
+                notification.PORTAL_NOTIFICATION_SMTP_USERNAME === environment.MAIL_RELAY_USERNAME,
             "The recovered mail worker must use this installation's relay username.",
         );
-        assert.equal(
-            notification.PORTAL_NOTIFICATION_SMTP_PASSWORD,
-            environment.MAIL_RELAY_PASSWORD,
+        assert(
+            Boolean(environment.MAIL_RELAY_PASSWORD) &&
+                notification.PORTAL_NOTIFICATION_SMTP_PASSWORD === environment.MAIL_RELAY_PASSWORD,
             "The recovered mail worker must use this installation's relay password.",
         );
-        assert.equal(notification.PORTAL_NOTIFICATION_SMTP_PORT, "2526");
+        assert(notification.PORTAL_NOTIFICATION_SMTP_PORT === "2526", "The recovered mail worker must use the internal relay port.");
         assert(["true", "false"].includes(notification.PORTAL_NOTIFICATION_MAIL_ENABLED));
         notificationWorkerEnvironmentRestored = true;
     }
-    assert(environment.POSTGRES_PASSWORD && environment.SERVICE_ROLE_KEY);
     const roles = JSON.parse(
         await database.sql(
             "select json_object_agg(rolname,rolpassword) from pg_authid where rolname in('postgres','supabase_admin','authenticator','supabase_auth_admin','supabase_storage_admin');",

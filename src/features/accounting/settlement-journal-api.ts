@@ -1,3 +1,5 @@
+/** Read and export a server-validated settlement journal for one exact period. */
+import { saveBlob } from "../../lib/blob-download";
 import { csvText } from "../../lib/csv";
 import { requireOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
@@ -69,13 +71,8 @@ export function downloadSettlementJournal(
     ],
     { type: format === "json" ? "application/json" : "text/csv;charset=utf-8" },
   );
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `luminovia-settlement-journal-${report.from}-${report.to}.${format}`;
-  link.rel = "noopener";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(
+    blob,
+    `luminovia-settlement-journal-${report.from}-${report.to}.${format}`,
+  );
 }

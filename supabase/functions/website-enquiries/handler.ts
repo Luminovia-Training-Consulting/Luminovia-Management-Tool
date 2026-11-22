@@ -1,5 +1,6 @@
 /** Bounded integration-only HTTP intake: validate/authenticate before one durable RPC. */
 import {timingSafeEqual} from "node:crypto";
+import {boundedJson, RequestBodyTooLarge} from "../_shared/bounded-body.ts";
 
 export interface EnquiryConfiguration {
     enabled: boolean;
@@ -43,31 +44,6 @@ function validOrigin(value: string) {
     } catch {
         return false;
     }
-}
-
-/** Bound actual streamed bytes even when Content-Length is absent or forged. */
-async function boundedJson(request: Request) {
-    if (!request.body) throw new Error("invalid");
-    const reader = request.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    while (true) {
-        const part = await reader.read();
-        if (part.done) break;
-        size += part.value.byteLength;
-        if (size > 24000) {
-            await reader.cancel();
-            throw new Error("oversize");
-        }
-        chunks.push(part.value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-    }
-    return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(bytes));
 }
 
 /** Normalise a small allowlist; no claimed identity/role/customer identifier is accepted. */
@@ -190,10 +166,10 @@ export function createWebsiteEnquiryHandler(
             return json(415, {error: "json_required"});
         let input;
         try {
-            input = validatedInput(await boundedJson(request));
+            input = validatedInput(await boundedJson(request, 24000));
         } catch (error) {
             return json(
-                error instanceof Error && error.message === "oversize" ? 413 : 400,
+                error instanceof RequestBodyTooLarge ? 413 : 400,
                 {error: "invalid_request"},
             );
         }
