@@ -15,6 +15,7 @@ import { useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
 import { saveBlob } from "../../lib/blob-download";
 import { globalEventCalendarFile } from "./ical";
+import { CalendarInvitationEditor } from "./invitations";
 import {
   type GlobalEvent,
   type GlobalEventForm,
@@ -232,11 +233,13 @@ export function GlobalEventManagement({
   zone: string;
 }) {
   const { t, i18n } = useTranslation("calendarPublications"),
+    invitationText = useTranslation("calendarInvitations").t,
     online = useOnline(),
     client = useQueryClient();
   const [search, setSearch] = useState(""),
     [input, setInput] = useState(""),
     [editing, setEditing] = useState<GlobalEvent | null | undefined>(),
+    [inviting, setInviting] = useState<GlobalEvent | null>(null),
     [denied, setDenied] = useState(false),
     [notice, setNotice] = useState(false);
   const records = useInfiniteQuery(
@@ -247,6 +250,7 @@ export function GlobalEventManagement({
   if (!denied && lost) {
     setDenied(true);
     setEditing(undefined);
+    setInviting(null);
   }
   const operation = useRef<{ signature: string; key: string } | null>(null);
   const change = useMutation({
@@ -275,6 +279,7 @@ export function GlobalEventManagement({
     onError: (e) => {
       if (permissionDenied(e)) {
         setEditing(undefined);
+        setInviting(null);
         setDenied(true);
       }
     },
@@ -374,6 +379,17 @@ export function GlobalEventManagement({
                       {t("edit")}
                     </Button>
                   )}
+                  {event.published &&
+                    !event.archived_at &&
+                    Date.parse(event.ends_at) > records.dataUpdatedAt && (
+                      <Button
+                        variant="secondary"
+                        disabled={!online || change.isPending}
+                        onClick={() => setInviting(event)}
+                      >
+                        {invitationText("manage")}
+                      </Button>
+                    )}
                   {(event.archived_at
                     ? ["recover"]
                     : event.published
@@ -409,6 +425,13 @@ export function GlobalEventManagement({
             </Button>
           )}
         </>
+      )}
+      {inviting && (
+        <CalendarInvitationEditor
+          actor={actor}
+          event={inviting}
+          onClose={() => setInviting(null)}
+        />
       )}
       <Dialog
         open={editing !== undefined}

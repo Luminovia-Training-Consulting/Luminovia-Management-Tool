@@ -34,6 +34,14 @@ import {
 } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
+import {
+  calendarExpectedRevision,
+  calendarInvitationRoster,
+  calendarInvitationVersion,
+  calendarRecipientCode,
+  calendarResponse,
+  ownCalendarInvitations,
+} from "../calendar/invitations-schema.ts";
 import { companyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import {
   contractRecordsSchema,
@@ -1646,6 +1654,66 @@ const nativePaths = {
     globalEventWindow,
     z.toJSONSchema(globalEventsPageSchema),
     ["p_manage", "p_search", "p_before_at", "p_before_id", "p_limit"],
+  ),
+  "/rest/v1/rpc/calendar_invitations": {
+    post: {
+      ...rpc(
+        "readCalendarInvitations",
+        "Calendar",
+        "Read personal invitations or the roster of an exact published event",
+        "Internal portal only. An empty request pages upcoming invitations for the current operational account. Pass both next_cursor fields to continue. Supplying the event ID and its exact published version instead requires courses.manage and returns the event's current recipient roster. The event must still accept invitations.",
+        {},
+        {
+          anyOf: [
+            z.toJSONSchema(ownCalendarInvitations),
+            z.toJSONSchema(calendarInvitationRoster),
+          ],
+        },
+      ).post,
+      requestBody: {
+        required: false,
+        content: json({
+          oneOf: [
+            object({}),
+            object({
+              p_after_at: { type: "string", format: "date-time" },
+              p_after_id: uuid,
+            }),
+            object({
+              p_event_id: uuid,
+              p_event_version: z.toJSONSchema(calendarInvitationVersion),
+            }),
+          ],
+        }),
+      },
+    },
+  },
+  "/rest/v1/rpc/set_calendar_invitation": rpc(
+    "setCalendarInvitation",
+    "Calendar",
+    "Invite or withdraw an operational account by Luminovia User ID",
+    "Internal portal only. Requires courses.manage and a current published event version. Send revision 0 for a new recipient or the roster revision for an existing recipient. An identical retry preserves the response. An event version holds at most 100 recipients.",
+    {
+      p_event_id: uuid,
+      p_event_version: z.toJSONSchema(calendarInvitationVersion),
+      p_user_code: z.toJSONSchema(calendarRecipientCode),
+      p_invited: { type: "boolean" },
+      p_expected_revision: z.toJSONSchema(calendarExpectedRevision),
+    },
+    { const: true },
+  ),
+  "/rest/v1/rpc/reply_calendar_invitation": rpc(
+    "replyCalendarInvitation",
+    "Calendar",
+    "Accept, tentatively accept or decline your own invitation",
+    "Internal portal only. Requires a current invitation belonging to the signed-in operational account. The event and invitation revision must still match. An identical retry returns the existing decision.",
+    {
+      p_event_id: uuid,
+      p_event_version: z.toJSONSchema(calendarInvitationVersion),
+      p_expected_revision: z.toJSONSchema(calendarInvitationVersion),
+      p_response: z.toJSONSchema(calendarResponse),
+    },
+    { const: true },
   ),
   "/rest/v1/rpc/manage_global_event": {
     post: {
@@ -4520,7 +4588,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.6.0",
+      version: "1.7.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

@@ -1,3 +1,9 @@
+# 22 November 2026 — Internal calendar invitations
+
+Calendar managers can add recipients by Luminovia User ID or withdraw invitations from a published global event. Invitees find the event and reply in the calendar. The in-app inbox links to their invitations without exposing the roster. An invitation belongs to one published event version. Stale writes return a conflict and withdrawing, editing or unpublishing the event removes its actionable invitation. The OpenAPI contracts cover the personal paged list, the manager roster and both writes. External provider and device delivery remain separate.
+
+The isolated PostgreSQL fixture passed recipient isolation, revision conflicts, idempotent retry, inbox revocation and a 51-invitation paging boundary. The six affected browser component and OpenAPI unit files passed all 89 cases locally.
+
 # 22 November 2026 — Assignment confirmation and catalogue query performance
 
 The Desktop Chromium run left the five-session publication form pending. A bounded native Docker rehearsal held the company-list refresh open while the database confirmed the published job and all five sessions. The previous form waited for the refresh. The corrected form displayed the confirmed job and its link before the same refresh completed.

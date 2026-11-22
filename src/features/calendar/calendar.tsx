@@ -6,6 +6,7 @@
 import { useBlocker, useSearchParams } from "react-router-dom";
 import { assignmentCalendarMetadataQuery } from "../jobs/discovery-api";
 import { CalendarColorPreferences } from "./calendar-colors";
+import { CalendarInvitationOverview } from "./invitations";
 import {
   calendarColorsQuery,
   defaultCalendarColors,
@@ -720,6 +721,7 @@ export function CalendarPage() {
           </Button>
         }
       />
+      <CalendarInvitationOverview actor={session!.user.id} />
       <CalendarTools actor={session!.user.id} zone={zone} />
       <div className="calendar-controls">
         <div

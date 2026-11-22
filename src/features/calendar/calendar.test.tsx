@@ -65,18 +65,26 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: (...args: unknown[]) =>
-      args[0] === "get_my_calendar_color_preferences"
-        ? Promise.resolve({
-            data: {
-              personal_event_color: "#E1EDDA",
-              assignment_event_color: "#DCE9F8",
-              customer_event_color: "#FFF0C5",
-              version: 0,
-            },
+    rpc: (...args: unknown[]) => {
+      if (args[0] === "calendar_invitations")
+        return {
+          abortSignal: async () => ({
+            data: { items: [], next_cursor: null },
             error: null,
-          })
-        : state.rpc(...args),
+          }),
+        };
+      if (args[0] === "get_my_calendar_color_preferences")
+        return Promise.resolve({
+          data: {
+            personal_event_color: "#E1EDDA",
+            assignment_event_color: "#DCE9F8",
+            customer_event_color: "#FFF0C5",
+            version: 0,
+          },
+          error: null,
+        });
+      return state.rpc(...args);
+    },
     from: () => ({
       select: () => ({ eq: async () => ({ data: [], error: null }) }),
       update: (payload: unknown) => ({

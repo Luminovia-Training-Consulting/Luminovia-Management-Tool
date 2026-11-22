@@ -24,6 +24,7 @@ const groups: Record<
     "job_reopened",
     "job_matching",
     "session_reminder",
+    "calendar_invitation",
     "replacement_available",
     "replacement_completed",
     "job_waitlist_available",
