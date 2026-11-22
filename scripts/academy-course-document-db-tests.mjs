@@ -318,6 +318,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const submissionAccess = (who, draft) =>
       actor(who, gate("/rpc/course_submission_access") +
         `select public.course_submission_access(${q(run)},${q(draft.version_id)})`).then(JSON.parse);
+    const withdrawSubmission = (who, draft) =>
+      actor(who, gate("/rpc/withdraw_course_submission") +
+        `select to_jsonb(public.withdraw_course_submission(${q(run)},${q(draft.version_id)}))`).then(JSON.parse);
     const submissionWorker = (draft, action, lease = null, sha = null, scanner = null) =>
       sql("begin;set local role service_role;" + gate("/rpc/course_submission_scan") +
         `select public.course_submission_scan(${[draft.document_id, draft.version_id, action, lease, sha, scanner]
@@ -329,7 +332,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(reserveSubmission(learner), /42501/);
     await assert.rejects(setSubmissions(otherClient, true), /42501/);
     await assert.rejects(setSubmissions(teacher, true), /42501/);
-    assert.equal(await setSubmissions(client, true), true);
+    const enabled = await setSubmissions(client, true);
+    checkResponse("/rest/v1/rpc/set_course_submissions", enabled);
+    assert.equal(enabled, true);
     await assert.rejects(reserveSubmission(client), /42501/);
     await assert.rejects(reserveSubmission(learner, 2_000_000), /54000/);
     const learnerDraft = await reserveSubmission(learner);
@@ -356,6 +361,17 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       `select public.course_submission_status(${q(run)},${q(learnerDraft.document_id)},${q(learnerDraft.version_id)})`
     ).then(JSON.parse);
     checkResponse("/functions/v1/files", {document: scannedSubmission.document});
+    const secondSubmission = await reserveSubmission(learner);
+    const secondLease = await submissionWorker(secondSubmission, "begin", null, digest);
+    await submissionWorker(secondSubmission, "clean", secondLease, digest, fresh);
+    await submissionWorker(secondSubmission, "end", secondLease);
+    await assert.rejects(withdrawSubmission(otherClient, secondSubmission), /42501/);
+    await assert.rejects(withdrawSubmission(teacher, secondSubmission), /42501/);
+    const withdrawn = await withdrawSubmission(learner, secondSubmission);
+    checkResponse("/rest/v1/rpc/withdraw_course_submission", withdrawn);
+    assert.equal(withdrawn, true);
+    await assert.rejects(submissionAccess(learner, secondSubmission), /42501/);
+    assert.deepEqual((await submissions(teacher)).entries.map((entry) => entry.version_id), [learnerDraft.version_id]);
     const newlyShared = await command(teacher, shareCall(staging.version_id));
     checkResponse("/rest/v1/rpc/academy_course_material_action", newlyShared);
     assert.equal((await access(learner, newlyShared.id)).sha256, digest);
@@ -575,6 +591,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal((await submissionAccess(learner, learnerDraft)).sha256, digest);
     assert.equal(await storagePath(learnerDraft), expectedPath);
     await assert.rejects(setSubmissions(client, false), /42501/);
+    await assert.rejects(withdrawSubmission(learner, learnerDraft), /42501/);
     await assert.rejects(reserveSubmission(learner), /42501/);
     await assert.rejects(submissionWorker(nextSubmission, "clean", nextSubmissionLease, digest, fresh), /42501/);
     await submissionWorker(nextSubmission, "end", nextSubmissionLease);
