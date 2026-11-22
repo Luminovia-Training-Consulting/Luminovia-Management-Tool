@@ -3,7 +3,7 @@
  */
 import {downloadDisposition, safeName, validateFile} from './validation.ts';
 import {scan} from './clamav.ts';
-import {academyChatRoom, academyMaterialCourse} from './academy-material.ts';
+import {academyChatRoom, academyMaterialCourse, courseSubmissionRun} from './academy-material.ts';
 
 // Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = 'assertion failed'): asserts value {
@@ -52,6 +52,30 @@ Deno.test('dedicated chat multipart never accepts a course ID, duplicate room or
         let rejected = false;
         try {
             academyChatRoom(body, active);
+        } catch (error) {
+            rejected = error instanceof Error && error.message === 'invalid_request';
+        }
+        assert(rejected);
+    }
+});
+
+Deno.test('private submission multipart requires the exact scoped transport and rejects generic inputs', () => {
+    const id = '52b7ddee-2166-485a-bcee-04d0eea958d1';
+    const form = () => {
+        const body = new FormData();
+        body.set('course_run_id', id);
+        body.set('client_id', id);
+        body.set('file', new File(['fictional submission'], 'lab.txt'));
+        return body;
+    };
+    assert(courseSubmissionRun(form(), true) === id);
+    assert(courseSubmissionRun(new FormData(), false) === null);
+    for (const [active, extra] of [[false, null], [true, 'course_run_id'], [true, 'owner_id'], [true, 'academy_course_id']] as const) {
+        const body = form();
+        if (extra) body.append(extra, id);
+        let rejected = false;
+        try {
+            courseSubmissionRun(body, active);
         } catch (error) {
             rejected = error instanceof Error && error.message === 'invalid_request';
         }

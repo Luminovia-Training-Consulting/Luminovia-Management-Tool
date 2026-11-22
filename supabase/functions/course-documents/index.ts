@@ -41,7 +41,7 @@ Deno.serve(
                 ? null
                 : result.data;
         },
-        retainedPath: async (version, sha256) => {
+        exactPath: async (version, sha256) => {
             const result = await service.from("document_versions")
                 .select("object_path")
                 .eq("id", version).eq("status", "clean").eq("sha256", sha256)

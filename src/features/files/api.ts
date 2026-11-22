@@ -70,6 +70,23 @@ export async function uploadDocument(
   return transferUpload(form, endpoint(), onProgress);
 }
 
+export const courseSubmissionMaxBytes = 10 * 1024 * 1024;
+
+/** Reserve and scan a private file for the caller's own enrolment. */
+export function uploadCourseSubmission(
+  file: File,
+  courseId: string,
+  clientId: string,
+) {
+  if (file.size < 1 || file.size > courseSubmissionMaxBytes)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set("course_run_id", courseId);
+  form.set("client_id", clientId);
+  return transferUpload(form, endpoint() + "?mode=course-submission");
+}
+
 /** Upload a single exact version through the assigned lecturer's course scope. */
 export function uploadAcademyCourseMaterial(
   file: File,

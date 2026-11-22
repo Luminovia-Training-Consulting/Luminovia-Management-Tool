@@ -276,6 +276,7 @@ export type PortalDocumentRequest =
       id: string;
     }
   | { kind: "attendance_evidence"; id: string }
+  | { kind: "participant_submission"; id: string; version_id: string }
   | {
       kind: "attendance" | "attendance_session";
       id: string;

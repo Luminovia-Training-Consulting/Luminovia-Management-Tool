@@ -1537,6 +1537,10 @@ describe("documented Premium course and spending operations", () => {
             "reason",
           ],
         },
+        {
+          properties: { kind: { const: "participant_submission" } },
+          required: ["kind", "id", "version_id"],
+        },
       ],
     );
     expect(

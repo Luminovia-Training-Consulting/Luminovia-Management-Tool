@@ -111,6 +111,7 @@ import {
   courseClassAssignment,
   courseClassOptions,
 } from "../learning/course-classes-schema.ts";
+import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
   readinessListSchema,
@@ -331,7 +332,7 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes. For participant_submission use the Premium course ID and exact submission version ID. Only the submitting learner or the current scoped course team can download it.",
     parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
@@ -402,6 +403,11 @@ const courseDocuments = {
             file_kind: { enum: ["exam", "material"] },
             reason: courseChatAuditReason,
           }),
+          object({
+            kind: { const: "participant_submission" },
+            id: uuid,
+            version_id: uuid,
+          }),
         ],
       }),
     },
@@ -427,8 +433,16 @@ const fileGateway = {
     tags: ["Files"],
     summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status.",
-    parameters: [gatewayOriginHeader],
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. This mode accepts only course_run_id, client_id and file.",
+    parameters: [
+      gatewayOriginHeader,
+      {
+        name: "mode",
+        in: "query",
+        required: false,
+        schema: { const: "course-submission", type: "string" },
+      },
+    ],
     requestBody: {
       required: true,
       content: {
@@ -440,6 +454,11 @@ const fileGateway = {
             properties: {
               file: { type: "string", format: "binary" },
               client_id: uuid,
+              course_run_id: {
+                ...uuid,
+                description:
+                  "Required for mode=course-submission. Omit for all generic transfers.",
+              },
               scope: {
                 enum: ["personal", "room", "job_before", "job_after"],
                 default: "personal",
@@ -480,6 +499,13 @@ const fileGateway = {
               },
             },
             additionalProperties: false,
+            dependentSchemas: {
+              course_run_id: object({
+                course_run_id: uuid,
+                client_id: uuid,
+                file: { type: "string", format: "binary" },
+              }),
+            },
           },
         },
         ...json({
@@ -3674,6 +3700,31 @@ const nativePaths = {
     "Requires current Premium and course access. Each response contains actor-scoped sessions, the current online meeting link, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     workspaceResult,
+  ),
+  "/rest/v1/rpc/course_submissions": rpc(
+    "courseSubmissions",
+    "Premium LMS",
+    "List private participant file submissions",
+    "Internal Premium LMS only. Participants see their own clean submissions. Assigned instructors, course management and authorised contacts of the course company can see its submissions. Pass next as p_after to page through the course. Closing intake preserves scoped reads.",
+    { ...course, p_after: nullableUuid },
+    z.toJSONSchema(courseSubmissionPage),
+    ["p_after"],
+  ),
+  "/rest/v1/rpc/set_course_submissions": rpc(
+    "setCourseSubmissions",
+    "Premium LMS",
+    "Open or close participant file submissions",
+    "Requires active company Premium and course-management authority or a current contact of the exact company. Each course defaults to closed. Opening intake permits enrolled participants to submit private files.",
+    { ...course, p_enabled: boolean },
+    boolean,
+  ),
+  "/rest/v1/rpc/withdraw_course_submission": rpc(
+    "withdrawCourseSubmission",
+    "Premium LMS",
+    "Withdraw an exact participant submission",
+    "On an active Premium course, an enrolled participant can withdraw their own file while submissions are open. Course management and authorised contacts of the course company can withdraw a file in their course. The version stops appearing in all active course views.",
+    { ...course, p_version_id: uuid },
+    boolean,
   ),
   "/rest/v1/rpc/set_course_meeting_link": rpc(
     "setCourseMeetingLink",
