@@ -1,3 +1,7 @@
+# 23 November 2026 — Course building-block spacing
+
+The course building-block grid has 24 pixels of breathing room below the last row. TypeScript and the production build with the CI configuration passed, including the bundle budget.
+
 # 23 November 2026 — Profile and calendar time zone dropdowns
 
 The profile, calendar display and private appointment form use the browser's IANA time zone catalogue. Valid stored aliases stay selectable. The saved account preference is the default for the calendar and personal time displays. Private events use the selected zone for their local start and end, including the existing daylight-saving validation.

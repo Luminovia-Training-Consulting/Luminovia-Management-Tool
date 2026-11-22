@@ -82,6 +82,10 @@
   line-height: 1.7;
 }
 
+.building-block-cards {
+  padding-block-end: 24px;
+}
+
 .building-block-cards .operations-course {
   border-top: 5px solid var(--brand);
 }

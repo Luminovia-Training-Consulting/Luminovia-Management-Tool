@@ -7,6 +7,7 @@
 ## Course creation
 
 - Keep one creation dialog with distinct template, draft and publication actions. Template-only saves contain reusable content. Date and time validation belongs to run actions.
+- Keep visible spacing below the building-block grid on narrow and wide screens.
 
 ## Administration reset
 
