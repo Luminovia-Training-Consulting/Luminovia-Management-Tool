@@ -1,3 +1,7 @@
+# 23 November 2026 — Local reset leaves the portal stopped
+
+The local CLI reset and the confirmed administrator reset erase the selected runtime without bootstrapping it again. The browser acknowledges the request before its server stops and terminal status reports the outcome. The isolated Docker and Chromium run denied the lecturer and the wrong password, then erased the volumes containing the seeded Auth user, organisation and uploaded file. The final inventory found no project containers, networks, volumes or generated credentials. The portal, API and local mail endpoints were offline. Nine focused reset tests, TypeScript, lint and the production build passed.
+
 # 23 November 2026 — Personal chat deletion
 
 The chat directory offers a confirmed delete action for the caller's whole conversation, including course rooms. The action hides existing messages for that account and clears its archive, pin and manual unread state. Other members keep the conversation and a new message returns it to the caller's list.

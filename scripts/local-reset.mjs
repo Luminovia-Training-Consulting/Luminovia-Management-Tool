@@ -1,4 +1,4 @@
-/** Reset one explicitly confirmed local development project and start its fresh fixture. */
+/** Erase one explicitly confirmed local development project and leave it stopped. */
 import assert from "node:assert/strict";
 import {
   closeSync,
@@ -153,6 +153,23 @@ export function localResetTarget(checkout) {
   return config;
 }
 
+/** The browser's detached reset records only its project and completion state. */
+export function readLocalResetReceipt(checkout, project) {
+  try {
+    const directory = join(checkout, ".local");
+    requireDirectory(directory);
+    const receipt = JSON.parse(
+      readOwnedFile(join(directory, "browser-reset.json")),
+    );
+    return receipt?.project === project &&
+      ["running", "complete", "failed"].includes(receipt.state)
+      ? receipt.state
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function confirmLocalReset(
   args,
   project,
@@ -173,7 +190,7 @@ export async function confirmLocalReset(
   const prompt = createInterface({ input, output });
   try {
     const answer = await prompt.question(
-      `Permanently erase local project ${project}, including database, accounts, uploads and local mail, then start with fictional data?\nType ${phrase} to proceed: `,
+      `Permanently erase local project ${project}, including database, accounts, uploads and local mail, and leave the portal stopped?\nType ${phrase} to proceed: `,
     );
     if (answer !== phrase) throw new Error("Local reset cancelled.");
   } finally {
@@ -324,7 +341,6 @@ export async function resetLocalPortal({
   docker,
   ownsRuntime,
   stop,
-  start,
 }) {
   assert.deepEqual(
     localResetTarget(checkout),
@@ -346,5 +362,4 @@ export async function resetLocalPortal({
   if (empty.containers || empty.volumes.length)
     throw new Error("Local reset could not verify an empty stack.");
   clearGeneratedState(checkout);
-  await start();
 }

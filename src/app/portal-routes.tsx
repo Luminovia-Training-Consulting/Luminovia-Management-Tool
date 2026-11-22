@@ -357,6 +357,10 @@ export default function PortalRoutes() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="reset"
+            element={<Navigate to="/admin/reset" replace />}
+          />
           <Route path="api/docs" element={<ApiExplorer />} />
           <Route path="topics" element={<TaxonomyPage />} />
           <Route

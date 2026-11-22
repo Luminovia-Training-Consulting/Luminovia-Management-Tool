@@ -1,16 +1,33 @@
 /** Destructive end-to-end acceptance. Run only inside an owned disposable portal instance. */
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { chromium, expect } from "@playwright/test";
-import { localResetTarget } from "./local-reset.mjs";
+import { localResetTarget, readLocalResetReceipt } from "./local-reset.mjs";
 import { readEnvFile, root } from "./runtime-lib.mjs";
 
 const config = localResetTarget(root);
 assert.match(config.id, /^luminovia-portal-test-[a-f0-9]{8}$/);
 assert.equal(process.env.PORTAL_TEST_MODE, "1");
 assert.equal(process.argv[2], config.id);
+const dockerNames = (resource) =>
+  execFileSync(
+    "docker",
+    [
+      resource,
+      "ls",
+      ...(resource === "container" ? ["--all"] : []),
+      "--format",
+      resource === "container" ? "{{.Names}}" : "{{.Name}}",
+    ],
+    { encoding: "utf8" },
+  )
+    .trim()
+    .split("\n")
+    .filter((name) => name.endsWith(`_${config.id}`));
 const before = readEnvFile(join(root, ".env.test.local"));
 const service = (env) =>
   createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -28,7 +45,6 @@ assert.ok(
   user.data.user && !user.error,
   "Fictional user must exist before reset",
 );
-const markerId = user.data.user.id;
 const org = await client
   .from("organisations")
   .insert({ id: marker, name: "Fictional reset marker" });
@@ -41,6 +57,16 @@ const upload = await client.storage
     { contentType: "application/pdf" },
   );
 assert.equal(upload.error, null, "Fictional file must exist before reset");
+for (const prefix of ["supabase_db", "supabase_storage", "portal_clamav"])
+  assert.ok(
+    dockerNames("volume").includes(`${prefix}_${config.id}`),
+    `Expected seeded ${prefix} volume`,
+  );
+
+assert.ok(
+  dockerNames("container").includes(`supabase_inbucket_${config.id}`),
+  "Expected a running local mail fixture",
+);
 
 const browser = await chromium.launch();
 const endpoint = "/__portal/local-reset";
@@ -67,7 +93,8 @@ try {
   await page.context().clearCookies();
   await page.evaluate(() => localStorage.clear());
   await signIn("admin@example.invalid");
-  await page.goto(config.site + "/admin/reset");
+  await page.goto(config.site + "/reset");
+  await expect(page).toHaveURL(/\/admin\/reset$/);
   await expect(page.getByText(config.id, { exact: true })).toBeVisible();
   const button = page.getByRole("button", {
     name: /Alle Daten dieser Installation löschen|Delete all data in this installation/,
@@ -106,38 +133,42 @@ try {
   await button.click();
   assert.equal((await accepted).status(), 202);
   await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: /Der Reset ist abgeschlossen|Reset is complete/ }),
-  ).toBeVisible({ timeout: 360000 });
-
-  const fresh = readEnvFile(join(root, ".env.test.local"));
-  const replacement = service(fresh);
-  assert.ok(
-    (await replacement.auth.admin.getUserById(markerId)).error,
-    "Old Auth account survived",
+    page.getByRole("status").filter({
+      hasText: /Der Reset wurde angefordert|Reset requested/,
+    }),
+  ).toBeVisible();
+  await expect
+    .poll(() => readLocalResetReceipt(root, config.id), {
+      timeout: 180000,
+    })
+    .toBe("complete");
+  for (const resource of ["container", "volume", "network"])
+    assert.deepEqual(
+      dockerNames(resource),
+      [],
+      `The reset left an owned ${resource} behind.`,
+    );
+  for (const file of [
+    ".env.local",
+    ".env.test.local",
+    ".local/runtime.json",
+    ".local/bootstrap.json",
+    ".local/ACCOUNTS.txt",
+  ])
+    assert.ok(!existsSync(join(root, file)), `The reset left ${file} behind.`);
+  await assert.rejects(
+    fetch(config.site, { signal: AbortSignal.timeout(2000) }),
   );
-  const organisations = await replacement
-    .from("organisations")
-    .select("id")
-    .eq("id", marker);
-  assert.equal(organisations.error, null);
-  assert.deepEqual(organisations.data, [], "Old organisation survived");
-  const files = await replacement.storage
-    .from("portal-clean")
-    .list("", { search: marker });
-  assert.equal(files.error, null);
-  assert.deepEqual(files.data, [], "Old uploaded file survived");
-  const auth = createClient(fresh.SUPABASE_URL, fresh.SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data } = await auth.auth.signInWithPassword({
-    email: "admin@example.invalid",
-    password: fresh.E2E_PASSWORD,
-  });
-  assert.ok(data.user, "Fresh admin could not sign in");
+  await assert.rejects(
+    fetch(before.SUPABASE_URL, { signal: AbortSignal.timeout(2000) }),
+  );
+  await assert.rejects(
+    fetch(`http://127.0.0.1:${config.mail}`, {
+      signal: AbortSignal.timeout(2000),
+    }),
+  );
   console.log(
-    "PASS Browser reset removed the original Auth account, organisation and uploaded file; fresh administrator login succeeded.",
+    "PASS Browser reset erased the seeded database, Auth and Storage volumes and left the portal offline.",
   );
 } finally {
   await browser.close();

@@ -16,6 +16,7 @@ import {
   assertResetDockerHost,
   confirmLocalReset,
   localResetTarget,
+  readLocalResetReceipt,
   resetLocalPortal,
 } from "./local-reset.mjs";
 
@@ -58,7 +59,7 @@ function runtime(root) {
     running: true,
     owned: true,
     foreignHolder: false,
-    restartError: false,
+    volumeError: false,
   };
   const operations = {
     checkout: root,
@@ -67,10 +68,6 @@ function runtime(root) {
     stop: async () => {
       calls.push("stop");
       state.running = false;
-    },
-    start: async () => {
-      calls.push("start");
-      if (state.restartError) throw new Error("fixture restart failed");
     },
     docker: async ([resource, action, ...args]) => {
       if (resource === "container" && action === "ls") {
@@ -117,6 +114,7 @@ function runtime(root) {
       if (resource === "volume" && action === "rm") {
         assert.equal(args.length, 1);
         calls.push(args[0]);
+        if (state.volumeError) throw new Error("fixture volume removal failed");
         volumes.delete(args[0]);
         return args[0];
       }
@@ -196,11 +194,11 @@ test("reset refuses linked projects, nonlocal settings, and linked runtime direc
   assert.throws(() => localResetTarget(linked), /linked or unowned/);
 });
 
-test("complete reset deletes only the verified project's persistent volumes and known generated state before restart", async (t) => {
+test("complete reset deletes only the verified project's persistent volumes and known generated state and leaves the runtime stopped", async (t) => {
   const root = checkout(t);
   const { calls, operations, volumes } = runtime(root);
   await resetLocalPortal(operations);
-  assert.deepEqual(calls, ["stop", db, scanner, "start"]);
+  assert.deepEqual(calls, ["stop", db, scanner]);
   assert.deepEqual([...volumes.keys()], [outsider]);
   for (const file of [".env.local", ".env.test.local", ".local/ADMIN-DEMO.txt"])
     assert.equal(existsSync(join(root, file)), false);
@@ -236,7 +234,7 @@ test("a running nonowned stack, foreign volume holder or incorrect label prevent
   assert.deepEqual(foreign.calls, []);
 });
 
-test("reset preserves data on failed shutdown and surfaces a failed fresh startup", async (t) => {
+test("reset stops before volume removal and reports deletion failures", async (t) => {
   const root = checkout(t);
   const shutdown = runtime(root);
   shutdown.operations.stop = async () => {
@@ -248,11 +246,24 @@ test("reset preserves data on failed shutdown and surfaces a failed fresh startu
   );
   assert.equal(shutdown.volumes.size, 3);
   assert.ok(existsSync(join(root, ".env.test.local")));
-  const restart = runtime(root);
-  restart.state.restartError = true;
+  const removal = runtime(root);
+  removal.state.volumeError = true;
   await assert.rejects(
-    resetLocalPortal(restart.operations),
-    /fixture restart failed/,
+    resetLocalPortal(removal.operations),
+    /fixture volume removal failed/,
   );
-  assert.deepEqual(restart.calls, ["stop", db, scanner, "start"]);
+  assert.deepEqual(removal.calls, ["stop", db]);
+  assert.equal(removal.volumes.size, 3);
+  assert.ok(existsSync(join(root, ".env.test.local")));
+});
+
+test("the terminal reads only the completed status for the matching browser reset", (t) => {
+  const root = checkout(t);
+  const receipt = join(root, ".local/browser-reset.json");
+  assert.equal(readLocalResetReceipt(root, project), undefined);
+  writeFileSync(receipt, JSON.stringify({ project, state: "complete" }));
+  assert.equal(readLocalResetReceipt(root, project), "complete");
+  assert.equal(readLocalResetReceipt(root, "fictional-other"), undefined);
+  writeFileSync(receipt, JSON.stringify({ project, state: "invalid" }));
+  assert.equal(readLocalResetReceipt(root, project), undefined);
 });

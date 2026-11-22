@@ -67,7 +67,7 @@ async function locked(operation) {
 /** Describes only commands actually offered and their local data storage. */
 function help() {
     console.log(
-        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset        Erase the confirmed local project and restart with fictional data\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
+        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset        Erase the confirmed local project and leave it stopped\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
     );
 }
 
@@ -77,6 +77,7 @@ function printStatus(state = readState()) {
     const alive = processIsOurs(state);
     console.log(`Luminovia Portal: ${alive ? state.phase : "stopped"}`);
     if (alive) console.log(state.message ?? "");
+    if (!alive && !existsSync(join(root, ".env.local"))) return;
     console.log(
         `Portal: ${config.site}\nSupabase API: http://127.0.0.1:${config.api}\nLocal email: http://127.0.0.1:${config.mail}\nSign in: admin@example.invalid or lecturer01@example.invalid\nShow password: ./portal credentials\nPrivate log: .local/runtime.log`,
     );
@@ -162,7 +163,7 @@ async function start() {
 }
 
 /** Stops only the owned service group and requires a cleanup acknowledgement matching its session. */
-async function stop() {
+async function stop({ report = true } = {}) {
     await assertLocalDocker();
     const state = readState();
     if (processIsOurs(state)) {
@@ -197,9 +198,8 @@ async function stop() {
         });
         await removeLoopbackNetwork(projectConfig().id);
     }
-    console.log(
-        "Local portal stopped. Database, password Auth and Storage data are preserved.",
-    );
+    if (report)
+        console.log("Local portal stopped. Database, password Auth and Storage data are preserved.");
 }
 
 try {
@@ -230,9 +230,15 @@ try {
                 await start();
             });
             break;
-        case "status":
+        case "status": {
             printStatus();
+            const { readLocalResetReceipt } = await import("./local-reset.mjs");
+            const result = readLocalResetReceipt(root, projectConfig().id);
+            if (result === "running") console.log("Local browser reset: in progress.");
+            if (result === "complete") console.log("Local browser reset: data erased.");
+            if (result === "failed") console.log("Local browser reset: deletion could not be confirmed.");
             break;
+        }
         case "credentials":
             if (!existsSync(join(runtimeDir, "ACCOUNTS.txt")))
                 throw new Error(
@@ -269,10 +275,9 @@ try {
                             throw new Error("The running supervisor owns another local project.");
                         return true;
                     },
-                    stop,
-                    start,
+                    stop: () => stop({ report: false }),
                 });
-                console.log(`Local project ${confirmed.id} reset and started with fictional data.`);
+                console.log(`Local project ${confirmed.id} erased. The portal is stopped.`);
             });
             break;
         }

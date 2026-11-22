@@ -3,28 +3,17 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { join } from "node:path";
-import { localResetTarget } from "./local-reset.mjs";
+import { localResetTarget, readLocalResetReceipt } from "./local-reset.mjs";
 import {
   cleanEnvironment,
   processIsOurs,
   readState,
   root,
-  runtimeDir,
 } from "./runtime-lib.mjs";
-import { readFileSync } from "node:fs";
 
 const path = "/__portal/local-reset";
-const receiptFile = join(runtimeDir, "browser-reset.json");
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const loopback = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
-
-function readReceipt() {
-  try {
-    return JSON.parse(readFileSync(receiptFile, "utf8"));
-  } catch {
-    return null;
-  }
-}
 
 function reply(res, status, body) {
   res
@@ -157,14 +146,7 @@ export function configureLocalReset(server, publishableKey, supervisor) {
       !ownsInstance()
     )
       return reply(res, 403, { error: "unavailable" });
-    if (req.method === "GET") {
-      const id = new URL(req.url, origin).searchParams.get("receipt");
-      if (!id) return reply(res, 200, { project: config.id });
-      const receipt = readReceipt();
-      return id === receipt?.id
-        ? reply(res, 200, { state: receipt.state })
-        : reply(res, 404, { error: "unknown_receipt" });
-    }
+    if (req.method === "GET") return reply(res, 200, { project: config.id });
     if (
       req.method !== "POST" ||
       req.headers.origin !== origin.origin ||
@@ -175,7 +157,7 @@ export function configureLocalReset(server, publishableKey, supervisor) {
       req.headers.authorization ?? "",
     )?.[1];
     if (!browserToken) return reply(res, 401, { error: "denied" });
-    if (starting || readReceipt()?.state === "running")
+    if (starting || readLocalResetReceipt(root, config.id) === "running")
       return reply(res, 409, { error: "in_progress" });
     starting = true;
     void (async () => {

@@ -1,10 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { profileQuery, userRolesQuery } from "../../lib/queries";
-import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 
 const endpoint = "/__portal/local-reset";
@@ -16,8 +15,8 @@ const copy = {
     "This page is for active administrators and owners only.",
   ],
   scope: [
-    "Der Reset löscht Datenbankinhalte, Konten, Sitzungen, LMS-Kurse, Nachrichten, hochgeladene Dateien und lokale E-Mails dieser Installation. Danach startet das lokale Portal mit neuen Testdaten.",
-    "Reset deletes this installation's database contents, accounts, sessions, LMS courses, messages, uploads and local email. The local portal then starts with fresh test data.",
+    "Der Reset löscht Datenbankinhalte, Konten, Sitzungen, LMS-Kurse, Nachrichten, hochgeladene Dateien und lokale E-Mails dieser Installation. Danach bleibt das lokale Portal gestoppt.",
+    "Reset deletes this installation's database contents, accounts, sessions, LMS courses, messages, uploads and local email. The local portal stays stopped.",
   ],
   hosted: [
     "Für den veröffentlichten CMS-Server ist der Reset eine Host-Operation. Starte die Zielprüfung im Server-Terminal. Der anschließende interaktive Reset prüft die Sicherung, dein Admin-Konto und den Authenticator und legt einen neuen Owner an.",
@@ -37,15 +36,10 @@ const copy = {
     "Alle Daten dieser Installation löschen",
     "Delete all data in this installation",
   ],
-  working: [
-    "Das Portal wird zurückgesetzt und startet neu. Lass diese Seite geöffnet.",
-    "The portal is resetting and restarting. Keep this page open.",
+  accepted: [
+    "Der Reset wurde angefordert. Das lokale Portal wird gestoppt. Prüfe im Terminal mit ./portal status, ob die Löschung abgeschlossen ist.",
+    "Reset requested. The local portal is shutting down. Check ./portal status in your terminal to confirm deletion.",
   ],
-  complete: [
-    "Der Reset ist abgeschlossen. Die neuen lokalen Zugangsdaten findest du mit ./portal credentials.",
-    "Reset is complete. Find the new local credentials with ./portal credentials.",
-  ],
-  login: ["Zur Anmeldung", "Go to sign-in"],
   failed: [
     "Der Reset konnte nicht bestätigt werden. Prüfe vor einem erneuten Versuch lokal den Portalstatus mit ./portal status.",
     "The reset could not be confirmed. Check the local portal status using ./portal status before trying again.",
@@ -226,73 +220,19 @@ function PlatformResetForm({
   );
 }
 
-/** The receipt stays usable after the server restarts and deletes the old session. */
+/** The browser confirms the request before the local web server shuts down. */
 export function PlatformResetStatus() {
   const receipt = useLocation().hash.slice(1);
   const { i18n } = useTranslation();
   const language = i18n.language.startsWith("de") ? 0 : 1;
-  const t = (key: keyof typeof copy) => copy[key][language];
-  const [result, setResult] = useState<"complete" | "failed">();
   const valid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(receipt);
-
-  useEffect(() => {
-    if (!valid || result) return;
-    const controller = new AbortController();
-    const timer = window.setInterval(async () => {
-      try {
-        const response = await fetch(
-          `${endpoint}?receipt=${encodeURIComponent(receipt)}`,
-          {
-            cache: "no-store",
-            signal: AbortSignal.any([
-              controller.signal,
-              AbortSignal.timeout(2000),
-            ]),
-          },
-        );
-        if (!response.ok) return;
-        const { state } = await response.json();
-        if (
-          !controller.signal.aborted &&
-          (state === "complete" || state === "failed")
-        )
-          setResult(state);
-      } catch {
-        // The owned Vite process is temporarily offline while Docker resets.
-      }
-    }, 2500);
-    const deadline = window.setTimeout(
-      () => setResult("failed"),
-      15 * 60 * 1000,
-    );
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-      window.clearTimeout(deadline);
-    };
-  }, [receipt, result, valid]);
 
   if (!valid) return <Navigate to="/login" replace />;
   return (
     <main className="mx-auto max-w-lg p-4">
       <section className="card stack">
-        <h1>{t("title")}</h1>
-        <p role={result === "failed" ? "alert" : "status"}>
-          {t(result ?? "working")}
-        </p>
-        {result === "complete" && (
-          <Button
-            className="self-start"
-            onClick={async () => {
-              await db()
-                .auth.signOut({ scope: "local" })
-                .catch(() => {});
-              window.location.replace("/login");
-            }}
-          >
-            {t("login")}
-          </Button>
-        )}
+        <h1>{copy.title[language]}</h1>
+        <p role="status">{copy.accepted[language]}</p>
       </section>
     </main>
   );

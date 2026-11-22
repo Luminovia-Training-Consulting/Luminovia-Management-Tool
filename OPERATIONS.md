@@ -46,7 +46,7 @@ see [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development). Inspect evolv
 
 Use `./portal stop` when the local background system is no longer required; the command preserves Auth/database/Storage data. `./portal start` resumes that data. Preserve source/migrations/roadmap/evidence, not running-process promises. Do not remove an existing unrelated stack or delete stored data as cleanup.
 
-For an intentional local rebuild, run `./portal reset` and confirm the project named in the prompt. The command verifies ownership on the local Docker engine, checks attached volumes, stops the selected instance and verifies the old persistent volumes are gone before starting the fictional setup. Its scope covers local database, Auth, Storage, Mailpit, scanner state and generated credentials. A failed shutdown leaves the deletion step unopened. A failed restart returns an error that can be inspected with `./portal status` and `.local/runtime.log`.
+Run `./portal reset` and confirm the exact project to erase the local database, Auth, Storage, Mailpit, scanner state and generated credentials. The command verifies Docker ownership and removes the selected project’s persistent volumes after successful shutdown. The portal stays stopped. Run `./portal start` when you want to create a new local installation.
 
 <a id="section-deployment-runbook-pinned-cli-semantics"></a>
 
@@ -711,7 +711,7 @@ The reviewed SQL still requires one explicit `BEGIN;`/`COMMIT;` transaction with
 
 ### Full reset of the existing CMS installation
 
-In an owned local portal started with `./portal start`, open **Administration → Reset platform** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password and authenticator code if enrolled. The browser invokes the same owned Docker reset as `./portal reset`. Wait for the completion receipt and get the fresh fictional credentials using `./portal credentials`.
+In an owned local portal started with `./portal start`, open **Administration → Reset platform** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password and authenticator code if enrolled. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
 
 On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's verified authenticator and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
 
