@@ -605,6 +605,7 @@ function RequestCard({
 /** Combine permitted client organizations, requests and the actor's spending projection. */
 export function ClientPortalPage() {
   const { t, i18n } = useTranslation("platform");
+  const { t: common } = useTranslation();
   const { session } = useAuth();
   const actor = session!.user.id;
   const online = useOnline();
@@ -678,6 +679,17 @@ export function ClientPortalPage() {
       <div className="page-actions">
         <Button asChild variant="secondary">
           <Link to="/learning">{t("learning:hub")}</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link
+            to={
+              access.data?.can_request
+                ? "/analytics?scope=company"
+                : "/analytics"
+            }
+          >
+            {common("analytics")}
+          </Link>
         </Button>
       </div>
       {orgs.isError ||

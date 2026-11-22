@@ -430,7 +430,7 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     ? page.locator("#demo-mobile-navigation")
     : desktopNavigation;
     await expect(navigation).toBeVisible();
-    await expect(navigation.getByRole("link")).toHaveCount(25);
+    await expect(navigation.getByRole("link")).toHaveCount(26);
     const paths = await navigation
         .getByRole("link")
         .evaluateAll((links) =>
@@ -451,6 +451,7 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
             "/my-reviews",
             "/contracts",
             "/finance",
+            "/analytics",
             "/clients",
             "/wiki",
             "/forum",
@@ -733,4 +734,46 @@ test("LMS demo shares a practice course across roles and keeps the learner view 
   await expect(page.getByRole("link", {name: "Exam", exact: true})).toHaveCount(0);
   await page.getByRole("button", {name: "Withdraw sample submission", exact: true}).click();
   await expect(page.getByText("Fictional course submission by Demo Alex", {exact: true})).toHaveCount(0);
+});
+
+test("company and management analytics work with fictional data", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("i18nextLng", "de"));
+  await page.goto("/demo/client?role=client");
+  const main = page.getByRole("main");
+  await main.getByRole("link", { name: "Analysen", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "Unternehmensansicht" })).toBeVisible();
+  await expect(main.getByRole("option", { name: "Dozentenvergütung" })).toHaveCount(0);
+  await main.getByLabel("Währung").selectOption("AUD");
+  await main.getByLabel("Kennzahl", { exact: true }).selectOption("customerCash");
+  const finance = main.locator("section.panel").filter({ has: page.getByRole("heading", { name: "Finanzverlauf" }) });
+  await finance.getByText("Monatswerte als Tabelle").click();
+  await expect(finance.getByRole("columnheader", { name: "Erfasst" })).toBeVisible();
+  await main.getByLabel("Kennzahl im Monatsvergleich").selectOption("monthlyHours");
+  await expect(main.getByRole("heading", { name: "Unterrichtsstunden pro Monat" })).toBeVisible();
+  await accessibleWithoutOverflow(page);
+  await main.getByLabel("Von", { exact: true }).fill("2035-01-01");
+  await main.getByLabel("Bis einschließlich").fill("2035-01-31");
+  await main.getByRole("button", { name: "Zeitraum anwenden" }).click();
+  await expect(main.getByText("Für diesen Zeitraum gibt es keine Beispieldaten.")).toBeVisible();
+
+  await page.getByLabel("Demo-Rolle").selectOption("management");
+  await main.getByLabel("Annahmewahrscheinlichkeit").selectOption("0");
+  const scenario = main.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "Vorschau für offene Aufträge" }),
+  });
+  await expect(scenario.locator("dd")).toHaveText(["0,00 €", "0,00 €"]);
+  await main.getByLabel("Unternehmen", { exact: true }).selectOption("Paper Bridge Studio");
+  await expect(main.getByRole("heading", { name: "Vorschau für offene Aufträge" })).toHaveCount(0);
+  await expect(main.getByRole("option", { name: "Erfasste Dozentenzahlungen" })).toHaveCount(0);
+  await page.getByLabel("Farbschema").selectOption("dark");
+  await page.getByLabel("Sprache").selectOption("en");
+  await expect(main.getByRole("heading", { name: "Financial trend" })).toBeVisible();
+  await accessibleWithoutOverflow(page);
+  await page.getByLabel("Demo role").selectOption("lecturer");
+  await expect(main.getByRole("heading", { name: "My assignments" })).toBeVisible();
+  await expect(main.getByRole("option", { name: "Lecturer compensation" })).toHaveCount(1);
+  await expect(main.getByRole("option", { name: "Customer fees" })).toHaveCount(0);
+  await page.getByLabel("Demo role").selectOption("participant");
+  await expect(page).toHaveURL(/\/demo\/learning/);
+  await expect(page.getByRole("link", { name: "Analytics", exact: true })).toHaveCount(0);
 });

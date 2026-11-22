@@ -16,6 +16,7 @@ import { Notice, PageHeading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useDismissibleDisclosure } from "../components/use-dismissible-disclosure";
 import helpCatalogue from "@edition-help";
+import { SampleAnalytics } from "../features/analytics/sample-report";
 import { guideText } from "../features/help/guide";
 import { publicDemoEnabled } from "../lib/installation-brand";
 import type { PreviewRole, RolePreviewState } from "./role-preview-state";
@@ -133,6 +134,8 @@ export function RolePreview({
   };
   const roleLabel = t(roleLabels[role]);
   const sectionPath = path.replace(/^\/demo/, "") || "/";
+  const showAnalytics =
+    !academy && sectionPath === "/analytics" && role !== "participant";
   const section = helpCatalogue.modules.find(
     (item) => item.path === sectionPath,
   );
@@ -146,29 +149,46 @@ export function RolePreview({
         description={t("previewDescription")}
       />
       <Notice>{t("previewWarning")}</Notice>
-      <section className="panel role-preview-current-section">
-        <h2>
-          {t("currentSection")}:{" "}
-          {section ? guideText(section.title, i18n.language) : roleLabel}
-        </h2>
-        <p>{t("sectionSample")}</p>
-        <span className="badge">{t("sample")}</span>
-      </section>
-      <div className="role-preview-grid">
-        {cards[role].map(([title, description, Icon]) => (
-          <article className="panel role-preview-card" key={title}>
-            <div className="role-preview-card-heading">
-              <Icon size={20} aria-hidden="true" />
-              <h2>{t(title)}</h2>
-            </div>
-            <p>{t(description)}</p>
+      {showAnalytics ? (
+        <SampleAnalytics
+          key={role}
+          scope={
+            role === "lecturer"
+              ? "personal"
+              : role === "management"
+                ? "staff"
+                : "company"
+          }
+        />
+      ) : (
+        <>
+          <section className="panel role-preview-current-section">
+            <h2>
+              {t("currentSection")}:{" "}
+              {section ? guideText(section.title, i18n.language) : roleLabel}
+            </h2>
+            <p>{t("sectionSample")}</p>
             <span className="badge">{t("sample")}</span>
-          </article>
-        ))}
-      </div>
+          </section>
+          <div className="role-preview-grid">
+            {cards[role].map(([title, description, Icon]) => (
+              <article className="panel role-preview-card" key={title}>
+                <div className="role-preview-card-heading">
+                  <Icon size={20} aria-hidden="true" />
+                  <h2>{t(title)}</h2>
+                </div>
+                <p>{t(description)}</p>
+                <span className="badge">{t("sample")}</span>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
       {publicDemoEnabled && (
         <Button asChild>
-          <Link to={`/demo?role=${role === "company" ? "client" : role}`}>
+          <Link
+            to={`/demo${showAnalytics ? "/analytics" : ""}?role=${role === "company" ? "client" : role}`}
+          >
             {t("openDemo")}
           </Link>
         </Button>

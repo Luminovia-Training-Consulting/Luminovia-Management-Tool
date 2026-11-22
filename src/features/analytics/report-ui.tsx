@@ -2,7 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Field } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { analyticsUntil, type AnalyticsPeriod } from "./api";
+import {
+  analyticsUntil,
+  type AnalyticsPeriod,
+  type AnalyticsPreset,
+} from "./period";
 import "./i18n";
 import "./analytics.css";
 
@@ -70,5 +74,62 @@ export function PeriodForm({
         </p>
       )}
     </form>
+  );
+}
+
+const presets = ["around", "historyYear", "nextQuarter"] as const;
+
+export function ReportingPeriodSelect({
+  preset,
+  custom,
+  onChange,
+}: {
+  preset: AnalyticsPreset;
+  custom: boolean;
+  onChange: (value: AnalyticsPreset) => void;
+}) {
+  const { t } = useTranslation("analytics");
+  return (
+    <Field id="analytics-period" label={t("period")}>
+      <select
+        value={custom ? "custom" : preset}
+        onChange={(event) => {
+          const value = event.target.value;
+          const next = presets.find((item) => item === value);
+          if (next) onChange(next);
+        }}
+      >
+        {custom && <option value="custom">{t("custom")}</option>}
+        {presets.map((item) => (
+          <option key={item} value={item}>
+            {t(item)}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+export function ScenarioProbability({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const { t } = useTranslation("analytics");
+  return (
+    <Field id="analytics-probability" label={t("probability")}>
+      <select
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      >
+        {[0, 0.25, 0.5, 0.75, 1].map((choice) => (
+          <option key={choice} value={choice}>
+            {choice * 100} %
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }

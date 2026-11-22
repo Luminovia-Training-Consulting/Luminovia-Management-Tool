@@ -14,6 +14,7 @@ const budgets = {
 const explorerEntries = [
   "src/features/developer-api/portal-explorer.tsx",
   "src/features/developer-api/academy-explorer.tsx",
+  "src/features/developer-api/swagger-view.tsx",
 ];
 
 function staticAssets(manifest, entry) {

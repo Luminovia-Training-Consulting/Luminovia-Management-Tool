@@ -7,11 +7,12 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { DateTime } from "luxon";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AnalyticsPage } from "./analytics";
-import { analyticsPreset, analyticsUntil } from "./api";
+import { analyticsPreset, analyticsUntil } from "./period";
 import type { AnalyticsAccess, AnalyticsReport } from "./schema";
 import i18n from "../../lib/i18n";
 
@@ -57,7 +58,11 @@ function fakeReport(scope: string): AnalyticsReport {
   };
 }
 
-function openAnalytics(access: AnalyticsAccess, canModel = false) {
+function openAnalytics(
+  access: AnalyticsAccess,
+  canModel = false,
+  path = "/analytics",
+) {
   rpc.mockImplementation(
     (
       name: string,
@@ -88,7 +93,9 @@ function openAnalytics(access: AnalyticsAccess, canModel = false) {
   });
   render(
     <QueryClientProvider client={cache}>
-      <AnalyticsPage />
+      <MemoryRouter initialEntries={[path]}>
+        <AnalyticsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -268,4 +275,59 @@ it("validates dates and uses a 90-day outlook in the selected reporting zone", (
   const preset = analyticsPreset("nextQuarter", localDate);
   expect(preset.from).toBe("2027-01-01");
   expect(analyticsUntil(preset)).toBe("2027-04-01");
+});
+
+it("opens the company report from a deep link for an administrator who belongs to a company", async () => {
+  openAnalytics(
+    {
+      staff: true,
+      personal: false,
+      time_zone: "Europe/Berlin",
+      organisations: [
+        {
+          id: company,
+          name: "Fictional Academy",
+          time_zone: "Europe/Berlin",
+          company: true,
+        },
+      ],
+    },
+    false,
+    "/analytics?scope=company",
+  );
+  await screen.findByRole("option", { name: "Customer fees" });
+  expect(screen.getByLabelText("View")).toHaveValue("company");
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "analytics_report"),
+  ).toEqual([
+    [
+      "analytics_report",
+      expect.objectContaining({
+        p_scope: "company",
+        p_organisation_id: company,
+      }),
+    ],
+  ]);
+});
+
+it("disregards a company deep link when the caller has no company membership", async () => {
+  openAnalytics(
+    {
+      staff: false,
+      personal: true,
+      time_zone: "Europe/Berlin",
+      organisations: [],
+    },
+    false,
+    "/analytics?scope=company",
+  );
+  await screen.findByRole("option", { name: "Lecturer compensation" });
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "analytics_report"),
+  ).toEqual([
+    [
+      "analytics_report",
+      expect.objectContaining({ p_scope: "personal", p_organisation_id: null }),
+    ],
+  ]);
 });

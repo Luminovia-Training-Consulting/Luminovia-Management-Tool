@@ -13,6 +13,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  ChartNoAxesCombined,
   Compass,
   FileCheck2,
   FlaskConical,
@@ -40,6 +41,7 @@ import {
 } from "../../components/portal-navigation";
 import { installationBrand } from "../../lib/installation-brand";
 import guideModules from "@edition-demo-guides";
+import { SampleAnalytics } from "../analytics/sample-report";
 import { guideText } from "../help/guide";
 import { StaffCoursePractice } from "./course-practice";
 import { LearnerDemo } from "./learner-demo";
@@ -69,6 +71,7 @@ const demoIcons: Record<string, LucideIcon> = {
   "/files": FolderOpen,
   "/contracts": FileCheck2,
   "/finance": Wallet,
+  "/analytics": ChartNoAxesCombined,
   "/admin": Settings2,
   "/client": Building2,
   "/clients": Building2,
@@ -258,6 +261,7 @@ export function DemoPage() {
   const module = selected ?? visibleModules[0] ?? guideModules[0];
   const index = visibleModules.indexOf(module);
   const path = module.path;
+  const analytics = path === "/analytics" && role !== "participant";
   const [tour, setTour] = useState(false);
   const [complete, setComplete] = useState(false);
   const [claimed, setClaimed] = useState(false);
@@ -622,7 +626,19 @@ export function DemoPage() {
               update={updateCourse}
             />
           )}
-          {!customLearnerView && !staffCourse && (
+          {analytics && (
+            <SampleAnalytics
+              key={role}
+              scope={
+                role === "client"
+                  ? "company"
+                  : role === "lecturer"
+                    ? "personal"
+                    : "staff"
+              }
+            />
+          )}
+          {!customLearnerView && !staffCourse && !analytics && (
             <div className="demo-content-grid">
               <section
                 className="panel demo-practice"
@@ -865,6 +881,11 @@ export function DemoPage() {
                 ) : path === "/client" ? (
                   <>
                     <h3>{t("organisation")}</h3>
+                    <Button variant="secondary" asChild>
+                      <Link to="/demo/analytics">
+                        {t("analytics", { ns: "translation" })}
+                      </Link>
+                    </Button>
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();

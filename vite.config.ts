@@ -235,6 +235,7 @@ export default defineConfig(({ mode }) => {
             "**/explorer-*.{js,css}",
             "**/portal-explorer-*.{js,css}",
             "**/academy-explorer-*.{js,css}",
+            "**/swagger-view-*.{js,css}",
           ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,

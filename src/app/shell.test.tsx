@@ -169,6 +169,7 @@ function setup(
               <Route path="courses" element={<p>Live courses route</p>} />
               <Route path="client" element={<p>Live company route</p>} />
               <Route path="jobs/:id" element={<p>Live job detail route</p>} />
+              <Route path="analytics" element={<p>Live analytics route</p>} />
               <Route path="finance" element={<p>Live finance route</p>} />
               <Route path="learning" element={<p>Live learning route</p>} />
               <Route path="search" element={<NavigationTarget />} />
@@ -585,4 +586,38 @@ it("combines enterprise, participant and teaching navigation on one account", ()
     within(sidebar).getByRole("link", { name: "Kursbewertungen" }),
   ).toHaveAttribute("href", "/my-reviews");
   expect(screen.getByText("Live finance route")).toBeVisible();
+});
+
+it("opens synthetic company analytics through the admin navigation preview", async () => {
+  access.roles = ["admin"];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const { user } = setup("/", false);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Navigationsvorschau" }),
+    "company",
+  );
+  await user.click(
+    within(screen.getByRole("complementary")).getByRole("link", {
+      name: "Analysen",
+    }),
+  );
+  expect(
+    screen.getByRole("heading", { name: "Unternehmensansicht" }),
+  ).toBeVisible();
+  expect(screen.getByText(/Fiktive Beispieldaten/)).toBeVisible();
+  expect(screen.getByRole("option", { name: "Kundenhonorare" })).toBeVisible();
+  expect(
+    screen.queryByRole("option", { name: "Dozentenvergütung" }),
+  ).toBeNull();
+  expect(screen.queryByText("Live analytics route")).toBeNull();
+  expect(
+    document.querySelector('a[href="/demo/analytics?role=client"]'),
+  ).toBeInTheDocument();
+  expect(access.roles).toEqual(["admin"]);
 });

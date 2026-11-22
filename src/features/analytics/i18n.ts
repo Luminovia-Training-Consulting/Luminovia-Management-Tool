@@ -5,6 +5,18 @@ const labels = {
     "Aufträge, Unterrichtszeiten und Finanzen im ausgewählten Zeitraum.",
     "Assignments, teaching time and finances for the selected period.",
   ],
+  sampleNotice: [
+    "Fiktive Beispieldaten. Für die Auswertung gilt der {{date}} als heutiges Datum.",
+    "Fictional sample data. The report uses {{date}} as today.",
+  ],
+  sampleEmpty: [
+    "Für diesen Zeitraum gibt es keine Beispieldaten.",
+    "There is no sample data for this period.",
+  ],
+  sampleScenarioBasis: [
+    "Beispiel für die nächsten 90 Tage. Die Annahmewahrscheinlichkeit gewichtet die Einnahmen und Kosten der offenen Aufträge.",
+    "Example for the next 90 days. The acceptance probability weights revenue and costs for open work.",
+  ],
   personal: ["Meine Aufträge", "My assignments"],
   company: ["Unternehmensansicht", "Company view"],
   staff: ["Management und Administration", "Management and administration"],

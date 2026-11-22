@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -13,30 +13,25 @@ import { Button } from "../../components/ui/button";
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { useAuth } from "../auth/auth-context";
 import { forecastQuery } from "../workbench/finance-api";
+import { analyticsAccessQuery, analyticsReportQuery } from "./api";
 import {
-  analyticsAccessQuery,
   analyticsPreset,
-  analyticsReportQuery,
   analyticsUntil,
   type AnalyticsPeriod,
   type AnalyticsPreset,
-} from "./api";
-import {
-  BarChart,
-  ChartKey,
-  ChartTable,
-  LineChart,
-  TimeDonut,
-  type ChartSeries,
-} from "./charts";
+} from "./period";
+import { ReportPanels } from "./report-panels";
 import {
   analyticsScopes,
   type AnalyticsAccess,
   type AnalyticsCurrency,
-  type AnalyticsReport,
-  type AnalyticsScope,
 } from "./schema";
-import { PeriodForm, Totals } from "./report-ui";
+import {
+  PeriodForm,
+  ReportingPeriodSelect,
+  ScenarioProbability,
+  Totals,
+} from "./report-ui";
 import {
   hasLearningAnalytics,
   learningAnalyticsAccessQuery,
@@ -44,9 +39,6 @@ import {
 import { useOnline } from "../../lib/online";
 import "./i18n";
 import "./learning-i18n";
-
-const presets = ["around", "historyYear", "nextQuarter"] as const;
-const currencyCodes = ["EUR", "AUD"] as const;
 
 function AnalyticsView({
   actor,
@@ -56,9 +48,8 @@ function AnalyticsView({
   access: AnalyticsAccess;
 }) {
   const { t } = useTranslation("analytics");
-  const [selectedScope, setSelectedScope] = useState<AnalyticsScope | null>(
-    null,
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedScope = searchParams.get("scope");
   const [companyId, setCompanyId] = useState("");
   const [staffCompanyId, setStaffCompanyId] = useState("");
   const [preset, setPreset] = useState<AnalyticsPreset>("around");
@@ -71,10 +62,7 @@ function AnalyticsView({
     scope === "company" ? companies.length > 0 : access[scope],
   );
   const defaultScope = access.staff ? "staff" : scopes[0];
-  const scope =
-    selectedScope && scopes.includes(selectedScope)
-      ? selectedScope
-      : defaultScope;
+  const scope = scopes.find((item) => item === requestedScope) ?? defaultScope;
   const company = companies.find(({ id }) => id === companyId) ?? companies[0];
   const staffCompany = access.organisations.find(
     ({ id }) => id === staffCompanyId,
@@ -109,7 +97,14 @@ function AnalyticsView({
               <select
                 value={scope}
                 onChange={(event) =>
-                  setSelectedScope(event.target.value as AnalyticsScope)
+                  setSearchParams(
+                    (previous) => {
+                      const next = new URLSearchParams(previous);
+                      next.set("scope", event.target.value);
+                      return next;
+                    },
+                    { replace: true },
+                  )
                 }
               >
                 {scopes.map((item) => (
@@ -149,22 +144,14 @@ function AnalyticsView({
               </select>
             </Field>
           )}
-          <Field id="analytics-period" label={t("period")}>
-            <select
-              value={customPeriod ? "custom" : preset}
-              onChange={(event) => {
-                setPreset(event.target.value as AnalyticsPreset);
-                setCustomPeriod(null);
-              }}
-            >
-              {customPeriod && <option value="custom">{t("custom")}</option>}
-              {presets.map((item) => (
-                <option key={item} value={item}>
-                  {t(item)}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <ReportingPeriodSelect
+            preset={preset}
+            custom={Boolean(customPeriod)}
+            onChange={(value) => {
+              setPreset(value);
+              setCustomPeriod(null);
+            }}
+          />
         </div>
         <PeriodForm
           key={`${period.from}/${period.through}`}
@@ -177,7 +164,16 @@ function AnalyticsView({
       {query.isError && <ErrorState retry={() => void query.refetch()} />}
       {query.isSuccess && (
         <ReportPanels
-          actor={actor}
+          scenario={
+            query.data.can_model_pipeline &&
+            !(scope === "staff" && organisation) && (
+              <ScenarioPanel
+                actor={actor}
+                zone={query.data.time_zone}
+                currency={currency}
+              />
+            )
+          }
           report={query.data}
           companyFiltered={scope === "staff" && Boolean(organisation)}
           currency={currency}
@@ -188,296 +184,23 @@ function AnalyticsView({
   );
 }
 
-function ReportPanels({
-  report,
-  actor,
-  companyFiltered,
-  currency,
-  setCurrency,
-}: {
-  report: AnalyticsReport;
-  actor: string;
-  companyFiltered: boolean;
-  currency: AnalyticsCurrency;
-  setCurrency: (currency: AnalyticsCurrency) => void;
-}) {
-  const { t, i18n } = useTranslation("analytics");
-  const [activity, setActivity] = useState<"assignments" | "monthlyHours">(
-    "assignments",
-  );
-  const locale = i18n.resolvedLanguage ?? i18n.language;
-  const numbers = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const percentages = new Intl.NumberFormat(locale, { style: "percent" });
-  const money = new Intl.NumberFormat(locale, { style: "currency", currency });
-  const date = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    year: "2-digit",
-    timeZone: "UTC",
-  });
-  const labels = report.months.map(({ month }) =>
-    date.format(new Date(`${month}T00:00:00Z`)),
-  );
-  const table = { labels, month: t("month"), title: t("data") };
-  const hours = (value: number) =>
-    t("scheduledHours", { value: numbers.format(value) });
-  const sum = (values: (number | null)[]) =>
-    values.reduce<number>((total, value) => total + (value ?? 0), 0);
-
-  const assignments: ChartSeries[] = [
-    {
-      name: t("past"),
-      tone: "past",
-      values: report.months.map((month) =>
-        month.history ? month.past_assignments : null,
-      ),
-    },
-    {
-      name: t("future"),
-      tone: "future",
-      values: report.months.map((month) =>
-        month.forecast ? month.future_assignments : null,
-      ),
-    },
-  ];
-  if (report.months[0].open_positions !== null)
-    assignments.push({
-      name: t("open"),
-      tone: "open",
-      values: report.months.map((month) =>
-        month.forecast ? month.open_positions : null,
-      ),
-    });
-  const teaching: ChartSeries[] = [
-    {
-      name: t("past"),
-      tone: "past",
-      values: report.months.map((month) =>
-        month.history ? month.past_minutes / 60 : null,
-      ),
-    },
-    {
-      name: t("future"),
-      tone: "future",
-      values: report.months.map((month) =>
-        month.forecast ? month.future_minutes / 60 : null,
-      ),
-    },
-  ];
-
-  const showingHours = activity === "monthlyHours";
-  const activitySeries = showingHours ? teaching : assignments;
-  const formatActivity = showingHours ? hours : numbers.format;
-
-  return (
-    <>
-      <div className="analytics-figures">
-        <section className="panel">
-          <div className="analytics-section-heading">
-            <h2>{t(activity)}</h2>
-            <Field id="analytics-activity" label={t("monthlyMetric")}>
-              <select
-                value={activity}
-                onChange={(event) =>
-                  setActivity(
-                    event.target.value === "monthlyHours"
-                      ? "monthlyHours"
-                      : "assignments",
-                  )
-                }
-              >
-                <option value="assignments">{t("assignments")}</option>
-                <option value="monthlyHours">{t("monthlyHours")}</option>
-              </select>
-            </Field>
-          </div>
-          <Totals
-            items={activitySeries.map(({ name, values }) => ({
-              label: name,
-              value: formatActivity(sum(values)),
-            }))}
-          />
-          <ChartKey series={activitySeries} />
-          <BarChart
-            labels={labels}
-            series={activitySeries}
-            format={formatActivity}
-          />
-          {!showingHours && (
-            <p className="analytics-muted">{t("allocationNote")}</p>
-          )}
-          {!showingHours && assignments.length > 2 && (
-            <p className="analytics-muted">{t("openNote")}</p>
-          )}
-          <ChartTable
-            {...table}
-            series={activitySeries}
-            format={formatActivity}
-          />
-        </section>
-        <section className="panel">
-          <h2>{t("hours")}</h2>
-          <TimeDonut
-            past={sum(teaching[0].values)}
-            future={sum(teaching[1].values)}
-            pastLabel={t("past")}
-            futureLabel={t("future")}
-            empty={t("emptyHours")}
-            format={hours}
-            percent={percentages.format}
-          />
-          <p className="analytics-muted">{t("hoursNote")}</p>
-          <ChartTable {...table} series={teaching} format={hours} />
-        </section>
-      </div>
-      <MoneyPanel
-        report={report}
-        companyFiltered={companyFiltered}
-        currency={currency}
-        setCurrency={setCurrency}
-        format={money.format}
-        table={table}
-      />
-      {report.can_model_pipeline && !companyFiltered && (
-        <ScenarioPanel
-          actor={actor}
-          zone={report.time_zone}
-          currency={currency}
-          format={money.format}
-        />
-      )}
-    </>
-  );
-}
-
-const metrics = ["fees", "gross", "lecturerCash", "customerCash"] as const;
-type Metric = (typeof metrics)[number];
-const keyByMetric = {
-  fees: ["past_net", "future_net"],
-  gross: ["past_gross", "future_gross"],
-  lecturerCash: ["lecturer_cash", null],
-  customerCash: ["customer_cash", null],
-} as const;
-
-function MoneyPanel({
-  report,
-  companyFiltered,
-  currency,
-  setCurrency,
-  format,
-  table,
-}: {
-  report: AnalyticsReport;
-  companyFiltered: boolean;
-  currency: AnalyticsCurrency;
-  setCurrency: (currency: AnalyticsCurrency) => void;
-  format: (amount: number) => string;
-  table: { labels: string[]; month: string; title: string };
-}) {
-  const { t } = useTranslation("analytics");
-  const [selected, setSelected] = useState<Metric | null>(null);
-  const first = report.months[0].currencies[currency];
-  const available = metrics.filter(
-    (metric) => first[keyByMetric[metric][0]] !== null,
-  );
-  const metric =
-    selected && available.includes(selected) ? selected : available[0];
-  if (!metric) return null;
-  const [pastKey, futureKey] = keyByMetric[metric];
-  const series: ChartSeries[] = [
-    {
-      name: t(futureKey ? "pastConfirmed" : "cash"),
-      tone: "past",
-      values: report.months.map((month) =>
-        month.history ? month.currencies[currency][pastKey] : null,
-      ),
-    },
-  ];
-  if (futureKey)
-    series.push({
-      name: t("futureConfirmed"),
-      tone: "future",
-      values: report.months.map((month) =>
-        month.forecast ? month.currencies[currency][futureKey] : null,
-      ),
-    });
-  const unknown = report.months.reduce(
-    (total, month) => total + (month.currencies[currency].missing_gross ?? 0),
-    0,
-  );
-
-  return (
-    <section className="panel">
-      <div className="analytics-section-heading">
-        <h2>{t("financialTrend")}</h2>
-        <div className="analytics-filters">
-          <Field id="analytics-metric" label={t("financeMetric")}>
-            <select
-              value={metric}
-              onChange={(event) => setSelected(event.target.value as Metric)}
-            >
-              {available.map((item) => (
-                <option key={item} value={item}>
-                  {t(item)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="analytics-currency" label={t("currency")}>
-            <select
-              value={currency}
-              onChange={(event) =>
-                setCurrency(event.target.value as AnalyticsCurrency)
-              }
-            >
-              {currencyCodes.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      </div>
-      <Totals
-        items={series.map(({ name, values }) => ({
-          label: name,
-          value: values.some((value) => value !== null)
-            ? format(
-                values.reduce<number>((sum, value) => sum + (value ?? 0), 0),
-              )
-            : "—",
-        }))}
-      />
-      <ChartKey series={series} />
-      <LineChart labels={table.labels} series={series} format={format} />
-      <p className="analytics-muted">
-        {t(futureKey ? "commitmentNote" : "cashNote")}
-      </p>
-      {metric === "gross" && unknown > 0 && (
-        <p className="analytics-muted">
-          {t("unknownGross", { count: unknown })}
-        </p>
-      )}
-      {companyFiltered && first.past_net !== null && (
-        <p className="analytics-muted">{t("cashScope")}</p>
-      )}
-      <ChartTable {...table} series={series} format={format} />
-    </section>
-  );
-}
-
 function ScenarioPanel({
   actor,
   zone,
   currency,
-  format,
 }: {
   actor: string;
   zone: string;
   currency: AnalyticsCurrency;
-  format: (amount: number) => string;
 }) {
-  const { t } = useTranslation("analytics");
+  const { t, i18n } = useTranslation("analytics");
+  const { format } = new Intl.NumberFormat(
+    i18n.resolvedLanguage ?? i18n.language,
+    {
+      style: "currency",
+      currency,
+    },
+  );
   const [probability, setProbability] = useState(0.5);
   const now = DateTime.now().setZone(zone);
   const period = {
@@ -508,24 +231,12 @@ function ScenarioPanel({
     (sum, row) => sum + (row.pipeline_gross_known ?? 0),
     0,
   );
-  const choices = [0, 0.25, 0.5, 0.75, 1];
 
   return (
     <section className="panel">
       <h2>{t("scenario")}</h2>
       <p className="analytics-muted">{t("scenarioBasis")}</p>
-      <Field id="analytics-probability" label={t("probability")}>
-        <select
-          value={probability}
-          onChange={(event) => setProbability(Number(event.target.value))}
-        >
-          {choices.map((value) => (
-            <option key={value} value={value}>
-              {value * 100} %
-            </option>
-          ))}
-        </select>
-      </Field>
+      <ScenarioProbability value={probability} onChange={setProbability} />
       {forecast.isPending && <Loading />}
       {forecast.isError && <ErrorState retry={() => void forecast.refetch()} />}
       {forecast.isSuccess && (

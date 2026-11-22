@@ -32,6 +32,7 @@
 ## Internal portal analytics
 
 - Analytics gives instructors their own compensation and payment history, companies their own scheduled work and customer figures, and management and administration company filters with permissioned finance. The report uses explicit date windows and original currencies. It allocates confirmed fees to the first unreleased session and splits scheduled time across reporting-zone month boundaries.
+- The company portal links directly to the company reporting scope when the current account is eligible. The administrator navigation preview and public demo share the report presentation with fictional data for the company, lecturer and staff perspectives. Period, currency, series and eligible company and forecast controls can be exercised without a server request.
 - The financial history distinguishes confirmed fees from recorded cash. The all-company finance view can model open work using the existing 90-day finance forecast and user-selected probability. Company-filtered lecturer payments remain unavailable because an invoice can cover several organisations.
 - The feature has targeted PostgreSQL, component, contract and responsive Chromium evidence. Full hosted acceptance remains in the existing release inventory.
 

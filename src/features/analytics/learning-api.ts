@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { analyticsUntil, type AnalyticsPeriod } from "./api";
+import { analyticsUntil, type AnalyticsPeriod } from "./period";
 import {
   learningAnalyticsAccessSchema,
   learningAnalyticsReportSchema,

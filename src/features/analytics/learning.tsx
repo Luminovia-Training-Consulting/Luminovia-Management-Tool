@@ -18,7 +18,7 @@ import {
   analyticsPreset,
   type AnalyticsPeriod,
   type AnalyticsPreset,
-} from "./api";
+} from "./period";
 import { analyticsScopes, type AnalyticsScope } from "./schema";
 import {
   hasLearningAnalytics,

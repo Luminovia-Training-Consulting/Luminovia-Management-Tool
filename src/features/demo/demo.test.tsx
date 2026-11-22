@@ -62,6 +62,13 @@ beforeEach(async () => {
       removeEventListener: vi.fn(),
     })),
   );
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
   network.mockClear();
 });
 afterEach(() => {

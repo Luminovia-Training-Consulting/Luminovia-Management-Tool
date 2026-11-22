@@ -93,6 +93,12 @@ import { uiLocalChangeEvent } from "../lib/preferences";
  * named focus/hover tooltips, a compact action toolbar and a complete mobile disclosure. React
  * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
  */
+const analyticsNavItem = {
+  to: "/analytics",
+  icon: ChartNoAxesCombined,
+  label: "analytics",
+};
+
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -286,13 +292,7 @@ export function Shell() {
             permissions.data?.includes("jobs.manage") ||
             permissions.data?.includes("courses.manage") ||
             permissions.data?.includes("finance.manage"))
-            ? [
-                {
-                  to: "/analytics",
-                  icon: ChartNoAxesCombined,
-                  label: "analytics",
-                },
-              ]
+            ? [analyticsNavItem]
             : []),
           ...(financeAccess
             ? [{ to: "/finance", icon: Wallet, label: "finance" }]
@@ -324,6 +324,7 @@ export function Shell() {
       { to: "/", icon: Home, label: "home" },
       { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
       { to: "/calendar", icon: CalendarDays, label: "calendar" },
+      analyticsNavItem,
       { to: "/courses", icon: GraduationCap, label: "coursesManage" },
       { to: "/clients", icon: Building2, label: "clients" },
       { to: "/people", icon: Users, label: "staffDirectory" },
@@ -341,6 +342,7 @@ export function Shell() {
       { to: "/", icon: Home, label: "home" },
       { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
       { to: "/calendar", icon: CalendarDays, label: "calendar" },
+      analyticsNavItem,
       { to: "/courses", icon: GraduationCap, label: "myCourses" },
       { to: "/chats", icon: MessagesSquare, label: "chats" },
       { to: "/files", icon: FolderOpen, label: "files" },
@@ -354,6 +356,7 @@ export function Shell() {
     company: [
       { to: "/", icon: Home, label: "home" },
       { to: "/calendar", icon: CalendarDays, label: "calendar" },
+      analyticsNavItem,
       { to: "/courses", icon: GraduationCap, label: "clientCourses" },
       { to: "/client", icon: Building2, label: "clientPortal" },
       { to: "/changes", icon: FileCheck2, label: "assignmentChanges" },

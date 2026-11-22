@@ -615,6 +615,42 @@ export const guideModules: GuideModule[] = [
     ],
   },
   {
+    id: "analytics",
+    path: "/analytics",
+    title: { de: "Analysen", en: "Analytics" },
+    summary: {
+      de: "Vergleiche vergangene und geplante Aufträge, Unterrichtszeiten und Beträge in deiner Ansicht.",
+      en: "Compare past and upcoming assignments, teaching hours and amounts in your view.",
+    },
+    steps: {
+      de: [
+        "Wähle einen Zeitraum oder gib ein eigenes Anfangs- und Enddatum ein.",
+        "Wechsle zwischen Aufträgen und Unterrichtsstunden. Öffne die Tabellen für die Monatswerte.",
+        "Wähle im Finanzverlauf eine verfügbare Kennzahl und die passende Währung.",
+      ],
+      en: [
+        "Choose a reporting period or enter your own start and end dates.",
+        "Switch between assignments and teaching hours. Open the tables for monthly values.",
+        "In the financial trend, choose an available metric and its currency.",
+      ],
+    },
+    problem: {
+      de: "Welche Zahlen sieht mein Unternehmen?",
+      en: "Which figures can my company see?",
+    },
+    resolution: {
+      de: [
+        "Die Unternehmensansicht zeigt die eigenen Aufträge, Kundenhonorare und erfassten Kundenzahlungen.",
+        "Wähle die Währung des Auftrags, um die zugehörigen Beträge zu sehen.",
+      ],
+      en: [
+        "The company view shows its own assignments, customer fees and recorded customer payments.",
+        "Choose the contract currency to see the corresponding amounts.",
+      ],
+    },
+    keywords: ["Statistik", "Prognose", "statistics", "forecast"],
+  },
+  {
     id: "finance",
     path: "/finance",
     title: { de: "Finanzen & Rechnungen", en: "Finance & invoices" },

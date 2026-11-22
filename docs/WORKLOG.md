@@ -1,3 +1,9 @@
+# 23 November 2026 — Company reporting, role preview and public demo
+
+The company portal opens the permitted company analytics view directly. The administrator navigation preview and the public demo use the same bilingual charts, tables and reporting controls with fictional data. Companies see their own sample assignments, teaching hours and customer amounts. The lecturer view shows personal activity and compensation. Management can filter companies or model open work across the fictional portfolio. Participant navigation omits the operational report.
+
+All 1,562 Vitest cases and all 26 guided demo and help journeys passed. The analytics journey covered desktop and mobile Chromium, German and English, light and dark, and automated accessibility checks. The browser suite detected no backend requests from the demo. TypeScript, formatting, lint for changed code and source integrity checks passed. The production bundle budget passed after keeping the standalone Swagger renderer out of the offline precache. The cache measures 4,162.2 KiB against a 4,352 KiB limit.
+
 # 23 November 2026 — Standalone Swagger UI
 
 The signed-in portal and Academy expose `/api/swagger` without workspace navigation. Swagger UI renders the full edition OpenAPI document in read-only mode and links to the existing interactive explorer. TypeScript and all 54 focused explorer and Academy route tests passed.
