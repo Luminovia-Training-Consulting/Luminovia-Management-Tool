@@ -5,6 +5,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Use the isolated portal stack.",
 );
+test.describe.configure({ timeout: 60_000 });
 
 /** Filter before selecting so Swagger renders the requested virtualized row. */
 async function operation(page: Page, method: "get" | "post", path: string) {
@@ -18,11 +19,12 @@ async function operation(page: Page, method: "get" | "post", path: string) {
 
 async function openExplorer(page: Page) {
   await page.goto("/api/docs");
-  // The isolated development server compiles the lazy Swagger module on the
-  // first authenticated visit. Keep the operation assertions on their normal budget.
+  // A cold browser has to load the lazy Swagger graph after the gated route
+  // resolves. Allow for development compilation here and keep operation
+  // assertions on their normal budget.
   await expect(
     page.getByRole("heading", { name: "API-Dokumentation", exact: true }),
-  ).toBeVisible({ timeout: 25_000 });
+  ).toBeVisible({ timeout: 40_000 });
 }
 
 test("the API explorer executes a documented read only after authorization", async ({

@@ -157,10 +157,19 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
             .getByLabel("Enable daily quiet hours", {exact: true})
             .check();
         await context.setOffline(false);
+        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
         await page
             .locator(".settings-section .preferences select[aria-label='Theme']")
             .selectOption("dark");
-        await page.goto("/notifications");
+        await Promise.all([
+            page.waitForResponse((response) =>
+                response.ok() &&
+                new URL(response.url()).pathname.endsWith("/rpc/notification_inbox") &&
+                response.request().method() === "POST" &&
+                response.request().postDataJSON()?.p_limit === 40,
+            {timeout: 25_000}),
+            page.goto("/notifications"),
+        ]);
         await expect(page.locator(".inbox-list > li")).toHaveCount(20);
         await expect(
             page.locator(".inbox-list > li.notification-unread"),
