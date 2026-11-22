@@ -69,8 +69,8 @@ describe("Premium course enrolment management", () => {
     let roster: Record<string, string>[] = [];
     const session = {
       id: "9f9a92be-1b47-4b25-bf7a-c3aec254376a",
-      starts_at: "2050-01-02T09:00:00Z",
-      ends_at: "2050-01-02T11:00:00Z",
+      starts_at: "2025-01-02T09:00:00Z",
+      ends_at: "2025-01-02T11:00:00Z",
       attendance: null,
       minutes: null,
       version: 0,
@@ -120,16 +120,17 @@ describe("Premium course enrolment management", () => {
     );
     expect(await screen.findByText("No enrolled participants.")).toBeVisible();
     const user = userEvent.setup();
-    await user.type(screen.getByRole("searchbox"), "Fictional");
-    await user.click(screen.getByRole("button", { name: "Search" }));
+    const management = within(
+      screen.getByRole("region", { name: "Manage course enrolments" }),
+    );
+    await user.type(management.getByRole("searchbox"), "Fictional");
+    await user.click(management.getByRole("button", { name: "Search" }));
     expect(rpc).toHaveBeenCalledWith("course_enrolment_candidates", {
       p_course_run_id: course.id,
       p_search: "Fictional",
     });
     await user.selectOptions(
-      await within(
-        screen.getByRole("region", { name: "Manage course enrolments" }),
-      ).findByRole("combobox"),
+      await management.findByRole("combobox"),
       participant.user_id,
     );
     await user.click(
