@@ -1,3 +1,9 @@
+# 22 November 2026 — Course-evaluation save confirmation after a lost response
+
+An evaluation now returns the same committed revision when the authorized caller repeats the exact score and comment with the immediately preceding version. The repeat creates no additional revision receipt. A different payload or a superseded version is still rejected. The editor uses the confirmed version immediately and refreshes aggregates in the background.
+
+The real Desktop and Mobile Chromium course flows committed the first evaluation request, discarded its response and retried successfully. Both flows also verified that the instructor can see the feedback and that the company can block and restore course access. Native PostgreSQL passed the scope and retry checks in all three editions, followed by all 11 API-surface checks. The 79 focused tests and 41 Academy package tests passed. The latter include a signed catalogue from the previous 1.33 release against the updated 1.34 validator.
+
 # 22 November 2026 — Recipient search and direct calendar invitation links
 
 The existing calendar invitation editor can search eligible recipients by name and displays each matching Luminovia User ID so managers can distinguish namesakes. The explicit ID input remains available. Search checks the exact published event revision and current management authority, with no email addresses in the results. The recipient link opens only that user's invitation to that event. A confirmed reply marks its notification as read. Editing or withdrawing a publication still invalidates that revision's invitations.

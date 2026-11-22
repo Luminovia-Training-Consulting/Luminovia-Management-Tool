@@ -36,8 +36,8 @@ const pairs: Record<string, [string, string]> = {
   evaluationSaving: ["Bewertung wird gespeichert …", "Saving evaluation…"],
   evaluationSaved: ["Bewertung gespeichert.", "Evaluation saved."],
   evaluationSaveError: [
-    "Die Bewertung konnte nicht gespeichert werden.",
-    "Could not save the evaluation.",
+    "Die Speicherung konnte nicht bestätigt werden. Versuche es mit denselben Eingaben erneut.",
+    "The save could not be confirmed. Try again with the same values.",
   ],
   evaluationConflict: [
     "Diese Bewertung wurde inzwischen geändert. Lade die aktuelle Fassung, bevor du erneut speicherst.",

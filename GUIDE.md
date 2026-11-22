@@ -248,6 +248,8 @@ Assigned lecturers can choose **Neue Kursdatei freigeben / Share a new course fi
 
 Open **Kursbewertungen / Course evaluations** in the course workspace after the final session. Learners can rate their assigned instructors and course company. Company contacts can rate the instructors. Assigned instructors can rate the difficulty, company and linked class. Check the selected role and subject when one account has several roles. The results show scores for the caller's course scope, and current recipients can open the corresponding comments. Comments appear without author names. Enter experience and practical observations without personal details.
 
+If the connection drops during a save, reconnect and submit the same evaluation again. The server confirms the exact current revision if the first request already saved it. If another edit has changed the evaluation, use **Aktuelle Bewertung laden / Reload current evaluation** to review that version before saving again.
+
 Use **Dozentensperren / Lecturer restrictions** in the company portal, the Academy learning hub or company administration. Choose the organisation and confirm the restriction or its removal. Company contacts can find instructors with assignment history in their organisation. Organisation managers can also restrict an eligible instructor before a first assignment. A restriction takes effect on lecturer access and future assignments. It retains existing commitments and accounting records.
 
 For an active online course, assigned lecturers and course managers can publish an HTTPS meeting link in the course's information section. Enrolled learners can open the link from that course workspace. Clearing a custom link restores the scheduled classroom link when the course has one.

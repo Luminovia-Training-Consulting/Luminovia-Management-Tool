@@ -186,6 +186,15 @@ test("completed course evaluations and lecturer restrictions follow current role
     await learner.getByLabel("Wen oder was bewertest du?").selectOption(`learner/lecturer/${f.teacher.id}`);
     await learner.getByLabel("Punktzahl").selectOption("5");
     await learner.getByLabel("Kommentar (optional)").fill("Fictional clear and practical instruction");
+    // Commit the actual first save and drop its response before the browser can use it.
+    await page.route("**/rest/v1/rpc/save_course_evaluation", async (route) => {
+        const response = await route.fetch();
+        expect(response.status()).toBe(200);
+        expect(await response.json()).toMatchObject({score: 5, version: 1});
+        await route.abort("failed");
+    }, {times: 1});
+    await learner.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
+    await expect(learner.getByText(/Die Speicherung konnte nicht bestätigt werden/)).toBeVisible();
     await learner.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
     await expect(learner.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
     await expect(learner.getByText(/5 von 5 · 1 Bewertung/)).toBeVisible();

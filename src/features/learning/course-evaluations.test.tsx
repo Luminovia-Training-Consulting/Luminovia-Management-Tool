@@ -192,6 +192,58 @@ it("shows translated read-only results and requests the next scoped comment page
   });
 });
 
+it("uses the confirmed revision while the results refresh is still pending", async () => {
+  let reads = 0;
+  let releaseRefresh = () => {};
+  const refresh = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  let mine: Array<
+    EvaluationTarget & { score: number; comment: string; version: number }
+  > = [];
+  rpc.mockImplementation((name, params) => {
+    if (name === "course_evaluations") {
+      return {
+        abortSignal: async () => {
+          if (++reads > 1) await refresh;
+          return result({
+            completed: true,
+            writable: true,
+            targets: [instructor],
+            mine,
+            summaries: [],
+          });
+        },
+      };
+    }
+    const saved = {
+      ...instructor,
+      score: params.p_score,
+      comment: params.p_comment.trim(),
+      version: params.p_expected_version + 1,
+    };
+    mine = [saved];
+    return Promise.resolve(result(saved));
+  });
+  const user = userEvent.setup();
+  renderEvaluations();
+  try {
+    await user.selectOptions(await screen.findByLabelText("Score"), "4");
+    await user.click(screen.getByRole("button", { name: "Save evaluation" }));
+    expect(await screen.findByText("Evaluation saved.")).toBeVisible();
+    expect(reads).toBeGreaterThan(1);
+    await user.selectOptions(screen.getByLabelText("Score"), "5");
+    await user.click(screen.getByRole("button", { name: "Save evaluation" }));
+    expect(await screen.findByText("Evaluation saved.")).toBeVisible();
+    expect(rpc).toHaveBeenCalledWith(
+      "save_course_evaluation",
+      expect.objectContaining({ p_score: 5, p_expected_version: 1 }),
+    );
+  } finally {
+    releaseRefresh();
+  }
+});
+
 it("requires reloading a changed evaluation before another write", async () => {
   const current = {
     ...instructor,

@@ -125,10 +125,12 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(save(learner, "learner", "lecturer", teacher, 6), /22023/);
         await assert.rejects(save(learner, "learner", "lecturer", teacher, 5, 0, "a".repeat(2001)), /22023/);
 
-        assert.deepEqual(await save(learner, "learner", "lecturer", teacher, 5, 0, " Strong teaching "), {
+        const firstReceipt = {
             rater_role:"learner",subject_kind:"lecturer",subject_id:teacher,
             label:"Fictional instructor A",score:5,comment:"Strong teaching",version:1,
-        });
+        };
+        assert.deepEqual(await save(learner, "learner", "lecturer", teacher, 5, 0, " Strong teaching "), firstReceipt);
+        assert.deepEqual(await save(learner, "learner", "lecturer", teacher, 5, 0, "Strong teaching"), firstReceipt);
         await save(learner, "learner", "company", organisation, 4, 0, "Helpful coordination");
         await save(peerLearner, "learner", "lecturer", teacher, 3, 0, "Clear slides");
         await save(company, "company", "lecturer", teacher, 4, 0, "Good delivery");
@@ -137,12 +139,13 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await save(teacher, "lecturer", "class", classId, 4, 0, "Ready for the next lab");
         assert.equal((await rpc(colleague,"save_course_evaluation",run,"lecturer","class",classId,5,0)).comment, "");
         await assert.rejects(save(learner,"learner","lecturer",teacher), /PT409/);
-        const race = await Promise.allSettled([
+        const race = await Promise.all([
             save(learner, "learner", "lecturer", teacher, 5, 1, "Strong teaching"),
             save(learner, "learner", "lecturer", teacher, 5, 1, "Strong teaching"),
         ]);
-        assert.equal(race.filter(({status}) => status === "fulfilled").length, 1);
-        assert.match(String(race.find(({status}) => status === "rejected").reason), /PT409/);
+        assert.deepEqual(race, [{...firstReceipt, version:2}, {...firstReceipt, version:2}]);
+        await assert.rejects(save(learner, "learner", "lecturer", teacher, 5, 1, "Different comment"), /PT409/);
+        await assert.rejects(save(learner, "learner", "lecturer", teacher, 5, 0, "Strong teaching"), /PT409/);
         assert.equal((await list(learner)).mine.find(({subject_id}) => subject_id === teacher).version, 2);
 
         const learnerView = await list(peerLearner);
@@ -223,6 +226,7 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
           update public.job_claims set status='cancelled' where lecturer_id=${q(teacher)}
             and job_id in (select id from public.jobs where course_run_id=${q(run)});`);
         await assert.rejects(list(learner), denied);
+        await assert.rejects(save(learner, "learner", "company", organisation, 4, 0, "Helpful coordination"), denied);
         await assert.rejects(list(teacher), denied);
         await assert.rejects(save(peerLearner,"learner","lecturer",teacher,4,1), denied);
         assert.ok((await list(peerLearner)).summaries.every(({subject_id}) => subject_id !== teacher));

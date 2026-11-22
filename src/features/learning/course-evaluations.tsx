@@ -209,6 +209,7 @@ export function CourseEvaluations({
     },
   });
   const mutation = useMutation({
+    onMutate: () => cache.cancelQueries({ queryKey: key, exact: true }),
     mutationFn: async ({
       target,
       version,
@@ -229,11 +230,34 @@ export function CourseEvaluations({
         p_expected_version: version,
       });
       if (error) throw error;
-      return ownEvaluation.parse(data);
+      const saved = ownEvaluation.parse(data);
+      if (
+        targetKey(saved) !== targetKey(target) ||
+        saved.version !== version + 1
+      )
+        throw new Error("invalid_evaluation_receipt");
+      return saved;
     },
-    onSuccess: async () => {
+    onSuccess: (saved) => {
       setExpanded(null);
-      await cache.invalidateQueries({ queryKey: key });
+      cache.setQueryData<ReturnType<typeof courseEvaluations.parse>>(
+        key,
+        (current) => {
+          const id = targetKey(saved);
+          if (!current?.targets.some((item) => targetKey(item) === id))
+            return current;
+          const existing = current.mine.find((item) => targetKey(item) === id);
+          if (existing && existing.version >= saved.version) return current;
+          return {
+            ...current,
+            mine: [
+              ...current.mine.filter((item) => targetKey(item) !== id),
+              saved,
+            ],
+          };
+        },
+      );
+      void cache.invalidateQueries({ queryKey: key, exact: true });
     },
   });
   const conflict =
@@ -256,6 +280,7 @@ export function CourseEvaluations({
       aria-labelledby="course-evaluations-title"
     >
       <h2 id="course-evaluations-title">{t("evaluations")}</h2>
+      {online && mutation.isSuccess && <Notice>{t("evaluationSaved")}</Notice>}
       {!online ? (
         <Notice>{t("workspaceOffline")}</Notice>
       ) : list.isPending ? (
@@ -342,8 +367,6 @@ export function CourseEvaluations({
             </Notice>
           ) : mutation.isError ? (
             <Notice kind="error">{t("evaluationSaveError")}</Notice>
-          ) : mutation.isSuccess ? (
-            <Notice>{t("evaluationSaved")}</Notice>
           ) : null}
           <div className="space-y-2">
             <h3>{t("evaluationResults")}</h3>

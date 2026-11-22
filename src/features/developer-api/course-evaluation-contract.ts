@@ -119,7 +119,7 @@ export function courseEvaluationPaths(academy: boolean) {
       write: true,
       summary: "Save one versioned course evaluation",
       description:
-        "Only the issued role and subject combinations are writable after the last course session and while learning access is active. Score ranges from 1 to 5. Send version 0 to create the actor's own evaluation or its current version to edit it. The optional comment is visible to authorized recipients. Re-read the result after a version conflict.",
+        "Only the issued role and subject combinations are writable after the last course session and while learning access is active. Score ranges from 1 to 5. Send version 0 to create the actor's own evaluation or its current version to edit it. If the response is lost, retry with the same revision, score and comment. The exact next revision is returned without an additional write while it is still current. Re-read after a version conflict. The optional comment is visible to authorized recipients.",
       request: z.strictObject({
         ...bySubject,
         p_score: evaluationScore,
