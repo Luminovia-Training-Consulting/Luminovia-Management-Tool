@@ -11,7 +11,7 @@ import {networkName} from "./runtime-network.mjs";
 
 // Use the same digest updated by self-host maintenance for disposable acceptance.
 const composePath = new URL("../deploy/hostinger/compose.yml", import.meta.url);
-const image = /^  clamav:\r?\n    image: (clamav\/clamav@sha256:[a-f0-9]{64})\r?$/m.exec(
+const image = /^ {2}clamav:\r?\n {4}image: (clamav\/clamav@sha256:[a-f0-9]{64})\r?$/m.exec(
     readFileSync(composePath, "utf8"),
 )?.[1];
 if (!image) throw new Error("The self-host ClamAV image must be digest-pinned.");
