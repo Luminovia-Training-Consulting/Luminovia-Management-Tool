@@ -64,6 +64,7 @@ import { academyClassPaths } from "./academy-class-contract.ts";
 import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
 import { academyMailPaths } from "./academy-mail-contract.ts";
 import { academyPersonalSettingsPaths } from "./academy-personal-settings-contract.ts";
+import { withAcademyIngressResponses } from "./academy-ingress-contract.ts";
 import {
   academyTimetableRequestSchema,
   academyTimetableSchema,
@@ -1090,12 +1091,12 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.29.0",
+      version: "1.30.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
     servers: [{ url: backend.replace(/\/+$/, "") || "/" }],
-    paths: {
+    paths: withAcademyIngressResponses({
       "/rest/v1/rpc/installation_capabilities": {
         get: {
           operationId: "readAcademyInstallationCapabilities",
@@ -1379,7 +1380,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
       },
       ...coursePaths,
       ...humanAuthPaths,
-    },
+    }),
     webhooks: { companyCourseEvent: companyCourseWebhook },
     components: {
       securitySchemes: {

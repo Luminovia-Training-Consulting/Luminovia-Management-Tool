@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { connect as connectTls } from "node:tls";
 import { promisify } from "node:util";
+import { academyOpenApi } from "../../src/features/developer-api/academy-contract.ts";
 
 const exec = promisify(execFile);
 const [binary, browser, manifestFile, origin, localPort, envoyBinary] =
@@ -24,12 +25,20 @@ const hostname = new URL(origin).hostname;
 assert.match(hostname, /^[a-z0-9.-]+$/);
 assert.match(localPort, /^[1-9][0-9]{3,4}$/);
 assert.ok(Number(localPort) > 1024 && Number(localPort) <= 65525);
-const root = await mkdtemp(join(tmpdir(), "academy-ingress-test-"));
-const template = await readFile(
+const caddyfile = await readFile(
   new URL("../../deploy/hostinger/Caddyfile", import.meta.url),
   "utf8",
 );
-const { files } = JSON.parse(await readFile(manifestFile, "utf8"));
+// Retain only the global options and the dedicated listener in this loopback fixture.
+const template = caddyfile.match(
+  /^\{\n[\s\S]*?^\}\n^\{\$PORTAL_DOMAIN\} \{\n[\s\S]*?^\}\n/m,
+)?.[0];
+assert.ok(template, "Dedicated Caddy listener missing from the template");
+const { edition, files, installationId, name } = JSON.parse(
+  await readFile(manifestFile, "utf8"),
+);
+assert.ok(edition === "customer-managed" || edition === "customer-self-hosted");
+const root = await mkdtemp(join(tmpdir(), "academy-ingress-test-"));
 const allowedApi = [
   "/auth/v1/settings",
   "/rest/v1/rpc/installation_capabilities",
@@ -293,20 +302,41 @@ try {
     socket.destroy();
   }
 
-  const restProbe = "/backend/rest/v1/rpc/installation_capabilities";
+  const capabilityPath = "/rest/v1/rpc/installation_capabilities";
+  const restProbe = "/backend" + capabilityPath;
+  const contract = academyOpenApi(origin + "/backend", {
+    edition,
+    installationId,
+    name,
+  }).paths[capabilityPath].get.responses;
+  const checkIngressError = async (status) => {
+    const { bytes, headers } = await request(restProbe, status);
+    const declared = contract[status];
+    const mediaType = headers["content-type"]?.split(";", 1)[0];
+    assert.equal(mediaType, "text/plain");
+    assert.equal(
+      bytes.toString("utf8"),
+      declared.content[mediaType].schema.const,
+    );
+    assert.equal(
+      Number(headers["retry-after"]),
+      declared.headers["Retry-After"].example,
+    );
+    assert.match(headers["cache-control"] ?? "", /no-store, private/);
+  };
   for (
     let consumed = allowedApi.length + blockedApi.length + 1;
     consumed < allowance;
     consumed++
   )
     await request(restProbe, 200);
-  assert.equal((await request(restProbe, 429)).headers["retry-after"], "60");
+  await checkIngressError(429);
   assert.deepEqual((await request("/", 200)).bytes, shell);
 
   const marker = join(browser, "maintenance.enabled");
   await writeFile(marker, "integration test", { flag: "wx", mode: 0o600 });
   try {
-    assert.equal((await request(restProbe, 503)).headers["retry-after"], "60");
+    await checkIngressError(503);
     assert.deepEqual((await request("/", 200)).bytes, shell);
   } finally {
     await rm(marker);

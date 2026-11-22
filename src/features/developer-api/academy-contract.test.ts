@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { internalInstallationBrand } from "../../lib/installation-brand";
 import { academyOpenApi } from "./academy-contract";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { humanAuthPaths } from "./human-auth-contract";
 
 const backend = "https://academy.example.invalid/backend";
 const id = "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca";
@@ -183,6 +184,50 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
     });
 
+    it("publishes shared ingress responses and retains the handler's JSON errors", () => {
+      const retryAfter = {
+        schema: { type: "integer", minimum: 0 },
+        example: 60,
+      };
+      const maintenance =
+        "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
+      expect(spec.info.version).toBe("1.30.0");
+      for (const methods of Object.values(spec.paths)) {
+        for (const { responses } of Object.values(methods)) {
+          expect(responses["429"]).toMatchObject({
+            headers: { "Retry-After": retryAfter },
+            content: {
+              "text/plain": { schema: { const: "local_rate_limited" } },
+            },
+          });
+          expect(responses["503"]).toMatchObject({
+            headers: { "Retry-After": retryAfter },
+            content: { "text/plain": { schema: { const: maintenance } } },
+          });
+        }
+      }
+      const integration = spec.paths["/functions/v1/company-integration"].get;
+      expect(
+        integration.responses["429"].content["application/json"].schema,
+      ).toMatchObject({ properties: { error: { const: "rate_limited" } } });
+      expect(
+        spec.paths["/rest/v1/rpc/send_course_chat_message"].post.responses[
+          "429"
+        ].content["application/json"].schema,
+      ).toMatchObject({ required: ["code", "message", "details", "hint"] });
+      expect(
+        spec.paths[upload].post.responses["503"].content["application/json"]
+          .schema,
+      ).toMatchObject({
+        properties: {
+          error: { enum: expect.arrayContaining(["scanner_unavailable"]) },
+        },
+      });
+      expect(spec.webhooks.companyCourseEvent.post.responses["429"]).toEqual({
+        description: "Receiver throttled the request. Delivery may be retried.",
+      });
+    });
+
     it("documents session prerequisites and keeps human credential requests download-only", () => {
       const read = spec.paths["/rest/v1/rpc/portal_access"].post;
       expect(read["x-portal-licence"]).toBe("active-or-grace");
@@ -200,7 +245,22 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         "/functions/v1/human-login",
         "/functions/v1/human-recovery",
       ] as const) {
-        expect(spec.paths[path]).toEqual(internal.paths[path]);
+        const operation = humanAuthPaths[path].post;
+        expect(internal.paths[path].post).toEqual(operation);
+        const { responses, ...shared } = operation;
+        const { responses: dedicatedResponses, ...dedicated } =
+          spec.paths[path].post;
+        expect(dedicated).toEqual(shared);
+        for (const [status, response] of Object.entries(responses)) {
+          if (status === "429" || status === "503") {
+            expect(dedicatedResponses[status]).toMatchObject({
+              ...response,
+              description: expect.stringContaining(response.description),
+            });
+          } else {
+            expect(dedicatedResponses).toHaveProperty(status, response);
+          }
+        }
         expect(explorer.paths[path]).toBeUndefined();
         expect(spec.paths[path].post.security).toEqual([]);
       }
