@@ -4,11 +4,13 @@ import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   chmod,
   lstat,
+  mkdir,
   mkdtemp,
   readFile,
   readdir,
   rm,
   symlink,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -588,4 +590,185 @@ test("rejects non-private files and symlinks, and will not overwrite a modified 
     /conflicting or modified/,
   );
   assert.equal(await readFile(path, "utf8"), corrupted);
+});
+
+test("an approved handoff creates exactly its independently confirmed private runtime and safely retries", async (t) => {
+  const registry = await fixture(t);
+  const operator = await fixture(t);
+  const runtimeCli = fileURLToPath(
+    new URL("./academy-runtime-config.mjs", import.meta.url),
+  );
+  const vendorKey = generateKeyPairSync("ed25519");
+  const untrustedKey = generateKeyPairSync("ed25519");
+  const vendorKeyPath = join(registry, "issuer.pem");
+  const trust = join(operator, "trusted.pem");
+  const otherTrust = join(operator, "other.pem");
+  await writeFile(
+    vendorKeyPath,
+    vendorKey.privateKey.export({ type: "pkcs8", format: "pem" }),
+    { mode: 0o600 },
+  );
+  await writeFile(
+    trust,
+    vendorKey.publicKey.export({ type: "spki", format: "pem" }),
+    { mode: 0o644 },
+  );
+  await writeFile(
+    otherTrust,
+    untrustedKey.publicKey.export({ type: "spki", format: "pem" }),
+    { mode: 0o644 },
+  );
+  const runtimes = [];
+
+  for (const [i, edition] of [
+    "customer-self-hosted",
+    "customer-managed",
+  ].entries()) {
+    const entry = draft();
+    const localRoot = join(operator, "runtime-" + i);
+    const targetOrigin = `https://academy-${i}.example.invalid`;
+    Object.assign(entry.target, {
+      portal_origin: targetOrigin,
+      edition,
+      runtime_directory: localRoot,
+    });
+    const source = await input(registry, entry, `private-draft-${i}.json`);
+    const exportCommand = () =>
+      run(process.execPath, [
+        cli,
+        "export-runtime-handoff",
+        registry,
+        entry.request_id,
+        vendorKeyPath,
+      ]);
+    await assert.rejects(
+      exportCommand(),
+      /approved customer draft could not be found/,
+    );
+    const { receipt } = await approveCustomerAcademyDraft(
+      registry,
+      source,
+      reviewToken(planCustomerAcademyDraft(entry)),
+    );
+    const result = JSON.parse((await exportCommand()).stdout);
+    const vendorFile = join(registry, result.filename);
+    const delivered = await readFile(vendorFile);
+    assert.equal((await lstat(vendorFile)).mode & 0o777, 0o600);
+    assert.deepEqual(JSON.parse((await exportCommand()).stdout), result);
+    assert.deepEqual(await readFile(vendorFile), delivered);
+    const handoff = JSON.parse(delivered);
+    assert.deepEqual(Object.keys(handoff).sort(), [
+      "signature",
+      "target",
+      "version",
+    ]);
+    assert.deepEqual(handoff.target, {
+      installation_id: receipt.installation_id,
+      edition,
+      portal_origin: targetOrigin,
+      runtime_directory: localRoot,
+      source_revision: entry.licence.release_commit,
+    });
+    for (const privateValue of [
+      entry.legal_customer_name,
+      entry.branding.name,
+      entry.initial_administrator.email,
+      entry.initial_administrator.username,
+      entry.support.contact_email,
+      entry.support.agreement_reference,
+    ]) {
+      assert.equal(delivered.includes(privateValue), false);
+    }
+
+    const received = join(operator, `received-${i}.signed`);
+    await writeFile(received, delivered, { mode: 0o600 });
+    const initialize = async ({
+      root = localRoot,
+      from = received,
+      key = trust,
+      address = "127.0.0.1",
+    } = {}) =>
+      JSON.parse(
+        (
+          await run(process.execPath, [
+            runtimeCli,
+            "from-handoff",
+            root,
+            from,
+            key,
+            address,
+          ])
+        ).stdout,
+      );
+    await assert.rejects(
+      initialize({ root: join(operator, "unapproved") }),
+      /Could not initialize/,
+    );
+    await assert.rejects(
+      initialize({ key: otherTrust }),
+      /Could not initialize/,
+    );
+    assert.ok(!(await readdir(operator)).includes(`runtime-${i}`));
+    if (i === 0) {
+      const edited = join(operator, "tampered.signed");
+      await writeFile(
+        edited,
+        JSON.stringify({
+          ...handoff,
+          target: {
+            ...handoff.target,
+            portal_origin: "https://altered.example.invalid",
+          },
+        }) + "\n",
+        { mode: 0o600 },
+      );
+      await assert.rejects(
+        initialize({ from: edited }),
+        /Could not initialize/,
+      );
+      await chmod(received, 0o644);
+      await assert.rejects(initialize(), /Could not initialize/);
+      await chmod(received, 0o600);
+      const linked = join(operator, "linked.signed");
+      await symlink(received, linked);
+      await assert.rejects(
+        initialize({ from: linked }),
+        /Could not initialize/,
+      );
+      await mkdir(localRoot, { mode: 0o700 });
+      await writeFile(join(localRoot, "existing.txt"), "retained installation");
+      await assert.rejects(initialize(), /Could not initialize/);
+      assert.equal(
+        await readFile(join(localRoot, "existing.txt"), "utf8"),
+        "retained installation",
+      );
+      await rm(localRoot, { recursive: true });
+    }
+
+    assert.deepEqual(await initialize(), { status: "initialized" });
+    const runtimeEnv = join(localRoot, "runtime.env");
+    const settingsHash = async () =>
+      createHash("sha256")
+        .update(await readFile(runtimeEnv))
+        .digest("hex");
+    const before = await settingsHash();
+    runtimes.push(before);
+    const privateReceiptPath = join(localRoot, "runtime-handoff.json");
+    assert.equal((await lstat(privateReceiptPath)).mode & 0o777, 0o600);
+    const applied = JSON.parse(await readFile(privateReceiptPath));
+    assert.equal(applied.installation_id, receipt.installation_id);
+    assert.equal(applied.source_revision, entry.licence.release_commit);
+    for (const directory of ["browser", "data", "backups"])
+      assert.deepEqual(await readdir(join(localRoot, directory)), []);
+    assert.deepEqual(await initialize(), { status: "already-initialized" });
+    await assert.rejects(
+      initialize({ address: "192.0.2.17" }),
+      /Could not initialize/,
+    );
+    assert.equal(await settingsHash(), before);
+    await unlink(join(localRoot, "runtime.env.notification.env"));
+    await assert.rejects(initialize(), /Could not initialize/);
+    assert.equal(await settingsHash(), before);
+  }
+  assert.notEqual(runtimes[0], runtimes[1]);
 });

@@ -23,6 +23,7 @@ import {
   academyBrandShortName,
 } from "../src/features/branding/academy-branding-schema.ts";
 import { describeAcademyRuntime } from "./academy-runtime-config.mjs";
+import { signAcademyRuntimeHandoff } from "./academy-runtime-handoff.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 import {
   signAcademyLicence,
@@ -633,6 +634,42 @@ async function exportLicence(root, actionId) {
   });
 }
 
+async function exportRuntimeHandoff(root, requestId, keyPath) {
+  await requireRegistryRoot(root);
+  return withRegistryLock(root, async () => {
+    const { drafts } = await readRegistry(root);
+    const receipt = drafts.find(({ draft }) => draft.request_id === requestId);
+    if (!receipt)
+      throw new Error("The approved customer draft could not be found.");
+    const { draft, installation_id } = receipt;
+    const handoff = Buffer.from(
+      signAcademyRuntimeHandoff(
+        {
+          installation_id,
+          edition: draft.target.edition,
+          portal_origin: draft.target.portal_origin,
+          runtime_directory: draft.target.runtime_directory,
+          source_revision: draft.licence.release_commit,
+        },
+        createPrivateKey(await readPrivateInput(keyPath, 16 * 1024)),
+      ),
+    );
+    const filename = "runtime-handoff-" + installation_id + ".signed";
+    const output = join(root, filename);
+    try {
+      await writePrivateFile(root, output, handoff);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      if (!(await readPrivateInput(output, 16 * 1024)).equals(handoff))
+        throw new Error(
+          "An unrelated file already occupies the runtime handoff path.",
+          { cause: error },
+        );
+    }
+    return { filename, installation_id };
+  });
+}
+
 function publicReview(plan) {
   const { draft, runtime, approval_sha256 } = plan;
   // Keep customer names and addresses in the operator's private input and
@@ -677,7 +714,7 @@ if (
           "export-licence",
         ].includes(command) &&
           approval === undefined) ||
-        (command === "approve" &&
+        ((command === "approve" || command === "export-runtime-handoff") &&
           approval !== undefined &&
           key === undefined) ||
         (command === "issue-licence" &&
@@ -686,7 +723,7 @@ if (
       )
     ) {
       throw new Error(
-        "Usage: academy-customer-draft.mjs preview|approve|preview-licence|issue-licence|licence-history|export-licence PRIVATE_REGISTRY INPUT [APPROVAL [PRIVATE_SIGNING_KEY [EXISTING_SIGNED_LICENCE]]]",
+        "Usage: academy-customer-draft.mjs preview|approve|preview-licence|issue-licence|licence-history|export-licence PRIVATE_REGISTRY INPUT [APPROVAL [PRIVATE_SIGNING_KEY [EXISTING_SIGNED_LICENCE]]] or export-runtime-handoff PRIVATE_REGISTRY DRAFT_REQUEST_ID PRIVATE_SIGNING_KEY",
       );
     }
     let result;
@@ -718,6 +755,9 @@ if (
         break;
       case "export-licence":
         result = await exportLicence(root, source);
+        break;
+      case "export-runtime-handoff":
+        result = await exportRuntimeHandoff(root, source, approval);
         break;
     }
     console.log(JSON.stringify(result, null, 2));

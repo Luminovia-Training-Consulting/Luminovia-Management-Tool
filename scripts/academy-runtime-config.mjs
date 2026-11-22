@@ -1,13 +1,24 @@
 /** Initialize a private, empty runtime for one dedicated academy. */
-import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { isIP } from "node:net";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import {
   createConfiguration,
   writeConfiguration,
 } from "../deploy/hostinger/selfhost/generate-env.mjs";
+import {
+  readRuntimeHandoffFile,
+  verifyAcademyRuntimeHandoff,
+} from "./academy-runtime-handoff.mjs";
 
 const editions = z.enum(["customer-self-hosted", "customer-managed"]);
 const domainLabels =
@@ -62,7 +73,10 @@ export function describeAcademyRuntime({
 }
 
 /** Reserve fresh private paths and generate the independent runtime settings. */
-export function initializeAcademyRuntime({ root, bindAddress, ...target }) {
+export function initializeAcademyRuntime(
+  { root, bindAddress, ...target },
+  handoffReceipt,
+) {
   const identity = describeAcademyRuntime({ root, ...target });
   if (realpathSync(dirname(root)) !== dirname(root))
     throw new Error("academy_runtime_parent");
@@ -105,10 +119,126 @@ export function initializeAcademyRuntime({ root, bindAddress, ...target }) {
       JSON.stringify(identity, null, 2) + "\n",
       { flag: "wx", mode: 0o600 },
     );
+    if (handoffReceipt)
+      writeFileSync(
+        join(root, "runtime-handoff.json"),
+        JSON.stringify(handoffReceipt, null, 2) + "\n",
+        { flag: "wx", mode: 0o600 },
+      );
     return identity;
   } catch (error) {
     rmSync(root, { recursive: true, force: true });
     throw error;
+  }
+}
+
+function requireHandoffParent(root) {
+  const operator = process.getuid();
+  const parent = dirname(root);
+  const checkout = resolve(fileURLToPath(new URL("../", import.meta.url)));
+  if (realpathSync(parent) !== parent || root.startsWith(checkout + "/"))
+    throw new Error("academy_runtime_handoff_parent");
+  for (let path = parent; ; path = dirname(path)) {
+    const directory = lstatSync(path);
+    if (
+      !directory.isDirectory() ||
+      (directory.uid !== operator && directory.uid !== 0) ||
+      ((directory.mode & 0o022) !== 0 &&
+        !(directory.uid === 0 && (directory.mode & 0o1000) !== 0))
+    )
+      throw new Error("academy_runtime_handoff_parent");
+    if (path === dirname(path)) break;
+  }
+}
+
+/** Initialize only the path independently confirmed by the local operator. */
+function initializeAcademyRuntimeFromHandoff({
+  root,
+  handoff,
+  trustedKey,
+  bindAddress,
+}) {
+  const { target, sha256 } = verifyAcademyRuntimeHandoff(
+    readRuntimeHandoffFile(handoff),
+    readRuntimeHandoffFile(trustedKey, false),
+  );
+  if (root !== target.runtime_directory)
+    throw new Error("academy_runtime_handoff_local_path_mismatch");
+  const options = {
+    root,
+    bindAddress,
+    installationId: target.installation_id,
+    edition: target.edition,
+    portalOrigin: target.portal_origin,
+  };
+  const identity = describeAcademyRuntime(options);
+  if (
+    identity.portal_origin !== target.portal_origin ||
+    isIP(bindAddress) !== 4
+  )
+    throw new Error("academy_runtime_handoff_target");
+  requireHandoffParent(root);
+  const receipt = {
+    version: 1,
+    installation_id: identity.installation_id,
+    source_revision: target.source_revision,
+    handoff_sha256: sha256,
+    bind_address: bindAddress,
+  };
+  try {
+    initializeAcademyRuntime(options, receipt);
+    return "initialized";
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    const directory = lstatSync(root);
+    if (
+      !directory.isDirectory() ||
+      directory.uid !== process.getuid() ||
+      (directory.mode & 0o077) !== 0 ||
+      !isDeepStrictEqual(
+        JSON.parse(readRuntimeHandoffFile(join(root, "runtime-handoff.json"))),
+        receipt,
+      ) ||
+      !isDeepStrictEqual(
+        JSON.parse(readRuntimeHandoffFile(join(root, "installation.json"))),
+        identity,
+      )
+    )
+      throw new Error("academy_runtime_handoff_existing_target", {
+        cause: error,
+      });
+    for (const name of [
+      "runtime.env",
+      "runtime.env.public.env",
+      "runtime.env.notification.env",
+    ]) {
+      const file = lstatSync(join(root, name));
+      if (
+        !file.isFile() ||
+        file.nlink !== 1 ||
+        file.uid !== process.getuid() ||
+        (file.mode & 0o077) !== 0
+      )
+        throw new Error("academy_runtime_handoff_existing_target", {
+          cause: error,
+        });
+    }
+    for (const path of [
+      identity.data_directory,
+      identity.backup_directory,
+      identity.browser_directory,
+    ]) {
+      const child = lstatSync(path);
+      if (
+        !child.isDirectory() ||
+        child.uid !== process.getuid() ||
+        (child.mode & 0o077) !== 0
+      )
+        throw new Error("academy_runtime_handoff_existing_target", {
+          cause: error,
+        });
+    }
+    return "already-initialized";
   }
 }
 
@@ -117,20 +247,36 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    const [root, installationId, edition, portalOrigin, bindAddress] =
-      process.argv.slice(2);
-    if (process.argv.length !== 7) throw new Error("academy_runtime_arguments");
-    initializeAcademyRuntime({
-      root,
-      installationId,
-      edition,
-      portalOrigin,
-      bindAddress,
-    });
-    console.log("Created private configuration for an empty academy runtime.");
+    const args = process.argv.slice(2);
+    if (args[0] === "from-handoff") {
+      const [, root, handoff, trustedKey, bindAddress] = args;
+      if (args.length !== 5) throw new Error("academy_runtime_arguments");
+      const status = initializeAcademyRuntimeFromHandoff({
+        root,
+        handoff,
+        trustedKey,
+        bindAddress,
+      });
+      console.log(JSON.stringify({ status }));
+    } else {
+      const [root, installationId, edition, portalOrigin, bindAddress] = args;
+      if (args.length !== 5) throw new Error("academy_runtime_arguments");
+      initializeAcademyRuntime({
+        root,
+        installationId,
+        edition,
+        portalOrigin,
+        bindAddress,
+      });
+      console.log(
+        "Created private configuration for an empty academy runtime.",
+      );
+    }
   } catch {
     console.error(
-      "Could not initialize the academy runtime. Provide a new absolute directory, installation UUID, dedicated edition, HTTPS domain and IPv4 bind address.",
+      process.argv[2] === "from-handoff"
+        ? "Could not initialize the academy runtime. Verify the explicitly selected absolute directory, signed handoff, trusted public key and local IPv4 bind address."
+        : "Could not initialize the academy runtime. Provide a new absolute directory, installation UUID, dedicated edition, HTTPS domain and IPv4 bind address.",
     );
     process.exitCode = 1;
   }
