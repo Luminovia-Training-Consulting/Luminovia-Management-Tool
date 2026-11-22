@@ -1,3 +1,7 @@
+# 23 November 2026 — Profile picture upload copy
+
+The German and English profile picture instructions and size error show the limit as 1 MB. All eight avatar component and upload validation tests passed.
+
 # 23 November 2026 — Course building-block spacing
 
 The course building-block grid has 24 pixels of breathing room below the last row. TypeScript and the production build with the CI configuration passed, including the bundle budget.
