@@ -8,6 +8,7 @@
 
 ## Local reset, release performance and Academy operations
 
+- First launch from a source ZIP checks Docker before npm and attempts to start the standard local Docker service. The launcher tests cover successful recovery, existing service, failed startup and endpoint boundaries. The affected CachyOS host still needs a reboot into an installed kernel with matching modules for a full launch.
 - The local reset has a real isolated Docker regression with seeded PostgreSQL, Auth, Storage, Mailpit and existing scanner state. The default launch after confirmation replays the tracked migrations and fictional seed.
 - The Build job and `./portal check` enforce production asset budgets. Full main acceptance still includes component coverage, native HTTP/PostgreSQL and retained-data tests, Chromium desktop and mobile, and PWA checks with the actual service worker.
 - Dedicated Academy ingress no longer includes CMS aliases. The private operator workflow now includes reviewed fulfilment receipts and local health monitoring. Academy OpenAPI 1.30 models the actual rate-limit and maintenance transport responses. Independent customer deployment, provider delivery, customer receiver onboarding and full external acceptance remain in the White-Label roadmap.

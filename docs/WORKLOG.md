@@ -1,3 +1,9 @@
+# 22 November 2026 — First start from a source ZIP
+
+The first `./portal start` checks the local Docker Engine before installing locked npm dependencies. If the standard socket is unavailable, it attempts to start the system Docker service, permits systemd's terminal authentication, and probes the Engine again. The launcher reports socket access failures, unavailable custom engines and the missing running-kernel module directory with targeted recovery guidance.
+
+Five executable launcher regressions and 15 existing runtime safety and documentation tests passed. The local system journal recorded Docker's bridge NAT startup failure. The machine was running CachyOS kernel 7.3.4 with only newer CachyOS and LTS module trees installed. The patched launcher reproduced the real host failure before npm and printed the reboot guidance. Repeat the full launch on this machine after rebooting into the installed kernel.
+
 # 22 November 2026 — Demo navigation and Academy header follow-up
 
 The mobile demo opens More directly from the fixed bottom navigation. The panel stays in view in portrait and landscape, includes help and sign-in, and closes when attention moves outside. Escape returns focus to More, and the button reports whether its panel is expanded. Changing a demo role on the current page keeps focus on the selector so arrow-key navigation can continue. Viewport checks cover all five fictional roles, German and English, and both themes. The browser regression also verifies that opening More on a scrolled page preserves its scroll offset.

@@ -87,8 +87,8 @@ async function start() {
     const [major, minor] = process.versions.node.split(".").map(Number);
     if (major < 22 || (major === 22 && minor < 12))
         throw new Error("Node.js >=22.12 is required.");
+    const dockerHost = await assertLocalDocker({startService: true});
     await ensureDependencies();
-    const dockerHost = await assertLocalDocker();
     const existing = readState();
     if (processIsOurs(existing)) {
         if (existing.phase === "ready") {

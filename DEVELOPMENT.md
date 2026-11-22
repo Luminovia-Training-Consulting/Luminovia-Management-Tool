@@ -199,6 +199,8 @@ The pinned Deno package needs its reviewed postinstall script to copy the platfo
 - Local email capture: <http://127.0.0.1:54324>
 - Fresh bootstrap accounts: `admin@example.invalid`, `carina@example.invalid` (owner demonstration), `client@example.invalid` (fictional organisation), `lecturer01@example.invalid` through `lecturer11@example.invalid`, `participant@example.invalid` — 15 distinct Auth identities. Populated instances retain existing records and are never automatically reseeded.
 
+`./portal start` checks Docker before installing npm dependencies. When the standard Linux socket is unavailable, it tries to start the installed `docker.service` through systemd. The terminal may ask for authentication. Start an explicitly selected Docker Desktop, rootless or other local engine separately. If the system service fails, inspect `journalctl -b -u docker.service -n 30 --no-pager`. After a kernel update that removed the running kernel’s modules, reboot into the installed kernel before retrying.
+
 The first start needs Docker image downloads and may take several minutes. The scanner needs additional RAM for signature loading; see the scanner documentation. Ports must be free; the launcher does not kill an unrelated process occupying a port.
 
 The launcher creates only its own labelled `portal_network_<project>` Docker bridge with `com.docker.network.bridge.host_binding_ipv4=127.0.0.1`, then passes that network explicitly to Supabase startup and Edge Functions. It inspects the effective container port bindings before reporting readiness: PostgreSQL, the API and Mailpit must publish only to loopback; ClamAV publishes no host port. It refuses an unowned network and never changes the Docker daemon configuration. The legacy
