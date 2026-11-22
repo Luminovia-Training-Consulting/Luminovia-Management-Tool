@@ -2,6 +2,8 @@
  * Active conversation with search, history, read state, mute and member controls. Access loss
  * hides retained data; report messages read only online and in the visible tab.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { orderedCursorRows } from "../../lib/cursor-rows";
 import { Fragment, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -25,12 +27,7 @@ import { profileQuery } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { DocumentAttachment } from "../files/document-attachment";
-import {
-  chatAccessDenied,
-  chatKeys,
-  chatMessagesQuery,
-  orderedMessages,
-} from "./api";
+import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
 import { MembersPanel, RoomIcon } from "./manage";
@@ -84,7 +81,7 @@ export function ChatThread({
     ...chatMessagesQuery(actor, room.id, search),
     enabled: !revoked,
   });
-  const ordered = orderedMessages(messages.data?.pages);
+  const ordered = orderedCursorRows(messages.data?.pages, "ascending");
   const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
   const latest = ordered[ordered.length - 1];
   // Jump only to history that has just been fetched through the existing ACL-checked RPC.
@@ -210,8 +207,9 @@ export function ChatThread({
   // Retained query data must not conceal the revoked state.
   const lost =
     revoked ||
-    chatAccessDenied(messages.error) ||
-    (room.kind === "topic" && chatAccessDenied(topicPins.query.error));
+    isDatabasePermissionDenied(messages.error) ||
+    (room.kind === "topic" &&
+      isDatabasePermissionDenied(topicPins.query.error));
   if (lost)
     return (
       <section className="chat-room-denied">

@@ -233,114 +233,153 @@ function sourceProgram(root, edition) {
     return {checker, sources};
 }
 
-/** Compiler references distinguish a disconnected export from a helper used
- * inside its own module. Import/export declarations alone do not count as use. */
-
-export function scanRuntimeExports(root) {
-    const exports = new Map();
-    // The same source import resolves to a different symbol in each build.
+/** Merge the alternative browser builds without requiring a declaration to be used in both. */
+export function scanRuntimeDeclarations(root) {
+    const declarations = new Map();
     for (const edition of ["internal", "academy"]) {
-        for (const entry of scanEditionExports(root, edition)) {
-            const key = entry.file + ":" + entry.name;
-            const current = exports.get(key);
-            exports.set(key, current
+        for (const entry of scanEditionDeclarations(root, edition)) {
+            const key = entry.file + ":" + entry.line + ":" + entry.name;
+            const current = declarations.get(key);
+            declarations.set(key, current
                 ? {
                     ...entry,
                     local: Math.max(entry.local, current.local),
                     external: Math.max(entry.external, current.external),
+                    reachable: entry.reachable || current.reachable,
                 }
                 : entry);
         }
     }
-    return [...exports.values()].sort(
-        (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
+    return [...declarations.values()].sort(
+        (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name) || a.line - b.line,
     );
 }
 
-function scanEditionExports(root, edition) {
+export function scanRuntimeExports(root) {
+    return scanRuntimeDeclarations(root).filter((entry) => entry.exported);
+}
+
+function exported(node) {
+    return node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+}
+
+function functionValue(node) {
+    return node && (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isClassExpression(node));
+}
+
+/** Module initializers execute even when nobody consumes their result. Function bodies are deferred. */
+function eagerInitializer(node) {
+    if (!node || functionValue(node) || ts.isTypeNode(node)) return false;
+    if (ts.isCallExpression(node) || ts.isNewExpression(node) || ts.isTaggedTemplateExpression(node)
+        || ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)
+        || ts.isAwaitExpression(node)) return true;
+    return ts.forEachChild(node, (child) => eagerInitializer(child) || undefined) ?? false;
+}
+
+function executesOnLoad(node) {
+    if (ts.isVariableDeclaration(node)) return eagerInitializer(node.initializer);
+    if (!ts.isClassDeclaration(node)) return false;
+    return Boolean(
+        node.heritageClauses?.some((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)
+        || node.members.some((member) => ts.isClassStaticBlockDeclaration(member)
+            || (member.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword)
+                && eagerInitializer(member.initializer))),
+    );
+}
+
+function scanEditionDeclarations(root, edition) {
     const {checker, sources} = sourceProgram(root, edition);
-    const tracked = new Map();
-    /** Resolves aliases and shorthand references to the actual compiler symbol. */
-    const symbol = (node) => {
+    const bySymbol = new Map();
+    const byDeclaration = new Map();
+    const roots = new Set();
+
+    function symbol(node) {
         const value = ts.isShorthandPropertyAssignment(node.parent)
             ? checker.getShorthandAssignmentValueSymbol(node.parent)
             : checker.getSymbolAtLocation(node);
         return value && value.flags & ts.SymbolFlags.Alias
             ? checker.getAliasedSymbol(value)
             : value;
-    };
+    }
+
     for (const source of sources) {
-        for (const statement of source.statements) {
-            if (
-                !statement.modifiers?.some(
-                    (item) => item.kind === ts.SyntaxKind.ExportKeyword,
-                )
-            )
-                continue;
-            const names =
-                ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)
-                    ? [statement.name]
-                    : ts.isVariableStatement(statement)
-                        ? statement.declarationList.declarations.map(
-                            (declaration) => declaration.name,
-                        )
-                        : [];
-            for (const name of names.filter(
-                (item) => item && ts.isIdentifier(item),
-            )) {
-                const value = symbol(name);
-                if (value)
-                    tracked.set(value, {
-                        name: name.text,
+        function register(node) {
+            const variables = ts.isVariableDeclaration(node) && ts.isVariableStatement(node.parent.parent)
+                ? node.parent.parent : undefined;
+            const topLevel = (variables ?? node).parent?.kind === ts.SyntaxKind.SourceFile;
+            const callable = (ts.isFunctionDeclaration(node) && Boolean(node.body))
+                || ts.isClassDeclaration(node)
+                || Boolean(variables && functionValue(node.initializer));
+            if ((callable || (variables && topLevel)) && node.name && ts.isIdentifier(node.name)) {
+                const value = symbol(node.name);
+                if (value) {
+                    const entry = {
+                        name: node.name.text,
                         file: source.fileName,
-                        node: name,
+                        line: source.getLineAndCharacterOfPosition(node.name.getStart(source)).line + 1,
+                        node: node.name,
+                        exported: topLevel && exported(variables ?? node),
+                        callable,
                         local: 0,
                         external: 0,
-                    });
+                        dependencies: new Set(),
+                    };
+                    bySymbol.set(value, entry);
+                    byDeclaration.set(node, entry);
+                    if (topLevel && executesOnLoad(node)) roots.add(entry);
+                }
             }
+            ts.forEachChild(node, register);
         }
+        register(source);
     }
-    for (const source of sources) {
-        /** Counts symbol uses outside import/export declarations and the definition itself. */
-        function visit(node) {
-            // TypeScript also classifies a class's `extends Base<T>` as a type node,
-            // although evaluating Base is required at runtime. Keep that expression
-            // and discard only its erased generic arguments (and implements clauses).
-            if (
-                ts.isExpressionWithTypeArguments(node) &&
-                ts.isHeritageClause(node.parent) &&
-                node.parent.token === ts.SyntaxKind.ExtendsKeyword &&
-                (ts.isClassDeclaration(node.parent.parent) ||
-                    ts.isClassExpression(node.parent.parent))
-            ) {
-                visit(node.expression);
-                return;
-            }
-            if (
-                ts.isImportDeclaration(node) ||
-                ts.isExportDeclaration(node) ||
-                ts.isExportAssignment(node) ||
-                // Type queries/annotations are erased by the compiler. Counting
-                // `type Signature = typeof unused` would disguise an unused export.
-                // A JavaScript `typeof value` expression remains a runtime reference.
-                ts.isTypeNode(node)
-            )
-                return;
-            if (ts.isIdentifier(node)) {
-                const target = tracked.get(symbol(node));
-                if (target && target.node !== node)
-                    target[target.file === source.fileName ? "local" : "external"]++;
-            }
-            ts.forEachChild(node, visit);
-        }
 
+    for (const source of sources) {
+        function visit(node, owner) {
+            // A class's extends expression executes, while generic arguments
+            // and implements/interface heritage are erased.
+            if (ts.isExpressionWithTypeArguments(node) && ts.isHeritageClause(node.parent)
+                && node.parent.token === ts.SyntaxKind.ExtendsKeyword
+                && (ts.isClassDeclaration(node.parent.parent) || ts.isClassExpression(node.parent.parent))) {
+                visit(node.expression, owner);
+                return;
+            }
+            if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)
+                || ts.isExportDeclaration(node) || ts.isExportAssignment(node)
+                || ts.isTypeNode(node)) return;
+            owner = byDeclaration.get(node) ?? owner;
+            if (ts.isIdentifier(node)) {
+                const target = bySymbol.get(symbol(node));
+                if (target && target.node !== node) {
+                    target[target.file === source.fileName ? "local" : "external"]++;
+                    if (owner) owner.dependencies.add(target);
+                    else roots.add(target);
+                }
+            }
+            ts.forEachChild(node, (child) => visit(child, owner));
+        }
         visit(source);
     }
-    return [...tracked.values()].map(({name, file, local, external}) => ({
-        name,
-        file: relative(root, file),
-        local,
-        external,
+
+    // A strongly connected group is still unused when no executable entry
+    // reaches it. Mark forward from the roots instead of counting callers.
+    const reachable = new Set();
+    const pending = [...roots];
+    while (pending.length) {
+        const entry = pending.pop();
+        if (reachable.has(entry)) continue;
+        reachable.add(entry);
+        pending.push(...entry.dependencies);
+    }
+    return [...byDeclaration.values()].map((entry) => ({
+        name: entry.name,
+        file: relative(root, entry.file),
+        line: entry.line,
+        exported: entry.exported,
+        callable: entry.callable,
+        local: entry.local,
+        external: entry.external,
+        reachable: reachable.has(entry),
     }));
 }
 
@@ -480,10 +519,10 @@ if (
     const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
     const report = auditFrontend(root);
     if (process.argv.includes("--exports")) {
-        report.runtimeExports = scanRuntimeExports(root);
-        report.unusedRuntimeExports = report.runtimeExports.filter(
-            (entry) => !entry.local && !entry.external,
-        );
+        const declarations = scanRuntimeDeclarations(root);
+        report.runtimeExports = declarations.filter((entry) => entry.exported);
+        report.unusedRuntimeExports = report.runtimeExports.filter((entry) => !entry.reachable);
+        report.unreachableFunctions = declarations.filter((entry) => entry.callable && !entry.exported && !entry.reachable);
     }
     console.log(JSON.stringify(report, null, 2));
     if (
@@ -491,7 +530,8 @@ if (
         report.unresolved.length ||
         report.invalidLinks.length ||
         report.missingAssets.length ||
-        report.unusedRuntimeExports?.length
+        report.unusedRuntimeExports?.length ||
+        report.unreachableFunctions?.length
     )
         process.exitCode = 1;
 }

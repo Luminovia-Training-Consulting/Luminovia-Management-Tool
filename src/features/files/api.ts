@@ -3,6 +3,7 @@
  * Complete uploads only after a clean server response; fetch private bytes with no-store outside
  * the PWA cache.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { saveBlob } from "../../lib/blob-download";
@@ -276,16 +277,6 @@ export async function saveDownload(
   saveBlob(blob, name);
 }
 
-/** Recognize metadata access denial so this query state stops automatic refetching. */
-function documentAccessDenied(error: unknown) {
-  return Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-}
-
 // Scan progress is temporary; settled metadata does not need a request for every
 // attachment every five seconds. Focus/reconnect and mutation invalidation still
 // revalidate immediately, and every byte download keeps its server access check.
@@ -303,7 +294,7 @@ function documentRefreshInterval(
     | undefined,
   error: unknown,
 ) {
-  if (documentAccessDenied(error)) return false;
+  if (isDatabasePermissionDenied(error)) return false;
   const pending = !error
     ? files?.filter((file) => ["quarantined", "scanning"].includes(file.status))
     : undefined;
@@ -342,7 +333,8 @@ export const documentQuery = (actor: string, id: string) =>
       return data as PortalDocument | null;
     },
     staleTime: 15000,
-    retry: (attempt, error) => !documentAccessDenied(error) && attempt < 1,
+    retry: (attempt, error) =>
+      !isDatabasePermissionDenied(error) && attempt < 1,
     refetchInterval: (query) =>
       query.state.data === null
         ? false
@@ -374,7 +366,8 @@ export const documentsQuery = (
       if (error) throw error;
       return data as PortalDocument[];
     },
-    retry: (attempt, error) => !documentAccessDenied(error) && attempt < 1,
+    retry: (attempt, error) =>
+      !isDatabasePermissionDenied(error) && attempt < 1,
     refetchInterval: (query) =>
       documentRefreshInterval(query, query.state.data, query.state.error),
   });

@@ -2,31 +2,18 @@ import { useRequestKey } from "../../lib/request-key";
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { DateTime } from "luxon";
 import { z } from "zod";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import { money } from "../../lib/dates";
+import { formatUtcDate, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { commercialKeys, invoiceSeriesOptionsQuery } from "./api";
 import type { InvoiceSeriesRecord } from "./invoice-series-schema";
 import { ManageInvoiceSeriesCorrections } from "./invoice-series-correction";
+import { parseInvoiceAmountCents } from "./invoice-submission";
 import "./i18n";
-
-function amountInCents(input: string) {
-  const normalized = input.trim().replace(",", ".");
-  return /^\d{1,10}(?:\.\d{1,2})?$/.test(normalized)
-    ? Math.round(Number(normalized) * 100)
-    : 0;
-}
-
-function seriesDate(day: string, language: string) {
-  return DateTime.fromISO(day, { zone: "UTC" })
-    .setLocale(language)
-    .toLocaleString(DateTime.DATE_MED);
-}
 
 export function InvoiceSeriesSummary({
   entry,
@@ -52,7 +39,7 @@ export function InvoiceSeriesSummary({
         })}
         {" · "}
         {t("invoiceSeriesDue", {
-          date: seriesDate(entry.due_on, i18n.language),
+          date: formatUtcDate(entry.due_on, i18n.language),
         })}
       </p>
       <p>
@@ -74,7 +61,7 @@ export function InvoiceSeriesSummary({
             {entry.credits.map((credit) => (
               <li key={credit.payment_id}>
                 {credit.invoice_number} · {format(credit.amount)} ·{" "}
-                {seriesDate(credit.paid_at, i18n.language)}
+                {formatUtcDate(credit.paid_at, i18n.language)}
               </li>
             ))}
           </ul>
@@ -161,7 +148,7 @@ export function ManageInvoiceSeries({
     : rules?.contracts.length === 1
       ? rules.contracts[0].id
       : "";
-  const amountCents = amountInCents(amount);
+  const amountCents = parseInvoiceAmountCents(amount) ?? 0;
   const creditCents = Math.round((rules?.credited ?? 0) * 100);
   const ceilingCents = Math.round((rules?.ceiling ?? 0) * 100);
   const maximumCents =
@@ -337,7 +324,7 @@ export function ManageInvoiceSeries({
                       <option key={version.id} value={version.id}>
                         {t(version.kind)} ·{" "}
                         {t("version", { version: version.version })} ·{" "}
-                        {seriesDate(
+                        {formatUtcDate(
                           version.effective_from.slice(0, 10),
                           i18n.language,
                         )}

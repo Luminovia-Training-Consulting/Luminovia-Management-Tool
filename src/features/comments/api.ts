@@ -2,6 +2,7 @@
  * Resource-specific comments for jobs and course templates. Server context permissions, versions
  * and timestamp/ID cursors govern changes; merge overlapping pages without duplicates.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 
@@ -63,7 +64,7 @@ export const commentContextQuery = (
     queryKey: commentKeys.context(actor, kind, id),
     queryFn: () =>
       commentRpc<CommentContext>("comment_context", { p_kind: kind, p_id: id }),
-    retry: (count, error) => !commentDenied(error) && count < 2,
+    retry: (count, error) => !isDatabasePermissionDenied(error) && count < 2,
     refetchInterval: 15000,
   });
 /** Read 40-comment pages using timestamp/ID cursors; stop automatic retries after access revocation. */
@@ -84,26 +85,16 @@ export const resourceCommentsQuery = (
         p_limit: 40,
       }),
     // Timestamp plus ID stays stable when creation times coincide. Only a full page
-    // can have a continuation; uniqueComments removes any overlap.
+    // can have a continuation; the caller merges any overlap.
     getNextPageParam: (page): CommentCursor | undefined => {
       const last = page.at(-1);
       return page.length === 40 && last
         ? { at: last.created_at, id: last.id }
         : undefined;
     },
-    retry: (count, error) => !commentDenied(error) && count < 2,
+    retry: (count, error) => !isDatabasePermissionDenied(error) && count < 2,
     refetchInterval: 15000,
   });
-
-/** Recognize resource access denial independently of the concrete error class. */
-export function commentDenied(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "42501"
-  );
-}
 
 /** Map known version, rate and permission failures to existing UI keys. */
 export function commentError(error: unknown) {
@@ -118,15 +109,4 @@ export function commentError(error: unknown) {
       : code === "42501"
         ? "denied"
         : "error";
-}
-
-/** Deduplicate cursor overlap during edit/refetch and order comments stably from newest to oldest. */
-export function uniqueComments(pages: ResourceComment[][] | undefined) {
-  const result = new Map<string, ResourceComment>();
-  for (const row of (pages ?? []).flat())
-    if (!result.has(row.id)) result.set(row.id, row);
-  return [...result.values()].sort(
-    (a, b) =>
-      b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id),
-  );
 }

@@ -1,6 +1,9 @@
 /** Verify dates at the invoice boundary without relying on the machine time zone. */
 import { describe, expect, it } from "vitest";
-import { resolveInvoiceDueDate } from "./invoice-submission";
+import {
+  parseInvoiceAmountCents,
+  resolveInvoiceDueDate,
+} from "./invoice-submission";
 
 describe("invoice payment term", () => {
   it.each([
@@ -31,4 +34,13 @@ describe("invoice payment term", () => {
       "2026-07-01",
     );
   });
+});
+
+it("parses invoice amounts consistently without accepting extra decimals or signed/grouped input", () => {
+  expect(parseInvoiceAmountCents(" 12,34 ")).toBe(1234);
+  expect(parseInvoiceAmountCents("9999999999.99")).toBe(999999999999);
+  expect(parseInvoiceAmountCents("0")).toBe(0);
+  for (const amount of ["", "5.001", "-20", "1,200.00", "10000000000"]) {
+    expect(parseInvoiceAmountCents(amount)).toBeNull();
+  }
 });

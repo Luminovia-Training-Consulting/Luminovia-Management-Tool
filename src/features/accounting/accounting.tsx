@@ -1,5 +1,6 @@
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
 import { useState } from "react";
@@ -175,7 +176,7 @@ function CustomerInvoiceForm({
       onDone();
     },
     onError: (error) => {
-      if (permissionDenied(error)) onDenied();
+      if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
   const busy = save.isPending || upload.isPending || !online;
@@ -402,7 +403,7 @@ function CustomerPaymentForm({
       onDone();
     },
     onError: (error) => {
-      if (permissionDenied(error)) onDenied();
+      if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
   const busy = write.isPending || !online;
@@ -509,17 +510,6 @@ function CustomerPaymentForm({
   );
 }
 
-/** Validation errors retain drafts; a current authorization refusal closes the
- * local private projection until an explicit server reload succeeds. */
-function permissionDenied(error: unknown) {
-  return Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-}
-
 /** Actor-bound accounting route. Capability changes suppress stale restricted
  * sources; every export and PDF still checks current database permission. */
 export function AccountingPage() {
@@ -568,7 +558,7 @@ export function AccountingPage() {
       retry.clear();
     },
     onError: (error) => {
-      if (permissionDenied(error)) setDenied(true);
+      if (isDatabasePermissionDenied(error)) setDenied(true);
     },
   });
   const complete = () => {
@@ -586,7 +576,7 @@ export function AccountingPage() {
       );
     },
     onError: (error) => {
-      if (permissionDenied(error)) setDenied(true);
+      if (isDatabasePermissionDenied(error)) setDenied(true);
     },
   });
   if (access.isPending) return <Loading />;

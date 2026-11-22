@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useState } from "react";
 import {
@@ -205,13 +206,7 @@ function SettlementJournal({
       });
     },
     onError: (error) => {
-      if (
-        typeof error === "object" &&
-        error &&
-        "code" in error &&
-        error.code === "42501"
-      )
-        onDenied();
+      if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
   const busy = !online || save.isPending;

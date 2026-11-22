@@ -16,3 +16,11 @@ export function resolveInvoiceDueDate(issue: string, due: string) {
   if (!resolved || resolved < issued || resolved.year > 9999) return null;
   return resolved.toISODate();
 }
+
+/** Parse the invoice forms' decimal input into original-currency cents. */
+export function parseInvoiceAmountCents(input: string): number | null {
+  const amount = input.trim().replace(",", ".");
+  return /^\d{1,10}(?:\.\d{1,2})?$/.test(amount)
+    ? Math.round(Number(amount) * 100)
+    : null;
+}

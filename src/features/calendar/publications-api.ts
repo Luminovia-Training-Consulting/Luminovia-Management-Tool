@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, type QueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -77,17 +78,10 @@ export const globalEventsQuery = (
       p.has_more ? (p.next_cursor ?? undefined) : undefined,
     staleTime: 15000,
     retry: (attempt, error) =>
-      !(error instanceof z.ZodError) && !permissionDenied(error) && attempt < 1,
+      !(error instanceof z.ZodError) &&
+      !isDatabasePermissionDenied(error) &&
+      attempt < 1,
   });
-
-export function permissionDenied(error: unknown) {
-  return Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-}
 
 export async function manageGlobalEvent(
   id: string | null,

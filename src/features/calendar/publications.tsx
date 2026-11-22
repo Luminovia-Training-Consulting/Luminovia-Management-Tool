@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -24,7 +25,6 @@ import {
   globalEventPayload,
   globalEventsQuery,
   manageGlobalEvent,
-  permissionDenied,
   refreshGlobalEvents,
 } from "./publications-api";
 import "./publications-i18n";
@@ -96,7 +96,7 @@ function GlobalEventEditor({
       onDone();
     },
     onError: (e) => {
-      if (permissionDenied(e)) onDenied();
+      if (isDatabasePermissionDenied(e)) onDenied();
     },
   });
   return (
@@ -246,7 +246,8 @@ export function GlobalEventManagement({
     globalEventsQuery(actor, from, to, true, search),
   );
   const lost =
-    permissionDenied(records.error) || permissionDenied(records.failureReason);
+    isDatabasePermissionDenied(records.error) ||
+    isDatabasePermissionDenied(records.failureReason);
   if (!denied && lost) {
     setDenied(true);
     setEditing(undefined);
@@ -271,7 +272,7 @@ export function GlobalEventManagement({
       operation.clear();
     },
     onError: (e) => {
-      if (permissionDenied(e)) {
+      if (isDatabasePermissionDenied(e)) {
         setEditing(undefined);
         setInviting(null);
         setDenied(true);

@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -50,22 +51,13 @@ export function AnnouncementCard({
         client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
       ]),
     onError: (error) => {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "42501"
-      )
+      if (isDatabasePermissionDenied(error))
         void client.invalidateQueries({
           queryKey: announcementKeys.all(actor),
         });
     },
   });
-  const revoked =
-    ack.error &&
-    typeof ack.error === "object" &&
-    "code" in ack.error &&
-    ack.error.code === "42501";
+  const revoked = isDatabasePermissionDenied(ack.error);
   if (!visible || !online || revoked) return null;
   return (
     <article

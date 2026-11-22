@@ -114,25 +114,3 @@ export const chatMessagesQuery = (
     staleTime: 1000,
     refetchInterval: 10000,
   });
-
-/** Recognize PostgreSQL access denial so the UI can hide retained room data. */
-export function chatAccessDenied(error: unknown) {
-  return Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-}
-
-/** Deduplicate overlapping cursors in favour of the newer page loaded first, then sort stably by timestamp/ID. */
-export function orderedMessages(pages: ChatMessage[][] | undefined) {
-  const unique = new Map<string, ChatMessage>();
-  // Newer pages win if a concurrent update makes cursor pages overlap.
-  for (const message of (pages ?? []).flat())
-    if (!unique.has(message.id)) unique.set(message.id, message);
-  return [...unique.values()].sort(
-    (a, b) =>
-      a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
-  );
-}

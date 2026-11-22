@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import {
   useInfiniteQuery,
@@ -199,13 +200,7 @@ export function DocumentOrganiser({
       onClose();
     },
     onError: (error) => {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "42501"
-      )
-        onDenied();
+      if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
   const stale =

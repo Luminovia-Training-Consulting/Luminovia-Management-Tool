@@ -1,12 +1,11 @@
 /** Scoped finance approval and lecturer access to reviewed final invoices. */
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { money } from "../../lib/dates";
+import { formatUtcDate, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
@@ -16,18 +15,8 @@ import {
   myInvoiceExceptionsQuery,
 } from "./api";
 import type { InvoiceException } from "./invoice-exception-schema";
+import { parseInvoiceAmountCents } from "./invoice-submission";
 import "./i18n";
-
-function displayDate(date: string, language: string) {
-  return DateTime.fromISO(date, { zone: "UTC" })
-    .setLocale(language)
-    .toLocaleString(DateTime.DATE_MED);
-}
-
-function reviewedAmount(value: string) {
-  const normalized = value.trim().replace(",", ".");
-  return /^\d{1,10}(?:\.\d{1,2})?$/.test(normalized) ? Number(normalized) : 0;
-}
 
 export function InvoiceExceptionDecision({
   actor,
@@ -97,7 +86,7 @@ export function InvoiceExceptionDecision({
     : contracts.length === 1
       ? contracts[0].id
       : "";
-  const selectedAmount = reviewedAmount(amount);
+  const selectedAmount = (parseInvoiceAmountCents(amount) ?? 0) / 100;
   const conflict =
     action.error && "code" in action.error && action.error.code === "PT409";
 
@@ -136,7 +125,7 @@ export function InvoiceExceptionDecision({
                   {" · "}
                   {money(active.amount, options.data.currency, i18n.language)}
                   {" · "}
-                  {displayDate(active.due_on, i18n.language)}
+                  {formatUtcDate(active.due_on, i18n.language)}
                 </p>
                 <Field
                   id={id + "-reason"}
@@ -189,7 +178,7 @@ export function InvoiceExceptionDecision({
                         <option value={item.id} key={item.id}>
                           {t(item.kind)} ·{" "}
                           {t("version", { version: item.version })} ·{" "}
-                          {displayDate(
+                          {formatUtcDate(
                             item.effective_from.slice(0, 10),
                             i18n.language,
                           )}
@@ -338,7 +327,7 @@ export function MyInvoiceExceptions({
             })}{" "}
             · {money(approval.amount, approval.currency, i18n.language)} ·{" "}
             {t("invoiceExceptionDue")}{" "}
-            {displayDate(approval.due_on, i18n.language)}
+            {formatUtcDate(approval.due_on, i18n.language)}
           </p>
           <Button type="button" onClick={() => onSubmit(approval)}>
             {t("submitInvoiceException")}

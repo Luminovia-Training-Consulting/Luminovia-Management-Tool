@@ -1,3 +1,11 @@
+# 23 November 2026 — Function reachability and duplicate implementations
+
+The frontend integrity guard now traces runtime references from executable code in both editions. A declaration referenced only by itself or by another unused function no longer counts as used. Regression fixtures cover cross-module mutual recursion, nested cycles, self-recursion and a live recursive path. The source scan of 490 modules found no unreachable callable or runtime export. The empty-body scan found intentional promise callbacks and test hooks.
+
+Chats and comments share cursor overlap handling with their original sort directions. The invoice forms share decimal parsing and UTC date formatting. Database permission checks share the SQLSTATE 42501 predicate. Existing handling of other error codes stays attached to the feature that owns it.
+
+All 1,555 frontend tests passed with 80.49% line coverage, along with 12 integrity tests and 11 PostgreSQL API surface checks. The branded Academy API fixture checks the two delivered LMS analytics operations. TypeScript, lint and formatting passed. The internal portal and both Academy builds passed their bundle budgets.
+
 # 23 November 2026 — Premium LMS course analytics
 
 The internal portal and both dedicated Academy editions now show aggregate course and learner reporting. Current instructors see their own assignments, company contacts see their authorised companies, and staff with course management permission can select a company or all authorised companies. The report uses a date range, course status and literal course or class search. It includes a monthly course chart, enrolment and completion cohorts, recorded attendance, a paged course table and scheduled hours. Attendance rates use verified present and absent marks from finished sessions. Cohort membership and enrolment totals reflect current records. The two scoped read operations are published in Internal OpenAPI 1.10 and Academy OpenAPI 1.35.

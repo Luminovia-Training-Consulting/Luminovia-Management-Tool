@@ -33,7 +33,7 @@ import { hasTeachingRole } from "../auth/internal-capabilities";
 import { type PortalDocument, saveDownload } from "../files/api";
 import { profileQuery, userRolesQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { dateTime, money, zonedInstant } from "../../lib/dates";
+import { dateTime, formatUtcDate, money, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -281,9 +281,7 @@ function SubmitInvoice({
           hint={
             !exception && defaultDue
               ? t("invoiceDueDefault", {
-                  date: DateTime.fromISO(defaultDue, { zone: "UTC" })
-                    .setLocale(i18n.language)
-                    .toLocaleString(DateTime.DATE_MED),
+                  date: formatUtcDate(defaultDue, i18n.language),
                 })
               : undefined
           }

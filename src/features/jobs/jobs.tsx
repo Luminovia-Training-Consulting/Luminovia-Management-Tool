@@ -3,6 +3,7 @@
  * Discovery owns bounded server paging and URL filters; only the atomic online
  * RPC confirms every session and preserves the accepted commercial snapshot.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { JobWithdrawalPanel } from "./withdrawal";
@@ -140,13 +141,7 @@ export function JobDetail() {
   // waitlist RPC still permits interest. Only the server's access-denied code
   // takes this path; transport, validation and server faults retain retry UI.
   // Check the denial even when Query retains previously authorised job data.
-  const detailDenied = Boolean(
-    jobs.isError &&
-    jobs.error &&
-    typeof jobs.error === "object" &&
-    "code" in jobs.error &&
-    jobs.error.code === "42501",
-  );
+  const detailDenied = jobs.isError && isDatabasePermissionDenied(jobs.error);
   if (jobs.isError && !detailDenied)
     return <ErrorState retry={() => void jobs.refetch()} />;
   if (detailDenied || !job)

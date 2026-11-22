@@ -8,19 +8,57 @@ import {tmpdir} from "node:os";
 import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import test from "node:test";
-import {auditFrontend, scanFrontendRpcReferences, scanRuntimeExports,} from "./code-integrity.mjs";
+import {auditFrontend, scanFrontendRpcReferences, scanRuntimeDeclarations, scanRuntimeExports,} from "./code-integrity.mjs";
 import {assertRpcArgumentShapes} from "./native-rpc-catalogue.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The delivered-source checks inspect the checkout; temporary counterexamples
 // below isolate analyser behavior and always remove their own fixture directory.
 const report = auditFrontend(root);
-// Compiler symbols must show use beyond a declaration or a re-export alone.
-test("delivered runtime exports have actual production references beyond their import/export declaration", () => {
+test("delivered callables and exports are reachable from executable source", () => {
     assert.deepEqual(
-        scanRuntimeExports(root).filter((item) => !item.local && !item.external),
+        scanRuntimeDeclarations(root).filter((item) => !item.reachable && (item.callable || item.exported)),
         [],
     );
+});
+
+test("dead recursive groups do not count as used and live recursion still works", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-call-graph-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(join(fixture, "src/main.ts"), `
+            import { deadA, active } from './other';
+            export function deadB() { return deadA(); }
+            const deadAlias = deadB;
+            function run() {
+                function nestedA() { return nestedB(); }
+                const nestedB = () => nestedA();
+                return active(2);
+            }
+            const handlers = { run };
+            declare const register: (value: unknown) => void;
+            register(handlers);
+        `);
+        writeFileSync(join(fixture, "src/other.ts"), `
+            import { deadB } from './main';
+            export const deadA = () => deadB();
+            export function active(count: number) {
+                return count ? callAgain(count - 1) : 0;
+            }
+            function callAgain(count: number) { return active(count); }
+            function unusedRecursion() { return unusedRecursion(); }
+        `);
+        const declarations = scanRuntimeDeclarations(fixture);
+        assert.deepEqual(declarations.filter((entry) => !entry.reachable).map((entry) => entry.name).sort(), [
+            "deadA", "deadAlias", "deadB", "nestedA", "nestedB", "unusedRecursion",
+        ]);
+        for (const name of ["deadA", "deadB", "nestedA", "nestedB", "unusedRecursion"]) {
+            const item = declarations.find((entry) => entry.name === name);
+            assert.ok(item.local + item.external > 0, name);
+        }
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
 });
 
 test("both edition routes count as used through the production alias", () => {

@@ -3,6 +3,7 @@
  * dialogs recheck exact resource access independently of filtered result pages;
  * transferred upload bytes alone do not confirm scan clearance.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   focusManager,
@@ -341,7 +342,7 @@ function CapturedDocumentGuard({
   );
   const rejected =
     !exact.isFetching &&
-    ((exact.isSuccess && !valid) || documentPermissionDenied(exact.error));
+    ((exact.isSuccess && !valid) || isDatabasePermissionDenied(exact.error));
   useEffect(() => {
     if (rejected) onRevoked();
   }, [rejected, onRevoked]);
@@ -355,15 +356,6 @@ function CapturedDocumentGuard({
       <Loading />
     ) : null,
     authorised ? exact.data! : null,
-  );
-}
-
-function documentPermissionDenied(error: unknown) {
-  return Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
   );
 }
 
@@ -534,7 +526,7 @@ function DocumentList({
       setSelected((previous) => (previous?.id === input.id ? null : previous));
     },
     onError: (error, input) => {
-      if (documentPermissionDenied(error)) discardTarget(input.id);
+      if (isDatabasePermissionDenied(error)) discardTarget(input.id);
     },
   });
   const select = (file: PortalDocument, value: typeof mode) => {

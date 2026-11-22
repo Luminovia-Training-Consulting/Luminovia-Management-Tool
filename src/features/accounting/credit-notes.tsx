@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useRef, useState } from "react";
 import {
@@ -27,15 +28,6 @@ import {
 } from "./schema";
 
 const emptyForm = { reference: "", issued: "", amount: "", reason: "" };
-function isPermissionDenied(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error &&
-    "code" in error &&
-    error.code === "42501"
-  );
-}
-
 export function CustomerCreditNotes({
   actor,
   invoice,
@@ -70,7 +62,7 @@ export function CustomerCreditNotes({
   const confirmed = review !== null && reviewed === review;
 
   function rejectIfDenied(error: unknown) {
-    if (isPermissionDenied(error)) {
+    if (isDatabasePermissionDenied(error)) {
       onDenied();
     }
   }
@@ -140,7 +132,7 @@ export function CustomerCreditNotes({
   const available =
     notes.isSuccess && (notes.isFetchedAfterMount || !notes.isFetching);
   const rows = available ? notes.data.pages.flatMap((page) => page.items) : [];
-  if (isPermissionDenied(notes.error)) {
+  if (isDatabasePermissionDenied(notes.error)) {
     return <Notice kind="error">{t("creditHistoryUnavailable")}</Notice>;
   }
 

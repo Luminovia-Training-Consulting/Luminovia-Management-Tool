@@ -1,4 +1,5 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist, SubstitutionOffers } from "./lifecycle-extra";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -249,14 +250,6 @@ function FilterForm({
   );
 }
 
-const permissionDenied = (error: unknown) =>
-  Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-
 function SavedViews({
   actor,
   filters,
@@ -271,7 +264,8 @@ function SavedViews({
   const views = useQuery(savedJobViewsQuery(actor));
   const [denied, setDenied] = useState(false);
   const accessDenied =
-    permissionDenied(views.error) || permissionDenied(views.failureReason);
+    isDatabasePermissionDenied(views.error) ||
+    isDatabasePermissionDenied(views.failureReason);
   // Keep a denial latched through later network failures; only a successful
   // authorized refresh may restore the editor. This guarded adjustment runs
   // once per denial and renders no captured private state in the meantime.
@@ -362,7 +356,7 @@ function SavedViewEditor({
       setEditing(null);
     },
     onError: (error) => {
-      if (permissionDenied(error)) onDenied();
+      if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
   const selectedView = views.find((v) => v.id === selected);

@@ -50,3 +50,10 @@ export function money(amount: number, currency: string, language: string) {
 export function validZone(zone: string) {
   return IANAZone.isValidZone(zone);
 }
+
+/** Display a finance date or timestamp as a calendar date in UTC. */
+export function formatUtcDate(value: string, language: string) {
+  return DateTime.fromISO(value, { zone: "UTC" })
+    .setLocale(language)
+    .toLocaleString(DateTime.DATE_MED);
+}

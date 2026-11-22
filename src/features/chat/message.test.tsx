@@ -14,7 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MessageBubble, MessageText } from "./message";
-import { orderedMessages } from "./api";
+import { orderedCursorRows } from "../../lib/cursor-rows";
 import type { ChatMessage } from "./types";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
@@ -142,6 +142,9 @@ describe("safe chat presentation and confirmed edits", () => {
       id: "message-b",
       created_at: "2027-01-18T09:00:00Z",
     };
-    expect(orderedMessages([[b, message], [message]])).toEqual([message, b]);
+    expect(orderedCursorRows([[b, message], [message]], "ascending")).toEqual([
+      message,
+      b,
+    ]);
   });
 });

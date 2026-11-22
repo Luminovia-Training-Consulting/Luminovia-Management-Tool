@@ -4,10 +4,9 @@ import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { DateTime } from "luxon";
 import { ErrorState, Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { money } from "../../lib/dates";
+import { formatUtcDate, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
@@ -19,14 +18,8 @@ import type {
   InvoiceSeriesCorrection,
   InvoiceSeriesCorrectionOptions,
 } from "./invoice-series-correction-schema";
+import { parseInvoiceAmountCents } from "./invoice-submission";
 import "./i18n";
-
-function cents(input: string) {
-  const value = input.trim().replace(",", ".");
-  return /^\d{1,10}(?:\.\d{1,2})?$/.test(value)
-    ? Math.round(Number(value) * 100)
-    : null;
-}
 
 function useCorrectionAction<T>(
   actor: string,
@@ -73,9 +66,7 @@ function CorrectionFacts({ item }: { item: InvoiceSeriesCorrection }) {
     money(amount, item.currency, i18n.language);
   const status = t("correctionStatus_" + item.state);
   const date = (value: string) =>
-    DateTime.fromISO(value.slice(0, 10), { zone: "UTC" })
-      .setLocale(i18n.language)
-      .toLocaleString(DateTime.DATE_MED);
+    formatUtcDate(value.slice(0, 10), i18n.language);
   const exportCorrection = () => {
     downloadCsv("luminovia-correction-" + item.id + ".csv", [
       [
@@ -361,7 +352,7 @@ function CorrectionRepaymentForm({
   const [received, setReceived] = useState("");
   const [reference, setReference] = useState("");
   const retry = useRequestKey();
-  const entered = cents(amount) ?? 0;
+  const entered = parseInvoiceAmountCents(amount) ?? 0;
   const save = useCorrectionAction(
     actor,
     async () => {
@@ -457,7 +448,7 @@ function CorrectionProposal({
   const [due, setDue] = useState("");
   const [note, setNote] = useState("");
   const retry = useRequestKey();
-  const amount = cents(estimate);
+  const amount = parseInvoiceAmountCents(estimate);
   const contract =
     options.contracts.find(({ id }) => id === chosen) ??
     (options.contracts.length === 1 ? options.contracts[0] : undefined);

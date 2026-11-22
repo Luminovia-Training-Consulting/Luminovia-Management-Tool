@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,14 +42,6 @@ const isConflict = (error: unknown) =>
     "code" in error &&
     error.code === "40001",
   );
-const isDenied = (error: unknown) =>
-  Boolean(
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "42501",
-  );
-
 function Editor({
   record,
   onDone,
@@ -122,7 +115,7 @@ function Editor({
     },
     onSuccess: onDone,
     onError: (error) => {
-      if (isDenied(error)) onRevoked();
+      if (isDatabasePermissionDenied(error)) onRevoked();
     },
   });
   const fields = [
@@ -250,7 +243,7 @@ function EditExisting({
 }) {
   const query = useQuery(adminAnnouncementQuery(actor, id));
   useEffect(() => {
-    if (query.isError && isDenied(query.error)) onRevoked();
+    if (query.isError && isDatabasePermissionDenied(query.error)) onRevoked();
   }, [query.isError, query.error, onRevoked]);
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
@@ -314,7 +307,7 @@ function Administration({ actor }: { actor: string }) {
       await refresh();
     },
     onError: (error) => {
-      if (isDenied(error)) revoke();
+      if (isDatabasePermissionDenied(error)) revoke();
     },
   });
   if (revoked) return <Notice kind="error">{t("forbidden")}</Notice>;

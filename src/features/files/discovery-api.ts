@@ -1,3 +1,4 @@
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -50,12 +51,7 @@ export const documentDiscoveryQuery = (
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
     staleTime: 15000,
     retry: (attempt, error) =>
-      !(
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "42501"
-      ) &&
+      !isDatabasePermissionDenied(error) &&
       !(error instanceof z.ZodError) &&
       attempt < 1,
     // Discovery is refreshed on focus/reconnect, explicit refresh or mutations.

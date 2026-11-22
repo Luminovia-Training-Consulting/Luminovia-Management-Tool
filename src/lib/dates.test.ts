@@ -3,7 +3,13 @@
  * not establish database scheduling behavior.
  */
 import { describe, expect, it } from "vitest";
-import { dateTime, money, zonedInstant, zonedInstantForEdit } from "./dates";
+import {
+  dateTime,
+  formatUtcDate,
+  money,
+  zonedInstant,
+  zonedInstantForEdit,
+} from "./dates";
 
 describe("calendar instants and DST safety", () => {
   it("maps the same Berlin teaching time across winter and summer offsets", () => {
@@ -61,4 +67,11 @@ describe("calendar instants and DST safety", () => {
       dateTime("2027-01-18T08:00:00Z", "de", "Australia/Brisbane"),
     ).toContain("18:00");
   });
+});
+
+it("formats ledger dates in UTC instead of the device or recorded offset", () => {
+  expect(formatUtcDate("2026-11-23T06:00:00+10:00", "en-US")).toBe(
+    "Nov 22, 2026",
+  );
+  expect(formatUtcDate("2026-11-23", "de-DE")).toBe("23. Nov. 2026");
 });

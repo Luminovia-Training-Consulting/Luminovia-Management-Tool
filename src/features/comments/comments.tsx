@@ -2,6 +2,8 @@
  * Comment threads with own edits/withdrawal and reasoned moderation. Load current resource
  * context separately; access errors must not present retained comments as still authorized.
  */
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { orderedCursorRows } from "../../lib/cursor-rows";
 import { useId, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -19,14 +21,12 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import {
   commentContextQuery,
-  commentDenied,
   commentError,
   commentKeys,
   type CommentResource,
   commentRpc,
   type ResourceComment,
   resourceCommentsQuery,
-  uniqueComments,
 } from "./api";
 import "./i18n";
 import "./comments.css";
@@ -279,18 +279,18 @@ function CommentThread({
   });
   if (access.isPending) return <Loading />;
   if (access.isError)
-    return commentDenied(access.error) ? (
+    return isDatabasePermissionDenied(access.error) ? (
       <p className="muted">{t("denied")}</p>
     ) : (
       <ErrorState retry={() => void access.refetch()} />
     );
   if (comments.isError)
-    return commentDenied(comments.error) ? (
+    return isDatabasePermissionDenied(comments.error) ? (
       <p className="muted">{t("denied")}</p>
     ) : (
       <ErrorState retry={() => void comments.refetch()} />
     );
-  const rows = uniqueComments(comments.data?.pages);
+  const rows = orderedCursorRows(comments.data?.pages, "descending");
   return (
     <section className="panel resource-comments" aria-labelledby={heading}>
       <h2 id={heading}>
