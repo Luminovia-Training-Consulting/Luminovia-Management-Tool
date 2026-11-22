@@ -1,3 +1,9 @@
+# 23 November 2026 — Premium course material library
+
+The learning hub now has a bilingual Course materials view with course filtering, file-name search and protected downloads. The view uses the current workspace projection and exact document gateway. Authorized publishers can open the existing scanned upload and sharing form from the selected course. The all-course view initially loads six courses and loads additional courses on demand.
+
+The 55 focused frontend tests passed. Isolated PostgreSQL verified course document access and sharing in the internal portal and both Academy editions.
+
 # 23 November 2026 — Clean dependency installation for the local portal
 
 The API explorer now mounts the official Swagger UI standalone browser distribution, pinned to 5.35.1. Its React runtime is isolated from the portal's React 19 tree. This drops the legacy direct transitive peer conflicts, the deprecated AbortController polyfill and unused native parser install scripts from the npm tree. The remaining Scarf postinstall is explicitly denied. Deno retains its existing pinned lifecycle approval.

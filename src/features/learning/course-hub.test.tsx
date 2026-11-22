@@ -32,14 +32,33 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: (name: string) => ({
+    rpc: (name: string, args?: { p_run_id: string }) => ({
       abortSignal: async () => {
         await fixture.courseRead;
         return {
           data:
             name === "my_course_workspaces"
               ? fixture.courses
-              : fixture.invitations,
+              : name === "course_workspace"
+                ? {
+                    lms_enabled: true,
+                    access: {
+                      learner: true,
+                      teacher: args?.p_run_id === "soon",
+                    },
+                    resources: [
+                      {
+                        id: args?.p_run_id,
+                        name:
+                          args?.p_run_id === "now"
+                            ? "Workshop.pdf"
+                            : "Course notes.pdf",
+                        category: "material",
+                        version: 1,
+                      },
+                    ],
+                  }
+                : fixture.invitations,
           error: null,
         };
       },
@@ -211,4 +230,41 @@ it("waits for current company courses and invitations after reconnecting with a 
   ).toBeNull();
   cleanup();
   queryClient.clear();
+});
+
+it("finds accessible material by course and file name and links upload only for a teaching assignment", async () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/learning?view=materials"]}>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Workshop.pdf")).toBeVisible();
+  expect(await screen.findAllByText("Course notes.pdf")).not.toHaveLength(0);
+  expect(
+    screen.queryByRole("heading", { name: "Completed course" }),
+  ).toBeNull();
+
+  const course = screen.getByRole("combobox", { name: "Nach Kurs filtern" });
+  fireEvent.change(course, { target: { value: "now" } });
+  expect(screen.queryByText("Course notes.pdf")).toBeNull();
+  expect(
+    screen.queryByRole("link", { name: "Neue Kursdatei freigeben" }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Workshop.pdf herunterladen" }),
+  ).toBeVisible();
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "missing" },
+  });
+  expect(screen.queryByText("Workshop.pdf")).toBeNull();
+  expect(
+    screen.getByText("Keine passenden Dateien in diesem Kurs."),
+  ).toBeVisible();
+
+  fireEvent.change(course, { target: { value: "soon" } });
+  expect(
+    await screen.findByRole("link", { name: "Neue Kursdatei freigeben" }),
+  ).toHaveAttribute("href", "/courses/soon/workspace#course-materials");
 });

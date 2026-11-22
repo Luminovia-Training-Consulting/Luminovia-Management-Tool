@@ -1,4 +1,5 @@
 /** Shared course files use the existing scanned, versioned document pipeline. */
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -164,6 +165,7 @@ export function Resources({
   return (
     <section className="panel learning-panel" aria-label={t("resources")}>
       <h2>{t("resources")}</h2>
+      <Link to="/learning?view=materials">{t("materialLibrary")}</Link>
       {!readOnly && <p>{t("resourceHelp")}</p>}
       {!course.resources.length && <p>{t("noResources")}</p>}
       <ul className="learning-resources">

@@ -684,6 +684,13 @@ export function CoursesPage() {
           )
         }
       />
+      <div className="page-actions">
+        <Button asChild variant="secondary">
+          <Link to="/learning?view=materials">
+            {t("learning:materialLibrary")}
+          </Link>
+        </Button>
+      </div>
       <section className="panel operations-toolbar">
         <Field id="course-search" label={t("search")}>
           <input

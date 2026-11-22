@@ -1,6 +1,6 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,6 +30,7 @@ import {
 } from "./course-phase";
 import { CoursePhaseFilter } from "./course-phase-filter";
 import { CompanyInvitations } from "./company-invitations";
+import { MaterialLibrary } from "./material-library";
 import { AcademyCourseDraft } from "./academy-draft";
 import "./i18n";
 import "./learning.css";
@@ -121,6 +122,8 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
   const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
+  const [params] = useSearchParams();
+  const materials = params.get("view") === "materials";
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
@@ -132,15 +135,38 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
 
   return (
     <>
-      {academy === "active" && <AcademyCourseDraft actor={actor} />}
-      {academy && <AcademyCompanyLecturerBlocks actor={actor} />}
-      {!academy && roles.data?.includes("participant") && (
+      <nav className="page-actions" aria-label={t("hub")}>
+        <Button asChild variant={materials ? "secondary" : "default"}>
+          <Link to="/learning" aria-current={materials ? undefined : "page"}>
+            {t("hub")}
+          </Link>
+        </Button>
+        <Button asChild variant={materials ? "default" : "secondary"}>
+          <Link
+            to="/learning?view=materials"
+            aria-current={materials ? "page" : undefined}
+          >
+            {t("materialLibrary")}
+          </Link>
+        </Button>
+      </nav>
+      {!materials && academy === "active" && (
+        <AcademyCourseDraft actor={actor} />
+      )}
+      {!materials && academy && <AcademyCompanyLecturerBlocks actor={actor} />}
+      {!materials && !academy && roles.data?.includes("participant") && (
         <CompanyInvitations actor={actor} />
       )}
       {query.isPending || !query.isFetchedAfterMount ? (
         <Loading />
       ) : query.isError ? (
         <ErrorState retry={() => void query.refetch()} />
+      ) : materials ? (
+        <MaterialLibrary
+          actor={actor}
+          courses={query.data.filter((course) => course.lms_enabled)}
+          readOnly={academy === "grace"}
+        />
       ) : query.data.length === 0 ? (
         <div className="empty-state">{t("noCourses")}</div>
       ) : (
