@@ -1,3 +1,7 @@
+# 23 November 2026 — One course creation form
+
+Course management offers one Create course action. New reusable content can be saved alone or used for a draft or published run. Existing templates and building-block schedules remain selectable. Template-only saves exclude company, venue and sessions. A confirmed new template survives an unconfirmed run and is reused on retry. TypeScript, targeted lint and 32 course and scheduling tests passed.
+
 # 23 November 2026 — Confirmed local reset in administration
 
 Active administrators and owners can inspect the local installation and enter DELETE and their current password before clearing its database, Auth accounts, Storage files and local mail. The development server carries out the existing owned Docker reset. A separate status page reports completion after the fresh stack starts. With an enrolled TOTP factor the server also verifies a new code. Hosted administration points to the existing guarded host procedure.

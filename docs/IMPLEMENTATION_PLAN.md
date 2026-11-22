@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Course creation
+
+- Keep one creation dialog with distinct template, draft and publication actions. Template-only saves contain reusable content. Date and time validation belongs to run actions.
+
 ## Administration reset
 
 - Let active administrators and owners reset their owned local installation through Administration. Require the literal confirmation, current password and enrolled TOTP. Reuse the full local Docker reset and confirm completion only after restart. Hosted deployments display the reviewed host reset procedure.

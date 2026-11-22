@@ -120,7 +120,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog.getByLabel("Ort", {exact: true}).fill("Fiktivstadt");
     await dialog.getByLabel("Branche", {exact: true}).fill("Training");
     await dialog.getByLabel("Interne Notizen", {exact: true}).fill(note);
-    await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
+    await dialog.getByRole("button", {name: "Als Vorlage speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
     await expect(
         page.getByRole("heading", {name: company, exact: true}),
@@ -152,7 +152,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     });
     await page.goto("/courses");
     await page
-        .getByRole("button", {name: "Vorlage anlegen", exact: true})
+        .getByRole("button", {name: "Kurs anlegen", exact: true})
         .click();
     dialog = page.getByRole("dialog");
     await dialog.getByLabel("Titel", {exact: true}).fill(title);
@@ -169,7 +169,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
     await page
-        .getByRole("button", {name: "Durchführung anlegen", exact: true})
+        .getByRole("button", {name: "Kurs anlegen", exact: true})
         .click();
     dialog = page.getByRole("dialog");
     await dialog
@@ -200,10 +200,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog
         .getByLabel("Ende 2", {exact: true})
         .fill(first.plus({days: 1, hours: 5}).toFormat("yyyy-MM-dd'T'HH:mm"));
-    await dialog
-        .getByRole("checkbox", {name: "Veröffentlicht", exact: true})
-        .check();
-    await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
+    await dialog.getByRole("button", {name: "Veröffentlichen", exact: true}).click();
     await expect(dialog).toBeHidden();
     await page.getByLabel("Suchen", {exact: true}).fill(title);
     let card = page

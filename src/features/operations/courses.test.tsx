@@ -108,11 +108,15 @@ function renderCourses({
 }
 
 /** Open a genuine new-run dialog through its visible management control. */
-async function newRun() {
-  await userEvent.click(
-    screen.getByRole("button", { name: "Durchführung anlegen" }),
-  );
-  return screen.getByRole("dialog", { name: "Durchführung anlegen" });
+async function newRun(useExistingTemplate = true) {
+  await userEvent.click(screen.getByRole("button", { name: "Kurs anlegen" }));
+  const dialog = screen.getByRole("dialog", { name: "Kurs anlegen" });
+  if (useExistingTemplate)
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText("Kursvorlage"),
+      templateId,
+    );
+  return dialog;
 }
 
 /** Change only the requested row's minute inputs, keeping React Hook Form ownership. */
@@ -210,6 +214,74 @@ it("filters the visible course list by time without requiring administrative per
   }
 });
 
+it("saves only reusable fields from the shared form without requiring dates", async () => {
+  renderCourses({ templates: [] });
+  const dialog = await newRun(false);
+  await userEvent.type(
+    within(dialog).getByLabelText("Titel", { exact: true }),
+    "Fictional spreadsheet",
+  );
+  await userEvent.type(
+    within(dialog).getByLabelText("Ort / Zugangslink"),
+    "Private classroom",
+  );
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Als Vorlage speichern" }),
+  );
+  await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  expect(state.rpc.mock.calls).toEqual([
+    [
+      "save_course_template",
+      {
+        p_id: null,
+        p_payload: {
+          title: "Fictional spreadsheet",
+          description: "",
+          syllabus: "",
+          prerequisites: "",
+          topic_ids: [],
+          archived: false,
+        },
+      },
+    ],
+  ]);
+});
+
+it("publishes a new run with its confirmed reusable content and retries a failed run without duplicating the template", async () => {
+  renderCourses({ templates: [] });
+  state.rpc
+    .mockResolvedValueOnce({ data: templateId, error: null })
+    .mockResolvedValueOnce({
+      data: null,
+      error: new Error("temporary run failure"),
+    })
+    .mockResolvedValueOnce({ data: runId, error: null });
+  const dialog = await newRun(false);
+  await userEvent.type(
+    within(dialog).getByLabelText("Titel", { exact: true }),
+    "Fictional training",
+  );
+  interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
+  const publish = within(dialog).getByRole("button", {
+    name: /^Veröffentlichen$/,
+  });
+  await userEvent.click(publish);
+  await within(dialog).findByText(
+    /Die Kursinhalte wurden als Vorlage gespeichert/,
+  );
+  await userEvent.click(publish);
+  await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  expect(state.rpc.mock.calls.map(([name]) => name)).toEqual([
+    "save_course_template",
+    "save_course_run",
+    "save_course_run",
+  ]);
+  expect(state.rpc.mock.calls[2][1]).toMatchObject({
+    p_id: null,
+    p_payload: { template_id: templateId, published: true },
+  });
+});
+
 describe("course form failure and confirmation boundaries", () => {
   it.each([
     ["nonexistent Berlin time", "2030-03-31T02:30", "2030-03-31T04:00"],
@@ -223,7 +295,9 @@ describe("course form failure and confirmation boundaries", () => {
       const dialog = await newRun();
       interval(dialog, start, end);
       await userEvent.click(
-        within(dialog).getByRole("button", { name: "Speichern" }),
+        within(dialog).getByRole("button", {
+          name: /^(Speichern|Entwurf speichern)$/,
+        }),
       );
       expect(await within(dialog).findByRole("alert")).toHaveTextContent(
         "Beginn und Ende müssen eindeutig sein.",
@@ -250,7 +324,9 @@ describe("course form failure and confirmation boundaries", () => {
     );
     interval(dialog, "2030-03-31T02:30", "2030-03-31T04:00", 2);
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await within(dialog).findByRole("alert");
     expect(state.rpc).not.toHaveBeenCalled();
@@ -259,7 +335,9 @@ describe("course form failure and confirmation boundaries", () => {
     ).toHaveValue("2030-03-30T09:00");
     interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00", 2);
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledExactlyOnceWith("save_course_run", {
@@ -295,7 +373,9 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "Fictional/Unknown" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await waitFor(() =>
       expect(within(dialog).getByLabelText("Zeitzone")).toHaveAttribute(
@@ -317,7 +397,9 @@ describe("course form failure and confirmation boundaries", () => {
       { target: { value: "2030-04-01T09:00" } },
     );
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await waitFor(() =>
       expect(
@@ -363,7 +445,9 @@ describe("course form failure and confirmation boundaries", () => {
         target: { value: "Edited fictional classroom" },
       });
       await userEvent.click(
-        within(dialog).getByRole("button", { name: "Speichern" }),
+        within(dialog).getByRole("button", {
+          name: /^(Speichern|Entwurf speichern)$/,
+        }),
       );
       expect(await within(dialog).findByRole("alert")).toHaveTextContent(
         notice,
@@ -381,7 +465,9 @@ describe("course form failure and confirmation boundaries", () => {
       const rejected = structuredClone(state.rpc.mock.calls[0]);
       state.rpc.mockResolvedValue({ data: runId, error: null });
       await userEvent.click(
-        within(dialog).getByRole("button", { name: "Speichern" }),
+        within(dialog).getByRole("button", {
+          name: /^(Speichern|Entwurf speichern)$/,
+        }),
       );
       await screen.findByText("Gespeichert.", { exact: true });
       expect(state.rpc.mock.calls[1]).toEqual(rejected);
@@ -404,7 +490,9 @@ describe("course form failure and confirmation boundaries", () => {
     renderCourses();
     const dialog = await newRun();
     interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
-    const save = within(dialog).getByRole("button", { name: "Speichern" });
+    const save = within(dialog).getByRole("button", {
+      name: /^(Speichern|Entwurf speichern)$/,
+    });
     await userEvent.click(save);
     await waitFor(() => expect(save).toBeDisabled());
     expect(dialog).toBeInTheDocument();
@@ -431,7 +519,9 @@ describe("course form failure and confirmation boundaries", () => {
       state.online = false;
       window.dispatchEvent(new Event("offline"));
     });
-    const save = within(dialog).getByRole("button", { name: "Speichern" });
+    const save = within(dialog).getByRole("button", {
+      name: /^(Speichern|Entwurf speichern)$/,
+    });
     expect(save).toBeDisabled();
     await userEvent.click(save);
     expect(state.rpc).not.toHaveBeenCalled();
@@ -449,6 +539,7 @@ describe("course form failure and confirmation boundaries", () => {
     renderCourses({ permissions: [], runs: [{ ...run, published: true }] });
     expect(screen.getByText(template.title, { exact: true })).toBeVisible();
     for (const name of [
+      "Kurs anlegen",
       "Durchführung anlegen",
       "Vorlage anlegen",
       "Bearbeiten",
@@ -464,12 +555,9 @@ describe("course form failure and confirmation boundaries", () => {
 
   it("refuses an empty template title and retains a server-rejected authored template", async () => {
     renderCourses();
+    const dialog = await newRun(false);
     await userEvent.click(
-      screen.getByRole("button", { name: "Vorlage anlegen" }),
-    );
-    const dialog = screen.getByRole("dialog", { name: "Vorlage anlegen" });
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", { name: "Als Vorlage speichern" }),
     );
     await waitFor(() =>
       expect(
@@ -489,7 +577,9 @@ describe("course form failure and confirmation boundaries", () => {
       error: { message: "courses.manage permission required", code: "42501" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: "Als Vorlage speichern",
+      }),
     );
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
       "Die Änderung konnte nicht gespeichert werden.",
@@ -531,7 +621,9 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "Another fictional venue" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -584,7 +676,9 @@ describe("course form failure and confirmation boundaries", () => {
         target: { value: input },
       });
       await userEvent.click(
-        within(dialog).getByRole("button", { name: "Speichern" }),
+        within(dialog).getByRole("button", {
+          name: /^(Speichern|Entwurf speichern)$/,
+        }),
       );
       await screen.findByText("Gespeichert.", { exact: true });
       expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -617,7 +711,9 @@ describe("course form failure and confirmation boundaries", () => {
       within(dialog).queryByLabelText("Beginn 2", { exact: true }),
     ).not.toBeInTheDocument();
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -644,7 +740,9 @@ describe("course form failure and confirmation boundaries", () => {
     );
     interval(dialog, "2030-04-02T09:00", "2030-04-02T10:00", 2);
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -680,7 +778,9 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "A fictional amended venue" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -714,7 +814,9 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "Europe/Paris" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
       "Beginn und Ende müssen eindeutig sein.",
@@ -743,7 +845,9 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "2030-04-01T10:15" },
     });
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -781,7 +885,9 @@ describe("course form failure and confirmation boundaries", () => {
       { target: { value: "2030-04-01T09:00" } },
     );
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -829,7 +935,9 @@ describe("course form failure and confirmation boundaries", () => {
         target: { value: "2030-04-01T09:00" },
       });
       await userEvent.click(
-        within(dialog).getByRole("button", { name: "Speichern" }),
+        within(dialog).getByRole("button", {
+          name: /^(Speichern|Entwurf speichern)$/,
+        }),
       );
       expect(await within(dialog).findByRole("alert")).toHaveTextContent(
         "Beginn und Ende müssen eindeutig sein.",
@@ -890,7 +998,9 @@ describe("course form failure and confirmation boundaries", () => {
       }),
     );
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Speichern" }),
+      within(dialog).getByRole("button", {
+        name: /^(Speichern|Entwurf speichern)$/,
+      }),
     );
     await screen.findByText("Gespeichert.", { exact: true });
     expect(state.rpc).toHaveBeenCalledWith("save_course_run", {

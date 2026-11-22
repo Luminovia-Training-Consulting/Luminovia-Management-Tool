@@ -5,12 +5,18 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
 import { ResourceComments } from "../comments/comments";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  useWatch,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CoursePhaseFilter } from "../learning/course-phase-filter";
@@ -26,6 +32,7 @@ import "./i18n";
 import "./styles.css";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery, topicsQuery } from "../../lib/queries";
+import type { Topic } from "../../lib/types";
 import { db } from "../../lib/supabase";
 import {
   dateTime,
@@ -86,6 +93,11 @@ const runSchema = z.object({
     .max(60),
 });
 
+type TemplateValues = z.infer<typeof templateSchema>;
+const newCourseSchema = runSchema.extend({
+  template_id: z.union([z.uuid(), z.literal("")]),
+});
+
 /** Compare absolute instants, retaining PostgreSQL microseconds when JavaScript milliseconds tie. Invalid endpoints return null. */
 function compareCourseInstants(first: string, second: string): number | null {
   const firstMillis = Date.parse(first);
@@ -111,11 +123,65 @@ async function saveCourseTemplate(
   id: string | null,
 ) {
   requireOnline();
-  const { error } = await db().rpc("save_course_template", {
+  const { data, error } = await db().rpc("save_course_template", {
     p_id: id,
     p_payload: values,
   });
   if (error) throw error;
+  return data as string;
+}
+
+function CourseContentFields({
+  register,
+  errors,
+  topics,
+  selectedTopicIds,
+}: {
+  register: UseFormRegister<TemplateValues>;
+  errors: FieldErrors<TemplateValues>;
+  topics: Topic[];
+  selectedTopicIds: string[];
+}) {
+  const { t, i18n } = useTranslation("operations");
+  return (
+    <>
+      <Field
+        id="template-title"
+        label={t("title")}
+        error={Boolean(errors.title)}
+      >
+        <input id="template-title" {...register("title")} />
+      </Field>
+      {(["description", "syllabus", "prerequisites"] as const).map((key) => (
+        <Field
+          key={key}
+          id={`template-${key}`}
+          label={t(key)}
+          error={Boolean(errors[key])}
+        >
+          <textarea
+            id={`template-${key}`}
+            rows={key === "syllabus" ? 6 : 3}
+            {...register(key)}
+          />
+        </Field>
+      ))}
+      <fieldset className="operations-topic-field">
+        <legend>{t("topics")}</legend>
+        {selectableTopics(topics, selectedTopicIds).map((topic) => (
+          <label className="checkbox-label" key={topic.id}>
+            <input
+              type="checkbox"
+              value={topic.id}
+              {...register("topic_ids")}
+            />
+            {i18n.language === "de" ? topic.label_de : topic.label_en}
+            {topic.archived_at && <> ({t("taxonomy:archived")})</>}
+          </label>
+        ))}
+      </fieldset>
+    </>
+  );
 }
 
 /** Edit reusable content templates separately from particular customers and schedules. */
@@ -126,7 +192,7 @@ function TemplateForm({
   original?: Template;
   onDone: () => void;
 }) {
-  const { t, i18n } = useTranslation("operations");
+  const { t } = useTranslation("operations");
   const client = useQueryClient();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
@@ -160,41 +226,12 @@ function TemplateForm({
   if (topics.isError) return <ErrorState retry={() => void topics.refetch()} />;
   return (
     <form noValidate onSubmit={handleSubmit((v) => save.mutate(v))}>
-      <Field
-        id="template-title"
-        label={t("title")}
-        error={Boolean(errors.title)}
-      >
-        <input id="template-title" {...register("title")} />
-      </Field>
-      {(["description", "syllabus", "prerequisites"] as const).map((key) => (
-        <Field
-          key={key}
-          id={`template-${key}`}
-          label={t(key)}
-          error={Boolean(errors[key])}
-        >
-          <textarea
-            id={`template-${key}`}
-            rows={key === "syllabus" ? 6 : 3}
-            {...register(key)}
-          />
-        </Field>
-      ))}
-      <fieldset className="operations-topic-field">
-        <legend>{t("topics")}</legend>
-        {selectableTopics(topics.data, selectedTopicIds).map((topic) => (
-          <label className="checkbox-label" key={topic.id}>
-            <input
-              type="checkbox"
-              value={topic.id}
-              {...register("topic_ids")}
-            />
-            {i18n.language === "de" ? topic.label_de : topic.label_en}
-            {topic.archived_at && <> ({t("taxonomy:archived")})</>}
-          </label>
-        ))}
-      </fieldset>
+      <CourseContentFields
+        register={register}
+        errors={errors}
+        topics={topics.data}
+        selectedTopicIds={selectedTopicIds}
+      />
       <label className="checkbox-label">
         <input type="checkbox" {...register("archived")} />
         {t("archive")}
@@ -217,17 +254,35 @@ function RunForm({
   initialTemplateId,
   blocks,
   onDone,
+  onBusy,
 }: {
   original?: CourseRun;
   templates: Template[];
   organisations: Organisation[];
   initialTemplateId?: string;
   blocks: BuildingBlock[];
-  onDone: () => void;
+  onDone: (result: "template" | "run") => void;
+  onBusy: (busy: boolean) => void;
 }) {
   const { t } = useTranslation("operations");
   const online = useOnline();
   const client = useQueryClient();
+  const topics = useQuery(topicsQuery);
+  const content = useForm<TemplateValues>({
+    resolver: zodResolver(templateSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      syllabus: "",
+      prerequisites: "",
+      topic_ids: [],
+      archived: false,
+    },
+  });
+  const topicIds =
+    useWatch({ control: content.control, name: "topic_ids" }) ?? [];
+  const [templateRetained, setTemplateRetained] = useState(false);
+  const createdTemplate = useRef<{ id: string; value: string } | null>(null);
   const [timeError, setTimeError] = useState(false);
   const [planningDate, setPlanningDate] = useState("");
   const [planningStart, setPlanningStart] = useState("09:00");
@@ -247,11 +302,10 @@ function RunForm({
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<z.infer<typeof runSchema>>({
-    resolver: zodResolver(runSchema),
+  } = useForm<z.infer<typeof newCourseSchema>>({
+    resolver: zodResolver(newCourseSchema),
     defaultValues: {
-      template_id:
-        original?.template_id ?? initialTemplateId ?? templates[0]?.id ?? "",
+      template_id: original?.template_id ?? initialTemplateId ?? "",
       organisation_id: original?.organisation_id ?? "",
       time_zone: original?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
@@ -284,10 +338,28 @@ function RunForm({
   const selectedBlock = blocks.find(
     (item) => item.id === selectedTemplate?.building_block_id,
   );
+  const needsContent = !original && !selectedTemplateId;
   const save = useMutation({
-    mutationFn: async (values: z.infer<typeof runSchema>) => {
+    onMutate: () => onBusy(true),
+    mutationFn: async (
+      intent:
+        | { kind: "template"; content: TemplateValues }
+        | {
+            kind: "run";
+            values: z.infer<typeof newCourseSchema>;
+            content?: TemplateValues;
+          },
+    ) => {
       requireOnline();
       setTimeError(false);
+      if (intent.kind === "template") {
+        await saveCourseTemplate(
+          intent.content,
+          createdTemplate.current?.id ?? null,
+        );
+        return "template" as const;
+      }
+      const { values } = intent;
       const sessions = values.sessions.map((s) => {
         const source = sessionOrigins.sessions.get(s.source_session_id ?? "");
         const start = zonedInstantForScheduleEdit(
@@ -314,26 +386,80 @@ function RunForm({
         }
         return { starts_at: start, ends_at: end };
       });
+      const ordered = [...sessions].sort(
+        (a, b) => compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+      );
+      if (
+        ordered.some(
+          (session, index) =>
+            index > 0 &&
+            (compareCourseInstants(
+              session.starts_at,
+              ordered[index - 1].ends_at,
+            ) ?? -1) < 0,
+        )
+      ) {
+        setTimeError(true);
+        throw new Error("time");
+      }
+      let templateId = values.template_id;
+      if (!templateId && intent.content) {
+        const value = JSON.stringify(intent.content);
+        const previous = createdTemplate.current;
+        if (!previous || previous.value !== value) {
+          const id = await saveCourseTemplate(
+            intent.content,
+            previous?.id ?? null,
+          );
+          if (!id) throw new Error("missing course template");
+          createdTemplate.current = { id, value };
+          setTemplateRetained(true);
+        }
+        templateId = createdTemplate.current!.id;
+      }
       const { error } = await db().rpc("save_course_run", {
         p_id: original?.id ?? null,
-        p_payload: { ...values, sessions },
+        p_payload: { ...values, template_id: templateId, sessions },
       });
       if (error) throw error;
+      return "run" as const;
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await client.invalidateQueries({ queryKey: ["operations"] });
-      onDone();
+      onDone(result);
     },
+    onError: async () => {
+      if (createdTemplate.current)
+        await client.invalidateQueries({ queryKey: ["operations"] });
+    },
+    onSettled: () => onBusy(false),
   });
+
+  const submitRun = (publish?: boolean) =>
+    handleSubmit(async (values) => {
+      if (save.isPending) return;
+      const draft = !values.template_id
+        ? await content.trigger(undefined, { shouldFocus: true })
+        : true;
+      if (!draft) return;
+      const fields = !values.template_id
+        ? templateSchema.parse(content.getValues())
+        : undefined;
+      save.mutate({
+        kind: "run",
+        values: { ...values, published: publish ?? values.published },
+        content: fields,
+      });
+    });
   return (
-    <form noValidate onSubmit={handleSubmit((v) => save.mutate(v))}>
+    <form noValidate onSubmit={submitRun(original ? undefined : false)}>
       <Field
         id="run-template"
         label={t("template")}
         error={Boolean(errors.template_id)}
       >
         <select id="run-template" {...register("template_id")}>
-          <option value="">—</option>
+          {!original && <option value="">{t("newCourseContent")}</option>}
           {templates
             .filter(
               (template) =>
@@ -346,6 +472,19 @@ function RunForm({
             ))}
         </select>
       </Field>
+      {needsContent &&
+        (topics.isPending ? (
+          <Loading />
+        ) : topics.isError ? (
+          <ErrorState retry={() => void topics.refetch()} />
+        ) : (
+          <CourseContentFields
+            register={content.register}
+            errors={content.formState.errors}
+            topics={topics.data}
+            selectedTopicIds={topicIds}
+          />
+        ))}
       {selectedBlock && (
         <fieldset className="operations-schedule-planner">
           <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
@@ -482,15 +621,55 @@ function RunForm({
           {t("addSession")}
         </Button>
       </fieldset>
-      <label className="checkbox-label">
-        <input type="checkbox" {...register("published")} />
-        {t("published")}
-      </label>
-      <label className="checkbox-label">
-        <input type="checkbox" {...register("archived")} />
-        {t("archive")}
-      </label>
-      <Button disabled={!online || save.isPending}>{t("save")}</Button>
+      {original && (
+        <>
+          <label className="checkbox-label">
+            <input type="checkbox" {...register("published")} />
+            {t("published")}
+          </label>
+          <label className="checkbox-label">
+            <input type="checkbox" {...register("archived")} />
+            {t("archive")}
+          </label>
+        </>
+      )}
+      <div className="button-row">
+        {needsContent && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!online || save.isPending || !topics.isSuccess}
+            onClick={content.handleSubmit((values) =>
+              save.mutate({ kind: "template", content: values }),
+            )}
+          >
+            {t("saveAsTemplate")}
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant={original ? "default" : "secondary"}
+          disabled={
+            !online || save.isPending || (needsContent && !topics.isSuccess)
+          }
+        >
+          {t(original ? "save" : "saveRunDraft")}
+        </Button>
+        {!original && (
+          <Button
+            type="button"
+            disabled={
+              !online || save.isPending || (needsContent && !topics.isSuccess)
+            }
+            onClick={submitRun(true)}
+          >
+            {t("publish")}
+          </Button>
+        )}
+      </div>
+      {save.isError && needsContent && templateRetained && (
+        <Notice>{t("courseTemplateRetained")}</Notice>
+      )}
       {save.isError && (
         <Notice kind="error">
           {t(
@@ -528,10 +707,9 @@ export function CoursesPage() {
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [tab, setTab] = useState<"runs" | "templates" | "blocks">("runs");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
-  const [templateEdit, setTemplateEdit] = useState<
-    Template | null | undefined
-  >();
+  const [templateEdit, setTemplateEdit] = useState<Template>();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
+  const [runSaving, setRunSaving] = useState(false);
   const [params, setParams] = useSearchParams();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const workspaceEntitlement = useQuery({
@@ -664,26 +842,16 @@ export function CoursesPage() {
         description={t("coursesIntro")}
         action={
           manage ? (
-            <div className="operations-actions">
-              <Button
-                variant="secondary"
-                disabled={!online}
-                onClick={() => setTemplateEdit(null)}
-              >
-                <Plus size={17} />
-                {t("newTemplate")}
-              </Button>
-              <Button
-                disabled={!online || !templates.data.length}
-                onClick={() => {
-                  setInitialTemplateId(undefined);
-                  setRunEdit(null);
-                }}
-              >
-                <Plus size={17} />
-                {t("newRun")}
-              </Button>
-            </div>
+            <Button
+              disabled={!online}
+              onClick={() => {
+                setInitialTemplateId(undefined);
+                setRunEdit(null);
+              }}
+            >
+              <Plus size={17} />
+              {t("newCourse")}
+            </Button>
           ) : (
             <Button asChild variant="secondary">
               <Link to="/learning">{t("translation:myCourses")}</Link>
@@ -1044,12 +1212,12 @@ export function CoursesPage() {
         onOpenChange={(open) => {
           if (!open) setTemplateEdit(undefined);
         }}
-        title={t(templateEdit ? "edit" : "newTemplate")}
+        title={t("edit")}
         description={t("template")}
       >
         <TemplateForm
-          key={templateEdit?.id ?? "new"}
-          original={templateEdit ?? undefined}
+          key={templateEdit?.id}
+          original={templateEdit}
           onDone={() => {
             setTemplateEdit(undefined);
             setMessage(t("saved"));
@@ -1059,9 +1227,10 @@ export function CoursesPage() {
       <Dialog
         open={runEdit !== undefined}
         onOpenChange={(open) => {
-          if (!open) setRunEdit(undefined);
+          if (!open && !runSaving) setRunEdit(undefined);
         }}
-        title={t(runEdit ? "edit" : "newRun")}
+        closeDisabled={runSaving}
+        title={t(runEdit ? "edit" : "newCourse")}
         description={t("publishedHint")}
       >
         <RunForm
@@ -1071,8 +1240,10 @@ export function CoursesPage() {
           organisations={orgs.data}
           initialTemplateId={initialTemplateId}
           blocks={blocks.data}
-          onDone={() => {
+          onBusy={setRunSaving}
+          onDone={(result) => {
             setRunEdit(undefined);
+            setTab(result === "template" ? "templates" : "runs");
             setMessage(t("saved"));
           }}
         />

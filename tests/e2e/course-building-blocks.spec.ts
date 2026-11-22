@@ -143,7 +143,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .getByRole("button", {name: "Durchführung planen", exact: true})
         .click();
     const runDialog = page.getByRole("dialog", {
-        name: "Durchführung anlegen",
+        name: "Kurs anlegen",
         exact: true,
     });
     await expect(
@@ -162,7 +162,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .getByLabel("Ort / Zugangslink", {exact: true})
         .fill("Fictional Course online classroom");
     await runDialog
-        .getByRole("button", {name: "Speichern", exact: true})
+        .getByRole("button", {name: "Entwurf speichern", exact: true})
         .click();
     await expect(runDialog).not.toBeVisible();
     const run = await checked(
