@@ -36,10 +36,10 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
       who,
       `public.request_company_participant_link(${q(organisation)},${q(target)},${q(key)})`,
     );
-  const accept = (who, version, key) =>
+  const accept = (who, version, key, organisation = org) =>
     call(
       who,
-      `public.accept_company_participant_invitation(${q(org)},${version},${q(key)})`,
+      `public.accept_company_participant_invitation(${q(organisation)},${version},${q(key)})`,
     );
   const history = async (who, organisation = org, limit = 25, cursor) => {
     const result = await call(
@@ -391,6 +391,83 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     items: [],
     has_more: false,
   });
+
+  // The same request ID is independently scoped to each company actor.
+  const concurrentLearnerId = await luminoviaId(stranger);
+  const concurrentKey = randomUUID();
+  const ownLink = () => request(company, concurrentLearnerId, concurrentKey);
+  const foreignLink = () =>
+    request(outsider, concurrentLearnerId, concurrentKey, foreign);
+  assert.deepEqual(
+    await Promise.all([ownLink(), foreignLink(), ownLink(), foreignLink()]),
+    [expected, expected, expected, expected],
+  );
+  assert.equal(
+    await sql(`select count(*) from private.company_participant_link_requests
+      where request_id=${q(concurrentKey)} and target_user_id=${q(stranger)}`),
+    "2",
+  );
+  const concurrentInvitations = await call(
+    stranger,
+    "public.my_company_participant_invitations()",
+  );
+  assertLmsResponse(
+    "my_company_participant_invitations",
+    concurrentInvitations,
+  );
+  assert.deepEqual(
+    concurrentInvitations.map(({ organisation_id }) => organisation_id).sort(),
+    [org, foreign].sort(),
+  );
+  for (const [manager, scope] of [
+    [company, org],
+    [outsider, foreign],
+  ]) {
+    const rows = await call(
+      manager,
+      `public.company_participants(${q(scope)})`,
+    );
+    assert.ok(rows.every(({ user_id }) => user_id !== stranger));
+  }
+  const ownInvitation = concurrentInvitations.find(
+    ({ organisation_id }) => organisation_id === org,
+  );
+  const concurrentConsent = () =>
+    accept(stranger, ownInvitation.version, randomUUID());
+  const outcomes = await Promise.allSettled([
+    concurrentConsent(),
+    concurrentConsent(),
+  ]);
+  assert.equal(
+    outcomes.filter(({ status }) => status === "fulfilled").length,
+    1,
+  );
+  const denied = outcomes.find(({ status }) => status === "rejected");
+  assert.match(denied.reason.message, /42501/);
+  const acceptedParticipants = await call(
+    company,
+    `public.company_participants(${q(org)})`,
+  );
+  assert.equal(
+    acceptedParticipants.filter(({ user_id }) => user_id === stranger).length,
+    1,
+  );
+  const remainingInvitations = await call(
+    stranger,
+    "public.my_company_participant_invitations()",
+  );
+  assert.deepEqual(
+    remainingInvitations.map(({ organisation_id }) => organisation_id),
+    [foreign],
+  );
+  assert.deepEqual(
+    await call(outsider, `public.company_participants(${q(foreign)})`),
+    [],
+  );
+  console.log(
+    "PASS concurrent two-company links stay unique and require independent participant consent",
+  );
+
   await call(
     admin,
     `public.set_company_premium(${q(org)},false,1,${q(randomUUID())})`,

@@ -9,7 +9,9 @@ test.describe.configure({ timeout: 60_000 });
 
 /** Filter before selecting so Swagger renders the requested virtualized row. */
 async function operation(page: Page, method: "get" | "post", path: string) {
-  const search = page.getByRole("searchbox", { name: "Schnittstellen suchen" });
+  const search = page.getByRole("searchbox", {
+    name: /^(Schnittstellen suchen|Search operations)$/,
+  });
   await search.fill(`${method} ${path}`);
   await search.press("Enter");
   return page.locator(`.opblock-${method} .opblock-summary-control`).filter({
@@ -23,7 +25,9 @@ async function openExplorer(page: Page) {
   // resolves. Allow for development compilation here and keep operation
   // assertions on their normal budget.
   await expect(
-    page.getByRole("heading", { name: "API-Dokumentation", exact: true }),
+    page.getByRole("heading", {
+      name: /^(API-Dokumentation|API documentation)$/,
+    }),
   ).toBeVisible({ timeout: 40_000 });
 }
 
@@ -113,4 +117,66 @@ test("an authenticated participant can run an own-account RPC through the API ex
   const result = await response;
   expect(result.status()).toBe(200);
   expect(await result.json()).toEqual({ username: null, version: 0 });
+});
+
+test("the English dark API explorer preserves finance permissions during keyboard execution", async ({
+  page,
+  request,
+}) => {
+  const account = await actor("Fictional API finance lecturer", "lecturer");
+  const financePath = "/rest/v1/rpc/commission_report";
+  const contractResponse = await request.get("/api/openapi.json");
+  expect(contractResponse.ok()).toBe(true);
+  const contract = await contractResponse.json();
+  expect(
+    contract.paths[financePath].post.responses["403"].description,
+  ).toContain("42501");
+
+  await login(page, account.email);
+  await page.goto("/settings");
+  const preferences = page.locator(".settings-section .preferences");
+  await preferences.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await preferences.getByLabel("Theme", { exact: true }).selectOption("dark");
+  await openExplorer(page);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(
+    page.getByText("Requests are disabled.", { exact: true }),
+  ).toBeVisible();
+  const authorize = page.getByRole("button", {
+    name: "Authorize with my account",
+  });
+  await authorize.press("Enter");
+
+  await (await operation(page, "post", financePath)).press("Enter");
+  const expanded = page.locator(".opblock.is-open");
+  await expanded
+    .getByRole("button", { name: "Try it out", exact: true })
+    .press("Enter");
+  await expanded.locator("textarea").fill("{}");
+  const response = page.waitForResponse(
+    (item) =>
+      item.request().method() === "POST" &&
+      new URL(item.url()).pathname.endsWith(financePath),
+  );
+  await expanded
+    .getByRole("button", { name: "Execute", exact: true })
+    .press("Enter");
+  const denied = await response;
+  expect(denied.status()).toBe(403);
+  expect(await denied.json()).toMatchObject({ code: "42501" });
+  await expect(
+    expanded.locator(".live-responses-table tbody .response-col_status"),
+  ).toContainText("403");
+  const curlExample = expanded.locator(".curl-command");
+  await expect(curlExample).toContainText(financePath);
+  await expect(curlExample).not.toContainText(/authorization|apikey/i);
+
+  await page.getByRole("button", { name: "Disable requests" }).press("Enter");
+  await expect(
+    page.getByText("Requests are disabled.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Execute", exact: true }),
+  ).toHaveCount(0);
 });

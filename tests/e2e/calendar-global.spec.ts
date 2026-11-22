@@ -1,6 +1,7 @@
 import {expect, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
+import {readFile} from "node:fs/promises";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 
 test.skip(
@@ -96,11 +97,27 @@ test("password-only authentication global publication, descriptions/HTTPS links,
                 exact: true,
             }),
         ).toHaveAttribute("href", "https://example.invalid/lesson");
+        await expect(details.getByRole("button", {
+            name: "Kalendereintrag herunterladen (.ics)",
+            exact: true,
+        })).toBeVisible();
         await viewer.getByLabel("Sprache", {exact: true}).selectOption("en");
         await viewer.getByLabel("Theme", {exact: true}).selectOption("dark");
         await expect(
             details.getByRole("link", {name: "Open related link", exact: true}),
         ).toHaveAttribute("rel", "noopener noreferrer");
+        const [download] = await Promise.all([
+            viewer.waitForEvent("download"),
+            details.getByRole("button", {name: "Download calendar event (.ics)", exact: true}).click(),
+        ]);
+        expect(download.suggestedFilename()).toBe("luminovia-event.ics");
+        const content = await readFile((await download.path())!, "utf8");
+        const date = day.replaceAll("-", "");
+        expect(content).toContain(`DTSTART:${date}T120000Z\r\n`);
+        expect(content).toContain(`DTEND:${date}T140000Z\r\n`);
+        expect(content).toContain(`SUMMARY:${title}\r\n`);
+        expect(content).not.toContain(description);
+        expect(content).not.toContain("https://example.invalid/lesson");
         await viewer.evaluate(() => document.fonts.ready);
         const report = await new AxeBuilder({page: viewer})
             .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])

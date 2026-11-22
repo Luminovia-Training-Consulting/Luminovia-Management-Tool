@@ -70,6 +70,69 @@ The historical requested-changes checklist uses its own WL test numbers. The cur
 | Webhooks | The local HTTP/SQLite receiver and actual worker verify committed credit applications, refunds, both reversals, denied writes, retry, restart and revocation. An independent HTTPS test receiver additionally captured six signed accounting events and a signed course publication for each Academy edition. The pinned TLS preflight, original signed bytes and exact delivery IDs passed. | Send a fictional acceptance event to the customer's approved external receiver. |
 | Independent Academy handoff | The local signed handoff, licensing and isolated Docker commissioning procedures have executable checks. | Obtain the independent target, written licensing/support approval and customer operator acknowledgement. |
 
+## API and Premium LMS acceptance inventory
+
+Reviewed from starting revision `3e3ff46f` with the new acceptance regressions below. The inventory records executable assertions and the evidence required from the tested commit, edition and target.
+
+The application workflow invokes `scripts/runtime-test.mjs`. Full verification includes source, runtime Node and Edge tests, followed by migration replay, all `scripts/*-db-tests.mjs`, all `scripts/*-api-check.mjs` and the local Mailpit invitation check. Its full browser jobs run the application on desktop and mobile Chromium. The separate built-PWA stage exercises selected WebKit behaviour. The native selfhost job owns isolated image and retained-data rehearsals. See the [application workflow](../.github/workflows/ci.yml), [security workflow](../.github/workflows/security.yml) and [browser configuration](../playwright.config.ts).
+
+### API-01–API-08
+
+| ID | Canonical evidence in the repository | Remaining acceptance |
+| --- | --- | --- |
+| API-01 | `username-auth-api-check.mjs`, `username-auth-db-tests.mjs`, `human-login/handler_test.ts`, `accounts-api-check.mjs`, `onboarding.spec.ts` cover shared Auth identity, alias uniqueness, uniform failures, password length and native invite/recovery. | Full password-boundary and throttling combinations across the edition targets. |
+| API-02 | `username-auth-api-check.mjs`, `accounts-api-check.mjs`, `company-integration-api-check.mjs` exercise bearer sessions, current account grants and scoped machine keys. | Expired/revoked token and stale-browser behaviour across every exposed transport. |
+| API-03 | `api-surface-db-tests.mjs` and `native-rpc-catalogue.mjs` discover frontend RPC bindings, compare migrated grants and validate supported request keys. Domain scripts cover representative wire responses. | An action-by-role response/denial matrix covering every callable operation in the installed edition. |
+| API-04 | `contract-parity.test.ts`, `native-operation-documentation.test.ts`, edition and domain contract tests, `api-explorer.spec.ts`. | Full per-route sample/schema compatibility and native browser coverage for both Academy editions. |
+| API-05 | `company-integration-api-check.mjs`, `company-integrations-db-tests.mjs`, company course/accounting and Academy webhook SQL tests, signed receiver runtime tests, and `company-integrations.test.tsx`. | Real approved remote receiver, current installation policy, and scoped delivery across all advertised events. |
+| API-06 | `scripts/examples/README.md`, `runtime-course-index-examples.test.mjs`, `runtime-academy-workflow-examples.test.mjs`, executable CMS and Academy workflows. | Exact-version target exercise and compatible upgrade for each published client workflow. |
+| API-07 | `api-surface-db-tests.mjs`, domain HTTP/scanner and permissions suites, plus the separate GitHub security workflow. | Actual scoped customer privacy on target, and cross-transport performance, rate and revocation evidence. |
+| API-08 | Full workflow and discovery rules above, with distinct browser and native selfhost runs. | Exact-commit required checks together with edition, revision and OpenAPI version on the approved target. |
+
+### API-T01–API-T20
+
+| IDs | Executable coverage | Limit of the evidence |
+| --- | --- | --- |
+| API-T01–02 | `username-auth-api-check.mjs` confirms the same native Auth UUID and own RPC for email and an uppercase alias. `username-auth-db-tests.mjs` covers uniqueness and normalization. `accounts-api-check.mjs` verifies the actual role and profile. | Repeat against approved installations. |
+| API-T03 | Uniform invalid/unknown/disabled responses and throttling in `human-login/handler_test.ts`, plus real invalid credentials in `username-auth-api-check.mjs`. | Native sustained throttle and disabled-user combinations are broader than the selected wire probes. |
+| API-T04 | Actual seven/eight-character creation and reset boundary in `accounts-api-check.mjs`, actual invitation and Mailpit PKCE recovery in `onboarding.spec.ts`. | Run both exact lengths through each invite and recovery browser flow. |
+| API-T05 | `username-auth-api-check.mjs` passes the native issued token to `getUser` and `account_username`, with no password on those requests. | Exact configured expiration across installed editions. |
+| API-T06 | `accounts-api-check.mjs` checks changed actor scopes, `course-workspace-api-check.mjs` revokes rights during an active session/socket, and `company-integration-api-check.mjs` covers scoped credential denial. | Token expiry and post-revocation behaviour require transport-specific acceptance. |
+| API-T07–08 | `api-surface-db-tests.mjs`, `contract-parity.test.ts`, generated schemas and validating native probes in account, job-capacity, replacement and chat checks. | Source binding and named response checks leave a full per-operation runtime schema matrix open. |
+| API-T09 | `api-explorer.spec.ts` exercises account authentication, search/selection, current-role execution and disabling. The new EN/dark case compares a documented and actual finance 403 and checks the displayed example omits credentials. | Additional operations, edition-specific Swagger tags and target acceptance. |
+| API-T10 | Account, client, commercial, learning and other authority-specific native API checks plus `portal-role-boundaries.spec.ts`. | Operation-by-role HTTP coverage on each edition. |
+| API-T11 | `documents-api-check.mjs`, `course-workspace-api-check.mjs` and `course-materials.spec.ts` exercise real upload/scanning, protected response and clean exact bytes. | Supported upload modes and MIME/size combinations across all edition targets. |
+| API-T12 | `company-integration-api-check.mjs`, `company-participant-course-assignment-db-tests.mjs`, `assignment-amendments-db-tests.mjs`, `local-api-check.mjs`. | Every currently advertised concurrent mutation. |
+| API-T13 | Native integration-key paging/rate responses in `company-integration-api-check.mjs`, account bounds in `accounts-api-check.mjs`, domain-specific filtering and cursor contract tests. | Coverage of all advertised bounds, sort fields and validation errors. |
+| API-T14 | `company-integrations-db-tests.mjs`, `company-course-webhooks-db-tests.mjs`, `company-accounting-webhooks-db-tests.mjs`, `academy-course-webhooks-db-tests.mjs`, `runtime-company-course-webhook-receiver.test.mjs`. | Each event and retry/revocation combination through approved external endpoint. |
+| API-T15 | `runtime-course-index-examples.test.mjs`, `runtime-academy-workflow-examples.test.mjs`, signed webhook receiver examples and previously recorded native focused trials. | Verify published example versions against the installed edition and actual exact release. |
+| API-T16 | `reviewed-upgrade-retention-db-tests.mjs`, Academy migrations, native selfhost candidate check and versioned examples. | Rerun each supported prior client against the approved retained-data candidate. |
+| API-T17 | `company-premium-db-tests.mjs`, `course-workspace-api-check.mjs` and `course-workspace.spec.ts` cover A/OFF–B/ON, retained membership, selected bytes and realtime. | Approved-target customer and scope evidence. |
+| API-T18 | `accounts-api-check.mjs`, `company-premium-db-tests.mjs`, `course-workspace-api-check.mjs`, `course-document-privacy-db-tests.mjs`. | All documented denial paths on the selected target edition. |
+| API-T19 | Default German and English dark keyboard runs in `api-explorer.spec.ts`, common portal theme/contrast checks. | The full language/theme cross-product, accessibility of all Swagger views, native OS browser and edition matrix. |
+| API-T20 | Application/security workflow, isolated edition checks and capability tests. | Successful required jobs and actual deployed source SHA and API version on the same candidate. |
+
+### LMS-T01–LMS-T34
+
+| IDs | Executable coverage | Limit of the evidence |
+| --- | --- | --- |
+| LMS-T01 | `accounts-api-check.mjs` validates concurrent unique public IDs and the actual account projection. Account and retained-upgrade DB checks validate identity continuity. | Full retained profile/foreign-key comparison on target. |
+| LMS-T02–04 | `company-participant-link-db-tests.mjs`, `company-participant-api-check.mjs` and the two-company access case in `course-workspace.spec.ts`. | Selected workflow and actor cases, pending approved organisations. |
+| LMS-T05–08 | `company-premium.spec.ts`, `company-premium-db-tests.mjs`, `company-premium.test.tsx` cover confirmed enable/disable, role rejection, version, conflict, idempotency and accessible state. | Exact runtime across supported browsers and target editions. |
+| LMS-T09–12 | `course-workspace-api-check.mjs`, `company-premium-db-tests.mjs` and `company-premium.spec.ts` cover scoped OFF/ON, retained state, exact bytes and active websocket revocation. | End-to-end checks on actual operating configuration and supported clients. |
+| LMS-T13 | `company-participant-api-check.mjs`, `local-invite-check.mjs` and `onboarding.spec.ts` exercise role assignment and native fictional activation. | Real external Mail delivery via the approved configuration. |
+| LMS-T14 | `company-participant-link-db-tests.mjs` verifies simultaneous requests by two companies, scoped retries and independent consent. `company-participant-course-assignment-db-tests.mjs` covers concurrent course assignments. | Repeat the concurrent role and scope scenarios on the approved installation. |
+| LMS-T15 | `company-participant-link-db-tests.mjs`, `company-participant-course-assignment-db-tests.mjs`, `participant-cancellation-db-tests.mjs` and `course-workspace-api-check.mjs`. | Final target transactional evidence for each cancellation/reassignment path. |
+| LMS-T16 | `company-premium-db-tests.mjs`, `course-chat-protection-db-tests.mjs`, `audited-course-chat.test.tsx`, `chat-db-tests.mjs`. | Browser and production configuration acceptance for the audit and private DM boundary. |
+| LMS-T17–19 | `course-document-privacy-db-tests.mjs`, `course-workspace-api-check.mjs`, `documents-api-check.mjs`, `course-materials.spec.ts`. | Repeat exact-file and real scanner checks against approved target. |
+| LMS-T20–23 | `company-premium-db-tests.mjs`, `course-workspace-api-check.mjs`, `course-workspace.spec.ts`, `exams.test.tsx` cover switch roles, disabled denial, selected clean student bytes and protected exam answers. | Full supported native client matrix. |
+| LMS-T24–28 | `session-attendance-db-tests.mjs`, `course-workspace-db-tests.mjs`, `course-workspace-api-check.mjs`, `attendance.test.tsx`, `attendance-import.test.ts`, `attendance-xlsx.test.tsx`, `course-workspace.spec.ts`. | Final CSV/XLSX and protected evidence paths on target. |
+| LMS-T29 | `course-welcome-db-tests.mjs`, `welcome-content.test.tsx` cover version, editor scope, published learner visibility and continued storage. | Browser and target acceptance for publication history. |
+| LMS-T30 | `premium-notification-db-tests.mjs`, `notification-delivery-api-check.mjs`, `notification-mail-api-check.mjs`, `notifications.spec.ts`, and dedicated Academy notification and mail transport checks. | Real configured delivery, opt-out and queue revocation across each enabled edition and channel. |
+| LMS-T31 | `company-premium.spec.ts` covers text labels, keyboard, DE/EN, light/dark and automated accessibility checks on Chromium; built-PWA WebKit cases are separate. | Every relevant screen at supported sizes and actual installed clients. |
+| LMS-T32 | `reviewed-upgrade-retention-db-tests.mjs`, `academy-migrations-db-tests.mjs`, Academy recovery and selfhost candidate checks. | Approved retained data, byte-verifiable storage witnesses and successfully restored copy. |
+| LMS-T33–34 | Canonical CI and native rehearsal tooling. | Exact current-main checks and approved Hostinger release, operating safeguards and isolated recovery. |
+
 ## Academy bootstrap, release packaging and restored CI verification
 
 - [x] Validate, preview and approve a private vendor-side customer academy draft. Exact retries return the same receipt and retain the derived installation identity. Automated tests cover concurrent approvals and duplicate target rejection. Live fulfilment uses its own authorisation.

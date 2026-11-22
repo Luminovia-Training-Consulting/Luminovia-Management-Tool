@@ -6,6 +6,7 @@ import {actor, api, checked, login} from "./helpers/accounts-support";
 test("calendar secret links and explicit minimal offline schedule survive reload and clear on logout", async ({
                                                                                                                   page,
                                                                                                               }) => {
+    test.setTimeout(120000);
     const owner = await actor(
             "Fictional connected calendar lecturer",
             "lecturer",
@@ -145,6 +146,9 @@ test("calendar secret links and explicit minimal offline schedule survive reload
         const tools = page.locator(".calendar-tools"),
             toolSummary = tools.locator(":scope > summary");
         await toolSummary.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await expect(toolSummary).toBeFocused();
         await page.keyboard.press("Enter");
         await expect(toolSummary).toBeFocused();
         await expect(tools).toHaveAttribute("open", "");
@@ -153,31 +157,60 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                 summary.matches(":focus-visible"),
             ),
         ).toBe(true);
-        for (const width of [390, 768, 1280, 1920]) {
-            await page.setViewportSize({width, height: 900});
-            const group = await tools.boundingBox(),
-                calendar = await page.locator(".calendar-controls").boundingBox(),
-                panels = await page
-                    .locator(".calendar-tools-content > details")
-                    .evaluateAll((elements) =>
-                        elements.map((element) => {
-                            const {x, right, y, bottom} = element.getBoundingClientRect();
-                            return {x, right, y, bottom};
-                        }),
-                    );
-            expect(group).not.toBeNull();
-            expect(calendar).not.toBeNull();
-            expect(panels).toHaveLength(4);
-            expect(group!.y + group!.height).toBeLessThanOrEqual(calendar!.y + 1);
-            expect(group!.x + group!.width).toBeLessThanOrEqual(width + 1);
-            for (const [index, panel] of panels.entries()) {
-                expect(panel.x).toBeGreaterThanOrEqual(0);
-                expect(panel.right).toBeLessThanOrEqual(width + 1);
-                if (index > 0)
-                    expect(panels[index - 1]!.bottom).toBeLessThanOrEqual(panel.y + 1);
+        const panelSummaries = tools.locator(".calendar-tools-content > details > summary");
+        await expect(panelSummaries).toHaveCount(4);
+        for (const summary of await panelSummaries.all()) {
+            await summary.press("Enter");
+            await expect(summary).toBeFocused();
+        }
+        await expect(tools.locator(".calendar-tools-content > details[open]")).toHaveCount(4);
+        for (const language of ["en", "de"]) {
+            await page.getByLabel(/^(Sprache|Language)$/).selectOption(language);
+            const subscriptionButton = page.getByRole("button", {
+                name: language === "de" ? "Kalenderadresse erstellen" : "Create calendar address",
+                exact: true,
+            });
+            const privateButton = page.getByRole("button", {
+                name: language === "de" ? "Dein privater Kalender" : "Your private calendar",
+                exact: true,
+            });
+            const exportButton = page.getByRole("button", {
+                name: language === "de" ? "ICS-Datei herunterladen" : "Download ICS file",
+                exact: true,
+            });
+            const offlineButton = page.getByRole("button", {
+                name: language === "de" ? "Unterrichtsplan für offline speichern" : "Save teaching schedule offline",
+                exact: true,
+            });
+            for (const theme of ["dark", "light"]) {
+                await page.getByLabel(/^(Farbschema|Theme)$/).selectOption(theme);
+                await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+                for (const width of [390, 768, 1280, 1920]) {
+                    await page.setViewportSize({width, height: 900});
+                    const boxes = await page.locator(
+                        ".calendar-tools, .calendar-tools-content > details, .calendar-controls",
+                    ).evaluateAll((elements) => elements.map((element) => {
+                        const {x, right, y, bottom} = element.getBoundingClientRect();
+                        return {x, right, y, bottom};
+                    }));
+                    expect(boxes).toHaveLength(6);
+                    const [group, ...panels] = boxes;
+                    const calendar = panels.pop();
+                    expect(group!.bottom).toBeLessThanOrEqual(calendar!.y + 1);
+                    expect(group!.right).toBeLessThanOrEqual(width + 1);
+                    for (const [index, panel] of panels.entries()) {
+                        expect(panel.x).toBeGreaterThanOrEqual(0);
+                        expect(panel.right).toBeLessThanOrEqual(width + 1);
+                        if (index > 0)
+                            expect(panels[index - 1]!.bottom).toBeLessThanOrEqual(panel.y + 1);
+                    }
+                    await subscriptionButton.click({trial: true});
+                    await privateButton.click({trial: true});
+                    await exportButton.click({trial: true});
+                    await offlineButton.click({trial: true});
+                }
             }
         }
-        await page.getByText("Kalender abonnieren", {exact: true}).click();
         await page
             .getByRole("button", {name: "Kalenderadresse erstellen", exact: true})
             .click();
