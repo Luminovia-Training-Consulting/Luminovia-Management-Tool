@@ -5,12 +5,13 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {once} from "node:events";
-import {mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync,} from "node:fs";
+import {mkdirSync, mkdtempSync, rmSync, writeFileSync,} from "node:fs";
 import {createServer} from "node:http";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {cleanEnvironment, localUrl, migrationDigest, privateWrite, processIsOurs, readEnvFile, redact, waitForHttp,} from "./runtime-lib.mjs";
 import {assertContainerBindings, assertNetworkDefinition, networkName,} from "./runtime-network.mjs";
+import {readPrivateFixture} from "./testing/read-private-fixture.mjs";
 
 test("local Docker networking rejects public host bindings, extra networks and unowned resources", () => {
     const project = "luminovia-portal-test-1234abcd";
@@ -163,9 +164,9 @@ test("private environment writes preserve values and restrict filesystem permiss
         const file = join(path, "env");
         privateWrite(file, "PASSWORD=value=with=equals\n");
         assert.equal(readEnvFile(file).PASSWORD, "value=with=equals");
-        assert.equal(statSync(file).mode & 0o777, 0o600);
+        assert.equal(readPrivateFixture(file).toString("utf8"), "PASSWORD=value=with=equals\n");
         privateWrite(file, "PASSWORD=value=with=equals\n");
-        assert.equal(readFileSync(file, "utf8"), "PASSWORD=value=with=equals\n");
+        assert.equal(readPrivateFixture(file).toString("utf8"), "PASSWORD=value=with=equals\n");
     } finally {
         rmSync(path, {recursive: true, force: true});
     }

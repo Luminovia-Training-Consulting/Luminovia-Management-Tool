@@ -3,7 +3,6 @@ import { execFile } from "node:child_process";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   chmod,
-  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -27,6 +26,7 @@ import {
   signAcademyLicence,
   verifyAcademyLicence,
 } from "./academy-licence.mjs";
+import { readPrivateFixture } from "./testing/read-private-fixture.mjs";
 
 const run = promisify(execFile);
 const cli = fileURLToPath(
@@ -157,9 +157,10 @@ test("issues from a v1 approved draft, converts a managed trial, renews, and exp
   assert.equal(conversion.tier, "licensed");
   const output = await command("export-licence", convert.action_id);
   const signedFile = join(root, output.filename);
-  assert.equal((await lstat(signedFile)).mode & 0o777, 0o600);
+  const signedBytes = readPrivateFixture(signedFile);
   assert.deepEqual(await command("export-licence", convert.action_id), output);
-  const envelope = (await readFile(signedFile, "utf8")).trim();
+  assert.deepEqual(readPrivateFixture(signedFile), signedBytes);
+  const envelope = signedBytes.toString("utf8").trim();
   const verified = verifyAcademyLicence(
     envelope,
     keys.publicKey,
@@ -367,8 +368,7 @@ test("preview and wrong or stale approval do not write a registry, while exact r
     first.receipt.draft.initial_administrator.email,
     entry.initial_administrator.email,
   );
-  const before = await readFile(join(root, ledger));
-  assert.equal((await lstat(join(root, ledger))).mode & 0o777, 0o600);
+  const before = readPrivateFixture(join(root, ledger));
   assert.equal(
     (await previewCustomerAcademyDraft(root, source)).status,
     "approved-draft",
@@ -377,7 +377,7 @@ test("preview and wrong or stale approval do not write a registry, while exact r
     await approveCustomerAcademyDraft(root, source, reviewToken(preview)),
     { ...first, created: false },
   );
-  assert.deepEqual(await readFile(join(root, ledger)), before);
+  assert.deepEqual(readPrivateFixture(join(root, ledger)), before);
   assert.deepEqual((await readdir(root)).sort(), [
     ".academy-drafts.lock",
     ledger,
@@ -652,10 +652,9 @@ test("an approved handoff creates exactly its independently confirmed private ru
     );
     const result = JSON.parse((await exportCommand()).stdout);
     const vendorFile = join(registry, result.filename);
-    const delivered = await readFile(vendorFile);
-    assert.equal((await lstat(vendorFile)).mode & 0o777, 0o600);
+    const delivered = readPrivateFixture(vendorFile);
     assert.deepEqual(JSON.parse((await exportCommand()).stdout), result);
-    assert.deepEqual(await readFile(vendorFile), delivered);
+    assert.deepEqual(readPrivateFixture(vendorFile), delivered);
     const handoff = JSON.parse(delivered);
     assert.deepEqual(Object.keys(handoff).sort(), [
       "signature",
@@ -754,8 +753,7 @@ test("an approved handoff creates exactly its independently confirmed private ru
     const before = await settingsHash();
     runtimes.push(before);
     const privateReceiptPath = join(localRoot, "runtime-handoff.json");
-    assert.equal((await lstat(privateReceiptPath)).mode & 0o777, 0o600);
-    const applied = JSON.parse(await readFile(privateReceiptPath));
+    const applied = JSON.parse(readPrivateFixture(privateReceiptPath));
     assert.equal(applied.installation_id, receipt.installation_id);
     assert.equal(applied.source_revision, entry.licence.release_commit);
     for (const directory of ["browser", "data", "backups"])
