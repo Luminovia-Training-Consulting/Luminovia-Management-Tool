@@ -2,20 +2,7 @@
 import { useTranslation } from "react-i18next";
 import { Field } from "../../components/common";
 import { validZone } from "../../lib/dates";
-
-// Older browsers still offer common teaching zones if they lack the IANA list API.
-const zones = [
-  ...new Set([
-    "UTC",
-    "Europe/Berlin",
-    "Europe/London",
-    "Australia/Brisbane",
-    "Australia/Sydney",
-    ...(Intl.supportedValuesOf?.("timeZone") ?? []),
-  ]),
-]
-  .filter(validZone)
-  .sort();
+import { timeZoneOptions } from "../../lib/time-zone-options";
 
 /** Change the presentation zone without writing to profile or event records. */
 export function CalendarDisplayZone({
@@ -40,7 +27,7 @@ export function CalendarDisplayZone({
         <option value="">
           {t("calendarProfileZone", { zone: profileZone })}
         </option>
-        {zones.map((zone) => (
+        {timeZoneOptions(value).map((zone) => (
           <option key={zone} value={zone}>
             {zone}
           </option>

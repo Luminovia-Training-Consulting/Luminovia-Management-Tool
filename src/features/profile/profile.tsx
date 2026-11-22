@@ -33,6 +33,7 @@ import {
 } from "../../lib/queries";
 import type { Profile } from "../../lib/types";
 import { validZone } from "../../lib/dates";
+import { timeZoneOptions } from "../../lib/time-zone-options";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -121,9 +122,19 @@ function ProfileForm({ profile }: { profile: Profile }) {
       <Field
         id="profile-zone"
         label={t("timezone")}
+        hint={t("profileTimeZoneHint")}
         error={Boolean(errors.time_zone)}
       >
-        <input id="profile-zone" list="time-zones" {...register("time_zone")} />
+        <select {...register("time_zone")}>
+          <option value="" disabled>
+            {t("chooseTimeZone")}
+          </option>
+          {timeZoneOptions(profile.time_zone).map((zone) => (
+            <option key={zone} value={zone}>
+              {zone}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field id="bio-de" label={t("aboutMe")} error={Boolean(errors.bio_de)}>
         <textarea id="bio-de" rows={5} {...register("bio_de")} />
@@ -213,11 +224,6 @@ export function ProfilePage() {
             {t("apiDocumentation")}
           </Link>
         )}
-        <datalist id="time-zones">
-          <option>Europe/Berlin</option>
-          <option>Australia/Brisbane</option>
-          <option>UTC</option>
-        </datalist>
       </>
     );
   return (
@@ -294,11 +300,6 @@ export function ProfilePage() {
           (expertise.data ?? []).some((value) => value.topic_id === topic.id),
         )}
       />
-      <datalist id="time-zones">
-        <option>Europe/Berlin</option>
-        <option>Australia/Brisbane</option>
-        <option>UTC</option>
-      </datalist>
     </>
   );
 }

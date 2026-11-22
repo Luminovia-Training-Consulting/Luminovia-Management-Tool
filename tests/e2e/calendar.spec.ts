@@ -41,13 +41,15 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     const stranger = await actor("Private calendar stranger", "lecturer");
     const admin = await actor("Private calendar administrator", "admin");
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    await checked(
-        service
-            .from("profiles")
-            .update({time_zone: "Australia/Brisbane"})
-            .eq("id", owner.id),
-    );
     await login(page, owner.email);
+    await page.goto("/profile");
+    const zoneSelect = page.getByRole("combobox", { name: "Zeitzone", exact: true });
+    await expect(zoneSelect.getByRole("option", { name: "Asia/Tokyo", exact: true })).toHaveCount(1);
+    await zoneSelect.selectOption("Australia/Brisbane");
+    await page.getByRole("button", { name: "Profil speichern", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(/gespeichert/i);
+    await page.reload();
+    await expect(zoneSelect).toHaveValue("Australia/Brisbane");
     await page.goto("/calendar");
     const displayZone = page.getByLabel("Kalenderanzeige in", {exact: true});
     await expect(displayZone.locator("option:checked")).toHaveText(
@@ -60,12 +62,13 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
         name: "Privaten Termin hinzufügen",
         exact: true,
     });
+    await expect(dialog.getByLabel("Zeitzone", {exact: true})).toHaveValue("Australia/Brisbane");
     const title = `Private calendar ${randomUUID().slice(0, 8)}`;
     await dialog.getByLabel("Titel", {exact: true}).fill(title);
     await dialog
         .getByLabel("Beschreibung oder Notiz", {exact: true})
         .fill("Fictional private preparation note");
-    await dialog.getByLabel("Zeitzone", {exact: true}).fill("Europe/Berlin");
+    await dialog.getByLabel("Zeitzone", {exact: true}).selectOption("Europe/Berlin");
     let writes = 0;
     page.on("request", (request) => {
         if (
@@ -101,7 +104,7 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     const local = (value: DateTime) => value.toFormat("yyyy-MM-dd'T'HH:mm");
     await dialog
         .getByLabel("Zeitzone", {exact: true})
-        .fill("Australia/Brisbane");
+        .selectOption("Australia/Brisbane");
     await dialog.getByLabel("Beginn", {exact: true}).fill(local(start));
     await dialog
         .getByLabel("Ende", {exact: true})

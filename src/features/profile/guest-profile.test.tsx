@@ -33,7 +33,7 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
     luminovia_user_id: "LV-0001-0002-0003-0004-0005",
     display_name: "Fictional Guest",
     phone: "",
-    time_zone: "Europe/Berlin",
+    time_zone: "US/Eastern",
     bio_de: "",
     bio_en: "",
     active: true,
@@ -47,6 +47,15 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
     </QueryClientProvider>,
   );
   expect(screen.getByDisplayValue("Fictional Guest")).toBeVisible();
+  const timeZone = screen.getByRole("combobox", { name: "Zeitzone" });
+  expect(timeZone).toHaveValue("US/Eastern");
+  expect(timeZone).toHaveAccessibleDescription(/Standard für deinen Kalender/);
+  expect(
+    screen.getByRole("option", { name: "Asia/Tokyo" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("option", { name: "Australia/Brisbane" }),
+  ).toBeInTheDocument();
   expect(
     screen.getByText("LV-0001-0002-0003-0004-0005", { exact: true }),
   ).toBeVisible();

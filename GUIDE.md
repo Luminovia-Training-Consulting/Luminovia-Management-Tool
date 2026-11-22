@@ -98,7 +98,7 @@ is not a new verification, public profile link or legal signature. You decide wh
 
 Each person has an individual account, created directly by authorised administration or by invitation, and chooses their own password. The available roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company**, **Kursteilnehmer:in / Course participant** and **Gast / Guest**. An account may hold several roles. Company workflows require an organisation association. Participant workflows require enrolment in the relevant course. An explicit teaching role is required to personally accept an offer or submit a lecturer’s own invoice. The server checks permissions for protected operations, private chat membership and personal calendar ownership.
 
-Use the public [demo](/demo) to explore the fictional Management, Lecturer, Company and Participant views. Signed-in portal workspaces follow the permissions of the current account.
+Use the public demo at `/demo` to explore the fictional Management, Lecturer, Company and Participant views. Signed-in portal workspaces follow the permissions of the current account.
 
 On your first dashboard visit, **Willkommen bei Luminovia / Welcome to Luminovia** introduces permitted areas step by step. Use Next/Back, open an area, pause and resume, or skip. Progress is private to your account and saved only after online server confirmation. Open `/welcome` to restart or continue later. The guide introduces functions; it does not assign roles or upload files. Its server-confirmed progress is separate from the Portal tour's tab-session progress. See
 the [welcome guide](GUIDE.md#section-welcome-guide).
@@ -1962,6 +1962,8 @@ The notification opens the recipient's exact invitation. They can accept, accept
 <a id="section-calendar-time-and-links"></a>
 
 ## Time and links
+
+Set your account default under **Profil → Zeitzone / Profile → Time zone**. Choose an IANA zone from the dropdown and save the profile. The calendar, dashboard schedule and notification timestamps use this zone where they show times in your personal view. When creating a private event, you can choose the time zone in which you entered its local times.
 
 Use **Kalenderanzeige in / Show calendar in** to change how the calendar displays appointments in the current view. **Profilzeitzone / Profile time zone** restores the account default. A zone change keeps the selected calendar date and leaves stored events and their original zones intact. In a repeated hour the calendar labels the UTC offsets. Global event details show both the original event times and the displayed times when the zones differ.
 

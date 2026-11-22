@@ -267,7 +267,7 @@ it("keeps calendar tools collapsed until explicitly opened and preserves the dis
   expect(tools).not.toHaveAttribute("open");
   expect(
     tools?.querySelectorAll(".calendar-tools-content > details"),
-  ).toHaveLength(4);
+  ).toHaveLength(5);
   expect(
     state.rpc.mock.calls.some(([name]) => name === "my_calendar_subscriptions"),
   ).toBe(false);
@@ -278,7 +278,7 @@ it("keeps calendar tools collapsed until explicitly opened and preserves the dis
   expect(tools).toHaveAttribute("open", "");
   expect(
     tools?.querySelectorAll(".calendar-tools-content > details > summary"),
-  ).toHaveLength(4);
+  ).toHaveLength(5);
   await act(async () => {
     await i18n.changeLanguage("en");
   });

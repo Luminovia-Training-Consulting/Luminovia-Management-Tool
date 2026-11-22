@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Profile time zone
+
+- Use the browser's IANA zone catalogue for profile, calendar display and private event dropdowns. Keep valid saved aliases available and reuse the profile default and existing calendar time conversion.
+
 ## Course creation
 
 - Keep one creation dialog with distinct template, draft and publication actions. Template-only saves contain reusable content. Date and time validation belongs to run actions.

@@ -1,3 +1,9 @@
+# 23 November 2026 — Profile and calendar time zone dropdowns
+
+The profile, calendar display and private appointment form use the browser's IANA time zone catalogue. Valid stored aliases stay selectable. The saved account preference is the default for the calendar and personal time displays. Private events use the selected zone for their local start and end, including the existing daylight-saving validation.
+
+All 268 focused Vitest cases and 10 isolated desktop/mobile Chromium calendar cases passed. The browser saved Australia/Brisbane from the profile, reloaded it, used it as the calendar and new appointment default and still rejected nonexistent and repeated wall times in Europe/Berlin. TypeScript, targeted lint, documentation and the build budget passed.
+
 # 23 November 2026 — One course creation form
 
 Course management offers one Create course action. New reusable content can be saved alone or used for a draft or published run. Existing templates and building-block schedules remain selectable. Template-only saves exclude company, venue and sessions. A confirmed new template survives an unconfirmed run and is reused on retry. TypeScript, targeted lint and 32 course and scheduling tests passed.
