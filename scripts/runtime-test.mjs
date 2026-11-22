@@ -349,28 +349,30 @@ try {
         ]);
         // These checks use fixtures and owned proxy containers, never the hosted VM.
         const hosting = join(scratch, "deploy/hostinger");
+        const academyRecovery = existsSync(join(scratch, "deploy/academy/test_recovery.py"));
+        if (academyRecovery || existsSync(join(hosting, "backups"))) {
+            // The crypto fixtures otherwise skip successfully when their tools are
+            // absent. Require real age binaries before claiming complete local QA.
+            for (const [label, binary] of [
+                ["age encryption tool", env.AGE_TEST_BINARY || "age"],
+                ["age key generation tool", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
+            ]) {
+                const version = await step(label, binary, ["--version"]);
+                if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
+                    throw new Error(
+                        "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
+                    );
+            }
+        }
+        if (academyRecovery)
+            await step("Academy encrypted transfer and recovery", "python3", [
+                "-m", "unittest", "discover", "-s", "deploy/academy", "-p", "test_*.py",
+            ]);
         if (existsSync(hosting)) {
             if (existsSync(join(hosting, "test_reset_live.py"))) {
                 await step("Operator reset guards and recovery", "python3", [
                     join(hosting, "test_reset_live.py"),
                 ]);
-            }
-            if (existsSync(join(hosting, "backups"))) {
-                // The crypto fixtures otherwise skip successfully when their tools are
-                // absent. Require real age binaries before claiming complete local QA.
-                for (const [label, binary] of [
-                    ["age encryption tool", env.AGE_TEST_BINARY || "age"],
-                    [
-                        "age key generation tool",
-                        env.AGE_KEYGEN_TEST_BINARY || "age-keygen",
-                    ],
-                ]) {
-                    const version = await step(label, binary, ["--version"]);
-                    if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
-                        throw new Error(
-                            "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
-                        );
-                }
             }
             for (const area of ["updates", "maintenance", "backups"])
                 if (existsSync(join(hosting, area)))

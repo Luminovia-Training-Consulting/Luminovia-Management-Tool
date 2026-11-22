@@ -149,7 +149,7 @@ async function runFixture({
             return [];
         },
         existsSync: (path) =>
-            /deploy\/hostinger|supabase\/functions|playwright-report$|test-results$|coverage$|\.local\/screenshots$|\.local\/browser$|\.local\/runtime\.log$/.test(
+            /deploy\/hostinger|deploy\/academy\/test_recovery\.py$|supabase\/functions|playwright-report$|test-results$|coverage$|\.local\/screenshots$|\.local\/browser$|\.local\/runtime\.log$/.test(
                 path,
             ),
         join,
@@ -387,6 +387,7 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
         "check",
         "--version",
         "unittest",
+        "deploy/academy",
         "deploy/hostinger/updates/package.test.mjs",
         "--gateway-routing",
         "scripts/hostinger-caddy-check.mjs",
