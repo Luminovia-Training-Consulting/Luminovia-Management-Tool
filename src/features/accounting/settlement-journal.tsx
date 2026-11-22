@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeftRight, Download } from "lucide-react";
 import { DateTime } from "luxon";
@@ -9,20 +9,27 @@ import { Dialog } from "../../components/ui/dialog";
 import { useOnline } from "../../lib/online";
 import {
   downloadSettlementJournal,
+  filterSettlementJournal,
   readSettlementJournal,
+  type SettlementJournalFile,
+  type SettlementJournalFilter,
 } from "./settlement-journal-api";
 import {
+  settlementJournalKind,
   settlementJournalPeriodSchema,
   type SettlementJournal,
   type SettlementJournalPeriod,
 } from "./settlement-journal-schema";
 
-type Action = "preview" | "json" | "csv";
+import { accountingCurrency } from "./schema";
+
+type Action = "preview" | SettlementJournalFile;
 const pageSize = 20;
 
 export function SettlementJournalButton() {
   const { t } = useTranslation("accounting");
   const [open, setOpen] = useState(false);
+  const online = useOnline();
   const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   return (
     <>
@@ -43,7 +50,12 @@ export function SettlementJournalButton() {
         description={t("journal.description")}
         returnFocusTo={trigger}
       >
-        {open && <JournalForm />}
+        {open &&
+          (online ? (
+            <JournalForm />
+          ) : (
+            <Notice kind="error">{t("offline")}</Notice>
+          ))}
       </Dialog>
     </>
   );
@@ -51,7 +63,6 @@ export function SettlementJournalButton() {
 
 function JournalForm() {
   const { t } = useTranslation("accounting");
-  const online = useOnline();
   const id = useId();
   const [period, setPeriod] = useState<SettlementJournalPeriod>(() => {
     const today = DateTime.utc();
@@ -61,9 +72,21 @@ function JournalForm() {
     };
   });
   const [visible, setVisible] = useState(pageSize);
-  const report = useMutation({ mutationFn: readSettlementJournal });
+  const [filter, setFilter] = useState<SettlementJournalFilter>({
+    kind: "",
+    currency: "",
+    posting: "",
+  });
+  const report = useMutation({
+    mutationFn: readSettlementJournal,
+    gcTime: 0,
+  });
+  const data = useMemo(
+    () => report.data && filterSettlementJournal(report.data, filter),
+    [report.data, filter],
+  );
   const validPeriod = settlementJournalPeriodSchema.safeParse(period).success;
-  const enabled = validPeriod && online && !report.isPending;
+  const enabled = validPeriod && !report.isPending;
   const errorCode =
     report.error && "code" in report.error ? report.error.code : null;
 
@@ -72,12 +95,25 @@ function JournalForm() {
     setPeriod((current) => ({ ...current, [field]: value }));
   }
 
+  function updateFilter<K extends keyof SettlementJournalFilter>(
+    field: K,
+    value: SettlementJournalFilter[K],
+  ) {
+    setVisible(pageSize);
+    setFilter((current) => ({ ...current, [field]: value }));
+  }
+
   function load(action: Action) {
     if (!enabled) return;
     setVisible(pageSize);
     report.mutate(period, {
       onSuccess(data) {
-        if (action !== "preview") downloadSettlementJournal(data, action);
+        if (action !== "preview")
+          downloadSettlementJournal(
+            filterSettlementJournal(data, filter),
+            action,
+            filter,
+          );
       },
     });
   }
@@ -114,6 +150,65 @@ function JournalForm() {
             />
           </Field>
         </div>
+        <div className="accounting-journal-period">
+          <Field id={`${id}-kind`} label={t("journal.kindFilter")}>
+            <select
+              id={`${id}-kind`}
+              value={filter.kind}
+              disabled={report.isPending}
+              onChange={(event) =>
+                updateFilter(
+                  "kind",
+                  event.target.value as SettlementJournalFilter["kind"],
+                )
+              }
+            >
+              <option value="">{t("journal.allKinds")}</option>
+              {settlementJournalKind.options.map((kind) => (
+                <option key={kind} value={kind}>
+                  {t(`journal.kind.${kind}`)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id={`${id}-currency`} label={t("journal.currencyFilter")}>
+            <select
+              id={`${id}-currency`}
+              value={filter.currency}
+              disabled={report.isPending}
+              onChange={(event) =>
+                updateFilter(
+                  "currency",
+                  event.target.value as SettlementJournalFilter["currency"],
+                )
+              }
+            >
+              <option value="">{t("journal.allCurrencies")}</option>
+              {accountingCurrency.options.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id={`${id}-posting`} label={t("journal.postingFilter")}>
+            <select
+              id={`${id}-posting`}
+              value={filter.posting}
+              disabled={report.isPending}
+              onChange={(event) =>
+                updateFilter(
+                  "posting",
+                  event.target.value as SettlementJournalFilter["posting"],
+                )
+              }
+            >
+              <option value="">{t("journal.allPostings")}</option>
+              <option value="recorded">{t("journal.onlyRecorded")}</option>
+              <option value="reversed">{t("journal.onlyReversed")}</option>
+            </select>
+          </Field>
+        </div>
         {!validPeriod && <p role="alert">{t("journal.invalidPeriod")}</p>}
         <div className="accounting-actions">
           <Button disabled={!enabled} type="submit">
@@ -137,9 +232,17 @@ function JournalForm() {
             <Download size={16} aria-hidden="true" />
             {t("journal.csv")}
           </Button>
+          <Button
+            disabled={!enabled}
+            type="button"
+            variant="secondary"
+            onClick={() => load("totals_csv")}
+          >
+            <Download size={16} aria-hidden="true" />
+            {t("journal.totalsCsv")}
+          </Button>
         </div>
       </form>
-      {!online && <Notice kind="error">{t("offline")}</Notice>}
       {report.isPending && <p role="status">{t("journal.loading")}</p>}
       {report.isError && (
         <Notice kind="error">
@@ -152,8 +255,8 @@ function JournalForm() {
           )}
         </Notice>
       )}
-      {report.data && <JournalResult data={report.data} visible={visible} />}
-      {report.data && visible < report.data.items.length && (
+      {data && <JournalResult data={data} visible={visible} />}
+      {data && visible < data.items.length && (
         <Button
           variant="secondary"
           onClick={() => setVisible((current) => current + pageSize)}

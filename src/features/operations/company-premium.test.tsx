@@ -75,7 +75,7 @@ function mount(isAdmin: boolean, setting = initial) {
 it("requires both confirmations before an admin command and sends no command on cancel", async () => {
   mount(true);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("switch", { name: "Premium aktivieren" }));
+  await user.click(screen.getByRole("switch", { name: "Premium LMS" }));
   expect(
     await screen.findByRole("dialog", { name: "Premium LMS aktivieren?" }),
   ).toBeVisible();
@@ -109,7 +109,7 @@ it("shows status without toggle or retained-data access for management", async (
     screen.getByText("Nur eine aktive Administration darf Premium umschalten."),
   ).toBeVisible();
   expect(
-    screen.queryByRole("switch", { name: "Premium aktivieren" }),
+    screen.queryByRole("switch", { name: "Premium LMS" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Beibehaltene Kursdaten ansehen" }),
@@ -198,7 +198,7 @@ it.each(["permission", "connection"] as const)(
 it("sends no toggle when cancelled and applies the same confirmations when disabling", async () => {
   mount(true);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("switch", { name: "Premium aktivieren" }));
+  await user.click(screen.getByRole("switch", { name: "Premium LMS" }));
   await user.click(await screen.findByRole("button", { name: "Abbrechen" }));
   expect(fake.rpc).not.toHaveBeenCalledWith(
     "set_company_premium",
@@ -208,9 +208,7 @@ it("sends no toggle when cancelled and applies the same confirmations when disab
 
   cleanup();
   mount(true, { ...initial, enabled: true, version: 1 });
-  await user.click(
-    screen.getByRole("switch", { name: "Premium deaktivieren" }),
-  );
+  await user.click(screen.getByRole("switch", { name: "Premium LMS" }));
   await user.click(await screen.findByRole("button", { name: "Weiter" }));
   expect(fake.rpc).not.toHaveBeenCalledWith(
     "set_company_premium",

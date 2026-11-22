@@ -172,77 +172,97 @@ await withTestDatabase("company_acct_webhooks", async ({ actor, sql }) => {
     foreignInvoice,
   );
 
-  async function ledger(name, ...args) {
-    return JSON.parse(await rpc(admin, name, invoice, ...args));
-  }
+  const ledger =
+    (invoiceId) =>
+    async (name, ...args) =>
+      JSON.parse(await rpc(admin, name, invoiceId, ...args));
   const paymentDate = "2020-02-08T11:00:00Z";
+
+  async function settleAndReverse(invoiceId) {
+    const record = ledger(invoiceId);
+    const repeat = async (name, ...inputs) => {
+      const args = [...inputs, randomUUID()];
+      const result = await record(name, ...args);
+      assert.deepEqual(await record(name, ...args), result);
+      return result;
+    };
+    await repeat(
+      "record_customer_invoice_payment",
+      "100.00",
+      paymentDate,
+      "Private bank reference",
+    );
+    const note = await repeat(
+      "register_customer_credit_note",
+      JSON.stringify({
+        reference: "Private credit reference " + invoiceId,
+        issued_on: "2020-02-05",
+        currency: "AUD",
+        amount: "10.00",
+        document_version_id: await pdf(),
+        issued_and_reviewed: true,
+        reason: "Private credit note reason",
+      }),
+    );
+    const application = await repeat(
+      "apply_customer_invoice_credit_note",
+      note.id,
+      "Private credit application",
+    );
+    const refund = await repeat(
+      "record_customer_invoice_refund",
+      "10.00",
+      paymentDate,
+      "Private refund reference",
+    );
+    const reverseCredit = [
+      application.id,
+      "Private credit correction",
+      randomUUID(),
+    ];
+    await assert.rejects(
+      record("reverse_customer_invoice_credit_note", ...reverseCredit),
+      /PT409/,
+    );
+    await repeat(
+      "reverse_customer_invoice_refund",
+      refund.id,
+      "Private refund reversal",
+    );
+    const correction = await record(
+      "reverse_customer_invoice_credit_note",
+      ...reverseCredit,
+    );
+    assert.deepEqual(
+      await record("reverse_customer_invoice_credit_note", ...reverseCredit),
+      correction,
+    );
+  }
+
+  const record = ledger(invoice);
   const paymentArgs = [
     "80.00",
     paymentDate,
     "Private bank reference",
     randomUUID(),
   ];
-  const payment = await ledger(
+  const payment = await record(
     "record_customer_invoice_payment",
     ...paymentArgs,
   );
   assert.deepEqual(
-    await ledger("record_customer_invoice_payment", ...paymentArgs),
+    await record("record_customer_invoice_payment", ...paymentArgs),
     payment,
   );
-  await ledger(
+  await record(
     "reverse_customer_invoice_payment",
     payment.id,
     "Private reversal reason",
     randomUUID(),
   );
-  await ledger(
-    "record_customer_invoice_payment",
-    "100.00",
-    paymentDate,
-    "Private bank reference",
-    randomUUID(),
-  );
-  const note = await ledger(
-    "register_customer_credit_note",
-    JSON.stringify({
-      reference: "Private credit reference",
-      issued_on: "2020-02-05",
-      currency: "AUD",
-      amount: "10.00",
-      document_version_id: await pdf(),
-      issued_and_reviewed: true,
-      reason: "Private credit note reason",
-    }),
-    randomUUID(),
-  );
-  const application = await ledger(
-    "apply_customer_invoice_credit_note",
-    note.id,
-    "Private credit application",
-    randomUUID(),
-  );
-  const refund = await ledger(
-    "record_customer_invoice_refund",
-    "10.00",
-    paymentDate,
-    "Private refund reference",
-    randomUUID(),
-  );
-  await ledger(
-    "reverse_customer_invoice_refund",
-    refund.id,
-    "Private refund reversal",
-    randomUUID(),
-  );
-  await ledger(
-    "reverse_customer_invoice_credit_note",
-    application.id,
-    "Private credit correction",
-    randomUUID(),
-  );
+  await settleAndReverse(invoice);
   await assert.rejects(
-    ledger(
+    record(
       "record_customer_invoice_payment",
       "1.00",
       paymentDate,
@@ -341,6 +361,16 @@ await withTestDatabase("company_acct_webhooks", async ({ actor, sql }) => {
     subscription: receiver,
     invoice: httpInvoice,
     eventType: "invoice.registered",
+    publishFollowups: async () => {
+      await settleAndReverse(httpInvoice);
+      return [
+        "payment.recorded",
+        "credit_note.applied",
+        "refund.recorded",
+        "refund.reversed",
+        "credit_note.reversed",
+      ];
+    },
     publishNext: queueNext,
     revoke: () =>
       rpc(admin, "company_course_webhook_revoke", company, receiver.id),
@@ -369,6 +399,6 @@ await withTestDatabase("company_acct_webhooks", async ({ actor, sql }) => {
     false,
   );
   console.log(
-    "PASS customer accounting webhook scope, ledger retries, signed HTTP and live revocation",
+    "PASS customer accounting webhook scope, exact ledger retries, signed credit application, refund, both reversals and live revocation",
   );
 });

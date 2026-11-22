@@ -380,8 +380,7 @@ const pairs: Record<string, [string, string]> = {
   premiumEnabled: ["Premium LMS EIN", "Premium LMS ON"],
   premiumDisabled: ["Premium LMS AUS", "Premium LMS OFF"],
   premiumVersion: ["Version {{version}}", "Version {{version}}"],
-  premiumEnable: ["Premium aktivieren", "Enable Premium"],
-  premiumDisable: ["Premium deaktivieren", "Disable Premium"],
+  premiumSwitch: ["Premium LMS", "Premium LMS"],
   premiumContinue: ["Weiter", "Continue"],
   premiumBack: ["Zurück", "Back"],
   premiumAdminOnly: [

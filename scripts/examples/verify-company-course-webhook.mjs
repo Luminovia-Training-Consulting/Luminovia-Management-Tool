@@ -61,6 +61,8 @@ export function verifyCompanyCourseWebhook({
     const event = JSON.parse(utf8.decode(body));
     if (
       event?.id !== eventId ||
+      // Keep the signed v1 fields identical to what the durable inbox stores.
+      Object.keys(event).length !== 5 ||
       event.version !== 1 ||
       typeof event.type !== "string" ||
       typeof event.occurred_at !== "string" ||

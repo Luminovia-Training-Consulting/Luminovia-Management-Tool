@@ -14,7 +14,10 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { signedWebhook } from "./company-course-webhook-worker.mjs";
 import { createCompanyCourseWebhookReceiver } from "./examples/company-course-webhook-receiver.mjs";
-import { webhookBodyLimit } from "./examples/verify-company-course-webhook.mjs";
+import {
+  verifyCompanyCourseWebhook,
+  webhookBodyLimit,
+} from "./examples/verify-company-course-webhook.mjs";
 
 const secret = "ab".repeat(32);
 const command = fileURLToPath(
@@ -114,10 +117,21 @@ test("customer events preserve the signed invoice ID and reject unrelated fields
     { ...recorded, amount: "100.00" },
   ];
   for (const attempted of incompatible) {
+    const signed = signedWebhook(attempted, secret);
     assert.equal(
-      (await deliver(url, signedWebhook(attempted, secret))).status,
-      401,
+      verifyCompanyCourseWebhook({
+        body: Buffer.from(signed.body),
+        headers: Object.fromEntries(
+          Object.entries(signed.headers).map(([name, value]) => [
+            name.toLowerCase(),
+            value,
+          ]),
+        ),
+        secret,
+      }),
+      null,
     );
+    assert.equal((await deliver(url, signed)).status, 401);
   }
   const conflicting = { ...recorded, invoice_id: randomUUID() };
   assert.equal(

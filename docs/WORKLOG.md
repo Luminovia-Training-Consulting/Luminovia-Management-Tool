@@ -1,3 +1,13 @@
+# 22 November 2026 — Filtered settlement exports and further LMS acceptance
+
+The settlement journal filters entry type, original currency and posting status. The preview, versioned JSON, detail CSV and totals CSV use the same selection. Totals keep signed decimal values, including a reversal-only negative net. Each export rechecks current finance access. Disconnect discards the open report, and reconnect requires a new authorised request. All 29 accounting component and contract tests passed. Native desktop and mobile Chromium verified the detail and totals exports, filter isolation and denial for customer accounts with real Auth, PostgREST, Storage and ClamAV.
+
+The local accounting webhook path now delivers the existing applied credit, refund and reversal events through PostgreSQL, the shared worker and the HTTP/SQLite receiver. A premature reversal fails without creating a delivery, retries preserve one event and revocation stops an already leased delivery. The standalone v1 verifier rejects extra fields. Tests confirm retained acknowledgement state across restart.
+
+The native Premium SMTP scenario uses actual Auth, PostgreSQL, the notification worker and a loopback mailbox. The opted-in fixture receives B while A is OFF. Reopening A restores historical inbox access and keeps the old mail suppressed. One new German A message and one English B message arrive with unique outbox IDs and generic bodies. Native desktop and mobile Chromium also passed the keyboard and scoped accessibility checks for the bilingual two-step Premium control, including the focus return.
+
+The internal historical migration replay preserves a private chat, its revision and read state alongside the existing account, contracts, invoices, payments and file evidence. Both signed Academy edition replays preserve enrolment, course chat and exact protected file metadata. Closed profiles and unrelated accounts are denied. The separate cold recovery and portability suite passed 18 tests with PostgreSQL and real encryption.
+
 # 22 November 2026 — Encrypted recovery and live health
 
 A real self-hosted Academy stopped its disposable Docker services, created an age-encrypted archive with PostgreSQL, Storage and the persistent Caddy volumes, then restarted. The operator verified the archive digest and freshness on the live health report. Login, manifest and edition isolation passed again. The first attempt had rejected Caddy's normal sticky directories. The updated archive policy allows those two exact Caddy directories, keeps setuid, setgid and all special or linked members rejected, and passed checks against all members of the real archive. The recovery suite passed 12 tests with real age and PostgreSQL, including restoration into a new target.

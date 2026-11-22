@@ -78,7 +78,7 @@ The inventory maps the current implementation and its principal automated eviden
 
 The portal supports **formal assignment amendments** with versioned proposals, approvals and audited application. A company can submit proposed shared dates for management to coordinate with each affected lecturer. Finance can include a lecturer-specific amendment for eligible future delivery. Approved dates and commercial terms apply together while preserving the original agreement, protected sessions, billed units and applicable deadlines. On a retained teaching record, an independent reviewer can request a new evidence revision and keep the earlier submission available in history.
 
-Internal finance supports exceptional and instalment invoices, payment credits, customer credit-note applications and refunds, and reviewed lecturer overpayment corrections. The settlement journal shows authorised movements and reversals by original currency and period with CSV and JSON exports. Eligible company integrations can opt into signed customer invoice and settlement event notifications. Operator receiver setup and acceptance on a hosted installation remain deployment work. The portal-side website enquiry intake and triage are available. The sender belongs to the separate Website project. See the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review).
+Internal finance supports exceptional and instalment invoices, payment credits, customer credit-note applications and refunds, and reviewed lecturer overpayment corrections. The settlement journal filters authorised movements and reversals by period, original currency, type and posting status. It exports detailed CSV, totals CSV and versioned JSON from a fresh authorised report. Eligible company integrations can opt into signed customer invoice and settlement event notifications. Operator receiver setup and acceptance on a hosted installation remain deployment work. The portal-side website enquiry intake and triage are available. The sender belongs to the separate Website project. See the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review).
 
 ## Historical OneDrive change evidence
 
@@ -160,9 +160,11 @@ The current owner priority is to complete the independent LMS before the install
 - [x] **LMS-02:** stable public User IDs and verified multi-company membership. Company-created accounts start with the participant role. Linking an existing participant preserves their roles. The SQL account and membership suites verify stable IDs, isolation and current scope.
 - [x] **LMS-03:** default-OFF, organisation-scoped Premium with admin-only audited version checks. Desktop and mobile Chromium verify the two explicit confirmations and refusal for management.
 - [x] **LMS-04:** company-scoped participant directory, invitation, User ID linking and enrolment/removal. Current tests exercise the account, membership and course transactions.
+- [x] Verify the admin switch with a stable name and both visible state labels. The native Premium test covers keyboard cancellation and confirmation, focus restoration, German light mode and English dark mode on desktop and mobile.
 - [x] Verify in desktop and mobile Chromium that OFF hides the course, still denies the old exact download and leaves the other company’s course and chat open for the same learner. While a reconnect request is pending, the learner sees no cached course content. Native SQL also tests in-app notices and an already claimed mail delivery.
 - [x] Verify existing Realtime subscriptions across Premium changes. The same learner socket receives company B updates while A is OFF. Reactivating A restores access and exact attachment bytes. The earlier forbidden marker is never delivered.
-- [ ] Cover the live provider delivery matrix.
+- [x] Exercise real loopback SMTP for a fictional two-company participant with an existing opt-in. Company B delivers while A is OFF. After A returns its old mail stays suppressed and a new eligible message is delivered once.
+- [ ] Cover the actual external provider delivery matrix.
 
 ### R4 — Premium LMS course experience and collaboration (`P1`, after R3)
 
@@ -184,7 +186,8 @@ The current owner priority is to complete the independent LMS before the install
 - [ ] **LMS-10–LMS-11:** complete DE/EN, security, permissions, migration, API, file, chat, notification, unit, component, SQL/RLS, integration and browser test matrix in Section 8.12 (Premium LMS test matrix below).
 - [ ] **API-T01–API-T20:** complete login/API/Swagger/integration test matrix from Section 10; verify that every supported UI action has an authorised API mapping and that the OpenAPI contract agrees with actual responses.
 - [x] Exercise Premium OFF→ON→OFF→ON with one participant shared by two companies. Existing native browser tests cover retained document and attendance evidence, current role checks, and the unaffected second course and chat.
-- [ ] Run the retained-data upgrade on a restored target fixture including old Auth UUIDs, contracts, payment snapshots, chat, invoices and actual Storage bytes.
+- [x] Replay the historical internal migration checkpoint through the current inventory. Verify retained Auth, agreements, payment and invoice snapshots, private chat and protected file metadata. The independent native self-host replay also verifies retained file bytes.
+- [ ] Run the update and recovery on the approved retained-data target.
 - [ ] Require all current required **application + security CI checks green on the exact release commit**; no red, skipped critical jobs, waived permissions, stale status or silently accepted failed UI test.
 - [ ] Verify on Hostinger the precise deployed revision, health checks, backup freshness, isolated recovery, migrations, external SMTP, monitoring, file scanner and supported clients. Do not assume automatic development publication is production.
 - [ ] Record an explicit **go/no-go** and rollback/incident plan before real user onboarding. If Premium acceptance is incomplete, it **must remain OFF**; releasing a core-only product requires a conscious scope decision rather than claiming the LMS delivered.
