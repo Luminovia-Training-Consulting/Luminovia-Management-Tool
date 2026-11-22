@@ -1,3 +1,7 @@
+# 23 November 2026 — Academy analytics response coverage
+
+The Academy instructor fixture now calls both LMS analytics operations as an authorized administrator. It validates their live PostgreSQL responses against the edition's OpenAPI schema and keeps the exhaustive operation coverage assertion.
+
 # 23 November 2026 — Follow-up check for duplicated scheduling functions
 
 Announcements, global calendar events and course planning now resolve edited times through the same helper. Unchanged minute and zone inputs preserve the exact stored seconds, fractional seconds and daylight-saving offset. An edited minute or zone uses the regular validation for ambiguous or nonexistent local times. Announcements and global events also use the same positive-duration check.

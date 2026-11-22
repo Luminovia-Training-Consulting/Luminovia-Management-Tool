@@ -463,6 +463,12 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   );
   const adminView = await workspace(admin, run);
   assert.equal(adminView.lms_enabled, true);
+  await call(admin, "learning_analytics_access");
+  await call(admin, "learning_analytics_report", [
+    "staff",
+    date(-7).slice(0, 10),
+    date(30).slice(0, 10),
+  ]);
   assert.deepEqual(adminView.meeting_link, {
     url: null,
     can_edit: true,
