@@ -34,6 +34,7 @@ export function CompanyIntegrations({
   archived,
   zone,
   canSubscribePremium = false,
+  canSubscribeAccounting = false,
   showWebhooks = true,
 }: {
   actor: string;
@@ -41,6 +42,7 @@ export function CompanyIntegrations({
   archived: boolean;
   zone: string;
   canSubscribePremium?: boolean;
+  canSubscribeAccounting?: boolean;
   showWebhooks?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
@@ -278,6 +280,7 @@ export function CompanyIntegrations({
                 (key) => (key.scope ?? "courses.read") === "courses.read",
               )}
               canSubscribePremium={canSubscribePremium}
+              canSubscribeAccounting={canSubscribeAccounting}
               archived={archived}
             />
           )}

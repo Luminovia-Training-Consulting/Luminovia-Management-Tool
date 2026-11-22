@@ -39,18 +39,18 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     `);
     return { document, version, sha };
   }
-  async function invoice(number) {
+  async function invoice(number, currency = "AUD") {
     const job = randomUUID(),
       claim = randomUUID(),
       evidence = await pdf(finance);
     await sql(`
       insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
-        values(${q(job)},'Fictional contract','Fictional settlement customer','online','filled',50.00,50.00,'AUD','fixed_total','Confirmed fictional terms');
+        values(${q(job)},'Fictional contract','Fictional settlement customer','online','filled',50.00,50.00,${q(currency)},'fixed_total','Confirmed fictional terms');
       insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
-        values(${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},50.00,50.00,'AUD','fixed_total','Confirmed fictional terms',1);
+        values(${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},50.00,50.00,${q(currency)},'fixed_total','Confirmed fictional terms',1);
       insert into private.claim_revenue_ledger(claim_id,job_id,organisation_id,lecturer_id,gross_amount,gross_total_amount,platform_percent,
         platform_total_amount,lecturer_net_amount,lecturer_net_total_amount,currency)
-        values(${q(claim)},${q(job)},${q(org)},${q(teacher)},100.00,100.00,50,50.00,50.00,50.00,'AUD');
+        values(${q(claim)},${q(job)},${q(org)},${q(teacher)},100.00,100.00,50,50.00,50.00,50.00,${q(currency)});
     `);
     const receipt = await rpc(finance, "register_customer_invoice", [
       q(
@@ -59,7 +59,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
           number,
           issued_on: "2020-02-01",
           due_on: "2020-03-01",
-          currency: "AUD",
+          currency,
           total_amount: "100.00",
           document_version_id: evidence.version,
           difference_reason: "",
@@ -70,7 +70,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     return { ...receipt, evidence, claim };
   }
   const original = await invoice("Fictional INV-A");
-  const cancelled = await invoice("Fictional INV-B");
+  const cancelled = await invoice("Fictional INV-B", "EUR");
   const foreignCustomer = randomUUID();
   await sql(`
     insert into auth.users(id,email) values(${q(foreignCustomer)},'foreign-'||${q(foreignCustomer)}||'@example.invalid');
@@ -80,7 +80,12 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     rpc(who, name, [q(invoiceId), ...args]);
   const read = (who = finance, invoiceId = original.id) =>
     rpcWithId(who, "accounting_customer_settlement", invoiceId);
-  const note = async (reference, amount, invoiceId = original.id) => {
+  const note = async (
+    reference,
+    amount,
+    invoiceId = original.id,
+    currency = "AUD",
+  ) => {
     const evidence = await pdf(finance);
     return await rpcWithId(
       finance,
@@ -92,7 +97,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
             reference,
             amount,
             issued_on: "2020-02-05",
-            currency: "AUD",
+            currency,
             document_version_id: evidence.version,
             issued_and_reviewed: true,
             reason: "Fictional external credit",
@@ -144,7 +149,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     reference,
     key = randomUUID(),
     invoiceId = original.id,
-    at = "2020-02-09T12:00:00Z",
+    at = "2020-02-09T23:30:00Z",
   ) =>
     rpcWithId(who, "record_customer_invoice_refund", invoiceId, [
       q(amount),
@@ -401,6 +406,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     "Fictional full cancellation",
     "100.00",
     cancelled.id,
+    "EUR",
   );
   await apply(finance, full.id, randomUUID(), cancelled.id);
   const creditClosed = await read(finance, cancelled.id);
@@ -429,7 +435,7 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
     "Fictional full payment sent before credit acknowledgement",
     cancelled.id,
   );
-  await refund(
+  const fullRefund = await refund(
     finance,
     "100.00",
     "Fictional full refund",
@@ -443,5 +449,135 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
   await assert.rejects(read(customer), /42501/);
   console.log(
     "PASS full credit closes an unpaid invoice, allows a later full refund after real cash and revokes customer visibility",
+  );
+  const journal = (who, from, to = from) =>
+    rpc(who, "accounting_settlement_journal", [q(from), q(to)]);
+  const recorded = await journal(finance, "2020-02-09");
+  assert.equal(recorded.schema_version, "luminovia.settlement-journal/1");
+  assert.deepEqual(recorded.scopes, ["customer", "lecturer"]);
+  assert.deepEqual(recorded.totals, [
+    {
+      kind: "customer_refund",
+      currency: "AUD",
+      recorded: "28.02",
+      reversed: "0.00",
+      net: "28.02",
+    },
+    {
+      kind: "customer_refund",
+      currency: "EUR",
+      recorded: "100.00",
+      reversed: "0.00",
+      net: "100.00",
+    },
+  ]);
+  assert.equal(recorded.items.length, 4);
+  assert.ok(
+    recorded.items.every(
+      ({ effective_on, reverses_id }) =>
+        effective_on === "2020-02-09" && reverses_id === null,
+    ),
+  );
+  assert.ok(
+    recorded.items.some(
+      ({ id, subject_id }) =>
+        id === fullRefund.id && subject_id === cancelled.id,
+    ),
+  );
+  assert.deepEqual((await journal(finance, "2020-02-10")).items, []);
+  const fromOtherZone = JSON.parse(
+    await actor(
+      finance,
+      `
+    set local timezone='Australia/Brisbane';
+    select public.accounting_settlement_journal('2020-02-09', '2020-02-09')
+  `,
+    ),
+  );
+  assert.deepEqual(fromOtherZone.items, recorded.items);
+  assert.deepEqual((await journal(manager, "2020-02-09")).scopes, ["lecturer"]);
+  assert.deepEqual((await journal(manager, "2020-02-09")).items, []);
+  for (const account of [customer, teacher, foreignCustomer])
+    await assert.rejects(journal(account, "2020-02-09"), /42501/);
+  await assert.rejects(
+    sql(
+      "begin; set local role anon; select public.accounting_settlement_journal('2020-02-09','2020-02-09')",
+    ),
+    /42501/,
+  );
+  await assert.rejects(journal(finance, "2020-02-10", "2020-02-09"), /22023/);
+  await assert.rejects(journal(finance, "2020-02-09", "2021-02-09"), /22023/);
+  await assert.rejects(journal(finance, "infinity"), /22023/);
+  assert.deepEqual(
+    (await journal(finance, "2019-01-01", "2020-01-01")).items,
+    [],
+  );
+
+  const postingPeriod = JSON.parse(
+    await sql(`
+    select jsonb_build_array(min(posted), max(posted))
+    from (
+      select (created_at at time zone 'UTC')::date as posted
+      from private.accounting_customer_credit_applications
+      union all
+      select (created_at at time zone 'UTC')::date
+      from private.accounting_customer_refunds
+      where reverses_id is not null
+    ) dates
+  `),
+  );
+  const posted = await journal(finance, ...postingPeriod);
+  assert.deepEqual(posted.totals, [
+    {
+      kind: "customer_credit",
+      currency: "AUD",
+      recorded: "20.01",
+      reversed: "20.01",
+      net: "0.00",
+    },
+    {
+      kind: "customer_refund",
+      currency: "AUD",
+      recorded: "0.00",
+      reversed: "28.02",
+      net: "-28.02",
+    },
+    {
+      kind: "customer_credit",
+      currency: "EUR",
+      recorded: "100.00",
+      reversed: "0.00",
+      net: "100.00",
+    },
+  ]);
+  assert.equal(
+    posted.items.find(({ id }) => id === correction.id).reference,
+    "Fictional final refund",
+  );
+  assert.equal(
+    posted.items.find(({ id }) => id === reversedApplication.id).reverses_id,
+    application.id,
+  );
+  assert.ok(
+    posted.items.every(
+      (item) => !("reason" in item) && !("recorded_by" in item),
+    ),
+  );
+  const unchanged = await rpc(finance, "accounting_export", [q(paidExport.id)]);
+  assert.deepEqual(unchanged, paidExport);
+
+  // Saturate an independent fixture date to verify the cap without silently discarding rows.
+  await sql(`
+    insert into private.accounting_customer_credit_applications(invoice_id,credit_note_id,reason,recorded_by,created_at)
+    select ${q(original.id)},${q(credit.id)},'Fictional report-cap fixture',${q(finance)},'2020-02-12T00:00:00Z'
+    from generate_series(1,5001)
+  `);
+  await assert.rejects(journal(finance, "2020-02-12"), /PT413/);
+  await sql(
+    `update public.profiles set active=false where id=${q(secondFinance)}`,
+  );
+  await assert.rejects(journal(secondFinance, "2020-02-09"), /42501/);
+  console.log(
+    "PASS original-currency report, UTC boundaries, later reversals, retained exports, scope, deactivation and complete-result limit",
   );
 });

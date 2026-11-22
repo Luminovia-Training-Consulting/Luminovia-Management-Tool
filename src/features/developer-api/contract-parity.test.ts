@@ -891,6 +891,7 @@ describe("documented Premium course and spending operations", () => {
               additionalProperties: false,
               properties: {
                 sessions: { maxItems: 60 },
+                terms: { maxLength: 12000 },
               },
             },
           },
@@ -906,7 +907,16 @@ describe("documented Premium course and spending operations", () => {
     }
     expect(requestSchema(prefix + "assignment_change_action")).toMatchObject({
       properties: {
-        p_action: { enum: ["submit", "accept", "reject", "withdraw", "apply"] },
+        p_action: {
+          enum: [
+            "submit",
+            "coordinate",
+            "accept",
+            "reject",
+            "withdraw",
+            "apply",
+          ],
+        },
       },
     });
   });
@@ -1013,12 +1023,62 @@ describe("documented Premium course and spending operations", () => {
       "save_calendar_subscription",
       "save_mail_configuration",
       "issue_company_integration_key",
+      "company_accounting_webhook_subscribe",
       "company_course_webhook_subscribe",
     ]) {
       const path = "/rest/v1/rpc/" + name;
       expect(download.paths[path].post).toBeDefined();
       expect(paths).not.toHaveProperty(path);
       expect(isDocumentedRequest(backend + path, "POST", backend)).toBe(false);
+    }
+  });
+
+  it("publishes separate exact accounting events only for the internal download", () => {
+    const path = "/rest/v1/rpc/company_accounting_webhook_subscribe";
+    expect(portalOpenApi(backend).paths[path]).toMatchObject({
+      post: {
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                required: ["p_organisation", "p_integration", "p_destination"],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(portalOpenApi(backend)).toHaveProperty(
+      "webhooks.companyAccountingEvent.post.requestBody.content.application/json.schema",
+      expect.objectContaining({
+        additionalProperties: false,
+        required: ["id", "type", "version", "occurred_at", "invoice_id"],
+        properties: expect.objectContaining({
+          type: {
+            enum: [
+              "invoice.registered",
+              "payment.recorded",
+              "payment.reversed",
+              "credit_note.applied",
+              "credit_note.reversed",
+              "refund.recorded",
+              "refund.reversed",
+            ],
+          },
+        }),
+      }),
+    );
+    for (const edition of [
+      "customer-managed",
+      "customer-self-hosted",
+    ] as const) {
+      const document = portalOpenApi(backend, true, {
+        ...internalInstallationBrand,
+        edition,
+        installationId: "90000000-0000-4000-8000-000000000000",
+      });
+      expect(document).not.toHaveProperty("webhooks.companyAccountingEvent");
+      expect(document.paths).not.toHaveProperty(path);
     }
   });
 

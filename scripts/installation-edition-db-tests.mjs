@@ -227,9 +227,17 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       sql("set role service_role; select * from private.installation_identity"),
       /42501/,
     );
+    await assert.rejects(
+      actor(
+        admin,
+        "select public.accounting_settlement_journal('2020-02-01','2020-02-01')",
+      ),
+      /42501/,
+    );
 
     for (const [path, method] of [
       ["/rpc/commission_report", "POST"],
+      ["/rpc/accounting_settlement_journal", "POST"],
       ["/rpc/set_company_premium", "POST"],
       ["/rpc/company_course_webhook_subscribe", "POST"],
       ["/rpc/require_portal_access", "POST"],

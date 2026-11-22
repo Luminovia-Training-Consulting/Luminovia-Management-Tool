@@ -186,7 +186,7 @@ await withTestDatabase("delivery", async ({sql, actor}) => {
             assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
             assert.match(
                 results.find((r) => r.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             const confirmed = (await list()).items.find(
                 (r) => r.session_id === a.session,
@@ -337,7 +337,7 @@ await withTestDatabase("delivery", async ({sql, actor}) => {
             assert.equal(writes.filter((r) => r.status === "fulfilled").length, 1);
             assert.match(
                 writes.find((r) => r.status === "rejected").reason.message,
-                /40001/,
+                /PT409/,
             );
             const page = await rpc(teacher, "delivery_sessions", [
                 q("own"),
@@ -405,6 +405,27 @@ await withTestDatabase("delivery", async ({sql, actor}) => {
                 2,
             );
             await assert.rejects(save(b, draft(b), 5), /42501/);
+            const reopened = await review(
+                b, 5, "request_correction", "Verify actual times on released assignment",
+            );
+            assert.equal(reopened.status, "correction_requested");
+            assert.equal((await rpc(teacher, "delivery_session", [q(b.session)])).can_edit, true);
+            await assert.rejects(save(b, draft(b), 6), /22023/);
+            await save(b, draft(b, {
+                correction_reason: "Verified missing teaching minutes",
+                actual_end: new Date(Date.parse(b.start) + 45 * 60_000).toISOString(),
+            }), 6);
+            const corrected = await submit(b, 7);
+            await review(b, 8);
+            const history = await rpc(teacher, "delivery_history", [q(b.session)]);
+            assert.equal(history.submissions.length, 3);
+            assert.equal(history.submissions[0].id, corrected.submission.id);
+            assert.equal(history.submissions[0].scheduled_start, item.scheduled_start);
+            assert.equal(history.submissions[0].scheduled_end, item.scheduled_end);
+            assert.equal(history.submissions[0].correction_reason, "Verified missing teaching minutes");
+            const unreported = await assignment();
+            await sql(`update public.assignment_sessions set released_at=now() where id=${q(unreported.session)}`);
+            await assert.rejects(save(unreported), /42501/);
         },
     );
     await check(

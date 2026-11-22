@@ -46,10 +46,15 @@ export async function verifyWebhookDeliveryHttp({
   destination,
   subscription,
   course,
+  invoice,
+  eventType = "course.published",
   publishNext,
   revoke,
   enforcePortalGate = false,
 }) {
+  const [resourceKey, resourceId] = course
+    ? ["course_id", course]
+    : ["invoice_id", invoice];
   const key = randomBytes(24).toString("hex");
   const calls = [];
   const receiverEvents = [];
@@ -117,8 +122,12 @@ export async function verifyWebhookDeliveryHttp({
         assert.equal(headers.apikey, undefined);
         assert.equal(headers.authorization, undefined);
         const event = JSON.parse(body);
-        assert.equal(event.course_id, course);
-        assert.equal(event.type, "course.published");
+        assert.equal(event[resourceKey], resourceId);
+        assert.equal(event.type, eventType);
+        assert.deepEqual(
+          Object.keys(event).sort(),
+          [resourceKey, "id", "occurred_at", "type", "version"].sort(),
+        );
         const response = await fetch(receiver.url + "/course-events", {
           method: "POST",
           headers,
@@ -138,7 +147,7 @@ export async function verifyWebhookDeliveryHttp({
         JSON.parse(
           await sql(
             `select to_jsonb(d) from private.company_course_webhook_deliveries d
-         where subscription_id=${q(subscription.id)} and course_id=${q(course)}`,
+         where subscription_id=${q(subscription.id)} and ${resourceKey}=${q(resourceId)}`,
           ),
         );
 

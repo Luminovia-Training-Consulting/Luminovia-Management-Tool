@@ -72,6 +72,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   const [org, foreignOrg, job, claim] = Array.from({ length: 4 }, randomUUID);
   const title = `Fictional accounting block ${testInfo.project.name}`;
   const number = `=FICTIONAL-${testInfo.project.name}`;
+  const refundReference = `Fictional partial refund ${testInfo.project.name}`;
   await checked(
     service.from("organisations").insert([
       { id: org, name: "Fictional accounting academy" },
@@ -348,7 +349,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     .fill("2001-02-05T09:30");
   await settlement
     .getByLabel("Referenz der ausgeführten Rückzahlung", { exact: true })
-    .fill("Fictional partial refund");
+    .fill(refundReference);
   await settlement
     .getByRole("checkbox", {
       name: "Ich bestätige, dass die Rückzahlung bereits ausgeführt wurde.",
@@ -363,6 +364,55 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await settlement
     .getByRole("button", { name: "Schließen", exact: true })
     .click();
+
+  const journalButton = page.getByRole("button", {
+    name: "Abrechnungsjournal",
+    exact: true,
+  });
+  await journalButton.click();
+  const journal = page.getByRole("dialog", {
+    name: "Abrechnungsjournal",
+    exact: true,
+  });
+  await journal.getByLabel("Von (einschließlich)").fill("2001-02-05");
+  await journal.getByLabel("Bis (einschließlich)").fill("2001-02-05");
+  await journal.getByRole("button", { name: "Journal anzeigen" }).click();
+  await expect(
+    journal.getByText(refundReference, { exact: true }),
+  ).toBeVisible();
+  for (const format of ["JSON", "CSV"] as const) {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      journal.getByRole("button", { name: `Journal als ${format}` }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe(
+      `luminovia-settlement-journal-2001-02-05-2001-02-05.${format.toLowerCase()}`,
+    );
+    const exported = (await contents(download)).toString("utf8");
+    if (format === "JSON") {
+      const report = JSON.parse(exported);
+      expect(report.schema_version).toBe("luminovia.settlement-journal/1");
+      expect(report.items).toContainEqual(
+        expect.objectContaining({
+          kind: "customer_refund",
+          subject_id: json.invoices[0].id,
+          currency: "AUD",
+          amount: "10.00",
+          effective_on: "2001-02-05",
+          reference: refundReference,
+        }),
+      );
+    } else {
+      expect(exported).toContain(`"AUD","10.00","${refundReference}"`);
+    }
+  }
+  expect(
+    await journal.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth + 1,
+    ),
+  ).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(journalButton).toBeFocused();
 
   const context = await browser.newContext({
     viewport: page.viewportSize(),
@@ -387,6 +437,12 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
         })
         .count(),
     ).toBe(0);
+    await expect(
+      clientPage.getByRole("button", {
+        name: "Abrechnungsjournal",
+        exact: true,
+      }),
+    ).toHaveCount(0);
     const clientCard = clientPage.locator("article.accounting-card").filter({
       has: clientPage.getByRole("heading", { name: number, exact: true }),
     });
@@ -410,7 +466,7 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
       customerBalance.getByLabel("Vorgang", { exact: true }),
     ).toHaveCount(0);
     await expect(
-      customerBalance.getByText("Fictional partial refund", { exact: false }),
+      customerBalance.getByText(refundReference, { exact: true }),
     ).toHaveCount(0);
     await customerBalance
       .getByRole("button", { name: "Schließen", exact: true })

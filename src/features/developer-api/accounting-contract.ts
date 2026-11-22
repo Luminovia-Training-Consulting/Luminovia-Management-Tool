@@ -13,6 +13,10 @@ import {
   customerCreditNotePageSchema,
   customerSettlementSchema,
 } from "../accounting/schema.ts";
+import {
+  settlementJournalPeriodSchema,
+  settlementJournalSchema,
+} from "../accounting/settlement-journal-schema.ts";
 import { nativeExplorerPaths } from "./native-contract.ts";
 
 const id = z.uuid();
@@ -79,7 +83,26 @@ function accountingOperation(
   };
 }
 
+const settlementJournalOperation = accountingOperation(
+  "accounting_settlement_journal",
+  "Reads the internal journal for an inclusive period of up to 366 days. Customer credit applications and refunds require finance.gross.read. Lecturer repayments require finance.manage. Each scope is evaluated separately. Credits and reversals use the UTC posting date, actual customer refunds use the UTC transaction date, and repayments retain the entered receipt date. Entries with reverses_id subtract their exact amount from the recorded total. A lecturer repayment void uses the original ledger ID for both id and reverses_id. Totals are grouped by currency and kind. The existing luminovia.accounting/1 format remains independent.",
+  settlementJournalPeriodSchema,
+  settlementJournalSchema,
+  "A concurrent database operation interrupted the report.",
+);
+
 export const accountingPaths = {
+  "/rest/v1/rpc/accounting_settlement_journal": {
+    post: {
+      ...settlementJournalOperation.post,
+      responses: {
+        ...settlementJournalOperation.post.responses,
+        "413": error(
+          "The report exceeds 5,000 ledger entries. Use a shorter period.",
+        ),
+      },
+    },
+  },
   "/rest/v1/rpc/accounting_access": accountingOperation(
     "accounting_access",
     "Returns permissions for the active account. Each accounting operation checks its own current role and scope.",

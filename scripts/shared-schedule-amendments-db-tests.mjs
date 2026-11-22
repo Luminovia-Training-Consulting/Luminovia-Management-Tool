@@ -33,21 +33,30 @@ await withTestDatabase("shared_schedule_amendments", async (database) => {
 });
 
 async function verifySchedule({ sql, actor }, positionsInOneOffer) {
-  const [manager, first, second, learner, outsider, company, template, run] =
-    Array.from({ length: 8 }, randomUUID);
+  const [manager, first, second, learner, outsider, company, template, run,
+    customer, customerPeer, foreignCustomer, foreignCompany, operations] =
+    Array.from({ length: 13 }, randomUUID);
   const accounts = [
     [manager, "admin"],
     [first, "lecturer"],
     [second, "lecturer"],
     [learner, "participant"],
     [outsider, "lecturer"],
+    [customer, "client"],
+    [customerPeer, "client"],
+    [foreignCustomer, "client"],
+    [operations, "management"],
   ];
   await sql(`
     insert into auth.users(id,email,email_confirmed_at) values
       ${accounts.map(([id]) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
     insert into public.user_roles(user_id,role) values
       ${accounts.map(([id, role]) => `(${q(id)},${q(role)})`).join(",")};
-    insert into public.organisations(id,name) values(${q(company)},'Fictional course organisation');
+    insert into public.organisations(id,name) values(${q(company)},'Fictional course organisation'),
+      (${q(foreignCompany)},'Fictional different organisation');
+    insert into public.client_organisation_memberships(user_id,organisation_id)
+      values(${q(customer)},${q(company)}),(${q(customerPeer)},${q(company)}),
+      (${q(foreignCustomer)},${q(foreignCompany)});
     insert into public.course_templates(id,title) values(${q(template)},'Fictional shared workshop');
     insert into public.course_runs(id,organisation_id,template_id,time_zone,published)
       values(${q(run)},${q(company)},${q(template)},'Australia/Brisbane',true);
@@ -331,10 +340,9 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
   await assert.rejects(
     draft(manager, firstClaim, {
       sessions: requested,
-      amount: 151,
-      total_amount: 151,
+      location: "https://example.invalid/different-shared-venue",
     }),
-    /only change the schedule/,
+    /original course scope/,
   );
   await assert.rejects(
     draft(manager, firstClaim, { sessions: [] }),
@@ -351,16 +359,48 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     /withdrawal deadline/,
   );
 
-  const rejected = await draft(manager, firstClaim, { sessions: requested });
+  const customerChoice = (await rpc(customer, "changeable_assignments")).find(
+    (item) => item.claim_id === firstClaim,
+  );
+  assert.equal(customerChoice.shared_schedule_only, true);
+  assert.equal(customerChoice.current.amount, null);
+  assert.equal(customerChoice.current.terms, null);
+  assert(!((await rpc(foreignCustomer, "changeable_assignments")).some(
+    (item) => item.claim_id === firstClaim,
+  )));
+  for (const changes of [{ terms: "Forbidden private terms" },
+    { amount: 42 }, { location: "https://example.invalid/different-venue" }]) {
+    await assert.rejects(draft(customer, firstClaim, {
+      sessions: requested, ...changes,
+    }), /42501/);
+  }
+  await assert.rejects(draft(foreignCustomer, firstClaim, {
+    sessions: requested,
+  }), /42501/);
+  const rejected = await draft(customer, firstClaim, { sessions: requested });
+  await assert.rejects(read(rejected, manager), /42501/);
   const submitKey = randomUUID();
   assert.equal(
-    await act(manager, rejected, "submit", "", submitKey, 1),
+    await act(customer, rejected, "submit", "", submitKey, 1),
     rejected,
   );
   assert.equal(
-    await act(manager, rejected, "submit", "", submitKey, 1),
+    await act(customer, rejected, "submit", "", submitKey, 1),
     rejected,
   );
+  assert.equal((await read(rejected, customer)).awaiting_coordination, true);
+  assert.equal((await read(rejected)).can_coordinate, true);
+  assert.equal((await read(rejected)).can_respond, false);
+  assert.equal((await read(rejected)).shared_schedule, null);
+  assert.equal(await siblingOf(rejected), "");
+  await assert.rejects(read(rejected, first), /42501/);
+  await assert.rejects(read(rejected, customerPeer), /42501/);
+  await assert.rejects(act(customer, rejected, "coordinate"), /42501/);
+  await assert.rejects(act(manager, rejected, "accept"), /first coordinate/);
+  const coordinateKey = randomUUID();
+  assert.equal(await act(manager, rejected, "coordinate", "", coordinateKey, 2), rejected);
+  assert.equal(await act(manager, rejected, "coordinate", "", coordinateKey, 2), rejected);
+  assert.equal((await read(rejected, customer)).awaiting_coordination, false);
   const rejectedSibling = await siblingOf(rejected);
   assert.match(rejectedSibling, /^[a-f0-9-]{36}$/);
   await assert.rejects(read(rejectedSibling, first), /42501/);
@@ -392,9 +432,22 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     "PASS shared scope, retained withdrawal deadline, single proposal and scoped individual rejection",
   );
 
-  const root = await draft(manager, firstClaim, { sessions: requested });
+  const beforeEffective = (await read(rejected)).original;
+  const nextCompensation = { amount: beforeEffective.amount + 1, total_amount: beforeEffective.total_amount + 2 };
+  if (beforeEffective.rate_unit === "fixed_total") nextCompensation.total_amount = nextCompensation.amount;
+  const privateTerms = "Fictional assignment-specific addendum";
+  const root = await draft(manager, firstClaim, {
+    sessions: requested, terms: privateTerms, ...nextCompensation,
+  });
   await act(manager, root, "submit");
   const sibling = await siblingOf(root);
+  assert.equal((await read(root, first)).proposed.terms, privateTerms);
+  assert.notEqual((await read(sibling, second)).proposed.terms, privateTerms);
+  await assert.rejects(read(root, second), /42501/);
+  await assert.rejects(read(root, customer), /42501/);
+  if (positionsInOneOffer) {
+    await assert.rejects(act(operations, root, "accept"), /finance authority/);
+  }
   await act(manager, root, "accept");
   await act(first, root, "accept");
   assert.equal((await read(root)).can_apply, false);
@@ -411,6 +464,10 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     state: "ready",
   });
   await assert.rejects(act(second, sibling, "apply"), /42501/);
+  if (positionsInOneOffer) {
+    assert.equal((await read(sibling, operations)).can_apply, false);
+    await assert.rejects(act(operations, sibling, "apply"), /Current finance authority/);
+  }
   const privateCommitment = randomUUID();
   await sql(`insert into public.personal_events(id,user_id,title,starts_at,ends_at,time_zone)
     values(${q(privateCommitment)},${q(second)},'Fictional private calendar block',
@@ -443,7 +500,7 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
   );
   assert.match(
     applications.find(({ status }) => status === "rejected").reason.message,
-    /40001/,
+    /40001|PT409/,
   );
   if (applications[0].status === "fulfilled")
     assert.equal(
@@ -494,6 +551,20 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     unchangedAllocations,
   );
   assert.deepEqual(await originalClaims(), retained);
+  const effective = JSON.parse(await sql(`select private.effective_assignment(${q(firstClaim)})`));
+  assert.equal(effective.terms, privateTerms);
+  assert.equal(Number(effective.amount), nextCompensation.amount);
+  assert.equal(Number(effective.total_amount), nextCompensation.total_amount);
+  const siblingEffective = JSON.parse(await sql(`select private.effective_assignment(${q(secondClaim)})`));
+  assert.notEqual(siblingEffective.terms, privateTerms);
+  if (positionsInOneOffer) {
+    const entry = JSON.parse(await sql(`select to_jsonb(amendment) from private.assignment_financial_amendments amendment
+      where claim_id=${q(firstClaim)}`));
+    assert.equal(entry.gross_total_amount, 300);
+    assert.equal(entry.lecturer_net_total_amount, nextCompensation.total_amount);
+    assert.equal(entry.platform_total_amount, 300 - nextCompensation.total_amount);
+    assert.equal(await sql(`select count(*) from private.assignment_financial_amendments where claim_id=${q(secondClaim)}`), "0");
+  }
   assert.deepEqual(
     await jobVersions(),
     Object.fromEntries(
@@ -678,6 +749,16 @@ async function verifySchedule({ sql, actor }, positionsInOneOffer) {
     (await rpc(manager, "changeable_assignments")).some(
       ({ claim_id }) => claim_id === firstClaim,
     ),
+  );
+  await assert.rejects(
+    draft(manager, firstClaim, {
+      sessions: [
+        ...move(teachingHistory, 0),
+        ...move(teachingHistory.slice(1), 2 / 24),
+      ],
+      terms: "Forbidden retroactive fictional terms",
+    }),
+    /require future delivery/,
   );
   await assert.rejects(
     draft(manager, firstClaim, {

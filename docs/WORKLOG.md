@@ -1,3 +1,13 @@
+# 22 November 2026 — Coordinated amendments, teaching corrections and settlement events
+
+Current company contacts can submit shared dates for management coordination. Each affected lecturer and an authorised reviewer approve the corresponding proposal. Eligible future assignments can also carry private terms and compensation for the selected lecturer. The course dates and approved amendment apply together. The original agreements, billed units and protected teaching sessions remain available. Expected version conflicts return HTTP 409. A separate teaching evidence route lets an independent reviewer reopen an existing submission, including after allocation release. The lecturer can then submit a new revision that retains the original scheduled interval and previous evidence.
+
+The settlement journal reports authorised customer credits, refunds and lecturer repayments in their original currencies. CSV and JSON use the same successful query result. The covered inclusive dates use UTC for timestamps. A report can span up to 366 days and include up to 5,000 movements. The separate invoice snapshot schema and original documents remain available.
+
+Internal accounting webhooks cover invoice registration and payment, credit and refund movements and reversals. The signed payload contains the event ID, type, version, occurrence timestamp and customer invoice ID. The local worker sent the signed JSON to a loopback receiver and verified a retry, durable deduplication and revocation. The existing course and Academy scope remains separate.
+
+The isolated migration snapshot passed 159 PostgreSQL suites. Real Docker HTTP verified the shared customer and compensation paths, permission and conflict responses, PDF-backed accounting, role-separated reports, protected delivery revisions and scoped integration routes. The browser and exact-main workflow results belong to the current run receipts. No hosted installation or receiver was changed.
+
 # 22 November 2026 — Scoped LMS integrations and full verification
 
 The local scanner now reads the owned configuration through open file handles and atomically replaces its private configuration. Restore manifests and reviewed historical sources are validated and read through the same bounded handle. The migration hash pins are unchanged. A deterministic restore fixture confirmed that a directory-entry change does not redirect the read. The scanner change passed 402 runtime and integration tests. The restore and migration change passed 19 offline checks.

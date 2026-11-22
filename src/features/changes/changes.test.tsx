@@ -807,3 +807,45 @@ it("offline mutation controls are disabled and denied refresh clears the retaine
     ).not.toBeInTheDocument(),
   );
 });
+
+it("requires reviewed-version confirmation before coordinating a customer request", async () => {
+  await i18n.changeLanguage("en");
+  data = [
+    {
+      ...request(),
+      status: "submitted",
+      version: 2,
+      shared_schedule_only: true,
+      requested_by_customer: true,
+      awaiting_coordination: true,
+      can_coordinate: true,
+      can_apply: false,
+      can_edit: false,
+      can_respond: false,
+      can_submit: false,
+    },
+  ];
+  const user = userEvent.setup();
+  mount();
+  expect(
+    await screen.findByText("Management is reviewing the proposed dates."),
+  ).toBeVisible();
+  const coordinate = screen.getByRole("button", { name: "Request consent" });
+  expect(coordinate).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Accept this amendment" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: /I have reviewed the customer request/,
+    }),
+  );
+  await user.click(coordinate);
+  expect(state.rpc).toHaveBeenCalledWith("assignment_change_action", {
+    p_id: id,
+    p_action: "coordinate",
+    p_expected_version: 2,
+    p_note: "",
+    p_request_id: expect.any(String),
+  });
+});

@@ -260,11 +260,21 @@ Call these server endpoints with \`Authorization: Bearer <integration-key>\` and
 | \`enrolments.write\` | \`POST /functions/v1/company-integration/enrolments\` | Enrol a confirmed company participant by \`course_id\` and their \`participant_id\` (Luminovia User ID). The same request returns the existing enrolment, while a removed or completed enrolment returns 409. |
 | \`reports.read\` | \`GET /functions/v1/company-integration/participation?course_id=<uuid>\` | Counts of sessions, currently enrolled learners and completed learners. The response contains aggregate counts without learner-level records. |
 
-Enrolment and reports require Premium LMS enabled for the internal company or an active dedicated Academy licence. The enrolment operation works with published courses and existing, confirmed memberships. Invitations and membership approval continue in the account workflows. Wrong scope returns 401. An unavailable course or participant returns 404 without distinguishing foreign resources. The [integration examples](scripts/examples/README.md) include runnable requests.
+Enrolment and reports require Premium LMS enabled for the internal company or an active dedicated Academy licence. The enrolment operation works with published courses and existing, confirmed memberships. Invitations and membership approval continue in the account workflows. Wrong scope returns 401. An unavailable course or participant returns 404 without distinguishing foreign resources. Invalid arguments return 400 and unsupported HTTP methods return 405 with the allowed method. Each route documents its JSON error shape. The [integration examples](scripts/examples/README.md) include runnable requests.
 
 ## Company course webhooks
 
 The [worker and receiver contract](OPERATIONS.md#company-course-webhooks) describes scoped subscriptions, exact signed JSON, timestamp validation, delivery attempts and deduplication. The downloadable OpenAPI document includes the webhook receiver contract. Subscription creation returns a signing key once and is excluded from interactive Swagger requests.
+
+The internal download also includes the customer accounting receiver contract and the explicitly authorised \`company_accounting_webhook_subscribe\` operation. Each accounting event carries its customer invoice ID, occurrence time, version and event ID. Amounts and documents remain available through authorised portal accounting views.
+
+## Assignment amendments, teaching evidence and settlement journal
+
+Use \`save_assignment_change\` to save a versioned proposal. A company contact can submit eligible shared dates. A manager calls \`assignment_change_action\` with \`coordinate\` to request consent from each affected lecturer. Staff can include eligible lecturer-specific terms and compensation. Current versions and independent consent govern application. An obsolete version returns HTTP 409. Retry an uncertain result with the original request identifier and payload.
+
+Teaching evidence reads and transitions use the \`delivery_sessions\`, \`delivery_session\`, \`delivery_history\`, \`save_delivery_draft\`, \`submit_delivery\`, \`review_delivery\` and \`confirm_customer_delivery\` RPCs. Reopening preserves every earlier submission and leaves the agreed schedule intact. Clients with current company scope receive the confirmed projection. Private drafts and correction reasons remain within their authorised scopes.
+
+Internal finance can call \`accounting_settlement_journal\` with inclusive ISO calendar dates \`p_from\` and \`p_to\`. It returns \`luminovia.settlement-journal/1\`, with authorised original-currency movements and reversals. Timestamp-based reporting days use UTC. An invalid or wider-than-366-day period returns HTTP 400. A report over 5,000 movements returns HTTP 413 so callers can narrow the period. Existing invoice snapshots still use \`luminovia.accounting/1\`.
 
 ## Calendar feeds, source revisions and privacy
 

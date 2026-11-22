@@ -106,3 +106,23 @@
   font-weight: 600;
   text-align: right;
 }
+
+.accounting-journal-period {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.75rem;
+}
+.accounting-journal-entries {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+  margin-block: 1rem;
+}
+.accounting-journal-entries li {
+  display: grid;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--line);
+  padding-block: 0.5rem;
+  overflow-wrap: anywhere;
+}

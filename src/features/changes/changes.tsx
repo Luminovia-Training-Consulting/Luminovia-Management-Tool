@@ -1,7 +1,7 @@
 /** Authenticated before/after review, explicit two-party consent and draft
  * authoring for the existing job workflow. Server snapshots own permissions and
  * transitions; this screen never confirms or applies a local optimistic change. */
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Link,
   useNavigate,
@@ -39,19 +39,10 @@ import {
   type ChangeCandidate,
   type ChangeInput,
 } from "./api";
+import type { AssignmentChangeAction } from "./schema";
+import { useRequest } from "./use-request";
 import "./i18n";
 import "./changes.css";
-/** Keep an unchanged uncertain form/action retry on its original request UUID.
- * A changed payload receives a new identity; nothing sensitive is persisted. */
-function useRequest() {
-  const key = useRef<{ payload: string; id: string } | null>(null);
-  return (payload: unknown) => {
-    const text = JSON.stringify(payload);
-    if (key.current?.payload !== text)
-      key.current = { payload: text, id: crypto.randomUUID() };
-    return key.current!.id;
-  };
-}
 const mutationErrorMessage = new Map([
   ["40001", "stale"],
   ["23P01", "conflict"],
@@ -163,8 +154,14 @@ function ChangeForm({
         )
       : [],
   );
+  const sharedCommercial = Boolean(
+    original?.shared_commercial_editable ??
+    candidate?.shared_commercial_editable,
+  );
+  const commercialFields =
+    !customerView && (!sharedSchedule || sharedCommercial);
   const canPrice =
-    !sharedSchedule && (original?.can_price ?? candidate?.can_price ?? false);
+    commercialFields && (original?.can_price ?? candidate?.can_price ?? false);
   const commissioned =
     original?.commissioned ?? candidate?.commissioned ?? false;
   const defaults = (s: AssignmentSnapshot | undefined) => ({
@@ -194,9 +191,7 @@ function ChangeForm({
     reset,
     formState: { errors },
   } = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(
-      customerView || sharedSchedule ? customerFormSchema : formSchema,
-    ),
+    resolver: zodResolver(commercialFields ? formSchema : customerFormSchema),
     defaultValues: defaults(source),
   });
   const { fields, append, remove } = useFieldArray({
@@ -250,10 +245,8 @@ function ChangeForm({
           return { starts_at: start, ends_at: end };
         });
       }
-      if (!customerView && !sharedSchedule) {
-        changes.terms = values.terms;
-        changes.cancel = values.cancel;
-      }
+      if (commercialFields) changes.terms = values.terms;
+      if (!customerView && !sharedSchedule) changes.cancel = values.cancel;
       if (canPrice) {
         const money = z.string().regex(/^\d{1,10}(?:[.,]\d{1,2})?$/);
         if (
@@ -265,7 +258,7 @@ function ChangeForm({
         }
         changes.amount = Number(values.amount.replace(",", "."));
         changes.total_amount = Number(values.total_amount.replace(",", "."));
-        changes.rate_unit = values.rate_unit;
+        if (!sharedSchedule) changes.rate_unit = values.rate_unit;
       }
       const payload = { reason: values.reason, changes };
       return saveAssignmentChange(
@@ -341,7 +334,11 @@ function ChangeForm({
         <textarea id="change-reason" rows={3} {...register("reason")} />
       </Field>
       {sharedSchedule ? (
-        <p className="muted">{t("sharedScheduleHelp")}</p>
+        <p className="muted">
+          {t(
+            customerView ? "customerSharedScheduleHelp" : "sharedScheduleHelp",
+          )}
+        </p>
       ) : (
         <>
           <Field
@@ -360,7 +357,8 @@ function ChangeForm({
           </Field>
         </>
       )}
-      {!customerView && !sharedSchedule && (
+      {sharedCommercial && <p className="muted">{t("sharedCommercialHelp")}</p>}
+      {commercialFields && (
         <Field
           id="change-terms"
           label={t("terms")}
@@ -369,10 +367,10 @@ function ChangeForm({
           <textarea id="change-terms" rows={4} {...register("terms")} />
         </Field>
       )}
-      {customerView && <p className="muted">{t("customerScope")}</p>}
-      {commissioned && !customerView && !sharedSchedule && (
-        <p className="muted">{t("commissioned")}</p>
+      {customerView && !sharedSchedule && (
+        <p className="muted">{t("customerScope")}</p>
       )}
+      {commissioned && canPrice && <p className="muted">{t("commissioned")}</p>}
       {canPrice && (
         <fieldset className="changes-money">
           <legend>
@@ -399,7 +397,7 @@ function ChangeForm({
           <Field id="change-unit" label={t("rate_unit")}>
             <select
               id="change-unit"
-              aria-readonly={commissioned}
+              aria-readonly={commissioned || sharedSchedule}
               {...register("rate_unit")}
             >
               {(
@@ -410,7 +408,11 @@ function ChangeForm({
                   "fixed_total",
                 ] as const
               )
-                .filter((unit) => !commissioned || unit === source?.rate_unit)
+                .filter(
+                  (unit) =>
+                    (!commissioned && !sharedSchedule) ||
+                    unit === source?.rate_unit,
+                )
                 .map((unit) => (
                   <option key={unit} value={unit}>
                     {t(unit)}
@@ -576,9 +578,7 @@ function DetailActions({ change }: { change: AssignmentChange }) {
   const [note, setNote] = useState(""),
     [consent, setConsent] = useState(false);
   const mutation = useMutation({
-    mutationFn: (
-      action: "submit" | "accept" | "reject" | "withdraw" | "apply",
-    ) =>
+    mutationFn: (action: AssignmentChangeAction) =>
       changeAssignmentAction(
         change.id,
         action,
@@ -589,8 +589,14 @@ function DetailActions({ change }: { change: AssignmentChange }) {
     onSuccess: () => refreshAssignmentChanges(client),
   });
   const disabled = !online || mutation.isPending;
+  const canReject = change.can_respond || change.can_coordinate;
   return (
     <section className="panel changes-decisions">
+      {change.awaiting_coordination && (
+        <p className="muted" role="status">
+          {t("awaitingCoordination")}
+        </p>
+      )}
       {change.shared_schedule && (
         <p className="muted" role="status">
           {t("sharedProgress", change.shared_schedule)}{" "}
@@ -603,17 +609,17 @@ function DetailActions({ change }: { change: AssignmentChange }) {
         {t("lecturerApproval")}:{" "}
         <strong>{t(change.lecturer_approved ? "yes" : "no")}</strong>
       </p>
-      {change.can_respond && (
+      {(change.can_respond || change.can_coordinate) && (
         <label className="checkbox-label">
           <input
             type="checkbox"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
           />
-          {t("consent")}
+          {t(change.can_coordinate ? "coordinateConsent" : "consent")}
         </label>
       )}
-      {(change.can_respond || change.can_withdraw) && (
+      {(canReject || change.can_withdraw) && (
         <Field id="change-decision-note" label={t("note")}>
           <textarea
             id="change-decision-note"
@@ -627,25 +633,37 @@ function DetailActions({ change }: { change: AssignmentChange }) {
       <div className="changes-controls">
         {change.can_submit && (
           <Button disabled={disabled} onClick={() => mutation.mutate("submit")}>
-            {t("submit")}
+            {t(
+              change.customer_view && change.shared_schedule_only
+                ? "submitForCoordination"
+                : "submit",
+            )}
+          </Button>
+        )}
+        {change.can_coordinate && (
+          <Button
+            disabled={disabled || !consent}
+            onClick={() => mutation.mutate("coordinate")}
+          >
+            {t("coordinate")}
           </Button>
         )}
         {change.can_respond && (
-          <>
-            <Button
-              disabled={disabled || !consent}
-              onClick={() => mutation.mutate("accept")}
-            >
-              {t("accept")}
-            </Button>
-            <Button
-              variant="danger"
-              disabled={disabled || note.trim().length < 5}
-              onClick={() => mutation.mutate("reject")}
-            >
-              {t("reject")}
-            </Button>
-          </>
+          <Button
+            disabled={disabled || !consent}
+            onClick={() => mutation.mutate("accept")}
+          >
+            {t("accept")}
+          </Button>
+        )}
+        {canReject && (
+          <Button
+            variant="danger"
+            disabled={disabled || note.trim().length < 5}
+            onClick={() => mutation.mutate("reject")}
+          >
+            {t("reject")}
+          </Button>
         )}
         {change.can_withdraw && (
           <Button
@@ -730,6 +748,7 @@ export function ChangeRequestsPage() {
         }
       />
       <p className="muted">{t("scopeHint")}</p>
+      <TextLink to="/delivery">{t("deliveryEvidence")}</TextLink>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
       {selected ? (
         <>
@@ -739,7 +758,11 @@ export function ChangeRequestsPage() {
           </Link>
           <section className="panel changes-summary">
             <span className={`badge changes-status-${selected.status}`}>
-              {t(selected.status)}
+              {t(
+                selected.awaiting_coordination
+                  ? "coordinationStatus"
+                  : selected.status,
+              )}
             </span>
             {selected.shared_schedule_only && selectedLecturer && (
               <p className="muted">
@@ -786,7 +809,13 @@ export function ChangeRequestsPage() {
                   )
                     .filter((field) =>
                       selected.shared_schedule_only
-                        ? field === "sessions"
+                        ? field === "sessions" ||
+                          (!selected.customer_view &&
+                            (field === "terms" ||
+                              field === "amount" ||
+                              field === "total_amount") &&
+                            selected.original[field] !==
+                              selected.proposed[field])
                         : !selected.customer_view ||
                           ["sessions", "location", "scope"].includes(field),
                     )
@@ -841,7 +870,11 @@ export function ChangeRequestsPage() {
                 <div className="section-heading">
                   <GitCompareArrows className="blue" aria-hidden="true" />
                   <span className={`badge changes-status-${change.status}`}>
-                    {t(change.status)}
+                    {t(
+                      change.awaiting_coordination
+                        ? "coordinationStatus"
+                        : change.status,
+                    )}
                   </span>
                 </div>
                 <h2>
@@ -921,7 +954,12 @@ export function AssignmentAmendments({
       {relevant.map((change) => (
         <p key={change.id}>
           <Link to={`/changes/${change.id}`}>
-            {t(change.status)} · {change.reason}
+            {t(
+              change.awaiting_coordination
+                ? "coordinationStatus"
+                : change.status,
+            )}{" "}
+            · {change.reason}
           </Link>
         </p>
       ))}

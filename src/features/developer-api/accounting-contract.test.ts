@@ -98,6 +98,54 @@ describe("accounting OpenAPI contracts", () => {
     }
   });
 
+  it("describes dated settlement journals, exact reversal totals and the result size limit", () => {
+    const path = "/rest/v1/rpc/accounting_settlement_journal";
+    expect(
+      input(path).safeParse({ p_from: "2026-11-22", p_to: "2026-11-30" })
+        .success,
+    ).toBe(true);
+    expect(input(path).safeParse({ p_from: "2026-11-22" }).success).toBe(false);
+    const fixture = {
+      schema_version: "luminovia.settlement-journal/1",
+      from: "2026-11-22",
+      to: "2026-11-30",
+      generated_at: instant,
+      scopes: ["lecturer"],
+      items: [
+        {
+          kind: "lecturer_repayment",
+          id,
+          reverses_id: id,
+          subject_id: id,
+          effective_on: "2026-11-22",
+          recorded_at: instant,
+          currency: "EUR",
+          amount: "12.34",
+          reference: "Fictional repayment",
+        },
+      ],
+      totals: [
+        {
+          kind: "lecturer_repayment",
+          currency: "EUR",
+          recorded: "0.00",
+          reversed: "12.34",
+          net: "-12.34",
+        },
+      ],
+    };
+    expect(result(path).safeParse(fixture).success).toBe(true);
+    expect(
+      result(path).safeParse({
+        ...fixture,
+        items: [{ ...fixture.items[0], amount: 12.34 }],
+      }).success,
+    ).toBe(false);
+    expect(accountingPaths[path].post.responses["413"].description).toMatch(
+      /5,000/,
+    );
+  });
+
   it("accepts omitted pagination fields and the real customer invoice row", () => {
     expect(input(lookup).safeParse({}).success).toBe(true);
     expect(

@@ -89,6 +89,44 @@ function deliver(url, message, body = message.body, extraHeaders) {
   });
 }
 
+test("customer events preserve the signed invoice ID and reject unrelated fields", async (t) => {
+  const inbox = await fixture(t);
+  const { url } = await inbox.listen();
+  const recorded = {
+    id: randomUUID(),
+    type: "payment.recorded",
+    version: 1,
+    occurred_at: "2026-11-21T09:00:00.000Z",
+    invoice_id: randomUUID(),
+  };
+  assert.equal(
+    (await deliver(url, signedWebhook(recorded, secret))).status,
+    204,
+  );
+  assert.equal(
+    (await deliver(url, signedWebhook(recorded, secret))).status,
+    204,
+  );
+  const incompatible = [
+    { ...recorded, type: "payment.failed" },
+    { ...recorded, invoice_id: null },
+    { ...recorded, course_id: randomUUID() },
+    { ...recorded, amount: "100.00" },
+  ];
+  for (const attempted of incompatible) {
+    assert.equal(
+      (await deliver(url, signedWebhook(attempted, secret))).status,
+      401,
+    );
+  }
+  const conflicting = { ...recorded, invoice_id: randomUUID() };
+  assert.equal(
+    (await deliver(url, signedWebhook(conflicting, secret))).status,
+    409,
+  );
+  assert.deepEqual(inbox.rows(), [recorded]);
+});
+
 test("parallel deliveries and a restart leave one durable receipt per event", async (t) => {
   const inbox = await fixture(t);
   const left = await inbox.listen();

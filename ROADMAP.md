@@ -81,7 +81,9 @@ The following summary preserves the A–N structure of the original roadmap whil
 | Q — QA, deployment and release **NEW**           | GitHub required checks, isolated tests, migration controller, Hostinger dev updater and backups                                                            | **LMS-11, FC-55–58, API-T01–API-T20:** exhaustive automated and manual acceptance, preserved database, real SMTP/backup restore, full API contract verification, green exact-main CI and separate production approval        |
 | R — Complete platform API & Swagger **NEW**      | The account facade, interactive Swagger, downloadable contract and native catalogue are present. Complete API parity remains open. | **API-01–API-08:** username/email Auth, token access, all supported functionality, documented permission-safe endpoints, Swagger UI, integration keys, webhook/events, API versioning and integration regression tests       |
 
-The portal supports **formal assignment amendments** with versioned proposals, approval and audited application. Each confirmed assignment must consent before one transaction amends the remaining shared schedule. Started dates, exact evidence, fees, billed units and applicable deadlines are preserved. Internal finance supports reviewed exceptional and instalment invoices, exact payment credits, customer credit-note applications and recorded refunds, and reviewed lecturer overpayment corrections. Remaining work includes customer-origin shared changes, coordinated commercial amendments and reporting across both settlement journals. The portal-side website enquiry intake and triage are available. The sender belongs to the separate Website project. See the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review).
+The portal supports **formal assignment amendments** with versioned proposals, approvals and audited application. A company can submit proposed shared dates for management to coordinate with each affected lecturer. Finance can include a lecturer-specific amendment for eligible future delivery. Approved dates and commercial terms apply together while preserving the original agreement, protected sessions, billed units and applicable deadlines. On a retained teaching record, an independent reviewer can request a new evidence revision and keep the earlier submission available in history.
+
+Internal finance supports exceptional and instalment invoices, payment credits, customer credit-note applications and refunds, and reviewed lecturer overpayment corrections. The settlement journal shows authorised movements and reversals by original currency and period with CSV and JSON exports. Eligible company integrations can opt into signed customer invoice and settlement event notifications. Operator receiver setup and acceptance on a hosted installation remain deployment work. The portal-side website enquiry intake and triage are available. The sender belongs to the separate Website project. See the [core function review](docs/IMPLEMENTATION_PLAN.md#core-function-review).
 
 ## Historical OneDrive change evidence
 
@@ -151,6 +153,7 @@ The original requirements for assignment amendments and Website enquiries are tr
 - [ ] Complete API-01–API-08 from Section 10 using the existing Auth, RPC, Edge and file integrations. Fill the remaining permission, request, response and error contracts in the versioned operation catalogue.
 - [x] Add searchable Swagger UI and a downloadable OpenAPI 3.1 definition for the installed edition. Interactive requests use the current caller's session and remain subject to database permission checks. The Academy explorer covers its documented database requests; its download also covers supported file and account requests.
 - [x] Add named, scoped, revocable credentials for the published course index, enrolment of confirmed participants and aggregate course reporting. Local fixtures cover credential rotation, revocation, Premium OFF, foreign scope and enrolment retries. Signed course webhooks have their own signing secrets and delivery retry tests.
+- [x] Add signed customer invoice and settlement webhooks for eligible company integrations. Isolated tests cover role and company boundaries, failed delivery, durable deduplication and key revocation. Hosted receiver setup remains a deployment task.
 - [ ] Implement API-T01–API-T20 in the canonical CI suite; validate API parity, authenticated files, Premium OFF denial, versioning, concurrent actions and backward compatibility.
 
 ### R3 — Premium LMS foundation (`P1`, blocking any Premium customer activation)
@@ -216,7 +219,6 @@ The target is ambitious given the reintroduced participant scope. Treat dates as
 
 ## 6. Deferred and adjacent roadmap (remain visible)
 
-- Formal change requests and immutable commercial amendments to accepted assignments, with multi-party approval and conflict-safe application.
 - Authorised public-website enquiry transport into the portal, anti-abuse controls and separate marketing-site deployment approval.
 - Richer global calendar invitations and external provider/device acceptance; additional company reporting and forecasting after baseline correctness.
 - Optional future LMS: online exam submission/grading, question banks, certificates beyond existing verified completion documents and richer learning content. **Not included solely by uploading exam PDFs.**
@@ -656,7 +658,7 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
 
-The published internal catalogue covers 366 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments and settlements. The Academy catalogue covers 85 paths per dedicated edition. Published JSONB payloads use domain schemas and the compiler-discovered browser RPC inventory is checked against the migrated APIs. The acceptance checks below also cover real responses, role denials, transport errors and compatibility.
+The internal catalogue covers 375 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments, teaching evidence and settlement reporting. Each Academy catalogue covers 85 paths. The compiler-discovered browser RPC inventory is checked against the migrated APIs. Reviewed domain schemas cover the current amendment, teaching evidence, finance and integration contracts. The broader checks below cover actual responses, role denials, transport errors and compatibility.
 
 | Test    | Automated acceptance / observable behaviour                                                                                               |
 |---------|-------------------------------------------------------------------------------------------------------------------------------------------|

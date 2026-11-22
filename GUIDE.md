@@ -395,6 +395,12 @@ With current gross-finance permission, choose **Record an external customer invo
 
 The internal OpenAPI explorer and download describe accounting permissions, eligible agreements, invoice pagination, customer invoice registration, payment entries and reversals, and immutable export creation and retrieval. Use exact decimal strings in the original currency. Pass both parts of the cursor from the last invoice for the next page. Customer-scoped results omit gross agreement values and claim identities. Reading a saved export checks current access to every included invoice and its original disclosure scope.
 
+**Deutsch.** Öffne das **Abrechnungsjournal** in **Buchhaltung und Exporte**. Wähle einen Zeitraum und lade die Ansicht oder den vollständigen CSV- oder JSON-Auszug. Das Journal zeigt erfasste und korrigierte Kundengutschriften, Rückerstattungen und Rückzahlungen von Dozierenden nach den aktuell zugewiesenen Finanzrechten. Summen bleiben in der Originalwährung. Eine Korrektur erscheint an ihrem eigenen Datum und verweist auf den ursprünglichen Eintrag.
+
+**English.** Open the **Settlement journal** in **Accounting and exports**. Choose a period and load its preview or download the complete CSV or JSON. Current finance permissions determine which customer credits, refunds, and lecturer repayments or corrections appear. Totals stay in their original currency. A reversal uses its own date and references the original movement.
+
+The inclusive reporting dates use UTC for timestamps. A period can span up to 366 days and must contain at most 5,000 movements. Narrow the period if the server rejects a larger result. The report uses `luminovia.settlement-journal/1`. The existing invoice snapshot remains available as `luminovia.accounting/1`.
+
 <a id="section-user-guide-workbench-favourites-and-reusable-workflows"></a>
 
 ## Workbench, favourites and reusable workflows
@@ -1693,7 +1699,7 @@ The additive `attendance_delivery` migration creates four RLS-enabled private ta
 | `private.delivery_events`      | Immutable submission/review/customer events, actor and timestamp with appropriate explanations               |
 | `private.delivery_operations`  | Immutable actor/request receipts for exact idempotent retries                                                |
 
-The existing `assignment_sessions → job_claims → jobs → course_runs` relationships determine ownership and customer scope. Browser-supplied user or role IDs never establish authority. Submitted evidence can be read by its lecturer even if the old assignment is subsequently cancelled/released; only their current confirmed unreleased assignment can receive a new draft/submission. Revoked or suspended actors cannot read or mutate delivery records. Current `courses.manage` or `finance.manage` and
+The existing `assignment_sessions → job_claims → jobs → course_runs` relationships determine ownership and customer scope. Browser-supplied user or role IDs never establish authority. A first submission requires a current confirmed allocation. If an allocation has been released, its lecturer can correct an existing submission only after an independent reviewer reopens that revision. The prior evidence and scheduled interval remain in history. Revoked or suspended actors cannot read or mutate delivery records. Current `courses.manage` or `finance.manage` and
 AAL2 determine management access; support permissions confer no such access.
 
 All writes lock the claim and session and compare the expected record version. Concurrent first drafts/reviews have one winner. Idempotent response-loss retries return their original result, while a request key reused for different values is refused. Current authority is checked before returning a stored receipt. Immutable-evidence triggers prevent replacement or deletion of prior submissions/events/receipts even by ordinary direct SQL writes. New business operations never disable those
@@ -1713,7 +1719,7 @@ triggers.
 | `review_delivery(p_session_id, p_expected_version, p_action, p_note, p_request_id)` | Independent confirm, dispute or request_correction decision                                              |
 | `confirm_customer_delivery(p_session_id, p_expected_version, p_request_id)`         | Explicit confirmation of current management-confirmed submission                                         |
 
-Public RPCs are invokers around isolated, empty-search-path private authority functions; anonymous execution is revoked. Protected tables are not exposed as an alternative write path. Invalid inputs/transition/idempotency conflicts use `22023`, denied access `42501` and stale versions `40001`. UI validation/errors, status/actions, screen-reader names and export headers are authored in German and English.
+Public RPCs are invokers around isolated, empty-search-path private authority functions. Anonymous execution is revoked. Invalid inputs, transitions and mismatched retries return HTTP 400. Denied access returns HTTP 403 for authenticated accounts. A stale version returns HTTP 409. The interface supports German and English.
 
 <a id="section-teaching-delivery-cross-module-integration"></a>
 
@@ -3529,6 +3535,10 @@ own proposals. Their view hides lecturer terms, compensation and decision notes.
 **Deutsch.** Wähle beim Erstellen eines kursgebundenen Auftrags die Anzahl der Dozierendenplätze. Jeder Platz umfasst alle Termine und sein eigenes Honorar. Bei einem geeigneten gemeinsamen Kursplan reicht das Management eine Terminänderung einmal ein. Bei Bedarf können ungebundene Termine ergänzt oder entfernt werden. Das Portal erstellt einen Antrag je betroffener Zuweisung. Jede dozierende Person und eine berechtigte Person aus der Verwaltung stimmen der entsprechenden Fassung zu. Die Verwaltung kann die Änderung erst anwenden, wenn alle Zustimmungen vorliegen. Dabei werden der gemeinsame Kursplan und die zugehörigen Zuweisungen gemeinsam aktualisiert. Die bisherige Vergütung und Abrechnungseinheit bleiben erhalten. Unveränderte Termine mit Anwesenheitsnachweisen behalten ihre IDs. Die ursprünglichen Einträge entfallener Termine bleiben in der Historie erhalten. Bei laufenden Einschreibungen darf sich die Abmeldefrist durch die Änderung nicht verkürzen.
 
 **English.** Choose the number of lecturer positions when creating a course-backed offer. Each position covers the complete schedule and has its own fee. For an eligible shared schedule, management submits the date change once. Future slots without retained evidence can be added or retired when the agreed billing units are preserved. The portal creates one proposal for each affected assignment. Each lecturer and an authorised manager consent to the corresponding version. Management can apply the change once all consents have been recorded. The portal then updates the shared course schedule and the linked assignments together. It preserves the agreed commercial terms and the identifiers of unchanged attendance-backed sessions. The original entries for retired dates remain in the history. The change must preserve the withdrawal deadline for learners with current enrolments.
+
+**Deutsch.** Firmenkontakte können für ihre gemeinsamen Kurse neue Termine vorschlagen. Die Verwaltung koordiniert den eingereichten Antrag und holt die Zustimmung der betroffenen Dozierenden ein. Bei geeigneten, vollständig zukünftigen Zuweisungen kann die Finanzverwaltung im selben Antrag Konditionen oder Vergütung für die ausgewählte dozierende Person vereinbaren. Die anderen Dozierenden bestätigen ihre Termine. Die ursprünglichen Vereinbarungen bleiben in der Historie.
+
+**English.** Company contacts can propose new dates for their shared courses. Management coordinates the submitted request and asks each affected lecturer for consent. On an eligible assignment where all teaching is still in the future, finance can include terms or compensation for the selected lecturer in the same proposal. The other lecturers confirm their dates. The original agreements remain in history.
 
 Commissioned net changes require gross-finance authority, retain the original
 currency and customer charge, and preserve the original claim and revenue
