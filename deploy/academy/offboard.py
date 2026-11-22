@@ -232,7 +232,7 @@ def export(root, expected, recipient, docker):
             with output.open("rb") as encrypted:
                 checksum = hashlib.file_digest(encrypted, "sha256").hexdigest()
             final = backup_root / ("offboarding-" + uuid4().hex + ".zip.age")
-            os.link(output, final)
+            recovery.publish_encrypted_archive(output, final)
         return {
             "installation_id": expected["installation_id"], "release": expected["source_revision"],
             "format": FORMAT, "export": str(final), "sha256": checksum,

@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 FORMAT = "luminovia-academy-recovery-v1"
 RUNTIME_FILES = ("installation.json", "runtime.env", "runtime.env.public.env",
                  "runtime.env.notification.env")
+OPTIONAL_RUNTIME_FILES = ("runtime.env.webhooks.env",)
 RUNTIME_DIRS = ("browser", "data")
 VOLUMES = ("db-config", "caddy_data", "caddy_config")
 CACHE_VOLUMES = ("deno-cache", "clamav_signatures")
@@ -58,6 +59,28 @@ def plain(path, kind, private=False):
 
 def optional_exists(path):
     return os.path.lexists(path)
+
+
+def optional_runtime_inputs(root):
+    inputs = {}
+    for name in OPTIONAL_RUNTIME_FILES:
+        path = root / name
+        if optional_exists(path):
+            info = plain(path, stat.S_ISREG, private=True)
+            inputs[name] = (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    return inputs
+
+
+def publish_encrypted_archive(source, destination):
+    """Publish private, synced bytes without replacing an existing receipt."""
+    os.link(source, destination)
+    source.unlink()
+    for directory in (source.parent, destination.parent):
+        handle = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            os.fsync(handle)
+        finally:
+            os.close(handle)
 
 
 def root_directory(value, existing):
@@ -303,7 +326,7 @@ def bundle_metadata(expected, edition, images, volumes):
             "images": images, "volumes": list(volumes)}
 
 
-def pack(root, output, recipient, metadata, volumes):
+def pack(root, output, recipient, metadata, volumes, optional_inputs):
     with output.open("xb") as destination:
         os.fchmod(destination.fileno(), 0o600)
         with subprocess.Popen(["age", "-r", recipient], env=COMMAND_ENV,
@@ -315,7 +338,7 @@ def pack(root, output, recipient, metadata, volumes):
                     member = tarfile.TarInfo("metadata.json")
                     member.size, member.mode = len(payload), 0o600
                     archive.addfile(member, io.BytesIO(payload))
-                    for name in (*RUNTIME_FILES, *RUNTIME_DIRS):
+                    for name in (*RUNTIME_FILES, *optional_inputs, *RUNTIME_DIRS):
                         archive.add(root / name, "runtime/" + name, filter=allowed_tar_type)
                     for name, path in volumes.items():
                         archive.add(path, "volumes/" + name, filter=allowed_tar_type)
@@ -353,7 +376,9 @@ def extract_member(archive, member, stage, volumes, seen):
     if (path.is_absolute() or path.as_posix() != name or ".." in parts or len(parts) < 2
             or name in seen or not (
                 parts[0] == "runtime" and (
-                    parts[1] in RUNTIME_DIRS or (parts[1] in RUNTIME_FILES and len(parts) == 2)
+                    parts[1] in RUNTIME_DIRS or (
+                        parts[1] in (*RUNTIME_FILES, *OPTIONAL_RUNTIME_FILES) and len(parts) == 2
+                    )
                 ) or parts[0] == "volumes" and parts[1] in volumes
             )):
         fail("encrypted recovery contains an unexpected archive path")
@@ -409,6 +434,7 @@ def unpack(bundle, key, stage, expected, checksum):
             fail("recovery archive changed during verification")
     for kind in metadata["volumes"]:
         plain(stage / "volumes" / kind, stat.S_ISDIR)
+    optional_runtime_inputs(stage / "runtime")
     if runtime_configuration(stage / "runtime", expected) != metadata["edition"]:
         fail("restored runtime and encrypted manifest disagree")
     return metadata
@@ -421,21 +447,21 @@ def backup(root, expected, recipient, docker):
     plain(backup_root, stat.S_ISDIR, private=True)
     with operator_lock(root, ".recovery.lock"):
         edition = runtime_configuration(root, expected)
+        optional_inputs = optional_runtime_inputs(root)
         images, volumes = docker.backup_state(root)
         metadata = bundle_metadata(expected, edition, images, volumes)
         with tempfile.TemporaryDirectory(prefix=".partial-recovery-", dir=backup_root) as staging:
             staging = Path(staging)
             output = staging / "bundle.tar.gz.age"
-            pack(root, output, recipient, metadata, volumes)
+            pack(root, output, recipient, metadata, volumes, optional_inputs)
             if (runtime_configuration(root, expected) != edition
+                    or optional_runtime_inputs(root) != optional_inputs
                     or docker.backup_state(root) != (images, volumes)):
                 fail("recovery sources changed while the set was being encrypted")
             with output.open("rb") as encrypted:
                 ciphertext_digest = hashlib.file_digest(encrypted, "sha256").hexdigest()
             final = backup_root / ("recovery-" + uuid4().hex + ".tar.gz.age")
-            # Link the already complete output under a new name with O_EXCL
-            # semantics; the private temporary link is removed on scope exit.
-            os.link(output, final)
+            publish_encrypted_archive(output, final)
         return {"installation_id": expected["installation_id"], "release": expected["source_revision"],
                 "bundle": str(final), "sha256": ciphertext_digest}
 

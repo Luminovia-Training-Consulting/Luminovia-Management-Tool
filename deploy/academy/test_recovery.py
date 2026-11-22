@@ -133,6 +133,7 @@ class RecoveryRoundTrip(unittest.TestCase):
         receipt = recovery.backup(self.root, self.expected, self.recipient, self.docker)
         bundle = Path(receipt["bundle"])
         assert stat.S_IMODE(bundle.stat().st_mode) == 0o600
+        assert bundle.stat().st_nlink == 1
         assert b"fictional-recovery-secret" not in bundle.read_bytes()
         assert b"retained-object" not in bundle.read_bytes()
         archived = self.scratch / "external.age"
@@ -152,12 +153,41 @@ class RecoveryRoundTrip(unittest.TestCase):
         self.assertEqual(handout.read_bytes(), b"retained-object\x00\x12")
         self.assertEqual(stat.S_IMODE(handout.stat().st_mode), 0o640)
         self.assertEqual(list((self.root / "backups").iterdir()), [])
+        self.assertFalse((self.root / "runtime.env.webhooks.env").exists())
         for kind, path in self.docker.created.items():
             self.assertEqual((path / "volume.txt").read_text(), kind)
         with self.assertRaisesRegex(recovery.RecoveryError, "new runtime"):
             recovery.root_directory(str(self.root), existing=False)
         with self.assertRaisesRegex(recovery.RecoveryError, "new runtime"):
             recovery.restore(self.root, self.expected, archive, self.key, digest(archive), self.docker)
+
+    def test_preserves_the_private_webhook_worker_and_receiver_configuration(self):
+        name = "runtime.env.webhooks.env"
+        config = self.root / name
+        payload = (b"PORTAL_WEBHOOK_SERVICE_KEY=fictional-operator-fixture\n"
+                   b"PORTAL_WEBHOOK_DESTINATIONS='{}'\n")
+        config.write_bytes(payload)
+        config.chmod(0o600)
+        archive = self.snapshot()
+        self.assertNotIn(payload, archive.read_bytes())
+        recovery.restore(self.root, self.expected, archive, self.key, digest(archive), self.docker)
+        self.assertEqual(config.read_bytes(), payload)
+        self.assertEqual(stat.S_IMODE(config.stat().st_mode), 0o600)
+
+    def test_rejects_an_unprotected_or_linked_optional_webhook_configuration(self):
+        config = self.root / "runtime.env.webhooks.env"
+        outside = self.scratch / "unrelated-config"
+        outside.write_text("unchanged")
+        config.symlink_to(outside)
+        with self.assertRaisesRegex(recovery.RecoveryError, "symbolic link"):
+            recovery.backup(self.root, self.expected, self.recipient, self.docker)
+        config.unlink()
+        config.touch()
+        config.chmod(0o644)
+        with self.assertRaisesRegex(recovery.RecoveryError, "must be private"):
+            recovery.backup(self.root, self.expected, self.recipient, self.docker)
+        self.assertEqual(outside.read_text(), "unchanged")
+        self.assertFalse(list((self.root / "backups").glob("recovery-*")))
 
     def test_wrong_key_release_and_ciphertext_fail_without_touching_target(self):
         archive = self.snapshot()

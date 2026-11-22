@@ -186,7 +186,7 @@ Wait for both ingress services to be ready and confirm the new licence receipt, 
 
 The operator command uses Linux, Python 3.12 or later, the local rootful Docker socket and the distribution's `age` package. Create the recovery identity on a separate trusted machine with `age-keygen`. Keep the private key there and provide only its X25519 public recipient to the academy. Keep a separate record of the expected installation UUID, runtime path, signed release, deployment source and the backup SHA-256.
 
-Close ingress and allow in-flight requests to complete. Stop the entire dedicated Compose project. Include the mail-capture profile and override if they were used. Keep the stopped containers for the command's ownership and mount checks.
+Close ingress and allow in-flight requests to complete. Stop the entire dedicated Compose project and its separate webhook worker, if configured. Include the mail-capture profile and override if they were used. Keep the stopped containers for the command's ownership and mount checks.
 
 ```sh
 academy_compose --profile ingress --profile mail-capture --profile notification-mail stop --timeout 90
@@ -194,7 +194,7 @@ sudo python3 deploy/academy/recovery.py backup \
   "$runtime_root" "$installation_id" "$release_commit" --recipient "$age_recipient"
 ```
 
-The command verifies the dedicated mounts and cold database state before encrypting files directly to an archive in the private `backups` directory. The archive contains the physical PostgreSQL 17 cluster, including Auth, roles, databases and migration ledger, Storage objects, local mail capture if present, browser release, private runtime and configuration volumes. Deno and scanner signature caches are rebuilt from the reviewed images. Copy the encrypted set off the deployment machine while preserving private permissions, confirm its SHA-256 using the recorded value, then resume the approved original services.
+The command verifies the dedicated mounts and cold database state before encrypting files directly to an archive in the private `backups` directory. The archive contains the physical PostgreSQL 17 cluster, including Auth, roles, databases and migration ledger, Storage objects, local mail capture if present, browser release, private runtime and configuration volumes. It also preserves the optional private `runtime.env.webhooks.env` file, which supplies the worker's receiver settings. Deno and scanner signature caches are rebuilt from the reviewed images. Copy the encrypted set off the deployment machine while preserving private permissions, confirm its SHA-256 using the recorded value, then resume the approved original services.
 
 To rehearse or recover, use an independent host with an empty Compose namespace and the same absolute runtime path. Keep ingress closed. Use only an archive from the agreed recovery storage and make sure the original installation's Linux ownership is usable on the recovery machine.
 
