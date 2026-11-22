@@ -14,13 +14,16 @@ import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { ControlCenterPage } from "./control-center";
 import { financePeriodSchema } from "./finance-api";
+import { ForecastExport } from "./forecast-export";
 
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   actor: "a597a651-389e-45f8-acba-92c006d6d261",
   responses: {} as Record<string, unknown>,
   errors: {} as Record<string, unknown>,
+  download: vi.fn(),
 }));
+vi.mock("../../lib/csv", () => ({ downloadCsv: fake.download }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     ...fake,
@@ -41,6 +44,7 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   fake.actor = teacher;
+  fake.download.mockReset();
   fake.errors = {};
   fake.responses = {
     get_my_permissions: ["jobs.manage", "finance.manage"],
@@ -169,6 +173,12 @@ it("makes the forecast table a bilingual keyboard-reachable scroll group", async
     screen.getByRole("button", { name: "Szenario berechnen" }),
   ).toHaveFocus();
   await user.tab();
+  expect(
+    screen.getByRole("button", {
+      name: "Finanzszenario als CSV herunterladen",
+    }),
+  ).toHaveFocus();
+  await user.tab();
   expect(scroll).toHaveFocus();
   expect(screen.getByRole("group", { name: "Finanzszenario" })).toBe(scroll);
   expect(scroll).toContainElement(table);
@@ -180,6 +190,53 @@ it("makes the forecast table a bilingual keyboard-reachable scroll group", async
   );
   expect(scroll).toHaveFocus();
   expect(within(scroll).getByRole("table")).toBe(table);
+});
+
+it("exports the applied scenario while masking gross columns without the current permission", async () => {
+  const user = userEvent.setup();
+  const period = { from: "2020-01-01", until: "2020-02-01" };
+  const forecast = fake.responses.finance_forecast as {
+    gross_authorized: boolean;
+    months: Array<Record<string, unknown>>;
+  };
+  forecast.gross_authorized = true;
+  Object.assign(forecast.months[0], {
+    accepted_gross_known: 500,
+    accepted_margin_known: 200,
+    unknown_gross_claims: 1,
+    pipeline_lecturer_cost_known: null,
+    pipeline_cost_unknown_positions: 2,
+  });
+  mount(
+    <ForecastExport
+      actor={teacher}
+      boundary={null}
+      period={period}
+      probability={0}
+      hasRows
+    />,
+  );
+  const button = screen.getByRole("button", {
+    name: "Finanzszenario als CSV herunterladen",
+  });
+  await user.click(button);
+  await waitFor(() => expect(fake.download).toHaveBeenCalledTimes(1));
+  const [filename, [header, row]] = fake.download.mock.calls[0]!;
+  expect(filename).toBe("luminovia-forecast-2020-01-01-2020-02-01.csv");
+  expect(header).not.toContain("Bekannter Bruttoumsatz");
+  expect(row).toContain(null);
+  expect(row).toContain(2);
+  await waitFor(() => expect(button).toBeEnabled());
+  fake.responses.get_my_permissions = [
+    "jobs.manage",
+    "finance.manage",
+    "finance.gross.read",
+  ];
+  await user.click(button);
+  await waitFor(() => expect(fake.download).toHaveBeenCalledTimes(2));
+  const [, [authorisedHeader, authorisedRow]] = fake.download.mock.calls[1]!;
+  expect(authorisedHeader).toContain("Bekannter Bruttoumsatz");
+  expect(authorisedRow).toContain(500);
 });
 
 it("does not fetch any privileged Control Center or forecast data without current management permission", async () => {

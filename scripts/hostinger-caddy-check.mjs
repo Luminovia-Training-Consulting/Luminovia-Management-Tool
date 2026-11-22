@@ -415,6 +415,7 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
                 const response = await request(path, {
                     headers: {
                         Referer: `https://portal.test/return?token=${markers[0]}`,
+                        "X-Fictional-Credential": markers[1],
                     },
                 });
                 assert.equal(response.status, 502);
@@ -443,15 +444,13 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
                     }
                 })
                 .filter((record) => record.logger?.startsWith("http.log.error"));
-            assert(
-                records.length >= 2,
-                "Transport error diagnostics remain available",
-            );
-            for (const record of records) {
+            for (const path of paths) {
+                const pathname = path.split("?")[0];
+                const record = records.find(({request}) => request?.uri === pathname);
+                assert(record, `Transport error diagnostics remain available for ${pathname}`);
                 assert.equal(record.status, 502);
                 assert.equal(typeof record.msg, "string");
-                assert(!record.request.uri.includes("?"));
-                assert(!("Referer" in (record.request.headers ?? {})));
+                assert(!("headers" in record.request));
             }
         },
     );

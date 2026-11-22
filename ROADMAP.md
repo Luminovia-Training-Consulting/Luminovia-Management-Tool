@@ -147,7 +147,7 @@ The original requirements for assignment amendments and Website enquiries are tr
 
 ### R2 — General product/UX completion (`P1/P2`, parallel, but without jeopardising P0)
 
-- [x] FC-01 source: German and English job and LinkedIn labels in the footer of the separate [Website project](https://github.com/Luminovia-Training-Consulting/Website/commit/bc3e698).
+- [x] FC-01 source: German and English job and LinkedIn labels in the footer of the separate [Website project](https://github.com/Luminovia-Training-Consulting/Website/commit/0ea02bf). The built site passed footer links and keyboard navigation at 390, 768, 1280 and 1920 px in both languages.
 - [ ] FC-01 release: verify the footer on the published Website in both languages.
 - [x] FC-02–03, FC-08–13: the fictional demo, dark/light themes, scoped Courses, Forum and Contracts links, and role preview. Current browser journeys cover these flows. The cross-browser and per-page visual audit remains below.
 - [x] FC-18, FC-20–21: direct expertise editing, fictional demo customers/courses and the scoped contract file picker and drop area. The demo and contract browser checks exercise the active interfaces.

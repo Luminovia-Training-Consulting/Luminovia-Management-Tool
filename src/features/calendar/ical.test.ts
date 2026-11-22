@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
-import { type CalendarExportEvent, calendarFile } from "./ical";
+import {
+  type CalendarExportEvent,
+  calendarFile,
+  globalEventCalendarFile,
+} from "./ical";
 
 const event: CalendarExportEvent = {
   id: "1911b233-f4ce-419f-9f3b-88773417ed8f",
@@ -11,6 +15,33 @@ const event: CalendarExportEvent = {
   time_zone: "Europe/Berlin",
 };
 describe("interoperable private calendar snapshots", () => {
+  it("downloads one published event without exposing its joining link or notes", () => {
+    const published = {
+      ...event,
+      description: "Fictional joining notes",
+      link_url: "https://example.invalid/join",
+      published: true,
+      archived_at: null,
+      version: 2,
+      updated_at: "2026-11-16T00:00:00Z",
+    };
+    const file = globalEventCalendarFile(published, "Calendar");
+    expect(file).toContain(`UID:global.${event.id}@luminovia.org`);
+    expect(file).toContain("DTSTART:20261025T003000Z");
+    expect(file).toContain("DTEND:20261025T013000Z");
+    expect(file).not.toContain(published.description);
+    expect(file).not.toContain(published.link_url);
+    expect(() =>
+      globalEventCalendarFile({ ...published, published: false }, "Calendar"),
+    ).toThrow();
+    expect(() =>
+      globalEventCalendarFile(
+        { ...published, archived_at: published.updated_at },
+        "Calendar",
+      ),
+    ).toThrow();
+  });
+
   it("preserves both repeated Berlin DST instants in UTC and a stable event identity", () => {
     const file = calendarFile([event], "Luminovia", "2026-11-16T00:00:00Z");
     expect(file).toContain("DTSTART:20261025T003000Z\r\n");

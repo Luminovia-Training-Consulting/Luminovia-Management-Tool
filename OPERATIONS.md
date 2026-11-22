@@ -119,6 +119,14 @@ Request approval for the concrete release and its migration/hosting changes. The
 
 After approval: take the documented backups; apply reviewed compatible migrations; deploy the exact built artifact to the approved portal root; verify HTTPS/deep links/auth/RLS/claim/calendar/reconnect and service-worker updates; monitor redacted errors and key business invariants. Record literal created URLs only after actual deployment succeeds.
 
+### Release decision — 22 November 2026
+
+**NO-GO for real-user onboarding and Premium activation.** The release owner must keep Premium OFF for any proposed launch. A core-only launch requires its own explicit scope approval and evidence for the shared release gates. The current Hostinger installation is authorised for development. Its frontend is still at `5f89986cbd7d47592563b609e869021468fe6d1a`. Its last recorded update attempt reported `unsafe_release_path`. The installed validator accepted that release manifest in a read-only replay, so the failed job's cause remains open. The host has a fresh encrypted backup and a healthy scanner. Auth uses the development Mailpit relay, and the target's external delivery and alert routing still need evidence.
+
+Before changing this decision, the release owner records the approved target and scope, exact deployed commit and artifact, completed application and security jobs for that commit, target health and provider evidence, and the isolated recovery result from an approved retained-data backup. The recovery must include Auth identities, tenant memberships, commercial records, course data and exact private file bytes. The acceptance owner signs off the scoped role, browser, API and privacy evidence. Both owners record the decision and the evidence references before onboarding starts.
+
+If an update fails, the deployment operator pauses writes and scheduled delivery, records the UTC time, release identifiers, migration history and health findings, and alerts the release owner. The operator preserves the rollback artifact and the latest consistent encrypted database and object backup. The previous signed frontend can be reinstated after the operator verifies compatibility with the migration ledger. Where that compatibility is missing, the operator rehearses a forward fix or restores into an isolated target. If writes have already resumed, the operator reconciles changes made since the backup before any cutover. The release owner approves reopening after health, authentication, scoped reads and writes, private file bytes, notifications and accounting invariants pass. The owner responsible for customer communications handles any notification using the confirmed impact and approved disclosure process.
+
 <a id="section-deployment-runbook-backup-restore-and-rollback"></a>
 
 ## Backup, restore and rollback

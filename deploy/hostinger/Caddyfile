@@ -4,11 +4,27 @@
 	# Access logging stays disabled. Runtime/error logs must also omit query
 	# capabilities and invitation/recovery values during upstream failures.
 	log default {
+		exclude http.log.error
 		format filter {
 			wrap json
 			fields {
 				request>uri regexp "[?].*$" ""
-				request>headers>Referer delete
+				request>headers delete
+				uri regexp "[?].*$" ""
+				url regexp "[?].*$" ""
+			}
+		}
+	}
+	# Caddy emits errors processed by handle_errors at debug level, including
+	# upstream failures that pass through the Academy asset fallback matcher.
+	log portal_http_errors {
+		include http.log.error
+		level DEBUG
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "[?].*$" ""
+				request>headers delete
 				uri regexp "[?].*$" ""
 				url regexp "[?].*$" ""
 			}
