@@ -201,6 +201,12 @@ try {
         portalJsonResponse("/functions/v1/files", oversized.status, await oversized.json()),
         {error: "file_size"},
     );
+    // A supplied version must be a UUID. Only an omitted version selects the current file.
+    for (const versionId of [null, "", false]) {
+        const invalid = await download(a, doc.id, versionId);
+        assert.equal(invalid.status, 400);
+        assert.deepEqual(await invalid.json(), {error: "invalid_request"});
+    }
     const replacedBytes = new TextEncoder().encode(
         "New fictional immutable version.",
     );

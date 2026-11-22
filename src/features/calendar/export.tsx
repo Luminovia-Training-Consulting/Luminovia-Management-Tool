@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
+import { saveBlob } from "../../lib/blob-download";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -58,20 +59,10 @@ export function CalendarExport({
         calendarExportSchema.parse(data),
         t("calendarName"),
       );
-      const url = URL.createObjectURL(
+      saveBlob(
         new Blob([file], { type: "text/calendar;charset=utf-8" }),
+        `luminovia-${month}.ics`,
       );
-      try {
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = `luminovia-${month}.ics`;
-        document.body.append(anchor);
-        anchor.click();
-        anchor.remove();
-      } finally {
-        // Leave the download navigation time to consume the object URL.
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
     },
   });
   return (

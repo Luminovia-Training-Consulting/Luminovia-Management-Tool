@@ -9,6 +9,7 @@ import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import test from "node:test";
 import {auditFrontend, scanFrontendRpcReferences, scanRuntimeExports,} from "./code-integrity.mjs";
+import {assertRpcArgumentShapes} from "./native-rpc-catalogue.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The delivered-source checks inspect the checkout; temporary counterexamples
@@ -139,7 +140,8 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
             `
       import { call as renamed } from './gateway';
       import { forward, byActor } from './forward';
-      renamed('people_directory', {});
+      const options = { p_limit: 50 };
+      renamed('people_directory', { ...options, p_search: 'fictional' });
       forward(\`profile_courses\`);
       byActor('actor', 'comment_context');
       declare const client: any;
@@ -167,10 +169,9 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
       export function byActor(actor: string, endpoint: string) { return call(endpoint, {actor}); }
     `,
         );
+        const references = scanFrontendRpcReferences(fixture);
         assert.deepEqual(
-            scanFrontendRpcReferences(fixture)
-                .map(({name}) => name)
-                .sort(),
+            references.map(({name}) => name).sort(),
             [
                 "accept_action",
                 "comment_context",
@@ -180,9 +181,41 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
                 "profile_courses",
             ],
         );
+        const byName = Object.fromEntries(references.map(({name, argumentShapes}) => [name, argumentShapes]));
+        assert.deepEqual(byName, {
+            people_directory: [{required: ["p_limit", "p_search"], possible: ["p_limit", "p_search"]}],
+            profile_courses: [{required: [], possible: []}],
+            comment_context: [{required: ["actor"], possible: ["actor"]}],
+            get_my_permissions: [{required: [], possible: []}],
+            accept_action: [],
+            decline_action: [],
+        });
     } finally {
         rmSync(fixture, {recursive: true, force: true});
     }
+});
+
+// A routine name can resolve successfully even when its browser payload
+// omits a required field or introduces one PostgreSQL cannot bind.
+test("RPC argument binding accepts defaults and rejects incompatible named keys", () => {
+    const entries = {
+        save_note: {
+            overloads: [{request: {required: ["p_body"], properties: {p_body: {}, p_title: {}}}}],
+        },
+    };
+    const reference = {name: "save_note", file: "src/notes.ts", line: 42};
+    assert.doesNotThrow(() => assertRpcArgumentShapes(entries, [{
+        ...reference,
+        argumentShapes: [{required: ["p_body"], possible: ["p_body", "p_title"]}],
+    }]));
+    assert.throws(() => assertRpcArgumentShapes(entries, [{
+        ...reference,
+        argumentShapes: [{required: [], possible: ["p_body"]}],
+    }]), /src\/notes\.ts:42 cannot call save_note/);
+    assert.throws(() => assertRpcArgumentShapes(entries, [{
+        ...reference,
+        argumentShapes: [{required: ["p_body", "p_typo"], possible: ["p_body", "p_typo"]}],
+    }]), /p_body, p_typo/);
 });
 // Existence checks cover statically declared local paths, not remote resources.
 test("all relative frontend imports and literal public image assets resolve", () => {

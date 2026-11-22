@@ -1,4 +1,4 @@
-import { boundedJson } from "../_shared/bounded-json.ts";
+import { boundedJson } from "../_shared/bounded-body.ts";
 
 type Course = { id: string; title: string; time_zone: string };
 type Lookup =

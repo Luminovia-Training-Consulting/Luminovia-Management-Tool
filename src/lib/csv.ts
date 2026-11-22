@@ -1,3 +1,6 @@
+/** Shared spreadsheet serialization and downloads for authorized export rows. */
+import { saveBlob } from "./blob-download";
+
 /** Escape cell text, line breaks and formula prefixes to keep authored exports from becoming spreadsheet formulas. */
 export function csvCell(value: unknown) {
   let text = String(value ?? "").replace(/[\r\n\t]/g, " ");
@@ -12,14 +15,8 @@ export function csvText(rows: unknown[][]) {
 
 /** Download the authorized export rows and release the temporary Blob URL afterwards. */
 export function downloadCsv(filename: string, rows: unknown[][]) {
-  const url = URL.createObjectURL(
+  saveBlob(
     new Blob([csvText(rows)], { type: "text/csv;charset=utf-8" }),
+    filename,
   );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

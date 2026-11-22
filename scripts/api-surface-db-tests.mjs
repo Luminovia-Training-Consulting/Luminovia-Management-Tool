@@ -2,46 +2,36 @@
  * Binds compiler-discovered frontend RPCs to a freshly migrated test database.
  * Checks execution grants, RLS and separation of the public API from private implementations.
  */
-/** Bind delivered frontend RPC references to the actual replayed database surface. */
 import assert from "node:assert/strict";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {scanFrontendRpcReferences} from "./code-integrity.mjs";
-import {assertNativeRpcCatalogue} from "./native-rpc-catalogue.mjs";
+import {assertNativeRpcCatalogue, assertRpcArgumentShapes} from "./native-rpc-catalogue.mjs";
 import {withTestDatabase} from "./testing/database.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 await withTestDatabase("api_surface", async ({sql}) => {
-    const endpoints = JSON.parse(
-        await sql(
-            `select coalesce(jsonb_agg(jsonb_build_object('name', p.proname, 'signature', pg_get_function_identity_arguments(p.oid), 'authenticated', has_function_privilege('authenticated', p.oid, 'EXECUTE'), 'definer', p.prosecdef)), '[]')
-             from pg_proc p
-                      join pg_namespace n on n.oid = p.pronamespace
-             where n.nspname = 'public'`,
-        ),
-    );
     const references = scanFrontendRpcReferences(root);
     assert.ok(
         references.length > 25,
         "Reference scan must cover the delivered application, not an empty subset",
     );
-    for (const reference of references)
-        assert.ok(
-            endpoints.some(
-                (endpoint) =>
-                    endpoint.name === reference.name && endpoint.authenticated,
-            ),
-            `${reference.file}:${reference.line} calls an unavailable public authenticated RPC ${reference.name}`,
-        );
+    // Catalogue generation requires an authenticated invoker signature for each
+    // reference before comparing the generated contracts or checking payloads.
+    const catalogue = await assertNativeRpcCatalogue(sql, references);
     console.log(
         `PASS All ${references.length} finite delivered frontend RPC references resolve to executable migrated APIs`,
     );
-    await assertNativeRpcCatalogue(sql, references);
     console.log("PASS Native OpenAPI requests, responses and REST role gates match the migration replay");
-    assert.ok(endpoints.length > 50);
+    assertRpcArgumentShapes(catalogue, references);
+    const verifiedPayloads = references.filter(({argumentShapes}) => argumentShapes.some(Boolean));
+    assert.ok(verifiedPayloads.length > 25, "Payload checks must exercise the delivered frontend");
+    console.log(`PASS Named arguments in ${verifiedPayloads.length} frontend RPC references fit migrated signatures`);
     assert.equal(
-        endpoints.filter((endpoint) => endpoint.definer).length,
-        0,
+        await sql(`select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.proname), '')
+             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public' and p.prosecdef`),
+        "",
         "Privileged implementations must remain in the unexposed schema",
     );
     console.log(
@@ -49,14 +39,14 @@ await withTestDatabase("api_surface", async ({sql}) => {
     );
     assert.equal(
         await sql(
-            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity",
+            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') and not c.relrowsecurity",
         ),
         "0",
     );
     console.log("PASS Every current exposed application table enforces RLS");
     assert.equal(
         await sql(
-            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private' and c.relkind='r' and not c.relrowsecurity",
+            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private' and c.relkind in ('r','p') and not c.relrowsecurity",
         ),
         "0",
         "Private application ledgers also require RLS as defense in depth",
@@ -64,11 +54,42 @@ await withTestDatabase("api_surface", async ({sql}) => {
     console.log(
         "PASS Every private application table retains RLS defense in depth",
     );
+    // A view otherwise evaluates underlying relations with its owner's access.
     assert.equal(
-        await sql(
-            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE') and p.oid not in (to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'),to_regprocedure('public.installation_capabilities()'),to_regprocedure('private.installation_capability_projection()'),coalesce(to_regprocedure('public.academy_public_branding()')::oid,0),coalesce(to_regprocedure('private.academy_public_branding()')::oid,0),coalesce(to_regprocedure('public.academy_public_brand_links()')::oid,0),coalesce(to_regprocedure('private.academy_public_brand_links()')::oid,0),coalesce(to_regprocedure('public.academy_public_logo()')::oid,0),coalesce(to_regprocedure('private.academy_public_logo()')::oid,0))",
-        ),
-        "0",
+        await sql(`select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+             from pg_class c join pg_namespace n on n.oid=c.relnamespace
+             where n.nspname='public' and c.relkind='v'
+               and not coalesce(c.reloptions @> array['security_invoker=true'], false)`),
+        "",
+        "Public views must preserve the caller's privileges",
+    );
+    console.log("PASS Public application views use invoker rights");
+    // Effective privileges capture both direct grants and inherited column grants.
+    // The reviewed bootstrap view is the sole anonymous relation read.
+    assert.equal(
+        await sql(`select coalesce(string_agg(n.nspname || '.' || c.relname, ', ' order by n.nspname, c.relname), '')
+             from pg_class c join pg_namespace n on n.oid=c.relnamespace
+             where n.nspname in ('public','private') and c.relkind in ('r','p','v','m','f')
+               and (has_table_privilege('anon', c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                 or has_any_column_privilege('anon', c.oid, 'INSERT,UPDATE,REFERENCES')
+                 or ((n.nspname, c.relname) <> ('public', 'installation_capability_state')
+                   and has_any_column_privilege('anon', c.oid, 'SELECT')))`),
+        "",
+        "Anonymous relation privileges are limited to reading installation capabilities",
+    );
+    console.log("PASS Anonymous relation privileges allow only the reviewed bootstrap read");
+    assert.equal(
+        await sql(`select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by n.nspname, p.proname), '')
+             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname in ('public','private') and has_function_privilege('anon', p.oid, 'EXECUTE')
+               and not exists (select 1 from unnest(array[
+                 'public.require_portal_access()', 'private.require_portal_access()',
+                 'public.installation_capabilities()', 'private.installation_capability_projection()',
+                 'public.academy_public_branding()', 'private.academy_public_branding()',
+                 'public.academy_public_brand_links()', 'private.academy_public_brand_links()',
+                 'public.academy_public_logo()', 'private.academy_public_logo()'
+               ]) allowed(signature) where p.oid = to_regprocedure(allowed.signature))`),
+        "",
         "Anonymous actors can only read the public installation bootstrap and Academy branding and run the Data API pre-request hook",
     );
     console.log(
@@ -90,6 +111,6 @@ await withTestDatabase("api_surface", async ({sql}) => {
         "PASS Every privileged application implementation has an explicitly empty search path",
     );
     console.log(
-        "\n7 API-surface PostgreSQL checks passed (source binding, OpenAPI catalogue, invoker boundary, public/private RLS, anonymous grants and definer search paths).",
+        "\n10 API-surface PostgreSQL checks passed (source binding, OpenAPI catalogue, payload keys, invoker boundaries, public/private RLS, anonymous grants and definer search paths).",
     );
 });

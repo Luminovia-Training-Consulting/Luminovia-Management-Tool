@@ -5,6 +5,7 @@
  */
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import { saveBlob } from "../../lib/blob-download";
 import { queryOptions } from "@tanstack/react-query";
 
 import type { PortalDocument } from "./schema";
@@ -30,13 +31,18 @@ export const acceptedFiles =
 /** Early 100 MiB browser limit; the gateway additionally enforces authoritative upload bounds. */
 export const maximumFileSize = 100 * 1024 * 1024;
 
-/** Check browser connectivity and read the current native access token for the file gateway. */
-async function authHeaders() {
+/** Capture the native session used to authorize a transfer across asynchronous browser work. */
+async function requireSession() {
   requireOnline();
   const { data, error } = await db().auth.getSession();
   if (error || !data.session) throw new Error("authentication_required");
+  return data.session;
+}
+
+/** Send the captured access token with the public API key on gateway requests. */
+function authHeaders(accessToken: string) {
   return {
-    Authorization: `Bearer ${data.session.access_token}`,
+    Authorization: `Bearer ${accessToken}`,
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 }
@@ -160,7 +166,7 @@ async function transferUpload(
   path: string,
   onProgress?: (percent: number) => void,
 ): Promise<PortalDocument> {
-  const headers = await authHeaders();
+  const headers = authHeaders((await requireSession()).access_token);
   return await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", path);
@@ -198,9 +204,13 @@ async function transferUpload(
 
 /** Fetch authenticated gateway bytes with the exact request context and no browser cache. */
 async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
+  const session = await requireSession();
   const response = await fetch(endpoint(), {
     method: "POST",
-    headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+    headers: {
+      ...authHeaders(session.access_token),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -213,7 +223,13 @@ async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
     }
     throw new Error(code);
   }
-  return await response.blob();
+  const blob = await response.blob();
+  const { data, error } = await db().auth.getSession();
+  // Server authorization occurs at request time. The active browser account
+  // can change while the bytes arrive, even though the old request succeeded.
+  if (error || data.session?.user.id !== session.user.id)
+    throw new Error("account_changed");
+  return blob;
 }
 
 /** Download the selected version so replacement cannot silently substitute newer bytes. */
@@ -231,17 +247,6 @@ export async function saveQualificationEvidence(
     evidence_id: evidenceId,
   });
   saveBlob(blob, name);
-}
-
-/** Download confirmed bytes through a temporary object URL, then release that URL. */
-function saveBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.rel = "noopener";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Download reviewed document bytes, then dispose the temporary browser URL. */

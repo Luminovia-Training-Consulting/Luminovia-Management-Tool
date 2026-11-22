@@ -20,9 +20,9 @@ import smtplib
 import socket
 import ssl
 import threading
-import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from dataclasses import dataclass
 from email.parser import BytesParser
 from typing import Any
@@ -295,8 +295,9 @@ class MailRelay:
             "error_code": error_code,
         }
 
-    def check_smtp(self, settings: dict[str, Any]) -> None:
-        """Verify TLS, SMTP greeting and credentials without issuing MAIL/RCPT/DATA."""
+    @contextmanager
+    def smtp_session(self, settings: dict[str, Any], *, verify_implicit_greeting=False):
+        """Own the pinned TLS connection and translate provider failures without exposing responses."""
         host, port, security = settings.get("host"), settings.get("port"), settings.get("security")
         if port not in (465, 587) or security not in ("implicit_tls", "starttls"):
             raise RelayFailure("configuration_unavailable")
@@ -315,12 +316,10 @@ class MailRelay:
                 if connection.ehlo()[0] != 250 or not connection.has_extn("starttls"):
                     raise RelayFailure("protocol_failed")
                 connection.starttls(context=context)
-                if connection.ehlo()[0] != 250:
-                    raise RelayFailure("protocol_failed")
-            connection.login(settings["username"], settings["password"])
-            code, _safe_response = connection.noop()
-            if code != 250:
+            if (security == "starttls" or verify_implicit_greeting) and connection.ehlo()[0] != 250:
                 raise RelayFailure("protocol_failed")
+            connection.login(settings["username"], settings["password"])
+            yield connection
         except smtplib.SMTPAuthenticationError:
             raise RelayFailure("authentication_failed") from None
         except ssl.SSLError:
@@ -334,6 +333,13 @@ class MailRelay:
         finally:
             if connection is not None:
                 connection.close()
+
+    def check_smtp(self, settings: dict[str, Any]) -> None:
+        """Verify TLS and credentials without issuing MAIL/RCPT/DATA."""
+        with self.smtp_session(settings) as connection:
+            code, _safe_response = connection.noop()
+            if code != 250:
+                raise RelayFailure("protocol_failed")
 
     def check_imap(self, settings: dict[str, Any]) -> None:
         """Verify IMAP TLS, login and NOOP only; no mailbox messages are fetched or changed."""
@@ -428,24 +434,7 @@ class MailRelay:
         except (ValueError, UnicodeError, TypeError):
             raise RelayFailure("protocol_failed") from None
 
-        connection: smtplib.SMTP | None = None
-        try:
-            context = ssl.create_default_context()
-            if security == "implicit_tls":
-                connection = PinnedSMTPSSL(
-                    host,
-                    port,
-                    timeout=self.config.connect_timeout,
-                    context=context,
-                )
-            else:
-                connection = PinnedSMTP(host, port, timeout=self.config.connect_timeout)
-                if connection.ehlo()[0] != 250 or not connection.has_extn("starttls"):
-                    raise RelayFailure("protocol_failed")
-                connection.starttls(context=context)
-            if connection.ehlo()[0] != 250:
-                raise RelayFailure("protocol_failed")
-            connection.login(settings["username"], settings["password"])
+        with self.smtp_session(settings, verify_implicit_greeting=True) as connection:
             if ticket and self.rpc("authorize_academy_notification_email", {
                 "p_id": ticket[0], "p_lease_token": ticket[1], "p_recipient": recipient,
                 "p_transport_version": settings.get("version"),
@@ -461,21 +450,6 @@ class MailRelay:
                 raise DeliveryUncertain() from None
             if code != 250:
                 raise RelayFailure("protocol_failed")
-        except smtplib.SMTPAuthenticationError:
-            raise RelayFailure("authentication_failed") from None
-        except ssl.SSLError:
-            raise RelayFailure("tls_failed") from None
-        except (TimeoutError, socket.timeout):
-            raise RelayFailure("timeout") from None
-        except DeliveryUncertain:
-            raise
-        except RelayFailure:
-            raise
-        except (smtplib.SMTPException, OSError):
-            raise RelayFailure("connect_failed") from None
-        finally:
-            if connection is not None:
-                connection.close()
 
     async def handle_smtp(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, *, auth_listener=False) -> None:
         """Run a small SMTP subset; never log commands, credentials, headers or message bodies."""

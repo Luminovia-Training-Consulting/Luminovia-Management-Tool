@@ -20,7 +20,6 @@ import {
   type AdminAnnouncement,
   adminAnnouncementQuery,
   adminAnnouncementsQuery,
-  type AnnouncementCursor,
   type AnnouncementForm,
   announcementFormSchema,
   announcementKeys,
@@ -29,6 +28,8 @@ import {
   audienceRoles,
   manageAnnouncement,
 } from "./api";
+import { AnnouncementPagination } from "./announcement-pagination";
+import { useAnnouncementPagination } from "./pagination-state";
 import "./i18n";
 import "./announcements.css";
 
@@ -262,17 +263,16 @@ function Administration({ actor }: { actor: string }) {
     client = useQueryClient();
   const [draft, setDraft] = useState({ search: "", state: "" }),
     [filter, setFilter] = useState(draft),
-    [cursors, setCursors] = useState<(AnnouncementCursor | null)[]>([null]),
-    [page, setPage] = useState(0),
     [editing, setEditing] = useState<string | null | undefined>(undefined),
     [saved, setSaved] = useState(false),
     [revoked, setRevoked] = useState(false);
+  const pagination = useAnnouncementPagination();
   const query = useQuery({
     ...adminAnnouncementsQuery(
       actor,
       filter.search,
       filter.state,
-      cursors[page],
+      pagination.cursor,
     ),
     enabled: online && !revoked,
   });
@@ -286,8 +286,7 @@ function Administration({ actor }: { actor: string }) {
   };
   const refresh = async () => {
     setSaved(true);
-    setCursors([null]);
-    setPage(0);
+    pagination.reset();
     await Promise.all([
       client.invalidateQueries({ queryKey: announcementKeys.all(actor) }),
       client.invalidateQueries({ queryKey: ["notifications", actor] }),
@@ -339,8 +338,7 @@ function Administration({ actor }: { actor: string }) {
         className="panel announcement-filters"
         onSubmit={(event) => {
           event.preventDefault();
-          setCursors([null]);
-          setPage(0);
+          pagination.reset();
           setFilter({ ...draft, search: draft.search.trim() });
         }}
       >
@@ -444,28 +442,12 @@ function Administration({ actor }: { actor: string }) {
               </article>
             ))}
           </div>
-          <nav className="announcement-pagination" aria-label={t("manage")}>
-            <Button
-              variant="secondary"
-              disabled={page === 0 || query.isFetching}
-              onClick={() => setPage(page - 1)}
-            >
-              {t("previous")}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!query.data.next_cursor || query.isFetching}
-              onClick={() => {
-                const cursor = query.data.next_cursor;
-                if (cursor) {
-                  setCursors([...cursors.slice(0, page + 1), cursor]);
-                  setPage(page + 1);
-                }
-              }}
-            >
-              {t("next")}
-            </Button>
-          </nav>
+          <AnnouncementPagination
+            label={t("manage")}
+            pagination={pagination}
+            nextCursor={query.data.next_cursor}
+            busy={query.isFetching}
+          />
         </>
       )}
       <Dialog

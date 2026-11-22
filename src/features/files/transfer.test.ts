@@ -66,7 +66,12 @@ const file = () =>
 beforeEach(() => {
   Request.requests = [];
   auth.getSession.mockReset().mockResolvedValue({
-    data: { session: { access_token: "fictional-access-token" } },
+    data: {
+      session: {
+        access_token: "fictional-access-token",
+        user: { id: "fictional-actor" },
+      },
+    },
     error: null,
   });
   Object.defineProperty(navigator, "onLine", {
@@ -395,7 +400,12 @@ describe("online, authenticated document transfers", () => {
         .spyOn(document, "createElement")
         .mockReturnValue(anchor);
       auth.getSession.mockResolvedValue({
-        data: { session: { access_token: "fictional-refreshed-token" } },
+        data: {
+          session: {
+            access_token: "fictional-refreshed-token",
+            user: { id: "fictional-actor" },
+          },
+        },
         error: null,
       });
       const name = "Reviewed original V1.txt";
@@ -431,6 +441,16 @@ describe("online, authenticated document transfers", () => {
           cache: "no-store",
         },
       );
+      // Token rotation for the initiating account must not discard the download.
+      auth.getSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: "fictional-rotated-token",
+            user: { id: "fictional-actor" },
+          },
+        },
+        error: null,
+      });
       complete(new Response("Fictional original reviewed bytes."));
       await saved;
       expect(create).toHaveBeenCalledOnce();
@@ -448,6 +468,54 @@ describe("online, authenticated document transfers", () => {
       expect(revoke).toHaveBeenCalledExactlyOnceWith(
         "blob:fictional-reviewed-download",
       );
+    },
+  );
+
+  it.each([
+    [
+      "file preview",
+      () => downloadDocument("fictional-file", "reviewed-version"),
+    ],
+    ["file download", () => saveDownload("fictional-file", "Private.txt")],
+    [
+      "qualification download",
+      () => saveQualificationEvidence("fictional-binding", "Proof.txt"),
+    ],
+  ] as const)(
+    "discards a delayed %s after the active account changes",
+    async (_, transfer) => {
+      let complete!: (response: Response) => void;
+      const fetch = vi.fn().mockReturnValue(
+        new Promise<Response>((resolve) => {
+          complete = resolve;
+        }),
+      );
+      vi.stubGlobal("fetch", fetch);
+      const create = vi.fn(() => "blob:previous-account");
+      vi.stubGlobal(
+        "URL",
+        class extends URL {
+          static createObjectURL = create;
+          static revokeObjectURL = vi.fn();
+        },
+      );
+      const click = vi
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => {});
+
+      const pending = transfer();
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+      auth.getSession.mockResolvedValue({
+        data: {
+          session: { access_token: "next-token", user: { id: "next-actor" } },
+        },
+        error: null,
+      });
+      complete(new Response("Previous account's fictional private bytes"));
+
+      await expect(pending).rejects.toThrow("account_changed");
+      expect(create).not.toHaveBeenCalled();
+      expect(click).not.toHaveBeenCalled();
     },
   );
 

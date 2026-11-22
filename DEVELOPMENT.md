@@ -85,7 +85,7 @@ Roles are read from current database rows. Editable `user_metadata`, submitted a
 Admin/owner accounts can exercise permitted business roles. Financial, role, contract and moderation operations retain current capability and resource checks. Private DMs require actual membership; private calendars remain owner-only data. The separate account HTTP API performs data operations with the caller's JWT. Only invitation delivery/completion and account creation use narrowly scoped server-side Auth administration permissions. Both invitation entry points share the same durable
 reservation protocol.
 
-The [generated API reference](API_REFERENCE.md) lists actual parameters, return types and execution grants from a migrated temporary PostgreSQL database. `scripts/api-surface-db-tests.mjs` connects actual frontend calls to this database through compiler symbols. A documented API or migration is not dead code merely because the browser does not call it.
+The [generated API reference](API_REFERENCE.md) lists actual parameters, return types and execution grants from a migrated temporary PostgreSQL database. `scripts/api-surface-db-tests.mjs` connects frontend calls to the migrated catalogue through compiler symbols. It checks named payload keys where the compiler resolves a single RPC and a finite argument shape. Dynamic dispatch and runtime values still require functional tests. The same suite checks public view invoker rights and effective anonymous relation and column grants. A documented API or migration can serve consumers outside the browser.
 
 <a id="section-developer-guide-feature-modules-and-their-connections"></a>
 
@@ -125,7 +125,7 @@ Administrators with the gross-price capability enter the full client price; the 
 
 Files reserve a specific version and are actually checked before release. Cancellation or scanner failure does not count as a clean upload. Contracts/invoices reference exactly the confirmed bytes. Profile pictures use the same secure upload path but a separate, narrowly scoped read projection. This does not grant other profiles access to general personal documents.
 
-The avatar editor produces a bounded raster image without the original metadata; the server independently validates the canonical PNG. Replacement, removal and membership revocation are checked even during download. Blob URLs belong to the current identity and selection, are released on changes/unmount/offline transitions, and are not stored as global URLs. The PWA caches only the public application shell, not private API/file responses.
+The avatar editor produces a bounded raster image without the original metadata; the server independently validates the canonical PNG. Replacement, removal and membership revocation are checked even during download. After receiving private document bytes, the browser checks that the initiating account is still signed in before passing bytes to a preview or a download. Token refresh for the same account preserves the transfer. A shared helper starts browser downloads and releases their temporary Blob URLs, including when browser activation throws. Preview Blob URLs belong to the current identity and selection and are released when the preview closes. The PWA caches only the public application shell, not private API/file responses.
 
 <a id="section-developer-guide-code-changes-and-comments"></a>
 
@@ -255,6 +255,8 @@ When the hosted-development source is present, the same command also discovers r
 
 The command runs source lint/typecheck/formatting, runtime safety tests, component/unit tests, dependency audit, Edge handler tests/typechecks, real services, actual stop/start persistence with password/no-MFA-factor/profile/private-event/Storage-byte verification, SQL/RLS/concurrency tests, real HTTP/Edge/Mailpit journeys, desktop/mobile browsers, production build and separate built-PWA checks. The main browser suite excludes the built-PWA cases because those run after the production build
 against its separate preview.
+
+Edge handlers share a byte-limited request reader. JSON is decoded as strict UTF-8 before an endpoint validates its input fields. Each endpoint retains its own size limit and HTTP error envelope. The Deno suite checks streamed byte counts and cancellation, and the loopback enquiry test exercises the real handler and its shared parser through HTTP.
 
 Results and private failure artifacts are stored under `.local/tests/<run>/`. Reports can contain local Auth traces; do not publish them. The test supervisor and only the randomly named test stack/volumes are removed in `finally` cleanup, including on a failing check. Normal development can remain running while tests execute. If the process is killed forcibly before cleanup, inspect its explicitly named test project and lock before removing only that test project's resources.
 
@@ -2986,7 +2988,7 @@ See [CI_QUALITY](DEVELOPMENT.md#section-ci-quality) for exact scopes and thresho
 
 [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) maps implemented module slices to real SQL/API/browser suites. The complete runner rejects skipped, flaky, retried, empty or incomplete browser selections and preserves separate application/PWA evidence plus a source-bound machine-readable acceptance summary. A real Playwright negative probe verifies that exit-zero skips cannot pass the acceptance guard.
 
-Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. Main/manual CI uses the complete command. Full-profile PR CI
+Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes source and GitHub configuration checks, actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, the pinned self-hosted Edge Runtime course PDF test, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. Main/manual CI uses the complete command. Full-profile PR CI
 partitions its unchanged stage set into independent `--phase system` and `--phase browser` stacks; neither partial phase alone is a complete pass. Documentation-only and ordinary frontend profiles perform narrower checks, as described in [CI_QUALITY](DEVELOPMENT.md#section-ci-quality).
 
 Individual `npm run test:e2e` and legacy broad API checks are guarded against accidental normal-development mutation. Use isolated mode through the canonical runner. `./portal start` / `stop` are persistent development operations, never test reset commands.

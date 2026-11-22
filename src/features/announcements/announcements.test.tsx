@@ -448,6 +448,14 @@ describe("announcement management", () => {
     const user = userEvent.setup();
     view(<AdminAnnouncementsPage />);
     await screen.findByText("Fiktiver Hinweis 1");
+    // A successful change must clear history from the paged result set.
+    await user.click(screen.getByRole("button", { name: "Nächste Seite" }));
+    await waitFor(() =>
+      expect(calls("admin_announcements").at(-1)![1].p_before_id).toBe(id(2)),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Vorherige Seite" }),
+    ).toBeEnabled();
     await user.click(
       screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
     );
@@ -457,6 +465,12 @@ describe("announcement management", () => {
       p_expected_version: 3,
       p_payload: {},
     });
+    await waitFor(() =>
+      expect(calls("admin_announcements").at(-1)![1].p_before_id).toBeNull(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Vorherige Seite" }),
+    ).toBeDisabled();
     await user.selectOptions(screen.getByLabelText("Status"), "archived");
     await user.click(screen.getByRole("button", { name: "Suchen" }));
     await waitFor(() =>

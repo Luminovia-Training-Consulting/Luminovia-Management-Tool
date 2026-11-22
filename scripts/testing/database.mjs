@@ -43,6 +43,35 @@ const ownedTemplate = (value) => {
     return value;
 };
 
+/** Streams SQL to psql in the caller's validated container and owned database. */
+function containerSql(container, database, {verbose = false} = {}) {
+    return (text, target = database) =>
+        new Promise((resolve, reject) => {
+            const child = spawn(
+                "docker",
+                [
+                    "exec", "-i", container, "psql", "-U", "postgres", "-d", target,
+                    "-X", "-qAt", "-v", "ON_ERROR_STOP=1",
+                    ...(verbose ? ["-v", "VERBOSITY=verbose"] : []),
+                ],
+                {stdio: ["pipe", "pipe", "pipe"]},
+            );
+            const stdout = collectUtf8(child.stdout);
+            const stderr = collectUtf8(child.stderr);
+            let inputError;
+            child.on("error", reject);
+            child.stdin.on("error", (error) => { inputError = error; });
+            child.on("close", (code) => {
+                const out = stdout();
+                const err = stderr();
+                if (code !== 0) reject(new Error(err || out || `psql exited with status ${code}`));
+                else if (inputError) reject(inputError);
+                else resolve(out.trim());
+            });
+            child.stdin.end(text);
+        });
+}
+
 async function initializeDatabase(
     database,
     sql,
@@ -169,38 +198,7 @@ export async function prepareTestDatabaseTemplate({
         throw new Error(
             "Only an owned isolated portal test database is permitted.",
         );
-    const dockerSql = (text, target = "postgres") =>
-        new Promise((resolve, reject) => {
-            const child = spawn(
-                "docker",
-                [
-                    "exec",
-                    "-i",
-                    container,
-                    "psql",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    target,
-                    "-X",
-                    "-qAt",
-                    "-v",
-                    "ON_ERROR_STOP=1",
-                ],
-                {stdio: ["pipe", "pipe", "pipe"]},
-            );
-            const stdout = collectUtf8(child.stdout);
-            const stderr = collectUtf8(child.stderr);
-            child.on("error", reject);
-            child.on("close", (code) => {
-                const out = stdout();
-                const err = stderr();
-                if (code === 0) resolve(out.trim());
-                else reject(new Error(err || out));
-            });
-            child.stdin.end(text);
-        });
-    const sql = execute ?? dockerSql;
+    const sql = execute ?? containerSql(container, "postgres");
     try {
         await initializeDatabase(
             name,
@@ -290,40 +288,7 @@ export async function withTestDatabase(
     if (!/^[a-z_]+$/.test(prefix))
         throw new Error("Safe test database prefix required");
     const database = `${prefix}_${randomUUID().replaceAll("-", "")}`;
-    /** Sends SQL to the owned test database and makes every psql error fail the run. */
-    const sql = (text, target = database) =>
-        new Promise((resolve, reject) => {
-            const child = spawn(
-                "docker",
-                [
-                    "exec",
-                    "-i",
-                    container,
-                    "psql",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    target,
-                    "-X",
-                    "-qAt",
-                    "-v",
-                    "ON_ERROR_STOP=1",
-                    "-v",
-                    "VERBOSITY=verbose",
-                ],
-                {stdio: ["pipe", "pipe", "pipe"]},
-            );
-            const stdout = collectUtf8(child.stdout);
-            const stderr = collectUtf8(child.stderr);
-            child.on("error", reject);
-            child.on("close", (code) => {
-                const out = stdout();
-                const err = stderr();
-                if (code === 0) resolve(out.trim());
-                else reject(new Error(err || out));
-            });
-            child.stdin.end(text);
-        });
+    const sql = containerSql(container, database, {verbose: true});
     /** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
     const actor = (id, text, aal = "aal1") =>
         sql(

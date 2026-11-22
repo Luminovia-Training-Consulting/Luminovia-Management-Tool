@@ -1,4 +1,6 @@
 /** Queue and report private SMTP/IMAP connection checks without exposing credentials or provider diagnostics. */
+import {boundedJson} from "../_shared/bounded-body.ts";
+
 export type MailProtocol = "smtp" | "imap";
 type RelayResult = {
     status: "succeeded" | "failed";
@@ -72,36 +74,13 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
             return response(401, {error: "authentication_required"}, origin);
         if (
             request.headers.get("content-type")?.split(";", 1)[0].trim() !==
-            "application/json" ||
-            Number(request.headers.get("content-length") ?? "0") > 2048 ||
-            !request.body
+            "application/json"
         )
             return response(400, {error: "invalid_request"}, origin);
 
         let body: unknown;
         try {
-            const reader = request.body.getReader();
-            const chunks: Uint8Array[] = [];
-            let size = 0;
-            for (; ;) {
-                const part = await reader.read();
-                if (part.done) break;
-                size += part.value.byteLength;
-                if (size > 2048) {
-                    await reader.cancel();
-                    return response(400, {error: "invalid_request"}, origin);
-                }
-                chunks.push(part.value);
-            }
-            const bytes = new Uint8Array(size);
-            let offset = 0;
-            for (const chunk of chunks) {
-                bytes.set(chunk, offset);
-                offset += chunk.byteLength;
-            }
-            body = JSON.parse(
-                new TextDecoder("utf-8", {fatal: true}).decode(bytes),
-            );
+            body = await boundedJson(request, 2048);
         } catch {
             return response(400, {error: "invalid_request"}, origin);
         }
