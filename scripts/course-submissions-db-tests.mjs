@@ -119,6 +119,10 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     assert.equal(courseDeletion.counts["private.course_submission_settings"], 1);
     assert.ok(courseDeletion.blockers.some(({kind}) => kind === "private.course_submissions"));
     assert.equal(courseDeletion.can_confirm, false);
+    const emptyCourse = await rpc(admin, "deletion_preview", "course_run", otherRun);
+    assert.equal(emptyCourse.can_confirm, true);
+    await rpc(admin, "deletion_confirm", emptyCourse.plan_id, randomUUID(), "DELETE");
+    await assert.rejects(rpc(admin, "set_course_submissions", otherRun, true), /55000/);
     console.log("PASS immutable scanned versions, idempotency, exact scope, RLS isolation and audited staff access");
 
     const inFlight = await reserve(learner, randomUUID());

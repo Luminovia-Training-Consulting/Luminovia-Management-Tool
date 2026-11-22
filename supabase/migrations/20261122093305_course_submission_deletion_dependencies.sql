@@ -1,5 +1,12 @@
 begin;
 
+-- Apply the same confirmed-graph barrier as other owned resource tables.
+-- A course cannot gain new intake settings or file references during deletion.
+create trigger permanent_deletion_fence before insert or update or delete on private.course_submissions
+for each row execute function private.guard_permanent_deletion();
+create trigger permanent_deletion_fence before insert or update or delete on private.course_submission_settings
+for each row execute function private.guard_permanent_deletion();
+
 alter function private.deletion_scope(text, uuid) rename to deletion_scope_before_course_submissions;
 
 create function private.deletion_scope(p_kind text, p_id uuid)
