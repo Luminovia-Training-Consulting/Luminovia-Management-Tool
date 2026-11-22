@@ -27,7 +27,11 @@ import "./styles.css";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { dateTime, validZone, zonedInstant } from "../../lib/dates";
+import {
+  dateTime,
+  validZone,
+  zonedInstantForScheduleEdit,
+} from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -279,26 +283,18 @@ function RunForm({
       setTimeError(false);
       const sessions = values.sessions.map((s) => {
         const source = sessionOrigins.sessions.get(s.source_session_id ?? "");
-        const endpoint = (
-          input: string,
-          originalInstant: string | undefined,
-        ) => {
-          const previous = originalInstant
-            ? DateTime.fromISO(originalInstant)
-            : null;
-          // The minute editor cannot express original seconds/microseconds or
-          // identify a DST-fold offset. Keep that already-known instant until
-          // this endpoint or its intended zone is actually changed.
-          return previous?.isValid &&
-            values.time_zone === sessionOrigins.zone &&
-            previous
-              .setZone(values.time_zone)
-              .toFormat("yyyy-MM-dd'T'HH:mm") === input
-            ? originalInstant!
-            : zonedInstant(input, values.time_zone);
-        };
-        const start = endpoint(s.starts_at, source?.starts_at);
-        const end = endpoint(s.ends_at, source?.ends_at);
+        const start = zonedInstantForScheduleEdit(
+          s.starts_at,
+          values.time_zone,
+          source?.starts_at,
+          sessionOrigins.zone,
+        );
+        const end = zonedInstantForScheduleEdit(
+          s.ends_at,
+          values.time_zone,
+          source?.ends_at,
+          sessionOrigins.zone,
+        );
         const unchanged =
           start === source?.starts_at && end === source?.ends_at;
         const order = start && end ? compareCourseInstants(end, start) : null;

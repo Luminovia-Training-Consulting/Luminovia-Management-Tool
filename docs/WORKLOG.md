@@ -1,3 +1,9 @@
+# 23 November 2026 — Follow-up check for duplicated scheduling functions
+
+Announcements, global calendar events and course planning now resolve edited times through the same helper. Unchanged minute and zone inputs preserve the exact stored seconds, fractional seconds and daylight-saving offset. An edited minute or zone uses the regular validation for ambiguous or nonexistent local times. Announcements and global events also use the same positive-duration check.
+
+The follow-up syntax scan examined 1,398 named callables across 528 application and Edge TypeScript files. It returned no named empty body or matching function body after local names were normalised. All 12 integrity tests and 1,557 application tests passed. The shared date utilities retain 100% coverage.
+
 # 23 November 2026 — Function reachability and duplicate implementations
 
 The frontend integrity guard now traces runtime references from executable code in both editions. A declaration referenced only by itself or by another unused function no longer counts as used. Regression fixtures cover cross-module mutual recursion, nested cycles, self-recursion and a live recursive path. The source scan of 490 modules found no unreachable callable or runtime export. The empty-body scan found intentional promise callbacks and test hooks.

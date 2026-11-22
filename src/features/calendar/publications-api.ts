@@ -1,10 +1,9 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, type QueryClient } from "@tanstack/react-query";
-import { DateTime } from "luxon";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { validZone, zonedInstant } from "../../lib/dates";
+import { validZone, resolveScheduleWindow } from "../../lib/dates";
 import {
   globalEventSchema,
   globalEventsPageSchema,
@@ -28,25 +27,9 @@ export function globalEventPayload(
   previous?: GlobalEvent,
 ) {
   const parsed = globalEventFormSchema.parse(values);
-  const exact = (name: "starts_at" | "ends_at") =>
-    previous &&
-    previous.time_zone === parsed.time_zone &&
-    DateTime.fromISO(previous[name])
-      .setZone(previous.time_zone)
-      .toFormat("yyyy-MM-dd'T'HH:mm") === parsed[name]
-      ? previous[name]
-      : zonedInstant(parsed[name], parsed.time_zone);
-  const starts = exact("starts_at"),
-    ends = exact("ends_at");
-  if (
-    !starts ||
-    !ends ||
-    !Number.isFinite(Date.parse(starts)) ||
-    !Number.isFinite(Date.parse(ends)) ||
-    Date.parse(ends) <= Date.parse(starts)
-  )
-    throw Error("invalid-time");
-  return { ...parsed, starts_at: starts, ends_at: ends };
+  const window = resolveScheduleWindow(parsed, previous);
+  if (!window) throw Error("invalid-time");
+  return { ...parsed, ...window };
 }
 
 export const globalEventsQuery = (

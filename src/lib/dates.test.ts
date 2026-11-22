@@ -7,8 +7,10 @@ import {
   dateTime,
   formatUtcDate,
   money,
+  resolveScheduleWindow,
   zonedInstant,
   zonedInstantForEdit,
+  zonedInstantForScheduleEdit,
 } from "./dates";
 
 describe("calendar instants and DST safety", () => {
@@ -74,4 +76,40 @@ it("formats ledger dates in UTC instead of the device or recorded offset", () =>
     "Nov 22, 2026",
   );
   expect(formatUtcDate("2026-11-23", "de-DE")).toBe("23. Nov. 2026");
+});
+
+it("preserves an exact saved instant only for the same displayed minute and zone", () => {
+  const original = "2026-10-25T02:30:37.123456+01:00";
+  const berlin = "Europe/Berlin";
+  const brisbane = "Australia/Brisbane";
+  expect(
+    zonedInstantForScheduleEdit("2026-10-25T02:30", berlin, original, berlin),
+  ).toBe(original);
+  expect(
+    zonedInstantForScheduleEdit("2026-10-25T02:31", berlin, original, berlin),
+  ).toBeNull();
+  expect(
+    zonedInstantForScheduleEdit("2026-10-25T02:30", brisbane, original, berlin),
+  ).toBe("2026-10-24T16:30:00.000Z");
+  expect(
+    zonedInstantForScheduleEdit("2026-10-25T04:00", berlin, "invalid", berlin),
+  ).toBe("2026-10-25T03:00:00.000Z");
+  expect(zonedInstantForScheduleEdit("2026-10-25T02:30", berlin)).toBeNull();
+});
+
+it("requires a positive published window with valid endpoints", () => {
+  const window = {
+    starts_at: "2026-11-23T09:00",
+    ends_at: "2026-11-23T10:30",
+    time_zone: "Australia/Brisbane",
+  };
+  expect(resolveScheduleWindow(window)).toEqual({
+    starts_at: "2026-11-22T23:00:00.000Z",
+    ends_at: "2026-11-23T00:30:00.000Z",
+  });
+  expect(resolveScheduleWindow({ ...window, starts_at: "invalid" })).toBeNull();
+  expect(resolveScheduleWindow({ ...window, ends_at: "invalid" })).toBeNull();
+  expect(
+    resolveScheduleWindow({ ...window, ends_at: window.starts_at }),
+  ).toBeNull();
 });

@@ -4,6 +4,8 @@
  */
 import { DateTime, IANAZone } from "luxon";
 
+const localMinuteFormat = "yyyy-MM-dd'T'HH:mm";
+
 /** Convert only existing, unambiguous local minute values to UTC; return null for DST gaps/duplicates. */
 export function zonedInstant(value: string, zone: string): string | null {
   if (!IANAZone.isValidZone(zone)) return null;
@@ -11,7 +13,7 @@ export function zonedInstant(value: string, zone: string): string | null {
   // Luxon normalises nonexistent DST times: reject rather than silently move a booking.
   if (
     !date.isValid ||
-    date.toFormat("yyyy-MM-dd'T'HH:mm") !== value ||
+    date.toFormat(localMinuteFormat) !== value ||
     date.getPossibleOffsets().length !== 1
   )
     return null;
@@ -27,6 +29,45 @@ export function zonedInstantForEdit(
 ): string | null {
   if (value === originalValue) return originalInstant;
   return value ? zonedInstant(value, zone) : null;
+}
+
+/** A minute editor cannot reconstruct stored seconds or pick an offset in a DST fold. Keep the exact instant while the same zone and displayed minute are retained. */
+export function zonedInstantForScheduleEdit(
+  value: string,
+  zone: string,
+  originalInstant?: string,
+  originalZone?: string,
+): string | null {
+  if (originalInstant && originalZone === zone) {
+    const original = DateTime.fromISO(originalInstant, { zone });
+    if (original.isValid && original.toFormat(localMinuteFormat) === value)
+      return originalInstant;
+  }
+  return zonedInstant(value, zone);
+}
+
+type ScheduleWindow = { starts_at: string; ends_at: string; time_zone: string };
+
+/** Resolve the two endpoints of a published window and require a positive duration. */
+export function resolveScheduleWindow(
+  value: ScheduleWindow,
+  original?: ScheduleWindow,
+) {
+  const starts_at = zonedInstantForScheduleEdit(
+    value.starts_at,
+    value.time_zone,
+    original?.starts_at,
+    original?.time_zone,
+  );
+  const ends_at = zonedInstantForScheduleEdit(
+    value.ends_at,
+    value.time_zone,
+    original?.ends_at,
+    original?.time_zone,
+  );
+  return starts_at && ends_at && Date.parse(starts_at) < Date.parse(ends_at)
+    ? { starts_at, ends_at }
+    : null;
 }
 
 /** Format an instant in the requested language and explicit display zone. */

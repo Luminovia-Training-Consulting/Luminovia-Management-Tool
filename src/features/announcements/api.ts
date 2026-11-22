@@ -1,8 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
-import { DateTime } from "luxon";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { zonedInstant } from "../../lib/dates";
+import { resolveScheduleWindow } from "../../lib/dates";
 import {
   adminAnnouncementPageSchema,
   adminAnnouncementSchema,
@@ -32,19 +31,9 @@ export function announcementPayload(
   previous?: Revision,
 ) {
   const parsed = announcementFormSchema.parse(values);
-  const exact = (field: "starts_at" | "ends_at") =>
-    previous &&
-    previous.time_zone === parsed.time_zone &&
-    DateTime.fromISO(previous[field])
-      .setZone(previous.time_zone)
-      .toFormat("yyyy-MM-dd'T'HH:mm") === parsed[field]
-      ? previous[field]
-      : zonedInstant(parsed[field], parsed.time_zone);
-  const starts = exact("starts_at"),
-    ends = exact("ends_at");
-  if (!starts || !ends || Date.parse(ends) <= Date.parse(starts))
-    throw new Error("invalid-window");
-  return { ...parsed, starts_at: starts, ends_at: ends };
+  const window = resolveScheduleWindow(parsed, previous);
+  if (!window) throw new Error("invalid-window");
+  return { ...parsed, ...window };
 }
 
 export const announcementKeys = {
