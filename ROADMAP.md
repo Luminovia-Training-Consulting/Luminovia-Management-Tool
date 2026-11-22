@@ -190,6 +190,7 @@ The current owner priority is to complete the independent LMS before the install
 - [x] **LMS-06:** scoped automatic room membership, chat posts and files, current revocation and notification paths. Existing native Realtime, HTTP and SQL witnesses cover revocation, exact file access and separation from private conversations.
 - [x] **LMS-07:** separate course-owned and member-contributed materials, with scanned versions and scoped file delivery. The actual file and workspace fixtures cover owner, instructor, learner and revoked access.
 - [x] Reuse the existing quiz, feedback, completion and course workspace under the organisation entitlement.
+- [x] Provide role-scoped Premium LMS reporting with course and class search, date and status filters, per-course enrolment and attendance, completions and valid records, scheduled time, and historical and upcoming course cohorts. [Local checks](docs/WORKLOG.md#23-november-2026--premium-lms-course-analytics).
 
 ### R5 — Premium LMS exams and attendance (`P1`, after R3–R4)
 
@@ -683,7 +684,7 @@ Document an intentional versioned route scheme (for example `/api/v1/*` as a **p
 
 All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
 
-The internal catalogue covers 390 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments, teaching evidence and settlement reporting. Each Academy catalogue covers 96 paths, including course evaluations, lecturer restrictions and runtime PWA assets. The compiler-discovered browser RPC inventory is checked against the migrated APIs. Internal OpenAPI 1.5 adds the previously generic chat, finance, course and account operation rules. The contract test verifies the published routes in both document modes. Native Auth and REST fixtures compare actual acknowledgement, replacement, chat and stale-capacity responses with the contract. The evidence for each release must still cover the role, transport and target combinations below.
+The internal OpenAPI 1.10 catalogue covers 394 paths, including accounts, Premium courses, attendance, scoped credentials, shared amendments, teaching evidence and settlement reporting. Each Academy OpenAPI 1.35 catalogue covers 98 paths, including course evaluations, lecturer restrictions and runtime PWA assets. The compiler-discovered browser RPC inventory is checked against the migrated APIs. Internal OpenAPI 1.5 adds the previously generic chat, finance, course and account operation rules. The contract test verifies the published routes in both document modes. Native Auth and REST fixtures compare actual acknowledgement, replacement, chat and stale-capacity responses with the contract. The evidence for each release must still cover the role, transport and target combinations below.
 
 | Test    | Automated acceptance / observable behaviour                                                                                               |
 |---------|-------------------------------------------------------------------------------------------------------------------------------------------|

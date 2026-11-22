@@ -1115,3 +1115,44 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
         user_id: f.learner.id, status: "present", note: "Reviewed register", version: 1,
     });
 });
+
+test("company filters live Premium LMS analytics without exposing learners", async ({ page }, info) => {
+    test.setTimeout(90_000);
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run,
+        p_user_id: f.learner.id,
+        p_status: "enrolled",
+    }));
+    await checked(f.service.from("course_runs").update({ published: true }).eq("id", f.run));
+    const english = info.project.name.startsWith("mobile");
+    const title = english ? "LMS analytics" : "LMS-Analysen";
+    await login(page, f.client.email);
+    await page.goto("/analytics");
+    await page.getByLabel(/^Sprache$|^Language$/).selectOption(english ? "en" : "de");
+    await page.getByLabel(/^Farbschema$|^Theme$/).selectOption(english ? "dark" : "light");
+    await expect(page.getByRole("link", { name: title, exact: true })).toBeVisible();
+    await page.getByRole("link", { name: title, exact: true }).click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    const breakdown = page.getByRole("region", {
+        name: english ? "Metrics by course" : "Kennzahlen je Kurs",
+    });
+    const row = breakdown.getByRole("row").filter({ hasText: f.title });
+    await expect(row.getByRole("cell").nth(2)).toHaveText("1");
+    await expect(page.getByText(f.learner.name, { exact: true })).toHaveCount(0);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", english ? "dark" : "light");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    if (english) {
+        expect(await breakdown.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    }
+    await page.getByLabel(english ? "Course status" : "Kursstatus").selectOption("upcoming");
+    await expect(page.getByText(english
+        ? "No courses match this selection."
+        : "Für diese Auswahl wurden keine Kurse gefunden.")).toBeVisible();
+    await page.getByLabel(english ? "Course status" : "Kursstatus").selectOption("finished");
+    await expect(row).toBeVisible();
+    await page.getByRole("searchbox").fill("does not match any course");
+    await page.getByRole("button", { name: english ? "Search" : "Suchen", exact: true }).click();
+    await expect(row).toHaveCount(0);
+});

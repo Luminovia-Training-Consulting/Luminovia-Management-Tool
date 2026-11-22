@@ -15,6 +15,8 @@ const readPaths = [
   "/rest/v1/rpc/course_chat_messages",
   "/rest/v1/rpc/course_session_register",
   "/rest/v1/rpc/academy_course_participation_report",
+  "/rest/v1/rpc/learning_analytics_access",
+  "/rest/v1/rpc/learning_analytics_report",
   "/rest/v1/rpc/notification_inbox",
   "/rest/v1/rpc/delivery_preferences",
   "/rest/v1/rpc/academy_course_publication",
@@ -202,7 +204,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.34.0");
+      expect(spec.info.version).toBe("1.35.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({

@@ -429,6 +429,7 @@ for (const version of [
   "1.31.0",
   "1.32.0",
   "1.33.0",
+  "1.34.0",
 ]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);

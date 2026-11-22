@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -35,76 +36,17 @@ import {
   type AnalyticsReport,
   type AnalyticsScope,
 } from "./schema";
+import { PeriodForm, Totals } from "./report-ui";
+import {
+  hasLearningAnalytics,
+  learningAnalyticsAccessQuery,
+} from "./learning-api";
+import { useOnline } from "../../lib/online";
 import "./i18n";
-import "./analytics.css";
+import "./learning-i18n";
 
 const presets = ["around", "historyYear", "nextQuarter"] as const;
 const currencyCodes = ["EUR", "AUD"] as const;
-
-type Reading = { label: string; value: string };
-
-function Totals({ items }: { items: Reading[] }) {
-  return (
-    <dl className="analytics-totals">
-      {items.map(({ label, value }) => (
-        <div key={label}>
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function PeriodForm({
-  period,
-  onApply,
-}: {
-  period: AnalyticsPeriod;
-  onApply: (period: AnalyticsPeriod) => void;
-}) {
-  const { t } = useTranslation("analytics");
-  const [error, setError] = useState(false);
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const nextPeriod = {
-      from: String(form.get("from")),
-      through: String(form.get("through")),
-    };
-    if (!analyticsUntil(nextPeriod)) {
-      setError(true);
-      return;
-    }
-    setError(false);
-    onApply(nextPeriod);
-  }
-  return (
-    <form onSubmit={submit}>
-      <div className="analytics-filters analytics-date-filters">
-        <Field id="analytics-from" label={t("from")}>
-          <input name="from" type="date" defaultValue={period.from} required />
-        </Field>
-        <Field id="analytics-through" label={t("through")}>
-          <input
-            name="through"
-            type="date"
-            defaultValue={period.through}
-            required
-          />
-        </Field>
-        <Button type="submit" variant="secondary">
-          {t("apply")}
-        </Button>
-      </div>
-      {error && (
-        <p className="error" role="alert">
-          {t("invalidPeriod")}
-        </p>
-      )}
-    </form>
-  );
-}
 
 function AnalyticsView({
   actor,
@@ -615,6 +557,11 @@ export function AnalyticsPage() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const actor = session?.user.id ?? "";
+  const online = useOnline();
+  const learning = useQuery({
+    ...learningAnalyticsAccessQuery(actor),
+    enabled: Boolean(actor && portalInternalEdition && online),
+  });
   const access = useQuery({
     ...analyticsAccessQuery(actor),
     enabled: Boolean(actor && portalInternalEdition),
@@ -625,6 +572,13 @@ export function AnalyticsPage() {
         title={t("analytics")}
         description={t("analytics:description")}
       />
+      {online && learning.isSuccess && hasLearningAnalytics(learning.data) && (
+        <div className="form-actions">
+          <Button asChild variant="secondary">
+            <Link to="/analytics/learning">{t("learningAnalytics:title")}</Link>
+          </Button>
+        </div>
+      )}
       {actor && portalInternalEdition ? (
         access.isPending ? (
           <Loading />

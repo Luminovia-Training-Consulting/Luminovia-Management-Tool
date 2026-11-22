@@ -47,16 +47,26 @@ import {
   RolePreviewUnavailable,
 } from "./role-preview";
 import { availableRolePreviews, useRolePreview } from "./role-preview-state";
+import {
+  hasLearningAnalytics,
+  learningAnalyticsAccessQuery,
+} from "../features/analytics/learning-api";
+import "../features/analytics/learning-i18n";
 import "./academy-routes.css";
 
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration(?:\/mail)?|\/timetable|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
+  /^(?:\/administration(?:\/mail)?|\/timetable|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/academy-explorer").then((module) => ({
     default: module.AcademyApiExplorer,
+  })),
+);
+const LearningAnalyticsPage = lazy(() =>
+  import("../features/analytics/learning").then((module) => ({
+    default: module.LearningAnalyticsPage,
   })),
 );
 const AdminMailPage = lazy(() =>
@@ -157,6 +167,10 @@ function AcademyWorkspaceFrame({
     enabled: online,
     refetchInterval: (query) => (online && query.state.data ? 15_000 : false),
   });
+  const learningAnalytics = useQuery({
+    ...learningAnalyticsAccessQuery(actor),
+    enabled: online,
+  });
   const authority =
     online && administration.isFetchedAfterMount && administration.isSuccess
       ? administration.data
@@ -208,6 +222,15 @@ function AcademyWorkspaceFrame({
           ) : (
             <>
               <AcademyTimetableLink />
+              {online &&
+                learningAnalytics.isSuccess &&
+                hasLearningAnalytics(learningAnalytics.data) && (
+                  <Button variant="secondary" asChild>
+                    <Link to="/analytics/learning">
+                      {t("learningAnalytics:title")}
+                    </Link>
+                  </Button>
+                )}
               {authority && (
                 <Button variant="secondary" asChild>
                   <Link to="/administration">{t("academyAdministration")}</Link>
@@ -332,6 +355,10 @@ export default function AcademyRoutes() {
             />
             <Route path="/notifications" element={<AcademyInbox />} />
             <Route path="/timetable" element={<AcademyTimetableRoute />} />
+            <Route
+              path="/analytics/learning"
+              element={<LearningAnalyticsPage />}
+            />
             <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
             <Route path="/api/docs" element={<AcademyApiExplorer />} />
             <Route

@@ -16,6 +16,12 @@
 - The financial history distinguishes confirmed fees from recorded cash. The all-company finance view can model open work using the existing 90-day finance forecast and user-selected probability. Company-filtered lecturer payments remain unavailable because an invoice can cover several organisations.
 - The feature has targeted PostgreSQL, component, contract and responsive Chromium evidence. Full hosted acceptance remains in the existing release inventory.
 
+## Premium LMS course analytics
+
+- The internal Analytics page links to LMS analytics when the server confirms a reporting scope. Both dedicated Academy editions link directly from Learning. Internal reports select enabled Premium companies. Dedicated reports use the signed LMS licence in active or read-only grace state.
+- The aggregates cover unique active learners, enrolments, completions, valid completion records, scheduled sessions and teaching time, status by month, and verified present, absent and excused counts. Reports show monthly cohorts and a paginated course table. An instructor sees their own assignments, a company sees its own courses, and course management can filter the companies it administers. Archived course runs remain visible to course management for historical reporting.
+- The report uses the first session or the draft creation date in the caller's reporting zone. Learner counts reflect current enrolment and membership. Verified attendance uses finished sessions. Learner identities, notes and grades stay out of the report. The Internal and Academy interactive APIs publish both read operations.
+
 ## Responsive UI and edition presentation
 
 - The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.

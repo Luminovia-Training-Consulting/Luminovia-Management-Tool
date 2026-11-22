@@ -284,6 +284,7 @@ export function Shell() {
           (teaching ||
             clientPortalAccess ||
             permissions.data?.includes("jobs.manage") ||
+            permissions.data?.includes("courses.manage") ||
             permissions.data?.includes("finance.manage"))
             ? [
                 {
