@@ -289,6 +289,7 @@ test("an explicit browser phase may execute one selected CI lane", async () => {
             const index = call.args.indexOf("--project");
             assert.ok(index >= 0);
             assert.equal(call.args[index + 1], "mobile-chromium");
+            assert.equal(call.timeoutMs, stage === "application" && !discovery ? 1800000 : 1200000);
         }
     }
 });
@@ -608,7 +609,7 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     );
     assert.equal(desktop.env.PORTAL_DB_CONTAINER, seed.env.PORTAL_DB_CONTAINER);
     assert.equal(desktop.env.PORTAL_BROWSER_STAGE, "application");
-    assert.equal(desktop.timeoutMs, 1800000);
+    assert.equal(desktop.timeoutMs, 3600000);
     assert.equal(
         discovery.timeoutMs,
         1200000,

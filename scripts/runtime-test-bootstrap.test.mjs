@@ -303,7 +303,7 @@ test("failed commercial bootstrap stops SQL/API acceptance while retaining owned
 
 // Execute the real orchestration, verifying the child process contract rather
 // than a source-text constant: this must not extend other stages or filter tests.
-test("only the complete browser command receives the expanded aggregate budget", async () => {
+test("only the application browser command receives a budget for both serial projects", async () => {
     const result = await runFixture();
     assert.equal(result.error, undefined);
     const browser = result.calls.filter(applicationExecution);
@@ -331,10 +331,10 @@ test("only the complete browser command receives the expanded aggregate budget",
     assert.ok(
         result.calls.indexOf(discovery[0]) < result.calls.indexOf(browser[0]),
     );
-    assert.equal(browser[0].timeoutMs, 1800000);
+    assert.equal(browser[0].timeoutMs, 3600000);
     assert.ok(browser[0].signal instanceof AbortSignal);
     assert.equal(
-        result.calls.filter((call) => call.timeoutMs === 1800000).length,
+        result.calls.filter((call) => call.timeoutMs === 3600000).length,
         1,
     );
     const stages = result.calls.filter(
@@ -342,7 +342,7 @@ test("only the complete browser command receives the expanded aggregate budget",
     );
     assert.ok(stages.length > 10);
     for (const stage of stages)
-        assert.equal(stage.timeoutMs, stage === browser[0] ? 1800000 : 1200000);
+        assert.equal(stage.timeoutMs, stage === browser[0] ? 3600000 : 1200000);
 });
 
 test("a browser deadline still fails acceptance, skips build/PWA and performs owned cleanup", async () => {

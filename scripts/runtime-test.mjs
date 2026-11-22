@@ -509,14 +509,14 @@ try {
             ...(process.env.CI === "true" ? ["--with-deps"] : []),
             "chromium",
         ]);
-        // Preserve the measured whole-command budget; individual browser tests
-        // remain bounded and strict discovery/results still reject incomplete runs.
+        // Projects run sequentially against one Auth service. Give each one
+        // the same aggregate budget CI uses for a single browser project.
         await browserStage(
             "application",
             "Desktop and mobile browsers",
             ["--grep-invert", "built PWA"],
             {},
-            1800000,
+            30 * 60 * 1000 * browserProjects.length,
         );
         // The required parallel Typecheck gate covers these exact source bytes.
         await step("Production build", "npx", ["--no-install", "vite", "build"]);
