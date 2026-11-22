@@ -96,3 +96,12 @@
 		}
 	}
 }
+
+# Legacy public entry points for the Luminovia instance.
+lms.luminovia.org, portal.luminovia.org {
+	redir https://cms.luminovia.org{uri} 308
+}
+
+http://lms.luminovia.org, http://portal.luminovia.org {
+	redir https://cms.luminovia.org{uri} 308
+}

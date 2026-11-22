@@ -231,6 +231,7 @@ Only the public age recipient is on the VPS. Daily complete sets are local, with
 - Ubuntu 26.10 was the installed system selected during provisioning. Docker and Compose came from its official Ubuntu repositories. A 2 GiB swap file supports setup; it is not a substitute for production RAM.
 - Only SSH and web ports are publicly reachable. PostgreSQL, API gateway, Auth, Storage, Edge and ClamAV have no published host ports. The development Mailpit web interface binds only to server loopback.
 - `cms` is a new A record, TTL 300, pointing to this VM. The apex/`www` marketing site and all MX/SPF/DKIM/DMARC records were preserved by exact readback comparison. Pre-change DNS snapshot: `168730836`. No nameserver change.
+- `lms` uses an A record to the same VPS. `portal` uses a CNAME to `cms.luminovia.org`. Caddy obtains HTTPS certificates for both aliases and redirects HTTP and HTTPS to the canonical CMS with status 308, preserving the path and query. Keep the application and authentication URLs on the canonical host.
 
 The initially approved free Cloud project was created before the user clarified self-hosting. Work on it stopped. It is unused, has no users/files/functions/mail and is not a configured application dependency; it has not been deleted without approval.
 
