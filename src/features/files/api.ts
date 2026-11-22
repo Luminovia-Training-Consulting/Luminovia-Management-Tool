@@ -76,7 +76,7 @@ export async function uploadDocument(
   return transferUpload(form, endpoint(), onProgress);
 }
 
-export const courseSubmissionMaxBytes = 10 * 1024 * 1024;
+const courseSubmissionMaxBytes = 10 * 1024 * 1024;
 
 /** Reserve and scan a private file for the caller's own enrolment. */
 export function uploadCourseSubmission(

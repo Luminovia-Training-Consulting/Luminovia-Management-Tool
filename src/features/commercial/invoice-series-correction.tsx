@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useEffect, useId, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -359,7 +360,7 @@ function CorrectionRepaymentForm({
   const [amount, setAmount] = useState("");
   const [received, setReceived] = useState("");
   const [reference, setReference] = useState("");
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const entered = cents(amount) ?? 0;
   const save = useCorrectionAction(
     actor,
@@ -371,11 +372,10 @@ function CorrectionRepaymentForm({
         p_reference: reference.trim(),
       };
       const signature = JSON.stringify(payload);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc(
         "record_invoice_series_repayment",
-        { ...payload, p_client_id: retry.current.key },
+        { ...payload, p_client_id: retryId },
       );
       if (error) throw error;
       z.uuid().parse(data);
@@ -384,7 +384,7 @@ function CorrectionRepaymentForm({
       setAmount("");
       setReceived("");
       setReference("");
-      retry.current = null;
+      retry.clear();
     },
   );
   return (
@@ -456,7 +456,7 @@ function CorrectionProposal({
   const [estimate, setEstimate] = useState("");
   const [due, setDue] = useState("");
   const [note, setNote] = useState("");
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const amount = cents(estimate);
   const contract =
     options.contracts.find(({ id }) => id === chosen) ??
@@ -475,11 +475,10 @@ function CorrectionProposal({
       p_note: note.trim(),
     };
     const signature = JSON.stringify(payload);
-    if (retry.current?.signature !== signature)
-      retry.current = { signature, key: crypto.randomUUID() };
+    const retryId = retry.forInput(signature);
     const { data, error } = await db().rpc(
       "propose_invoice_series_correction",
-      { ...payload, p_client_id: retry.current.key },
+      { ...payload, p_client_id: retryId },
     );
     if (error) throw error;
     z.uuid().parse(data);

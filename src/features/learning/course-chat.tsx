@@ -1,4 +1,5 @@
 /** Participant course rooms use scoped history, scan-gated uploads and confirmed posting. */
+import { useRequestKey } from "../../lib/request-key";
 import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -170,7 +171,7 @@ function CourseChatThread({
   const [progress, setProgress] = useState(0);
   const [invalidDrop, setInvalidDrop] = useState(false);
   const uploadRetry = useRef<{ file: File; key: string } | null>(null);
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const historyKey = ["course-chat-messages", actor, run, room.id];
   useCourseChatLive(actor, run, room.id);
   const messages = useQuery({
@@ -246,12 +247,11 @@ function CourseChatThread({
         attachment?.id,
         attachment?.version,
       ]);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const args = {
         p_room_id: room.id,
         p_body: text,
-        p_client_id: retry.current.key,
+        p_client_id: retryId,
       };
       const { data, error } = attachment
         ? await db().rpc("send_course_chat_attachment", {
@@ -263,7 +263,7 @@ function CourseChatThread({
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
     onSuccess: async () => {
-      retry.current = null;
+      retry.clear();
       setBefore(null);
       setBody("");
       setAttachment(null);

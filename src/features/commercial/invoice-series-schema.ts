@@ -43,4 +43,3 @@ export const invoiceSeriesOptionsSchema = z.strictObject({
 });
 
 export type InvoiceSeriesRecord = z.infer<typeof invoiceSeriesRecordSchema>;
-export type InvoiceSeriesKind = z.infer<typeof invoiceSeriesKindSchema>;

@@ -2,7 +2,7 @@
  * Validated invitation form with reusable request identity. An uncertain network outcome is not
  * a sent invitation; status and permitted roles follow the server contract.
  */
-import { useRef } from "react";
+import { useRequestKey } from "../../lib/request-key";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -124,7 +124,7 @@ export function InviteForm({
     },
   });
   const online = useOnline();
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const {
     register,
     control,
@@ -156,14 +156,13 @@ export function InviteForm({
       const next = signature(normalized);
       // Preserve the same key after network/HTTP failures. Only editing the intended
       // recipient or display name starts another request; the DB also deduplicates email.
-      if (!retry.current || retry.current.signature !== next)
-        retry.current = { signature: next, key: crypto.randomUUID() };
+      const requestId = retry.forInput(next);
       if (allRoles) {
         return resultFrom(
           await accountRequest("invitations", "POST", {
             ...normalized,
             organisation_id: normalized.organisation_id || null,
-            idempotency_key: retry.current.key,
+            idempotency_key: requestId,
           }),
         );
       }
@@ -171,7 +170,7 @@ export function InviteForm({
         body: {
           email: normalized.email,
           display_name: normalized.display_name,
-          idempotency_key: retry.current.key,
+          idempotency_key: requestId,
         },
       });
       if (error) {

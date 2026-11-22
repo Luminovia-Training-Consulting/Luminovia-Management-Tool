@@ -24,47 +24,11 @@
   margin: 1rem 0;
 }
 
-.finance-actions .button,
-.finance-review .button {
+.finance-actions .button {
   height: auto;
   white-space: normal;
   max-width: 100%;
   text-align: start;
-}
-
-.finance-time-form fieldset {
-  border: 0;
-  padding: 0;
-  min-width: 0;
-}
-
-.finance-time-form input,
-.finance-time-form select,
-.finance-time-form textarea {
-  max-width: 100%;
-  min-width: 0;
-}
-
-.finance-time-list {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.finance-review {
-  margin-top: 1rem;
-}
-
-.finance-history {
-  padding-left: 1.5rem;
-}
-
-.finance-history > li {
-  margin-bottom: 1.5rem;
-}
-
-.finance-history p {
-  overflow-wrap: anywhere;
 }
 
 .control-grid {

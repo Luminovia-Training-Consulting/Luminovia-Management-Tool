@@ -1,3 +1,4 @@
+import { useRequestKey } from "../../lib/request-key";
 import { useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -52,7 +53,7 @@ export function CustomerCreditNotes({
   const [document, setDocument] = useState<PortalDocument | null>(null);
   const [reviewed, setReviewed] = useState<string | null>(null);
   const uploadRequest = useRef<{ file: File; id: string } | null>(null);
-  const saveRequest = useRef<{ signature: string; id: string } | null>(null);
+  const saveRequest = useRequestKey();
   const proposal = customerCreditNoteInputSchema.safeParse({
     reference: form.reference,
     issued_on: form.issued,
@@ -102,20 +103,17 @@ export function CustomerCreditNotes({
     mutationFn: () => {
       if (!review || !confirmed || !proposal.success)
         throw new Error("invalid_credit_note");
-      if (saveRequest.current?.signature !== review) {
-        saveRequest.current = { signature: review, id: crypto.randomUUID() };
-      }
       return accountingWrite("register_customer_credit_note", {
         p_invoice_id: invoice.id,
         p_payload: proposal.data,
-        p_request_id: saveRequest.current.id,
+        p_request_id: saveRequest.forInput(review),
       });
     },
     onSuccess: async () => {
       setForm(emptyForm);
       setDocument(null);
       setReviewed(null);
-      saveRequest.current = null;
+      saveRequest.clear();
       uploadRequest.current = null;
       await client.invalidateQueries({
         queryKey: accountingKeys.customerCreditNotes(actor, invoice.id),

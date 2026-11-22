@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
@@ -146,7 +147,7 @@ export function ManageInvoiceSeries({
   const [note, setNote] = useState("");
   const [revokeId, setRevokeId] = useState("");
   const [revocationNote, setRevocationNote] = useState("");
-  const retry = useRef<{ signature: string; id: string } | null>(null);
+  const retry = useRequestKey();
   const options = useQuery({
     ...invoiceSeriesOptionsQuery(actor, claimId),
     enabled: online,
@@ -193,11 +194,10 @@ export function ManageInvoiceSeries({
         p_note: note.trim(),
       };
       const signature = JSON.stringify(payload);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, id: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("approve_invoice_series_entry", {
         ...payload,
-        p_client_id: retry.current.id,
+        p_client_id: retryId,
       });
       if (error) throw error;
       z.uuid().parse(data);
@@ -207,7 +207,7 @@ export function ManageInvoiceSeries({
         setAmount("");
         setDue("");
         setNote("");
-        retry.current = null;
+        retry.clear();
       } else {
         setRevokeId("");
         setRevocationNote("");

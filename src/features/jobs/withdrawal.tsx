@@ -1,5 +1,6 @@
 /** Requests retain their retry identity, and never release assignments optimistically. */
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -36,7 +37,7 @@ export function JobWithdrawalPanel({
   const query = useQuery(withdrawalsQuery(actor, jobId));
   const [action, setAction] = useState<Action | null>(null);
   const [reason, setReason] = useState("");
-  const retry = useRef<{ signature: string; id: string } | null>(null);
+  const retry = useRequestKey();
   const change = useMutation({
     mutationFn: async ({
       action: chosen,
@@ -46,16 +47,10 @@ export function JobWithdrawalPanel({
       reason: string;
     }) => {
       const signature = JSON.stringify({ chosen, text });
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, id: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return chosen.kind === "request"
-        ? requestWithdrawal(chosen.id, text, retry.current.id)
-        : reviewWithdrawal(
-            chosen.id,
-            chosen.kind === "approve",
-            text,
-            retry.current.id,
-          );
+        ? requestWithdrawal(chosen.id, text, retryId)
+        : reviewWithdrawal(chosen.id, chosen.kind === "approve", text, retryId);
     },
     onSuccess: async () => {
       setAction(null);
@@ -65,7 +60,7 @@ export function JobWithdrawalPanel({
   const open = (chosen: Action) => {
     setAction(chosen);
     setReason("");
-    retry.current = null;
+    retry.clear();
     change.reset();
   };
   // Synthetic/non-resource IDs do not issue a protected query.

@@ -1,5 +1,6 @@
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
-import { useEffect, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -97,7 +98,7 @@ function Preparation({ course, actor, academy }: ActivityProps) {
   const save = useAction(course.id, actor, Boolean(academy));
   const [label, setLabel] = useState("");
   const [visible, setVisible] = useState(true);
-  const request = useRef<{ fingerprint: string; id: string }>(undefined);
+  const request = useRequestKey();
   return (
     <section className="panel learning-panel" aria-label={t("preparation")}>
       <h2>{t("preparation")}</h2>
@@ -139,21 +140,20 @@ function Preparation({ course, actor, academy }: ActivityProps) {
           onSubmit={(event) => {
             event.preventDefault();
             const values = { label: label.trim(), client_visible: visible };
-            const fingerprint = JSON.stringify(values);
-            if (academy && request.current?.fingerprint !== fingerprint) {
-              request.current = { fingerprint, id: crypto.randomUUID() };
-            }
             save.mutate(
               {
                 action: "preparation_create",
                 payload: academy
-                  ? { ...values, request_id: request.current?.id }
+                  ? {
+                      ...values,
+                      request_id: request.forInput(JSON.stringify(values)),
+                    }
                   : values,
               },
               {
                 onSuccess: () => {
                   setLabel("");
-                  request.current = undefined;
+                  request.clear();
                 },
               },
             );
@@ -810,7 +810,7 @@ function RepeatBooking({ course }: WorkProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
   const request = course.repeat_request!;
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const [sessions, setSessions] = useState(() => {
     const first = DateTime.fromISO(request.sessions[0].starts_at, {
       zone: course.time_zone,
@@ -840,9 +840,8 @@ function RepeatBooking({ course }: WorkProps) {
         return { starts_at, ends_at };
       });
       const signature = JSON.stringify(values);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
-      return repeatCourse(request.id, values, retry.current.key);
+      const retryId = retry.forInput(signature);
+      return repeatCourse(request.id, values, retryId);
     },
   });
   return (

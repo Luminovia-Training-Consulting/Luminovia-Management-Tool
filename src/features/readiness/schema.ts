@@ -41,7 +41,7 @@ export const readinessTaskInputSchema = z.strictObject({
   archived: z.boolean(),
 });
 
-export const readinessSettingsSchema = z.object({
+const readinessSettingsSchema = z.object({
   version: z.number().int().nonnegative(),
   ...requirementFlags,
   instructions,
@@ -50,7 +50,7 @@ export const readinessSettingsSchema = z.object({
   preparation_deadline: instant.nullable(),
   sessions_confirmed: z.boolean(),
 });
-export const readinessTaskSchema = z.object({
+const readinessTaskSchema = z.object({
   id: uuid,
   title: z.string(),
   required: z.boolean(),
@@ -61,7 +61,7 @@ export const readinessTaskSchema = z.object({
   version: z.number().int().positive(),
   can_complete: z.boolean(),
 });
-export const readinessSchema = z.object({
+const readinessSchema = z.object({
   id: uuid,
   title: z.string(),
   organisation_name: z.string().nullable(),

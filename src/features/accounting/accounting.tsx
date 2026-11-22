@@ -1,7 +1,8 @@
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
+import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -73,8 +74,8 @@ function CustomerInvoiceForm({
     difference: "",
   });
   const [reviewed, setReviewed] = useState<string | null>(null);
-  const key = useRef<{ signature: string; key: string } | null>(null),
-    uploadKey = useRef<{ signature: string; key: string } | null>(null);
+  const key = useRequestKey(),
+    uploadKey = useRequestKey();
   const chosen =
     claims.data?.filter((c) => selected.includes(c.claim_id)) ?? [];
   const first = chosen[0];
@@ -124,13 +125,12 @@ function CustomerInvoiceForm({
         file.size,
         file.lastModified,
       ]);
-      if (uploadKey.current?.signature !== signature)
-        uploadKey.current = { signature, key: crypto.randomUUID() };
+      const uploadKeyId = uploadKey.forInput(signature);
       return uploadDocument(file, {
         scope: "personal",
         kind: "material",
         ownerId: actor,
-        clientId: uploadKey.current.key,
+        clientId: uploadKeyId,
       });
     },
     onSuccess: setDocument,
@@ -164,11 +164,10 @@ function CustomerInvoiceForm({
         difference_reason: form.difference.trim(),
       };
       const signature = JSON.stringify(payload);
-      if (key.current?.signature !== signature)
-        key.current = { signature, key: crypto.randomUUID() };
+      const keyId = key.forInput(signature);
       return accountingWrite("register_customer_invoice", {
         p_payload: payload,
-        p_request_id: key.current.key,
+        p_request_id: keyId,
       });
     },
     onSuccess: async () => {
@@ -367,7 +366,7 @@ function CustomerPaymentForm({
   const [at, setAt] = useState("");
   const [reference, setReference] = useState("");
   const [reason, setReason] = useState("");
-  const key = useRef<{ signature: string; key: string } | null>(null);
+  const key = useRequestKey();
   const write = useMutation({
     mutationFn: async (paymentId: string | null) => {
       const payload: Record<string, unknown> = { p_invoice_id: invoice.id };
@@ -392,11 +391,10 @@ function CustomerPaymentForm({
         payload.p_reference = reference;
       }
       const signature = JSON.stringify({ name, payload });
-      if (key.current?.signature !== signature)
-        key.current = { signature, key: crypto.randomUUID() };
+      const keyId = key.forInput(signature);
       return accountingWrite(name, {
         ...payload,
-        p_request_id: key.current.key,
+        p_request_id: keyId,
       });
     },
     onSuccess: async () => {
@@ -556,23 +554,18 @@ export function AccountingPage() {
     sourceAllowed && !invoices.isError
       ? (invoices.data?.pages.flatMap((page) => page.items) ?? [])
       : [];
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const exportRecords = useMutation({
     mutationFn: async (format: "json" | "csv") => {
       const signature = JSON.stringify({ source, selected });
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
-      const result = await createAccountingExport(
-        source,
-        selected,
-        retry.current.key,
-      );
+      const retryId = retry.forInput(signature);
+      const result = await createAccountingExport(source, selected, retryId);
       downloadAccounting(result, format);
       setSnapshot(result);
       return result;
     },
     onSuccess: () => {
-      retry.current = null;
+      retry.clear();
     },
     onError: (error) => {
       if (permissionDenied(error)) setDenied(true);
@@ -665,7 +658,7 @@ export function AccountingPage() {
         <Button
           variant="secondary"
           onClick={() => {
-            retry.current = null;
+            retry.clear();
             setSnapshot(null);
             void client.invalidateQueries({
               queryKey: accountingKeys.all(actor),

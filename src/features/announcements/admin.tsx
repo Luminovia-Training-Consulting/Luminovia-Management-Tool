@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +63,7 @@ function Editor({
   // A background detail refresh must not advance the version of an unsaved form.
   const [base] = useState(record),
     [invalid, setInvalid] = useState(false),
-    retry = useRef<{ signature: string; key: string } | null>(null);
+    retry = useRequestKey();
   const source = base?.draft,
     zone = source?.time_zone ?? "Europe/Berlin";
   const form = useForm<AnnouncementForm>({
@@ -110,13 +111,12 @@ function Editor({
         base?.version ?? 0,
         payload,
       ]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return manageAnnouncement({
         id: base?.id ?? null,
         action: "save",
         version: base?.version ?? 0,
-        requestId: retry.current.key,
+        requestId: retryId,
         payload,
       });
     },
@@ -276,7 +276,7 @@ function Administration({ actor }: { actor: string }) {
     ),
     enabled: online && !revoked,
   });
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const revoke = () => {
     setRevoked(true);
     setEditing(undefined);
@@ -301,17 +301,16 @@ function Administration({ actor }: { actor: string }) {
       action: "publish" | "archive" | "recover";
     }) => {
       const signature = JSON.stringify([row.id, row.version, action]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return manageAnnouncement({
         id: row.id,
         version: row.version,
         action,
-        requestId: retry.current.key,
+        requestId: retryId,
       });
     },
     onSuccess: async () => {
-      retry.current = null;
+      retry.clear();
       await refresh();
     },
     onError: (error) => {

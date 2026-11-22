@@ -2,8 +2,9 @@
  * Shared commercial PDF upload. Return only a clean, concrete document version to the parent
  * form; a filename or selected local bytes alone is insufficient.
  */
+import { useRequestKey } from "../../lib/request-key";
 import { type DragEvent, useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FileCheck2, LoaderCircle, Upload } from "lucide-react";
 import { type PortalDocument, uploadDocument } from "../files/api";
@@ -23,13 +24,14 @@ export function CommercialPdfUpload({
   kind: "contract" | "invoice";
   ownerId: string;
   label: string;
-  onDocument: (document: PortalDocument | null) => void;
+  onDocument?: (document: PortalDocument | null) => void;
   disabled?: boolean;
 }) {
   const { t } = useTranslation("commercial");
   const online = useOnline();
+  const cache = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const [progress, setProgress] = useState(0);
   const [name, setName] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -44,7 +46,7 @@ export function CommercialPdfUpload({
     mutationFn: async (file: File) => {
       setProgress(0);
       setName("");
-      onDocument(null);
+      onDocument?.(null);
       if (
         file.type !== "application/pdf" &&
         !file.name.toLowerCase().endsWith(".pdf")
@@ -56,19 +58,24 @@ export function CommercialPdfUpload({
         file.lastModified,
         ownerId,
       ]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return uploadDocument(
         file,
-        { scope: "personal", kind, ownerId, clientId: retry.current.key },
+        { scope: "personal", kind, ownerId, clientId: retryId },
         setProgress,
       );
     },
     onSuccess: (document) => {
+      void cache.invalidateQueries({ queryKey: ["documents"] });
+      if (kind === "contract") {
+        void cache.invalidateQueries({
+          queryKey: ["contract-registration-candidates"],
+        });
+      }
       if (!mounted.current) return;
       setName(document.original_name);
-      retry.current = null;
-      onDocument(document);
+      retry.clear();
+      onDocument?.(document);
     },
   });
 

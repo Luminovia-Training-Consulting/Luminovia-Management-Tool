@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -121,7 +122,7 @@ function SettlementJournal({
   const [amount, setAmount] = useState("");
   const [at, setAt] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const applications = result.credit_applications ?? [];
   const refunds = result.refunds ?? [];
   const currentApplications = activeEntries(applications);
@@ -186,11 +187,10 @@ function SettlementJournal({
         } as const
       )[command];
       const signature = JSON.stringify({ name, payload });
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return accountingWrite(name, {
         ...payload,
-        p_request_id: retry.current.key,
+        p_request_id: retryId,
       });
     },
     onSuccess: async () => {
@@ -199,7 +199,7 @@ function SettlementJournal({
       setAmount("");
       setAt("");
       setConfirmed(false);
-      retry.current = null;
+      retry.clear();
       await client.invalidateQueries({
         queryKey: accountingKeys.customerSettlement(actor, result.invoice_id),
       });

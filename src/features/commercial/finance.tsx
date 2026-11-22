@@ -2,7 +2,8 @@
  * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
  * confirmed server rows; payment reversals require their own auditable action.
  */
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -123,7 +124,7 @@ function SubmitInvoice({
   const [invalidDate, setInvalidDate] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [today] = useState(() => DateTime.now().setZone(zone).toISODate()!);
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const form = useForm<z.infer<typeof invoiceSchema>>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -200,15 +201,14 @@ function SubmitInvoice({
           ? { p_exception_id: exception.id }
           : { p_claim_ids: selected, p_due_on: due };
       const signature = JSON.stringify({ ...payload, ...routing });
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc(
         series
           ? "submit_invoice_series_entry"
           : exception
             ? "submit_exception_invoice"
             : "submit_invoice",
-        { ...payload, ...routing, p_client_id: retry.current.key },
+        { ...payload, ...routing, p_client_id: retryId },
       );
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
@@ -596,7 +596,7 @@ function RecordPayment({
   const { t, i18n } = useTranslation("commercial");
   const online = useOnline();
   const client = useQueryClient();
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const [invalid, setInvalid] = useState(false);
   const [today] = useState(() =>
     DateTime.now().setZone(zone).toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -634,11 +634,10 @@ function RecordPayment({
         p_reference: values.reference,
       };
       const signature = JSON.stringify(payload);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("record_invoice_payment", {
         ...payload,
-        p_client_id: retry.current.key,
+        p_client_id: retryId,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
     },

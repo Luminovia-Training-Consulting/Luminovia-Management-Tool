@@ -1,5 +1,6 @@
 /** Future whole-block replacements reuse the existing online claim contract; the original allocation stays confirmed until a complete transactional handover succeeds. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
-import { type FormEvent, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowRightLeft } from "lucide-react";
@@ -32,16 +33,6 @@ import {
 import "./i18n";
 import "./replacements.css";
 
-/** Reuse a request identity only while every reviewed input stays identical, making uncertain transport retries safe. */
-function useRequestKey() {
-  const key = useRef<{ signature: string; id: string } | null>(null);
-  return (signature: string) => {
-    if (key.current?.signature !== signature)
-      key.current = { signature, id: crypto.randomUUID() };
-    return key.current.id;
-  };
-}
-
 /** Bind consent to the full quote and block; only a committed confirmed response may render a successful handover. */
 function ReplacementCard({
   offer,
@@ -55,7 +46,7 @@ function ReplacementCard({
   const { t, i18n } = useTranslation("replacements");
   const online = useOnline();
   const [consent, setConsent] = useState<string | null>(null);
-  const keyFor = useRequestKey();
+  const { forInput: keyFor } = useRequestKey();
   const fingerprint = JSON.stringify([
     offer.id,
     offer.version,
@@ -196,7 +187,7 @@ function ReplacementRequest({
   const [mode, setMode] = useState<"open" | "selected">("open");
   const [invited, setInvited] = useState<string[]>([]);
   const [emergency, setEmergency] = useState(false);
-  const keyFor = useRequestKey();
+  const { forInput: keyFor } = useRequestKey();
   const people = useQuery({
     ...peopleDirectoryQuery(actor, "", "", ""),
     enabled: mode === "selected",

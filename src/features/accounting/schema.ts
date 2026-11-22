@@ -151,7 +151,7 @@ export const customerCreditNoteInputSchema = z.strictObject({
   document_version_id: uuid,
   issued_and_reviewed: z.literal(true),
 });
-export const customerCreditNoteSchema = customerCreditNoteInputSchema
+const customerCreditNoteSchema = customerCreditNoteInputSchema
   .omit({ issued_and_reviewed: true })
   .extend({
     id: uuid,

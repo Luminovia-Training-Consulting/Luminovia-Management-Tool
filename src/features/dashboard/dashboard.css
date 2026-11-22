@@ -78,15 +78,6 @@
   background: var(--lilac);
 }
 
-.dashboard-lower {
-  align-items: start;
-  gap: 20px;
-}
-
-.dashboard-lower > section {
-  min-width: 0;
-}
-
 .dashboard-account-destination {
   display: flex;
   align-items: center;
@@ -131,10 +122,6 @@
 
   .dashboard-metric > svg:not(.dashboard-metric-arrow) {
     width: 19px;
-  }
-
-  .dashboard-lower {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

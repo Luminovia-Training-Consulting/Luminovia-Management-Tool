@@ -15,7 +15,7 @@ const eventSchema = z
     time_zone: z.string().refine(validZone),
   })
   .strict();
-export const offlineScheduleSchema = z
+const offlineScheduleSchema = z
   .object({
     actor: z.string().uuid(),
     session: z.string().max(45).optional(),

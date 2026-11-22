@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -46,7 +47,7 @@ function GlobalEventEditor({
     client = useQueryClient();
   const [base] = useState(event),
     [invalid, setInvalid] = useState(false),
-    key = useRef<{ signature: string; id: string } | null>(null);
+    key = useRequestKey();
   const form = useForm<GlobalEventForm>({
     resolver: zodResolver(globalEventFormSchema),
     defaultValues: {
@@ -81,13 +82,12 @@ function GlobalEventEditor({
         base?.version ?? 0,
         payload,
       ]);
-      if (!key.current || key.current.signature !== signature)
-        key.current = { signature, id: crypto.randomUUID() };
+      const keyId = key.forInput(signature);
       return manageGlobalEvent(
         base?.id ?? null,
         "save",
         base?.version ?? 0,
-        key.current.id,
+        keyId,
         payload,
       );
     },
@@ -252,7 +252,7 @@ export function GlobalEventManagement({
     setEditing(undefined);
     setInviting(null);
   }
-  const operation = useRef<{ signature: string; key: string } | null>(null);
+  const operation = useRequestKey();
   const change = useMutation({
     mutationFn: async ({
       event,
@@ -262,19 +262,13 @@ export function GlobalEventManagement({
       action: "publish" | "unpublish" | "archive" | "recover";
     }) => {
       const signature = JSON.stringify([event.id, event.version, action]);
-      if (!operation.current || operation.current.signature !== signature)
-        operation.current = { signature, key: crypto.randomUUID() };
-      return manageGlobalEvent(
-        event.id,
-        action,
-        event.version,
-        operation.current.key,
-      );
+      const operationId = operation.forInput(signature);
+      return manageGlobalEvent(event.id, action, event.version, operationId);
     },
     onSuccess: async () => {
       await refreshGlobalEvents(client);
       setNotice(true);
-      operation.current = null;
+      operation.clear();
     },
     onError: (e) => {
       if (permissionDenied(e)) {

@@ -2,7 +2,8 @@
  * Redacted interest stays removable without exposing private offer metadata;
  * only confirmed server responses update identity-scoped cached membership.
  */
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -26,15 +27,6 @@ import {
   waitlistQuery,
 } from "./lifecycle-extra-api";
 import "./lifecycle-extra-i18n";
-
-function useRequestKey() {
-  const current = useRef<{ signature: string; key: string } | null>(null);
-  return (signature: string) => {
-    if (current.current?.signature !== signature)
-      current.current = { signature, key: crypto.randomUUID() };
-    return current.current.key;
-  };
-}
 
 /** Confirm one own-interest change before replacing its exact receipt and own list. */
 function useWaitlistChange(actor: string, jobId: string) {
@@ -174,7 +166,7 @@ function SubstituteOffer({
   const consent = reviewedSnapshot === snapshot;
   const online = useOnline(),
     client = useQueryClient(),
-    keyFor = useRequestKey();
+    { forInput: keyFor } = useRequestKey();
   const action = useMutation({
     mutationFn: (kind: "accept" | "decline" | "withdraw") => {
       if (kind === "accept" && (!consent || !teaching || !offer.can_accept))
@@ -347,7 +339,7 @@ export function JobSubstitutionPanel({ jobId }: { jobId: string }) {
   const { t } = useTranslation("jobExtra");
   const online = useOnline(),
     client = useQueryClient(),
-    keyFor = useRequestKey();
+    { forInput: keyFor } = useRequestKey();
   const lifecycle = useQuery(lifecycleQuery(actor, jobId));
   const [claim, setClaim] = useState<string | null>(null),
     [search, setSearch] = useState(""),

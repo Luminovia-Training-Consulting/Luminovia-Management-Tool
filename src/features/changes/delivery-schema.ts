@@ -12,7 +12,7 @@ export const deliveryReviewActions = [
   "dispute",
   "request_correction",
 ] as const;
-export const deliveryStatuses = [
+const deliveryStatuses = [
   "missing",
   "draft",
   "submitted",

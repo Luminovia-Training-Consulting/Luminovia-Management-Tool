@@ -83,7 +83,7 @@ export function RoleFeePreview({
 }
 
 /** Explain local cent allocation without presenting it as a binding server snapshot. */
-export function FeeSplitPreview({
+function FeeSplitPreview({
   gross,
   percent,
   currency,

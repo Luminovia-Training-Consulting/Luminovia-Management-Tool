@@ -1,3 +1,11 @@
+# 23 November 2026 — Code integrity and workflow cleanup
+
+The internal and Academy source graphs resolve 482 frontend modules, 59 route patterns and 93 literal navigation references. The audit found no disconnected module, unreferenced runtime export, unresolved import, broken literal link or missing referenced public asset. Five unused type declarations were removed and 22 runtime declarations were made private to their owning modules.
+
+Write forms now share the request ID helper for an unchanged retry. Version scope, reviewed inputs and existing reset points are preserved. A clean contract PDF upload refreshes the file list and contract-registration picker. The Academy contract regression now expects the published OpenAPI 1.34 version. Signed historical 1.33 catalogue verification still passes. Academy demo navigation restores the packaged title, theme and icon before paint.
+
+Removed CSS for 42 retired classes across seven stylesheets. Retained selectors keep their original declarations and rule contexts. The complete local frontend suite passed 1,549 cases with 80.43% line and 72% branch coverage. The packaging and integrity checks passed 55 cases, the isolated PostgreSQL API surface passed all 11 checks, and the public demo and help passed 24 desktop and mobile Chromium cases. A separate Academy login-to-demo browser check verified the initial demo frame at 390 and 1440 px. The internal portal and both Academy editions built with their startup, explorer and precache sizes within budget.
+
 # 23 November 2026 — Course visibility after acceptance and course period filters
 
 Published previews are visible to eligible lecturers until a lecturer takes the course. A confirmed allocation restricts the course and its sessions to the assigned teaching team, the owning company, enrolled learners and authorised course managers. A filled offer is also hidden from former lecturers whose allocations were cancelled. Explicitly open positions in a multi-position advertisement still use the marketplace.

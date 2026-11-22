@@ -6,61 +6,11 @@
   min-height: 100vh;
 }
 
-.demo-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-  padding: 1.1rem clamp(1rem, 4vw, 3rem);
-  background: var(--surface);
-  border-bottom: 5px solid var(--brand);
-  border-image: linear-gradient(
-      90deg,
-      var(--coral),
-      var(--peach),
-      var(--yellow),
-      var(--mint),
-      #1749b5,
-      var(--indigo),
-      var(--lilac)
-    )
-    1;
-}
-
-.demo-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  text-decoration: none;
-  font-size: 1.3rem;
-  font-weight: 700;
-}
-
-.demo-brand img {
-  width: 45px;
-  height: 45px;
-}
-
-.demo-brand small {
-  display: block;
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-}
-
-.demo-header-actions,
 .demo-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.7rem;
-}
-
-.demo-header-actions select {
-  width: auto;
-}
-
-.demo-header-actions > a {
-  font-size: 0.9rem;
 }
 
 .demo-safety {
@@ -85,15 +35,6 @@
   max-width: 110ch;
 }
 
-.demo-layout {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  max-width: 1500px;
-  margin: auto;
-  gap: 1.5rem;
-  padding: 0 1.5rem 3rem;
-}
-
 .demo-sidebar {
   padding: 1rem;
   background: var(--surface);
@@ -113,10 +54,6 @@
 .demo-role-hint {
   font-size: 0.8rem;
   color: var(--muted);
-}
-
-.demo-navigation-hint {
-  display: none;
 }
 
 .demo-sidebar nav {
@@ -142,31 +79,6 @@
 
 .demo-main {
   min-width: 0;
-}
-
-.demo-intro {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 1rem;
-  margin: 0.5rem 0;
-}
-
-.demo-intro h1 {
-  font-size: clamp(1.9rem, 3vw, 2.7rem);
-  margin: 0.2rem 0 0.6rem;
-}
-
-.demo-intro > div {
-  min-width: 0;
-}
-
-.demo-intro > .button {
-  flex-shrink: 0;
-}
-
-.demo-intro p {
-  max-width: 75ch;
 }
 
 .demo-perspective {
@@ -314,54 +226,19 @@
 }
 
 @media (max-width: 1000px) {
-  .demo-layout {
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 1rem;
-  }
-
   .demo-content-grid {
     grid-template-columns: 1fr;
-  }
-
-  .demo-intro {
-    flex-direction: column;
   }
 }
 
 @media (max-width: 700px) {
-  .demo-header {
-    flex-wrap: wrap;
-    padding: 1rem;
-  }
-
-  .demo-header-actions {
-    width: 100%;
-    gap: 0.5rem;
-  }
-
-  .demo-header-actions .button {
-    padding: 0.5rem 0.7rem;
-  }
-
   .demo-safety {
     margin: 1rem;
     padding: 1rem;
   }
 
-  .demo-layout {
-    display: flex;
-    flex-direction: column;
-    padding: 0 1rem 2rem;
-  }
-
   .demo-sidebar {
     width: 100%;
-  }
-
-  .demo-navigation-hint {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--muted);
   }
 
   .demo-sidebar nav {

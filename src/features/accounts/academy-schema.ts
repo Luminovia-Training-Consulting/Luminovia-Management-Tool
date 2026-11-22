@@ -10,7 +10,7 @@ export type AcademyAccountRole = z.infer<typeof academyAccountRole>;
 
 // The legacy directory keeps its scalar role. The local role editor reads the
 // actual grants, including their independent company scope where applicable.
-export const academyRoleAssignment = z.strictObject({
+const academyRoleAssignment = z.strictObject({
   role: academyAccountRole,
   organisation_id: z.uuid().nullable(),
   organisation_name: z.string().nullable(),

@@ -28,7 +28,7 @@ export const invoiceExceptionOptionsSchema = z.strictObject({
     .nullable(),
 });
 
-export const invoiceExceptionSchema = z.strictObject({
+const invoiceExceptionSchema = z.strictObject({
   id: z.uuid(),
   claim_id: z.uuid(),
   title: z.string(),

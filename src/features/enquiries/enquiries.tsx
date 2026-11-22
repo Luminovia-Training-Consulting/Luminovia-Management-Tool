@@ -1,6 +1,7 @@
 /** Private management inbox and course conversion UI; never submits public website input. */
+import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -191,7 +192,7 @@ function EnquiryForm({
   const [venue, setVenue] = useState("");
   const [sessions, setSessions] = useState([{ starts_at: "", ends_at: "" }]);
   const [timeInvalid, setTimeInvalid] = useState(false);
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const save = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -222,14 +223,13 @@ function EnquiryForm({
       // An uncertain retry of unchanged decisions retains its identity. Changed
       // fields receive a fresh key, while the captured reviewed version stays fixed.
       const signature = JSON.stringify(payload);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       return manageEnquiry(
         enquiry.id,
         action,
         payload,
         enquiry.version,
-        retry.current!.key,
+        retryId,
       );
     },
     onSuccess: onDone,

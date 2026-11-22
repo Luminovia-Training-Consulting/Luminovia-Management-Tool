@@ -28,7 +28,6 @@ export const academyPersonalSettingsSchema = z.strictObject({
 export type AcademyPersonalSettings = z.infer<
   typeof academyPersonalSettingsSchema
 >;
-export type AcademyAppearance = z.infer<typeof academyAppearanceSchema>;
 export type AcademyAppearancePatch = z.infer<
   typeof academyAppearancePatchSchema
 >;

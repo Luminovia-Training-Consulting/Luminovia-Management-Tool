@@ -2,8 +2,9 @@
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
  * source while editing; the server checks actual sessions and prices on save.
  */
+import { useRequestKey } from "../../lib/request-key";
 import { OfferBoard } from "../jobs/board";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,7 +101,7 @@ function JobForm({
     ...clientOrganisationsQuery(actor),
     enabled: gross && !courseRun,
   });
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
   const client = useQueryClient();
@@ -238,12 +239,11 @@ function JobForm({
             : { amount, total_amount }),
         };
         const signature = JSON.stringify([courseRun.course_run_id, payload]);
-        if (!retry.current || retry.current.signature !== signature)
-          retry.current = { signature, key: crypto.randomUUID() };
+        const retryId = retry.forInput(signature);
         const { data, error } = await db().rpc("create_course_run_job", {
           p_course_run_id: courseRun.course_run_id,
           p_payload: payload,
-          p_client_id: retry.current.key,
+          p_client_id: retryId,
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
         return courseRecordId.parse(data);
@@ -252,12 +252,11 @@ function JobForm({
         ? { ...base, gross_amount: amount, gross_total_amount: total_amount }
         : { ...base, amount, total_amount };
       const signature = JSON.stringify([organisation, capacity, payload]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("create_capacity_job", {
         p_payload: payload,
         p_capacity: capacity,
-        p_request_id: retry.current.key,
+        p_request_id: retryId,
         p_organisation_id: gross ? organisation || null : null,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");

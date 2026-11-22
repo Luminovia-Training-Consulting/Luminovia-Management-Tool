@@ -8,7 +8,7 @@ const nonnegativeAmount = z.number().nonnegative();
 const timestamp = z.iso.datetime({ offset: true });
 const note = z.string().min(10).max(1000);
 
-export const invoiceSeriesRepaymentSchema = z.strictObject({
+const invoiceSeriesRepaymentSchema = z.strictObject({
   id: z.uuid(),
   amount: z.number().positive(),
   received_on: z.iso.date(),
@@ -18,7 +18,7 @@ export const invoiceSeriesRepaymentSchema = z.strictObject({
   void_note: note.nullable(),
 });
 
-export const invoiceSeriesCorrectionEntrySchema = z.strictObject({
+const invoiceSeriesCorrectionEntrySchema = z.strictObject({
   id: z.uuid(),
   claim_id: z.uuid(),
   title: z.string(),
@@ -48,7 +48,7 @@ export const invoiceSeriesCorrectionEntrySchema = z.strictObject({
   repayments: z.array(invoiceSeriesRepaymentSchema),
 });
 
-export const invoiceSeriesCorrectionOptionsSchema = invoiceSeriesOptionsSchema
+const invoiceSeriesCorrectionOptionsSchema = invoiceSeriesOptionsSchema
   .pick({
     claim_id: true,
     currency: true,

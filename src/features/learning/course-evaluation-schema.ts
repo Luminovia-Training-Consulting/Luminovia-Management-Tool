@@ -19,7 +19,7 @@ export const ownEvaluation = evaluationTarget.extend({
   comment: z.string().max(2000),
   version: z.number().int().positive(),
 });
-export const evaluationSummary = evaluationTarget.extend({
+const evaluationSummary = evaluationTarget.extend({
   count: z.number().int().positive(),
   average: z.number().min(1).max(5),
   can_read_comments: z.boolean(),

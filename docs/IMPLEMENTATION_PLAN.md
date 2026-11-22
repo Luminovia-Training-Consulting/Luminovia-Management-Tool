@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Code integrity and workflow cleanup
+
+- Keep shared retry identities tied to the input reviewed by the user and retain separate request IDs for workflows with multiple distinct writes. Refresh the file list and contract-registration picker when the gateway confirms a clean PDF.
+- The local source, API surface, browser demo, packaging and edition-build checks are recorded in the work log. The separate release inventory tracks the external provider and hosted acceptance checks.
+
 ## Course visibility and time filters
 
 - The course catalogue and session reads use the current teaching allocation, company membership or enrolled learner identity. Lecturer previews of explicitly published courses stop once a lecturer has a confirmed allocation. Open positions in a multi-position offer remain available through job discovery.

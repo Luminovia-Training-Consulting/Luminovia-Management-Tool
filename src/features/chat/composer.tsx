@@ -2,6 +2,7 @@
  * Message drafts with validated text, attachments and confirmed sending. Retain request IDs for
  * retry and reference uploaded documents only after scan clearance.
  */
+import { useRequestKey } from "../../lib/request-key";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -44,8 +45,8 @@ export function MessageComposer({
   const input = useRef<HTMLInputElement>(null);
   // Sending and uploading are separate operations with separate retry identities.
   // An uncertain outcome keeps the same identity for unchanged content; changed input starts a new operation.
-  const retry = useRef<{ signature: string; key: string } | null>(null);
-  const uploadRetry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
+  const uploadRetry = useRequestKey();
   const [attachment, setAttachment] = useState<{
     id: string;
     name: string;
@@ -69,21 +70,20 @@ export function MessageComposer({
         file.size,
         file.lastModified,
       ]);
-      if (!uploadRetry.current || uploadRetry.current.signature !== signature)
-        uploadRetry.current = { signature, key: crypto.randomUUID() };
+      const uploadRetryId = uploadRetry.forInput(signature);
       return uploadDocument(
         file,
         {
           scope: "room",
           roomId: room,
-          clientId: uploadRetry.current.key,
+          clientId: uploadRetryId,
           messageOnly: true,
         },
         setProgress,
       );
     },
     onSuccess: (document) => {
-      uploadRetry.current = null;
+      uploadRetry.clear();
       setAttachment({ id: document.id, name: document.original_name });
     },
   });
@@ -104,14 +104,13 @@ export function MessageComposer({
         ids,
         replyId ?? null,
       ]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       if (replyId && (!replyTarget || replyTarget.deleted_at))
         throw new Error("reply_unavailable");
       const args = {
         p_room_id: room,
         p_body: body,
-        p_client_id: retry.current.key,
+        p_client_id: retryId,
         p_document_id: attachment?.id ?? null,
         p_mention_ids: ids,
       };
@@ -122,7 +121,7 @@ export function MessageComposer({
       return data;
     },
     onSuccess: async () => {
-      retry.current = null;
+      retry.clear();
       form.reset();
       setAttachment(null);
       setMentions([]);

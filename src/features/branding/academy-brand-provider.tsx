@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useLayoutEffect, useMemo } from "react";
 import { installationBrand } from "../../lib/installation-brand";
 import { useOnline } from "../../lib/online";
 import { isConfigured } from "../../lib/supabase";
@@ -26,7 +26,7 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
     }),
     [branding.data],
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     const { style } = document.documentElement;
     const theme = document.querySelector('meta[name="theme-color"]');
     const previousTitle = document.title;
@@ -42,7 +42,7 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
     style.setProperty("--portal-mobile-brand", JSON.stringify(brand.shortName));
     style.setProperty("--academy-accent", brand.themeColor);
     theme?.setAttribute("content", brand.themeColor);
-    // The public demo lives outside this provider and uses the signed package styling.
+    // Restore the packaged branding before the public demo paints.
     return () => {
       document.title = previousTitle;
       if (previousTheme == null) theme?.removeAttribute("content");
@@ -51,7 +51,7 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
         style.setProperty(name, value, priority);
     };
   }, [brand]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (!icon) return;
     icon.href = logo

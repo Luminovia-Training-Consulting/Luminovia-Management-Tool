@@ -2,6 +2,7 @@
  * Forum threads, replies, accepted answers, subscriptions and visible moderation. Wait for
  * server confirmation and invalidate only the affected query scopes.
  */
+import { useRequestKey } from "../../lib/request-key";
 import { type Ref, useImperativeHandle, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -224,7 +225,7 @@ function ReplyForm({
     }),
     [],
   );
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const reply = useMutation({
     onMutate: () => onReplyPending(true),
     onSettled: () => onReplyPending(false),
@@ -236,12 +237,11 @@ function ReplyForm({
         throw new Error("content_invalid");
       }
       const signature = JSON.stringify(content);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("add_forum_post", {
         p_thread_id: thread.id,
         p_content: content,
-        p_client_id: retry.current.key,
+        p_client_id: retryId,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
@@ -250,7 +250,7 @@ function ReplyForm({
       contentRef.current = emptyDocument;
       setContent(emptyDocument);
       setGeneration((value) => value + 1);
-      retry.current = null;
+      retry.clear();
     },
   });
   return (

@@ -78,10 +78,6 @@
   font-size: 0.8rem;
   word-break: break-all;
 }
-.accounting-upload {
-  display: grid;
-  gap: 0.5rem;
-}
 .accounting-credit-notes {
   display: grid;
   gap: 0.5rem;

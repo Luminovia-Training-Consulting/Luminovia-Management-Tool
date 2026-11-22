@@ -1,9 +1,10 @@
+import { useRequestKey } from "../../lib/request-key";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
  * reviewed version/request ID; background changes must not silently authorize an action.
  */
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -53,12 +54,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   const [copyTitle, setCopyTitle] = useState(job.title);
   const [editing, setEditing] = useState(false);
   const [newCapacity, setNewCapacity] = useState<number | null>(null);
-  const request = useRef<{ signature: string; key: string } | null>(null);
-  const keyFor = (signature: string) => {
-    if (request.current?.signature !== signature)
-      request.current = { signature, key: crypto.randomUUID() };
-    return request.current.key;
-  };
+  const request = useRequestKey();
   const change = useMutation({
     mutationFn: async (
       input:
@@ -66,7 +62,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
         | { claim: string; reason: string }
         | { job: string; capacity: number; version: number },
     ) => {
-      const key = keyFor(JSON.stringify(input));
+      const key = request.forInput(JSON.stringify(input));
       return "claim" in input
         ? cancelAssignment(input.claim, input.reason, key)
         : "capacity" in input

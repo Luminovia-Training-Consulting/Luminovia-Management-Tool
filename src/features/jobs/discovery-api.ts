@@ -2,7 +2,6 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import type { Job } from "../../lib/types";
 import {
   assignmentCalendarMetadataSchema,
   defaultJobFilters,
@@ -153,22 +152,6 @@ export async function removeJobView(view: SavedJobView) {
     p_expected_version: view.version,
   });
   if (error) throw error;
-}
-
-export interface JobDashboard {
-  open_count: number;
-  assignment_count: number;
-  next_session_count: number;
-  matching: boolean;
-  suggestions: Job[];
-  next_assignments: {
-    id: string;
-    starts_at: string;
-    ends_at: string;
-    job: { id: string; title: string };
-  }[];
-  management: { drafts: number; expired: number; upcoming: number } | null;
-  as_of: string;
 }
 
 /** Share strict quote/null validation with marketplace items so suggestions never coerce restricted amounts. */

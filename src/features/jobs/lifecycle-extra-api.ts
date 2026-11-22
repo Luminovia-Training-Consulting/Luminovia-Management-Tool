@@ -75,7 +75,7 @@ export const substitutionCandidatesQuery = (
     staleTime: 15000,
     retry: false,
   });
-export const substitutionsKey = (actor: string, job?: string) =>
+const substitutionsKey = (actor: string, job?: string) =>
   ["job-substitutions", actor, job ?? "inbox"] as const;
 export const substitutionsQuery = (actor: string, job?: string) =>
   queryOptions({

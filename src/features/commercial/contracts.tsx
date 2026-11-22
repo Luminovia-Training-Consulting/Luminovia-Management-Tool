@@ -2,6 +2,7 @@
  * Register executed contract PDFs, view own versions and acknowledge receipt. Contracts
  * reference exact clean versions; acknowledgement is not an electronic signature.
  */
+import { useRequestKey } from "../../lib/request-key";
 import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -73,7 +74,7 @@ function RegisterContract({
   const [initialDate] = useState(() =>
     DateTime.now().setZone(zone).startOf("day").toFormat("yyyy-MM-dd'T'HH:mm"),
   );
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -126,11 +127,10 @@ function RegisterContract({
         p_parent_id: values.kind === "addendum" ? values.parent : null,
       };
       const signature = JSON.stringify(payload);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("register_executed_contract", {
         ...payload,
-        p_client_id: retry.current.key,
+        p_client_id: retryId,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
@@ -248,13 +248,9 @@ function RegisterContract({
           ownerId={person}
           label={t("contractPdf")}
           disabled={!online || save.isPending}
-          onDocument={(uploaded) => {
-            setDocument(uploaded?.current_version_id ?? "");
-            if (uploaded)
-              void client.invalidateQueries({
-                queryKey: ["contract-registration-candidates", actor, person],
-              });
-          }}
+          onDocument={(uploaded) =>
+            setDocument(uploaded?.current_version_id ?? "")
+          }
         />
       )}
       <Field
@@ -546,7 +542,6 @@ export function ContractsPage() {
           kind="contract"
           ownerId={actor}
           label={t("contractPdf")}
-          onDocument={() => undefined}
         />
       </section>
       <div className="commercial-search panel">

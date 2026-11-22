@@ -12,7 +12,7 @@ const companyReference = z
   .max(companyReferenceLimit)
   .nullable();
 
-export const companyParticipantSchema = z.object({
+const companyParticipantSchema = z.object({
   user_id: z.uuid(),
   luminovia_user_id: z.string(),
   display_name: z.string(),
@@ -63,9 +63,6 @@ export const companyCourseAssignmentReceiptSchema = z.strictObject({
   enrolled: z.array(z.uuid()).max(companyCourseAssignmentLimit),
   unchanged: z.array(z.uuid()).max(companyCourseAssignmentLimit),
 });
-export type CompanyCourseAssignmentReceipt = z.infer<
-  typeof companyCourseAssignmentReceiptSchema
->;
 
 export const companyParticipantHistorySchema = z.strictObject({
   items: z

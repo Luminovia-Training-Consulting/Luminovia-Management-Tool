@@ -1,3 +1,4 @@
+import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
 import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
@@ -9,7 +10,7 @@ import {
  * Organization-scoped course requests and client spending views. Membership limits available
  * organizations; publication and lecturer allocation remain separate server operations.
  */
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../learning/i18n";
 import { CoursePhaseFilter } from "../learning/course-phase-filter";
@@ -113,7 +114,7 @@ function RequestForm({
   const [invalidSessions, setInvalidSessions] = useState(false);
   const [brief, setBrief] = useState(initialRequestBrief);
   const { t: briefText } = useTranslation("requestBrief");
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const [initial] = useState(() => {
     const day = DateTime.now().setZone(zone).plus({ days: 7 });
     return {
@@ -166,15 +167,14 @@ function RequestForm({
       if (!validRequestBrief(cleanedBrief, sessions))
         throw new Error("invalid_brief");
       const signature = JSON.stringify([organisation, payload, cleanedBrief]);
-      if (!retry.current || retry.current.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
+      const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc(
         "create_client_request_with_brief",
         {
           p_organisation_id: organisation,
           p_payload: payload,
           p_brief: cleanedBrief,
-          p_client_id: retry.current.key,
+          p_client_id: retryId,
         },
       );
       if (error || !data) throw error ?? new Error("unconfirmed");

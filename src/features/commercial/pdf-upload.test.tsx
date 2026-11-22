@@ -17,13 +17,20 @@ afterEach(() => {
 });
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup(done: (document: PortalDocument | null) => void) {
+function setup(done?: (document: PortalDocument | null) => void) {
+  const client = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  });
+  const documents = ["documents", "lecturer", "discovery"];
+  const candidates = [
+    "contract-registration-candidates",
+    "manager",
+    "lecturer",
+  ];
+  client.setQueryData(documents, []);
+  client.setQueryData(candidates, []);
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { mutations: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <CommercialPdfUpload
         kind="contract"
         ownerId="lecturer"
@@ -32,6 +39,7 @@ function setup(done: (document: PortalDocument | null) => void) {
       />
     </QueryClientProvider>,
   );
+  return { client, documents, candidates };
 }
 
 it("clears a previous PDF while scanning and exposes only the confirmed immutable version", async () => {
@@ -131,4 +139,24 @@ it("routes a dropped executed PDF through the same owner-scoped scan and version
   );
   expect(done).toHaveBeenLastCalledWith(uploaded);
   expect(dropTarget).not.toHaveClass("is-dragging");
+});
+
+it("refreshes the file list and registration picker after a clean standalone contract upload", async () => {
+  const user = userEvent.setup();
+  const { client, documents, candidates } = setup();
+  uploadDocument.mockResolvedValue({
+    id: "own-contract",
+    current_version_id: "own-clean-version",
+    owner_id: "lecturer",
+    original_name: "own-contract.pdf",
+    status: "clean",
+  } as PortalDocument);
+
+  await user.upload(
+    screen.getByLabelText("Ausgeführter Vertrag als PDF"),
+    new File(["%PDF-1.7"], "own-contract.pdf", { type: "application/pdf" }),
+  );
+  await screen.findByText(/own-contract.pdf/);
+  expect(client.getQueryState(documents)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(candidates)?.isInvalidated).toBe(true);
 });

@@ -3,7 +3,8 @@
  * controls. Versioned edits reuse stable request identities; room RPCs authorise
  * mutations under current membership and resource state.
  */
-import { Fragment, type ReactNode, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { Fragment, type ReactNode, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -99,7 +100,7 @@ export function MessageBubble({
   const [mentions, setMentions] = useState<ChatMention[]>(
     message.mentions ?? [],
   );
-  const editRequest = useRef<{ signature: string; key: string } | null>(null);
+  const editRequest = useRequestKey();
   const own = message.sender_id === actor;
   const canEdit =
     own &&
@@ -128,19 +129,18 @@ export function MessageBubble({
         values.body.trim(),
         ids,
       ]);
-      if (!editRequest.current || editRequest.current.signature !== signature)
-        editRequest.current = { signature, key: crypto.randomUUID() };
+      const editRequestId = editRequest.forInput(signature);
       const { error } = await db().rpc("edit_message_with_mentions", {
         p_message_id: message.id,
         p_body: values.body.trim(),
         p_expected_version: editingVersion,
-        p_client_id: editRequest.current.key,
+        p_client_id: editRequestId,
         p_mention_ids: ids,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
-      editRequest.current = null;
+      editRequest.clear();
       await invalidate();
       setEditing(false);
     },
@@ -367,7 +367,7 @@ export function MessageBubble({
                       form.reset({ body: message.body });
                       setMentions(message.mentions ?? []);
                       setEditingVersion(message.content_version ?? 1);
-                      editRequest.current = null;
+                      editRequest.clear();
                       edit.reset();
                       setEditing(true);
                     }}

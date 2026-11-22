@@ -2,7 +2,8 @@
  * Optional authored job references and explicitly shared contacts. Editing freezes the
  * reviewed version; only explicit reload replaces a draft, and errors hide retained reads.
  */
-import { type FormEvent, useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -75,19 +76,13 @@ function BriefingContent({
     values: BriefingValues;
   } | null>(null);
   const [saved, setSaved] = useState(false);
-  const request = useRef<{ signature: string; key: string } | null>(null);
+  const request = useRequestKey();
   const save = useMutation({
     mutationFn: async () => {
       if (!draft) throw new Error("missing_draft");
       const signature = JSON.stringify([jobId, draft.version, draft.values]);
-      if (request.current?.signature !== signature)
-        request.current = { signature, key: crypto.randomUUID() };
-      return saveBriefing(
-        jobId,
-        draft.version,
-        request.current.key,
-        draft.values,
-      );
+      const requestId = request.forInput(signature);
+      return saveBriefing(jobId, draft.version, requestId, draft.values);
     },
     onError: (error) => {
       // A write denial is fresh authorization evidence; close the private draft
@@ -96,7 +91,7 @@ function BriefingContent({
     },
     onSuccess: async (confirmed) => {
       client.setQueryData(briefingKey(actor, jobId), confirmed);
-      request.current = null;
+      request.clear();
       setDraft(null);
       setSaved(true);
       await client.invalidateQueries({
@@ -115,7 +110,7 @@ function BriefingContent({
     },
     onSuccess: (current) => {
       setDraft({ version: current.version, values: briefingValues(current) });
-      request.current = null;
+      request.clear();
       save.reset();
     },
   });

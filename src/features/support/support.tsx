@@ -1,4 +1,5 @@
 /** Ticket ownership and current support capability govern replies, internal notes and dedicated scanned attachments; support never grants unrelated private-resource access. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
+import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -96,7 +97,7 @@ function NewTicket({
     claim_id: "",
     organisation_id: "",
   });
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const [invalid, setInvalid] = useState(false);
   const create = useMutation({
     mutationFn: async () => {
@@ -107,9 +108,8 @@ function NewTicket({
         throw Error("invalid");
       }
       const signature = JSON.stringify(parsed.data);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
-      return createTicket(parsed.data, retry.current!.key);
+      const retryId = retry.forInput(signature);
+      return createTicket(parsed.data, retryId);
     },
     onSuccess: onCreated,
   });
@@ -392,7 +392,7 @@ function TicketActionForm({
     claim_id: ticket.claim_id ?? "",
     organisation_id: ticket.organisation_id ?? "",
   });
-  const retry = useRef<{ signature: string; key: string } | null>(null);
+  const retry = useRequestKey();
   const update = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -407,15 +407,8 @@ function TicketActionForm({
                 ? { priority }
                 : links;
       const signature = JSON.stringify(payload);
-      if (retry.current?.signature !== signature)
-        retry.current = { signature, key: crypto.randomUUID() };
-      return updateTicket(
-        ticket.id,
-        action,
-        payload,
-        ticket.version,
-        retry.current!.key,
-      );
+      const retryId = retry.forInput(signature);
+      return updateTicket(ticket.id, action, payload, ticket.version, retryId);
     },
     onSuccess: onDone,
   });

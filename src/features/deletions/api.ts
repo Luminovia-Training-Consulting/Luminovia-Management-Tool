@@ -4,23 +4,22 @@ import { z } from "zod";
 import { accountRequest } from "../accounts/api";
 import { requireOnline } from "../../lib/online";
 
-export const deletionAccessSchema = z.object({
+const deletionAccessSchema = z.object({
   can_admin: z.boolean(),
   kinds: z.array(z.string()),
 });
-export const deletionTargetSchema = z.object({
+const deletionTargetSchema = z.object({
   id: z.string(),
   kind: z.string(),
   label: z.string(),
   owner_label: z.string().nullable(),
   can_delete: z.boolean(),
 });
-export type DeletionTarget = z.infer<typeof deletionTargetSchema>;
-export const deletionResourcesSchema = z.object({
+const deletionResourcesSchema = z.object({
   items: z.array(deletionTargetSchema),
   next_cursor: z.string().nullable(),
 });
-export const deletionPreviewSchema = z.object({
+const deletionPreviewSchema = z.object({
   plan_id: z.string(),
   kind: z.string(),
   id: z.string(),
@@ -37,7 +36,7 @@ export const deletionPreviewSchema = z.object({
   expires_at: z.string().datetime({ offset: true }),
 });
 export type DeletionPreview = z.infer<typeof deletionPreviewSchema>;
-export const deletionOperationSchema = z.object({
+const deletionOperationSchema = z.object({
   operation_id: z.string(),
   status: z.enum(["pending", "failed", "completed"]),
   kind: z.string(),

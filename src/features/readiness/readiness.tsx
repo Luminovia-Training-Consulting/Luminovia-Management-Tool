@@ -1,5 +1,6 @@
 /** Course preparation derives status from scoped server records; the browser edits requirements and receipts, never an authoritative readiness percentage. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
-import { useRef, useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -73,17 +74,6 @@ function localTime(value: string | null, zone: string) {
   return value
     ? DateTime.fromISO(value).setZone(zone).toFormat("yyyy-MM-dd'T'HH:mm")
     : "";
-}
-
-/** Keep transport retries bound to identical reviewed inputs instead of creating duplicate server operations. */
-function useRequestKey() {
-  const current = useRef<{ payload: string; id: string } | null>(null);
-  return (payload: unknown) => {
-    const serialized = JSON.stringify(payload);
-    if (current.current?.payload !== serialized)
-      current.current = { payload: serialized, id: crypto.randomUUID() };
-    return current.current!.id;
-  };
 }
 
 /** Distinguish a stale reviewed version from an ordinary failed write without displaying raw server details. */
@@ -211,7 +201,7 @@ function SettingsForm({
         course.id,
         payload,
         course.settings.version,
-        request(payload),
+        request.forInput(JSON.stringify(payload)),
       );
     },
     onSuccess: async () => {
@@ -332,7 +322,7 @@ function TaskForm({
         task?.id ?? null,
         payload,
         task?.version ?? 0,
-        request(payload),
+        request.forInput(JSON.stringify(payload)),
       );
     },
     onSuccess: async () => {
