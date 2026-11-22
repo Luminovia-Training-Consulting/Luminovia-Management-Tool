@@ -155,6 +155,8 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         assert.equal(JSON.stringify(learnerView).includes("Strong teaching"), false);
         assert.equal(JSON.stringify(learnerView).includes(learner), false);
         await assert.rejects(comments(peerLearner,"learner","lecturer",teacher), denied);
+        await assert.rejects(comments(withdrawn,"learner","lecturer",teacher), denied);
+        await assert.rejects(comments(admin,"lecturer","class",foreignClass), denied);
 
         const teacherProse = await comments(teacher,"learner","lecturer",teacher);
         assert.deepEqual(new Set(teacherProse.items.map(({comment}) => comment)), new Set(["Strong teaching","Clear slides"]));

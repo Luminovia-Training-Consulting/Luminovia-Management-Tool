@@ -202,10 +202,16 @@ begin
     or not coalesce(private.course_evaluation_can_review(
       context, p_rater_role, p_subject_kind, p_subject_id, true
     ), false)
-    or (not (context->>'manager')::boolean and not exists (
-      select 1 from private.course_evaluation_subjects(p_run_id) subject
-      where subject.subject_kind = p_subject_kind and subject.subject_id = p_subject_id
-    )) then raise insufficient_privilege; end if;
+    or not (
+      exists (
+        select 1 from private.course_evaluation_subjects(p_run_id) subject
+        where subject.subject_kind = p_subject_kind and subject.subject_id = p_subject_id
+      ) or ((context->>'manager')::boolean and exists (
+        select 1 from private.course_evaluations retained
+        where retained.run_id = p_run_id and retained.rater_role = p_rater_role
+          and retained.subject_kind = p_subject_kind and retained.subject_id = p_subject_id
+      ))
+    ) then raise insufficient_privilege; end if;
 
   with page as (
     select id, comment from private.course_evaluations evaluation
