@@ -297,8 +297,12 @@ export function Shell() {
   )
     return <Navigate to="/learning" replace />;
   if (online && !profileDenied && !profile.isError && !limitedAccount) {
+    const companyJobDetail =
+      clientPortalAccess &&
+      /^\/jobs\/[0-9a-f-]{36}\/?$/i.test(location.pathname);
     if (
       !staff &&
+      !companyJobDetail &&
       /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
     )
       return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;

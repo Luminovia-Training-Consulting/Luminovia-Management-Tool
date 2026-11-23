@@ -506,3 +506,186 @@ it("submits exact per-day times and the edited required labels through the versi
     ),
   );
 });
+
+it("switches the class and contact choices when staff select a different company", async () => {
+  const oldClass = "9b72bb19-072c-4dec-bdd5-2a6cb6d77c77";
+  const newClass = "45e0dc2e-1e4f-48dc-bea2-aaddfecfeb85";
+  const client = setup(
+    {
+      ...empty,
+      organisation_id: "original-company",
+      can_reassign_company: true,
+      can_edit_dispatch: true,
+      class_id: oldClass,
+    },
+    (name, args) => {
+      if (name !== "job_dispatch_options") return { data: "job" };
+      const old = args.p_organisation_id === "original-company";
+      return {
+        data: {
+          classes: [
+            {
+              id: old ? oldClass : newClass,
+              name: old ? "Fictional first class" : "Fictional second class",
+              meeting_url: old ? null : "https://academy.example.invalid/room",
+            },
+          ],
+          contact: old
+            ? null
+            : { name: "Fictional contact", email: null, phone: null },
+        },
+      };
+    },
+  );
+  client.setQueryData(
+    ["operations", "organisations", "actor"],
+    [
+      { id: "original-company", name: "Fictional first operator" },
+      { id: "new-company", name: "Fictional second operator" },
+    ],
+  );
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Unangenommenen Auftrag bearbeiten",
+    }),
+  );
+  expect(await screen.findByLabelText("Klasse für diesen Auftrag")).toHaveValue(
+    oldClass,
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Unternehmen für diesen Auftrag"),
+    "new-company",
+  );
+  const classes = await screen.findByLabelText("Klasse für diesen Auftrag");
+  expect(classes).toHaveValue("");
+  expect(
+    within(classes).queryByRole("option", { name: "Fictional first class" }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(classes, newClass);
+  expect(
+    screen.getByText(/Standardkontakt des Unternehmens: Fictional contact/),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Besprechungsraum öffnen" }),
+  ).toHaveAttribute("href", "https://academy.example.invalid/room");
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_job_offer",
+      expect.objectContaining({
+        p_expected_version: 1,
+        p_payload: expect.objectContaining({
+          organisation_id: "new-company",
+          class_id: newClass,
+        }),
+      }),
+    ),
+  );
+});
+
+it("lets a company classify its own job without exposing the staff offer editor", async () => {
+  const classId = "45e0dc2e-1e4f-48dc-bea2-aaddfecfeb85";
+  setup(
+    {
+      ...empty,
+      can_manage: false,
+      can_edit: false,
+      can_edit_dispatch: true,
+      organisation_id: "own-company",
+    },
+    (name) =>
+      name === "job_dispatch_options"
+        ? {
+            data: {
+              classes: [
+                {
+                  id: classId,
+                  name: "Fictional company class",
+                  meeting_url: null,
+                },
+              ],
+              contact: null,
+            },
+          }
+        : { data: null },
+  );
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Klasse bearbeiten" }),
+  );
+  expect(
+    screen.queryByLabelText("Unternehmen für diesen Auftrag"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Auftragstitel")).not.toBeInTheDocument();
+  await user.selectOptions(
+    await screen.findByLabelText("Klasse für diesen Auftrag"),
+    classId,
+  );
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("save_job_dispatch", {
+      p_job_id: "job",
+      p_class_id: classId,
+      p_expected_version: 1,
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Klasse bearbeiten" }),
+  ).toBeVisible();
+});
+
+it("shows the saved company contact and reapplies class defaults to an awarded job", async () => {
+  const classId = "45e0dc2e-1e4f-48dc-bea2-aaddfecfeb85";
+  setup(
+    {
+      ...assigned,
+      can_edit_dispatch: true,
+      organisation_id: "own-company",
+      class_id: classId,
+      class_name: "Fictional assigned class",
+      dispatch_contact: {
+        name: "Fictional saved contact",
+        email: "contact@example.invalid",
+        phone: null,
+      },
+    },
+    (name) =>
+      name === "job_dispatch_options"
+        ? {
+            data: {
+              classes: [
+                {
+                  id: classId,
+                  name: "Fictional assigned class",
+                  meeting_url: null,
+                },
+              ],
+              contact: null,
+            },
+          }
+        : { data: "job" },
+  );
+  const user = userEvent.setup();
+  expect(
+    await screen.findByText(
+      /Unternehmenskontakt für diesen Auftrag: Fictional saved contact/,
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Klasse bearbeiten" }));
+  expect(await screen.findByLabelText("Klasse für diesen Auftrag")).toHaveValue(
+    classId,
+  );
+  await user.click(
+    screen.getByRole("button", {
+      name: "Aktuellen Firmenkontakt und Besprechungsraum übernehmen",
+    }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("save_job_dispatch", {
+      p_job_id: "job",
+      p_class_id: classId,
+      p_expected_version: 2,
+    }),
+  );
+});

@@ -118,6 +118,7 @@ export const jobSchema = z.object({
   capacity_basis: z.enum(["single_position", "per_position"]),
   created_at: instant,
   urgent_reopened_at: instant.nullable().optional(),
+  dispatch_only: z.boolean().optional(),
   job_sessions: z.array(
     z.object({
       id: z.uuid(),

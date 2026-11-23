@@ -78,7 +78,7 @@ const job: Job & {
 function setup(
   route = "/jobs/job-a",
   list = false,
-  overrides: Partial<Job> = {},
+  overrides: Partial<Job & { dispatch_only: boolean }> = {},
   roles = ["lecturer"],
 ) {
   const offer = { ...job, ...overrides };
@@ -522,5 +522,31 @@ describe("independent waitlist after a denied job detail", () => {
         ).toHaveLength(reads + 1),
       );
     },
+  );
+});
+
+it("uses the scoped company detail without querying private material or rendering lecturer terms", async () => {
+  setup(
+    "/jobs/job-a",
+    false,
+    { dispatch_only: true, description: "Fictional company job summary" },
+    ["client"],
+  );
+  expect(
+    await screen.findByText("Fictional company job summary"),
+  ).toBeVisible();
+  expect(screen.queryByText("Version one")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /zurück/i })).toHaveAttribute(
+    "href",
+    "/client",
+  );
+  expect(rpc).not.toHaveBeenCalledWith(
+    "job_related_navigation",
+    expect.anything(),
+  );
+  expect(rpc).not.toHaveBeenCalledWith("job_briefing", expect.anything());
+  expect(rpc).not.toHaveBeenCalledWith(
+    "job_building_block_reference",
+    expect.anything(),
   );
 });

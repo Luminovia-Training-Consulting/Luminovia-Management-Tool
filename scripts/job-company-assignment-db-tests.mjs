@@ -179,6 +179,52 @@ await withTestDatabase("job_company", async ({ actor, sql }) => {
   assert.equal(await owner(job), companyTwo + "|Fictional operator two");
   console.log("PASS confirmed offers cannot be reassigned");
 
+  const dispatchJob = await create(companyOne, randomUUID());
+  const classDirectory = JSON.parse(await actor(companyA,
+    `select public.save_company_dispatch_class('${companyOne}',null,'Fictional class','https://meet.example.invalid/class')`));
+  const classId = classDirectory.classes[0].id;
+  const renamed = JSON.parse(await actor(companyA,
+    `select public.save_company_dispatch_class('${companyOne}','${classId}','Fictional renamed class','https://meet.example.invalid/class')`));
+  assert.equal(renamed.classes[0].name, "Fictional renamed class");
+  await actor(companyA, `select public.save_company_dispatch_settings('${companyOne}',null,${json({
+    name: "Fictional coordinator", email: "desk@example.invalid", phone: "",
+  })})`);
+  await assert.rejects(
+    actor(companyB, `select public.company_class_directory('${companyOne}')`), /42501/,
+  );
+  await assert.rejects(
+    actor(companyA, `select public.save_company_dispatch_class('${companyOne}',null,'Bad link','javascript:alert(1)')`), /22023/,
+  );
+  const companyOffer = JSON.parse(await actor(companyA, `select public.job_detail('${dispatchJob}')`));
+  assert.equal(companyOffer.amount, null);
+  assert.equal(companyOffer.terms, "");
+  assert.equal((await lifecycle(dispatchJob, companyA)).max_net_budget, null);
+  const dispatchVersion = await version(dispatchJob);
+  await assert.rejects(
+    actor(companyB, `select public.save_job_dispatch('${dispatchJob}','${classId}',${dispatchVersion})`), /42501/,
+  );
+  assert.equal(await actor(companyA,
+    `select public.save_job_dispatch('${dispatchJob}','${classId}',${dispatchVersion})`), dispatchJob);
+  assert.equal((await lifecycle(dispatchJob, companyA)).class_id, classId);
+  assert.equal((await lifecycle(dispatchJob, companyA)).meeting_url, "https://meet.example.invalid/class");
+  assert.equal((await lifecycle(dispatchJob, manager)).dispatch_contact.name, "Fictional coordinator");
+  assert.equal((await lifecycle(dispatchJob, lecturer)).meeting_url, null);
+  assert.equal((await lifecycle(dispatchJob, lecturer)).dispatch_contact, null);
+  await assert.rejects(
+    actor(companyA, `select public.save_job_dispatch('${dispatchJob}',null,${dispatchVersion})`), /PT409/,
+  );
+  const moveVersion = await version(dispatchJob);
+  await assert.rejects(
+    actor(manager, `select public.manage_job_offer('${dispatchJob}','edit',${moveVersion},'${randomUUID()}',${json({
+      organisation_id: companyTwo, class_id: classId,
+    })})`), /42501/,
+  );
+  assert.equal(await owner(dispatchJob), companyOne + "|Fictional operator one");
+  await manage(dispatchJob, companyTwo, moveVersion, randomUUID());
+  assert.equal((await lifecycle(dispatchJob, companyB)).class_id, null);
+  assert.equal((await lifecycle(dispatchJob, companyB)).dispatch_contact, null);
+  console.log("PASS classes without Premium, own company editing, meeting/contact snapshots and atomic company moves");
+
   const shared = await create(companyOne, randomUUID(), admin);
   await sql(`insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
     select course_run_id,'${lecturer}','enrolled','${admin}' from public.jobs where id='${shared}'`);

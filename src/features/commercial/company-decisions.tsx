@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { db } from "../../lib/supabase";
@@ -198,6 +199,9 @@ export function AdditionalCompanyDecisions({
         <article className="panel platform-request-card" key={job.id}>
           <span className="eyebrow">{job.organisation_name}</span>
           <h3>{job.title}</h3>
+          <Button asChild variant="secondary">
+            <Link to={`/jobs/${job.id}`}>{t("companyOpenJob")}</Link>
+          </Button>
           <CompanyDecisions actor={actor} job={job.id} zone={zone} />
         </article>
       ))}

@@ -36,6 +36,7 @@ import {
   type Organisation,
   orgQuery,
 } from "./data";
+import { CompanyDispatchSettings } from "./company-dispatch-settings";
 import { CompanyPremiumControl } from "./company-premium";
 import { CompanyLecturerBlocks } from "./company-lecturer-blocks";
 import { CompanyIntegrations } from "./company-integrations";
@@ -238,7 +239,10 @@ function ContactForm({
     mutationFn: (values: z.infer<typeof contactSchema>) =>
       saveContact(values, organisation, original?.id ?? null),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["operations"] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations"] }),
+        client.invalidateQueries({ queryKey: ["company-class-directory"] }),
+      ]);
       onDone();
     },
   });
@@ -455,6 +459,12 @@ function ClientWorkspace({
                 />
               )}
               {!organisation.archived_at && (
+                <CompanyDispatchSettings
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {!organisation.archived_at && (
                 <CompanyLecturerBlocks
                   key={`lecturer-blocks:${organisation.id}`}
                   actor={actor}
@@ -515,7 +525,18 @@ function ClientWorkspace({
               save={(row, key) =>
                 importTableRow(key, "contact", row, organisation.id)
               }
-              refresh={refresh}
+              refresh={async () => {
+                await Promise.all([
+                  refresh(),
+                  client.invalidateQueries({
+                    queryKey: [
+                      "company-class-directory",
+                      actor,
+                      organisation.id,
+                    ],
+                  }),
+                ]);
+              }}
             />
             <div className="operations-contact-list">
               {contacts.isPending && <Loading />}

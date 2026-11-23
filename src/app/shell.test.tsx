@@ -501,6 +501,12 @@ it.each(["/jobs/fictional-offer", "/finance?claim=fictional-claim"])(
   },
 );
 
+it("opens a valid job detail ID for the company-scoped server projection", async () => {
+  access.roles = ["client"];
+  setup("/jobs/28e21536-c4ab-4219-a5ac-16399fce8efa", false);
+  expect(await screen.findByText("Live job detail route")).toBeVisible();
+});
+
 it("uses one finance link for company invoices and analytics", () => {
   access.roles = ["client"];
   setup("/client", false);

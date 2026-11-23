@@ -925,6 +925,29 @@ const lifecycleInput = {
   p_expected_version: { ...version, minimum: 1 },
   ...idempotency,
 };
+const dispatchText = { type: ["string", "null"] };
+const dispatchContact = object({
+  name: text,
+  email: dispatchText,
+  phone: dispatchText,
+});
+const dispatchClasses = {
+  type: "array",
+  items: object({ id: uuid, name: text, meeting_url: dispatchText }),
+};
+const dispatchDirectory = object({
+  classes: dispatchClasses,
+  contact_id: nullableUuid,
+  contacts: {
+    type: "array",
+    items: object({
+      id: uuid,
+      name: text,
+      email: dispatchText,
+      phone: dispatchText,
+    }),
+  },
+});
 const lifecycleCommand = rpc(
   "native_manage_job_offer",
   "Jobs",
@@ -1482,7 +1505,7 @@ const nativePaths = {
     "native_job_detail",
     "Jobs",
     "Read one currently visible job offer",
-    "Returns exact sessions and topic requirements for a job the account can read. Private lecturer amount and total are null when current role and offer policy withhold the quote.",
+    "Returns exact sessions and visible topic requirements for a job the account can read. A company-only caller can open its own job using the reduced dispatch_only projection without lecturer rates or contract terms.",
     { p_job_id: uuid },
     z.toJSONSchema(jobSchema),
   ),
@@ -2440,6 +2463,68 @@ const nativePaths = {
     uuid,
     ["p_organisation_id", "p_platform_percent"],
   ),
+  "/rest/v1/rpc/company_class_directory": rpc(
+    "native_company_class_directory",
+    "Jobs",
+    "Read company classes and dispatch contacts",
+    "Requires current authority for the internal company. Premium LMS is optional.",
+    { p_organisation_id: uuid },
+    dispatchDirectory,
+  ),
+  "/rest/v1/rpc/save_company_dispatch_class": rpc(
+    "native_save_company_dispatch_class",
+    "Jobs",
+    "Save a company class and its default meeting room",
+    "Requires current authority for the internal company. A null class ID creates a class. Set an HTTPS meeting URL or clear the optional link.",
+    {
+      p_organisation_id: uuid,
+      p_class_id: nullableUuid,
+      p_name: text,
+      p_meeting_url: dispatchText,
+    },
+    dispatchDirectory,
+  ),
+  "/rest/v1/rpc/save_company_dispatch_settings": rpc(
+    "native_save_company_dispatch_settings",
+    "Jobs",
+    "Set the default company job contact",
+    "Select a current contact of the company, clear the default, or create and select a contact in one operation.",
+    {
+      p_organisation_id: uuid,
+      p_contact_id: nullableUuid,
+      p_new_contact: {
+        anyOf: [
+          object({ name: text, email: text, phone: text }),
+          { type: "null" },
+        ],
+      },
+    },
+    dispatchDirectory,
+    ["p_new_contact"],
+  ),
+  "/rest/v1/rpc/job_dispatch_options": rpc(
+    "native_job_dispatch_options",
+    "Jobs",
+    "Read classes and defaults for a job",
+    "Company contacts select classes of the job company. Job managers may inspect another company only while the job company is reassignable.",
+    { p_job_id: uuid, p_organisation_id: uuid },
+    object({
+      classes: dispatchClasses,
+      contact: { anyOf: [dispatchContact, { type: "null" }] },
+    }),
+  ),
+  "/rest/v1/rpc/save_job_dispatch": rpc(
+    "native_save_job_dispatch",
+    "Jobs",
+    "Assign or clear the class of a job",
+    "Requires ownership or job-management permission and the current lifecycle version. Saves the meeting room and contact without changing accepted terms.",
+    {
+      p_job_id: uuid,
+      p_class_id: nullableUuid,
+      p_expected_version: { ...version, minimum: 1 },
+    },
+    uuid,
+  ),
   "/rest/v1/rpc/job_lifecycle": rpc(
     "native_job_lifecycle",
     "Jobs",
@@ -2461,6 +2546,11 @@ const nativePaths = {
       can_duplicate: boolean,
       organisation_id: nullableUuid,
       can_reassign_company: boolean,
+      can_edit_dispatch: boolean,
+      class_id: nullableUuid,
+      class_name: dispatchText,
+      meeting_url: dispatchText,
+      dispatch_contact: { anyOf: [dispatchContact, { type: "null" }] },
       claims: {
         type: "array",
         items: object({
@@ -2515,6 +2605,7 @@ const nativePaths = {
                 description:
                   "Assign an active company to an unaccepted, standalone net offer only when its course has no dependent activity.",
               },
+              class_id: nullableUuid,
               description: { ...text, maxLength: 12000 },
               sessions: {
                 type: "array",

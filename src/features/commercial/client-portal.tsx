@@ -1,5 +1,6 @@
 import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
+import { CompanyDispatchSettings } from "../operations/company-dispatch-settings";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
 import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { CompanyIntegrationPicker } from "../operations/company-integrations";
@@ -536,6 +537,11 @@ function RequestCard({
             : t("unassigned")}
         </span>
       </div>
+      {request.job_id && (
+        <Button asChild variant="secondary">
+          <Link to={`/jobs/${request.job_id}`}>{t("companyOpenJob")}</Link>
+        </Button>
+      )}
       {!manager && request.job_id && (
         <CompanyDecisions
           actor={actor}
@@ -762,6 +768,7 @@ export function ClientPortalPage() {
             />
           )}
           <div className="section-stack company-operation-sections">
+            <CompanyDispatchSettings actor={actor} organisations={orgs.data} />
             <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
             {access.data.can_request && !access.data.can_manage_gross && (
               <CompanyIntegrationPicker

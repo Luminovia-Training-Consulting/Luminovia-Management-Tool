@@ -1,3 +1,9 @@
+# 23 November 2026 — Company classes and job dispatch defaults
+
+Companies can maintain classes, HTTPS meeting rooms and an assignment contact without Premium. Own job details use a company-scoped projection without lecturer compensation or contract terms. Staff choose the class for the selected company inside the versioned offer editor. Saving records the current room and contact, while existing offer ownership and accepted-term restrictions remain in force.
+
+The disposable Chromium run created the class and company contact and verified the saved details after opening and editing an own job from the company portal. Native PostgreSQL covered cross-company denial, version conflicts, same-company scope and atomic reassignment. The focused frontend run passed 161 tests.
+
 # 23 November 2026 — File explorer folder filter
 
 The unfiled option now sits below the personal folder filter. The component suite passed all 45 cases, including switching to unfiled results and restoring the previous folder name. Chromium checked the filter layout with production CSS at 320, 390 and 1280 px in both themes. The production build and bundle budgets passed.

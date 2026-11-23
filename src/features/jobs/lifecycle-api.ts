@@ -3,6 +3,7 @@
  * retries; PostgreSQL owns state, slots, cancellation and immutable claim history.
  */
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
@@ -22,6 +23,13 @@ export interface LifecycleClaim {
   events: { type: string; created_at: string; reason: string | null }[];
 }
 
+const dispatchContactSchema = z.object({
+  name: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+});
+export type JobDispatchContact = z.infer<typeof dispatchContactSchema>;
+
 /** Current administrative offer state with version protection and separate claim histories. */
 export interface JobLifecycle {
   version: number;
@@ -38,6 +46,11 @@ export interface JobLifecycle {
   can_duplicate: boolean;
   organisation_id?: string | null;
   can_reassign_company?: boolean;
+  can_edit_dispatch?: boolean;
+  class_id?: string | null;
+  class_name?: string | null;
+  meeting_url?: string | null;
+  dispatch_contact?: JobDispatchContact | null;
   claims: LifecycleClaim[];
 }
 
@@ -79,6 +92,50 @@ export const lifecycleQuery = (actor: string, job: string) =>
       };
     },
   });
+
+const dispatchOptionsSchema = z.object({
+  classes: z.array(
+    z.object({
+      id: z.uuid(),
+      name: z.string(),
+      meeting_url: z.string().nullable(),
+    }),
+  ),
+  contact: dispatchContactSchema.nullable(),
+});
+
+export const jobDispatchOptionsQuery = (
+  actor: string,
+  job: string,
+  company: string,
+) =>
+  queryOptions({
+    queryKey: ["job-dispatch-options", actor, job, company],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("job_dispatch_options", {
+          p_job_id: job,
+          p_organisation_id: company,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return dispatchOptionsSchema.parse(data);
+    },
+  });
+
+export async function saveJobDispatch(
+  job: string,
+  classId: string | null,
+  version: number,
+) {
+  requireOnline();
+  const { error } = await db().rpc("save_job_dispatch", {
+    p_job_id: job,
+    p_class_id: classId,
+    p_expected_version: version,
+  });
+  if (error) throw error;
+}
 
 /** Submit one versioned offer action; the server decides returned state and side effects. */
 export async function manageOffer(input: {
@@ -124,6 +181,7 @@ export async function refreshJobState(client: QueryClient) {
       "jobs",
       "job-board",
       "job-lifecycle",
+      "job-dispatch-options",
       "assignment-withdrawals",
       "assignment-changes",
       "changeable-assignments",

@@ -222,6 +222,9 @@ Use fictional customers and documents locally. [Job lifecycle](GUIDE.md#section-
 
 ## Client portal and full-fee visibility
 
+In the internal portal, open **Klassen und Auftragskontakt / Classes and assignment contact** to create company classes, set their HTTPS meeting rooms and choose a standard contact. This is available with Premium off. Open an own job from the company portal and choose **Klasse bearbeiten / Edit class**. Management and administrators choose the company in the offer editor where a company move is permitted and then choose an available class. Saving the selection stores the current class room and company contact on the job. An explicit reapply copies revised defaults. Confirmed lecturers can see these details in the assigned job.
+
+
 `/client` is the **Kundenportal / Client portal** for an associated client account and authorised platform management. It differs from `/clients`, the internal customer/contact directory. A client sees only its active associated organisations, their course requests and full client fees, confirmed assignment sums and assigned teachers. EUR and AUD remain separate. The request volume and confirmed assignment sum are agreement values, not proof of a bank payment.
 
 Choose **Kurs anfragen / Request a course**, select the organisation and enter title/topics, delivery, every intended-zone session and the original-currency full fee. Add whole required teaching units, explicitly choose 45 or 60 minutes per unit, list required documents one per line and enter preparation instructions. Required teaching minutes must fit the actual session time; remaining time may cover breaks. Teaching units do not calculate or change the commercial price. Save and wait for

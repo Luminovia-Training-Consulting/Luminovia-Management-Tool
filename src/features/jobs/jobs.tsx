@@ -44,11 +44,13 @@ import {
 } from "../../components/common";
 
 /** Return from a job detail view to the job list. */
-function BackLink() {
+function BackLink({
+  companyDispatchOnly = false,
+}: { companyDispatchOnly?: boolean } = {}) {
   const { t } = useTranslation();
   return (
     <Button variant="ghost" asChild>
-      <NavLink to="/jobs">
+      <NavLink to={companyDispatchOnly ? "/client" : "/jobs"}>
         <ChevronLeft size={18} />
         {t("back")}
       </NavLink>
@@ -159,6 +161,7 @@ export function JobDetail() {
         {id && teaching && <JobWaitlist jobId={id} />}
       </>
     );
+  const companyDispatchOnly = job.dispatch_only === true;
   const zone = profile.data?.time_zone ?? job.time_zone;
   // An accepted claim remains the source for agreed fees and conditions
   // even if the current offer is subsequently edited.
@@ -192,7 +195,7 @@ export function JobDetail() {
       : null;
   return (
     <>
-      <BackLink />
+      <BackLink companyDispatchOnly={companyDispatchOnly} />
       <PageHeading
         eyebrow={job.customer_name}
         title={job.title}
@@ -207,8 +210,10 @@ export function JobDetail() {
       {permissions.data?.includes("jobs.manage") && (
         <JobPricingPanel job={job} />
       )}
-      <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
-      {teaching && ownClaim?.status === "confirmed" && (
+      {!companyDispatchOnly && (
+        <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
+      )}
+      {!companyDispatchOnly && teaching && ownClaim?.status === "confirmed" && (
         <div className="form-actions">
           <JobSickDay key={ownClaim.id} claim={ownClaim} zone={job.time_zone} />
           <Button asChild variant="secondary">
@@ -218,9 +223,11 @@ export function JobDetail() {
           </Button>
         </div>
       )}
-      <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
-      {teaching && <JobWaitlist jobId={job.id} />}
-      <div className="detail-layout">
+      {!companyDispatchOnly && (
+        <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
+      )}
+      {!companyDispatchOnly && teaching && <JobWaitlist jobId={job.id} />}
+      <div className={companyDispatchOnly ? "stack" : "detail-layout"}>
         <div>
           <section className="panel">
             <div className="inline-meta">
@@ -234,7 +241,9 @@ export function JobDetail() {
             </div>
             <h2>{t("description")}</h2>
             <p className="preserve-text">{job.description}</p>
-            <JobBuildingBlockReference jobId={job.id} />
+            {!companyDispatchOnly && (
+              <JobBuildingBlockReference jobId={job.id} />
+            )}
             {period && (
               <>
                 <h2>{lifeText("deliveryPeriod")}</h2>
@@ -271,125 +280,140 @@ export function JobDetail() {
                 </li>
               ))}
             </ol>
-            <h2>{t("requirements")}</h2>
-            {job.job_requirements.length ? (
-              <div className="tags">
-                {job.job_requirements.map((r) => (
-                  <span key={r.topic_id} className="badge">
-                    {topics.data?.find((t) => t.id === r.topic_id)?.[
-                      i18n.language === "de" ? "label_de" : "label_en"
-                    ] ?? t("expertise")}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p>{t("noRequirements")}</p>
-            )}
-            {job.requires_contract && <p>{t("contractRequired")}</p>}
-          </section>
-          <JobLifecyclePanel job={job} />
-          <JobBriefing
-            jobId={job.id}
-            archived={job.status === "archived"}
-            managementHint={permissions.data?.includes("jobs.manage") ?? false}
-          />
-          <JobDocuments
-            jobId={job.id}
-            canManage={permissions.data?.includes("jobs.manage") ?? false}
-          />
-          <ResourceComments kind="job" resourceId={job.id} />
-          {ownClaim && session && (
-            <AssignmentAmendments
-              actor={session.user.id}
-              claimId={ownClaim.id}
-            />
-          )}
-        </div>
-        <aside className="claim-panel panel">
-          <p className="eyebrow">
-            {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
-          </p>
-          <div className="amount">
-            {terms.total_amount === null
-              ? i18n.getFixedT(i18n.language, "platform")("privateCompensation")
-              : money(terms.total_amount, terms.currency, i18n.language)}
-          </div>
-          <p>
-            {terms.amount !== null && (
+            {!companyDispatchOnly && (
               <>
-                {money(terms.amount, terms.currency, i18n.language)}{" "}
-                {t(terms.rate_unit)}
+                <h2>{t("requirements")}</h2>
+                {job.job_requirements.length ? (
+                  <div className="tags">
+                    {job.job_requirements.map((r) => (
+                      <span key={r.topic_id} className="badge">
+                        {topics.data?.find((t) => t.id === r.topic_id)?.[
+                          i18n.language === "de" ? "label_de" : "label_en"
+                        ] ?? t("expertise")}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p>{t("noRequirements")}</p>
+                )}
+                {job.requires_contract && <p>{t("contractRequired")}</p>}
               </>
             )}
-          </p>
-          <small>{lifeText("positionFeeHint")}</small>
-          <hr />
-          <h2>{t(ownClaim ? "termsSnapshot" : "terms")}</h2>
-          <p className="preserve-text">{terms.terms}</p>
-          <small>
-            {t("termsVersion")} {terms.terms_version}
-          </small>
-          {job.claim_deadline && (
-            <p>
-              {t("claimDeadline")}:{" "}
-              {dateTime(job.claim_deadline, i18n.language, zone)}
-            </p>
-          )}
-          {ownClaim ? (
-            <Notice>
-              <CheckCircle2 size={20} />
-              {t("confirmed")}
-            </Notice>
-          ) : teaching ? (
+          </section>
+          <JobLifecyclePanel job={job} dispatchOnly={companyDispatchOnly} />
+          {!companyDispatchOnly && (
             <>
-              <p>{t("claimHelp")}</p>
-              {assignmentConflict && (
-                <Notice kind="error">{t("claim_conflict")}</Notice>
-              )}
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={accepted === consent}
-                  onChange={(e) =>
-                    setAccepted(e.target.checked ? consent : null)
-                  }
-                />
-                <span>{t("acceptTerms")}</span>
-              </label>
-              <Button
-                className="full-width"
-                onClick={() => claim.mutate()}
-                disabled={
-                  accepted !== consent ||
-                  assignmentConflict ||
-                  !claims.isSuccess ||
-                  !online ||
-                  claim.isPending ||
-                  job.status !== "published" ||
-                  job.amount === null ||
-                  job.total_amount === null
+              <JobBriefing
+                jobId={job.id}
+                archived={job.status === "archived"}
+                managementHint={
+                  permissions.data?.includes("jobs.manage") ?? false
                 }
-              >
-                {t(claim.isPending ? "claiming" : "claim")}
-              </Button>
+              />
+              <JobDocuments
+                jobId={job.id}
+                canManage={permissions.data?.includes("jobs.manage") ?? false}
+              />
+              <ResourceComments kind="job" resourceId={job.id} />
+              {ownClaim && session && (
+                <AssignmentAmendments
+                  actor={session.user.id}
+                  claimId={ownClaim.id}
+                />
+              )}
             </>
-          ) : null}
-          {claim.isError && <Notice kind="error">{t("error")}</Notice>}
-          {result && result !== "confirmed" && (
-            <Notice kind="error">
-              {result === "already_assigned"
-                ? lifeText("alreadyAssigned")
-                : t(resultKey)}
-            </Notice>
           )}
-          {ownClaim && (
-            <Button variant="secondary" asChild>
-              <Link to={`/calendar?assignment=${encodeURIComponent(job.id)}`}>
-                {t("viewCalendar")}
-              </Link>
-            </Button>
-          )}
-        </aside>
+        </div>
+        {!companyDispatchOnly && (
+          <aside className="claim-panel panel">
+            <p className="eyebrow">
+              {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
+            </p>
+            <div className="amount">
+              {terms.total_amount === null
+                ? i18n.getFixedT(
+                    i18n.language,
+                    "platform",
+                  )("privateCompensation")
+                : money(terms.total_amount, terms.currency, i18n.language)}
+            </div>
+            <p>
+              {terms.amount !== null && (
+                <>
+                  {money(terms.amount, terms.currency, i18n.language)}{" "}
+                  {t(terms.rate_unit)}
+                </>
+              )}
+            </p>
+            <small>{lifeText("positionFeeHint")}</small>
+            <hr />
+            <h2>{t(ownClaim ? "termsSnapshot" : "terms")}</h2>
+            <p className="preserve-text">{terms.terms}</p>
+            <small>
+              {t("termsVersion")} {terms.terms_version}
+            </small>
+            {job.claim_deadline && (
+              <p>
+                {t("claimDeadline")}:{" "}
+                {dateTime(job.claim_deadline, i18n.language, zone)}
+              </p>
+            )}
+            {ownClaim ? (
+              <Notice>
+                <CheckCircle2 size={20} />
+                {t("confirmed")}
+              </Notice>
+            ) : teaching ? (
+              <>
+                <p>{t("claimHelp")}</p>
+                {assignmentConflict && (
+                  <Notice kind="error">{t("claim_conflict")}</Notice>
+                )}
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={accepted === consent}
+                    onChange={(e) =>
+                      setAccepted(e.target.checked ? consent : null)
+                    }
+                  />
+                  <span>{t("acceptTerms")}</span>
+                </label>
+                <Button
+                  className="full-width"
+                  onClick={() => claim.mutate()}
+                  disabled={
+                    accepted !== consent ||
+                    assignmentConflict ||
+                    !claims.isSuccess ||
+                    !online ||
+                    claim.isPending ||
+                    job.status !== "published" ||
+                    job.amount === null ||
+                    job.total_amount === null
+                  }
+                >
+                  {t(claim.isPending ? "claiming" : "claim")}
+                </Button>
+              </>
+            ) : null}
+            {claim.isError && <Notice kind="error">{t("error")}</Notice>}
+            {result && result !== "confirmed" && (
+              <Notice kind="error">
+                {result === "already_assigned"
+                  ? lifeText("alreadyAssigned")
+                  : t(resultKey)}
+              </Notice>
+            )}
+            {ownClaim && (
+              <Button variant="secondary" asChild>
+                <Link to={`/calendar?assignment=${encodeURIComponent(job.id)}`}>
+                  {t("viewCalendar")}
+                </Link>
+              </Button>
+            )}
+          </aside>
+        )}
       </div>
     </>
   );

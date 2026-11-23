@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Company classes and job dispatch
+
+- [x] Provide company-scoped class, meeting room and default contact settings independently of Premium LMS.
+- [x] Add company-filtered class selection and default copying to job edits. Keep company moves subject to existing ownership and assignment guards.
+- [x] Open a company-owned job through a reduced operational projection and verify company access, current versions, and saved contact and room details.
+
 ## Standard course workspace
 
 - [x] Open the scoped course workspace when company Premium is off. Return standard course details and scheduled sessions for authorised staff, assigned lecturers and contacts of the course company. Keep retained learning data and participant workflows guarded.

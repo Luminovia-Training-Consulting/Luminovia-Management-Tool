@@ -27,6 +27,7 @@ const pairs: Record<string, [string, string]> = {
     "Die Ablehnung konnte nicht aufgehoben werden. Bitte versuche es erneut.",
     "The rejection could not be lifted. Please try again.",
   ],
+  companyOpenJob: ["Auftrag öffnen", "Open assignment"],
   companyOtherJobs: ["Weitere Aufträge", "Other assignments"],
   companyDecisionHeading: ["Dozierende bestätigen", "Confirm lecturers"],
   companyDecisionLoading: [

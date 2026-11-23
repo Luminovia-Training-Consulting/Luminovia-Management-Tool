@@ -19,9 +19,12 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import {
   cancelAssignment,
+  jobDispatchOptionsQuery,
+  type JobDispatchContact,
   lifecycleQuery,
   manageOffer,
   refreshJobState,
+  saveJobDispatch,
   setCapacity,
 } from "./lifecycle-api";
 import "./lifecycle-i18n";
@@ -32,6 +35,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import { JobDateRange } from "./session-range";
 import { localSessionTime, resolveJobSessions } from "./session-schedule";
 import { orgQuery } from "../operations/data";
+import { briefingWebUrl } from "./briefing-api";
 
 /** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
@@ -43,7 +47,13 @@ type Confirmation = {
 };
 
 /** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
-export function JobLifecyclePanel({ job }: { job: Job }) {
+export function JobLifecyclePanel({
+  job,
+  dispatchOnly = false,
+}: {
+  job: Job;
+  dispatchOnly?: boolean;
+}) {
   const { session } = useAuth();
   const { t, i18n } = useTranslation("jobLifecycle");
   const online = useOnline();
@@ -97,7 +107,29 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   const confirmedCount =
     info.confirmed_count ??
     info.claims.filter((claim) => claim.status === "confirmed").length;
-  if (!info.can_manage && !info.claims.length && capacity === 1) return null;
+  const dispatch = (
+    <JobDispatchSummary
+      job={job}
+      organisationId={info.organisation_id}
+      classId={info.class_id}
+      className={info.class_name}
+      meetingUrl={info.meeting_url}
+      contact={info.dispatch_contact}
+      version={info.version}
+      editable={
+        info.can_edit_dispatch === true && !(info.can_manage && info.can_edit)
+      }
+    />
+  );
+  if (
+    dispatchOnly ||
+    (!info.can_manage && !info.claims.length && capacity === 1)
+  )
+    return info.can_edit_dispatch ? (
+      <section className="panel">{dispatch}</section>
+    ) : (
+      dispatch
+    );
   const active = info.claims.some((claim) => claim.status === "confirmed");
   const cancelled = info.claims.some((claim) => claim.status === "cancelled");
   const openConfirmation = (kind: Confirmation["kind"], claim?: string) => {
@@ -147,6 +179,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
         </div>
         <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       </div>
+      {dispatch}
       {info.can_manage && (
         <div className="page-actions">
           <ManualAssignment
@@ -319,6 +352,8 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
           version={info.version}
           organisationId={info.organisation_id}
           canReassignCompany={info.can_reassign_company === true}
+          canEditDispatch={info.can_edit_dispatch === true}
+          classId={info.class_id}
           pending={change.isPending}
           save={(input) => change.mutate(input)}
         />
@@ -471,6 +506,207 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   );
 }
 
+function useDispatchOptions(job: string, company: string, enabled: boolean) {
+  const { session } = useAuth();
+  return useQuery({
+    ...jobDispatchOptionsQuery(session!.user.id, job, company),
+    enabled: enabled && Boolean(company),
+  });
+}
+
+function ClassField({
+  options,
+  value,
+  setValue,
+  pending,
+}: {
+  options: ReturnType<typeof useDispatchOptions>;
+  value: string;
+  setValue: (value: string) => void;
+  pending: boolean;
+}) {
+  const { t } = useTranslation("jobLifecycle");
+  if (options.isPending) return <Loading />;
+  if (options.isError)
+    return <ErrorState retry={() => void options.refetch()} />;
+  const selected = options.data.classes.find(({ id }) => id === value);
+  const contact = options.data.contact;
+  const meeting = briefingWebUrl(selected?.meeting_url ?? "");
+  return (
+    <>
+      <Field id="offer-class" label={t("class")}>
+        <select
+          id="offer-class"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          disabled={pending}
+        >
+          <option value="">{t("noClass")}</option>
+          {options.data.classes.map(({ id, name }) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {contact && (
+        <p>
+          {t("defaultContact")}:{" "}
+          {[contact.name, contact.email, contact.phone]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
+      {meeting && (
+        <p>
+          {t("defaultMeeting")}:{" "}
+          <a href={meeting} target="_blank" rel="noopener noreferrer">
+            {t("meetingRoom")}
+          </a>
+        </p>
+      )}
+    </>
+  );
+}
+
+function JobDispatchSummary({
+  job,
+  organisationId,
+  classId,
+  className,
+  meetingUrl,
+  contact,
+  version,
+  editable,
+}: {
+  job: Job;
+  organisationId?: string | null;
+  classId?: string | null;
+  className?: string | null;
+  meetingUrl?: string | null;
+  contact?: JobDispatchContact | null;
+  version: number;
+  editable: boolean;
+}) {
+  const { t } = useTranslation("jobLifecycle");
+  const online = useOnline();
+  const [editing, setEditing] = useState(false);
+  const company = organisationId ?? "";
+  const meeting = briefingWebUrl(meetingUrl ?? "");
+  if (!className && !meeting && !contact && !(company && editable)) return null;
+  return (
+    <div className="stack">
+      <h3>{t("dispatch")}</h3>
+      {company && <p>{job.customer_name}</p>}
+      {className && (
+        <p>
+          {t("class")}: {className}
+        </p>
+      )}
+      {meeting && (
+        <p>
+          <a href={meeting} target="_blank" rel="noopener noreferrer">
+            {t("meetingRoom")}
+          </a>
+        </p>
+      )}
+      {contact && (
+        <p>
+          {t("companyContact")}:{" "}
+          {[contact.name, contact.email, contact.phone]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
+      {company &&
+        editable &&
+        (editing ? (
+          <JobDispatchForm
+            jobId={job.id}
+            company={company}
+            classId={classId}
+            version={version}
+            close={() => setEditing(false)}
+          />
+        ) : (
+          <Button
+            variant="secondary"
+            disabled={!online}
+            onClick={() => setEditing(true)}
+          >
+            {t("editDispatch")}
+          </Button>
+        ))}
+    </div>
+  );
+}
+
+function JobDispatchForm({
+  jobId,
+  company,
+  classId,
+  version,
+  close,
+}: {
+  jobId: string;
+  company: string;
+  classId?: string | null;
+  version: number;
+  close: () => void;
+}) {
+  const { t } = useTranslation("jobLifecycle");
+  const common = useTranslation().t;
+  const online = useOnline();
+  const client = useQueryClient();
+  const options = useDispatchOptions(jobId, company, online);
+  const [reviewed] = useState({ classId: classId ?? "", version });
+  const [selection, setSelection] = useState(reviewed.classId);
+  const save = useMutation({
+    mutationFn: (value: string) =>
+      saveJobDispatch(jobId, value || null, reviewed.version),
+    onSuccess: async () => {
+      await refreshJobState(client);
+      close();
+    },
+  });
+  const allowed =
+    options.isSuccess &&
+    (!selection || options.data.classes.some(({ id }) => id === selection));
+  const canSave = online && allowed && !save.isPending;
+  return (
+    <form
+      className="job-life-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canSave) save.mutate(selection);
+      }}
+    >
+      <ClassField
+        options={options}
+        value={selection}
+        setValue={setSelection}
+        pending={save.isPending}
+      />
+      {save.isError && <Notice kind="error">{t("failed")}</Notice>}
+      <div className="job-life-actions">
+        <Button disabled={!canSave}>
+          {t(
+            selection === reviewed.classId ? "refreshDispatchDefaults" : "save",
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={close}
+          disabled={save.isPending}
+        >
+          {common("cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 /** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
 function EditOffer({
   job,
@@ -478,6 +714,8 @@ function EditOffer({
   version,
   organisationId,
   canReassignCompany,
+  canEditDispatch,
+  classId,
   pending,
   save,
 }: {
@@ -486,6 +724,8 @@ function EditOffer({
   version: number;
   organisationId: string | null | undefined;
   canReassignCompany: boolean;
+  canEditDispatch: boolean;
+  classId?: string | null;
   pending: boolean;
   save: (input: Omit<OfferInput, "request">) => void;
 }) {
@@ -525,6 +765,27 @@ function EditOffer({
   });
   const [originalCompany] = useState(organisationId ?? "");
   const [company, setCompany] = useState(originalCompany);
+  const [originalClass] = useState(classId ?? "");
+  const [chosenClass, setChosenClass] = useState(originalClass);
+  const [refreshDispatchDefaults, setRefreshDispatchDefaults] = useState(false);
+  const companyChanged = Boolean(
+    canReassignCompany && company && company !== originalCompany,
+  );
+  const classChanged =
+    canEditDispatch &&
+    (companyChanged ||
+      chosenClass !== originalClass ||
+      refreshDispatchDefaults);
+  const options = useDispatchOptions(
+    job.id,
+    company,
+    online && canEditDispatch,
+  );
+  const dispatchValid =
+    !classChanged ||
+    (options.isSuccess &&
+      (!chosenClass ||
+        options.data.classes.some(({ id }) => id === chosenClass)));
   // Capture the reviewed version once; a background refresh must not approve a stale draft.
   const [expectedVersion] = useState(version);
   const [title, setTitle] = useState(job.title),
@@ -552,7 +813,7 @@ function EditOffer({
       className="job-life-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (sessionsChanged && !proposedSchedule) return;
+        if (!dispatchValid || (sessionsChanged && !proposedSchedule)) return;
         save({
           job: job.id,
           action: "edit",
@@ -562,9 +823,8 @@ function EditOffer({
             description,
             location,
             terms,
-            ...(canReassignCompany && company && company !== originalCompany
-              ? { organisation_id: company }
-              : {}),
+            ...(companyChanged ? { organisation_id: company } : {}),
+            ...(classChanged ? { class_id: chosenClass || null } : {}),
             claim_deadline: instant,
             ...(proposedSchedule ? { sessions: proposedSchedule } : {}),
             ...(topicsChanged ? { topic_ids: chosenTopics } : {}),
@@ -591,7 +851,13 @@ function EditOffer({
             <select
               id="offer-organisation"
               value={company}
-              onChange={(event) => setCompany(event.target.value)}
+              onChange={(event) => {
+                const nextCompany = event.target.value;
+                setCompany(nextCompany);
+                setChosenClass(
+                  nextCompany === originalCompany ? originalClass : "",
+                );
+              }}
               disabled={pending}
             >
               {!organisations.data.some(
@@ -609,6 +875,31 @@ function EditOffer({
             </select>
           )}
         </Field>
+      )}
+      {canEditDispatch && company && (
+        <>
+          <ClassField
+            options={options}
+            value={chosenClass}
+            setValue={setChosenClass}
+            pending={pending}
+          />
+          {options.isSuccess &&
+            !companyChanged &&
+            chosenClass === originalClass && (
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={refreshDispatchDefaults}
+                  onChange={(event) =>
+                    setRefreshDispatchDefaults(event.target.checked)
+                  }
+                  disabled={pending}
+                />
+                {t("refreshDispatchDefaults")}
+              </label>
+            )}
+        </>
       )}
       <Field id="offer-description" label={t("description")}>
         <textarea
@@ -757,6 +1048,7 @@ function EditOffer({
           pending ||
           !title.trim() ||
           !terms.trim() ||
+          !dispatchValid ||
           (sessionsChanged && !proposedSchedule) ||
           Boolean(deadline && !instant)
         }
