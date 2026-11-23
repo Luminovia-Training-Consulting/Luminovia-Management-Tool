@@ -157,13 +157,16 @@ function PlatformResetForm({
                 {t("target")} <code>{target.data}</code>
               </p>
             )}
-            <form className="stack max-w-md" onSubmit={submit}>
-              <label className="stack" htmlFor="reset-confirmation">
+            <div className="grid max-w-md gap-4">
+              {/* This confirmation is not a username in the password form. */}
+              <label className="grid gap-1.5" htmlFor="reset-confirmation">
                 {t("confirm")}
                 <input
                   id="reset-confirmation"
+                  name="reset-confirmation"
                   className="input"
                   autoComplete="off"
+                  autoCapitalize="none"
                   spellCheck={false}
                   value={confirmation}
                   onChange={(event) =>
@@ -171,29 +174,32 @@ function PlatformResetForm({
                   }
                 />
               </label>
-              <label className="stack" htmlFor="reset-password">
-                {t("password")}
-                <input
-                  id="reset-password"
-                  className="input"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  maxLength={1024}
-                  value={password}
-                  onChange={(event) => setPassword(event.currentTarget.value)}
-                />
-              </label>
-              {result && <p role="alert">{t(result)}</p>}
-              <Button
-                className="self-start"
-                type="submit"
-                variant="danger"
-                disabled={confirmation !== "DELETE" || !password || pending}
-              >
-                {t("action")}
-              </Button>
-            </form>
+              <form className="grid gap-4" onSubmit={submit}>
+                <label className="grid gap-1.5" htmlFor="reset-password">
+                  {t("password")}
+                  <input
+                    id="reset-password"
+                    name="reset-current-password"
+                    className="input"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    maxLength={1024}
+                    value={password}
+                    onChange={(event) => setPassword(event.currentTarget.value)}
+                  />
+                </label>
+                {result && <p role="alert">{t(result)}</p>}
+                <Button
+                  className="max-w-full justify-self-start whitespace-normal"
+                  type="submit"
+                  variant="danger"
+                  disabled={confirmation !== "DELETE" || !password || pending}
+                >
+                  {t("action")}
+                </Button>
+              </form>
+            </div>
           </>
         ) : import.meta.env.DEV ? (
           <p>{t("localUnavailable")}</p>

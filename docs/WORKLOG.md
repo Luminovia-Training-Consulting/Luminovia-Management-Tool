@@ -1,3 +1,7 @@
+# 23 November 2026 — Reset form spacing and autofill
+
+The reset confirmation is separate from the password form, so browsers can identify the password field without treating the DELETE field as a sign-in identifier. The reset inputs and action use consistent spacing. A component test checks that a filled password and an email in the confirmation field cannot submit. Chromium measured 16 px at 320, 390 and 1280 px using the production styles. No reset was executed.
+
 # 23 November 2026 — Standard course workspace
 
 A course manager, assigned lecturer or authorised course-company contact can open the course workspace from the assignment, the catalogue or the learning hub while company Premium is off. The workspace shows the title, description, syllabus, on-site venue and scheduled sessions. PostgreSQL returns the scoped standard projection without reading retained learning records. Course-participant access, materials, chat, exams, attendance and meeting links use their existing Premium controls. Dedicated Academy still uses its licence and course profile.
