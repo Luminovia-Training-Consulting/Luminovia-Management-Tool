@@ -5,7 +5,7 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
-  wiki: ["Wiki", "Wiki"],
+  wiki: ["Fachartikel", "Articles"],
   forum: ["Forum", "Forum"],
   wikiIntro: [
     "Wissen festhalten, Erfahrungen teilen und gemeinsam besser lehren.",
@@ -15,7 +15,7 @@ const pairs: Record<string, [string, string]> = {
     "Fragen, Ideen und hilfreiche Antworten aus dem Team.",
     "Questions, ideas and helpful answers from the team.",
   ],
-  searchWiki: ["Wiki durchsuchen", "Search the wiki"],
+  searchWiki: ["Fachartikel durchsuchen", "Search articles"],
   searchForum: ["Forum durchsuchen", "Search the forum"],
   search: ["Suchen", "Search"],
   categories: ["Kategorien", "Categories"],

@@ -1,3 +1,11 @@
+# 23 November 2026 — Consolidated forum and local API documentation
+
+The Forum under Communication is the only entry point for discussions and articles. Article drafts, publication, history, attachments and course-template references retain their existing storage and permissions. Historical Wiki links preserve the selected article and fragment. Help and Support have their own entry point.
+
+Vite prebundles the lazy Swagger dependency and both API documentation routes handle load failures within the API page. The recovery state offers reload, OpenAPI JSON and portal navigation.
+
+Authenticated Chromium verified the live local portal at 1440 and 390 px for discussions, articles and the historical Help redirect. Chromium also loaded both API documentation views and the OpenAPI JSON on port 5173, recovered after an intentionally blocked Explorer module, and kept the portal usable during the failure. TypeScript, lint, production bundle budgets and 1,557 unit/component tests with coverage passed.
+
 # 23 November 2026 — Lecturer lounge access for administrators
 
 Aligned the lounge join and room access rules with the role-specific button. All 21 isolated PostgreSQL chat checks passed, including administrator membership, message access and private direct-message boundaries. Reproduced HTTP 403 in the downloaded local portal, applied the additive migration there and verified the administrator click and message composer in Chromium.

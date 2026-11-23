@@ -2,8 +2,18 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useSearchParams } from "react-router-dom";
-import { SectionHub } from "./section-hubs";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  CommunicationForum,
+  LegacyWikiRoute,
+  SectionHub,
+} from "./section-hubs";
 import "../lib/i18n";
 
 const state = vi.hoisted(() => ({ roles: ["lecturer"] }));
@@ -18,8 +28,11 @@ vi.mock("@tanstack/react-query", async (original) => ({
 vi.mock("../features/operations/courses", () => ({
   CoursesPage: () => <p>Course catalogue</p>,
 }));
-vi.mock("../features/knowledge/wiki", () => ({
-  WikiPage: () => <p>Wiki articles</p>,
+vi.mock("../features/knowledge/articles", () => ({
+  KnowledgeArticles: () => <p>Article content</p>,
+}));
+vi.mock("../features/knowledge/forum", () => ({
+  ForumPage: () => <p>Discussion content</p>,
 }));
 vi.mock("../features/help/help", () => ({
   HelpCenter: ({ embedded }: { embedded?: boolean }) => {
@@ -59,10 +72,10 @@ it.each(["lecturer", "client"])(
     ).not.toBeInTheDocument();
   },
 );
-it("embeds help without losing the active knowledge section on topic navigation", async () => {
+it("embeds help without losing the active assistance section on topic navigation", async () => {
   render(
-    <MemoryRouter initialEntries={["/wiki?section=help"]}>
-      <SectionHub kind="knowledge" />
+    <MemoryRouter initialEntries={["/assistance?section=help"]}>
+      <SectionHub kind="assistance" />
     </MemoryRouter>,
   );
   const help = await screen.findByRole("button", { name: "Embedded help" });
@@ -70,5 +83,62 @@ it("embeds help without losing the active knowledge section on topic navigation"
   expect(
     screen.getByRole("button", { name: "Embedded help" }),
   ).toBeInTheDocument();
-  expect(screen.queryByText("Wiki articles")).not.toBeInTheDocument();
+  expect(screen.queryByText("Article content")).not.toBeInTheDocument();
+});
+
+function Location() {
+  const { pathname, search, hash } = useLocation();
+  return <output>{pathname + search + hash}</output>;
+}
+
+function renderForum(url: string) {
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route
+          path="/chats/forum"
+          element={
+            <>
+              <Location />
+              <CommunicationForum />
+            </>
+          }
+        />
+        <Route path="/wiki" element={<LegacyWikiRoute />} />
+        <Route path="/assistance" element={<Location />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+it("makes existing article links open in the forum and switches to discussions in place", async () => {
+  renderForum("/wiki?section=wiki&page=sample#revision");
+  expect(
+    await screen.findByText("/chats/forum?page=sample&view=articles#revision"),
+  ).toBeVisible();
+  expect(await screen.findByText("Article content")).toBeVisible();
+  expect(screen.queryByText("Discussion content")).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: /Diskussionen|Discussions/ }),
+  );
+  expect(await screen.findByText("Discussion content")).toBeVisible();
+  expect(screen.getByText("/chats/forum")).toBeVisible();
+});
+
+it("does not mount articles or offer the tab to an account with discussion-only access", async () => {
+  state.roles = ["client"];
+  renderForum("/chats/forum?view=articles&page=sample");
+  expect(await screen.findByText("Discussion content")).toBeVisible();
+  expect(screen.queryByText("Article content")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Fachartikel|Articles/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("retains old help links including their selected article", async () => {
+  state.roles = ["guest"];
+  renderForum("/wiki?section=help&topic=security#guidance");
+  expect(
+    await screen.findByText("/assistance?topic=security#guidance"),
+  ).toBeVisible();
 });

@@ -3,16 +3,16 @@ import i18n from "../../lib/i18n";
 const words = {
   title: ["Dateianhänge", "Attachments"],
   hint: [
-    "Anhänge gelten für diese Artikelfassung. Eine Veröffentlichung gibt die geprüfte Dateiversion für Wiki-Berechtigte frei.",
-    "Attachments belong to this article revision. Publishing shares the scanned file version with authorized wiki readers.",
+    "Anhänge gelten für diese Artikelfassung. Eine Veröffentlichung gibt die geprüfte Dateiversion für berechtigte Leser:innen frei.",
+    "Attachments belong to this article revision. Publishing shares the scanned file version with authorized readers.",
   ],
   draftFirst: [
     "Speichere zunächst einen neuen Entwurf, um Anhänge zu ändern.",
     "Save a new draft before changing attachments.",
   ],
   file: [
-    "Datei für den Wiki-Entwurf auswählen",
-    "Choose a file for the wiki draft",
+    "Datei für den Artikelentwurf auswählen",
+    "Choose a file for the article draft",
   ],
   upload: ["Datei prüfen und anhängen", "Scan and attach file"],
   remove: ["Anhang {{name}} entfernen", "Remove attachment {{name}}"],

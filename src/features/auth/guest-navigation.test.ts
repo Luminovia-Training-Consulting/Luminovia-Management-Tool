@@ -8,7 +8,14 @@ it("requires explicit guest-only membership", () => {
     expect(isGuestOnly(roles)).toBe(false);
 });
 it("keeps own settings and help while blocking operational routes", () => {
-  for (const path of ["/profile", "/settings", "/wiki", "/help", "/profile/"])
+  for (const path of [
+    "/profile",
+    "/settings",
+    "/wiki",
+    "/assistance",
+    "/help",
+    "/profile/",
+  ])
     expect(guestRouteAllowed(path)).toBe(true);
   for (const path of [
     "/",

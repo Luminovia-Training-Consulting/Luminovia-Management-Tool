@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Consolidated forum
+
+- [x] Keep the forum as the entry point for discussions and revisioned articles. Preserve existing records, attachments, course-template links and role boundaries.
+- [x] Redirect historical Wiki links. Keep Help and Support independently accessible and send article search results into the forum.
+
 ## Timed LMS exams
 
 - [x] Validate the exam window against the course's dates and time zone. Apply announcement visibility and paper access rules at the database and download gateway.

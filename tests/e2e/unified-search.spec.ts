@@ -63,7 +63,7 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
         const result = page.getByRole("link", {
             name: new RegExp(`${needle} own draft`),
         });
-        await expect(result).toHaveAttribute("href", `/wiki?page=${pages[0]}`);
+        await expect(result).toHaveAttribute("href", `/chats/forum?view=articles&page=${pages[0]}`);
         await expect(
             page.getByText(`${needle} peer private`, {exact: true}),
         ).toHaveCount(0);
@@ -97,7 +97,7 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
             fullPage: true,
         });
         await result.click();
-        await expect(page).toHaveURL(new RegExp(`/wiki\\?page=${pages[0]}`));
+        await expect(page).toHaveURL(new RegExp(`/chats/forum\\?view=articles&page=${pages[0]}`));
         await expect(
             page.getByText(`${needle} own draft`, {exact: true}).first(),
         ).toBeVisible();

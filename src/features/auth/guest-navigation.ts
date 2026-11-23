@@ -5,7 +5,7 @@ export function isGuestOnly(roles: readonly string[] | undefined): boolean {
 
 /** Guests keep only own settings/profile and the public help container. */
 export function guestRouteAllowed(pathname: string): boolean {
-  return ["/profile", "/settings", "/wiki", "/help"].includes(
+  return ["/profile", "/settings", "/wiki", "/help", "/assistance"].includes(
     pathname.replace(/\/$/, "") || "/",
   );
 }

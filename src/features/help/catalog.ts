@@ -742,9 +742,9 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "wiki",
-    path: "/wiki",
+    path: "/chats/forum?view=articles",
     roles: staff,
-    title: { de: "Wiki", en: "Wiki" },
+    title: { de: "Fachartikel im Forum", en: "Articles in the forum" },
     summary: {
       de: "Finde freigegebenes Wissen und erstelle mit passendem Zugang versionierte Artikel.",
       en: "Find shared knowledge and create versioned articles when authorised.",
@@ -788,7 +788,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "forum",
-    path: "/forum",
+    path: "/chats/forum",
     roles: staff,
     title: { de: "Forum", en: "Forum" },
     summary: {

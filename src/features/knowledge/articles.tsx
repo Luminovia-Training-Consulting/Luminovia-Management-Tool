@@ -388,7 +388,7 @@ function WikiArticle({
 }
 
 /** Coordinate wiki search, categories and article routes using authorized server lists. */
-export function WikiPage() {
+export function KnowledgeArticles() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();
   const { session } = useAuth();

@@ -27,8 +27,10 @@ const Readiness = lazy(() =>
     default: m.CourseReadinessPage,
   })),
 );
-const Wiki = lazy(() =>
-  import("../features/knowledge/wiki").then((m) => ({ default: m.WikiPage })),
+const Articles = lazy(() =>
+  import("../features/knowledge/articles").then((m) => ({
+    default: m.KnowledgeArticles,
+  })),
 );
 const Help = lazy(() =>
   import("../features/help/help").then((m) => ({ default: m.HelpCenter })),
@@ -52,9 +54,7 @@ const sections = {
     ["readiness", "Kursbereitschaft", "Readiness", Readiness],
     ["reviews", "Dozent:innen bewerten", "Review lecturers", Reviews],
   ],
-  knowledge: [
-    ["wiki", "Wiki", "Wiki", Wiki],
-    ["forum", "Forum", "Forum", Forum],
+  assistance: [
     ["help", "Hilfe & FAQ", "Help & FAQ", Help],
     ["support", "Support", "Support", Support],
   ],
@@ -65,19 +65,13 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   const [params, setParams] = useSearchParams();
   const actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
-  const knowledge = useQuery({
-    ...knowledgeAccessQuery(actor),
-    enabled: kind === "knowledge",
-  });
   const staff = hasJobStaffRole(roles.data);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const items = sections[kind].filter((item) => {
     if (isGuestOnly(roles.data))
-      return kind === "knowledge" && item[0] === "help";
-    if (item[0] === "forum") return Boolean(knowledge.data?.can_author);
+      return kind === "assistance" && item[0] === "help";
     if (kind === "courses" && item[0] === "readiness") return Boolean(staff);
-    if (kind === "knowledge" && item[0] === "wiki") return staff;
     return (
       item[0] !== "reviews" ||
       roles.data?.some((role) => ["client", "owner", "admin"].includes(role))
@@ -109,7 +103,7 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
         ))}
       </nav>
       <Suspense fallback={<Loading />}>
-        {kind === "knowledge" && selected[0] === "help" ? (
+        {kind === "assistance" && selected[0] === "help" ? (
           <Help embedded />
         ) : (
           <Page />
@@ -154,7 +148,74 @@ export function CommunicationWorkspace() {
 }
 
 export function CommunicationForum() {
-  return <Forum />;
+  const { i18n } = useTranslation();
+  const actor = useAuth().session!.user.id;
+  const roles = useQuery(userRolesQuery(actor));
+  const [params, setParams] = useSearchParams();
+  const articles = params.get("view") === "articles";
+  const de = i18n.language.startsWith("de");
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  const canReadArticles = hasJobStaffRole(roles.data);
+  if (articles && !canReadArticles)
+    return <Navigate to="/chats/forum" replace />;
+  return (
+    <>
+      {canReadArticles && (
+        <nav
+          className="admin-tabs"
+          aria-label={de ? "Forum-Inhalte" : "Forum content"}
+        >
+          <button
+            className={
+              articles ? "button button-secondary" : "button button-primary"
+            }
+            aria-current={!articles ? "page" : undefined}
+            onClick={() => {
+              if (articles) setParams({});
+            }}
+          >
+            {de ? "Diskussionen" : "Discussions"}
+          </button>
+          <button
+            className={
+              articles ? "button button-primary" : "button button-secondary"
+            }
+            aria-current={articles ? "page" : undefined}
+            onClick={() => {
+              if (!articles) setParams({ view: "articles" });
+            }}
+          >
+            {de ? "Fachartikel" : "Articles"}
+          </button>
+        </nav>
+      )}
+      <Suspense fallback={<Loading />}>
+        {articles ? <Articles /> : <Forum />}
+      </Suspense>
+    </>
+  );
+}
+
+export function LegacyWikiRoute() {
+  const { search, hash } = useLocation();
+  const actor = useAuth().session!.user.id;
+  const roles = useQuery(userRolesQuery(actor));
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  const params = new URLSearchParams(search);
+  const section = params.get("section");
+  params.delete("section");
+  let pathname = "/chats/forum";
+  if (section === "help" || section === "support" || isGuestOnly(roles.data)) {
+    pathname = "/assistance";
+    if (section === "support") params.set("section", "support");
+  } else if (section !== "forum" && hasJobStaffRole(roles.data)) {
+    params.set("view", "articles");
+  }
+  return (
+    <Navigate to={{ pathname, search: params.toString(), hash }} replace />
+  );
 }
 
 export function LegacyForumRoute() {

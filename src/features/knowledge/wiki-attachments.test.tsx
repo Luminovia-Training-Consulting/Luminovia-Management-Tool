@@ -59,7 +59,7 @@ it("uploads once and retries the same version after an unconfirmed attachment, t
   view();
   const user = userEvent.setup();
   await user.upload(
-    screen.getByLabelText("Datei für den Wiki-Entwurf auswählen"),
+    screen.getByLabelText("Datei für den Artikelentwurf auswählen"),
     new File(["fiction"], "fictional.txt", { type: "text/plain" }),
   );
   await user.click(

@@ -16,7 +16,7 @@ const pairs: Record<string, [string, string]> = {
   installApp: ["App installieren", "Install app"],
   assignmentChanges: ["Auftragsänderungen", "Assignment changes"],
   courseReadiness: ["Kursbereitschaft", "Course readiness"],
-  knowledgeHelp: ["Wissen & Hilfe", "Knowledge & help"],
+  helpSupport: ["Hilfe & Support", "Help & support"],
   teachingDelivery: ["Leistungsnachweise", "Teaching delivery"],
   supportDesk: ["Support", "Support desk"],
   websiteEnquiries: ["Website-Anfragen", "Website enquiries"],

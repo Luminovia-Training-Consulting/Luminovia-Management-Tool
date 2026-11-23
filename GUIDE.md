@@ -357,15 +357,15 @@ unavailable evidence; reconnect/reload through the permitted workflow. See [Qual
 
 <a id="section-user-guide-wiki-and-forum"></a>
 
-## Wiki and forum
+## Forum: discussions and articles
 
-At `/wiki`, search by text, category and authored language. **Artikel schreiben / Write article** opens the rich text editor for eligible staff. Use paragraphs/headings/lists, safe links and labelled code blocks. Selecting a code language adds syntax highlighting without executing the code. In desktop code blocks, **Enter** inserts a new code line; **Shift+Enter** exits the code block. Automated Android-emulated Chromium checks use a profile-specific Shift+Enter input path to create their code
+Open **Kommunikation → Forum → Fachartikel / Communication → Forum → Articles** and search by text, category and authored language. **Artikel schreiben / Write article** opens the rich text editor for eligible staff. Use paragraphs/headings/lists, safe links and labelled code blocks. Selecting a code language adds syntax highlighting without executing the code. In desktop code blocks, **Enter** inserts a new code line; **Shift+Enter** exits the code block. Automated Android-emulated Chromium checks use a profile-specific Shift+Enter input path to create their code
 newline because no native virtual keyboard runs in emulation. Native Android virtual-keyboard Enter behavior still requires manual acceptance on a physical device; browser emulation does not establish that behavior. A page’s German or English authored text is retained when you change interface language.
 
 Save your draft to preserve it. Publishing and archiving require the corresponding management permission. An author’s changes to an already published page are saved as a newer draft until an authorised publisher publishes them; other readers continue seeing the previous published snapshot. The history shows permitted revisions and their editors. If another editor has saved since you opened the form, a version conflict requires reviewing the latest record rather than overwriting it silently.
 
-At `/forum`, open a category and create a discussion or reply. The thread owner or moderator can choose an accepted answer. Subscribe to receive the supported in-app reply notification; unsubscribe to stop it. Report a post with a reason for moderator review. Authorised management can pin, lock/archive and resolve reports. A locked or archived thread blocks ordinary replies/edits; permitted moderation retains an auditable history. Deleted posts become tombstones. Knowledge access is staff-only
-in this slice; course participants do not automatically receive it. Wiki attachments and revision-bound course-template references now have dedicated permission-aware source implementations. Full native database, API, and browser acceptance remains pending; forum attachments and participant access are still outside this slice.
+Choose **Diskussionen / Discussions** in the same forum, then open a category and create a discussion or reply. The thread owner or moderator can choose an accepted answer. Subscribe to receive the supported in-app reply notification; unsubscribe to stop it. Report a post with a reason for moderator review. Authorised management can pin, lock/archive and resolve reports. A locked or archived thread blocks ordinary replies/edits; permitted moderation retains an auditable history. Deleted posts become tombstones. Knowledge access is staff-only
+in this slice; course participants do not automatically receive it. Article attachments and revision-bound course-template references now have dedicated permission-aware source implementations. Full native database, API, and browser acceptance remains pending; forum attachments and participant access are still outside this slice.
 
 <a id="section-user-guide-contracts-and-receipt-acknowledgements"></a>
 

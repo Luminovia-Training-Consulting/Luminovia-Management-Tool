@@ -261,10 +261,10 @@ test("real portal search combines authorized sources, excludes foreign private r
     ])
         await expect(results.getByText(title, {exact: true})).toHaveCount(0);
     await expect(
-        results.locator(`a[href="/wiki?page=${wiki.page_id}"]`),
+        results.locator(`a[href="/chats/forum?view=articles&page=${wiki.page_id}"]`),
     ).toBeVisible();
     await expect(
-        results.locator(`a[href="/forum?thread=${thread}"]`),
+        results.locator(`a[href="/chats/forum?thread=${thread}"]`),
     ).toBeVisible();
     await expect(results.locator(`a[href="/chats?room=${room}"]`)).toBeVisible();
     await expect(results.locator(`a[href="/people/${peer.id}"]`)).toBeVisible();
@@ -306,7 +306,7 @@ test("real portal search combines authorized sources, excludes foreign private r
     ).toBeVisible();
 
     await page.goto(`/search?q=${encodeURIComponent(marker)}`);
-    await results.locator(`a[href="/wiki?page=${wiki.page_id}"]`).click();
+    await results.locator(`a[href="/chats/forum?view=articles&page=${wiki.page_id}"]`).click();
     await expect(
         page.getByRole("heading", {name: wikiTitle, exact: true}),
     ).toBeVisible();

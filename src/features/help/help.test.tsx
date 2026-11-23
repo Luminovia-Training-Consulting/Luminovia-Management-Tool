@@ -29,7 +29,7 @@ function page(path = "/help") {
   const router = createMemoryRouter(
     [
       { path: "/help", element: <HelpCenter /> },
-      { path: "/wiki", element: <HelpCenter embedded /> },
+      { path: "/assistance", element: <HelpCenter embedded /> },
     ],
     { initialEntries: [path] },
   );
@@ -136,8 +136,8 @@ describe("public bilingual help", () => {
       screen.getByRole("heading", { level: 2, name: "Aufträge übernehmen" }),
     ).toHaveFocus();
   });
-  it("keeps Wiki context through category, keyboard article selection and recovery", async () => {
-    const router = page("/wiki?section=help");
+  it("keeps assistance context through category, keyboard article selection and recovery", async () => {
+    const router = page("/assistance?section=help");
     await userEvent.selectOptions(
       screen.getByRole("combobox", { name: "Themenbereich" }),
       "courses",
@@ -149,7 +149,7 @@ describe("public bilingual help", () => {
     });
     course.focus();
     await userEvent.keyboard("{Enter}");
-    expect(router.state.location.pathname).toBe("/wiki");
+    expect(router.state.location.pathname).toBe("/assistance");
     expect(router.state.location.search).toBe(
       "?section=help&area=courses&topic=lms-learning",
     );

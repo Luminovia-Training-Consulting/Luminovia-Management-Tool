@@ -62,6 +62,9 @@ export default defineConfig(({ mode }) => {
     ) + "\n";
   return {
     publicDir: internal ? "public" : false,
+    // Both editions load Swagger lazily. Prebundle its UMD entry on startup
+    // so the first API visit cannot rediscover it and invalidate dependency URLs.
+    optimizeDeps: { include: ["swagger-ui-dist/swagger-ui-bundle.js"] },
     resolve: {
       // Resolve the edition before tracing imports and precache assets.
       alias: Object.fromEntries(

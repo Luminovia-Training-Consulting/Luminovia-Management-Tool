@@ -213,7 +213,7 @@ export function Shell() {
       ? [
           { to: "/profile", icon: UserRound, label: "profile" },
           { to: "/settings", icon: Settings2, label: "settings" },
-          { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
+          { to: "/assistance", icon: BookOpen, label: "helpSupport" },
         ]
       : [
           { to: "/", icon: Home, label: "home" },
@@ -261,7 +261,7 @@ export function Shell() {
           ...(clientPortalAccess
             ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
             : []),
-          { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
+          { to: "/assistance", icon: BookOpen, label: "helpSupport" },
           { to: "/topics", icon: BookOpen, label: "topics" },
           ...(manage
             ? [{ to: "/admin", icon: Settings2, label: "admin" }]

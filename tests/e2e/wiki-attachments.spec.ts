@@ -70,7 +70,7 @@ test("wiki draft attachments become readable only after publication and are revo
     await page.goto(`/wiki?page=${pageId}`);
     await expect(page.getByRole("heading", {name: base.p_title})).toBeVisible();
     await page
-        .getByLabel("Datei für den Wiki-Entwurf auswählen")
+        .getByLabel("Datei für den Artikelentwurf auswählen")
         .setInputFiles({name: filename, mimeType: "text/plain", buffer: bytes});
     await page.getByRole("button", {name: "Datei prüfen und anhängen"}).click();
     await expect(

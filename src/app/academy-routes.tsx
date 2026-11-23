@@ -22,6 +22,7 @@ import {
   AcademyPersonalSettingsPage,
 } from "../features/accounts/academy-personal-settings";
 import { useAuth } from "../features/auth/auth-context";
+import { SwaggerRoute } from "../features/developer-api/swagger-route";
 import { AuthCallback } from "../features/auth/callback";
 import { AcademyCourseAccess } from "../features/auth/installation-access";
 import { Login } from "../features/auth/login";
@@ -293,8 +294,22 @@ export default function AcademyRoutes() {
               element={<LearningAnalyticsPage />}
             />
             <Route path="/settings" element={<AcademyPersonalSettingsPage />} />
-            <Route path="/api/docs" element={<AcademyApiExplorer />} />
-            <Route path="/api/swagger" element={<StandaloneSwagger />} />
+            <Route
+              path="/api/docs"
+              element={
+                <SwaggerRoute>
+                  <AcademyApiExplorer />
+                </SwaggerRoute>
+              }
+            />
+            <Route
+              path="/api/swagger"
+              element={
+                <SwaggerRoute>
+                  <StandaloneSwagger />
+                </SwaggerRoute>
+              }
+            />
             <Route
               path="/courses"
               element={<Navigate to="/learning" replace />}

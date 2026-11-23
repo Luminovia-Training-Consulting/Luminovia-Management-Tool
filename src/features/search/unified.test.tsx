@@ -74,7 +74,7 @@ it("uses authenticated server search and exact server-provided stable cursor rat
   view();
   expect(
     await screen.findByRole("link", { name: /Needle private draft/ }),
-  ).toHaveAttribute("href", row.url);
+  ).toHaveAttribute("href", "/chats/forum?view=articles&page=" + row.id);
   await userEvent.click(
     screen.getByRole("button", { name: "Weitere Treffer laden" }),
   );

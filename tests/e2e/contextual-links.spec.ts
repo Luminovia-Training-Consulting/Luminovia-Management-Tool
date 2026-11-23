@@ -1,4 +1,4 @@
-/** Verify Chat/Help references reuse the guarded Forum route and denied deep links reveal no thread data. */
+/** Verify Chat and article references reuse the guarded Forum route and denied deep links reveal no thread data. */
 import {expect, test} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, login} from "./helpers/accounts-support";
@@ -8,7 +8,7 @@ test.skip(
     "Context navigation permission checks require the isolated ./portal test project.",
 );
 
-test("Chats and Knowledge & Help reach the same Forum and outsiders cannot open a thread deep link", async ({
+test("Chats and legacy articles reach the same Forum and outsiders cannot open a thread deep link", async ({
                                                                                                                 page,
                                                                                                                 browser,
                                                                                                             }) => {
@@ -40,8 +40,10 @@ test("Chats and Knowledge & Help reach the same Forum and outsiders cannot open 
             page.getByRole("heading", {name: "Forum", exact: true}),
         ).toBeVisible();
         await page.goto("/wiki");
-        await page.getByRole("button", {name: "Forum", exact: true}).click();
-        await expect(page).toHaveURL(/\/wiki\?section=forum$/);
+        await expect(page).toHaveURL(/\/chats\/forum\?view=articles$/);
+        await expect(page.getByRole("heading", {name: "Articles", exact: true})).toBeVisible();
+        await page.getByRole("button", {name: "Discussions", exact: true}).click();
+        await expect(page).toHaveURL(/\/chats\/forum$/);
         await expect(
             page.getByRole("heading", {name: "Forum", exact: true}),
         ).toBeVisible();

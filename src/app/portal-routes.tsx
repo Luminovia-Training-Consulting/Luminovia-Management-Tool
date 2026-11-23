@@ -8,6 +8,7 @@ import {
   CommunicationForum,
   CommunicationWorkspace,
   LegacyForumRoute,
+  LegacyWikiRoute,
   SectionHub,
 } from "./section-hubs";
 import {
@@ -20,6 +21,7 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
+import { SwaggerRoute } from "../features/developer-api/swagger-route";
 import { PortalAccess } from "../features/auth/portal-access";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
@@ -285,7 +287,14 @@ export default function PortalRoutes() {
         <Route path="/reset-status" element={<PlatformResetStatus />} />
       )}
       <Route element={<Protected />}>
-        <Route path="/api/swagger" element={<StandaloneSwagger />} />
+        <Route
+          path="/api/swagger"
+          element={
+            <SwaggerRoute>
+              <StandaloneSwagger />
+            </SwaggerRoute>
+          }
+        />
         <Route element={<Shell />}>
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<WelcomeGuidePage />} />
@@ -349,7 +358,8 @@ export default function PortalRoutes() {
           />
           <Route path="changes" element={<ChangeRequestsPage />} />
           <Route path="changes/:id" element={<ChangeRequestsPage />} />
-          <Route path="wiki" element={<SectionHub kind="knowledge" />} />
+          <Route path="wiki" element={<LegacyWikiRoute />} />
+          <Route path="assistance" element={<SectionHub kind="assistance" />} />
           <Route path="forum" element={<LegacyForumRoute />} />
           <Route path="files" element={<FilesPage />} />
           <Route path="profile" element={<ProfilePage />} />
@@ -360,7 +370,14 @@ export default function PortalRoutes() {
             path="reset"
             element={<Navigate to="/admin/reset" replace />}
           />
-          <Route path="api/docs" element={<ApiExplorer />} />
+          <Route
+            path="api/docs"
+            element={
+              <SwaggerRoute>
+                <ApiExplorer />
+              </SwaggerRoute>
+            }
+          />
           <Route path="topics" element={<TaxonomyPage />} />
           <Route
             path="availability"

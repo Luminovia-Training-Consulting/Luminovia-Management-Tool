@@ -11,7 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { JSONContent } from "@tiptap/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { WikiPage } from "./wiki";
+import { KnowledgeArticles } from "./articles";
 import { knowledgeKeys } from "./api";
 import { documentText } from "./content";
 import type {
@@ -205,7 +205,7 @@ function view(path = "/wiki?page=wiki-routing") {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <WikiPage />
+        <KnowledgeArticles />
       </MemoryRouter>
     </QueryClientProvider>,
   );

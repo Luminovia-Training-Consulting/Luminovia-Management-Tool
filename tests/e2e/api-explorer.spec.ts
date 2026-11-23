@@ -31,6 +31,38 @@ async function openExplorer(page: Page) {
   ).toBeVisible({ timeout: 40_000 });
 }
 
+test("a failed Swagger import leaves the portal usable and reload recovers", async ({
+  page,
+}) => {
+  const account = await actor("Fictional API recovery lecturer", "lecturer");
+  await login(page, account.email);
+  const explorerModule = /\/portal-explorer(?:-[^/?]+)?\.(?:js|tsx)(?:\?.*)?$/;
+  const abortedModule = page.waitForEvent("requestfailed", {
+    predicate: (request) => explorerModule.test(request.url()),
+  });
+  await page.route(explorerModule, (route) => route.abort());
+
+  await openExplorer(page);
+  await abortedModule;
+  await expect(page.getByRole("alert")).toContainText(
+    "Die API-Dokumentation konnte nicht geladen werden.",
+  );
+  await expect(
+    page.getByRole("link", { name: "OpenAPI JSON" }),
+  ).toHaveAttribute("href", "/api/openapi.json");
+  await expect(page.getByRole("link", { name: "Zum Portal" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+  await expect(page.getByText("Unexpected Application Error!")).toHaveCount(0);
+
+  await page.unroute(explorerModule);
+  await page.getByRole("button", { name: "Seite neu laden" }).click();
+  await expect(
+    page.getByRole("searchbox", { name: "Schnittstellen suchen" }),
+  ).toBeVisible({ timeout: 40_000 });
+});
+
 test("the API explorer executes a documented read only after authorization", async ({
   page,
   request,

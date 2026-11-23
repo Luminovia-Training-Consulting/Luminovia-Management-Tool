@@ -26,7 +26,25 @@ export const unifiedSearchQuery = (
         })
         .abortSignal(signal);
       if (error) throwPagedReadError(error, status);
-      return unifiedSearchPageSchema.parse(data);
+      const page = unifiedSearchPageSchema.parse(data);
+      return {
+        ...page,
+        items: page.items.map((item) => {
+          if (item.kind === "wiki" && item.url.startsWith("/wiki?")) {
+            return {
+              ...item,
+              url: item.url.replace("/wiki?", "/chats/forum?view=articles&"),
+            };
+          }
+          if (item.kind === "forum" && item.url.startsWith("/forum?")) {
+            return {
+              ...item,
+              url: item.url.replace("/forum?", "/chats/forum?"),
+            };
+          }
+          return item;
+        }),
+      };
     },
     getNextPageParam: (page) =>
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
