@@ -25,7 +25,10 @@ vi.mock("../operations/building-blocks", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: mock.rpc,
+    rpc: (name: string, args?: Record<string, unknown>) => {
+      const response = mock.rpc(name, args);
+      return Object.assign(response, { abortSignal: () => response });
+    },
     from: () => ({
       select: () => ({ order: async () => ({ data: [], error: null }) }),
     }),
@@ -83,6 +86,10 @@ beforeEach(async () => {
             },
             error: null,
           };
+        if (name === "job_lifecycle")
+          return { data: { version: 3, claims: [] }, error: null };
+        if (name === "manage_job_offer")
+          return { data: args?.p_job_id, error: null };
         if (name === "course_run_job_defaults")
           return { data: mock.source, error: null };
         if (name === "create_course_run_job")
@@ -150,7 +157,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
       screen.getByRole("button", { name: "Als Entwurf speichern" }),
     );
     expect(
-      await screen.findByText(/Als Entwurf gespeichert\. Öffne den Entwurf/),
+      await screen.findByText(/Als Entwurf gespeichert\. Du kannst/),
     ).toBeVisible();
     const link = screen.getByRole("link", {
       name: "Entwurf öffnen",
@@ -183,8 +190,8 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
   expect(calls[0][1]).not.toHaveProperty("p_platform_percent");
   expect(calls[0][1].p_payload).not.toHaveProperty("customer_name");
   expect(
-    screen.getByRole("button", { name: "Als Entwurf speichern" }),
-  ).toBeDisabled();
+    screen.queryByRole("button", { name: "Als Entwurf speichern" }),
+  ).not.toBeInTheDocument();
 });
 
 it("retains the reviewed source during background changes and shows a stale-preview rejection without losing fee input", async () => {
@@ -283,7 +290,7 @@ it("saves a scoped management override and previews the lecturer fee and platfor
   await user.click(
     screen.getByRole("button", { name: "Als Entwurf speichern" }),
   );
-  await screen.findByText(/Als Entwurf gespeichert\. Öffne den Entwurf/);
+  await screen.findByText(/Als Entwurf gespeichert\. Du kannst/);
   expect(mock.rpc).toHaveBeenCalledWith(
     "create_course_run_job",
     expect.objectContaining({
@@ -311,7 +318,9 @@ it("allows publishing without additional terms and uses a fresh key for an inten
       name: "Weiteren Auftrag für diesen Kurs erstellen",
     }),
   );
-  await user.click(publish);
+  await user.click(
+    screen.getByRole("button", { name: "In der Stellenbörse veröffentlichen" }),
+  );
   await screen.findByText("Auftrag in der Stellenbörse veröffentlicht.");
   const calls = mock.rpc.mock.calls.filter(
     ([name]) => name === "create_course_run_job",
@@ -322,4 +331,30 @@ it("allows publishing without additional terms and uses a fresh key for an inten
     status: "published",
   });
   expect(calls[1][1].p_client_id).not.toBe(calls[0][1].p_client_id);
+});
+
+it("publishes the saved draft using its ID and version without creating another offer", async () => {
+  const user = userEvent.setup();
+  setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Als Entwurf speichern" }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "In der Stellenbörse veröffentlichen",
+    }),
+  );
+  await screen.findByText("Auftrag in der Stellenbörse veröffentlicht.");
+  expect(
+    mock.rpc.mock.calls.filter(([name]) => name === "create_course_run_job"),
+  ).toHaveLength(1);
+  expect(mock.rpc).toHaveBeenCalledWith(
+    "manage_job_offer",
+    expect.objectContaining({
+      p_job_id: "f4f59e7e-30c4-4599-80c3-f53341f45eb4",
+      p_action: "published",
+      p_expected_version: 3,
+      p_payload: {},
+    }),
+  );
 });

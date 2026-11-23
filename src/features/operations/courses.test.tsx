@@ -313,7 +313,7 @@ it("opens the exact course schedule from a blocked deletion and focuses its date
   renderCourses({ runs: [{ ...run, published: true }] });
   await user.click(
     await screen.findByRole("button", {
-      name: `Endgültig löschen: ${template.title}`,
+      name: `Löschen: ${template.title}`,
     }),
   );
   expect(await screen.findByText(/Löschung derzeit gesperrt/)).toBeVisible();

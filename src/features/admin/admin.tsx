@@ -4,6 +4,7 @@
  */
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
+import { PublishOfferDraft } from "../jobs/publish-draft";
 import { OfferBoard } from "../jobs/board";
 import { JobDateRange } from "../jobs/session-range";
 import { resolveJobSessions } from "../jobs/session-schedule";
@@ -116,6 +117,7 @@ function JobForm({
   const client = useQueryClient();
   const [invalidTime, setInvalidTime] = useState(false);
   const [done, setDone] = useState(false);
+  const [publishedDraft, setPublishedDraft] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const {
     register,
@@ -187,6 +189,7 @@ function JobForm({
       requireOnline();
       if (Number.isNaN(percent)) throw new Error("invalid_price");
       setDone(false);
+      setPublishedDraft(false);
       setCreatedId(null);
       setInvalidTime(false);
       const sessions = courseRun
@@ -378,336 +381,342 @@ function JobForm({
           <BuildingBlockReference templateId={courseRun.template_id} />
         </>
       )}
-      {!courseRun && (
-        <>
-          <Field id="job-organisation" label={priceText("existingCustomer")}>
-            <select
-              id="job-organisation"
-              {...register("organisation", {
+      <fieldset className="contents" disabled={Boolean(courseRun && done)}>
+        {!courseRun && (
+          <>
+            <Field id="job-organisation" label={priceText("existingCustomer")}>
+              <select
+                id="job-organisation"
+                {...register("organisation", {
+                  onChange: (event) => {
+                    const selected = organisations.data?.find(
+                      (org) => org.id === event.target.value,
+                    );
+                    setValue("customer_name", selected?.name ?? "", {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  },
+                })}
+              >
+                <option value="">{priceText("newCustomer")}</option>
+                {organisations.data
+                  ?.filter((org) => !org.archived_at)
+                  .map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <div className="form-row">
+              <Field
+                id="job-title"
+                label={t("title")}
+                error={Boolean(errors.title)}
+              >
+                <input id="job-title" {...register("title")} />
+              </Field>
+              <Field
+                id="job-customer"
+                label={t("customer")}
+                error={Boolean(errors.customer_name)}
+              >
+                <input
+                  id="job-customer"
+                  {...register("customer_name")}
+                  readOnly={Boolean(selectedOrganisation)}
+                />
+              </Field>
+            </div>
+            <Field
+              id="job-description"
+              label={t("description")}
+              error={Boolean(errors.description)}
+            >
+              <textarea
+                id="job-description"
+                rows={4}
+                {...register("description")}
+              />
+            </Field>
+            <div className="form-row">
+              <Field id="job-delivery" label={t("delivery")}>
+                <select id="job-delivery" {...register("delivery_type")}>
+                  <option value="online">{t("online")}</option>
+                  <option value="onsite">{t("onsite")}</option>
+                </select>
+              </Field>
+              <Field
+                id="job-location"
+                label={
+                  i18n.language === "de" ? "Ort / Link" : "Location / link"
+                }
+              >
+                <input id="job-location" {...register("location")} />
+              </Field>
+              <Field
+                id="job-zone"
+                label={t("timezone")}
+                error={Boolean(errors.time_zone)}
+              >
+                <input id="job-zone" {...register("time_zone")} />
+              </Field>
+            </div>
+            <fieldset>
+              <legend>{t("sessions")}</legend>
+              <JobDateRange
+                prefix="job"
+                sessions={getValues("sessions")}
+                onApply={replace}
+                disabled={create.isPending}
+              />
+              {fields.map((field, index) => (
+                <div className="session-form-row" key={field.id}>
+                  <Field
+                    id={`session-start-${index}`}
+                    label={`${t("start")} ${index + 1}`}
+                    error={Boolean(errors.sessions?.[index]?.starts_at)}
+                  >
+                    <input
+                      id={`session-start-${index}`}
+                      type="datetime-local"
+                      {...register(`sessions.${index}.starts_at`)}
+                    />
+                  </Field>
+                  <Field
+                    id={`session-end-${index}`}
+                    label={`${t("end")} ${index + 1}`}
+                    error={Boolean(errors.sessions?.[index]?.ends_at)}
+                  >
+                    <input
+                      id={`session-end-${index}`}
+                      type="datetime-local"
+                      {...register(`sessions.${index}.ends_at`)}
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={fields.length < 2}
+                    aria-label={`${t("remove")} ${index + 1}`}
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={fields.length >= 60}
+                onClick={() => append({ starts_at: "", ends_at: "" })}
+              >
+                <Plus size={17} />
+                {t("newSession")}
+              </Button>
+            </fieldset>
+          </>
+        )}
+        <Field
+          id="job-capacity"
+          label={lifeText("positions")}
+          hint={lifeText("perPositionHint")}
+          error={Boolean(errors.capacity)}
+        >
+          <input
+            id="job-capacity"
+            type="number"
+            min="1"
+            max="20"
+            step="1"
+            {...register("capacity", { valueAsNumber: true })}
+          />
+        </Field>
+        {(fullFinance || scopedPricing) && (
+          <CourseCommissionField
+            id="job-course-commission"
+            value={commission}
+            onChange={(value) => {
+              setCommission(value);
+              if (!courseRun) setDone(false);
+            }}
+            netWhenBlank={!fullFinance}
+            disabled={create.isPending}
+          />
+        )}
+        <div className="form-row">
+          <Field
+            id="job-amount"
+            label={gross ? priceText("grossRate") : t("amount")}
+            error={Boolean(errors.amount)}
+          >
+            <input
+              id="job-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              {...register("amount", {
+                valueAsNumber: true,
                 onChange: (event) => {
-                  const selected = organisations.data?.find(
-                    (org) => org.id === event.target.value,
-                  );
-                  setValue("customer_name", selected?.name ?? "", {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
+                  if (getValues("rate_unit") === "fixed_total")
+                    setValue("total_amount", Number(event.target.value));
+                },
+              })}
+            />
+          </Field>
+          <Field id="job-currency" label={t("currency")}>
+            <select id="job-currency" {...register("currency")}>
+              {currencyCodes.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="job-unit" label={t("unit")}>
+            <select
+              id="job-unit"
+              {...register("rate_unit", {
+                onChange: (event) => {
+                  if (event.target.value === "fixed_total")
+                    setValue("amount", getValues("total_amount"));
                 },
               })}
             >
-              <option value="">{priceText("newCustomer")}</option>
-              {organisations.data
-                ?.filter((org) => !org.archived_at)
-                .map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
+              {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
+                (unit) => (
+                  <option key={unit} value={unit}>
+                    {t(unit)}
                   </option>
-                ))}
+                ),
+              )}
             </select>
           </Field>
-          <div className="form-row">
-            <Field
-              id="job-title"
-              label={t("title")}
-              error={Boolean(errors.title)}
-            >
-              <input id="job-title" {...register("title")} />
-            </Field>
-            <Field
-              id="job-customer"
-              label={t("customer")}
-              error={Boolean(errors.customer_name)}
-            >
-              <input
-                id="job-customer"
-                {...register("customer_name")}
-                readOnly={Boolean(selectedOrganisation)}
-              />
-            </Field>
-          </div>
           <Field
-            id="job-description"
-            label={t("description")}
-            error={Boolean(errors.description)}
+            id="job-total"
+            label={gross ? priceText("grossTotal") : t("total")}
+            error={Boolean(errors.total_amount)}
           >
-            <textarea
-              id="job-description"
-              rows={4}
-              {...register("description")}
+            <input
+              id="job-total"
+              type="number"
+              min="0"
+              step="0.01"
+              {...register("total_amount", {
+                valueAsNumber: true,
+                onChange: (event) => {
+                  if (getValues("rate_unit") === "fixed_total")
+                    setValue("amount", Number(event.target.value));
+                },
+              })}
             />
           </Field>
-          <div className="form-row">
-            <Field id="job-delivery" label={t("delivery")}>
-              <select id="job-delivery" {...register("delivery_type")}>
-                <option value="online">{t("online")}</option>
-                <option value="onsite">{t("onsite")}</option>
-              </select>
-            </Field>
-            <Field
-              id="job-location"
-              label={i18n.language === "de" ? "Ort / Link" : "Location / link"}
-            >
-              <input id="job-location" {...register("location")} />
-            </Field>
-            <Field
-              id="job-zone"
-              label={t("timezone")}
-              error={Boolean(errors.time_zone)}
-            >
-              <input id="job-zone" {...register("time_zone")} />
-            </Field>
-          </div>
-          <fieldset>
-            <legend>{t("sessions")}</legend>
-            <JobDateRange
-              prefix="job"
-              sessions={getValues("sessions")}
-              onApply={replace}
-              disabled={create.isPending}
+        </div>
+        {Number.isFinite(Number(watchedCapacity)) &&
+          Number(watchedCapacity) >= 1 &&
+          Number.isFinite(Number(watchedTotal)) && (
+            <p className="job-life-budget">
+              <strong>
+                {lifeText(gross ? "maxGrossBudget" : "maxNetBudget")}:{" "}
+                {money(
+                  (Math.round(Number(watchedTotal) * 100) *
+                    Number(watchedCapacity)) /
+                    100,
+                  watchedCurrency,
+                  i18n.language,
+                )}
+              </strong>
+            </p>
+          )}
+        {gross && (
+          <>
+            <RoleFeePreview
+              gross={Number(watchedTotal)}
+              grossRate={watchedRate}
+              access={pricing.data}
+              currency={watchedCurrency}
+              platformPercent={percent}
             />
-            {fields.map((field, index) => (
-              <div className="session-form-row" key={field.id}>
-                <Field
-                  id={`session-start-${index}`}
-                  label={`${t("start")} ${index + 1}`}
-                  error={Boolean(errors.sessions?.[index]?.starts_at)}
-                >
-                  <input
-                    id={`session-start-${index}`}
-                    type="datetime-local"
-                    {...register(`sessions.${index}.starts_at`)}
-                  />
-                </Field>
-                <Field
-                  id={`session-end-${index}`}
-                  label={`${t("end")} ${index + 1}`}
-                  error={Boolean(errors.sessions?.[index]?.ends_at)}
-                >
-                  <input
-                    id={`session-end-${index}`}
-                    type="datetime-local"
-                    {...register(`sessions.${index}.ends_at`)}
-                  />
-                </Field>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={fields.length < 2}
-                  aria-label={`${t("remove")} ${index + 1}`}
-                  onClick={() => remove(index)}
-                >
-                  <Trash2 size={18} />
-                </Button>
-              </div>
-            ))}
+            <p className="muted commercial-small">
+              {priceText("splitHint")} {priceText("feeBasis")}
+            </p>
+          </>
+        )}
+        <Field
+          id="job-terms"
+          label={courseRun ? courseText("optionalTerms") : t("terms")}
+          error={Boolean(errors.terms)}
+          hint={courseRun ? undefined : t("totalHint")}
+        >
+          <textarea id="job-terms" rows={4} {...register("terms")} />
+        </Field>
+        {!courseRun && (
+          <details className="offer-topic-picker">
+            <summary>
+              {t("requirements")} ({selectedTopicIds.length})
+            </summary>
+            <div className="offer-topic-options">
+              {selectableTopics(topics.data ?? [], selectedTopicIds).map(
+                (topic) => (
+                  <label key={topic.id} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value={topic.id}
+                      {...register("topic_ids")}
+                    />
+                    {i18n.language === "de" ? topic.label_de : topic.label_en}
+                    {topic.archived_at &&
+                      ` (${i18n.getFixedT(i18n.language, "taxonomy")("archived")})`}
+                  </label>
+                ),
+              )}
+            </div>
+          </details>
+        )}
+        <Field
+          id="job-claim-deadline"
+          label={`${lifeText("deadline")} · ${valuesTimeZone}`}
+          hint={lifeText("deadlineZone")}
+          error={Boolean(errors.claim_deadline)}
+        >
+          <input
+            id="job-claim-deadline"
+            type="datetime-local"
+            {...register("claim_deadline")}
+          />
+        </Field>
+        <label className="checkbox-label">
+          <input type="checkbox" {...register("requires_contract")} />
+          {t("contractRequired")}
+        </label>
+      </fieldset>
+      {courseRun ? (
+        !done && (
+          <div className="form-actions">
             <Button
               type="button"
-              variant="secondary"
-              disabled={fields.length >= 60}
-              onClick={() => append({ starts_at: "", ends_at: "" })}
-            >
-              <Plus size={17} />
-              {t("newSession")}
-            </Button>
-          </fieldset>
-        </>
-      )}
-      <Field
-        id="job-capacity"
-        label={lifeText("positions")}
-        hint={lifeText("perPositionHint")}
-        error={Boolean(errors.capacity)}
-      >
-        <input
-          id="job-capacity"
-          type="number"
-          min="1"
-          max="20"
-          step="1"
-          {...register("capacity", { valueAsNumber: true })}
-        />
-      </Field>
-      {(fullFinance || scopedPricing) && (
-        <CourseCommissionField
-          id="job-course-commission"
-          value={commission}
-          onChange={(value) => {
-            setCommission(value);
-            if (!courseRun) setDone(false);
-          }}
-          netWhenBlank={!fullFinance}
-          disabled={create.isPending}
-        />
-      )}
-      <div className="form-row">
-        <Field
-          id="job-amount"
-          label={gross ? priceText("grossRate") : t("amount")}
-          error={Boolean(errors.amount)}
-        >
-          <input
-            id="job-amount"
-            type="number"
-            min="0"
-            step="0.01"
-            {...register("amount", {
-              valueAsNumber: true,
-              onChange: (event) => {
-                if (getValues("rate_unit") === "fixed_total")
-                  setValue("total_amount", Number(event.target.value));
-              },
-            })}
-          />
-        </Field>
-        <Field id="job-currency" label={t("currency")}>
-          <select id="job-currency" {...register("currency")}>
-            {currencyCodes.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="job-unit" label={t("unit")}>
-          <select
-            id="job-unit"
-            {...register("rate_unit", {
-              onChange: (event) => {
-                if (event.target.value === "fixed_total")
-                  setValue("amount", getValues("total_amount"));
-              },
-            })}
-          >
-            {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
-              (unit) => (
-                <option key={unit} value={unit}>
-                  {t(unit)}
-                </option>
-              ),
-            )}
-          </select>
-        </Field>
-        <Field
-          id="job-total"
-          label={gross ? priceText("grossTotal") : t("total")}
-          error={Boolean(errors.total_amount)}
-        >
-          <input
-            id="job-total"
-            type="number"
-            min="0"
-            step="0.01"
-            {...register("total_amount", {
-              valueAsNumber: true,
-              onChange: (event) => {
-                if (getValues("rate_unit") === "fixed_total")
-                  setValue("amount", Number(event.target.value));
-              },
-            })}
-          />
-        </Field>
-      </div>
-      {Number.isFinite(Number(watchedCapacity)) &&
-        Number(watchedCapacity) >= 1 &&
-        Number.isFinite(Number(watchedTotal)) && (
-          <p className="job-life-budget">
-            <strong>
-              {lifeText(gross ? "maxGrossBudget" : "maxNetBudget")}:{" "}
-              {money(
-                (Math.round(Number(watchedTotal) * 100) *
-                  Number(watchedCapacity)) /
-                  100,
-                watchedCurrency,
-                i18n.language,
+              disabled={
+                !online || Number.isNaN(percent) || create.isPending || done
+              }
+              onClick={handleSubmit((values) =>
+                create.mutate({ ...values, publish: true }),
               )}
-            </strong>
-          </p>
-        )}
-      {gross && (
-        <>
-          <RoleFeePreview
-            gross={Number(watchedTotal)}
-            grossRate={watchedRate}
-            access={pricing.data}
-            currency={watchedCurrency}
-            platformPercent={percent}
-          />
-          <p className="muted commercial-small">
-            {priceText("splitHint")} {priceText("feeBasis")}
-          </p>
-        </>
-      )}
-      <Field
-        id="job-terms"
-        label={courseRun ? courseText("optionalTerms") : t("terms")}
-        error={Boolean(errors.terms)}
-        hint={courseRun ? undefined : t("totalHint")}
-      >
-        <textarea id="job-terms" rows={4} {...register("terms")} />
-      </Field>
-      {!courseRun && (
-        <details className="offer-topic-picker">
-          <summary>
-            {t("requirements")} ({selectedTopicIds.length})
-          </summary>
-          <div className="offer-topic-options">
-            {selectableTopics(topics.data ?? [], selectedTopicIds).map(
-              (topic) => (
-                <label key={topic.id} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={topic.id}
-                    {...register("topic_ids")}
-                  />
-                  {i18n.language === "de" ? topic.label_de : topic.label_en}
-                  {topic.archived_at &&
-                    ` (${i18n.getFixedT(i18n.language, "taxonomy")("archived")})`}
-                </label>
-              ),
-            )}
+            >
+              {courseText("publishOffer")}
+            </Button>
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={
+                !online || Number.isNaN(percent) || create.isPending || done
+              }
+            >
+              {courseText("saveOfferDraft")}
+            </Button>
           </div>
-        </details>
-      )}
-      <Field
-        id="job-claim-deadline"
-        label={`${lifeText("deadline")} · ${valuesTimeZone}`}
-        hint={lifeText("deadlineZone")}
-        error={Boolean(errors.claim_deadline)}
-      >
-        <input
-          id="job-claim-deadline"
-          type="datetime-local"
-          {...register("claim_deadline")}
-        />
-      </Field>
-      <label className="checkbox-label">
-        <input type="checkbox" {...register("requires_contract")} />
-        {t("contractRequired")}
-      </label>
-      {courseRun ? (
-        <div className="form-actions">
-          <Button
-            type="button"
-            disabled={
-              !online || Number.isNaN(percent) || create.isPending || done
-            }
-            onClick={handleSubmit((values) =>
-              create.mutate({ ...values, publish: true }),
-            )}
-          >
-            {courseText("publishOffer")}
-          </Button>
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={
-              !online || Number.isNaN(percent) || create.isPending || done
-            }
-          >
-            {courseText("saveOfferDraft")}
-          </Button>
-        </div>
+        )
       ) : (
         <>
           <label className="checkbox-label">
@@ -743,7 +752,7 @@ function JobForm({
         <Notice>
           {courseRun
             ? courseText(
-                create.variables?.publish
+                create.variables?.publish || publishedDraft
                   ? "publishedOffer"
                   : "savedOfferDraft",
               )
@@ -752,6 +761,12 @@ function JobForm({
       )}
       {createdId && (
         <div className="form-actions">
+          {courseRun && !create.variables?.publish && !publishedDraft && (
+            <PublishOfferDraft
+              jobId={createdId}
+              onPublished={() => setPublishedDraft(true)}
+            />
+          )}
           {done && courseRun && (
             <Button
               type="button"
@@ -759,6 +774,7 @@ function JobForm({
               onClick={() => {
                 retry.clear();
                 setDone(false);
+                setPublishedDraft(false);
                 setCreatedId(null);
                 setValue("publish", false);
               }}
@@ -769,7 +785,7 @@ function JobForm({
           <Button asChild variant="secondary">
             <Link to={`/jobs/${createdId}`}>
               {courseText(
-                courseRun && !create.variables?.publish
+                courseRun && !create.variables?.publish && !publishedDraft
                   ? "openOfferDraft"
                   : "openJob",
               )}

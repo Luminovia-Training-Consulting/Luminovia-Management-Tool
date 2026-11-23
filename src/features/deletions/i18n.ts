@@ -153,6 +153,8 @@ const pairs: Record<string, [string, string]> = {
     "This list contains only jobs belonging to your current company memberships.",
   ],
   action: ["Endgültig löschen", "Delete permanently"],
+  shortAction: ["Löschen", "Delete"],
+  shortActionNamed: ["Löschen: {{name}}", "Delete: {{name}}"],
   actionNamed: ["Endgültig löschen: {{name}}", "Delete permanently: {{name}}"],
   irreversible: [
     "Diese Löschung ist unwiderruflich. Es gibt keinen Papierkorb und keine Wiederherstellung.",

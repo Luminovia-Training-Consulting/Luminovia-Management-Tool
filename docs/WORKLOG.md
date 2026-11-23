@@ -1,3 +1,7 @@
+# 23 November 2026 — Resume and publish saved course offers
+
+Saved course runs link back to their detail after the list refreshes. A saved offer draft can be published directly from its receipt or course card using the existing versioned mutation. Publication reuses the saved settings and offer ID. Course deletion uses a shorter action label and retains its explicit permanent confirmation.
+
 # 23 November 2026 — USD commercial currency
 
 USD is available alongside EUR and AUD for offers, company requests, lecturer compensation, invoicing and settlement. The catalogue filters, Swagger contracts and finance reports use the same supported currencies. Financial totals remain separate by original currency.

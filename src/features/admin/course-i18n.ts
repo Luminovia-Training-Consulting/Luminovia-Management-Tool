@@ -13,8 +13,7 @@ const en = {
   publishOffer: "Publish in the marketplace",
   saveOfferDraft: "Save as draft",
   publishedOffer: "Offer published in the marketplace.",
-  savedOfferDraft:
-    "Saved as a draft. Open it and select Publish to list it in the marketplace.",
+  savedOfferDraft: "Saved as a draft. Open the saved offer or publish it now.",
   openOfferDraft: "Open draft",
   sourceChanged:
     "The course changed since this preview. Review the current course and reopen its teaching-offer form.",
@@ -34,7 +33,7 @@ const de: typeof en = {
   saveOfferDraft: "Als Entwurf speichern",
   publishedOffer: "Auftrag in der Stellenbörse veröffentlicht.",
   savedOfferDraft:
-    "Als Entwurf gespeichert. Öffne den Entwurf und wähle dort „Veröffentlichen“.",
+    "Als Entwurf gespeichert. Du kannst den gespeicherten Auftrag jetzt öffnen oder direkt veröffentlichen.",
   openOfferDraft: "Entwurf öffnen",
   sourceChanged:
     "Der Kurs wurde seit dieser Vorschau geändert. Prüfe den aktuellen Kurs und öffne sein Auftragsformular erneut.",

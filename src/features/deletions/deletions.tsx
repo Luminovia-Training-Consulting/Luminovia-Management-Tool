@@ -136,7 +136,10 @@ function OperationReceipts({
 }
 
 /** Render a contextual action only under a current server-provided deletion capability. */
-export function PermanentDeleteAction(target: Target) {
+export function PermanentDeleteAction({
+  shortLabel,
+  ...target
+}: Target & { shortLabel?: boolean }) {
   const { kind, id } = target;
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -153,12 +156,12 @@ export function PermanentDeleteAction(target: Target) {
         type="button"
         variant="danger"
         disabled={!online}
-        aria-label={t("actionNamed", {
+        aria-label={t(shortLabel ? "shortActionNamed" : "actionNamed", {
           name: targetLabel(target, t),
         })}
         onClick={() => (launch ? launch(target) : setLocal(actor))}
       >
-        {t("action")}
+        {t(shortLabel ? "shortAction" : "action")}
       </Button>
       {local === actor && (
         <AuthorizedDialog

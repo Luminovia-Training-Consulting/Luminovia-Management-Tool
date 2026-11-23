@@ -11,6 +11,7 @@ import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
 import { ResourceComments } from "../comments/comments";
 import { changeCandidatesQuery } from "../changes/api";
+import { PublishOfferDraft } from "../jobs/publish-draft";
 import { lifecycleQuery, refreshJobState } from "../jobs/lifecycle-api";
 import { TimeZoneOptions } from "../../components/time-zone-options";
 import {
@@ -332,7 +333,11 @@ function RunForm({
   focusSchedule: boolean;
   blocks: BuildingBlock[];
   canPrepareOffer: boolean;
-  onDone: (result: "template" | "run", offerRun?: string) => void;
+  onDone: (
+    result: "template" | "run",
+    offerRun?: string,
+    savedRun?: string,
+  ) => void;
   onBusy: (busy: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("operations");
@@ -664,10 +669,15 @@ function RunForm({
       return {
         kind: "run",
         offerRun: intent.offer && typeof data === "string" ? data : undefined,
+        savedRun: typeof data === "string" ? data : undefined,
       } as const;
     },
     onSuccess: (result) => {
-      onDone(result.kind, result.kind === "run" ? result.offerRun : undefined);
+      onDone(
+        result.kind,
+        result.kind === "run" ? result.offerRun : undefined,
+        result.kind === "run" ? result.savedRun : undefined,
+      );
       if (linked) void refreshJobState(client);
       else void client.invalidateQueries({ queryKey: ["operations"] });
     },
@@ -1193,6 +1203,7 @@ export function CoursesPage() {
   }>();
   const [copyTitle, setCopyTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [savedRun, setSavedRun] = useState<string>();
   const visibility = useMutation({
     mutationFn: async ({
       run,
@@ -1499,7 +1510,19 @@ export function CoursesPage() {
           )}
         </p>
       </section>
-      {message && <Notice>{message}</Notice>}
+      {message && (
+        <Notice>
+          {message}
+          {savedRun && runs.data.some(({ id }) => id === savedRun) && (
+            <>
+              {" "}
+              <Link to={`/courses?run=${encodeURIComponent(savedRun)}`}>
+                {t("openSavedRun")}
+              </Link>
+            </>
+          )}
+        </Notice>
+      )}
       {visibility.isError && (
         <Notice kind="error">
           {t(visibility.error.message === "course_locked" ? "locked" : "error")}
@@ -1580,9 +1603,14 @@ export function CoursesPage() {
                     {jobs
                       .filter(({ status }) => status === "draft")
                       .map((job) => (
-                        <Link key={job.id} to={`/jobs/${job.id}`}>
-                          {t("openMarketplaceDraft", { title: job.title })}
-                        </Link>
+                        <div key={job.id} className="operations-actions">
+                          <Link to={`/jobs/${job.id}`}>
+                            {t("openMarketplaceDraft", { title: job.title })}
+                          </Link>
+                          {canPrepareOffer && (
+                            <PublishOfferDraft jobId={job.id} />
+                          )}
+                        </div>
                       ))}
                   </div>
                 )}
@@ -1680,6 +1708,7 @@ export function CoursesPage() {
                       {t("duplicate")}
                     </Button>
                     <PermanentDeleteAction
+                      shortLabel
                       kind="course_run"
                       id={run.id}
                       label={template?.title ?? t("courses")}
@@ -1826,8 +1855,9 @@ export function CoursesPage() {
           blocks={blocks.data ?? []}
           canPrepareOffer={canPrepareOffer}
           onBusy={setRunSaving}
-          onDone={(result, offerRun) => {
+          onDone={(result, offerRun, savedId) => {
             setRunEdit(undefined);
+            setSavedRun(savedId);
             if (offerRun) {
               navigate(`/admin?courseRun=${encodeURIComponent(offerRun)}`);
               return;
@@ -1887,6 +1917,7 @@ export function CoursesPage() {
                 )}
                 {manage && (
                   <PermanentDeleteAction
+                    shortLabel
                     kind="course_template"
                     id={templateDetail.id}
                     label={templateDetail.title}
@@ -1989,6 +2020,7 @@ export function CoursesPage() {
                 </>
               )}
               <PermanentDeleteAction
+                shortLabel
                 kind="course_run"
                 id={detail.id}
                 label={findTemplate(detail)?.title ?? t("courses")}

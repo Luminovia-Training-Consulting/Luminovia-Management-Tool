@@ -621,6 +621,7 @@ const pairs: Record<string, [string, string]> = {
   edit: ["Bearbeiten", "Edit"],
   save: ["Speichern", "Save"],
   saved: ["Gespeichert.", "Saved."],
+  openSavedRun: ["Durchführung öffnen", "Open course run"],
   error: [
     "Die Änderung konnte nicht gespeichert werden. Bitte prüfe deine Angaben und versuche es erneut.",
     "The change could not be saved. Check your input and try again.",
