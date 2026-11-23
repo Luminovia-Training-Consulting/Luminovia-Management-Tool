@@ -5,9 +5,8 @@
 import {spawn} from "node:child_process";
 import {appendFileSync, existsSync} from "node:fs";
 import {join} from "node:path";
-import {createServer} from "node:net";
 import {cleanEnvironment, command, localEdgeOrigins, migrationDigest, privateDirectory, privateWrite, projectConfig, readEnvFile, redact, root, runtimeDir, runtimeVersion, supabase, waitForHttp, writeState,} from "./runtime-lib.mjs";
-import {ensureLoopbackNetwork, removeLoopbackNetwork, stackNeedsNetworkMigration, verifyLoopbackBindings,} from "./runtime-network.mjs";
+import {assertLocalPortalPortAvailable, assertNoRunningProject, ensureLoopbackNetwork, removeLoopbackNetwork, stackNeedsNetworkMigration, verifyLoopbackBindings,} from "./runtime-network.mjs";
 import {ensureLocalAccounts} from "./local-bootstrap.mjs";
 
 const session = process.argv[2];
@@ -48,23 +47,8 @@ function stage(message) {
     state({message});
 }
 
-/** Checks a local port before startup without terminating an existing listener. */
-async function available(port) {
-    await new Promise((resolve, reject) => {
-        const server = createServer();
-        server.once("error", () =>
-            reject(
-                new Error(
-                    `Port ${port} is already in use; unrelated processes will not be stopped.`,
-                ),
-            ),
-        );
-        server.listen(port, "127.0.0.1", () => server.close(resolve));
-    });
-}
-
 /** Stops owned children/services through their cleanup path, then writes the terminal state. */
-async function stop(exitCode = 0) {
+async function stop(exitCode = 0, failureMessage) {
     if (stopping) return;
     stopping = true;
     phase = "stopping";
@@ -107,7 +91,7 @@ async function stop(exitCode = 0) {
     phase = exitCode ? "failed" : "stopped";
     state({
         message: exitCode
-            ? "Startup or shutdown failed; check the private runtime log."
+            ? failureMessage ?? "Startup or shutdown failed; check the private runtime log."
             : "Stopped. Database, Auth and Storage are preserved.",
     });
     process.exit(exitCode);
@@ -141,7 +125,8 @@ function background(file, args, env) {
 
 try {
     state({message: "Starting local Supabase services …"});
-    await available(Number(new URL(config.site).port));
+    await assertLocalPortalPortAvailable(config.site);
+    await assertNoRunningProject(config.id);
     stage("Starting PostgreSQL, Auth, Storage, Realtime and local Mailpit …");
     migrations = migrationDigest();
     network = await ensureLoopbackNetwork(config.id);
@@ -264,5 +249,6 @@ try {
     });
 } catch (error) {
     log(`ERROR: ${error.message}\n`);
-    await stop(1);
+    const actionable = ["PORTAL_BIND_FAILED", "PORTAL_PROJECT_RUNNING"].includes(error.code);
+    await stop(1, actionable ? error.message : undefined);
 }

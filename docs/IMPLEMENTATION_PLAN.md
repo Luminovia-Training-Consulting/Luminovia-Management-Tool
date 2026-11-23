@@ -4,6 +4,10 @@
 - [x] Let management assign company, participant and lecturer roles to eligible accounts and bind the selected organisation with company role changes. Make the own-profile expertise picker a bounded, responsive scroll area.
 - [x] Let internal management select a searchable company and class when creating a participant or adding their role. Let company contacts select the class when inviting a participant and change it on an active membership. Preserve company consent, course enrolment boundaries and current membership versions.
 
+## Local launcher
+
+- [x] Detect a busy frontend port and an already-running local project before installing dependencies. Report the conflicting port or project and preserve the existing local stack during checkout handoffs.
+
 ## Automatic updates on KVM 1
 
 - [x] Restore the existing five-minute systemd timer on the rebuilt instance and match the GitHub public build configuration to the deployed key and API origin.

@@ -8,7 +8,7 @@ import {join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {setTimeout as delay} from "node:timers/promises";
 import {assertLocalDocker, cleanEnvironment, command, ensureDependencies, migrationDigest, privateDirectory, processIsOurs, projectConfig, readState, root, runtimeDir, runtimeVersion, supabase, writeState,} from "./runtime-lib.mjs";
-import {removeLoopbackNetwork, verifyLoopbackBindings,} from "./runtime-network.mjs";
+import {assertLocalPortalPortAvailable, assertNoRunningProject, removeLoopbackNetwork, verifyLoopbackBindings,} from "./runtime-network.mjs";
 
 const action = process.argv[2] ?? "start";
 if (process.platform !== "linux" && !["help", "--help", "-h"].includes(action))
@@ -89,8 +89,13 @@ async function start() {
     if (major < 22 || (major === 22 && minor < 12))
         throw new Error("Node.js >=22.12 is required.");
     const dockerHost = await assertLocalDocker({startService: true});
-    await ensureDependencies();
     const existing = readState();
+    if (!processIsOurs(existing)) {
+        const config = projectConfig();
+        await assertLocalPortalPortAvailable(config.site);
+        await assertNoRunningProject(config.id);
+    }
+    await ensureDependencies();
     if (processIsOurs(existing)) {
         if (existing.phase === "ready") {
             if (
@@ -186,6 +191,7 @@ async function stop({ report = true } = {}) {
                 "Data-preserving shutdown was not confirmed; check .local/runtime.log.",
             );
     } else {
+        await assertNoRunningProject(projectConfig().id);
         await ensureDependencies();
         if (existsSync(join(root, "scripts/local-scanner.mjs")))
             await command(process.execPath, ["scripts/local-scanner.mjs", "stop"], {

@@ -1,18 +1,21 @@
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
 import {copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {createServer} from "node:net";
+import {once} from "node:events";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {test} from "node:test";
 import {root} from "./runtime-lib.mjs";
 
-function launch(t, {endpoint = "unix:///var/run/docker.sock", initial = "offline", service = "ready"} = {}) {
+function launch(t, {endpoint = "unix:///var/run/docker.sock", initial = "offline", service = "ready", port = 0, foreignProject = false, action = "start"} = {}) {
     const checkout = mkdtempSync(join(tmpdir(), "portal-first-start-"));
     t.after(() => rmSync(checkout, {recursive: true, force: true}));
-    for (const directory of ["bin", "scripts"]) mkdirSync(join(checkout, directory));
+    for (const directory of ["bin", "scripts", "supabase"]) mkdirSync(join(checkout, directory));
     for (const file of ["portal", "package.json", "package-lock.json", "scripts/runtime-cli.mjs", "scripts/runtime-lib.mjs", "scripts/runtime-network.mjs"]) {
         copyFileSync(join(root, file), join(checkout, file));
     }
+    writeFileSync(join(checkout, "supabase/config.toml"), `project_id = "luminovia-portal"\n[auth]\nsite_url = "http://127.0.0.1:${port}"\n`);
     const trace = join(checkout, "trace");
     writeFileSync(trace, "");
     const ready = join(checkout, "ready");
@@ -20,6 +23,11 @@ function launch(t, {endpoint = "unix:///var/run/docker.sock", initial = "offline
         docker: `
 if [ "$1" = context ]; then
     echo "$FIXTURE_ENDPOINT"
+    exit 0
+fi
+if [ "$1" = ps ]; then
+    echo "docker ps" >> "$FIXTURE_TRACE"
+    if [ "$FIXTURE_FOREIGN_PROJECT" = true ]; then echo supabase_edge_runtime_luminovia-portal; fi
     exit 0
 fi
 echo "docker info" >> "$FIXTURE_TRACE"
@@ -54,9 +62,10 @@ exit 77`,
         FIXTURE_INITIAL: initial,
         FIXTURE_SERVICE: service,
         FIXTURE_TRACE: trace,
+        FIXTURE_FOREIGN_PROJECT: String(foreignProject),
         FIXTURE_READY: ready,
     };
-    const result = spawnSync("./portal", ["start"], {cwd: checkout, env, encoding: "utf8", timeout: 20_000});
+    const result = spawnSync("./portal", [action], {cwd: checkout, env, encoding: "utf8", timeout: 20_000});
     assert.ifError(result.error);
     assert.equal(result.status, 1);
     return {
@@ -67,17 +76,17 @@ exit 77`,
 
 test("a fresh ZIP starts the default Docker service and rechecks it before npm ci", (t) => {
     const {calls, output} = launch(t);
-    assert.deepEqual(calls, ["docker info", "systemctl --no-ask-password start docker.service", "docker info", "npm ci"]);
+    assert.deepEqual(calls, ["docker info", "systemctl --no-ask-password start docker.service", "docker info", "docker ps", "npm ci"]);
     assert.match(output, /Fixture reached dependency installation/);
 });
 
 test("a running Docker service requires no system action", (t) => {
-    assert.deepEqual(launch(t, {initial: "ready"}).calls, ["docker info", "npm ci"]);
+    assert.deepEqual(launch(t, {initial: "ready"}).calls, ["docker info", "docker ps", "npm ci"]);
 });
 
 test("a timed-out Docker probe retries before changing services or installing dependencies", (t) => {
     const {calls, output} = launch(t, {initial: "slow"});
-    assert.deepEqual(calls, ["docker info", "docker info", "npm ci"]);
+    assert.deepEqual(calls, ["docker info", "docker info", "docker ps", "npm ci"]);
     assert.match(output, /Fixture reached dependency installation/);
 });
 
@@ -100,4 +109,25 @@ test("a remote Docker context is rejected before probing or installing anything"
     const {calls, output} = launch(t, {endpoint: "ssh://example.invalid"});
     assert.deepEqual(calls, []);
     assert.match(output, /refuses a remote Docker context/);
+});
+
+test("a fresh ZIP reports the actual occupied port and leaves the listener in place", async (t) => {
+    const listener = createServer();
+    listener.listen(0, "127.0.0.1");
+    await once(listener, "listening");
+    t.after(() => listener.close());
+    const {port} = listener.address();
+    const {output, calls} = launch(t, {initial: "ready", port});
+    assert.match(output, new RegExp(`Local portal port ${port} is already in use`));
+    assert.match(output, /run \.\/portal stop in that checkout/);
+    assert.deepEqual(calls, ["docker info"]);
+    assert.equal(listener.listening, true);
+});
+
+test("another checkout's running project prevents start, stop and restart before dependency or service changes", (t) => {
+    for (const action of ["start", "stop", "restart"]) {
+        const {output, calls} = launch(t, {initial: "ready", foreignProject: true, action});
+        assert.match(output, /Local project luminovia-portal is already running/);
+        assert.deepEqual(calls, ["docker info", "docker ps"]);
+    }
 });

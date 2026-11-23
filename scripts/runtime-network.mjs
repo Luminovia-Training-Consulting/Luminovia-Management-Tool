@@ -2,7 +2,8 @@
  * Ownership-checked Docker network management for the local Supabase runtime.
  * Published service ports must remain on loopback; unrelated networks are not changed.
  */
-import {command} from "./runtime-lib.mjs";
+import {createServer} from "node:net";
+import {command, localUrl} from "./runtime-lib.mjs";
 
 const ownerLabel = "org.luminovia.portal";
 const purposeLabel = "org.luminovia.portal.network";
@@ -15,6 +16,38 @@ export function networkName(project) {
             "A safe local project ID is required for the Docker network.",
         );
     return `portal_network_${project}`;
+}
+
+const otherCheckoutHelp = "If another Luminovia checkout is running, run ./portal stop in that checkout, then retry here. Use ./portal github for a separate preview.";
+
+export async function assertLocalPortalPortAvailable(site) {
+    const port = Number(localUrl(site, "Portal URL").port || 80);
+    await new Promise((resolve, reject) => {
+        const server = createServer();
+        server.once("error", (cause) => {
+            const message = cause.code === "EADDRINUSE"
+                ? `Local portal port ${port} is already in use. ${otherCheckoutHelp}`
+                : `Cannot bind local portal port ${port} (${cause.code ?? "unknown error"}).`;
+            reject(Object.assign(new Error(message, {cause}), {code: "PORTAL_BIND_FAILED"}));
+        });
+        server.listen(port, "127.0.0.1", () => server.close(resolve));
+    });
+}
+
+/** Detects a fully started local project even if the other checkout uses a different browser port. */
+export async function assertNoRunningProject(project) {
+    networkName(project);
+    const edge = `supabase_edge_runtime_${project}`;
+    const running = await command(
+        "docker",
+        ["ps", "--filter", `name=^/${edge}$`, "--format", "{{.Names}}"],
+        {quiet: true, timeoutMs: 10000},
+    );
+    if (running.trim().split("\n").includes(edge))
+        throw Object.assign(
+            new Error(`Local project ${project} is already running. ${otherCheckoutHelp}`),
+            {code: "PORTAL_PROJECT_RUNNING"},
+        );
 }
 
 /** Checks ownership labels, bridge driver and loopback-only publishing before changing a network. */

@@ -1,3 +1,9 @@
+# 23 November 2026 — Downloaded source startup conflict
+
+The downloaded source failed before starting database services because an existing checkout owned port 5173. The launcher reports the occupied frontend port or the active local project directly before dependency installation. The fallback stop path refuses a running project without its local supervisor. No process or database reset is attempted when a conflicting start is refused.
+
+Reproduced the conflict with the actual Downloads checkout and checked that the first instance stayed available. Stopped it through its own launcher, then started the Downloads copy against the same local Docker project and volumes. The new copy completed migration, scanner, Edge Functions and Vite readiness. The login route returned HTTP 200 and a repeated start reused the running supervisor.
+
 # 23 November 2026 — Publish and install main updates without waiting for CI
 
 Changed the CMS delivery policy at the user's explicit request: every exact-current `main` push now runs the production typecheck/build and creates an immutable package without waiting for Portal or Security CI. The KVM updater no longer queries CI status; it still requires the exact current-main SHA, immutable tag and manifest, complete archive/member hashes, pinned runtime identity, compatible migration history, backup/checkpoint, health and rollback checks. The separate manual release workflow retains its full CI gates.
