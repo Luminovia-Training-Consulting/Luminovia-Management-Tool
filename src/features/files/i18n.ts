@@ -29,6 +29,14 @@ const pairs: Record<string, [string, string]> = {
     "PDF, Bilder, TXT und Office-Dateien · bis 100 MiB. Jede Datei wird vor der Freigabe geprüft.",
     "PDF, images, TXT and Office files · up to 100 MiB. Every file is scanned before release.",
   ],
+  sourceTypes: [
+    "Nur die Original-PDF mit der Prüfsumme dieser Quelle. Die Datei wird vor der Freigabe geprüft.",
+    "Use the original PDF matching this source checksum. The file is scanned before release.",
+  ],
+  source_mismatch: [
+    "Diese PDF gehört zu einer anderen Dateiversion. Wähle die Originaldatei dieser Quelle.",
+    "This PDF is a different revision. Choose the original file for this source.",
+  ],
   scope: ["Freigabe", "Sharing"],
   personal: ["Nur persönlich", "Personal only"],
   room: ["Chat-Mitglieder", "Chat members"],

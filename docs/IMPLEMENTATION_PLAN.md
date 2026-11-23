@@ -5,6 +5,7 @@
 - [x] Let internal management select a searchable company and class when creating a participant or adding their role. Let company contacts select the class when inviting a participant and change it on an active membership. Preserve company consent, course enrolment boundaries and current membership versions.
 - [x] Download an authorised original PDF or other scanned job attachment directly from the job by its filename.
 - [x] Preserve saved mail transport settings and support an SMTP test message to the administrator’s confirmed account address.
+- [x] Let job managers attach a missing original PDF at the source reference with exact digest validation and explicit visibility.
 
 ## Local launcher
 

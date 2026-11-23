@@ -11,6 +11,7 @@ import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
 import { saveDownload } from "../files/api";
+import { FileUpload } from "../files/files";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, Notice } from "../../components/common";
 import {
@@ -28,11 +29,13 @@ export function BuildingBlockReference({
   sourceId,
   templateId,
   jobId,
+  canManageJobSource,
 }: {
   buildingBlockId?: string | null;
   sourceId?: string | null;
   templateId?: string;
   jobId?: string;
+  canManageJobSource?: boolean;
 }) {
   const { session } = useAuth();
   const reference = useQuery({
@@ -74,12 +77,19 @@ export function BuildingBlockReference({
       block={block}
       sourceId={selectedSourceId}
       jobId={jobId}
+      canManageJobSource={canManageJobSource}
     />
   ) : null;
 }
 
 /** Read one job's protected source chain and render it only when a reference exists. */
-export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
+export function JobBuildingBlockReference({
+  jobId,
+  canManage,
+}: {
+  jobId: string;
+  canManage: boolean;
+}) {
   const { session } = useAuth();
   const reference = useQuery(jobBuildingBlockQuery(session!.user.id, jobId));
   if (reference.isPending) return <Loading />;
@@ -90,6 +100,7 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
       buildingBlockId={reference.data.building_block_id}
       sourceId={reference.data.source_id}
       jobId={jobId}
+      canManageJobSource={canManage}
     />
   ) : null;
 }
@@ -99,10 +110,12 @@ export function BuildingBlockSources({
   block,
   sourceId,
   jobId,
+  canManageJobSource = false,
 }: {
   block: BuildingBlock;
   sourceId?: string | null;
   jobId?: string;
+  canManageJobSource?: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const date = (value: string) =>
@@ -141,7 +154,11 @@ export function BuildingBlockSources({
         {sources.map((source: BuildingBlockSource) => (
           <li key={source.id}>
             {jobId ? (
-              <JobSourceDownload jobId={jobId} source={source} />
+              <JobSourceDownload
+                jobId={jobId}
+                source={source}
+                canUpload={canManageJobSource && source.id === sourceId}
+              />
             ) : (
               <strong>{source.file_name}</strong>
             )}
@@ -188,9 +205,11 @@ export function CourseRunOfferLink({ runId }: { runId: string }) {
 function JobSourceDownload({
   jobId,
   source,
+  canUpload,
 }: {
   jobId: string;
   source: BuildingBlockSource;
+  canUpload: boolean;
 }) {
   const { session } = useAuth();
   const { t } = useTranslation("files");
@@ -234,7 +253,18 @@ function JobSourceDownload({
       <>
         <strong>{source.file_name}</strong>
         {online && attachment.isSuccess && (
-          <p className="muted">{sourceText("jobSourceUnavailable")}</p>
+          <>
+            <p className="muted">{sourceText("jobSourceUnavailable")}</p>
+            {canUpload && (
+              <details>
+                <summary>{sourceText("attachJobSource")}</summary>
+                <FileUpload
+                  context={{ scope: "job_after", jobId }}
+                  sourceSha256={source.sha256}
+                />
+              </details>
+            )}
+          </>
         )}
         {attachment.isError && (
           <ErrorState retry={() => void attachment.refetch()} />

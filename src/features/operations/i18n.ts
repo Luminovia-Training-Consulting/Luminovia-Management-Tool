@@ -379,6 +379,7 @@ const pairs: Record<string, [string, string]> = {
     "Original-PDFs lassen sich hier herunterladen, sobald sie als geprüfte Auftragsdatei vorliegen.",
     "Download an original PDF here once it has been attached to the job and scanned.",
   ],
+  attachJobSource: ["Original-PDF anhängen", "Attach original PDF"],
   openJobAttachments: ["Zu den Auftragsdateien", "Go to job attachments"],
   jobSourceUnavailable: [
     "Diese PDF ist für dich in diesem Auftrag nicht zum Download verfügbar.",

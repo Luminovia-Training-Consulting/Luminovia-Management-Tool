@@ -4,7 +4,7 @@
  * transferred upload bytes alone do not confirm scan clearance.
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import {
   focusManager,
   useMutation,
@@ -65,6 +65,7 @@ function fileError(error: unknown) {
     "unsupported_type",
     "scan_rejected",
     "scanner_unavailable",
+    "source_mismatch",
   ].includes(code)
     ? code
     : "error";
@@ -73,17 +74,23 @@ function fileError(error: unknown) {
 /** Keep file selection and retry identity together; clear the draft only after successful upload/scan completion. */
 export function FileUpload({
   context,
+  sourceSha256,
   onDone,
 }: {
   context: UploadContext;
+  sourceSha256?: string;
   onDone?: (document: PortalDocument) => void;
 }) {
   const { t } = useTranslation("files");
   const online = useOnline();
   const client = useQueryClient();
+  const inputId = useId();
   const input = useRef<HTMLInputElement>(null);
   const clientId = useRef(crypto.randomUUID());
   const [file, setFile] = useState<File | null>(null);
+  const [sourceScope, setSourceScope] = useState<"job_before" | "job_after">(
+    "job_after",
+  );
   const [progress, setProgress] = useState(0);
   const [drag, setDrag] = useState(false);
   const [error, setError] = useState("");
@@ -91,9 +98,23 @@ export function FileUpload({
     mutationFn: async () => {
       if (!file) throw new Error("file_size");
       requireOnline();
+      if (sourceSha256) {
+        const bytes = await crypto.subtle.digest(
+          "SHA-256",
+          await file.arrayBuffer(),
+        );
+        const checksum = Array.from(new Uint8Array(bytes), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join("");
+        if (checksum !== sourceSha256) throw new Error("source_mismatch");
+      }
       return await uploadDocument(
         file,
-        { ...context, clientId: clientId.current },
+        {
+          ...context,
+          ...(sourceSha256 && { scope: sourceScope }),
+          clientId: clientId.current,
+        },
         setProgress,
       );
     },
@@ -127,6 +148,25 @@ export function FileUpload({
   };
   return (
     <div>
+      {sourceSha256 && (
+        <Field id={`${inputId}-scope`} label={t("scope")}>
+          <select
+            value={sourceScope}
+            disabled={upload.isPending}
+            onChange={(event) => {
+              setSourceScope(
+                event.currentTarget.value === "job_before"
+                  ? "job_before"
+                  : "job_after",
+              );
+              clientId.current = crypto.randomUUID();
+            }}
+          >
+            <option value="job_after">{t("job_after")}</option>
+            <option value="job_before">{t("job_before")}</option>
+          </select>
+        </Field>
+      )}
       <div
         className={`file-drop ${drag ? "is-dragging" : ""}`}
         onDragOver={(e) => {
@@ -141,20 +181,16 @@ export function FileUpload({
         }}
       >
         <FileUp size={28} />
-        <label
-          htmlFor={`file-${context.replaceId ?? context.jobId ?? context.ownerId ?? context.kind ?? "personal"}`}
-        >
-          {t("choose")}
-        </label>
+        <label htmlFor={inputId}>{t("choose")}</label>
         <input
-          id={`file-${context.replaceId ?? context.jobId ?? context.ownerId ?? context.kind ?? "personal"}`}
+          id={inputId}
           ref={input}
           type="file"
-          accept={acceptedFiles}
+          accept={sourceSha256 ? "application/pdf,.pdf" : acceptedFiles}
           disabled={!online || upload.isPending}
           onChange={(e) => choose(e.target.files?.[0])}
         />
-        <small>{t("types")}</small>
+        <small>{t(sourceSha256 ? "sourceTypes" : "types")}</small>
       </div>
       {file && (
         <p className="selected-file">

@@ -242,7 +242,10 @@ export function JobDetail() {
             <h2>{t("description")}</h2>
             <p className="preserve-text">{job.description}</p>
             {!companyDispatchOnly && (
-              <JobBuildingBlockReference jobId={job.id} />
+              <JobBuildingBlockReference
+                jobId={job.id}
+                canManage={permissions.data?.includes("jobs.manage") ?? false}
+              />
             )}
             {period && (
               <>

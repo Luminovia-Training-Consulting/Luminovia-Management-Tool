@@ -1,3 +1,7 @@
+# 23 November 2026 — Attach a missing original from the job source section
+
+Job managers can attach the referenced original PDF inside the job. The form verifies the exact source digest before uploading, defaults to visibility after claim, and uses the existing scoped upload and scan. The download appears when the scanned version becomes available. All 73 focused component tests, TypeScript and targeted ESLint passed. The existing hosted source reference had no attachment at inspection.
+
 # 23 November 2026 — Mail settings and SMTP test delivery
 
 Administrators can send a fixed test message to their own confirmed portal account address through the saved SMTP transport. The existing handshake and single-use test claim remain available. The form keeps confirmed non-secret settings, couples TLS and port selections, and marks saved credentials without revealing them. The administration component, Edge handler and relay tests passed with fictional boundaries. External inbox delivery still needs confirmation from the recipient.
