@@ -2,6 +2,8 @@
 
 ## Course editor layout
 
+- [x] Label the offer schedule, space the planning link, and support optional additional terms and separate offers from the same course run. Preserve exact source sessions and idempotent retries.
+
 - [x] Group catalogue choices by kind in scrollable checkbox lists and space the save and publish actions. The course component suite and responsive Chromium layout fixture passed.
 
 ## Teaching subject areas

@@ -379,7 +379,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Lost-response retry returns the same offer and changed operation keys cannot reuse it",
+        "Identical retries reuse the offer, and a fresh key creates another offer without terms",
         async () => {
             assert.equal(
                 await rpc(
@@ -399,20 +399,16 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 /idempotency conflict/,
             );
-            await assert.rejects(
-                rpc(
-                    "admin",
-                    "create_course_run_job",
-                    [run, payload, null, randomUUID()],
-                    "aal1",
-                ),
-                /course_run_offer_exists/,
+            const {terms: _terms, ...optionalPayload} = payload;
+            const anotherId = randomUUID();
+            const another = await rpc(
+                "admin", "create_course_run_job", [run, optionalPayload, null, anotherId], "aal1",
             );
+            assert.notEqual(another, job);
+            assert.equal(await sql(`select length(terms) from public.jobs where id=${q(another)}`), "0");
             assert.equal(
-                await sql(
-                    `select count(*) from public.jobs where course_run_id=${q(run)}`,
-                ),
-                "1",
+                await rpc("admin", "create_course_run_job", [run, optionalPayload, null, anotherId], "aal1"),
+                another,
             );
         },
     );
@@ -457,9 +453,8 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         "Client portal sees the linked course and original company fee until membership is withdrawn",
         async () => {
             const requests = await rpc("client", "client_requests");
-            assert.equal(requests.length, 1);
-            assert.equal(requests[0].job_id, job);
-            assert.equal(requests[0].gross_total_amount, 200.02);
+            assert.equal(requests.length, 2);
+            assert.equal(requests.find((request) => request.job_id === job).gross_total_amount, 200.02);
             assert.equal(
                 await actor(
                     ids.client,
@@ -547,7 +542,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Two independent management actors racing one run create exactly one whole-block offer",
+        "Two independent management actors can publish separate whole-block offers for one run",
         async () => {
             const raceRun = await createRun(template, 20),
                 preview = await rpc(
@@ -577,19 +572,19 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             ]);
             assert.equal(
                 attempts.filter((item) => item.status === "fulfilled").length,
-                1,
+                2,
             );
             assert.equal(
                 await sql(
                     `select count(*) from public.jobs where course_run_id=${q(raceRun)}`,
                 ),
-                "1",
+                "2",
             );
             assert.equal(
                 await sql(
                     `select count(*) from public.job_sessions where job_id in(select id from public.jobs where course_run_id=${q(raceRun)})`,
                 ),
-                "2",
+                "4",
             );
         },
     );

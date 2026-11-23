@@ -1026,7 +1026,6 @@ function EditOffer({
           id="offer-terms"
           value={terms}
           maxLength={12000}
-          required
           onChange={(event) => setTerms(event.target.value)}
         />
       </Field>
@@ -1047,7 +1046,6 @@ function EditOffer({
           !online ||
           pending ||
           !title.trim() ||
-          !terms.trim() ||
           !dispatchValid ||
           (sessionsChanged && !proposedSchedule) ||
           Boolean(deadline && !instant)

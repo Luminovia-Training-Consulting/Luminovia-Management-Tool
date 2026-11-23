@@ -248,15 +248,13 @@ await withApiFixture(
             ),
             job,
         );
-        assert.ok(
-            (
-                await admin.client.rpc("create_course_run_job", {
-                    p_course_run_id: run,
-                    p_payload: payload,
-                    p_client_id: randomUUID(),
-                })
-            ).error,
-        );
+        const {terms: _terms, ...optionalPayload} = payload;
+        const another = await checked(admin.client.rpc("create_course_run_job", {
+            p_course_run_id: run,
+            p_payload: optionalPayload,
+            p_client_id: randomUUID(),
+        }));
+        assert.notEqual(another, job);
         const actual = await checked(
             teacher.client
                 .from("jobs")
@@ -346,7 +344,7 @@ await withApiFixture(
                 p_client_id: randomUUID(),
             }),
         ]);
-        assert.equal(race.filter((row) => !row.error).length, 1);
+        assert.equal(race.filter((row) => !row.error).length, 2);
         assert.equal(
             (
                 await checked(
@@ -356,7 +354,7 @@ await withApiFixture(
                         .eq("course_run_id", raceRun),
                 )
             ).length,
-            1,
+            2,
         );
         await checked(
             admin.client.rpc("manage_course_enrolment", {

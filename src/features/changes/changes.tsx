@@ -68,7 +68,7 @@ const formSchema = z.object({
   reason: z.string().trim().min(5).max(2000),
   location: z.string().max(500),
   scope: z.string().max(12000),
-  terms: z.string().trim().min(1).max(12000),
+  terms: z.string().trim().max(12000),
   amount: z.string(),
   total_amount: z.string(),
   rate_unit: z.enum([

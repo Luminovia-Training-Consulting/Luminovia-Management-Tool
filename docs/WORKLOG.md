@@ -1,3 +1,9 @@
+# 23 November 2026 — Multiple offers from one course run
+
+The course-backed offer editor labels its schedule, separates the planning link from the dates and lecturer positions, and lets management explicitly start another offer after a successful save. Additional terms may be omitted; empty terms remain editable and valid in a later amendment. Each new offer has its own request identity and retains the exact reviewed source sessions. Parallel cohorts with independent schedules and enrolment use separate course runs from the same template.
+
+All 18 course-offer PostgreSQL groups and the shared-amendment suite passed. The focused frontend and API contract suites passed 43 tests, TypeScript passed, and documentation and migration replay tooling passed 40 checks. A Chromium layout fixture measured 24 px above the planning link and 20 px below it at 320, 390 and 1280 px. The native HTTP acceptance was updated but was not run.
+
 # 23 November 2026 — Compact course catalogue controls
 
 The shared course and template editors group topics, tools and programming languages into independently scrollable checkbox lists. The course creation actions use the standard wrapping row with a 12 px gap. All 30 course component tests and TypeScript passed. A Chromium layout fixture with production styles confirmed scrolling, keyboard selection, no horizontal overflow and the action gap at 320, 390, 768 and 1280 px.

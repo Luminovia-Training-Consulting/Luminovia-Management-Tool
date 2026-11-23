@@ -97,7 +97,7 @@ const offerFields = {
     ),
   currency: courseOfferCurrencySchema,
   rate_unit: courseOfferRateUnitSchema,
-  terms: z.string().trim().min(1).max(10000).regex(/[^ ]/),
+  terms: z.string().max(10000).optional(),
   requires_contract: z.boolean().optional().meta({ default: true }),
   status: z
     .enum(["draft", "published"])

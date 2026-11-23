@@ -66,7 +66,7 @@ const schema = z.object({
   total_amount: z.number().nonnegative().max(1000000),
   currency: courseOfferCurrencySchema,
   rate_unit: courseOfferRateUnitSchema,
-  terms: z.string().min(1).max(10000),
+  terms: z.string().max(10000),
   publish: z.boolean(),
   requires_contract: z.boolean(),
   claim_deadline: z.string(),
@@ -125,7 +125,9 @@ function JobForm({
     getValues,
     formState: { errors, isDirty },
   } = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(
+      courseRun ? schema : schema.extend({ terms: schema.shape.terms.min(1) }),
+    ),
     defaultValues: {
       title: courseRun?.title ?? "",
       description: courseRun?.description ?? "",
@@ -326,32 +328,44 @@ function JobForm({
           <h3>{courseRun.title}</h3>
           <p className="preserve-text">{courseRun.description}</p>
           <p>
-            {courseRun.customer_name} · {t(courseRun.delivery_type)} ·{" "}
-            {courseRun.location} · {courseRun.time_zone}
+            {[
+              courseRun.customer_name,
+              t(courseRun.delivery_type),
+              courseRun.location,
+              courseRun.time_zone,
+            ].filter(Boolean).join(" · ")}
           </p>
-          <ol className="session-list">
-            {courseRun.sessions.map((row) => (
-              <li key={row.source_course_session_id}>
-                <div>
-                  <strong>
-                    {dateTime(
-                      row.starts_at,
-                      i18n.language,
-                      courseRun.time_zone,
-                    )}
-                  </strong>
-                  <span>
-                    {dateTime(row.ends_at, i18n.language, courseRun.time_zone)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <Button asChild variant="secondary">
-            <Link to={`/courses?run=${courseRun.course_run_id}`}>
-              {courseText("plan")}
-            </Link>
-          </Button>
+          <section
+            className="course-offer-schedule"
+            aria-labelledby="course-offer-schedule-title"
+          >
+            <h3 id="course-offer-schedule-title">{courseText("schedule")}</h3>
+            <ol className="session-list">
+              {courseRun.sessions.map((row) => (
+                <li key={row.source_course_session_id}>
+                  <div>
+                    <strong>
+                      {dateTime(
+                        row.starts_at,
+                        i18n.language,
+                        courseRun.time_zone,
+                      )}
+                    </strong>
+                    <span>
+                      {dateTime(row.ends_at, i18n.language, courseRun.time_zone)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className="form-actions">
+              <Button asChild variant="secondary">
+                <Link to={`/courses?run=${courseRun.course_run_id}`}>
+                  {courseText("plan")}
+                </Link>
+              </Button>
+            </div>
+          </section>
           <BuildingBlockReference templateId={courseRun.template_id} />
         </>
       )}
@@ -614,9 +628,9 @@ function JobForm({
       )}
       <Field
         id="job-terms"
-        label={t("terms")}
+        label={courseRun ? courseText("optionalTerms") : t("terms")}
         error={Boolean(errors.terms)}
-        hint={t("totalHint")}
+        hint={courseRun ? undefined : t("totalHint")}
       >
         <textarea id="job-terms" rows={4} {...register("terms")} />
       </Field>
@@ -678,15 +692,26 @@ function JobForm({
         <Notice kind="error">
           {courseRun && create.error.message === "course_run_source_changed"
             ? courseText("sourceChanged")
-            : courseRun && create.error.message === "course_run_offer_exists"
-              ? courseText("exists")
-              : courseRun &&
-                  create.error.message === "course_run_customer_required"
-                ? courseText("customerRequired")
-                : t(invalidTime ? "invalidTime" : "error")}
+            : courseRun && create.error.message === "course_run_customer_required"
+              ? courseText("customerRequired")
+              : t(invalidTime ? "invalidTime" : "error")}
         </Notice>
       )}
       {done && <Notice>{t("jobSaved")}</Notice>}
+      {done && courseRun && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => {
+            retry.clear();
+            setDone(false);
+            setCreatedId(null);
+            setValue("publish", false);
+          }}
+        >
+          {courseText("addAnother")}
+        </Button>
+      )}
       {createdId && (
         <Button asChild variant="secondary">
           <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
