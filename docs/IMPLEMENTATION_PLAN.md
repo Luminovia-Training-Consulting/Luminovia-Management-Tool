@@ -1942,3 +1942,10 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Add a forward-only typed empty-array initializer for `private.save_course_run`; current local `supabase db lint` and database advisors pass without warnings or findings.
 - [x] Align readiness SQL acceptance with internal offer-based course discovery: a lecturer loses access after assignment cancellation while management retains access.
 - [ ] Finish isolated system and browser phases, then verify every required Portal and Security job on the exact pushed main SHA.
+
+
+## Exact-main workbench regression follow-up — 23 November 2026
+
+- [x] Update the recommendation regression to follow self-selected subject-area matching; do not gate discovery on optional verification expiry metadata. Preserve schedule-conflict exclusion.
+- [x] Run the focused PostgreSQL workbench suite against the current migrated schema: 11 groups passed.
+- [ ] Complete all Portal and Security workflow jobs on the exact current `main` SHA, including system, browser and self-host acceptance.

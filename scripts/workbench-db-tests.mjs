@@ -300,7 +300,7 @@ await withTestDatabase("workbench_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Recommendations explain verified-topic/favourite ranking and recheck expiry/conflicts",
+        "Recommendations rank self-selected subject area and recheck scheduling conflicts",
         async () => {
             const topic = randomUUID(),
                 preferred = randomUUID(),
@@ -320,9 +320,10 @@ await withTestDatabase("workbench_test", async ({sql, actor}) => {
                    and topic_id=${q(topic)}`,
             );
             assert.ok(
-                !(await rpc(owner, "recommended_jobs")).some(
+                (await rpc(owner, "recommended_jobs")).some(
                     (row) => row.id === preferred,
                 ),
+                "self-selected subject areas do not depend on verification expiry",
             );
             await sql(
                 `update public.lecturer_topics

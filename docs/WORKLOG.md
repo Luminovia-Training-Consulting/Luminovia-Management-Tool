@@ -1,3 +1,7 @@
+# 23 November 2026 — Workbench recommendation regression
+
+The full local system phase on `85427729` reached the workbench PostgreSQL suite after the readiness regression passed, then found an obsolete assertion that expired verification metadata should suppress recommendations. Current policy matches recommendations to the lecturer's self-selected subject area; attestation expiry is optional metadata. Updated the regression to retain the matching offer while preserving the separate schedule-conflict exclusion. The focused workbench PostgreSQL suite passed all 11 groups against the current migrated local schema. The exact-main Portal workflow for `7f04d0a8` is still running; its Security workflow passed. The full CI result for the next pushed main commit remains pending.
+
 # 23 November 2026 — Participant class placement
 
 Management can select a searchable company and class during participant creation or a subordinate role change. Company contacts can choose a class on an invitation and update a class on their active roster. Matching company keys are enforced in PostgreSQL. A new company association remains pending for the participant's acceptance. Class metadata grants no course access by itself.
