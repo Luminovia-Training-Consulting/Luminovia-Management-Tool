@@ -1,3 +1,7 @@
+# 23 November 2026 — White-Label roadmap and Swagger acceptance
+
+Translated the White-Label roadmap and updated inbound section links. The internal Swagger keyboard test now covers the German and English light and dark variants, comparing the documented finance denial with the HTTP response and checking the generated command for credentials. Playwright discovered the cases for desktop and mobile Chromium. All 218 focused developer API and enquiries tests and all 7 documentation tests passed. The canonical browser runner stopped before startup because port 55322 was occupied by another isolated stack. Run the expanded browser cases once that port is free. The full edition and transport matrix, the end-to-end coordinated amendment through settlement and the separate Website activation remain open.
+
 # 23 November 2026 — Responsive Swagger catalogue and navigation
 
 The standalone Swagger reference and the interactive explorer show a maximum of 24 operations at a time. Search indexes all paths and the available webhook operations while the complete OpenAPI download remains accessible. Swagger uses its pinned renderer, loaded after the page controls become available. Requests still require the current account and explicit opt-in in the interactive explorer.
@@ -566,7 +570,7 @@ Production build verification now measures emitted gzip bytes for the startup gr
 
 Dedicated Caddy excludes the CMS aliases. Pinned Caddy and Envoy exercised both signed editions over local TLS, including the signed allowance and actual `429` and `503` responses documented by Academy OpenAPI 1.30. The vendor registry now records reviewed handovers against the exact issued licence and operator handoff, with concurrent confirmation and exact retry checks. Both branded editions use neutral account identifier labels and include a private health report for the local Compose stack, database, scanner and backup receipt.
 
-Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#abnahme-je-kundeninstallation) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
+Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#acceptance-for-each-customer-installation) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
 
 The first exact-main run exposed two obsolete fixtures. The Academy access guard test now supplies the compiled edition with the other branding exports. The scanner startup fixture now requires the new local ownership label for the signature volume. The full workflow needs the corrected exact SHA. The earlier CodeQL run completed successfully.
 

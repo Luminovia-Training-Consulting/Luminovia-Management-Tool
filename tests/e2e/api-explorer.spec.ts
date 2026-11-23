@@ -230,64 +230,85 @@ test("an authenticated participant can run an own-account RPC through the API ex
   expect(await get.json()).toEqual({ username: null, version: 0 });
 });
 
-test("the English dark API explorer preserves finance permissions during keyboard execution", async ({
-  page,
-  request,
-}) => {
-  const account = await actor("Fictional API finance lecturer", "lecturer");
-  const financePath = "/rest/v1/rpc/commission_report";
-  const contractResponse = await request.get("/api/openapi.json");
-  expect(contractResponse.ok()).toBe(true);
-  const contract = await contractResponse.json();
-  expect(
-    contract.paths[financePath].post.responses["403"].description,
-  ).toContain("42501");
+const explorerCopy = {
+  de: {
+    disabled: "Anfragen sind deaktiviert.",
+    authorize: "Mit meinem Konto autorisieren",
+    disable: "Anfragen deaktivieren",
+  },
+  en: {
+    disabled: "Requests are disabled.",
+    authorize: "Authorize with my account",
+    disable: "Disable requests",
+  },
+} as const;
 
-  await login(page, account.email);
-  await page.goto("/settings");
-  const preferences = page.locator(".settings-section .preferences");
-  await preferences.getByLabel("Sprache", { exact: true }).selectOption("en");
-  await preferences.getByLabel("Theme", { exact: true }).selectOption("dark");
-  await openExplorer(page);
-  await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(
-    page.getByText("Requests are disabled.", { exact: true }),
-  ).toBeVisible();
-  const authorize = page.getByRole("button", {
-    name: "Authorize with my account",
+for (const [language, theme] of [
+  ["de", "light"],
+  ["de", "dark"],
+  ["en", "light"],
+  ["en", "dark"],
+] as const) {
+  const copy = explorerCopy[language];
+  test(`the ${language}/${theme} API explorer preserves finance permissions during keyboard execution`, async ({
+    page,
+    request,
+  }) => {
+    const account = await actor("Fictional API finance lecturer", "lecturer");
+    const financePath = "/rest/v1/rpc/commission_report";
+    const contractResponse = await request.get("/api/openapi.json");
+    expect(contractResponse.ok()).toBe(true);
+    const contract = await contractResponse.json();
+    expect(
+      contract.paths[financePath].post.responses["403"].description,
+    ).toContain("42501");
+
+    await login(page, account.email);
+    await page.goto("/settings");
+    const preferences = page.locator(".settings-section .preferences");
+    await preferences.getByLabel("Sprache", { exact: true }).selectOption(language);
+    await preferences.getByLabel(language === "de" ? "Farbschema" : "Theme", { exact: true }).selectOption(theme);
+    await openExplorer(page);
+    await expect(page.locator("html")).toHaveAttribute("lang", language);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(
+      page.getByText(copy.disabled, { exact: true }),
+    ).toBeVisible();
+    const authorize = page.getByRole("button", {
+      name: copy.authorize,
+    });
+    await authorize.press("Enter");
+
+    await (await operation(page, "post", financePath)).press("Enter");
+    const expanded = page.locator(".opblock.is-open");
+    await expanded
+      .getByRole("button", { name: "Try it out", exact: true })
+      .press("Enter");
+    await expanded.locator("textarea").fill("{}");
+    const response = page.waitForResponse(
+      (item) =>
+        item.request().method() === "POST" &&
+        new URL(item.url()).pathname.endsWith(financePath),
+    );
+    await expanded
+      .getByRole("button", { name: "Execute", exact: true })
+      .press("Enter");
+    const denied = await response;
+    expect(denied.status()).toBe(403);
+    expect(await denied.json()).toMatchObject({ code: "42501" });
+    await expect(
+      expanded.locator(".live-responses-table tbody .response-col_status"),
+    ).toContainText("403");
+    const curlExample = expanded.locator(".curl-command");
+    await expect(curlExample).toContainText(financePath);
+    await expect(curlExample).not.toContainText(/authorization|apikey/i);
+
+    await page.getByRole("button", { name: copy.disable }).press("Enter");
+    await expect(
+      page.getByText(copy.disabled, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Execute", exact: true }),
+    ).toHaveCount(0);
   });
-  await authorize.press("Enter");
-
-  await (await operation(page, "post", financePath)).press("Enter");
-  const expanded = page.locator(".opblock.is-open");
-  await expanded
-    .getByRole("button", { name: "Try it out", exact: true })
-    .press("Enter");
-  await expanded.locator("textarea").fill("{}");
-  const response = page.waitForResponse(
-    (item) =>
-      item.request().method() === "POST" &&
-      new URL(item.url()).pathname.endsWith(financePath),
-  );
-  await expanded
-    .getByRole("button", { name: "Execute", exact: true })
-    .press("Enter");
-  const denied = await response;
-  expect(denied.status()).toBe(403);
-  expect(await denied.json()).toMatchObject({ code: "42501" });
-  await expect(
-    expanded.locator(".live-responses-table tbody .response-col_status"),
-  ).toContainText("403");
-  const curlExample = expanded.locator(".curl-command");
-  await expect(curlExample).toContainText(financePath);
-  await expect(curlExample).not.toContainText(/authorization|apikey/i);
-
-  await page.getByRole("button", { name: "Disable requests" }).press("Enter");
-  await expect(
-    page.getByText("Requests are disabled.", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Execute", exact: true }),
-  ).toHaveCount(0);
-});
+}
