@@ -457,10 +457,7 @@ describe("course form failure and confirmation boundaries", () => {
   });
 
   it.each([
-    [
-      "course_locked",
-      "Diese Änderung betrifft einen verknüpften Auftrag.",
-    ],
+    ["course_locked", "Diese Änderung betrifft einen verknüpften Auftrag."],
     [
       "courses.manage permission required",
       "Die Änderung konnte nicht gespeichert werden.",
@@ -648,13 +645,22 @@ describe("course form failure and confirmation boundaries", () => {
   });
 
   it("shows an active order on an unpublished run and saves the run venue without changing its source sessions", async () => {
-    const job = { id: "fictional-job", title: "Fictional active order", status: "published" };
+    const job = {
+      id: "fictional-job",
+      title: "Fictional active order",
+      status: "published",
+    };
     renderCourses({ runs: [{ ...run, jobs: [job] }] });
     expect(await screen.findByText("Aktiver Auftrag")).toBeVisible();
-    expect(screen.queryByText("Entwurf", { exact: true })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Entwurf", { exact: true }),
+    ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
-    expect(dialog.getByRole("link", { name: job.title })).toHaveAttribute("href", "/jobs/fictional-job");
+    expect(dialog.getByRole("link", { name: job.title })).toHaveAttribute(
+      "href",
+      "/jobs/fictional-job",
+    );
     expect(dialog.getByLabelText("Beginn 1")).toHaveAttribute("readonly");
     fireEvent.change(dialog.getByLabelText("Ort / Zugangslink"), {
       target: { value: "Updated course venue" },
@@ -667,7 +673,11 @@ describe("course form failure and confirmation boundaries", () => {
         venue: "Updated course venue",
         template_id: run.template_id,
         published: false,
-        sessions: [expect.objectContaining({ starts_at: run.course_sessions[0].starts_at })],
+        sessions: [
+          expect.objectContaining({
+            starts_at: run.course_sessions[0].starts_at,
+          }),
+        ],
       }),
     });
   });

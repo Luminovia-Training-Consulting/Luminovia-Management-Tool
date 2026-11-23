@@ -153,7 +153,9 @@ export function PermanentDeleteAction({ kind, id, label, linkedJobs }: Target) {
         aria-label={t("actionNamed", {
           name: targetLabel({ kind, id, label }, t),
         })}
-        onClick={() => (launch ? launch({ kind, id, label, linkedJobs }) : setLocal(actor))}
+        onClick={() =>
+          launch ? launch({ kind, id, label, linkedJobs }) : setLocal(actor)
+        }
       >
         {t("action")}
       </Button>
@@ -537,7 +539,8 @@ function DeletionDialog({
                 </ul>
               </Notice>
             )}
-            {target.kind === "course_run" && preview.data.blockers.length > 0 &&
+            {target.kind === "course_run" &&
+              preview.data.blockers.length > 0 &&
               Boolean(target.linkedJobs?.length) && (
                 <section>
                   <h4>{t("linkedAssignments")}</h4>
@@ -545,7 +548,9 @@ function DeletionDialog({
                   <ul>
                     {target.linkedJobs?.map((job) => (
                       <li key={job.id}>
-                        <Link to={`/jobs/${job.id}`} onClick={close}>{job.title}</Link>
+                        <Link to={`/jobs/${job.id}`} onClick={close}>
+                          {job.title}
+                        </Link>
                       </li>
                     ))}
                   </ul>

@@ -630,8 +630,14 @@ const pairs: Record<string, [string, string]> = {
     "You can change the run’s venue or access link and catalogue visibility. To change linked sessions, open the associated assignment. The course template stays intact.",
   ],
   runVisibility: ["Sichtbarkeit der Durchführung", "Course run visibility"],
-  hideFromCourseCatalogue: ["Im Kurskatalog ausblenden", "Hide from the course catalogue"],
-  showInCourseCatalogue: ["Im Kurskatalog anzeigen", "Show in the course catalogue"],
+  hideFromCourseCatalogue: [
+    "Im Kurskatalog ausblenden",
+    "Hide from the course catalogue",
+  ],
+  showInCourseCatalogue: [
+    "Im Kurskatalog anzeigen",
+    "Show in the course catalogue",
+  ],
   locked: [
     "Diese Inhalte sind mit bestehenden Aufträgen verbunden und geschützt. Erstelle eine Kopie, um neue Termine oder Inhalte zu planen.",
     "This content is linked to existing assignments and protected. Create a copy to plan new dates or content.",

@@ -359,7 +359,9 @@ function RunForm({
   const needsContent = !original && !selectedTemplateId;
   const linkedJobs = original?.jobs ?? [];
   const linked = linkedJobs.length > 0;
-  const hasActiveJob = linkedJobs.some(({ status }) => status === "published" || status === "filled");
+  const hasActiveJob = linkedJobs.some(
+    ({ status }) => status === "published" || status === "filled",
+  );
   const save = useMutation({
     onMutate: () => onBusy(true),
     mutationFn: async (
@@ -479,7 +481,9 @@ function RunForm({
           <p>{t("linkedRunHelp")}</p>
           <ul>
             {linkedJobs.map((job) => (
-              <li key={job.id}><Link to={`/jobs/${job.id}`}>{job.title}</Link></li>
+              <li key={job.id}>
+                <Link to={`/jobs/${job.id}`}>{job.title}</Link>
+              </li>
             ))}
           </ul>
         </Notice>
@@ -495,7 +499,8 @@ function RunForm({
             {templates
               .filter(
                 (template) =>
-                  !template.archived_at || template.id === original?.template_id,
+                  !template.archived_at ||
+                  template.id === original?.template_id,
               )
               .map((template) => (
                 <option value={template.id} key={template.id}>
@@ -664,7 +669,11 @@ function RunForm({
             {t("showInCourseCatalogue")}
           </label>
           <label className="checkbox-label">
-            <input type="checkbox" disabled={hasActiveJob} {...register("archived")} />
+            <input
+              type="checkbox"
+              disabled={hasActiveJob}
+              {...register("archived")}
+            />
             {t("archive")}
           </label>
         </fieldset>
@@ -1066,7 +1075,9 @@ export function CoursesPage() {
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {
             const template = findTemplate(run);
-            const hasActiveJob = run.jobs?.some(({ status }) => status === "published" || status === "filled");
+            const hasActiveJob = run.jobs?.some(
+              ({ status }) => status === "published" || status === "filled",
+            );
             return (
               <article className="panel operations-course" key={run.id}>
                 <div className="section-heading">
@@ -1146,7 +1157,9 @@ export function CoursesPage() {
                       }
                     >
                       {t(
-                        run.published ? "hideFromCourseCatalogue" : "showInCourseCatalogue",
+                        run.published
+                          ? "hideFromCourseCatalogue"
+                          : "showInCourseCatalogue",
                       )}
                     </Button>
                     <Button
