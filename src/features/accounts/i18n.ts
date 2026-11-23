@@ -98,6 +98,9 @@ const de = {
     "Die Unternehmensrolle gilt für die zugeordneten Organisationen.",
   organisationAdmin:
     "Für die Zuordnung eines Unternehmens sind aktuelle Verwaltungsrechte erforderlich.",
+  searchOrganisations: "Organisationen suchen",
+  noOrganisationMemberships:
+    "Dieses Konto ist noch keiner Organisation zugeordnet.",
   choose: "Organisation wählen",
   clientLink: "Organisation zuordnen",
   clientUnlink: "Organisationszugriff entziehen",
@@ -208,6 +211,9 @@ const en: typeof de = {
   organisationHint: "The company role applies to linked organisations.",
   organisationAdmin:
     "Linking a company requires current management permission.",
+  searchOrganisations: "Search organisations",
+  noOrganisationMemberships:
+    "This account has no organisation assignments yet.",
   choose: "Choose organisation",
   clientLink: "Assign organisation",
   clientUnlink: "Revoke organisation access",

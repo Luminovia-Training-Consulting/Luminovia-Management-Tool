@@ -381,6 +381,47 @@ describe("Account administration", () => {
       ),
     );
   });
+  it("assigns an existing organisation directly from a company account's details", async () => {
+    fake.capabilities = [
+      "users.manage",
+      "users.roles.manage",
+      "organisations.manage",
+    ];
+    fake.companyAccess = true;
+    const previous = fake.invoke.getMockImplementation()!;
+    fake.invoke.mockImplementation(async (path: string) => {
+      const result = await previous(path);
+      if (path.includes("/users?")) result.data.items[0].roles = ["client"];
+      return result;
+    });
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "Anna" }));
+    const details = within(
+      screen.getByRole("dialog", { name: "Kontodetails" }),
+    );
+    await userEvent.type(
+      await details.findByRole("searchbox", { name: "Organisationen suchen" }),
+      "conversion",
+    );
+    await userEvent.selectOptions(
+      details.getByLabelText("Zugeordnetes Unternehmen"),
+      "company-a",
+    );
+    await userEvent.click(
+      details.getByRole("button", { name: "Organisation zuordnen" }),
+    );
+    expect(fake.invoke).toHaveBeenCalledWith(
+      "accounts/v1/users/teacher-id/organisations/company-a",
+      {
+        method: "PUT",
+      },
+    );
+    await details.findByText("Organisationszugriff wurde aktualisiert.");
+    expect(fake.invoke).not.toHaveBeenCalledWith(
+      "accounts/v1/users/teacher-id/roles",
+      expect.anything(),
+    );
+  });
   it("does not mount lecturer compensation for a company account", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
     const previous = fake.invoke.getMockImplementation()!;

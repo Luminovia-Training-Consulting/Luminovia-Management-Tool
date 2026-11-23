@@ -254,4 +254,13 @@ test("administrator combines own roles and delegates company, lecturer and parti
     await saveRoles("Rollen bearbeiten", participant.name);
     expect(await rolesOf(participant.id)).toEqual(["client", "lecturer", "participant"]);
     expect(await membersOf(participant.id)).toEqual([company.id]);
+    await participantCard.getByRole("button", {name: participant.name, exact: true}).click();
+    const companyDetails = page.getByRole("dialog", {name: "Kontodetails", exact: true});
+    await companyDetails.getByRole("button", {name: "Organisationszugriff entziehen", exact: true}).click();
+    await expect.poll(() => membersOf(participant.id)).toEqual([]);
+    await companyDetails.getByRole("searchbox", {name: "Organisationen suchen", exact: true}).fill(company.name);
+    await companyDetails.getByLabel("Zugeordnetes Unternehmen", {exact: true}).selectOption(company.id);
+    await companyDetails.getByRole("button", {name: "Organisation zuordnen", exact: true}).click();
+    await expect.poll(() => membersOf(participant.id)).toEqual([company.id]);
+    expect(await rolesOf(participant.id)).toEqual(["client", "lecturer", "participant"]);
 });

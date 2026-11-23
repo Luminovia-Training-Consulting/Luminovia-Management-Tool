@@ -3,7 +3,7 @@
  * using the accounts API; a visible role selector or submitted user ID grants no authority.
  */
 import { Link, useSearchParams } from "react-router-dom";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -52,11 +52,13 @@ function AccountProfileDialog({
   person,
   actorId,
   canVerify,
+  companySettings,
   close,
 }: {
   person: AccountPerson;
   actorId: string;
   canVerify: boolean;
+  companySettings?: ReactNode;
   close: () => void;
 }) {
   const { t } = useTranslation("accounts");
@@ -115,6 +117,7 @@ function AccountProfileDialog({
           </Button>
         )}
       </div>
+      {companySettings}
       {canVerify && openedExpertise && (
         <div hidden={!showExpertise}>
           {!own && <LecturerCompensation userId={person.id} />}
@@ -151,6 +154,7 @@ function AccountsDirectory({
   const [selected, setSelected] = useState<AccountPerson | null>(null);
   const [roles, setRoles] = useState<AccountRole[]>([]);
   const [organisation, setOrganisation] = useState("");
+  const [organisationSearch, setOrganisationSearch] = useState("");
   const [placement, setPlacement] = useState(emptyParticipantPlacement);
   const [confirm, setConfirm] = useState(false);
   const accounts = useQuery(accountListQuery(actorId, search, offset));
@@ -180,14 +184,21 @@ function AccountsDirectory({
     !roles.includes("admin");
   const companyChange =
     editingCompany && organisation ? { organisation_id: organisation } : {};
+  const profileCompany =
+    openAccount?.active &&
+    openAccount.roles.includes("client") &&
+    (openAccount.can_assign_roles || openAccount.id === actorId)
+      ? openAccount
+      : null;
+  const membershipTarget = profileCompany ?? (editingCompany ? selected : null);
   const organisations = useQuery({
     ...accountOrganisationsQuery(actorId),
-    enabled: canLinkOrganisations && selected !== null && editingCompany,
+    enabled: canLinkOrganisations && membershipTarget !== null,
   });
   const membership = useQuery({
-    queryKey: ["account-memberships", actorId, selected?.id],
-    enabled: canLinkOrganisations && selected !== null && editingCompany,
-    queryFn: () => accountMemberships(selected!.id),
+    queryKey: ["account-memberships", actorId, membershipTarget?.id],
+    enabled: canLinkOrganisations && membershipTarget !== null,
+    queryFn: () => accountMemberships(membershipTarget!.id),
   });
   const change = useMutation({
     mutationFn: async () => {
@@ -232,13 +243,19 @@ function AccountsDirectory({
       remove: boolean;
     }) => {
       requireOnline();
+      if (!membershipTarget || !canLinkOrganisations)
+        throw new Error("permission_required");
       return await accountRequest(
-        `users/${selected!.id}/organisations/${orgId}`,
+        `users/${membershipTarget.id}/organisations/${orgId}`,
         remove ? "DELETE" : "PUT",
       );
     },
-    onSuccess: () =>
-      cache.invalidateQueries({ queryKey: ["account-memberships", actorId] }),
+    onSuccess: async (_receipt, { remove }) => {
+      if (!remove && profileCompany) setOrganisation("");
+      await cache.invalidateQueries({
+        queryKey: ["account-memberships", actorId],
+      });
+    },
   });
   const ownChangeError =
     ownRoles &&
@@ -254,6 +271,113 @@ function AccountsDirectory({
           "Complete or transfer active teaching assignments first"
         ? "activeTeachingProtected"
         : "error";
+
+  const companyMembershipSettings = canLinkOrganisations &&
+    membershipTarget && (
+      <section>
+        <h3>{t("organisation")}</h3>
+        <p>{t("organisationHint")}</p>
+        {!profileCompany && addingCompanyRole && (
+          <Notice>{t("conversionOrganisation")}</Notice>
+        )}
+        {organisations.isPending || membership.isPending ? (
+          <Loading />
+        ) : organisations.isError || membership.isError ? (
+          <ErrorState
+            retry={() => {
+              void organisations.refetch();
+              void membership.refetch();
+            }}
+          />
+        ) : (
+          <>
+            {membership.data.length === 0 && (
+              <p>{t("noOrganisationMemberships")}</p>
+            )}
+            <ul>
+              {membership.data.map((member) => (
+                <li key={member.organisation_id}>
+                  {organisations.data.find(
+                    (org) => org.id === member.organisation_id,
+                  )?.name ?? member.organisation_id}{" "}
+                  <Button
+                    variant="ghost"
+                    disabled={!online || link.isPending}
+                    onClick={() =>
+                      link.mutate({
+                        orgId: member.organisation_id,
+                        remove: true,
+                      })
+                    }
+                  >
+                    {t("clientUnlink")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            {profileCompany && (
+              <Field
+                id="account-organisation-search"
+                label={t("searchOrganisations")}
+              >
+                <input
+                  type="search"
+                  id="account-organisation-search"
+                  value={organisationSearch}
+                  onChange={(event) =>
+                    setOrganisationSearch(event.target.value)
+                  }
+                />
+              </Field>
+            )}
+            <Field id="account-organisation" label={t("organisation")}>
+              <select
+                id="account-organisation"
+                value={organisation}
+                onChange={(event) => setOrganisation(event.target.value)}
+              >
+                <option value="">{t("choose")}</option>
+                {organisations.data
+                  .filter(
+                    (org) =>
+                      !profileCompany ||
+                      org.id === organisation ||
+                      org.name
+                        .toLocaleLowerCase()
+                        .includes(
+                          organisationSearch.trim().toLocaleLowerCase(),
+                        ),
+                  )
+                  .map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Button
+              variant="secondary"
+              disabled={
+                !online ||
+                !organisation ||
+                link.isPending ||
+                !membershipTarget.roles.includes("client") ||
+                membership.data.some(
+                  (member) => member.organisation_id === organisation,
+                )
+              }
+              onClick={() =>
+                link.mutate({ orgId: organisation, remove: false })
+              }
+            >
+              {t("clientLink")}
+            </Button>
+          </>
+        )}
+        {link.isSuccess && <Notice>{t("clientLinked")}</Notice>}
+        {link.isError && <Notice kind="error">{t("error")}</Notice>}
+      </section>
+    );
 
   if (accounts.isPending) return <Loading />;
   if (accounts.isError)
@@ -293,7 +417,12 @@ function AccountsDirectory({
                   variant="ghost"
                   size="sm"
                   className="account-name-button"
-                  onClick={() => setOpenAccount(person)}
+                  onClick={() => {
+                    setOrganisation("");
+                    setOrganisationSearch("");
+                    link.reset();
+                    setOpenAccount(person);
+                  }}
                 >
                   <strong>{person.display_name || person.email}</strong>
                 </Button>
@@ -400,7 +529,7 @@ function AccountsDirectory({
           <CreateAccountForm
             actor={actorId}
             roles={catalog.data}
-            canLinkOrganisations={Boolean(clientAccess.data?.can_manage_gross)}
+            canLinkOrganisations={canLinkOrganisations}
           />
         )}
       </Dialog>
@@ -415,7 +544,12 @@ function AccountsDirectory({
               (role) => role === "lecturer" || role === "senior_lecturer",
             )
           }
-          close={() => setOpenAccount(null)}
+          companySettings={
+            profileCompany ? companyMembershipSettings : undefined
+          }
+          close={() => {
+            if (!link.isPending) setOpenAccount(null);
+          }}
         />
       )}
       <InviteForm allRoles canAssignRoles={canAssign} />
@@ -499,79 +633,7 @@ function AccountsDirectory({
         {editingCompany && !canLinkOrganisations && (
           <Notice>{t("organisationAdmin")}</Notice>
         )}
-        {editingCompany && canLinkOrganisations && (
-          <section>
-            <h3>{t("organisation")}</h3>
-            <p>{t("organisationHint")}</p>
-            {addingCompanyRole && (
-              <Notice>{t("conversionOrganisation")}</Notice>
-            )}
-            {organisations.isPending || membership.isPending ? (
-              <Loading />
-            ) : organisations.isError || membership.isError ? (
-              <ErrorState
-                retry={() => {
-                  void organisations.refetch();
-                  void membership.refetch();
-                }}
-              />
-            ) : (
-              <>
-                <ul>
-                  {membership.data.map((member) => (
-                    <li key={member.organisation_id}>
-                      {organisations.data.find(
-                        (org) => org.id === member.organisation_id,
-                      )?.name ?? member.organisation_id}{" "}
-                      <Button
-                        variant="ghost"
-                        disabled={!online || link.isPending}
-                        onClick={() =>
-                          link.mutate({
-                            orgId: member.organisation_id,
-                            remove: true,
-                          })
-                        }
-                      >
-                        {t("clientUnlink")}
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-                <Field id="account-organisation" label={t("organisation")}>
-                  <select
-                    id="account-organisation"
-                    value={organisation}
-                    onChange={(event) => setOrganisation(event.target.value)}
-                  >
-                    <option value="">{t("choose")}</option>
-                    {organisations.data.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Button
-                  variant="secondary"
-                  disabled={
-                    !online ||
-                    !organisation ||
-                    link.isPending ||
-                    !selected?.roles.includes("client")
-                  }
-                  onClick={() =>
-                    link.mutate({ orgId: organisation, remove: false })
-                  }
-                >
-                  {t("clientLink")}
-                </Button>
-              </>
-            )}
-            {link.isSuccess && <Notice>{t("clientLinked")}</Notice>}
-            {link.isError && <Notice kind="error">{t("error")}</Notice>}
-          </section>
-        )}
+        {editingCompany && companyMembershipSettings}
       </Dialog>
       <Dialog
         open={confirm && selected !== null}

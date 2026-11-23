@@ -1976,3 +1976,5 @@ Account directory now opens a unified profile and expertise dialog. The focused 
 Personnel and expertise account details now expose individual lecturer compensation using the existing authorized, versioned workflow.
 
 Password-provisioned accounts now request a one-time access email after confirmed creation. Verify the configured sender and actual mailbox receipt on the approved target.
+
+Company account details now expose searchable organisation membership management through the existing scoped account API. Run the updated browser and course workflow acceptance on the resulting revision.
