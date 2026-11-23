@@ -134,6 +134,14 @@ for (const edition of [
           ].schema,
         )
         .parse(data);
+    const offerMaterials = [];
+    const materialVisibility = async (who) => {
+      const ids = offerMaterials.map(({ document_id }) => q(document_id)).join(",");
+      return JSON.parse(await actor(who, `select jsonb_build_array(
+        (select count(*) from public.documents where id in (${ids})),
+        (select count(*) from public.document_versions where document_id in (${ids}))
+      );`));
+    };
     let originalClaim;
     if (academy) {
       const assignment = await call(
@@ -196,6 +204,20 @@ for (const edition of [
         update public.chat_members set removed_at=null where room_id=${q(chatRoom)} and user_id=${q(teacher)};
         insert into public.chat_members(room_id,user_id) values(${q(chatRoom)},${q(teacher)}) on conflict do nothing;
       `);
+      for (const [offer, scope] of [[nextJob, "job_before"], [job, "job_after"], [outsideJob, "job_before"]]) {
+        offerMaterials.push(await call(staff, "reserve_document",
+          `${q(`${scope}.txt`)},'text/plain',5,${q(scope)},'material',null,${q(offer)},${q(randomUUID())}`));
+      }
+      assert.deepEqual(await materialVisibility(teacher), [3, 3]);
+      assert.deepEqual(await materialVisibility(otherTeacher), [2, 2]);
+      assert.deepEqual(await materialVisibility(learner), [0, 0]);
+      const topic = "fbb0c720-bcdf-4c96-aac4-16931325ba01";
+      await sql(`insert into public.job_requirements(job_id,topic_id) values(${q(nextJob)},${q(topic)});`);
+      assert.deepEqual(await materialVisibility(teacher), [2, 2]);
+      await sql(`insert into public.lecturer_topics(user_id,topic_id) values(${q(teacher)},${q(topic)});`);
+      assert.deepEqual(await materialVisibility(teacher), [3, 3]);
+      await sql(`delete from public.job_requirements where job_id=${q(nextJob)};
+        delete from public.lecturer_topics where user_id=${q(teacher)} and topic_id=${q(topic)};`);
       assert.equal(
         (
           await call(
@@ -361,6 +383,8 @@ for (const edition of [
         false,
       );
     } else {
+      assert.deepEqual(await materialVisibility(teacher), [1, 1]);
+      assert.deepEqual(await materialVisibility(staff), [3, 3]);
       assert.equal(
         await actor(
           teacher,
@@ -478,6 +502,7 @@ for (const edition of [
       assert.equal((await readBlocks(contact)).can_write, false);
       await assert.rejects(setBlock(contact, true, 2), /42501/);
     } else {
+      assert.deepEqual(await materialVisibility(teacher), [3, 3]);
       // Wait until the block transaction owns the same lecturer lock used by
       // claiming. The concurrent claim must observe the committed restriction.
       const blocking = actor(

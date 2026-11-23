@@ -24,10 +24,20 @@ import {
 
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
+  saveDownload: vi.fn(),
+  downloadCourseDocument: vi.fn(),
   responses: {} as Record<string, unknown>,
   errors: {} as Record<string, unknown>,
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
+vi.mock("../files/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../files/api")>()),
+  saveDownload: fake.saveDownload,
+}));
+vi.mock("../learning/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../learning/api")>()),
+  downloadCourseDocument: fake.downloadCourseDocument,
+}));
 const clients: QueryClient[] = [];
 const claim = "6ed51acb-935b-44e2-bd87-fc8eb55d77a7";
 
@@ -71,6 +81,7 @@ beforeEach(async () => {
     teaching_day: day(),
   };
   fake.errors = {};
+  fake.saveDownload.mockReset().mockResolvedValue(undefined);
   fake.rpc.mockReset().mockImplementation((name: string) => {
     const request = {
       abortSignal: () => request,
@@ -139,8 +150,18 @@ describe("personal dashboard", () => {
     expect(
       screen.getByText("1 von 2 Vorbereitungspunkten erledigt"),
     ).toBeVisible();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Agreed original V1.pdf herunterladen",
+      }),
+    );
+    expect(fake.downloadCourseDocument).toHaveBeenCalledWith(
+      "resource",
+      "e980ed88-5a96-435f-afb6-2abb01faef88",
+      "Agreed original V1.pdf",
+    );
     expect(
-      screen.getByRole("link", { name: "Agreed original V1.pdf" }),
+      screen.getByRole("link", { name: /kursbereich und alle/i }),
     ).toHaveAttribute("href", `/courses/${run}/workspace`);
     expect(
       screen.getByText("11 weitere freigegebene Fassung(en) im Kursbereich."),
@@ -285,9 +306,17 @@ describe("personal dashboard", () => {
         name: "Unterrichtslink öffnen",
       }),
     ).toHaveAttribute("href", "https://example.invalid/class");
-    expect(
-      within(panel).getByRole("link", { name: "Fictional handout.pdf" }),
-    ).toHaveAttribute("href", "/files?q=Fictional%20handout.pdf");
+    await user.click(
+      within(panel).getByRole("button", {
+        name: "Fictional handout.pdf herunterladen",
+      }),
+    );
+    await waitFor(() =>
+      expect(fake.saveDownload).toHaveBeenCalledWith(
+        "dc294aa7-19fc-4577-a6c7-963713607c4e",
+        "Fictional handout.pdf",
+      ),
+    );
     let resolve!: (data: unknown) => void;
     fake.responses.save_teaching_preparation = new Promise(
       (r) => (resolve = r),

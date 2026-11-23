@@ -68,7 +68,7 @@ const courseFiles = (page: Page) => page.getByRole("region", {name: "Kursdateien
 const courseFile = (page: Page, name: string) => courseFiles(page).getByRole("listitem").filter({
     has: page.getByText(name, {exact: true}),
 });
-const withdrawName = "Freigabe zurücknehmen";
+const withdrawName = "Aus Kurs entfernen";
 
 async function upload(page: Page, name: string, bytes: Buffer, audience: "staff" | "participants") {
     const files = courseFiles(page);
@@ -173,7 +173,26 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
         const companyPage = await openAs(f.company.email);
         await expect(courseFiles(companyPage)).toBeVisible();
         await expect(courseFile(companyPage, participantName)).toHaveCount(0);
-        await unavailable(companyPage, (await signIn(f.company.email)).accessToken, participantResource.id);
+        const company = await signIn(f.company.email);
+        await unavailable(companyPage, company.accessToken, participantResource.id);
+        const sharedCompanyName = `Fictional-company-visible-${f.suffix}.txt`;
+        const sharedCompanyBytes = Buffer.from(`Fictional file shared by lecturer ${f.suffix}`);
+        await upload(page, sharedCompanyName, sharedCompanyBytes, "all");
+        await companyPage.reload();
+        const companyFile = courseFile(companyPage, sharedCompanyName);
+        const companyDownload = companyPage.waitForEvent("download");
+        await companyFile.getByRole("button", {name: "Herunterladen", exact: true}).click();
+        expect(await readFile(await (await companyDownload).path())).toEqual(sharedCompanyBytes);
+        const managerView = await checked(f.admin.rpc("course_workspace", {p_run_id: f.run}), {requireData: true});
+        const companyResource = managerView.resources.find((entry: {name: string}) => entry.name === sharedCompanyName);
+        await companyFile.getByRole("button", {name: withdrawName, exact: true}).click();
+        const companyConfirmation = companyPage.getByRole("dialog", {name: `„${sharedCompanyName}“ aus dem Kurs entfernen?`, exact: true});
+        await companyConfirmation.getByRole("button", {name: withdrawName, exact: true}).click();
+        await expect(companyFile).toHaveCount(0);
+        await unavailable(companyPage, company.accessToken, companyResource.id);
+        const revokedOwnedFile = await checked(f.service.from("documents").select("owner_id,deleted_at")
+            .eq("original_name", sharedCompanyName).single(), {requireData: true});
+        expect(revokedOwnedFile).toEqual({owner_id: f.teacher.id, deleted_at: null});
 
         for (const excluded of [{...f.otherLearner, landing: /\/learning$/}, {...f.otherTeacher, landing: /\/$/}]) {
             const excludedPage = await openAs(excluded.email, excluded.landing);
@@ -183,6 +202,8 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
         }
 
         await ownFile.getByRole("button", {name: withdrawName, exact: true}).click();
+        const confirmation = page.getByRole("dialog", {name: `„${participantName}“ aus dem Kurs entfernen?`, exact: true});
+        await confirmation.getByRole("button", {name: withdrawName, exact: true}).click();
         await expect(ownFile).toHaveCount(0);
         await expect(staffFile).toBeVisible();
         await learnerPage.reload();

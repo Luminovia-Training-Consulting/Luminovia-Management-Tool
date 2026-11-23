@@ -5,10 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Download } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import { Field, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import {
   acceptedFiles,
+  saveDownload,
   uploadAcademyCourseMaterial,
   uploadDocument,
 } from "../files/api";
@@ -21,6 +23,7 @@ import {
   shareAcademyCourseMaterial,
   removeAcademyCourseMaterial,
 } from "./api";
+import "./i18n";
 
 /** Preserve the exact authorised byte gateway for resources and certificates. */
 export function DownloadButton({
@@ -29,7 +32,7 @@ export function DownloadButton({
   name,
   label,
 }: {
-  kind: "resource" | "attendance" | "completion";
+  kind: "resource" | "attendance" | "completion" | "document";
   id: string;
   name: string;
   label?: string;
@@ -37,7 +40,10 @@ export function DownloadButton({
   const { t } = useTranslation("learning");
   const online = useOnline();
   const download = useMutation({
-    mutationFn: () => downloadCourseDocument(kind, id, name),
+    mutationFn: () =>
+      kind === "document"
+        ? saveDownload(id, name)
+        : downloadCourseDocument(kind, id, name),
   });
   return (
     <>
@@ -84,6 +90,9 @@ export function Resources({
     null,
   );
   const [cleanVersion, setCleanVersion] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [fileInputKey, setFileInputKey] = useState(0);
   const [progress, setProgress] = useState(0);
   const [version, setVersion] = useState("");
@@ -116,7 +125,10 @@ export function Resources({
         ? courseAction(course.id, action, payload, 0, true)
         : courseAction(course.id, action, payload);
     },
-    onSuccess: refresh,
+    onSuccess: async (_, { action }) => {
+      await refresh();
+      if (action === "resource_remove") setRemoving(null);
+    },
   });
   const upload = useMutation({
     mutationFn: async () => {
@@ -202,14 +214,13 @@ export function Resources({
               )}
               {(!readOnly || academyCanUpload) && resource.can_remove && (
                 <Button
+                  type="button"
                   variant="ghost"
                   disabled={!online || save.isPending}
-                  onClick={() =>
-                    save.mutate({
-                      action: "resource_remove",
-                      payload: { id: resource.id },
-                    })
-                  }
+                  onClick={() => {
+                    save.reset();
+                    setRemoving({ id: resource.id, name: resource.name });
+                  }}
                 >
                   {t("unshare")}
                 </Button>
@@ -351,7 +362,57 @@ export function Resources({
           </Button>
         </form>
       )}
-      {save.isError && <Notice kind="error">{t("saveError")}</Notice>}
+      {save.isError && !removing && (
+        <Notice kind="error">{t("saveError")}</Notice>
+      )}
+      <Dialog
+        open={removing !== null}
+        onOpenChange={(open) => {
+          if (!open && !save.isPending) {
+            setRemoving(null);
+            save.reset();
+          }
+        }}
+        closeDisabled={save.isPending}
+        title={t("removeResourceTitle", { name: removing?.name })}
+        description={t("removeResourceHelp")}
+      >
+        {save.isError && <Notice kind="error">{t("saveError")}</Notice>}
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={save.isPending}
+            onClick={() => {
+              setRemoving(null);
+              save.reset();
+            }}
+          >
+            {t("translation:cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={
+              !online ||
+              save.isPending ||
+              !course.resources.some(
+                (resource) =>
+                  resource.id === removing?.id && resource.can_remove,
+              )
+            }
+            onClick={() => {
+              if (removing)
+                save.mutate({
+                  action: "resource_remove",
+                  payload: { id: removing.id },
+                });
+            }}
+          >
+            {t("unshare")}
+          </Button>
+        </div>
+      </Dialog>
     </section>
   );
 }

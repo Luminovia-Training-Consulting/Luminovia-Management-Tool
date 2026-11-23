@@ -61,9 +61,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 65 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(65);
-    expect(definitions).toHaveLength(65);
+  it("covers the 66 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(66);
+    expect(definitions).toHaveLength(66);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -113,7 +113,7 @@ describe("internal operation documentation", () => {
           entry.overloads.some((overload) => !overload.void),
         );
         if (documentation.result)
-          expect(current.responses["200"].content, name).toBeDefined();
+          expect(current.responses["200"]?.content, name).toBeDefined();
       }
     }
   });

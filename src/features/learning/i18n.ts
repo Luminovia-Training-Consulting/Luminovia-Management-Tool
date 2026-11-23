@@ -492,7 +492,15 @@ const pairs: Record<string, [string, string]> = {
   report: ["Bericht", "Report"],
   acknowledge: ["Empfang bestätigen", "Acknowledge receipt"],
   acknowledged: ["Empfang bestätigt", "Receipt acknowledged"],
-  unshare: ["Freigabe zurücknehmen", "Withdraw share"],
+  unshare: ["Aus Kurs entfernen", "Remove from course"],
+  removeResourceTitle: [
+    "„{{name}}“ aus dem Kurs entfernen?",
+    "Remove “{{name}}” from the course?",
+  ],
+  removeResourceHelp: [
+    "Damit endet die Freigabe dieser Datei im aktuellen Kurs.",
+    "This ends access to this file through the current course.",
+  ],
   reviewedVersion: ["Geprüfte Dateifassung", "Reviewed file version"],
   audience: ["Sichtbarkeit", "Audience"],
   category: ["Dokumentart", "Document category"],

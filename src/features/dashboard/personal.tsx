@@ -24,6 +24,7 @@ import {
   type WidgetId,
 } from "./personal-api";
 import { contactEmailLink, contactPhoneLink } from "../profile/contact-api";
+import { DownloadButton } from "../learning/resources";
 import "./i18n";
 import "./widgets.css";
 
@@ -363,7 +364,7 @@ function TeachingCourseContext({
         <ul>
           {session.course_resources.map((resource) => (
             <li key={resource.id}>
-              <Link to={workspace}>{resource.name}</Link>
+              <strong>{resource.name}</strong>
               <small>
                 {t(
                   resource.category === "report"
@@ -371,6 +372,12 @@ function TeachingCourseContext({
                     : "sharedMaterial",
                 )}
               </small>
+              <DownloadButton
+                kind="resource"
+                id={resource.id}
+                name={resource.name}
+                label={t("learning:materialDownload", { name: resource.name })}
+              />
             </li>
           ))}
         </ul>
@@ -457,11 +464,15 @@ export function TeachingDayWidget({ actor }: { actor: string }) {
                       <ul>
                         {session.documents.map((file) => (
                           <li key={file.id}>
-                            <Link
-                              to={`/files?q=${encodeURIComponent(file.name)}`}
-                            >
-                              {file.name}
-                            </Link>
+                            <strong>{file.name}</strong>
+                            <DownloadButton
+                              kind="document"
+                              id={file.id}
+                              name={file.name}
+                              label={t("learning:materialDownload", {
+                                name: file.name,
+                              })}
+                            />
                           </li>
                         ))}
                       </ul>

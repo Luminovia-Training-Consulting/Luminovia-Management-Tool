@@ -175,9 +175,13 @@ export function MaterialLibrary({
                     {t("materialOnlyThisCourse")}
                   </Button>
                 )}
-                {first.can_upload && !readOnly && (
-                  <Link to={workspace}>{t("uploadCourseFile")}</Link>
-                )}
+                <Link to={workspace}>
+                  {t(
+                    first.can_upload && !readOnly
+                      ? "uploadCourseFile"
+                      : "workspaceMaterials",
+                  )}
+                </Link>
               </div>
             </article>
           );

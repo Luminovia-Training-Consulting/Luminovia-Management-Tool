@@ -720,8 +720,56 @@ describe("connected course workspace", () => {
     setup();
     expect(await screen.findByText("Fictional company handout")).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Freigabe zurücknehmen" }),
+      screen.queryByRole("button", { name: "Aus Kurs entfernen" }),
     ).not.toBeInTheDocument();
+  });
+  it("only withdraws the selected visible course file after confirmation", async () => {
+    fake.workspace.resources = [
+      {
+        id: "visible-share",
+        name: "Fictional teaching file",
+        version_id: "clean-version",
+        version: 1,
+        sha256: "a".repeat(64),
+        category: "material",
+        audience: "all",
+        acknowledged: false,
+        ownership_kind: "lecturer",
+        can_remove: true,
+      },
+    ];
+    const user = userEvent.setup();
+    setup();
+    const remove = await screen.findByRole("button", {
+      name: "Aus Kurs entfernen",
+    });
+    await user.click(remove);
+    let dialog = within(
+      screen.getByRole("dialog", { name: /Fictional teaching file/ }),
+    );
+    await user.click(dialog.getByRole("button", { name: "Abbrechen" }));
+    expect(fake.rpc).not.toHaveBeenCalledWith(
+      "course_workspace_action",
+      expect.objectContaining({
+        p_action: "resource_remove",
+      }),
+    );
+    await user.click(remove);
+    dialog = within(
+      screen.getByRole("dialog", { name: /Fictional teaching file/ }),
+    );
+    await user.click(
+      dialog.getByRole("button", { name: "Aus Kurs entfernen" }),
+    );
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "course_workspace_action",
+        expect.objectContaining({
+          p_action: "resource_remove",
+          p_payload: { id: "visible-share" },
+        }),
+      ),
+    );
   });
   it("does not create a course share when the scanner rejects an upload", async () => {
     fake.upload.mockRejectedValue(new Error("scan_rejected"));

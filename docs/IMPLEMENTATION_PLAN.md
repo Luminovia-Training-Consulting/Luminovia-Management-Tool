@@ -168,6 +168,7 @@
 
 - Preserve each spreadsheet preview on a failed write. Resume at the outstanding row using a caller-scoped receipt committed with the existing create operation. Keep the calendar's atomic and deduplicated batch import.
 - Search clean material metadata across every current course in scope. Page matches by file name and resource ID, expose course and category filters, and keep download authority on the existing file gateway.
+- [x] Provide direct downloads of authorised course materials and job attachments on Teaching Day. Let internal company contacts withdraw visible materials and reports from their own courses with a separate confirmation. Keep exact-version access, the reviewed owner deletion flow and attendance evidence protection. Use the current job audience for job attachment access.
 - Show one selected course workspace section on narrow layouts. Retain hash navigation, role-specific actions and form drafts across section changes.
 - Remember chat category, permitted selection and unread or archive state per account in the browser. Keep free-text searches and legacy company names out of browser preferences.
 

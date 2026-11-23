@@ -228,7 +228,6 @@ export const operationsRpcDocumentation = {
       p_roles: { type: "array", minItems: 1, maxItems: 8, items: accountRole },
       p_organisation_id: id,
     },
-    result: { type: "null" },
     errors: {
       "400":
         "Invalid role list or protected final administrative or teaching role.",

@@ -353,7 +353,7 @@ const workspaceAction = {
       "courseWorkspaceAction",
       "Premium LMS",
       "Apply a course workspace command",
-      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Retained attendance evidence cannot be removed. Quiz attempts are idempotent by request ID and return only the score and pass result. Completion issuance requires current completed enrolment, verified attendance and a pass on any published quiz.",
+      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Assigned lecturers can withdraw their own material shares. Authorised company contacts can withdraw visible material and report shares in their course. Scoped course managers can withdraw course shares. Withdrawal keeps the original file. Attendance evidence remains protected. Quiz attempts are idempotent by request ID and return only the score and pass result. Completion issuance requires current completed enrolment, verified attendance and a pass on any published quiz.",
       {},
       workspaceActionResult,
     ).post,

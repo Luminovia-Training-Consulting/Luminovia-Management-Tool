@@ -266,6 +266,9 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             await action(learner, "resource_acknowledge", {id: resource});
             assert.equal((await workspace(learner)).resources[0].acknowledged, true);
             await action(admin, "resource_remove", {id: resource});
+            const acknowledgedPlan = await rpc(admin, "deletion_preview", [q("document"), q(doc)]);
+            assert.equal(acknowledgedPlan.can_confirm, false);
+            assert.ok(acknowledgedPlan.blockers.some(({kind}) => kind === "private.course_resources"));
             assert.deepEqual(await materialSearch(learner), []);
             await assert.rejects(
                 rpc(learner, "course_document_access", [q("resource"), q(resource)]),
@@ -273,46 +276,142 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             );
         },
     );
-    await check("Course file ownership is immutable and removal follows the staff/company/lecturer matrix", async () => {
+    await check("Course files follow exact download and removal authority by audience and current role", async () => {
+        const [manager, otherClient] = Array.from({length: 2}, randomUUID);
+        await sql(`insert into auth.users(id,email) values
+                    (${q(manager)},${q(manager + "@example.invalid")}),
+                    (${q(otherClient)},${q(otherClient + "@example.invalid")});
+                   insert into public.user_roles(user_id,role) values
+                    (${q(manager)},'management'),(${q(otherClient)},'client');
+                   insert into public.client_organisation_memberships(user_id,organisation_id)
+                    values (${q(otherClient)},${q(otherorg)});`);
         const addMaterial = async (owner, name) => {
-            const documentId = randomUUID(), version = randomUUID();
+            const document = randomUUID(), version = randomUUID();
+            const objectPath = `fictional/${name}`, sha256 = "a".repeat(64);
             await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
-                       values (${q(documentId)},${q(owner)},${q(owner)},'personal','material',${q(name)},'application/pdf',10,'clean',${q(randomUUID())});
+                       values (${q(document)},${q(owner)},${q(owner)},'personal','material',${q(name)},'application/pdf',10,'clean',${q(randomUUID())});
                        insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
-                       values (${q(version)},${q(documentId)},${q(owner)},${q(randomUUID())},1,${q(`fictional/${name}`)},${q(name)},'application/pdf',10,'clean',${q("a".repeat(64))});
-                       update public.documents set current_version_id=${q(version)} where id=${q(documentId)};`);
-            return version;
+                       values (${q(version)},${q(document)},${q(owner)},${q(randomUUID())},1,${q(objectPath)},${q(name)},'application/pdf',10,'clean',${q(sha256)});
+                       update public.documents set current_version_id=${q(version)} where id=${q(document)};`);
+            return {document, version, objectPath, sha256};
         };
-        const staffVersion = await addMaterial(admin, "Staff.pdf");
-        const lecturerVersion = await addMaterial(teacher, "Lecturer.pdf");
-        const companyVersion = await addMaterial(client, "Company.pdf");
-        const staffLink = (await action(admin, "resource_share", {version_id: staffVersion, audience: "all", category: "material"})).id;
-        const lecturerLink = (await action(teacher, "resource_share", {version_id: lecturerVersion, audience: "all", category: "material"})).id;
-        const companyLink = (await action(client, "resource_share", {version_id: companyVersion, audience: "all", category: "material"})).id;
-        await assert.rejects(action(teacher, "resource_share", {version_id: companyVersion, audience: "staff", category: "material"}), /42501/);
-        await assert.rejects(action(client, "resource_share", {version_id: lecturerVersion, audience: "staff", category: "material"}), /42501/);
-        await assert.rejects(action(learner, "resource_share", {version_id: lecturerVersion, audience: "staff", category: "material"}), /42501/);
-        const visible = await workspace(teacher);
-        assert.equal(visible.resources.find((row) => row.id === staffLink).can_remove, false);
-        assert.equal(visible.resources.find((row) => row.id === companyLink).ownership_kind, "company");
-        assert.equal(visible.resources.find((row) => row.id === lecturerLink).can_remove, true);
-        assert.equal((await workspace(client)).resources.find((row) => row.id === companyLink).can_remove, true);
-        assert.equal((await workspace(learner)).resources.find((row) => row.id === companyLink).can_remove, false);
-        for (const link of [staffLink, companyLink]) await assert.rejects(action(teacher, "resource_remove", {id: link}), /42501/);
-        for (const link of [staffLink, lecturerLink]) await assert.rejects(action(client, "resource_remove", {id: link}), /42501/);
-        await assert.rejects(action(learner, "resource_remove", {id: lecturerLink}), /42501/);
+        const share = async (who, material, audience, category = "material") =>
+            (await action(who, "resource_share", {version_id: material.version, audience, category})).id;
+        const remove = (who, id, course = run) => action(who, "resource_remove", {id}, 0, course);
+        const download = (who, id) => rpc(who, "course_document_access", [q("resource"), q(id)]);
+        const deletionPlan = (who, document) => rpc(who, "deletion_preview", [q("document"), q(document)]);
+        const confirmDeletion = (who, plan) =>
+            rpc(who, "deletion_confirm", [q(plan.plan_id), q(randomUUID()), q("DELETE")]);
+        const staffFile = await addMaterial(admin, "Staff.pdf");
+        const lecturerFile = await addMaterial(teacher, "Lecturer.pdf");
+        const companyFile = await addMaterial(client, "Company.pdf");
+        const staffLink = await share(admin, staffFile, "all");
+        const staffPrivateLink = await share(admin, staffFile, "staff");
+        const participantLink = await share(admin, staffFile, "participants");
+        const lecturerLink = await share(teacher, lecturerFile, "all");
+        const clientReport = await share(teacher, lecturerFile, "client", "report");
+        const companyLink = await share(client, companyFile, "all");
+
+        await assert.rejects(share(teacher, companyFile, "staff"), /42501/);
+        await assert.rejects(share(client, lecturerFile, "staff"), /42501/);
+        await assert.rejects(share(learner, lecturerFile, "staff"), /42501/);
+        const teachingView = (await workspace(teacher)).resources;
+        assert.equal(teachingView.find((row) => row.id === staffLink).can_remove, false);
+        assert.equal(teachingView.find((row) => row.id === companyLink).ownership_kind, "company");
+        assert.equal(teachingView.find((row) => row.id === lecturerLink).can_remove, true);
+        const companyView = (await workspace(client)).resources;
+        for (const link of [staffLink, lecturerLink, clientReport, companyLink]) {
+            assert.equal(companyView.find((row) => row.id === link).can_remove, true);
+        }
+        const learnerView = (await workspace(learner)).resources;
+        assert.equal(learnerView.find((row) => row.id === companyLink).can_remove, false);
+        const managerView = (await workspace(manager)).resources;
+        for (const link of [staffLink, staffPrivateLink, participantLink, lecturerLink, clientReport, companyLink]) {
+            assert.equal(managerView.find((row) => row.id === link).can_remove, true);
+        }
+
+        for (const [who, id, material] of [
+            [teacher, companyLink, companyFile],
+            [client, staffLink, staffFile],
+            [client, clientReport, lecturerFile],
+            [learner, lecturerLink, lecturerFile],
+            [manager, staffPrivateLink, staffFile],
+        ]) {
+            const receipt = await download(who, id);
+            assert.equal(receipt.id, material.version);
+            assert.equal(receipt.object_path, material.objectPath);
+            assert.equal(receipt.sha256, material.sha256);
+        }
+        for (const id of [staffPrivateLink, participantLink]) {
+            assert.equal(companyView.some((row) => row.id === id), false);
+            await assert.rejects(remove(client, id), /42501/);
+            await assert.rejects(download(client, id), /42501/);
+        }
+        await assert.rejects(workspace(otherClient), /42501/);
+        await assert.rejects(remove(otherClient, staffLink), /42501/);
+        await assert.rejects(download(otherClient, staffLink), /42501/);
+        await assert.rejects(remove(client, staffLink, current), /42501/);
+        for (const id of [staffLink, companyLink]) await assert.rejects(remove(teacher, id), /42501/);
+        await assert.rejects(remove(learner, lecturerLink), /42501/);
         await assert.rejects(sql(`update private.course_resources set ownership_kind='lecturer' where id=${q(companyLink)}`), /42501/);
-        await action(teacher, "resource_remove", {id: lecturerLink});
-        await action(client, "resource_remove", {id: companyLink});
-        assert.equal((await action(client, "resource_share", {version_id: companyVersion, audience: "all", category: "material"})).id, companyLink);
-        assert.equal((await workspace(client)).resources.find((row) => row.id === companyLink).ownership_kind, "company");
-        await action(client, "resource_remove", {id: companyLink});
-        await action(admin, "resource_remove", {id: staffLink});
-        assert.equal((await workspace(learner)).resources.some((row) => [staffLink, lecturerLink, companyLink].includes(row.id)), false);
+
+        await sql(`update public.client_organisation_memberships set removed_at=now() where user_id=${q(client)} and organisation_id=${q(org)}`);
+        await assert.rejects(remove(client, staffLink), /42501/);
+        await assert.rejects(download(client, staffLink), /42501/);
+        await sql(`update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`);
         await rpc(admin, "set_company_premium", [q(org), "false", "1", q(randomUUID())]);
-        await assert.rejects(action(teacher, "resource_share", {version_id: lecturerVersion, audience: "all", category: "material"}), /42501/);
-        await assert.rejects(action(client, "resource_remove", {id: companyLink}), /42501/);
+        await assert.rejects(share(teacher, lecturerFile, "staff"), /42501/);
+        await assert.rejects(remove(client, companyLink), /42501/);
         await rpc(admin, "set_company_premium", [q(org), "true", "2", q(randomUUID())]);
+
+        await remove(teacher, lecturerLink);
+        const activeReportPlan = await deletionPlan(teacher, lecturerFile.document);
+        assert.equal(activeReportPlan.can_confirm, false);
+        assert.ok(activeReportPlan.blockers.some(({kind}) => kind === "private.course_resources"));
+        await remove(client, clientReport);
+        await remove(client, staffLink);
+        await remove(client, companyLink);
+        assert.equal(await share(client, companyFile, "all"), companyLink);
+        assert.equal((await workspace(client)).resources.find((row) => row.id === companyLink).ownership_kind, "company");
+        await remove(client, companyLink);
+        await remove(manager, staffPrivateLink);
+        await remove(admin, participantLink);
+        await assert.rejects(remove(client, staffLink), /42501/);
+        await assert.rejects(download(client, staffLink), /42501/);
+        await assert.rejects(download(learner, lecturerLink), /42501/);
+        assert.deepEqual((await workspace(learner)).resources, []);
+        assert.equal(await sql(`select count(*) from public.documents where id = ${q(lecturerFile.document)}`), "1");
+        await assert.rejects(deletionPlan(client, lecturerFile.document), /42501/);
+        await assert.rejects(deletionPlan(admin, lecturerFile.document), /42501/);
+
+        const ownPlan = await deletionPlan(teacher, lecturerFile.document);
+        assert.equal(ownPlan.can_confirm, true);
+        assert.equal(ownPlan.counts["private.course_resources"], 2);
+        await assert.rejects(confirmDeletion(teacher, activeReportPlan), /40001/);
+        const ownCompanyPlan = await deletionPlan(client, companyFile.document);
+        assert.equal(ownCompanyPlan.can_confirm, true);
+        assert.equal(ownCompanyPlan.counts["private.course_resources"], 1);
+        const operation = await confirmDeletion(teacher, ownPlan);
+        await assert.rejects(share(teacher, lecturerFile, "all"), /42501/);
+        const execution = await rpc(teacher, "deletion_execution", [q(operation.operation_id)]);
+        await sql(`begin;set local role service_role;set local request.jwt.claims='{"role":"service_role"}';
+                   select public._deletion_apply(${q(operation.operation_id)},${q(execution.permit_id)});commit;`);
+        assert.equal(await sql(`select count(*) from public.documents where id = ${q(lecturerFile.document)}`), "0");
+        assert.equal(await sql(`select count(*) from private.course_resources where id in (${q(lecturerLink)},${q(clientReport)})`), "0");
+        assert.equal(await sql(`select count(*) from public.documents where id = ${q(companyFile.document)}`), "1");
+        assert.equal(await sql(`select count(*) from public.audit_events where action = 'course.resource_remove' and resource_id = ${q(clientReport)}`), "1");
+        const attendanceFile = await addMaterial(teacher, "Retained-attendance.pdf");
+        const attendanceLink = await share(teacher, attendanceFile, "staff");
+        await sql(`insert into private.course_attendance_evidence(session_id,resource_id,version_id,attached_by)
+                   values (${q(session)},${q(attendanceLink)},${q(attendanceFile.version)},${q(teacher)})`);
+        for (const who of [admin, manager, teacher]) {
+            assert.equal((await workspace(who)).resources.find(({id}) => id === attendanceLink).can_remove, false);
+            await assert.rejects(remove(who, attendanceLink), /23503/);
+        }
+        const attendancePlan = await deletionPlan(teacher, attendanceFile.document);
+        assert.equal(attendancePlan.can_confirm, false);
+        assert.ok(attendancePlan.blockers.some(({kind}) => kind === "private.course_attendance_evidence"));
+        assert.equal((await download(teacher, attendanceLink)).id, attendanceFile.version);
     });
     await check(
         "Personal notebook is owner-only while course Q&A admits enrolled learners and assigned teachers",
