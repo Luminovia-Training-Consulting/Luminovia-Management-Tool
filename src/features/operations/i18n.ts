@@ -232,6 +232,7 @@ const pairs: Record<string, [string, string]> = {
   webhookRefresh: ["Zustellstatus aktualisieren", "Refresh delivery status"],
   webhookActive: ["Abonnement aktiv", "Subscription active"],
   webhookInactive: ["Abonnement inaktiv", "Subscription inactive"],
+  webhookEventId: ["Ereignis-ID", "Event ID"],
   webhookRecent: ["Letzte Zustellungen", "Recent deliveries"],
   webhookRevoke: ["Abonnement widerrufen", "Revoke subscription"],
   webhookConfirm: [

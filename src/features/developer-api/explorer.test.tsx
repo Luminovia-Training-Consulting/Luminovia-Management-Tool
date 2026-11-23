@@ -95,6 +95,7 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
     "/api/openapi.json",
   );
   for (const [name, href] of [
+    ["Business workflows (JSON)", "/api/workflows.json"],
     ["TypeScript", "/api/client.ts"],
     ["Python", "/api/client.py"],
   ]) {
@@ -181,6 +182,9 @@ it("preserves the internal explorer catalogue and interactive methods", async ()
   const user = userEvent.setup();
   await show(<ApiExplorer />);
   expect(latest().spec.info.title).toBe("Luminovia Portal API");
+  expect(
+    screen.queryByRole("link", { name: "Business workflows (JSON)" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: "TypeScript" }),
   ).not.toBeInTheDocument();

@@ -47,6 +47,13 @@
 - [x] Include the observed browser bundle and worker components and their licence texts in signed Academy browser deliveries.
 - [ ] Record runtime-image dependency and licence evidence and complete the independent target, delivery and managed-operator checks in the [White Label roadmap](../WHITELABEL_ROADMAP.md).
 
+## Academy API and data flows
+
+- [x] Publish the installation-bound bilingual business workflow index beside Swagger and the full OpenAPI contract. Reject orphaned operations and verify the exact index in the signed browser archive and public target probe.
+- [x] Validate integration HTTP responses, scoped cursors, rate limits, key rotation, current authority and concurrent enrolment against migrated PostgreSQL. Verify earlier SDK and signed-contract compatibility.
+- [x] Correlate signed webhook deliveries end to end using the stable event ID in restricted delivery history. Verify retries, durable deduplication, replacement keys and revocation.
+- [ ] Record the exact customer target receipts for WL-T16–WL-T22 and WL-T37, including the customer HTTPS receiver and file scanner.
+
 ## Live White Label and administration activity
 
 - [x] Open one live White Label form in a dedicated Academy. Apply version-checked branding and public links together without rebuilding the installation.

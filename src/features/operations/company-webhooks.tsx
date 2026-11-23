@@ -11,6 +11,7 @@ import "./i18n";
 
 type WebhookDelivery = {
   id: string;
+  event_id?: string;
   event_type: string;
   state: "pending" | "failed" | "delivered" | "cancelled";
   occurred_at: string;
@@ -237,6 +238,13 @@ export function CompanyWebhooks({
                                 {t("webhookAttempts", {
                                   count: delivery.attempts,
                                 })}
+                                {delivery.event_id && (
+                                  <span>
+                                    {" · "}
+                                    {t("webhookEventId")}{" "}
+                                    <code>{delivery.event_id}</code>
+                                  </span>
+                                )}
                               </li>
                             ))}
                           </ul>

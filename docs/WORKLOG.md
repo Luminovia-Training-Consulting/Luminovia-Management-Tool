@@ -4596,3 +4596,11 @@ The administration activity view records reviewed actions with minimal metadata.
 Local coverage passed with 1,580 tests before the final main sync. Nine administration activity checks passed after that sync. Isolated database acceptance also covered atomic branding changes, financial visibility and redaction, file receipts, enquiry intake and the real PostgreSQL cleanup worker. Hosted deployment and browser acceptance remain pending.
 
 The post-sync local suite passed all 1,589 tests but identified two untested error branches in the job dispatch API added on main. Added focused tests for permission denial when reading dispatch options and stale-version rejection when saving them. The existing coverage threshold stays in effect.
+
+# 23 November 2026 — Academy API and data flow acceptance
+
+The Academy publishes a bilingual workflow index beside the full OpenAPI document. The index binds the edition, installation and API version to 111 canonical operations in 16 groups and includes their reviewed HTTP aliases, status codes, interactive availability and operational exceptions. The build rejects unmapped operations. Signed delivery checks enforce the current index and preserve reviewed historic OpenAPI contracts, including 1.37. Webhook history retains the delivery ID and now shows the stable receiver event ID.
+
+In both editions, native PostgreSQL and the production integration handler over loopback verified scoped cursor paging, response schemas, 401/403/404/405/409/429 responses, quota and Retry-After, concurrent key rotation, authority loss and idempotent concurrent enrolment. Current and retained 1.36 clients worked against the same handler. The webhook test verified raw-body signatures, durable duplicate handling, retry and replacement-key behavior, and revocation. The standalone local file rehearsal passed in both editions using real Auth, Edge, Storage and ClamAV. It compared the exact scanned bytes, checked concurrent publication and verified denied downloads after access withdrawal.
+
+Target acceptance remains pending for the specific signed release and the configured customer receiver and scanner. No customer instance or external receiver was changed.

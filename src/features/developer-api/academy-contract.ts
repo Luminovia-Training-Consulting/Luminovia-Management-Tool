@@ -1,3 +1,4 @@
+import { academyWorkflows } from "./academy-workflows.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
@@ -1284,7 +1285,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.37.0",
+      version: "1.38.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },
@@ -1702,5 +1703,18 @@ export function academyExplorerOpenApi(
         ),
       ),
     ),
+  };
+}
+
+/** Link the complete signed contract with the interactive operations on this installation. */
+export function academyWorkflowIndex(
+  document: ReturnType<typeof academyOpenApi>,
+  explorer: ReturnType<typeof academyExplorerOpenApi>,
+) {
+  return {
+    openapi: "/api/openapi.json",
+    apiVersion: document.info.version,
+    installation: document["x-portal-installation"],
+    ...academyWorkflows(document.paths, explorer.paths),
   };
 }

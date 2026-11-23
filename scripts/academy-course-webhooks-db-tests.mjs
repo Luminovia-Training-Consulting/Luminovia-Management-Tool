@@ -19,9 +19,11 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       foreign,
       course,
       next,
+      afterRevocation,
+      rotatedCourse,
       outside,
       template,
-    ] = Array.from({ length: 9 }, randomUUID);
+    ] = Array.from({ length: 11 }, randomUUID);
     const now = Date.now();
     const date = (days) => new Date(now + days * 86_400_000).toISOString();
     const terms = {
@@ -59,6 +61,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
       insert into public.course_templates(id,title) values (${q(template)},'Fictional private course');
       insert into public.course_runs(id,template_id,organisation_id) values
         (${q(course)},${q(template)},${q(company)}),(${q(next)},${q(template)},${q(company)}),
+        (${q(afterRevocation)},${q(template)},${q(company)}),(${q(rotatedCourse)},${q(template)},${q(company)}),
         (${q(outside)},${q(template)},${q(foreign)});`);
 
     const request = (name, method = "POST", profile = "public") =>
@@ -140,7 +143,20 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     );
     await assert.rejects(subscribe(admin, randomUUID(), "unknown"), /42501/);
 
-    const signing = await subscribe(admin, company, "timing");
+    // Concurrent duplicate aliases may expose a signing secret only once.
+    const subscriptionsRace = await Promise.allSettled([
+      subscribe(admin, company, "timing"),
+      subscribe(admin, company, "timing"),
+    ]);
+    const [successful] = subscriptionsRace.filter(
+      ({ status }) => status === "fulfilled",
+    );
+    const [duplicate] = subscriptionsRace.filter(
+      ({ status }) => status === "rejected",
+    );
+    assert.ok(successful && duplicate);
+    assert.match(duplicate.reason.message, /23505/);
+    const signing = successful.value;
     assert.match(signing.signing_secret, /^[0-9a-f]{64}$/);
     await assert.rejects(subscribe(admin, company, "timing"), /23505/);
     assert.equal((await list(admin, company)).length, 1);
@@ -162,27 +178,41 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     assert.equal(await lease("timing", foreign), null);
     await publish(course);
 
-    await verifyWebhookDeliveryHttp({
+    const subscriptions = await verifyWebhookDeliveryHttp({
       sql,
       course,
       subscription: signing,
       destination: company + "/timing",
       publishNext: () => publish(next),
       revoke: () => revoke(admin, company, signing.id),
+      readHistory: () => list(admin, company),
+      replaceSubscription: async (dispatch) => {
+        await publish(afterRevocation);
+        assert.equal(
+          await dispatch(),
+          0,
+          "Revoked subscriptions cannot receive future events",
+        );
+        return {
+          subscription: await subscribe(admin, company, "timing"),
+          resource: rotatedCourse,
+          publish: () => publish(rotatedCourse),
+        };
+      },
       enforcePortalGate: true,
     });
     const afterRevoke = await list(admin, company);
-    assert.equal(afterRevoke[0].active, false);
+    const old = afterRevoke.find(({ id }) => id === subscriptions.retired);
+    assert.equal(old.active, false);
+    assert.deepEqual(old.deliveries.map(({ state }) => state).sort(), [
+      "cancelled",
+      "delivered",
+    ]);
     assert.equal(
-      afterRevoke[0].deliveries.filter(({ state }) => state === "delivered")
-        .length,
-      1,
+      afterRevoke.find(({ id }) => id === subscriptions.active).active,
+      true,
     );
-    assert.equal(
-      afterRevoke[0].deliveries.filter(({ state }) => state === "cancelled")
-        .length,
-      1,
-    );
+    await revoke(admin, company, subscriptions.active);
     assert.equal(
       await sql(
         "select count(*) from private.company_integration_keys where purpose='academy-webhook' and revoked_at is null",
@@ -293,7 +323,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     console.log(
       "PASS",
       edition,
-      "actual signed HTTP delivery and retry, organisation scope, role and licence gates, in-flight revoke, and exact release binding",
+      "signed HTTP receipt, attempt history, deduplication, rotation, organisation scope, revocation, and exact release binding",
     );
   });
 }

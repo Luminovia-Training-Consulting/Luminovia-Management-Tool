@@ -38,7 +38,11 @@ import {
   ZipWriter,
 } from "@zip.js/zip.js";
 import { z } from "zod";
-import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
+import {
+  academyExplorerOpenApi,
+  academyOpenApi,
+  academyWorkflowIndex,
+} from "../src/features/developer-api/academy-contract.ts";
 import {
   academySbomPath,
   academyNoticesPath,
@@ -117,6 +121,7 @@ const manifestSchema = z.strictObject({
 function approvedPath(path) {
   return (
     fixedFiles.has(path) ||
+    path === "api/workflows.json" ||
     academyClientPaths.includes(path) ||
     path === academySbomPath ||
     path === academyNoticesPath ||
@@ -280,6 +285,9 @@ const reviewedHistoricCatalogueDigests = new Set([
   "2cdb94859a7ad8264987406b1b3add7fa2563c007c01f1f017d81667c22ff93d", // 1.36.0 at ca0ef6e9
   "2647f0e2741685481803398ce567e89efc4e83429961c0cfc9a3adb2eee62623", // 1.36.0 at af97d678
   "1d4cb0a7caf5c84dbf4459822f42c45df7bdd24de2a15c5dcc79b528d34d9702", // 1.36.0 at ab9248c0
+  "b67f2a025e0df68b1933c4e5cc98225326a58b743aefbe870e46da6c11cec035", // 1.37.0 at dc159a63
+  "7f59813264e4c5dbad1ab5a71506828674d84901d12bda640068dc1458e5398f", // 1.37.0 at ad17eff0
+  "76a6e18c85ff66cf4e235a740e899486b376a9a87c1a24bae8873203807cc96a", // 1.37.0 at 9b828637
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */
@@ -442,6 +450,24 @@ function validateBrowserOutput(
     )
   ) {
     throw new Error("Customer API differs from the reviewed course profile.");
+  }
+  if (
+    api.info.version === expectedApi.info.version ||
+    files.has("api/workflows.json")
+  ) {
+    const workflowFile = files.get("api/workflows.json");
+    const expectedWorkflows = academyWorkflowIndex(
+      expectedApi,
+      academyExplorerOpenApi(apiBackend, brand),
+    );
+    if (
+      !workflowFile ||
+      !isDeepStrictEqual(JSON.parse(text(workflowFile)), expectedWorkflows)
+    ) {
+      throw new Error(
+        "Customer workflow index differs from the reviewed contract.",
+      );
+    }
   }
   if (requireClients || academyClientPaths.some((path) => files.has(path))) {
     for (const [path, source] of academyClientAssets(api)) {

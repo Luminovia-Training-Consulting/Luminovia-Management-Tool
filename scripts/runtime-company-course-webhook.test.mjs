@@ -4,6 +4,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
+import https from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
@@ -128,7 +129,8 @@ test("the CLI checks an alias without any backend configuration", () => {
   });
 });
 
-test("the receiver check verifies a pinned TLS peer and independently checks the hostname", async () => {
+/** Generate a short-lived certificate trusted only by the loopback test client. */
+async function withReceiverCertificate(run) {
   const directory = await mkdtemp(join(tmpdir(), "luminovia-webhook-tls-"));
   try {
     const keyPath = join(directory, "receiver.key");
@@ -158,6 +160,14 @@ test("the receiver check verifies a pinned TLS peer and independently checks the
       readFile(keyPath),
       readFile(certPath),
     ]);
+    await run({ key, cert });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+test("the receiver check verifies a pinned TLS peer and independently checks the hostname", async () => {
+  await withReceiverCertificate(async ({ key, cert }) => {
     const server = createTlsServer({ key, cert });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -196,9 +206,87 @@ test("the receiver check verifies a pinned TLS peer and independently checks the
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
+  });
+});
+
+test("the production sender classifies actual HTTPS receiver responses and never follows redirects", async (t) => {
+  await withReceiverCertificate(async ({ key, cert }) => {
+    let status;
+    let requests = 0;
+    const receiver = https.createServer({ key, cert }, (request, response) => {
+      requests++;
+      request.resume();
+      assert.equal(request.url, "/webhooks/courses");
+      assert.equal(request.method, "POST");
+      response.writeHead(status, { Location: "/do-not-follow" }).end();
+    });
+    receiver.listen(0, "127.0.0.1");
+    await once(receiver, "listening");
+    try {
+      const request = https.request;
+      // Preserve TLS verification and the real sender, but bind its one socket
+      // to the fixture. No request can leave this machine.
+      t.mock.method(https, "request", (target, options, callback) => {
+        assert.equal(target.href, url);
+        options.lookup(target.hostname, { all: true }, (error, pinned) => {
+          assert.ifError(error);
+          assert.deepEqual(pinned, [publicIp]);
+        });
+        return request(
+          target,
+          {
+            ...options,
+            ca: cert,
+            port: receiver.address().port,
+            lookup(_hostname, { all }, resolve) {
+              const address = "127.0.0.1";
+              if (all) resolve(null, [{ address, family: 4 }]);
+              else resolve(null, address, 4);
+            },
+          },
+          callback,
+        );
+      });
+
+      const cases = [
+        [204, "delivered"],
+        [408, "retry"],
+        [429, "retry"],
+        [503, "retry"],
+        [401, "failed"],
+        [409, "failed"],
+        [302, "failed"],
+      ];
+      for (const [httpStatus, expected] of cases) {
+        status = httpStatus;
+        const backend = fixture({
+          destination,
+          event,
+          signing_secret: signingSecret,
+        });
+        const processed = await dispatchCompanyWebhooks(
+          webhookConfiguration(env),
+          {
+            ...backend,
+            resolve: async () => [publicIp],
+          },
+        );
+        assert.equal(processed, 1);
+        assert.deepEqual(
+          backend.stages.find(
+            ([action]) => action === "finish_company_course_webhook",
+          ),
+          [
+            "finish_company_course_webhook",
+            { p_id: lease.id, p_token: lease.token, p_result: expected },
+          ],
+        );
+      }
+      assert.equal(requests, cases.length);
+    } finally {
+      await new Promise((resolve) => receiver.close(resolve));
+    }
+  });
 });
 
 test("a committed event is signed after DNS and live authorization with its stable event ID", async () => {

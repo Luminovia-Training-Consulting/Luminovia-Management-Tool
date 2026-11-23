@@ -36,6 +36,19 @@ async function readBytes(request) {
   return Buffer.concat(chunks, length);
 }
 
+/** Post the exact signed bytes to the owned receiver and drain the response. */
+async function postReceiver(receiver, { body, headers }) {
+  const response = await fetch(receiver.url + "/course-events", {
+    method: "POST",
+    headers,
+    body,
+    redirect: "error",
+    signal: AbortSignal.timeout(10000),
+  });
+  await response.body?.cancel();
+  return response.status;
+}
+
 /**
  * Calls the actual service-role database functions through an owned HTTP bridge.
  * The injected final transport sends to the owned receiver only. Production
@@ -51,6 +64,8 @@ export async function verifyWebhookDeliveryHttp({
   publishFollowups,
   publishNext,
   revoke,
+  readHistory,
+  replaceSubscription,
   enforcePortalGate = false,
 }) {
   const [resourceKey, resourceId] = course
@@ -100,14 +115,15 @@ export async function verifyWebhookDeliveryHttp({
   try {
     const directory = await mkdtemp(join(tmpdir(), "portal-receiver-"));
     const databasePath = join(directory, "events.sqlite");
-    const startReceiver = () =>
+    const startReceiver = (secret = subscription.signing_secret) =>
       listen(
         createCompanyCourseWebhookReceiver({
           databasePath,
-          secret: subscription.signing_secret,
+          secret,
         }),
       );
     let receiver;
+    let nextReceiver;
     try {
       receiver = await startReceiver();
       const config = webhookConfiguration({
@@ -118,27 +134,31 @@ export async function verifyWebhookDeliveryHttp({
         }),
       });
       const pinned = { address: "8.8.8.8", family: 4 };
-      const send = async (url, address, { body, headers }) => {
+      let firstMessage;
+      let expectedResource = resourceId;
+      const send = async (url, address, message) => {
+        const { body, headers } = message;
         assert.equal(url.href, "https://example.invalid/course-events");
         assert.deepEqual(address, pinned);
         assert.equal(headers.apikey, undefined);
         assert.equal(headers.authorization, undefined);
         const event = JSON.parse(body);
-        assert.equal(event[resourceKey], resourceId);
+        assert.equal(event[resourceKey], expectedResource);
+        assert.equal(headers["X-Luminovia-Event-Id"], event.id);
         assert.ok(expectedTypes.has(event.type), "Expected signed event type");
         assert.deepEqual(
           Object.keys(event).sort(),
           [resourceKey, "id", "occurred_at", "type", "version"].sort(),
         );
-        const response = await fetch(receiver.url + "/course-events", {
-          method: "POST",
-          headers,
-          body,
-          redirect: "error",
-          signal: AbortSignal.timeout(10000),
-        });
-        await response.body?.cancel();
-        assert.equal(response.status, 204);
+        firstMessage ??= message;
+        if (receiverEvents.length === 1) assert.equal(body, firstMessage.body);
+        if (nextReceiver) {
+          assert.equal(await postReceiver(receiver, message), 401);
+        }
+        assert.equal(
+          await postReceiver(nextReceiver ?? receiver, message),
+          204,
+        );
         receiverEvents.push(event);
         // Model an acknowledgement lost after the durable write.
         return receiverEvents.length === 1 ? "retry" : "delivered";
@@ -153,12 +173,38 @@ export async function verifyWebhookDeliveryHttp({
           ),
         );
 
+      const checkHistory = async (
+        row,
+        event,
+        subscriptionId = subscription.id,
+      ) => {
+        assert.equal(
+          row.event_id,
+          event.id,
+          "The queue and receiver share an event ID",
+        );
+        if (!readHistory) return;
+        const history = await readHistory();
+        const receipt = history
+          .find(({ id }) => id === subscriptionId)
+          ?.deliveries.find(({ id }) => id === row.id);
+        assert.deepEqual(receipt, {
+          id: row.id,
+          event_id: event.id,
+          event_type: event.type,
+          occurred_at: event.occurred_at,
+          state: row.state,
+          attempts: row.attempts,
+        });
+      };
+
       assert.equal(await dispatch(), 1);
       assert.equal(receiverEvents.length, 1);
       let row = await currentDelivery();
       assert.equal(row.state, "pending");
       assert.equal(row.attempts, 1);
       assert.equal(row.lease_token, null);
+      await checkHistory(row, receiverEvents[0]);
       assert.equal(
         await dispatch(),
         0,
@@ -176,6 +222,7 @@ export async function verifyWebhookDeliveryHttp({
       assert.equal(row.state, "delivered");
       assert.equal(row.attempts, 2);
       assert.equal(row.lease_token, null);
+      await checkHistory(row, receiverEvents[0]);
       assert.deepEqual(calls.slice(0, 4), [
         "/rest/v1/rpc/lease_company_course_webhook",
         "/rest/v1/rpc/prepare_company_course_webhook",
@@ -205,18 +252,21 @@ export async function verifyWebhookDeliveryHttp({
         accepted - 1,
         "Only the first acknowledgement is lost",
       );
-      const inbox = new DatabaseSync(databasePath, { readOnly: true });
-      try {
-        const persisted = inbox
-          .prepare("SELECT event_json FROM course_event_inbox ORDER BY rowid")
-          .all();
-        assert.deepEqual(
-          persisted.map(({ event_json }) => JSON.parse(event_json)),
-          [...receipts.values()],
-        );
-      } finally {
-        inbox.close();
-      }
+      const checkInbox = () => {
+        const inbox = new DatabaseSync(databasePath, { readOnly: true });
+        try {
+          const persisted = inbox
+            .prepare("SELECT event_json FROM course_event_inbox ORDER BY rowid")
+            .all();
+          assert.deepEqual(
+            persisted.map(({ event_json }) => JSON.parse(event_json)),
+            [...receipts.values()],
+          );
+        } finally {
+          inbox.close();
+        }
+      };
+      checkInbox();
       assert.equal(
         await sql(
           `select count(*) from private.company_course_webhook_deliveries
@@ -245,7 +295,43 @@ export async function verifyWebhookDeliveryHttp({
         ),
         "1",
       );
+
+      if (replaceSubscription) {
+        const replacement = await replaceSubscription(() => dispatch());
+        assert.notEqual(replacement.subscription.id, subscription.id);
+        // Do not include signing keys in assertion error output.
+        assert.ok(
+          replacement.subscription.signing_secret !==
+            subscription.signing_secret,
+        );
+        nextReceiver = await startReceiver(
+          replacement.subscription.signing_secret,
+        );
+        assert.equal(await postReceiver(nextReceiver, firstMessage), 401);
+        expectedResource = replacement.resource;
+        await replacement.publish();
+        assert.equal(await dispatch(), 1);
+        assert.equal(receiverEvents.length, accepted + 1);
+        const newest = receiverEvents.at(-1);
+        assert.ok(!receipts.has(newest.id));
+        receipts.set(newest.id, newest);
+        checkInbox();
+        const delivered = JSON.parse(
+          await sql(
+            `select to_jsonb(d) from private.company_course_webhook_deliveries d
+          where subscription_id=${q(replacement.subscription.id)} and event_id=${q(newest.id)}`,
+          ),
+        );
+        assert.equal(delivered.state, "delivered");
+        assert.equal(delivered.attempts, 1);
+        await checkHistory(delivered, newest, replacement.subscription.id);
+        return {
+          retired: subscription.id,
+          active: replacement.subscription.id,
+        };
+      }
     } finally {
+      await nextReceiver?.close();
       await receiver?.close();
       await rm(directory, { recursive: true, force: true });
     }

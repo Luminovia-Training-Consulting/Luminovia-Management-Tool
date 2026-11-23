@@ -41,6 +41,13 @@ const accountingWebhookTypes = {
 };
 
 function subscriptionSchema(eventTypes: { enum: string[] }) {
+  const delivery = object({
+    id: uuid,
+    event_type: eventTypes,
+    occurred_at: { type: "string", format: "date-time" },
+    attempts: { type: "integer", minimum: 0, maximum: 5 },
+    state: { enum: ["pending", "delivered", "failed", "cancelled"] },
+  });
   return object({
     id: uuid,
     destination: companyWebhookDestination,
@@ -50,13 +57,17 @@ function subscriptionSchema(eventTypes: { enum: string[] }) {
     active: boolean,
     deliveries: {
       type: "array",
-      items: object({
-        id: uuid,
-        event_type: eventTypes,
-        occurred_at: { type: "string", format: "date-time" },
-        attempts: { type: "integer", minimum: 0, maximum: 5 },
-        state: { enum: ["pending", "delivered", "failed", "cancelled"] },
-      }),
+      items: {
+        ...delivery,
+        properties: {
+          ...delivery.properties,
+          event_id: {
+            ...uuid,
+            description:
+              "Stable receiver event ID, also sent as X-Luminovia-Event-Id. Older servers may omit it.",
+          },
+        },
+      },
     },
   });
 }
@@ -124,9 +135,42 @@ export const companyCourseWebhook = {
       ),
     },
     responses: {
-      "2XX": { description: "Event accepted or already processed." },
+      "204": {
+        description:
+          "The reference receiver persisted the event or had already processed it.",
+      },
+      "2XX": {
+        description: "An approved customer receiver accepted the event.",
+      },
+      "401": {
+        description:
+          "Invalid signature, event envelope or timestamp. Delivery will not be retried.",
+      },
+      "404": {
+        description: "Incorrect receiver path. Delivery will not be retried.",
+      },
+      "405": {
+        description: "Method other than POST. Delivery will not be retried.",
+      },
+      "408": { description: "Receiver timed out. Delivery may be retried." },
+      "409": {
+        description:
+          "The event ID already exists with different content. Delivery will not be retried.",
+      },
+      "413": {
+        description:
+          "Request body exceeds the receiver limit. Delivery will not be retried.",
+      },
+      "415": {
+        description:
+          "Unsupported content type or encoding. Delivery will not be retried.",
+      },
       "429": {
         description: "Receiver throttled the request. Delivery may be retried.",
+      },
+      "503": {
+        description:
+          "The reference receiver could not commit the event. Delivery may be retried.",
       },
       "5XX": {
         description: "Transient receiver failure. Delivery may be retried.",

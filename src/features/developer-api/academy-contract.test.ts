@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { internalInstallationBrand } from "../../lib/installation-brand";
-import { academyOpenApi } from "./academy-contract";
+import {
+  academyExplorerOpenApi,
+  academyOpenApi,
+  academyWorkflowIndex,
+} from "./academy-contract";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
 import { humanAuthPaths } from "./human-auth-contract";
 
@@ -116,6 +120,47 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
     };
     const spec = academyOpenApi(backend + "/", brand);
 
+    it("accounts for native and HTTP aliases while keeping documented-only actions out of the explorer", () => {
+      const explorer = academyExplorerOpenApi(backend, brand);
+      const inventory = academyWorkflowIndex(spec, explorer);
+      expect(inventory.installation).toEqual(spec["x-portal-installation"]);
+      expect(inventory.apiVersion).toBe(spec.info.version);
+      const operations = inventory.workflows.flatMap(
+        (group) => group.operations,
+      );
+      const endpoints = operations.flatMap((operation) => operation.endpoints);
+      const expected = Object.values(spec.paths)
+        .flatMap((methods) => Object.values(methods))
+        .map((operation) => operation.operationId)
+        .sort();
+      expect(endpoints.map((endpoint) => endpoint.operationId).sort()).toEqual(
+        expected,
+      );
+      const byId = new Map(
+        operations.map((operation) => [operation.operationId, operation]),
+      );
+      expect(byId.get("saveAcademyWhiteLabel")?.endpoints).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ method: "POST", interactive: true }),
+          expect.objectContaining({
+            method: "PUT",
+            interactive: true,
+            statuses: expect.arrayContaining(["409", "415"]),
+          }),
+        ]),
+      );
+      expect(byId.get("issueAcademyScopedIntegrationKey")?.endpoints).toEqual([
+        expect.objectContaining({ method: "POST", interactive: false }),
+      ]);
+      for (const exception of inventory.exceptions) {
+        expect(exception.reason.de).toBeTruthy();
+        expect(exception.reason.en).toBeTruthy();
+        expect(exception.relatedOperations.every((id) => byId.has(id))).toBe(
+          true,
+        );
+      }
+    });
+
     it("publishes exactly the reviewed paths and closed public installation fields", () => {
       expect(portalOpenApi(backend, true, brand)).toEqual(spec);
       expect(spec.info.title).toEqual("Practice Academy API");
@@ -219,7 +264,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.37.0");
+      expect(spec.info.version).toBe("1.38.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({
@@ -253,6 +298,51 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       });
       expect(spec.webhooks.companyCourseEvent.post.responses["429"]).toEqual({
         description: "Receiver throttled the request. Delivery may be retried.",
+      });
+    });
+
+    it("documents the signed receiver and tolerates legacy delivery receipts", () => {
+      const receiver = spec.webhooks.companyCourseEvent.post;
+      expect(Object.keys(receiver.responses)).toEqual(
+        expect.arrayContaining([
+          "204",
+          "401",
+          "404",
+          "405",
+          "408",
+          "409",
+          "413",
+          "415",
+          "429",
+          "503",
+        ]),
+      );
+      const history =
+        spec.paths["/rest/v1/rpc/company_course_webhook_list"].post;
+      expect(
+        history.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        items: {
+          properties: {
+            deliveries: {
+              items: {
+                properties: { event_id: { type: "string", format: "uuid" } },
+                required: expect.arrayContaining(["id"]),
+              },
+            },
+          },
+        },
+      });
+      expect(
+        history.responses["200"].content["application/json"].schema,
+      ).not.toMatchObject({
+        items: {
+          properties: {
+            deliveries: {
+              items: { required: expect.arrayContaining(["event_id"]) },
+            },
+          },
+        },
       });
     });
 

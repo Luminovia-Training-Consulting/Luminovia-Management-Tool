@@ -91,6 +91,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 ## Schnittstellen und Integrationen
 
 - Editionsbezogene OpenAPI-3.1-Dokumente, integrierter API-Explorer, interaktives Swagger UI und abrufbare JSON-Verträge. Registrierte Auth-, REST/RPC-, Edge- und Dateischnittstellen sind im [API-Referenzhandbuch](API_REFERENCE.md) dokumentiert.
+- Zweisprachiger Academy-Download für Geschäftsabläufe mit OpenAPI-Operationen, HTTP-Methoden, Statuscodes, Swagger-Verfügbarkeit und begründeten Ausnahmen. Der Index ist an Version, Edition und Installation gebunden.
 - Versionierte Konto- und Einladungsoperationen, Login und Recovery, kurs- und rollenbezogene Operationen, geschützte Dateiübertragung, Kursdokumente, Kalenderfeed, Benachrichtigungen, zeitnahe Kurskommunikation und die Website-Anfragen-Schnittstelle.
 - Organisationsgebundene Integrationsschlüssel für veröffentlichte Kursverzeichnisse und passende Berechtigungen für Einschreibungen oder aggregierte Berichte. Getrennt ausstellen, rotieren und widerrufen. Berechtigungen orientieren sich an Edition, Schlüsselzweck und aktuellen Organisationsrechten.
 - Signierte Webhooks für Kursveröffentlichung, Kursänderungen, Terminwechsel, Zuweisungen, Anmeldungen, Prüfungsveröffentlichung, Anwesenheit, Abschlüsse und Materialveröffentlichung. Abonnements, separate Signaturgeheimnisse, Empfängerprüfung, Zustellverlauf und Wiederholungen mit stabiler Ereignis-ID. Interne Buchungsvorgänge verwenden die vorgesehenen kaufmännischen Ereignisse.

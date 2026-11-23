@@ -232,6 +232,7 @@ it.each([
                   deliveries: [
                     {
                       id: "fictional-delivery",
+                      event_id: "a392eb7f-1a88-4c1a-81a6-2df3765ffc6b",
                       event_type: "payment.reversed",
                       occurred_at: "2026-11-21T09:00:00Z",
                       attempts: 1,
@@ -290,6 +291,9 @@ it.each([
     }
     expect(
       screen.getByText(/Zahlung storniert|Payment reversed/),
+    ).toBeVisible();
+    expect(
+      screen.getByText("a392eb7f-1a88-4c1a-81a6-2df3765ffc6b"),
     ).toBeVisible();
   },
 );

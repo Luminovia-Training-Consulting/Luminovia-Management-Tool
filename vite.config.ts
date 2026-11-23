@@ -10,7 +10,11 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
 import { portalOpenApi } from "./src/features/developer-api/contract.ts";
-import { academyExplorerOpenApi } from "./src/features/developer-api/academy-contract.ts";
+import {
+  academyExplorerOpenApi,
+  academyOpenApi,
+  academyWorkflowIndex,
+} from "./src/features/developer-api/academy-contract.ts";
 import { academyClientAssets } from "./scripts/academy-client-assets.mjs";
 import { recordAcademyBrowserModules } from "./scripts/academy-browser-inventory.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
@@ -57,14 +61,24 @@ export default defineConfig(({ mode }) => {
   const escapeHtml = (value: string) =>
     value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const openApiPath = "/api/openapi.json";
-  const openApiDocument = portalOpenApi(
-    env.VITE_SUPABASE_URL ?? "",
-    true,
-    brand,
-  );
+  const backend = env.VITE_SUPABASE_URL ?? "";
+  const academyExplorer = academyExplorerOpenApi(backend, brand);
+  const academyDocument = !internal ? academyOpenApi(backend, brand) : null;
+  const openApiDocument =
+    academyDocument ?? portalOpenApi(backend, true, brand);
   const openApi = JSON.stringify(openApiDocument, null, 2) + "\n";
-  if (!internal) {
-    for (const [path, source] of academyClientAssets(openApiDocument))
+  if (academyDocument) {
+    assets.set(
+      "api/workflows.json",
+      Buffer.from(
+        JSON.stringify(
+          academyWorkflowIndex(academyDocument, academyExplorer),
+          null,
+          2,
+        ) + "\n",
+      ),
+    );
+    for (const [path, source] of academyClientAssets(academyDocument))
       assets.set(path, Buffer.from(source));
   }
   return {
@@ -84,9 +98,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __PORTAL_INSTALLATION_BRAND__: JSON.stringify(brand),
       __PORTAL_INTERNAL_EDITION__: JSON.stringify(internal),
-      __PORTAL_ACADEMY_EXPLORER__: JSON.stringify(
-        academyExplorerOpenApi(env.VITE_SUPABASE_URL ?? "", brand),
-      ),
+      __PORTAL_ACADEMY_EXPLORER__: JSON.stringify(academyExplorer),
     },
     ...(!internal && {
       server: {
@@ -157,10 +169,12 @@ export default defineConfig(({ mode }) => {
                   ? "text/javascript"
                   : path === "manifest.webmanifest"
                     ? "application/manifest+json"
-                    : "text/plain; charset=utf-8";
+                    : path.endsWith(".json")
+                      ? "application/json; charset=utf-8"
+                      : "text/plain; charset=utf-8";
             res.setHeader("Content-Type", contentType);
             res.setHeader("X-Content-Type-Options", "nosniff");
-            if (path.startsWith("api/client."))
+            if (path.startsWith("api/"))
               res.setHeader("Cache-Control", "no-store");
             res.end(req.method === "HEAD" ? undefined : bytes);
           });

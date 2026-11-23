@@ -63,6 +63,11 @@ export function StandaloneSwagger() {
           {!portalInternalEdition && (
             <>
               <Button asChild variant="secondary">
+                <a href="/api/workflows.json" download>
+                  {de ? "Geschäftsabläufe (JSON)" : "Business workflows (JSON)"}
+                </a>
+              </Button>
+              <Button asChild variant="secondary">
                 <a href="/api/client.ts" download>
                   TypeScript
                 </a>

@@ -34,7 +34,11 @@ import {
   verifyAcademyBrowserRelease,
   writeAcademyBrowserPackage,
 } from "./academy-browser-package.mjs";
-import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
+import {
+  academyExplorerOpenApi,
+  academyOpenApi,
+  academyWorkflowIndex,
+} from "../src/features/developer-api/academy-contract.ts";
 import {
   academyClientAssets,
   academyClientPaths,
@@ -85,6 +89,13 @@ const fixture = (t, buildMetadata = metadata) => {
   };
   const api = academyOpenApi(buildMetadata.backend, buildMetadata);
   file("api/openapi.json", api);
+  file(
+    "api/workflows.json",
+    academyWorkflowIndex(
+      api,
+      academyExplorerOpenApi(buildMetadata.backend, buildMetadata),
+    ),
+  );
   for (const [path, source] of academyClientAssets(api)) file(path, source);
   file(
     "index.html",
@@ -207,7 +218,8 @@ async function rewriteCatalogue({ dist, output }, original, api) {
   const records = structuredClone(original);
   // Retained releases predate packaged developer clients.
   records.files = records.files.filter(
-    ({ path }) => !academyClientPaths.includes(path),
+    ({ path }) =>
+      !academyClientPaths.includes(path) && path !== "api/workflows.json",
   );
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     level: 0,
@@ -229,6 +241,18 @@ async function rewriteCatalogue({ dist, output }, original, api) {
   writeFileSync(join(output, "manifest.json"), JSON.stringify(records));
   return records;
 }
+
+test("requires the current Academy workflow index and rejects substituted contents", async (t) => {
+  const { dist, file, write } = fixture(t);
+  const path = "api/workflows.json";
+  const original = readFileSync(join(dist, path), "utf8");
+  rmSync(join(dist, path));
+  await assert.rejects(write(), /Customer workflow index differs/);
+  file(path, { ...JSON.parse(original), workflows: [] });
+  await assert.rejects(write(), /Customer workflow index differs/);
+  file(path, original);
+  assert.ok((await write()).files.some((entry) => entry.path === path));
+});
 
 test("creates a deterministic ZIP inventory of exactly the verified customer browser bytes", async (t) => {
   const { root, dist, output, write } = fixture(t);
@@ -282,7 +306,10 @@ test("rejects a changed installation, undocumented API operation or wrong custom
 test("requires both exact generated Academy clients in newly written archives", async (t) => {
   const { dist, file, api, write } = fixture(t);
   rmSync(join(dist, "api/client.py"));
-  await assert.rejects(write(), /API client differs from its packaged contract/);
+  await assert.rejects(
+    write(),
+    /API client differs from its packaged contract/,
+  );
   for (const [path, source] of academyClientAssets(api)) file(path, source);
   file("api/client.ts", "export const substitutedClient = true;");
   await assert.rejects(
@@ -458,6 +485,7 @@ for (const version of [
   "1.33.0",
   "1.34.0",
   "1.36.0",
+  "1.37.0",
 ]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);
@@ -911,6 +939,7 @@ test("binds public Academy ingress to the signed current release on each DNS add
       "/api/openapi.json",
       "/api/client.ts",
       "/api/client.py",
+      "/api/workflows.json",
       "/backend/rest/v1/rpc/installation_capabilities",
       "/backend/auth/v1/admin/users",
       "/backend/storage/v1/bucket",

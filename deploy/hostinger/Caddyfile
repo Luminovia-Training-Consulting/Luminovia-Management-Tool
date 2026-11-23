@@ -169,7 +169,7 @@
 				file_server
 			}
 		}
-		@academyDeliverables path /api/client.ts /api/client.py /api/browser-sbom.cdx.json /api/dependency-licenses.txt
+		@academyDeliverables path /api/client.ts /api/client.py /api/workflows.json /api/browser-sbom.cdx.json /api/dependency-licenses.txt
 		handle @academyDeliverables {
 			root * /srv/current
 			@clientSources path /api/client.ts /api/client.py

@@ -35,7 +35,11 @@ const identityFields = [
   "backup_directory",
 ];
 const shellPaths = ["/", "/auth/callback", "/auth/password"];
-const uncachedPaths = ["/index.html", "/manifest.webmanifest?package=1", "/sw.js"];
+const uncachedPaths = [
+  "/index.html",
+  "/manifest.webmanifest?package=1",
+  "/sw.js",
+];
 const deniedPaths = [
   "/backend/auth/v1/admin/users",
   "/backend/storage/v1/bucket",
@@ -176,7 +180,12 @@ export async function checkAcademyPublic(
     entryAssets.length > 0 && entryAssets.length <= 16,
     "entry_assets",
   );
-  const downloadPaths = [...academyClientPaths, academySbomPath, academyNoticesPath]
+  const downloadPaths = [
+    ...academyClientPaths,
+    academySbomPath,
+    academyNoticesPath,
+    "api/workflows.json",
+  ]
     .filter((path) => files.has(path))
     .map((path) => "/" + path);
   const signedPaths = new Map([
