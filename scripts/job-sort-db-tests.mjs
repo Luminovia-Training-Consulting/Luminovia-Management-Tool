@@ -14,6 +14,7 @@ await withTestDatabase("job_text_sort", async ({sql, actor}) => {
     await sql(`insert into auth.users(id,email) values(${q(lecturer)},'teacher@example.invalid'),(${q(manager)},'manager@example.invalid'),(${q(outsider)},'client@example.invalid');
     insert into public.user_roles(user_id,role) values(${q(lecturer)},'lecturer'),(${q(manager)},'management'),(${q(outsider)},'client');
     insert into public.topics(id,label_de,label_en,kind) values(${q(x)},'Alpha','Zulu','topic'),(${q(y)},'Zulu','Alpha','topic');
+    insert into public.lecturer_topics(user_id,topic_id) values(${q(lecturer)},${q(x)});
     insert into public.jobs(id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms) values
     (${q(jobs[0])},'Test A','Fictional Zebra','online','published',10,'EUR','fixed_total',10,'Fictional terms'),
     (${q(jobs[1])},'Test B','Fictional Alpha','online','published',10,'EUR','fixed_total',10,'Fictional terms'),

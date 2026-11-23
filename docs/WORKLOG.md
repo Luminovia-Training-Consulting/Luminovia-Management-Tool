@@ -1,3 +1,7 @@
+# 23 November 2026 — Marketplace sort fixture
+
+Give the fictional sort lecturer a topic in the same teaching area as the test offers. The real PostgreSQL sort check passed with customer order, bilingual topic labels, keyset ties and restricted access.
+
 # 23 November 2026 — Retired public practice bookmarks
 
 Return an uncached HTTP 404 for the old public practice path and its subpaths in Caddy, Vite development and built preview. Exclude those paths from the service worker's navigation fallback. Public help keeps its existing offline support.
