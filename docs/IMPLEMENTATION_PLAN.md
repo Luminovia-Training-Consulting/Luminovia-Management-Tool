@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Portal spacing, calendar selection and company API key validity
+
+- [x] Space course catalogue controls, administration cards, company controls and course-readiness actions using shared wrapping and stack styles. Check desktop and mobile administration layouts in the local browser.
+- [x] Create personal drafts from a click or a visual date or time selection. Use the active display zone, validate local time, and write only after confirmation. Expose global draft selection to authorised staff.
+- [x] Let current company users and authorised staff manage internal company integration keys with finite or permanent validity. Exercise tenant and role boundaries, rotation and revocation in native PostgreSQL. Preserve the Academy key contract.
+- [ ] Run the complete isolated desktop/mobile browser and Auth/Edge integration suites when the QA ports are available.
+
 ## Published job details and schedules
 
 - [x] Show title, location, description, date range and exact sessions. Generate an inclusive range for standalone staff offers and company requests and keep editable times per day.

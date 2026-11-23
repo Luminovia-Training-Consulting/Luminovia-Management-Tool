@@ -4408,31 +4408,46 @@ const keyVersionConflict = {
   description:
     "The key changed or is no longer available. Read the list again before retrying.",
 };
+const companyIntegrationKeyListFields = {
+  id: uuid,
+  label: { ...text, minLength: 1, maxLength: 120 },
+  created_at: { ...text, format: "date-time" },
+  expires_at: nullableDateTime,
+  revoked_at: nullableDateTime,
+  version: integrationKeyVersion,
+  last_used_at: nullableDateTime,
+  scope: { type: "string", enum: companyIntegrationScopes },
+};
 const companyIntegrationKeys = rpc(
   "listCompanyIntegrationKeys",
   "Server integrations",
   "List a company's integration keys",
-  "Only an active administrator or owner can read the most recent 100 keys for the specified company. The list contains public key metadata and never returns key material.",
+  "An active administrator, owner or authorised manager can list keys. Company accounts can read only their own current companies. Returns at most 100 keys without key material. A null expiry denotes a permanent key.",
   organisation,
   {
     type: "array",
     maxItems: 100,
-    items: object({
-      id: uuid,
-      label: { ...text, minLength: 1, maxLength: 120 },
-      created_at: { ...text, format: "date-time" },
-      expires_at: { ...text, format: "date-time" },
-      revoked_at: nullableDateTime,
-      version: integrationKeyVersion,
-      last_used_at: nullableDateTime,
-      scope: { type: "string", enum: companyIntegrationScopes },
-    }),
+    items: {
+      ...object({
+        ...companyIntegrationKeyListFields,
+        webhook_eligible: {
+          ...boolean,
+          description:
+            "Returned to administration for key selection when setting up webhooks.",
+        },
+      }),
+      required: Object.keys(companyIntegrationKeyListFields),
+    },
   },
 );
 const companyIntegrationKeyParameters = {
   ...organisation,
   p_label: { ...text, minLength: 1, maxLength: 120 },
-  p_expires_at: { ...text, format: "date-time" },
+  p_expires_at: {
+    ...nullableDateTime,
+    description:
+      "Use null for a key without an expiry. A finite expiry must be within 180 days.",
+  },
   p_rotate_id: nullableUuid,
   p_expected_version: { type: ["integer", "null"], minimum: 1 },
 };
@@ -4449,7 +4464,7 @@ const companyIntegrationKeyIssue = rpc(
   "issueCompanyIntegrationKey",
   "Server integrations",
   "Issue or rotate a company integration key",
-  "Only an active administrator or owner can issue or rotate a key for a non-archived company. For a new key send null for the key ID and version. For rotation send the current key ID and its version. Expiry must be after the database's current time and within 180 days. The response contains the one-time credential for secure storage by the receiving backend.",
+  "An active administrator, owner or authorised manager can issue or rotate a key. Company accounts can do so only for their own current companies. For a new key send null for the key ID and version. For rotation send the current key ID and its version. Send null for no expiry or a future timestamp within 180 days. The response contains the one-time credential for secure storage by the receiving backend.",
   companyIntegrationKeyParameters,
   companyIntegrationKeyReceipt,
 );
@@ -4457,7 +4472,7 @@ const scopedCompanyIntegrationKeyIssue = rpc(
   "issueScopedCompanyIntegrationKey",
   "Server integrations",
   "Issue or rotate a key with one explicit scope",
-  "Requires an active administrator or owner. The selected scope is immutable on rotation. The response contains the one-time credential.",
+  "Available to active administrators, owners and authorised management, and to company accounts for their own current companies. The selected scope is immutable on rotation. Send null for no expiry or a future timestamp within 180 days. The response contains the one-time credential.",
   {
     ...companyIntegrationKeyParameters,
     p_scope: { type: "string", enum: companyIntegrationScopes },
@@ -4468,7 +4483,7 @@ const companyIntegrationKeyRevoke = voidRpc(
   "revokeCompanyIntegrationKey",
   "Server integrations",
   "Revoke a company integration key",
-  "Only an active administrator or owner can revoke a key using its current version. Subsequent use of the key is denied.",
+  "An active administrator, owner or authorised manager can revoke a key. Company accounts can revoke only keys belonging to their own current companies. Supply the current version. Subsequent use is denied.",
   { p_id: uuid, p_expected_version: integrationKeyVersion },
 );
 const internalCapabilities = {

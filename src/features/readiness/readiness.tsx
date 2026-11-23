@@ -488,28 +488,30 @@ function CourseDetail({
             ))}
           </ul>
           <p className="muted">{t("sessionsHint")}</p>
-          {course.can_manage && !course.settings.sessions_confirmed && (
-            <Action
-              key={`confirm-${course.settings.version}`}
-              write={(request) =>
-                confirmCourseSessions(
-                  course.id,
-                  course.settings.version,
-                  request,
-                )
-              }
-            >
-              {t("confirmSessions")}
-            </Action>
-          )}
           {course.can_manage && (
-            <Button
-              variant="secondary"
-              disabled={!online}
-              onClick={() => setSettingsEdit(course)}
-            >
-              {t("editSettings")}
-            </Button>
+            <div className="page-actions readiness-checklist-actions">
+              {!course.settings.sessions_confirmed && (
+                <Action
+                  key={`confirm-${course.settings.version}`}
+                  write={(request) =>
+                    confirmCourseSessions(
+                      course.id,
+                      course.settings.version,
+                      request,
+                    )
+                  }
+                >
+                  {t("confirmSessions")}
+                </Action>
+              )}
+              <Button
+                variant="secondary"
+                disabled={!online}
+                onClick={() => setSettingsEdit(course)}
+              >
+                {t("editSettings")}
+              </Button>
+            </div>
           )}
         </section>
         <aside className="readiness-context">

@@ -1,7 +1,7 @@
 import { canRetryNextPage } from "../../lib/paged-read";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -36,15 +36,18 @@ import {
 } from "./publications-api";
 import "./publications-i18n";
 import "./publications.css";
+import type { CalendarDraftRange } from "./date-selection";
 
 function GlobalEventEditor({
   event,
   zone,
+  selection,
   onDone,
   onDenied,
 }: {
   event?: GlobalEvent;
   zone: string;
+  selection?: CalendarDraftRange;
   onDone: () => void;
   onDenied: () => void;
 }) {
@@ -65,13 +68,13 @@ function GlobalEventEditor({
         ? DateTime.fromISO(base.starts_at)
             .setZone(base.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm")
-        : "",
+        : (selection?.starts_at ?? ""),
       ends_at: base
         ? DateTime.fromISO(base.ends_at)
             .setZone(base.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm")
-        : "",
-      time_zone: base?.time_zone ?? zone,
+        : (selection?.ends_at ?? ""),
+      time_zone: base?.time_zone ?? selection?.time_zone ?? zone,
     },
   });
   const save = useMutation({
@@ -233,11 +236,15 @@ export function GlobalEventManagement({
   from,
   to,
   zone,
+  selection,
+  onSelectionClose,
 }: {
   actor: string;
   from: string;
   to: string;
   zone: string;
+  selection?: CalendarDraftRange;
+  onSelectionClose?: () => void;
 }) {
   const { t, i18n } = useTranslation("calendarPublications"),
     invitationText = useTranslation("calendarInvitations").t,
@@ -261,6 +268,13 @@ export function GlobalEventManagement({
     setEditing(undefined);
     setInviting(null);
   }
+  useEffect(() => {
+    if ((denied || lost) && selection) onSelectionClose?.();
+  }, [denied, lost, selection, onSelectionClose]);
+  const closeEditor = () => {
+    setEditing(undefined);
+    if (selection) onSelectionClose?.();
+  };
   const operation = useRequestKey();
   const change = useMutation({
     mutationFn: async ({
@@ -446,9 +460,9 @@ export function GlobalEventManagement({
         />
       )}
       <Dialog
-        open={editing !== undefined}
+        open={editing !== undefined || Boolean(selection)}
         onOpenChange={(v) => {
-          if (!v) setEditing(undefined);
+          if (!v) closeEditor();
         }}
         title={t(editing ? "edit" : "add")}
         description={t("saveHint")}
@@ -457,12 +471,13 @@ export function GlobalEventManagement({
           key={editing?.id ?? "new"}
           event={editing ?? undefined}
           zone={zone}
+          selection={selection}
           onDone={() => {
-            setEditing(undefined);
+            closeEditor();
             setNotice(true);
           }}
           onDenied={() => {
-            setEditing(undefined);
+            closeEditor();
             setDenied(true);
           }}
         />

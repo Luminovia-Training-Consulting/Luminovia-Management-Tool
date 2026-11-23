@@ -280,11 +280,13 @@ function ClientWorkspace({
   actor,
   isAdmin,
   canManageIntegrations,
+  canManageWebhooks,
   canSubscribeAccounting,
 }: {
   actor: string;
   isAdmin: boolean;
   canManageIntegrations: boolean;
+  canManageWebhooks: boolean;
   canSubscribeAccounting: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
@@ -440,43 +442,46 @@ function ClientWorkspace({
                 </span>
               ))}
             </div>
-            {/* Each panel resets for a new organisation with its own sibling key. */}
-            {premiumSetting && (
-              <CompanyPremiumControl
-                key={`premium:${organisation.id}`}
-                actor={actor}
-                zone={organisation.time_zone}
-                setting={premiumSetting}
-                isAdmin={isAdmin}
-                archived={Boolean(organisation.archived_at)}
-              />
-            )}
-            {!organisation.archived_at && (
-              <CompanyLecturerBlocks
-                key={`lecturer-blocks:${organisation.id}`}
-                actor={actor}
-                organisations={[organisation]}
-              />
-            )}
-            {canManageIntegrations && (
-              <CompanyIntegrations
-                key={`integrations:${organisation.id}`}
-                actor={actor}
-                organisation={organisation.id}
-                archived={Boolean(organisation.archived_at)}
-                zone={organisation.time_zone}
-                canSubscribePremium={
-                  isAdmin && Boolean(premiumSetting?.enabled)
-                }
-                canSubscribeAccounting={canSubscribeAccounting}
-              />
-            )}
-            {premiumSetting?.enabled && (
-              <CompanyParticipantsPanel
-                actor={actor}
-                organisationId={organisation.id}
-              />
-            )}
+            <div className="section-stack company-operation-sections">
+              {/* Each panel resets for a new organisation with its own sibling key. */}
+              {premiumSetting && (
+                <CompanyPremiumControl
+                  key={`premium:${organisation.id}`}
+                  actor={actor}
+                  zone={organisation.time_zone}
+                  setting={premiumSetting}
+                  isAdmin={isAdmin}
+                  archived={Boolean(organisation.archived_at)}
+                />
+              )}
+              {!organisation.archived_at && (
+                <CompanyLecturerBlocks
+                  key={`lecturer-blocks:${organisation.id}`}
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {canManageIntegrations && (
+                <CompanyIntegrations
+                  key={`integrations:${organisation.id}`}
+                  actor={actor}
+                  organisation={organisation.id}
+                  archived={Boolean(organisation.archived_at)}
+                  zone={organisation.time_zone}
+                  canSubscribePremium={
+                    isAdmin && Boolean(premiumSetting?.enabled)
+                  }
+                  canSubscribeAccounting={canSubscribeAccounting}
+                  showWebhooks={canManageWebhooks}
+                />
+              )}
+              {premiumSetting?.enabled && (
+                <CompanyParticipantsPanel
+                  actor={actor}
+                  organisationId={organisation.id}
+                />
+              )}
+            </div>
             <h3>{t("notes")}</h3>
             <p className="preserve-text">{detail || "—"}</p>
             <small className="muted">{t("privateHint")}</small>
@@ -641,7 +646,10 @@ export function ClientsPage() {
     <ClientWorkspace
       actor={session!.user.id}
       isAdmin={roles.data.includes("admin")}
-      canManageIntegrations={
+      canManageIntegrations={roles.data.some(
+        (role) => role === "admin" || role === "owner" || role === "management",
+      )}
+      canManageWebhooks={
         roles.data.includes("admin") || roles.data.includes("owner")
       }
       canSubscribeAccounting={permissions.data.includes("finance.gross.read")}

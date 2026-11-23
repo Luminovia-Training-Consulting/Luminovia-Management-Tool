@@ -303,3 +303,11 @@
 .retained-course p {
   overflow-wrap: anywhere;
 }
+
+.company-operation-sections:not(:empty) {
+  margin-block: 1.25rem;
+}
+
+.company-premium-control > .form-actions {
+  margin-block-start: 0;
+}

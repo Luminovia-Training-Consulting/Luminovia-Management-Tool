@@ -277,7 +277,7 @@ The OpenAPI information version follows semantic versioning for the explicitly d
 
 ## Company integration keys
 
-In **Admin → Companies → API integrations** or **Academy administration → Course integrations**, an authorised administrator issues an expiring key for one organisation and one scope. Store its one-time secret on the consuming server. Rotation keeps the scope and invalidates the previous secret. Revocation, expiry, issuer role loss, company archiving and an inactive Academy licence prevent use.
+In **Companies → API integrations**, authorised managers and administrators can manage a key for one organisation and one scope. Company accounts can manage keys for their own current organisations from **Company portal → API integrations**. The internal API accepts a future expiry within 180 days or JSON null for no expiry. Dedicated Academy keeps expiring keys under **Academy administration → Course integrations**. Store the one-time secret on the consuming server. Rotation keeps the scope and invalidates the previous secret. Revocation, expiry, loss of the issuing account's authority, company archiving and an inactive Academy licence prevent use.
 
 Call these server endpoints with \`Authorization: Bearer <integration-key>\` and without an Origin header. Requests share the key's allowance of 60 per minute. HTTP 429 includes \`Retry-After\`.
 

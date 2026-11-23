@@ -561,3 +561,73 @@ test("calendar navigation and long agenda titles stay usable on narrow phones an
     await week.press("ArrowRight");
     await expect.poll(() => week.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
 });
+
+test("selects an appointment directly on the calendar using mouse or touch and writes only on confirmation", async ({page, context}, testInfo) => {
+    const touch = testInfo.project.use.hasTouch === true;
+    const owner = await actor("Private calendar range owner", "lecturer");
+    const client = await signedIn(owner);
+    await login(page, owner.email);
+    await page.goto("/calendar");
+    await page.getByLabel("Kalenderanzeige in", {exact: true}).selectOption("Australia/Brisbane");
+
+    const panel = page.locator(".calendar-panel");
+    await panel.getByRole("button", {name: "Monat", exact: true}).click();
+    await panel.getByRole("button", {name: "Heute", exact: true}).click();
+    const first = DateTime.now().setZone("Australia/Brisbane").startOf("month").plus({days: 7});
+    const last = first.plus({days: 2});
+    const end = last.plus({days: 1});
+    const day = (date: DateTime) => panel.locator(`[data-date="${date.toISODate()}"] .fc-daygrid-day-frame`);
+    await day(first).scrollIntoViewIfNeeded();
+    const center = async (date: DateTime) => {
+        const box = await day(date).boundingBox();
+        if (!box) throw Error("Expected visible calendar day.");
+        return {x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2)};
+    };
+    const dialog = page.getByRole("dialog", {name: "Privaten Termin hinzufügen", exact: true});
+    const startPoint = await center(first);
+    if (touch) {
+        await page.touchscreen.tap(startPoint.x, startPoint.y);
+        await expect(dialog.getByLabel("Beginn", {exact: true})).toHaveValue(first.toISODate() + "T09:00");
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+    }
+
+    const from = await center(first);
+    const to = await center(last);
+    const selection = panel.locator(".fc-highlight").first();
+    if (touch) {
+        const pointer = await context.newCDPSession(page);
+        try {
+            await pointer.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: [from]});
+            // The gesture must outlast FullCalendar's short touch hold.
+            await page.waitForTimeout(450);
+            await pointer.send("Input.dispatchTouchEvent", {type: "touchMove", touchPoints: [to]});
+            await expect(selection).toBeVisible();
+            await pointer.send("Input.dispatchTouchEvent", {type: "touchEnd", touchPoints: []});
+        } finally {
+            await pointer.detach();
+        }
+    } else {
+        await page.mouse.move(from.x, from.y);
+        await page.mouse.down();
+        await page.mouse.move(to.x, to.y, {steps: 10});
+        await expect(selection).toBeVisible();
+        await page.mouse.up();
+    }
+
+    await expect(dialog.getByLabel("Beginn", {exact: true})).toHaveValue(first.toISODate() + "T00:00");
+    await expect(dialog.getByLabel("Ende", {exact: true})).toHaveValue(end.toISODate() + "T00:00");
+    await expect(dialog.getByLabel("Zeitzone", {exact: true})).toHaveValue("Australia/Brisbane");
+    expect(await checked(client.from("personal_events").select("id"))).toEqual([]);
+    const title = `Fictional range ${randomUUID().slice(0, 8)}`;
+    await dialog.getByLabel("Titel", {exact: true}).fill(title);
+    await dialog.getByRole("button", {name: "Termin speichern", exact: true}).click();
+    await expect(dialog).toBeHidden();
+    await expect(selection).toBeHidden();
+    const saved = (await checked(
+        client.from("personal_events").select("starts_at,ends_at,time_zone").eq("title", title).single(),
+    ))!;
+    expect(new Date(saved.starts_at).toISOString()).toBe(first.toUTC().toISO());
+    expect(new Date(saved.ends_at).toISOString()).toBe(end.toUTC().toISO());
+    expect(saved.time_zone).toBe("Australia/Brisbane");
+});

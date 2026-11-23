@@ -29,6 +29,8 @@ async function checkResponse(contract, response, status, code) {
 
 await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
   const admin = await actor("integration-admin", "admin");
+  const company = await actor("integration-company", "client");
+  const management = await actor("integration-management", "management");
   const blocked = await actor("integration-lecturer", "lecturer");
   const learner = await actor("integration-learner", "participant");
   const [companyA, companyB, template, courseA, courseB] = Array.from(
@@ -37,6 +39,7 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
   );
   defer(() =>
     sql(`
+    delete from public.client_organisation_memberships where user_id=${q(company.id)} and organisation_id=${q(companyA)};
     delete from public.course_enrolments where course_run_id='${courseA}' and user_id='${learner.id}';
     delete from public.course_runs where id in ('${courseA}','${courseB}');
     delete from public.course_templates where id='${template}';
@@ -46,6 +49,7 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
   await sql(`
     insert into public.organisations(id,name) values
       ('${companyA}','Fictional integration A'),('${companyB}','Fictional integration B');
+    insert into public.client_organisation_memberships(user_id,organisation_id) values (${q(company.id)},${q(companyA)});
     insert into public.course_templates(id,title) values('${template}','Fictional course listing');
     insert into public.course_runs(id,template_id,organisation_id,published) values
       ('${courseA}','${template}','${companyA}',true),
@@ -322,6 +326,65 @@ await withApiFixture(async ({ actor, checked, defer, sql, url }) => {
     "Revoke fictional organisation key",
   );
   assert.equal((await request(rotated.credential)).status, 401);
+
+  const issuePermanent = (account, organisation) =>
+    account.client.rpc("issue_company_integration_key", {
+      p_organisation_id: organisation,
+      p_label: "Fictional permanent API key",
+      p_expires_at: null,
+      p_rotate_id: null,
+      p_expected_version: null,
+    });
+  assert.equal((await issuePermanent(company, companyB)).error?.code, "42501");
+  const ownKey = await checked(
+    issuePermanent(company, companyA),
+    "Issue own permanent key",
+  );
+  const managedKey = await checked(
+    issuePermanent(management, companyB),
+    "Issue managed permanent key",
+  );
+  const ownKeys = await checked(
+    company.client.rpc("company_integration_keys", {
+      p_organisation_id: companyA,
+    }),
+    "Read own company key metadata",
+  );
+  assert.equal(ownKeys.find((item) => item.id === ownKey.id)?.expires_at, null);
+  assert.equal(
+    (
+      await company.client.rpc("revoke_company_integration_key", {
+        p_id: managedKey.id,
+        p_expected_version: managedKey.version,
+      })
+    ).error?.code,
+    "42501",
+  );
+  assert.deepEqual(
+    (
+      await checkResponse(indexContract, await request(ownKey.credential), 200)
+    ).items.map(({ id }) => id),
+    [courseA],
+  );
+  assert.deepEqual(
+    (
+      await checkResponse(
+        indexContract,
+        await request(managedKey.credential),
+        200,
+      )
+    ).items.map(({ id }) => id),
+    [courseB],
+  );
+  await sql(`update public.client_organisation_memberships set removed_at=clock_timestamp()
+    where organisation_id=${q(companyA)} and user_id=${q(company.id)};`);
+  await checkResponse(
+    indexContract,
+    await request(ownKey.credential),
+    401,
+    "invalid_credential",
+  );
+
   console.log(
     "PASS real Edge/REST scoped catalogue, enrolment and aggregate report, role denial, Premium OFF, foreign scope, concurrent exact retry, human removal and key rotation/revocation",
   );

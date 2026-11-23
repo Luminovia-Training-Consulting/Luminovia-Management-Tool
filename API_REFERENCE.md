@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **292 migration files** through version **20261123013000**, containing **541 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `c14e6c31b92cf3190c43a99f5732004e51df9435a8596c277d6523271e7ba742`.
+This reference describes the current repository API. It is generated from a disposable replay of **293 migration files** through version **20261123022528**, containing **541 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `9890bf9d702d9b0d6f9e27568efd71e5540a6b7994b4cb04dc9d4bb63622ac55`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and [QA results](DEVELOPMENT.md#section-test-plan) define that evidence.
 
@@ -787,7 +787,7 @@ The OpenAPI information version follows semantic versioning for the explicitly d
 
 ## Company integration keys
 
-In **Admin → Companies → API integrations** or **Academy administration → Course integrations**, an authorised administrator issues an expiring key for one organisation and one scope. Store its one-time secret on the consuming server. Rotation keeps the scope and invalidates the previous secret. Revocation, expiry, issuer role loss, company archiving and an inactive Academy licence prevent use.
+In **Companies → API integrations**, authorised managers and administrators can manage a key for one organisation and one scope. Company accounts can manage keys for their own current organisations from **Company portal → API integrations**. The internal API accepts a future expiry within 180 days or JSON null for no expiry. Dedicated Academy keeps expiring keys under **Academy administration → Course integrations**. Store the one-time secret on the consuming server. Rotation keeps the scope and invalidates the previous secret. Revocation, expiry, loss of the issuing account's authority, company archiving and an inactive Academy licence prevent use.
 
 Call these server endpoints with `Authorization: Bearer <integration-key>` and without an Origin header. Requests share the key's allowance of 60 per minute. HTTP 429 includes `Retry-After`.
 

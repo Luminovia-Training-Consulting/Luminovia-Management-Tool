@@ -800,7 +800,7 @@ export function AdminPage() {
           <OfferBoard />
         </>
       ) : (
-        <div className="operations-grid">
+        <div className="section-stack">
           <section className="panel">
             <h2>{de ? "Kursdurchführungen" : "Course runs"}</h2>
             <p>

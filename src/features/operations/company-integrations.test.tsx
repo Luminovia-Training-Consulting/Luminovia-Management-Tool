@@ -130,9 +130,18 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
             {
               id: "fictional-key",
               label: "Training sync",
-              expires_at: "2100-01-01T00:00:00Z",
+              expires_at: null,
               revoked_at: null,
               version: 1,
+              webhook_eligible: true,
+            },
+            {
+              id: "delegated-key",
+              label: "Company-issued key",
+              expires_at: null,
+              revoked_at: null,
+              version: 1,
+              webhook_eligible: false,
             },
           ]
         : name === "company_course_webhook_subscribe"
@@ -146,6 +155,9 @@ it("opts a company webhook into Premium explicitly and discards its one-time sig
   const key = await screen.findByRole("combobox", {
     name: /^Integrationsschlüssel$|^Integration key$/,
   });
+  expect(
+    screen.queryByRole("option", { name: "Company-issued key" }),
+  ).toBeNull();
   await user.selectOptions(key, "fictional-key");
   await user.type(
     screen.getByRole("textbox", { name: /Empfänger-Alias|Receiver alias/ }),
@@ -281,3 +293,59 @@ it.each([
     ).toBeVisible();
   },
 );
+
+it("creates a permanent company key, lists its validity and preserves it on rotation", async () => {
+  const key = {
+    id: "permanent-key",
+    version: 2,
+    label: "Fictional integration",
+    expires_at: null,
+    revoked_at: null,
+    last_used_at: null,
+    scope: "courses.read",
+  };
+  let created = false;
+  fake.rpc.mockImplementation(async (rpc) => {
+    if (rpc === "company_integration_keys")
+      return { data: created ? [key] : [], error: null };
+    created = true;
+    return { data: { credential: "fictional-one-time-key" }, error: null };
+  });
+  const { toggle, user } = view();
+  toggle(true);
+  await user.type(
+    await screen.findByRole("textbox", { name: /Bezeichnung|Label/ }),
+    key.label,
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Gültigkeit|Validity/ }),
+    "permanent",
+  );
+  await user.click(
+    screen.getByRole("button", { name: /Schlüssel erstellen|Create key/ }),
+  );
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "issue_scoped_company_integration_key",
+    expect.objectContaining({
+      p_organisation_id: "fictional-company",
+      p_expires_at: null,
+    }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: /Schlüssel ersetzen|Replace key/,
+    }),
+  );
+  expect(
+    screen.getByRole("combobox", { name: /Gültigkeit|Validity/ }),
+  ).toHaveValue("permanent");
+  await user.click(screen.getByRole("button", { name: /Bestätigen|Confirm/ }));
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "issue_scoped_company_integration_key",
+    expect.objectContaining({
+      p_rotate_id: key.id,
+      p_expected_version: key.version,
+      p_expires_at: null,
+    }),
+  );
+});

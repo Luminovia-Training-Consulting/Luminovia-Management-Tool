@@ -120,6 +120,14 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
     await assert.rejects(listKeys(manager), /42501/);
     await assert.rejects(issue(manager), /42501/);
     await assert.rejects(
+      call(
+        admin,
+        "issue_company_integration_key",
+        `${q(org)},'No expiry on internal installs only',null,null,null`,
+      ),
+      /22023/,
+    );
+    await assert.rejects(
       actor(admin, gateway("integration_course_index")),
       /42501/,
     );

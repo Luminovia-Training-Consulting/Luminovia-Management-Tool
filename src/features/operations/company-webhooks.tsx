@@ -44,7 +44,7 @@ export function CompanyWebhooks({
   keys?: {
     id: string;
     label: string;
-    expires_at: string;
+    expires_at: string | null;
     revoked_at: string | null;
   }[];
   archived: boolean;
@@ -77,7 +77,9 @@ export function CompanyWebhooks({
     },
   });
   const eligibleKeys = keys.filter(
-    (key) => !key.revoked_at && Date.parse(key.expires_at) > openedAt,
+    (key) =>
+      !key.revoked_at &&
+      (key.expires_at === null || Date.parse(key.expires_at) > openedAt),
   );
 
   const canCreate = !archived && (academy || eligibleKeys.length > 0);

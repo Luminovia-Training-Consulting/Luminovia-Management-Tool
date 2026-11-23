@@ -16,6 +16,14 @@ const values = {
     "Seitlich scrollen, um alle Wochentage zu sehen.",
     "Scroll horizontally to see all days of the week.",
   ],
+  selectFromGrid: [
+    "Wechsle zu Monat, Woche oder Tag, um einen Termin direkt im Kalender auszuwählen.",
+    "Switch to Month, Week or Day to select an appointment directly on the calendar.",
+  ],
+  selectPeriod: [
+    "Tippe auf einen freien Zeitpunkt oder ziehe über mehrere Zeiten oder Tage. Auf dem Touchscreen zum Ziehen kurz gedrückt halten.",
+    "Tap a free time, or drag across times or days. On touchscreens, press and hold before dragging.",
+  ],
   customer: ["Unternehmen", "Company"],
   allCustomers: ["Alle Unternehmen", "All companies"],
   calendarColors: ["Kalenderfarben", "Calendar colors"],

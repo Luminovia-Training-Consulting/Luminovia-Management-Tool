@@ -168,6 +168,11 @@ const pairs: Record<string, [string, string]> = {
     "No messages found.",
   ],
   integrationTitle: ["API-Integrationen", "API integrations"],
+  integrationCompany: [
+    "Unternehmen für API-Integrationen",
+    "Company for API integrations",
+  ],
+  integrationPermanent: ["Unbefristet", "No expiry"],
   integrationScope: [
     "Jeder Schlüssel gilt für dieses Unternehmen und genau eine Berechtigung. Pro Schlüssel sind 60 Anfragen pro Minute möglich.",
     "Each key grants one permission for this company. A key allows 60 requests per minute.",

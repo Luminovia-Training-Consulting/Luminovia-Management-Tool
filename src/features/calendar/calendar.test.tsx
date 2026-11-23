@@ -31,6 +31,8 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { CalendarPage } from "./calendar";
+import type { DateClickArg } from "@fullcalendar/interaction";
+import type { DateSelectArg } from "@fullcalendar/core";
 import i18n from "../../lib/i18n";
 
 function MemoryRouter({
@@ -50,6 +52,7 @@ function MemoryRouter({
 
 const state = vi.hoisted(() => ({
   claims: [] as unknown[],
+  permissions: [] as string[],
   events: [] as unknown[],
   deleteEvent: vi.fn(),
   saveEvent: vi.fn(),
@@ -87,6 +90,9 @@ vi.mock("../../lib/supabase", () => ({
     },
     from: () => ({
       select: () => ({ eq: async () => ({ data: [], error: null }) }),
+      insert: (payload: unknown) => ({
+        select: () => ({ single: () => state.saveEvent(payload) }),
+      }),
       update: (payload: unknown) => ({
         eq: () => ({
           eq: () => ({
@@ -105,7 +111,7 @@ vi.mock("../../lib/supabase", () => ({
 vi.mock("../../lib/queries", () => ({
   permissionsQuery: () => ({
     queryKey: ["permissions"],
-    queryFn: async () => [],
+    queryFn: async () => state.permissions,
   }),
   profileQuery: () => ({
     queryKey: ["profile"],
@@ -155,6 +161,9 @@ vi.mock("@fullcalendar/react", () => ({
     timeZone,
     initialDate,
     ref,
+    selectable,
+    dateClick,
+    select,
   }: {
     events: {
       id: string;
@@ -170,10 +179,16 @@ vi.mock("@fullcalendar/react", () => ({
     locale: unknown;
     timeZone: string;
     initialDate?: string;
+    selectable?: boolean;
+    dateClick?: (value: Pick<DateClickArg, "dateStr" | "allDay">) => void;
+    select?: (
+      value: Pick<DateSelectArg, "startStr" | "endStr" | "allDay">,
+    ) => void;
     ref?: Ref<{
       getApi: () => {
         getDate: () => Date;
         formatIso: (date: Date, omitTime: boolean) => string;
+        unselect: () => void;
       };
     }>;
   }) {
@@ -185,6 +200,7 @@ vi.mock("@fullcalendar/react", () => ({
           getDate: () => new Date("2030-10-27T12:00:00Z"),
           formatIso: (date, omitTime) =>
             omitTime ? date.toISOString().slice(0, 10) : date.toISOString(),
+          unselect: () => undefined,
         }),
       }),
       [],
@@ -212,6 +228,29 @@ vi.mock("@fullcalendar/react", () => ({
           }
         >
           Change visible range
+        </button>
+        <button
+          disabled={!selectable}
+          onClick={() =>
+            select?.({
+              startStr: "2030-03-30",
+              endStr: "2030-04-02",
+              allDay: true,
+            })
+          }
+        >
+          Select date range
+        </button>
+        <button
+          disabled={!selectable}
+          onClick={() =>
+            dateClick?.({
+              dateStr: "2030-03-30T09:00:00+10:00",
+              allDay: false,
+            })
+          }
+        >
+          Click time slot
         </button>
         {events.map((event) => (
           <a
@@ -244,6 +283,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   state.claims = [];
+  state.permissions = [];
   state.events = [];
   vi.clearAllMocks();
 });
@@ -1218,5 +1258,120 @@ it("filters confirmed course sessions by customer and any selected topic while r
   expect(
     state.rpc.mock.calls.some(([name]) => name === "my_calendar_subscriptions"),
   ).toBe(false);
+  client.clear();
+});
+
+it("prefills a dragged range through the DST change and saves its exclusive end in the selected zone", async () => {
+  state.saveEvent.mockResolvedValue({ data: { id: "saved" }, error: null });
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Select date range" }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Privaten Termin hinzufügen" }),
+  );
+  expect(dialog.getByLabelText("Beginn")).toHaveValue("2030-03-30T00:00");
+  expect(dialog.getByLabelText("Ende")).toHaveValue("2030-04-02T00:00");
+  expect(dialog.getByLabelText("Zeitzone")).toHaveValue("Europe/Berlin");
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  await user.type(dialog.getByLabelText("Titel"), "Window");
+  await user.click(dialog.getByRole("button", { name: "Termin speichern" }));
+  await waitFor(() =>
+    expect(state.saveEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        starts_at: "2030-03-29T23:00:00.000Z",
+        ends_at: "2030-04-01T22:00:00.000Z",
+        time_zone: "Europe/Berlin",
+        user_id: "actor",
+      }),
+    ),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  client.clear();
+});
+
+it("uses the clicked clock time in the display zone and leaves the read-only global grid untouched", async () => {
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.selectOptions(
+    await screen.findByLabelText("Kalenderanzeige in"),
+    "Australia/Brisbane",
+  );
+  await user.click(screen.getByRole("button", { name: "Click time slot" }));
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Privaten Termin hinzufügen" }),
+  );
+  expect(dialog.getByLabelText("Beginn")).toHaveValue("2030-03-30T09:00");
+  expect(dialog.getByLabelText("Ende")).toHaveValue("2030-03-30T09:30");
+  expect(dialog.getByLabelText("Zeitzone")).toHaveValue("Australia/Brisbane");
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Globale Termine" }));
+  expect(
+    screen.getByRole("button", { name: "Select date range" }),
+  ).toBeDisabled();
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  client.clear();
+});
+
+it("opens the existing unpublished global event editor with the selected period for authorised staff", async () => {
+  state.permissions = ["courses.manage"];
+  state.rpc.mockImplementation((name) => {
+    const response = Promise.resolve({
+      data: { items: [], has_more: false, next_cursor: null },
+      error: null,
+    });
+    return name === "global_calendar_events"
+      ? Object.assign(response, { abortSignal: () => response })
+      : response;
+  });
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Globale Termine" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Select date range" }));
+  const editor = within(
+    screen.getByRole("dialog", { name: "Globalen Termin erstellen" }),
+  );
+  expect(editor.getByLabelText("Beginn")).toHaveValue("2030-03-30T00:00");
+  expect(editor.getByLabelText("Ende")).toHaveValue("2030-04-02T00:00");
+  expect(
+    editor.getByRole("button", { name: "Als Entwurf speichern" }),
+  ).toBeVisible();
+  expect(
+    state.rpc.mock.calls.some(([name]) => name === "manage_global_event"),
+  ).toBe(false);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   client.clear();
 });

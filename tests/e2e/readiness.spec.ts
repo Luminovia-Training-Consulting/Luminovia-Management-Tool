@@ -122,6 +122,20 @@ test("management preparation and assigned lecturer acknowledgements update actua
             name: "Konfiguration bearbeiten",
             exact: true,
         });
+        const readinessActions = page.locator(".readiness-checklist-actions");
+        const confirmPlan = readinessActions.getByRole("button", {
+            name: "Aktuellen Unterrichtsplan bestätigen",
+            exact: true,
+        });
+        await expect(confirmPlan).toBeVisible();
+        const [confirmBounds, configureBounds] = await Promise.all([
+            confirmPlan.boundingBox(),
+            configure.boundingBox(),
+        ]);
+        expect(Math.max(
+            configureBounds!.x - confirmBounds!.x - confirmBounds!.width,
+            configureBounds!.y - confirmBounds!.y - confirmBounds!.height,
+        )).toBeGreaterThanOrEqual(10);
         await configure.focus();
         await page.keyboard.press("Enter");
         const dialog = page.getByRole("dialog");

@@ -2,6 +2,7 @@ import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
 import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
+import { CompanyIntegrationPicker } from "../operations/company-integrations";
 import {
   AdditionalCompanyDecisions,
   CompanyDecisions,
@@ -760,16 +761,25 @@ export function ClientPortalPage() {
               }}
             />
           )}
-          <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
-          {access.data.can_request &&
-            !access.data.can_manage_gross &&
-            orgs.data.map((org) => (
-              <CompanyParticipantsPanel
-                key={org.id}
+          <div className="section-stack company-operation-sections">
+            <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
+            {access.data.can_request && !access.data.can_manage_gross && (
+              <CompanyIntegrationPicker
                 actor={actor}
-                organisationId={org.id}
+                organisations={orgs.data}
+                zone={profile.data?.time_zone ?? "Europe/Berlin"}
               />
-            ))}
+            )}
+            {access.data.can_request &&
+              !access.data.can_manage_gross &&
+              orgs.data.map((org) => (
+                <CompanyParticipantsPanel
+                  key={org.id}
+                  actor={actor}
+                  organisationId={org.id}
+                />
+              ))}
+          </div>
           <section className="panel platform-filters">
             <Search size={18} />
             <Field id="client-search" label={t("searchRequests")}>

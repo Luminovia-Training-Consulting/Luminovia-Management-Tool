@@ -402,3 +402,17 @@
   background: var(--brand);
   color: var(--on-brand);
 }
+
+.calendar-selection-help {
+  margin-block: 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.calendar-panel .fc {
+  --fc-highlight-color: color-mix(in srgb, var(--focus-ring) 32%, transparent);
+}
+
+.calendar-panel .fc-highlight {
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}

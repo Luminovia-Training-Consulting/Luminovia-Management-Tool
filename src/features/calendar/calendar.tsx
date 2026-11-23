@@ -73,6 +73,11 @@ import "./filter-i18n";
 import { CalendarToolbar } from "./toolbar";
 import { type CalendarView, calendarViews } from "./views";
 import "./calendar-toolbar.css";
+import {
+  calendarClickRange,
+  calendarSelectionRange,
+  type CalendarDraftRange,
+} from "./date-selection";
 import { privateMeetingHref } from "./personal-details";
 
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
@@ -94,6 +99,7 @@ function EventForm({
   userId,
   zone,
   event,
+  draftRange,
   onDone,
   onBusyChange,
   onDirtyChange,
@@ -101,6 +107,7 @@ function EventForm({
   userId: string;
   zone: string;
   event?: PersonalEvent;
+  draftRange?: CalendarDraftRange;
   onDone: (deleted?: boolean) => void;
   onBusyChange: (busy: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
@@ -136,9 +143,9 @@ function EventForm({
           title: "",
           description: "",
           meeting_url: "",
-          starts_at: "",
-          ends_at: "",
-          time_zone: zone,
+          starts_at: draftRange?.starts_at ?? "",
+          ends_at: draftRange?.ends_at ?? "",
+          time_zone: draftRange?.time_zone ?? zone,
         },
   });
   useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
@@ -369,6 +376,11 @@ function CalendarTools({
   );
 }
 
+type PersonalEditorDraft = {
+  event?: PersonalEvent;
+  range?: CalendarDraftRange;
+};
+
 /** Combine separately authorized calendar sources and display them in the selected IANA zone. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
@@ -456,10 +468,24 @@ export function CalendarPage() {
   const [eventBusy, setEventBusy] = useState(false);
   const [eventDirty, setEventDirty] = useState(false);
   const [eventFormEpoch, setEventFormEpoch] = useState(0);
+  const [editorDraft, setEditorDraft] = useState<PersonalEditorDraft>({});
+  const selected = editorDraft.event;
+  const [globalDraft, setGlobalDraft] = useState<CalendarDraftRange>();
+  const canManageGlobal =
+    !permissions.isError &&
+    permissions.data?.includes("courses.manage") === true;
+  if (globalDraft && !canManageGlobal) setGlobalDraft(undefined);
+  // FullCalendar can emit drag and click for the same ending pointer event.
+  const selectedPointer = useRef<Event>(null);
+  const clearGridSelection = useCallback(() => {
+    calendarRef.current?.getApi().unselect();
+  }, []);
+  const closeGlobalDraft = useCallback(() => {
+    setGlobalDraft(undefined);
+    clearGridSelection();
+  }, [clearGridSelection]);
   const [discardAction, setDiscardAction] = useState<
-    | { kind: "close" }
-    | { kind: "event"; event: PersonalEvent | undefined }
-    | null
+    { kind: "close" } | { kind: "event"; draft: PersonalEditorDraft } | null
   >(null);
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -469,6 +495,17 @@ export function CalendarPage() {
         currentLocation.search !== nextLocation.search ||
         currentLocation.hash !== nextLocation.hash),
   );
+  const openPersonalEditor = (draft: PersonalEditorDraft) => {
+    if (eventBusy) return;
+    if (open && eventDirty) {
+      setDiscardAction({ kind: "event", draft });
+      return;
+    }
+    setEditorDraft(draft);
+    setEventDirty(false);
+    setEventFormEpoch((value) => value + 1);
+    setOpen(true);
+  };
   const cancelDiscard = () => {
     setDiscardAction(null);
     if (blocker.state === "blocked") blocker.reset();
@@ -487,10 +524,11 @@ export function CalendarPage() {
     setEventDirty(false);
     if (action.kind === "event") {
       setEventFormEpoch((value) => value + 1);
-      setSelected(action.event);
+      setEditorDraft(action.draft);
       setOpen(true);
     } else {
       setOpen(false);
+      clearGridSelection();
     }
   };
   useEffect(() => {
@@ -504,7 +542,6 @@ export function CalendarPage() {
       window.removeEventListener("beforeunload", beforeUnload);
     };
   }, [open, eventDirty, eventBusy]);
-  const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
   const online = useOnline();
   const [displayZone, setDisplayZone] = useState("");
@@ -704,24 +741,21 @@ export function CalendarPage() {
     ),
   );
   const weekView = calendarView === "timeGridWeek";
+  const scopeAllowsSelection = !global || canManageGlobal;
+  const gridSelectionEnabled =
+    scopeAllowsSelection && online && !open && !globalDraft;
+  const openGridSelection = (range: CalendarDraftRange) => {
+    if (!gridSelectionEnabled) return;
+    if (global) setGlobalDraft(range);
+    else openPersonalEditor({ range });
+  };
   return (
     <>
       <PageHeading
         title={t("calendar")}
         description={t("privateNote")}
         action={
-          <Button
-            onClick={() => {
-              if (open && eventDirty)
-                setDiscardAction({ kind: "event", event: undefined });
-              else if (!eventBusy) {
-                setSelected(undefined);
-                setEventDirty(false);
-                setOpen(true);
-              }
-            }}
-            disabled={!online}
-          >
+          <Button onClick={() => openPersonalEditor({})} disabled={!online}>
             <Plus size={18} />
             {t("addEvent")}
           </Button>
@@ -740,6 +774,7 @@ export function CalendarPage() {
             aria-pressed={!global}
             onClick={() => {
               setGlobal(false);
+              closeGlobalDraft();
               setEventType("all");
               setCustomer("");
               setTopicIds([]);
@@ -752,6 +787,7 @@ export function CalendarPage() {
             aria-pressed={global}
             onClick={() => {
               setGlobal(true);
+              clearGridSelection();
               setEventType("all");
               setCustomer("");
               setTopicIds([]);
@@ -908,6 +944,11 @@ export function CalendarPage() {
             calendarRef.current?.getApi().changeView(view);
           }}
         />
+        {scopeAllowsSelection && online && calendarView !== "listMonth" && (
+          <p className="calendar-selection-help">
+            {filterText("selectPeriod")}
+          </p>
+        )}
         {weekView && (
           <p
             id="calendar-week-scroll-hint"
@@ -988,6 +1029,31 @@ export function CalendarPage() {
                 : el.querySelector(".fc-list-event-title a");
               target?.setAttribute("role", "button");
             }}
+            selectable={gridSelectionEnabled}
+            selectMinDistance={6}
+            selectLongPressDelay={400}
+            select={(info) => {
+              if (!gridSelectionEnabled) return;
+              selectedPointer.current = info.jsEvent ?? null;
+              openGridSelection(
+                calendarSelectionRange(
+                  info.startStr,
+                  info.endStr,
+                  info.allDay,
+                  zone,
+                ),
+              );
+            }}
+            dateClick={(info) => {
+              if (
+                !gridSelectionEnabled ||
+                selectedPointer.current === info.jsEvent
+              )
+                return;
+              openGridSelection(
+                calendarClickRange(info.dateStr, info.allDay, zone),
+              );
+            }}
             nowIndicator
             dayMaxEvents={3}
             eventClick={(info) => {
@@ -997,13 +1063,7 @@ export function CalendarPage() {
               }
               if (info.event.extendedProps.kind === "private") {
                 const next = personal.data.find((e) => e.id === info.event.id);
-                if (open && eventDirty)
-                  setDiscardAction({ kind: "event", event: next });
-                else if (!eventBusy) {
-                  setSelected(next);
-                  setEventDirty(false);
-                  setOpen(true);
-                }
+                if (next) openPersonalEditor({ event: next });
               }
             }}
           />
@@ -1052,16 +1112,16 @@ export function CalendarPage() {
           )}
         </div>
       )}
-      {global &&
-        !permissions.isError &&
-        permissions.data?.includes("courses.manage") && (
-          <GlobalEventManagement
-            actor={session!.user.id}
-            from={range.from}
-            to={range.to}
-            zone={zone}
-          />
-        )}
+      {global && canManageGlobal && (
+        <GlobalEventManagement
+          actor={session!.user.id}
+          from={range.from}
+          to={range.to}
+          zone={zone}
+          selection={globalDraft}
+          onSelectionClose={closeGlobalDraft}
+        />
+      )}
       {global && activeGlobal && (
         <GlobalEventDetails
           key={activeGlobal.id}
@@ -1075,7 +1135,10 @@ export function CalendarPage() {
         onOpenChange={(next) => {
           if (eventBusy) return;
           if (!next && eventDirty) setDiscardAction({ kind: "close" });
-          else setOpen(next);
+          else {
+            setOpen(next);
+            if (!next) clearGridSelection();
+          }
         }}
         title={t(selected ? "privateEvent" : "addEvent")}
         description={t("eventHelp")}
@@ -1085,6 +1148,7 @@ export function CalendarPage() {
           userId={session!.user.id}
           zone={zone}
           event={selected}
+          draftRange={editorDraft.range}
           onBusyChange={setEventBusy}
           onDirtyChange={setEventDirty}
           onDone={(deleted) => {
@@ -1092,6 +1156,7 @@ export function CalendarPage() {
             setEventDirty(false);
             setDiscardAction(null);
             setOpen(false);
+            clearGridSelection();
             setMessage(t(deleted ? "eventDeleted" : "eventSaved"));
           }}
         />

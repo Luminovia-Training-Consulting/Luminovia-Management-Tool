@@ -44,6 +44,7 @@ export function AcademyWebhookPanel({
             zone={selected.time_zone}
             archived={false}
             showWebhooks={false}
+            allowPermanent={false}
           />
           <CompanyWebhooks
             key={selected.id}

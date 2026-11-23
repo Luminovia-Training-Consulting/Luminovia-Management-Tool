@@ -1,3 +1,11 @@
+# 23 November 2026 — Portal spacing, calendar selection and company API keys
+
+Added responsive spacing between administration cards, between company controls, around catalogue actions and between course-readiness buttons. The local signed-in Chromium check inspected the 14 primary administration navigation destinations at 1280 and 390 px. At the reported points it measured 16 px around the materials action, 24 px between administration cards and between adjacent company controls, and 12 px between the mobile readiness actions. The reported areas were checked in light and dark where applicable.
+
+Selecting a day or dragging across the month, week or day grid opens the existing event editor with its date range and display time zone. Selection is highlighted during the gesture. Touch users can tap or press briefly and drag. The backend write still requires saving the draft. Local browser checks confirmed 24–26 November inclusive and 09:00–11:00 selections. Tests also cover permission-gated public drafts, cancelled drafts, the Berlin DST boundary and mobile touch interaction.
+
+On the internal portal, active company accounts can manage scoped keys for their current company. Authorised Management and Admins can also manage company keys. The supported UI lifetimes are 30 days, 90 days and no expiry. Revocation and current issuer authority apply to all three. Dedicated Academy retains finite keys issued by local administration. Isolated PostgreSQL fixtures passed tenant isolation, rotation, live role and membership checks, both Academy editions and the reviewed API surface. The signed receiver suites passed locally. Port 55322 remained occupied, so the canonical full Auth/Edge browser suite could not start.
+
 # 23 November 2026 — Published offer details and daily schedules
 
 The published offer shows the delivery period and precise sessions in the offer's time zone. The date-range control generates individual days for staff offers and company requests and keeps existing times within the selected period. Admin and Management can select an existing company independently of gross-pricing authority. Company-originated offers retain the submitting company. Only unaccepted, standalone net offers without dependent course activity expose reassignment.

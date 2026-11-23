@@ -364,3 +364,19 @@
   outline: 3px solid var(--brand);
   outline-offset: 3px;
 }
+
+.readiness-checklist-actions {
+  align-items: start;
+  margin-block-end: 0;
+}
+
+.readiness-checklist-actions > .readiness-action {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.readiness-checklist-actions .button {
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
