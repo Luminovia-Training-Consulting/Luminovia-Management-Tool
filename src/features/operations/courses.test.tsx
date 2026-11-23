@@ -404,7 +404,9 @@ it.each([
   expect(
     await screen.findByText("Durchführung als Entwurf gespeichert."),
   ).toBeVisible();
-  expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/);
+  await waitFor(() =>
+    expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/),
+  );
   expect(
     state.rpc.mock.calls.filter(([name]) => name.startsWith("save_course")),
   ).toEqual([
