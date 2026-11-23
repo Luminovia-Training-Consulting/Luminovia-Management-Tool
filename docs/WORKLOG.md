@@ -1,3 +1,11 @@
+# 23 November 2026 — Retained data and recovery after the KVM 1 rebuild
+
+The rebuilt host's 320 migration entries matched the installed SQL bytes through `20261123064701`. The timer was enabled and active and its first check reported the installed revision as current. The read-only host check found no portal full-backup timer or retained portal backup on the rebuilt installation. Hostinger displayed a weekly VM backup. The first eligible live update and an isolated restore from a current encrypted KVM 1 backup remain pending.
+
+An isolated Compose rehearsal upgraded a fictional installation from 319 to 320 migrations using the reviewed SQL path. The same controller's unattended path refused that migration and applied a separate compatible migration. A deliberately failing transaction rolled back its write and ledger entry. Replaying the migration ledger left it unchanged. Auth, role and membership data, private calendar and scanned file bytes, accepted assignments and invoices survived. TLS, WebSockets, 50 concurrent claims and the withdrawal API suite passed.
+
+The encrypted recovery drill now runs with a restrictive umask. Restore sets readable modes on the verified public PostgreSQL extension installers inside a private scratch tree before copying them into the isolated database. Real age and PostgreSQL recovery verified all three databases, password-bearing roles and grants, row-level security and private object and configuration hashes. A separate physical rollback drill restored a stopped PostgreSQL data directory and private storage bytes, restarted PostgreSQL and verified the original records and migration ledger. That drill used test Compose metadata. The 68 updater tests and seven physical recovery tests passed.
+
 # 23 November 2026 — Automatic updates after the KVM 1 rebuild
 
 Re-enabled the five-minute systemd update timer and matched the GitHub public build configuration to the rebuilt installation. The first timer-triggered service run returned the exact installed main commit as current. Public Auth and TLS passed. The next eligible release will exercise the installation path on the live host.

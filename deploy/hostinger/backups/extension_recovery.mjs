@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {mkdir, writeFile} from "node:fs/promises";
+import {chmod, mkdir, writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {collectCommand} from "../backup.mjs";
 
@@ -47,7 +47,11 @@ export async function installExtensionRecovery(
         (name) => requested[name] === recovery.versions[name],
     );
     const directory = resolve(temporary, "legacy-extension-installers");
-    await mkdir(directory, {recursive: true, mode: 0o755});
+    await mkdir(directory, {recursive: true, mode: 0o700});
+    // Docker copies the modes into the extension directory. The public
+    // installers must remain readable to the PostgreSQL process even under
+    // a backup operator's restrictive umask. The parent stays private.
+    await chmod(directory, 0o755);
     let count = 0;
     for (const [name, file] of Object.entries(recovery.files)) {
         assert.match(name, /^[a-z0-9_-]+(?:--[a-zA-Z0-9_.-]+)?\.(?:control|sql)$/);
@@ -64,7 +68,9 @@ export async function installExtensionRecovery(
             createHash("sha256").update(contents).digest("hex"),
             file.sha256,
         );
-        await writeFile(resolve(directory, name), contents, {mode: 0o644});
+        const destination = resolve(directory, name);
+        await writeFile(destination, contents, {mode: 0o600});
+        await chmod(destination, 0o644);
         count++;
     }
     if (count) {

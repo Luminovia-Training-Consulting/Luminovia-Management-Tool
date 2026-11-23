@@ -15,6 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const age = process.env.AGE_TEST_BINARY ?? "age";
 const keygen = process.env.AGE_KEYGEN_TEST_BINARY ?? "age-keygen";
 const privateRoot = resolve(here, "../../../.local/hostinger");
+const previousUmask = process.umask(0o077);
 await mkdir(privateRoot, {recursive: true, mode: 0o700});
 const temporary = await mkdtemp(resolve(privateRoot, "complete-fixture-"));
 let source;
@@ -112,6 +113,7 @@ try {
         "PASS real complete encrypted fixture:3 PostgreSQL databases, password-bearing roles/grantors, RLS/data counts, secret config/TLS/key/mail/object hashes; only networkless owned containers/volumes/private extraction used.",
     );
 } finally {
+    process.umask(previousUmask);
     if (source) await source.cleanup();
     await rm(temporary, {recursive: true, force: true});
 }

@@ -6,6 +6,8 @@
 
 - [x] Restore the existing five-minute systemd timer on the rebuilt instance and match the GitHub public build configuration to the deployed key and API origin.
 - [x] Include both systemd units in the CMS release archive and document re-enabling them after a clean install.
+- [x] Rehearse reviewed and automatic migrations, failed transactions and retained records on an isolated Compose stack. Verify physical rollback with a stopped PostgreSQL cluster and encrypted recovery under a restrictive umask.
+- [ ] Configure encrypted full backups for the rebuilt KVM 1 with a recovery key held separately from the server. Restore a current backup on an isolated target before approving a reviewed live migration.
 - [ ] Observe the next eligible immutable release install on KVM 1. Record its commit, applied migration versions and live health checks.
 
 ## Marketplace date search time zone
