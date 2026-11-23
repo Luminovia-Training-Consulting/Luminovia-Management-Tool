@@ -1,3 +1,9 @@
+# 23 November 2026 — Delete individual company contacts
+
+The company directory now exposes the reviewed permanent-deletion action on each contact card. Staff with current company management permission can delete an individual contact in the internal portal. The preview shows the contact's name and identifies active course contact and company assignment default references. Those references must be changed before removal.
+
+Desktop and mobile Chromium verified that a management user can confirm removal of the selected contact and that the other contact remains visible. All 30 permanent-deletion PostgreSQL groups passed, including denial without permission, live reference protection and rejection of a stale preview.
+
 # 23 November 2026 — Native release acceptance fixtures
 
 The real job picker now checks that an administrator cannot give themselves the senior lecturer role, with no role or audit mutation. The reopened-offer test checks the complete fixture audience while allowing matching accounts from a retained baseline. The operations API confirms that legacy course visibility does not grant unassigned previews, a confirmed assignment exposes the course and sessions, and changing the venue preserves the booked schedule. These three checks passed in the isolated Auth and PostgreSQL stack. The live update still requires an eligible immutable package for the exact main revision.

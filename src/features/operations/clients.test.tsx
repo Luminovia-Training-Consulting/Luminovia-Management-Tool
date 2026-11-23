@@ -55,7 +55,7 @@ describe("private client directory capability boundary", () => {
       screen.queryByRole("button", { name: "Organisation anlegen" }),
     ).not.toBeInTheDocument();
   });
-  it("offers exact organisation deletion from that organisation's actual edit dialog", async () => {
+  it("targets each contact from its own card and the organisation from its edit dialog", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
@@ -79,7 +79,18 @@ describe("private client directory capability boundary", () => {
     );
     client.setQueryData(
       ["operations", "contacts", "actor", "organisation-a"],
-      [],
+      ["Fictional first contact", "Fictional second contact"].map(
+        (name, index) => ({
+          id: `contact-${index + 1}`,
+          organisation_id: "organisation-a",
+          name,
+          email: "",
+          phone: "",
+          position: "",
+          notes: "",
+          archived_at: index === 0 ? null : "2026-11-01T10:00:00Z",
+        }),
+      ),
     );
     client.setQueryData(["operations", "notes", "actor"], []);
     render(
@@ -89,6 +100,14 @@ describe("private client directory capability boundary", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
+    for (const [name, id] of [
+      ["Fictional first contact", "contact-1"],
+      ["Fictional second contact", "contact-2"],
+    ]) {
+      const action = screen.getByRole("button", { name: `Delete ${name}` });
+      expect(action).toHaveAttribute("data-kind", "organisation_contact");
+      expect(action).toHaveAttribute("data-id", id);
+    }
     expect(
       screen.queryByRole("button", { name: "Delete Fictional organisation" }),
     ).not.toBeInTheDocument();

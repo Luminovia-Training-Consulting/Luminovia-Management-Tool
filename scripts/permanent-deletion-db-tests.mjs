@@ -72,6 +72,54 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
     const document = await reserve();
     const second = await reserve(owner, document.document_id);
 
+    await check("Organisation managers delete only the reviewed standalone contact and keep live references protected", async () => {
+        const company = randomUUID(), standalone = randomUUID(), assigned = randomUUID();
+        const template = randomUUID(), run = randomUUID();
+        await sql(`insert into public.organisations(id,name) values(${q(company)},'Fictional contacts company');
+          insert into public.organisation_contacts(id,organisation_id,name) values
+            (${q(standalone)},${q(company)},'Fictional removable contact'),
+            (${q(assigned)},${q(company)},'Fictional assigned contact');
+          insert into public.course_templates(id,title) values(${q(template)},'Fictional contacts template');
+          insert into public.course_runs(id,template_id,organisation_id) values(${q(run)},${q(template)},${q(company)});`);
+        const access = await call(manager, "deletion_access");
+        assert.ok(access.kinds.includes("organisation_contact"));
+        assert.ok(!access.kinds.includes("organisation"));
+        assert.ok(!(await call(owner, "deletion_access")).kinds.includes("organisation_contact"));
+        await expectCode(plan("organisation", company, manager), "42501");
+        await expectCode(plan("organisation_contact", standalone, owner), "42501");
+
+        const previous = await plan("organisation_contact", assigned, manager);
+        assert.equal(previous.can_confirm, true);
+        await sql(`insert into private.company_dispatch_settings(organisation_id,contact_id)
+            values(${q(company)},${q(assigned)});
+          insert into private.course_workspace_settings(run_id,contact_id)
+            values(${q(run)},${q(assigned)});`);
+        await expectCode(confirm(previous, manager), "40001");
+        const protectedContact = await plan("organisation_contact", assigned, manager);
+        assert.equal(protectedContact.can_confirm, false);
+        assert.deepEqual(
+            protectedContact.blockers.map(({kind}) => kind).sort(),
+            ["private.company_dispatch_settings", "private.course_workspace_settings"],
+        );
+        await expectCode(confirm(protectedContact, manager), "23503");
+
+        const removable = await plan("organisation_contact", standalone, manager);
+        assert.equal(removable.label, "Fictional removable contact");
+        assert.equal(removable.can_confirm, true);
+        assert.equal(removable.counts["public.organisation_contacts"], 1);
+        const operation = await confirm(removable, manager);
+        await sql(`delete from public.user_roles where user_id=${q(manager)} and role='management'`);
+        await expectCode(permit(operation, manager), "42501");
+        await sql(`insert into public.user_roles(user_id,role) values(${q(manager)},'management')`);
+        const execution = await permit(operation, manager);
+        await worker("apply", key(operation, execution));
+        assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
+        assert.equal(await sql(`select count(*) from public.organisation_contacts where id=${q(standalone)}`), "0");
+        assert.equal(await sql(`select count(*) from public.organisations where id=${q(company)}`), "1");
+        assert.equal(await sql(`select count(*) from public.organisation_contacts where id=${q(assigned)}`), "1");
+        assert.equal(await sql(`select contact_id from private.company_dispatch_settings where organisation_id=${q(company)}`), assigned);
+        assert.equal(await sql(`select contact_id from private.course_workspace_settings where run_id=${q(run)}`), assigned);
+    });
     await check("Course management can delete an unused draft with dates without touching its template or another run", async () => {
         const template = randomUUID(), run = randomUUID(), sibling = randomUUID();
         const session = randomUUID(), siblingSession = randomUUID();

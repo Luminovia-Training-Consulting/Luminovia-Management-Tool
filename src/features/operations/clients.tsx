@@ -571,13 +571,21 @@ function ClientWorkspace({
                     </a>
                   )}
                   <p className="preserve-text">{contact.notes}</p>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setContactEdit(contact)}
-                    disabled={!online}
-                  >
-                    {t("edit")}
-                  </Button>
+                  <div className="operations-actions">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setContactEdit(contact)}
+                      disabled={!online}
+                    >
+                      {t("edit")}
+                    </Button>
+                    <PermanentDeleteAction
+                      shortLabel
+                      kind="organisation_contact"
+                      id={contact.id}
+                      label={contact.name}
+                    />
+                  </div>
                 </article>
               ))}
             </div>

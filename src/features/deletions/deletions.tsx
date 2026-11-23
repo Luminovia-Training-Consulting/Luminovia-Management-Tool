@@ -281,6 +281,8 @@ function resourceLabel(
     assignment_sessions: "assignmentSessions",
     organisations: "organisation",
     organisation_contacts: "organisation_contact",
+    course_workspace_settings: "courseContactSettings",
+    company_dispatch_settings: "companyDispatchContactSettings",
     course_templates: "course_template",
     course_runs: "course_run",
     course_sessions: "course_session",
@@ -541,6 +543,13 @@ function DeletionDialog({
                     </li>
                   ))}
                 </ul>
+                {target.kind === "organisation_contact" &&
+                  preview.data.blockers.some(({ kind }) =>
+                    [
+                      "course_workspace_settings",
+                      "company_dispatch_settings",
+                    ].includes(kind.split(".").at(-1) ?? kind),
+                  ) && <p>{t("replaceContactBeforeDeletion")}</p>}
               </Notice>
             )}
             {target.kind === "course_run" &&

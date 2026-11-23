@@ -14,6 +14,10 @@
 
 - [x] Use the shared time-zone selector in the marketplace date filter while preserving saved filters, valid historical aliases and local date boundaries.
 
+## Company contact deletion
+
+- [x] Offer reviewed removal on each company contact card to staff with current company management permission. Identify active references in courses and company dispatch defaults.
+
 ## Course catalogue orientation and draft deletion
 
 - [x] Explain runs, templates and building blocks in the catalogue with a Linux practice-day example. Show the current marketplace status and any active assignment.

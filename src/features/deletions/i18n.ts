@@ -232,6 +232,15 @@ const pairs: Record<string, [string, string]> = {
   assignment: ["Zuweisungen", "Assignments"],
   organisation: ["Unternehmen", "Organisations"],
   organisation_contact: ["Unternehmenskontakte", "Organisation contacts"],
+  courseContactSettings: ["Kurskontakt", "Course contact"],
+  companyDispatchContactSettings: [
+    "Standardkontakt für Aufträge",
+    "Default contact for teaching offers",
+  ],
+  replaceContactBeforeDeletion: [
+    "Entferne oder ersetze zuerst die Kontaktzuordnung im Kurs-Workspace oder unter „Klassen und Auftragskontakt“ beim Unternehmen.",
+    "Remove or replace the contact assignment in the course workspace or the company's assignment defaults first.",
+  ],
   course_template: ["Kursvorlagen", "Course templates"],
   course_run: ["Kursdurchläufe", "Course runs"],
   course_session: ["Kurstermine", "Course sessions"],
