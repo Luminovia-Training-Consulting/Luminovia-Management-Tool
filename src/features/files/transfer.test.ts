@@ -13,6 +13,7 @@ import {
   uploadAcademyAttendancePdf,
   uploadAcademyCourseChatAttachment,
   uploadAcademyStudentExamPdf,
+  uploadCourseSubmission,
   uploadDocument,
 } from "./api";
 
@@ -129,6 +130,51 @@ describe("online, authenticated document transfers", () => {
       });
     },
   );
+  it.each([
+    { mode: "course-submission", exam: undefined },
+    { mode: "exam-submission", exam: true },
+  ])(
+    "sends $mode with the exact course, file and retry key",
+    async ({ mode, exam }) => {
+      const bytes = file();
+      const promise = uploadCourseSubmission(
+        bytes,
+        "fictional-course",
+        "draft-key",
+        exam,
+      );
+      await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+      const request = Request.requests[0];
+      expect(request.open).toHaveBeenCalledWith(
+        "POST",
+        `https://fictional.example.invalid/backend/functions/v1/files?mode=${mode}`,
+      );
+      expect([...request.form!]).toEqual([
+        ["file", bytes],
+        ["course_run_id", "fictional-course"],
+        ["client_id", "draft-key"],
+      ]);
+      request.respond(200, {
+        document: { status: "clean", current_version_id: "fictional-version" },
+      });
+      await expect(promise).resolves.toMatchObject({
+        current_version_id: "fictional-version",
+      });
+    },
+  );
+
+  it("rejects empty and oversized exam drafts before opening an upload", () => {
+    for (const size of [0, 10 * 1024 * 1024 + 1]) {
+      const bytes = new File([new Uint8Array(size)], "exam.pdf", {
+        type: "application/pdf",
+      });
+      expect(() =>
+        uploadCourseSubmission(bytes, "fictional-course", "draft-key", true),
+      ).toThrow("file_size");
+    }
+    expect(Request.requests).toHaveLength(0);
+  });
+
   it("sends an academy chat draft only with its room, retry key and file", async () => {
     const promise = uploadAcademyCourseChatAttachment(
       file(),
