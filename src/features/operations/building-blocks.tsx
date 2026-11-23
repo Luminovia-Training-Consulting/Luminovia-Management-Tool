@@ -134,6 +134,9 @@ export function BuildingBlockSources({
       <p className="muted">
         {t(jobId ? "jobSourceDownloadHelp" : "sourcePrivacy")}
       </p>
+      {jobId && (
+        <Link to={{ hash: "#job-documents" }}>{t("openJobAttachments")}</Link>
+      )}
       <ul className="building-block-sources">
         {sources.map((source: BuildingBlockSource) => (
           <li key={source.id}>
@@ -191,6 +194,7 @@ function JobSourceDownload({
 }) {
   const { session } = useAuth();
   const { t } = useTranslation("files");
+  const { t: sourceText } = useTranslation("operations");
   const online = useOnline();
   const attachment = useQuery({
     queryKey: [
@@ -226,12 +230,23 @@ function JobSourceDownload({
   });
 
   if (!attachment.data || attachment.isError)
-    return <strong>{source.file_name}</strong>;
+    return (
+      <>
+        <strong>{source.file_name}</strong>
+        {online && attachment.isSuccess && (
+          <p className="muted">{sourceText("jobSourceUnavailable")}</p>
+        )}
+        {attachment.isError && (
+          <ErrorState retry={() => void attachment.refetch()} />
+        )}
+      </>
+    );
   return (
     <>
       <Button
         type="button"
         variant="secondary"
+        aria-label={`${t("download")}: ${source.file_name}`}
         disabled={!online || download.isPending}
         onClick={() => attachment.data && download.mutate(attachment.data)}
       >

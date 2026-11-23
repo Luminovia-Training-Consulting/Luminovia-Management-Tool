@@ -430,12 +430,14 @@ function DocumentList({
   verificationEpoch,
   renewalEpoch,
   managedJobId,
+  jobAttachments = false,
 }: {
   files: PortalDocument[];
   pending?: boolean;
   verificationEpoch?: string;
   renewalEpoch?: string;
   managedJobId?: string;
+  jobAttachments?: boolean;
 }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
@@ -544,6 +546,17 @@ function DocumentList({
     setMode(value);
     setSelected(file);
   };
+  async function downloadFile(file: PortalDocument) {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await saveDownload(file.id, file.original_name, file.current_version_id);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
   const canRemoveJobFile = (file: PortalDocument) =>
     Boolean(
       managedJobId &&
@@ -569,7 +582,19 @@ function DocumentList({
               <FolderOpen size={23} />
             </div>
             <div className="file-info">
-              <strong>{file.original_name}</strong>
+              {jobAttachments && file.status === "clean" ? (
+                <button
+                  type="button"
+                  className="job-attachment-name"
+                  aria-label={`${t("download")}: ${file.original_name}`}
+                  disabled={!online || busy}
+                  onClick={() => void downloadFile(file)}
+                >
+                  {file.original_name}
+                </button>
+              ) : (
+                <strong>{file.original_name}</strong>
+              )}
               <small>
                 {t(file.kind)} · {t(file.scope)} ·{" "}
                 {(file.size_bytes / 1024).toLocaleString(i18n.language, {
@@ -605,29 +630,17 @@ function DocumentList({
                   <Tags size={18} />
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`${t("download")}: ${file.original_name}`}
-                disabled={!online || busy || file.status !== "clean"}
-                onClick={async () => {
-                  setBusy(true);
-                  setFailed(false);
-                  try {
-                    await saveDownload(
-                      file.id,
-                      file.original_name,
-                      file.current_version_id,
-                    );
-                  } catch {
-                    setFailed(true);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <FileDown size={18} />
-              </Button>
+              {!jobAttachments && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${t("download")}: ${file.original_name}`}
+                  disabled={!online || busy || file.status !== "clean"}
+                  onClick={() => void downloadFile(file)}
+                >
+                  <FileDown size={18} />
+                </Button>
+              )}
               {[
                 "application/pdf",
                 "image/png",
@@ -979,6 +992,7 @@ export function JobDocuments({
       ) : (
         <DocumentList
           files={files.data}
+          jobAttachments
           managedJobId={canManage ? jobId : undefined}
           verificationEpoch={epoch}
           renewalEpoch={

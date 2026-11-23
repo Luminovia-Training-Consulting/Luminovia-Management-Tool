@@ -1731,7 +1731,11 @@ it("exposes the attachment for reading without providing job-management actions"
   state.rpc.mockReturnValue(response({ kinds: [] }));
   mount(<JobDocuments jobId={jobId} canManage={false} />);
   const section = screen.getByRole("region", { name: "Job attachments" });
-  expect(await within(section).findByText(record.original_name)).toBeVisible();
+  expect(
+    await within(section).findByRole("button", {
+      name: `Download: ${record.original_name}`,
+    }),
+  ).toHaveTextContent(record.original_name);
   expect(
     within(section).queryByText("Add job attachment"),
   ).not.toBeInTheDocument();

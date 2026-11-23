@@ -1,3 +1,7 @@
+# 23 November 2026 — Direct job attachment downloads
+
+The job source section links to the attachments and explains when the original PDF is unavailable. A matching scanned PDF opens the existing authenticated download for the exact revision. Other clean job attachments download from their names. The 89 focused source, job, lifecycle and file tests passed, along with TypeScript and targeted ESLint.
+
 # 23 November 2026 — Hourly KVM 1 package checks
 
 The packaged timer checks once per hour and catches up after downtime. Pushes to main continue to start the immutable package build immediately. The hourly unit still needs installation on KVM 1. The connected Hostinger account did not list the VM, and SSH rejected the available key. The previous live verification recorded e45c01c2, 327 migrations and an active update timer.

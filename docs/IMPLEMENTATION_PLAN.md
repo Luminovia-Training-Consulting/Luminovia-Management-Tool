@@ -3,6 +3,7 @@
 - [x] Expose own profile, expertise and contracts from the internal account directory. Let administrators edit their own administration, management, lecturer, participant and company roles, preserving final administrative access and active teaching obligations.
 - [x] Let management assign company, participant and lecturer roles to eligible accounts and bind the selected organisation with company role changes. Make the own-profile expertise picker a bounded, responsive scroll area.
 - [x] Let internal management select a searchable company and class when creating a participant or adding their role. Let company contacts select the class when inviting a participant and change it on an active membership. Preserve company consent, course enrolment boundaries and current membership versions.
+- [x] Download an authorised original PDF or other scanned job attachment directly from the job by its filename.
 
 ## Local launcher
 
