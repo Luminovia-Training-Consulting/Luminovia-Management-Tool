@@ -1,3 +1,9 @@
+# 23 November 2026 — Single publishing workflow for internal courses
+
+Course cards and the editor follow the linked teaching offer. Staff save a course draft and prepare the offer, then publish the saved offer from the course editor. Unassigned offers without protected history can return to draft. The previous catalogue toggle no longer grants prospective lecturers access to private course records. Confirmed allocations continue to open the course. Legacy course release values and the dedicated Academy workflow remain supported. A linked published or filled offer also makes new internal courses available through the scoped company enrolment picker.
+
+The migrated PostgreSQL checks covered publication, withdrawal, legacy preview denial, assignment access, company and participant scope, comments, and all edition-specific lecturer block checks. The focused frontend suite passed 77 tests. Desktop and mobile Chromium both published and withdrew a saved offer through the live course editor, with database confirmation after each action. The production build stayed within existing budgets.
+
 # 23 November 2026 — Resume and publish saved course offers
 
 Saved course runs link back to their detail after the list refreshes. A saved offer draft can be published directly from its receipt or course card using the existing versioned mutation. Publication reuses the saved settings and offer ID. Course deletion uses a shorter action label and retains its explicit permanent confirmation.

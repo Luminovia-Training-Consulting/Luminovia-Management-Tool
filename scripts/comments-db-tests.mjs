@@ -22,6 +22,7 @@ await withTestDatabase("comments_test", async ({sql, actor}) => {
         learner = randomUUID();
     const job = randomUUID(),
         draft = randomUUID(),
+        teachingJob = randomUUID(),
         template = randomUUID(),
         run = randomUUID();
     await sql(`insert into auth.users(id, email)
@@ -32,7 +33,11 @@ await withTestDatabase("comments_test", async ({sql, actor}) => {
  insert into public.course_runs(id,template_id,published) values('${run}','${template}',true);
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,time_zone,status,amount,total_amount,currency,rate_unit,terms) values
  ('${job}','${run}','Fictional discussion','Fictional academy','online','Europe/Berlin','published',100,100,'EUR','fixed_total','Immutable net terms'),
- ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');`);
+ ('${teachingJob}','${run}','Fictional assigned work','Fictional academy','online','Europe/Berlin','filled',100,100,'EUR','fixed_total','Immutable net terms'),
+ ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');
+ update public.jobs set capacity=2,capacity_basis='per_position' where id='${teachingJob}';
+     insert into public.job_claims(job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version)
+ values ${[peer, teacher].map((id) => `('${teachingJob}','${id}','${randomUUID()}','confirmed',100,100,'EUR','fixed_total','Immutable net terms',1)`).join(",")};`);
     const commentResponses = new Map([
         ["comment_context", rpcResponse("comment_context")],
         ["resource_comments", rpcResponse("resource_comments")],

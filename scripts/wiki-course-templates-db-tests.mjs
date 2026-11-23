@@ -15,6 +15,7 @@ await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
         denied = randomUUID(),
         template = randomUUID(),
         run = randomUUID(),
+        offer = randomUUID(),
         privateTemplate = randomUUID();
     await sql(
         `insert into auth.users(id, email)
@@ -24,7 +25,12 @@ await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
                 (${q(denied)}, 'denied@example.invalid');
      insert into public.user_roles(user_id,role) values(${q(author)},'lecturer'),(${q(reader)},'lecturer'),(${q(manager)},'admin'),(${q(denied)},'lecturer');
      insert into public.course_templates(id,title) values(${q(template)},'Fictional shared template'),(${q(privateTemplate)},'Fictional private template');
-     insert into public.course_runs(id,template_id,published) values(${q(run)},${q(template)},true);`,
+     insert into public.course_runs(id,template_id,published) values(${q(run)},${q(template)},false);
+     insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+       values(${q(offer)},${q(run)},'Fictional teaching offer','Fictional company','online','published',100,100,'EUR','fixed_total','Fictional terms');
+     update public.jobs set capacity=2,capacity_basis='per_position' where id=${q(offer)};
+     insert into public.job_claims(job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version)
+       values ${[author, reader].map((lecturer) => `(${q(offer)},${q(lecturer)},${q(randomUUID())},'confirmed',100,100,'EUR','fixed_total','Fictional terms',1)`).join(",")};`,
     );
     const category = await sql(
         "select id from public.knowledge_categories where kind='wiki' limit 1",
@@ -100,7 +106,7 @@ await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
     await assert.rejects(sql(`delete from public.course_templates where id=${q(template)}`), /foreign key/);
     const scope = JSON.parse(await sql(`select private.deletion_scope('wiki_page',${q(page)})`));
     assert.ok(scope.some((entry) => entry.table === "private.wiki_revision_course_templates"));
-    await sql(`update public.course_runs set published=false where id=${q(run)}`);
+    await sql(`update public.job_claims set status='cancelled' where job_id=${q(offer)} and lecturer_id=${q(reader)}`);
     assert.deepEqual(await list(reader), []);
     assert.equal(await actor(reader, `select count(*) from public.wiki_pages where id=${q(page)}`), "1");
     console.log("PASS wiki template references: caller visibility, draft revision CAS, immutable published snapshot, archive and delete boundaries");

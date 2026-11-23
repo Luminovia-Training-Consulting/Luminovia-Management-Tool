@@ -1,7 +1,7 @@
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Reusable templates and actual course runs with concrete sessions. Content, participant
- * management, course publication and job offers remain distinct operations.
+ * management and versioned publication of linked teaching offers.
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
@@ -11,7 +11,10 @@ import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
 import { ResourceComments } from "../comments/comments";
 import { changeCandidatesQuery } from "../changes/api";
-import { PublishOfferDraft } from "../jobs/publish-draft";
+import {
+  OfferPublicationAction,
+  PublishOfferDraft,
+} from "../jobs/publish-draft";
 import { lifecycleQuery, refreshJobState } from "../jobs/lifecycle-api";
 import { TimeZoneOptions } from "../../components/time-zone-options";
 import {
@@ -82,7 +85,6 @@ const runSchema = z.object({
   time_zone: z.string().refine(validZone),
   delivery_type: z.enum(["online", "onsite"]),
   venue: z.string().max(500),
-  published: z.boolean(),
   archived: z.boolean(),
   sessions: z
     .array(
@@ -386,7 +388,7 @@ function RunForm({
     getValues,
     handleSubmit,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
     defaultValues: {
@@ -399,7 +401,6 @@ function RunForm({
       time_zone: original?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
       venue: original?.venue ?? "",
-      published: original?.published ?? false,
       archived: Boolean(original?.archived_at),
       sessions: original
         ? [...original.course_sessions]
@@ -475,6 +476,16 @@ function RunForm({
 
   const hasActiveJob = linkedJobs.some(
     ({ status }) => status === "published" || status === "filled",
+  );
+  const withdrawableJobId =
+    linkedJob?.status === "published" &&
+    linkedDetails?.can_manage &&
+    linkedDetails.confirmed_count === 0 &&
+    linkedDetails.claims.length === 0
+      ? linkedJob.id
+      : undefined;
+  const publicationJobs = linkedJobs.filter(
+    ({ id, status }) => status === "draft" || id === withdrawableJobId,
   );
   function changeZone(next: string) {
     if (!validZone(next) || next === zone) return;
@@ -615,7 +626,12 @@ function RunForm({
         }
         templateId = createdTemplate.current!.id;
       }
-      const payload = { ...values, template_id: templateId, sessions };
+      const payload = {
+        ...values,
+        template_id: templateId,
+        sessions,
+        published: original?.published ?? false,
+      };
       let offerChange:
         { expected_job_version: number; job_request_id: string } | undefined;
       if (linked && original) {
@@ -688,7 +704,7 @@ function RunForm({
     onSettled: () => onBusy(false),
   });
 
-  const submitRun = (publish?: boolean, offer = false) =>
+  const submitRun = (offer = false) =>
     handleSubmit(async (values) => {
       if (save.isPending || (offer && !values.organisation_id)) return;
       const draft = !values.template_id
@@ -700,17 +716,13 @@ function RunForm({
         : undefined;
       save.mutate({
         kind: "run",
-        values: { ...values, published: publish ?? values.published },
+        values,
         content: fields,
         offer,
       });
     });
   return (
-    <form
-      className="course-run-editor"
-      noValidate
-      onSubmit={submitRun(original ? undefined : false)}
-    >
+    <form className="course-run-editor" noValidate onSubmit={submitRun()}>
       {linked && (
         <Notice>
           <p>
@@ -1030,13 +1042,8 @@ function RunForm({
         )}
       </fieldset>
       {original && (
-        <fieldset className="course-run-visibility">
-          <legend>{t("runVisibility")}</legend>
-          <p className="course-run-visibility-hint">{t("publishedHint")}</p>
-          <label className="checkbox-label">
-            <input type="checkbox" {...register("published")} />
-            {t("showInCourseCatalogue")}
-          </label>
+        <fieldset className="course-run-archive">
+          <legend>{t("courseArchive")}</legend>
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -1073,19 +1080,11 @@ function RunForm({
         >
           {t(original ? "save" : "saveRunDraft")}
         </Button>
-        {!original && !draftOnly && (
-          <Button
-            type="button"
-            disabled={
-              !online || save.isPending || (needsContent && !topics.isSuccess)
-            }
-            onClick={submitRun(true)}
-          >
-            {t("showInCourseCatalogue")}
-          </Button>
-        )}
-        {!original &&
+        {!original?.archived_at &&
           !draftOnly &&
+          !linkedJobs.some(({ status }) =>
+            ["draft", "published", "filled"].includes(status),
+          ) &&
           canPrepareOffer &&
           selectedOrganisationId && (
             <Button
@@ -1093,12 +1092,37 @@ function RunForm({
               disabled={
                 !online || save.isPending || (needsContent && !topics.isSuccess)
               }
-              onClick={submitRun(false, true)}
+              onClick={submitRun(true)}
             >
               {t("saveAndPrepareOffer")}
             </Button>
           )}
       </div>
+      {original &&
+        !original.archived_at &&
+        canPrepareOffer &&
+        publicationJobs.length > 0 && (
+          <section
+            className="course-marketplace-state"
+            aria-label={t("marketplaceStatus")}
+          >
+            <strong>{t("marketplaceStatus")}</strong>
+            <p className="muted">
+              {t(isDirty ? "saveBeforeOfferPublication" : "publishedHint")}
+            </p>
+            {publicationJobs.map((job) => (
+              <div key={job.id} className="operations-actions">
+                <Link to={`/jobs/${job.id}`}>{job.title}</Link>
+                <OfferPublicationAction
+                  disabled={isDirty || save.isPending}
+                  jobId={job.id}
+                  action={job.status === "draft" ? "published" : "draft"}
+                  onChanged={() => onDone("run", undefined, original.id)}
+                />
+              </div>
+            ))}
+          </section>
+        )}
       {save.isError && needsContent && templateRetained && (
         <Notice>{t("courseTemplateRetained")}</Notice>
       )}
@@ -1204,27 +1228,25 @@ export function CoursesPage() {
   const [copyTitle, setCopyTitle] = useState("");
   const [message, setMessage] = useState("");
   const [savedRun, setSavedRun] = useState<string>();
-  const visibility = useMutation({
+  const archiveRun = useMutation({
     mutationFn: async ({
       run,
-      published,
       archived,
     }: {
       run: CourseRun;
-      published: boolean;
       archived: boolean;
     }) => {
       requireOnline();
       const { error } = await db().rpc("set_course_visibility", {
         p_id: run.id,
-        p_published: published,
+        p_published: run.published,
         p_archived: archived,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["operations"] });
-      setMessage(t("visibilitySaved"));
+      setMessage(t("archiveSaved"));
     },
   });
   const duplicate = useMutation({
@@ -1523,9 +1545,9 @@ export function CoursesPage() {
           )}
         </Notice>
       )}
-      {visibility.isError && (
+      {archiveRun.isError && (
         <Notice kind="error">
-          {t(visibility.error.message === "course_locked" ? "locked" : "error")}
+          {t(archiveRun.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
       {tab === "runs" && filteredRuns.length === 0 ? (
@@ -1583,9 +1605,14 @@ export function CoursesPage() {
                     {t(
                       run.archived_at
                         ? "archive"
-                        : run.published
-                          ? "inCourseCatalogue"
-                          : "privateCourseRun",
+                        : liveOffers.length > 0
+                          ? "published"
+                          : closedReason === "marketplaceDraft" ||
+                              closedReason === "marketplaceMissing"
+                            ? "draft"
+                            : closedReason === "marketplaceAssigned"
+                              ? "courseRunAssigned"
+                              : "courseRunClosed",
                     )}
                   </span>
                 </div>
@@ -1607,7 +1634,7 @@ export function CoursesPage() {
                           <Link to={`/jobs/${job.id}`}>
                             {t("openMarketplaceDraft", { title: job.title })}
                           </Link>
-                          {canPrepareOffer && (
+                          {canPrepareOffer && !run.archived_at && (
                             <PublishOfferDraft jobId={job.id} />
                           )}
                         </div>
@@ -1664,28 +1691,10 @@ export function CoursesPage() {
                     </Button>
                     <Button
                       variant="ghost"
-                      disabled={!online || visibility.isPending}
+                      disabled={!online || archiveRun.isPending}
                       onClick={() =>
-                        visibility.mutate({
+                        archiveRun.mutate({
                           run,
-                          published: !run.published,
-                          archived: Boolean(run.archived_at),
-                        })
-                      }
-                    >
-                      {t(
-                        run.published
-                          ? "hideFromCourseCatalogue"
-                          : "showInCourseCatalogue",
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      disabled={!online || visibility.isPending}
-                      onClick={() =>
-                        visibility.mutate({
-                          run,
-                          published: run.published,
                           archived: !run.archived_at,
                         })
                       }
@@ -2006,11 +2015,10 @@ export function CoursesPage() {
                   </Button>
                   <Button
                     variant="secondary"
-                    disabled={!online || visibility.isPending}
+                    disabled={!online || archiveRun.isPending}
                     onClick={() =>
-                      visibility.mutate({
+                      archiveRun.mutate({
                         run: detail,
-                        published: detail.published,
                         archived: !detail.archived_at,
                       })
                     }

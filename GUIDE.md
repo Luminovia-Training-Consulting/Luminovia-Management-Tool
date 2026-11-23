@@ -537,11 +537,11 @@ See [Support](GUIDE.md#section-support-desk), [readiness](GUIDE.md#section-cours
 
 **Durchführungen / Runs** lists concrete courses, including drafts, published courses and archived runs. **Vorlagen / Templates** holds reusable content. **Kursbausteine / Course building blocks** provides prepared content and its suggested duration as a starting point.
 
-For example, use **Kurs anlegen / Create course** to save the shell, file permissions and exercises for a Linux practice day as a template. Start a run from that template for a Friday from 9 am to 4 pm, and save it as a draft while planning. When ready, display the run in the catalogue. Create a separate teaching offer from the run if a lecturer needs to claim the teaching assignment.
+For example, use **Kurs anlegen / Create course** to save the shell, file permissions and exercises for a Linux practice day as a template. Start a run from that template for a Friday from 9 am to 4 pm, and save it as a draft while planning. When you need a lecturer, prepare the linked teaching offer and publish it in the marketplace. The run shows the status of that offer.
 
 Under **Courses → Course building blocks**, find the 22 subject templates derived from the 24 supplied PDF versions. Search by short code or content and open the description. Source references show the exact version with filename, revision, pages and an expandable checksum; original files are not publicly hosted. Both versions remain visible for LPC3/LPC4.
 
-Under **Kurse → Kurs anlegen / Courses → Create course**, enter reusable course content or select an existing template. Choose **Als Vorlage speichern / Save as template** to keep only title, description, syllabus, prerequisites and topics. Enter a company, delivery details and sessions when needed for a run, then choose **Entwurf speichern / Save draft** or **Veröffentlichen / Publish**. If the server saves new reusable content but does not confirm the run, the dialog reports that state and uses the same template on retry.
+Under **Kurse → Kurs anlegen / Courses → Create course**, enter reusable course content or select an existing template. Choose **Als Vorlage speichern / Save as template** to keep only title, description, syllabus, prerequisites and topics. Enter a company, delivery details and sessions when needed for a run, then choose **Entwurf speichern / Save draft** or **Speichern und zum Auftrag / Save and open offer form**. You can publish a saved offer or withdraw an eligible unassigned offer from the course editor. If the server saves new reusable content but does not confirm the run, the dialog reports that state and uses the same template on retry.
 
 As authorised management, choose **Plan course run**, assign the client and adjust delivery mode, location/link, time zone and sessions. The scheduling template can distribute the ten teaching days over weekdays; review holidays, breaks and actual teaching times yourself. A new run does not copy other people's personal data, contracts or allocations.
 
@@ -1357,7 +1357,7 @@ Public documentation, examples and screenshots must use neutral descriptions or 
 4. Administration enters the full customer fee under the privately configured compensation policy. Management without gross permission enters only the permitted lecturer compensation. The database derives the resulting job from the locked course; it never trusts browser-submitted titles, customers or session IDs.
 5. A lecturer sees only their compensation and the source reference. Claiming reserves every actual session immediately through the existing atomic claim transaction. Gross offers appear in the appropriate client's request/spend list; net-only offers retain unknown gross and do not fabricate customer quotes.
 
-Open **Courses → Edit** to update venue, access link and visibility. If a sole linked offer has an editable future schedule, saving dates updates the course and the offer together. Eligible linked drafts also offer selectors for template, organisation, time zone and delivery mode. Changing the display time zone preserves the scheduled instants. For confirmed work, **Propose schedule change** opens the amendment form for the selected assignment and uses the existing approval workflow.
+Open **Courses → Edit** to update venue and access link. Publish the linked teaching offer to list it for eligible lecturers. If a sole linked offer has an editable future schedule, saving dates updates the course and the offer together. Eligible linked drafts also offer selectors for template, organisation, time zone and delivery mode. Changing the display time zone preserves the scheduled instants. For confirmed work, **Propose schedule change** opens the amendment form for the selected assignment and uses the existing approval workflow.
 
 Building-block/template discussions are attached to the actual reusable template, so teaching notes persist across runs of that template. Job discussions remain attached to the individual job. These are teaching-team discussions; clients/learners do not receive their bodies. Course enrolment, invoices and private commercial/DM/calendar boundaries remain independent and enforced.
 
@@ -1458,8 +1458,7 @@ Combined hosting/application acceptance also passed in canonical04 (`4c7c897`,17
 
 # Course workspaces, preparation and learning evidence
 
-The `/learning` hub and `/courses/:id/workspace` connect an actual course run to its assigned lecturers, current client-organisation members and explicitly enrolled participants. The course catalogue detail and client portal link to these workspaces. An unrelated lecturer, another client organisation, removed enrolment or inactive account does not gain access by guessing the URL. Course-management capabilities retain their current MFA requirement. A published catalogue entry alone does not grant
-access to the operational workspace.
+The `/learning` hub and `/courses/:id/workspace` connect an actual course run to its assigned lecturers, current client-organisation members and explicitly enrolled participants. The course catalogue detail and client portal link to these workspaces. An unrelated lecturer, another client organisation, removed enrolment or inactive account does not gain access by guessing the URL. Course-management capabilities retain their current MFA requirement. Prospective lecturers browse live offers in the marketplace. Confirmed teaching allocation grants access to the course workspace.
 
 <a id="section-course-learning-workspace-delivered-workflows"></a>
 

@@ -224,10 +224,11 @@ try {
         await sql(`update public.course_runs set published=true where id='${run}'`);
         const courseVisibility = (user) =>
             as(user, `select count(*) from public.course_runs where id='${run}'`);
-        assert.equal(await courseVisibility(users[51]), "1");
+        assert.equal(await courseVisibility(users[51]), "0");
         assert.equal(await courseVisibility(users[52]), "0");
         assert.equal((await rpc(users[52], offer)).status, "not_eligible");
         assert.equal((await rpc(users[51], offer)).status, "confirmed");
+        assert.equal(await courseVisibility(users[51]), "1");
         assert.equal(await visibility(users[51]), "1");
     });
     await test("Missing or expired executed contract rejected", async () => {

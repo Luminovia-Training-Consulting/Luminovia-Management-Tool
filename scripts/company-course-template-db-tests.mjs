@@ -80,7 +80,7 @@ await withTestDatabase("company_course_authoring", async ({ sql, actor }) => {
     forbidden,
   );
   await actor(manager, `select public.set_course_visibility(${q(saved)},true,false)`);
-  assert.equal(await actor(lecturer, `select published from public.course_runs where id=${q(saved)}`), "t");
+  assert.equal(await actor(lecturer, `select count(*) from public.course_runs where id=${q(saved)}`), "0");
   await assert.rejects(save(customer, "template", ownTemplate, template), /course_locked/);
   assert.equal(await save(manager, "template", ownTemplate, template), ownTemplate);
 

@@ -53,7 +53,7 @@ async function a11y(page: Page) {
     ).toEqual([]);
 }
 
-test("readonly operations catalogue is accessible and private client directory is denied", async ({
+test("readonly course overview is accessible and private client directory is denied", async ({
                                                                                                       page,
                                                                                                   }, testInfo) => {
     const lecturer = await actor("Fictional operations catalogue lecturer", "lecturer");
@@ -120,7 +120,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog.getByLabel("Ort", {exact: true}).fill("Fiktivstadt");
     await dialog.getByLabel("Branche", {exact: true}).fill("Training");
     await dialog.getByLabel("Interne Notizen", {exact: true}).fill(note);
-    await dialog.getByRole("button", {name: "Als Vorlage speichern", exact: true}).click();
+    await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
     await expect(
         page.getByRole("heading", {name: company, exact: true}),
@@ -166,8 +166,9 @@ test("admin persists private customer/contact, course template/run and safe unpu
         .getByLabel("Voraussetzungen", {exact: true})
         .fill("Linux Grundlagen");
     await dialog.getByRole("checkbox", {name: "Linux", exact: true}).check();
-    await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
+    await dialog.getByRole("button", {name: "Als Vorlage speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
+    await page.getByRole("button", {name: "Durchführungen", exact: true}).click();
     await page
         .getByRole("button", {name: "Kurs anlegen", exact: true})
         .click();
@@ -200,7 +201,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog
         .getByLabel("Ende 2", {exact: true})
         .fill(first.plus({days: 1, hours: 5}).toFormat("yyyy-MM-dd'T'HH:mm"));
-    await dialog.getByRole("button", {name: "Im Kurskatalog anzeigen", exact: true}).click();
+    await dialog.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
     await page.getByLabel("Suchen", {exact: true}).fill(title);
     let card = page
@@ -237,6 +238,48 @@ test("admin persists private customer/contact, course template/run and safe unpu
         .locator(".operations-course")
         .filter({has: page.getByRole("heading", {name: title, exact: true})});
     await expect(card).toHaveCount(2);
-    expect(await card.filter({hasText: "Entwurf"}).count()).toBe(1);
+    await expect(card.filter({hasText: "Entwurf"})).toHaveCount(2);
     await a11y(page);
+});
+test("course editor publishes and withdraws the linked marketplace offer", async ({page}) => {
+    const admin = await actor("Fictional marketplace course admin", "admin");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const [organisation, template, run, courseSlot, job] = Array.from({length: 5}, randomUUID);
+    const title = "Fictional marketplace course " + run.slice(0, 8);
+    const starts = DateTime.utc().plus({days: 120});
+    const dates = {starts_at: starts.toISO(), ends_at: starts.plus({hours: 2}).toISO()};
+    const write = async (table: string, row: object) => {
+        const {error} = await service.from(table).insert(row);
+        expect(error?.message).toBeUndefined();
+    };
+    await write("organisations", {id: organisation, name: "Fictional marketplace company"});
+    await write("course_templates", {id: template, title});
+    await write("course_runs", {id: run, template_id: template, organisation_id: organisation});
+    await write("course_sessions", {id: courseSlot, course_run_id: run, ...dates});
+    await write("jobs", {
+        id: job, course_run_id: run, title, customer_name: "Fictional marketplace company",
+        delivery_type: "online", status: "draft", currency: "EUR", amount: 100,
+        total_amount: 100, rate_unit: "fixed_total", terms: "Fictional offer terms",
+    });
+    await write("job_sessions", {job_id: job, course_session_id: courseSlot, ...dates});
+
+    await login(page, admin.email);
+    const openEditor = async (status: string) => {
+        await page.goto("/courses");
+        await page.getByLabel("Suchen", {exact: true}).fill(title);
+        const card = page.locator(".operations-course").filter({
+            has: page.getByRole("heading", {name: title, exact: true}),
+        });
+        await expect(card.getByText(status, {exact: true})).toBeVisible();
+        await card.getByRole("button", {name: "Bearbeiten", exact: true}).click();
+        return page.getByRole("dialog", {name: "Bearbeiten"});
+    };
+    let editor = await openEditor("Entwurf");
+    await editor.getByRole("button", {name: "In der Stellenbörse veröffentlichen"}).click();
+    await expect(editor).toBeHidden();
+    expect((await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("published");
+    editor = await openEditor("Veröffentlicht");
+    await editor.getByRole("button", {name: "Veröffentlichung zurücknehmen"}).click();
+    await expect(editor).toBeHidden();
+    expect((await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("draft");
 });

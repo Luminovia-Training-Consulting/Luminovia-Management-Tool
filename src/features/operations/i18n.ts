@@ -178,7 +178,7 @@ const pairs: Record<string, [string, string]> = {
     "Each key grants one permission for this company. A key allows 60 requests per minute.",
   ],
   integrationScopeChoice: ["API-Berechtigung", "API permission"],
-  integrationCourseIndex: ["Kurskatalog lesen", "Read course index"],
+  integrationCourseIndex: ["Kursübersicht lesen", "Read course index"],
   integrationEnrolments: [
     "Bestätigte Teilnehmende einschreiben",
     "Enrol confirmed participants",
@@ -569,12 +569,12 @@ const pairs: Record<string, [string, string]> = {
     "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm.",
   ],
   courseCatalogueVisibility: [
-    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, wähle „Speichern und zum Auftrag“ und veröffentliche anschließend den Auftrag.",
-    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, select “Save and open offer form”, then publish the offer.",
+    "Speichere die Durchführung als Entwurf. Wenn du eine Lehrkraft suchst, wähle „Speichern und zum Auftrag“ und veröffentliche anschließend die Ausschreibung in der Stellenbörse.",
+    "Save the course run as a draft. If you need a lecturer, choose “Save and open offer form”, then publish the offer in the marketplace.",
   ],
   "courseCatalogueTab.runs": [
-    "Hier stehen konkrete Kurse mit Terminen, Ort und Sichtbarkeit. Dazu gehören Entwürfe, im Katalog sichtbare Kurse und das Archiv.",
-    "This tab contains scheduled courses with sessions, venue and visibility. It includes drafts, courses visible in the catalogue and archived runs.",
+    "Hier stehen konkrete Kurse mit Terminen, Ort und dem Status ihrer Ausschreibung.",
+    "This tab lists scheduled courses with sessions, venue and the status of their teaching offer.",
   ],
   "courseCatalogueTab.templates": [
     "Hier speicherst du wiederverwendbare Kursinhalte wie Titel, Lehrplan und Voraussetzungen. Eine Vorlage kannst du für mehrere Durchführungen mit unterschiedlichen Terminen verwenden.",
@@ -708,15 +708,7 @@ const pairs: Record<string, [string, string]> = {
     "Beim Wechsel der Zeitzone werden die vorhandenen Termine umgerechnet. Der Zeitpunkt bleibt gleich.",
     "Changing the time zone updates how existing sessions are shown. The scheduled instants stay the same.",
   ],
-  runVisibility: ["Sichtbarkeit der Durchführung", "Course run visibility"],
-  hideFromCourseCatalogue: [
-    "Im Kurskatalog ausblenden",
-    "Hide from the course catalogue",
-  ],
-  showInCourseCatalogue: [
-    "Im Kurskatalog anzeigen",
-    "Show in the course catalogue",
-  ],
+  courseArchive: ["Kursarchiv", "Course archive"],
   locked: [
     "Diese Inhalte sind mit bestehenden Aufträgen verbunden und geschützt. Erstelle eine Kopie, um neue Termine oder Inhalte zu planen.",
     "This content is linked to existing assignments and protected. Create a copy to plan new dates or content.",
@@ -725,7 +717,7 @@ const pairs: Record<string, [string, string]> = {
     "Beginn und Ende müssen eindeutig sein. Prüfe Zeitzone und Zeitumstellung; das Ende muss nach dem Beginn liegen.",
     "Start and end must be unambiguous. Check the time zone and daylight saving transition; end must follow start.",
   ],
-  catalogue: ["Kurskatalog", "Course catalogue"],
+  catalogue: ["Kursübersicht", "Course overview"],
   noAccess: [
     "Für diesen Bereich fehlt dir die Berechtigung.",
     "You do not have permission for this area.",
@@ -737,8 +729,6 @@ const pairs: Record<string, [string, string]> = {
     "Speichern und zum Auftrag",
     "Save and open offer form",
   ],
-  inCourseCatalogue: ["Im Kurskatalog", "In course catalogue"],
-  privateCourseRun: ["Nicht im Kurskatalog", "Outside the course catalogue"],
   marketplaceStatus: ["Stellenbörse", "Marketplace"],
   marketplaceMissing: ["Keine Ausschreibung angelegt", "No offer created"],
   marketplaceExpired: [
@@ -755,11 +745,17 @@ const pairs: Record<string, [string, string]> = {
   ],
   marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
   marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
+  courseRunAssigned: ["Besetzt", "Filled"],
+  courseRunClosed: ["Geschlossen", "Closed"],
   openMarketplaceDraft: ["Entwurf öffnen: {{title}}", "Open draft: {{title}}"],
   openListedOffer: ["Ausschreibung öffnen: {{title}}", "Open offer: {{title}}"],
   publishedHint: [
-    "Der Kurskatalog zeigt geplante Kurse. Wenn du eine Lehrkraft suchst, wähle beim Auftrag „In der Stellenbörse veröffentlichen“. Passende Dozierende sehen den offenen Auftrag.",
-    "The course catalogue shows scheduled courses. To find a lecturer, select “Publish in the marketplace” on the offer. Eligible lecturers can see the open offer.",
+    "Wenn du den Lehrauftrag in der Stellenbörse veröffentlichst, können berechtigte Dozierende ihn sehen und übernehmen.",
+    "Publishing the teaching offer in the marketplace lets eligible lecturers see and claim it.",
+  ],
+  saveBeforeOfferPublication: [
+    "Speichere deine Kursänderungen, bevor du die Ausschreibung veröffentlichst oder zurücknimmst.",
+    "Save your course changes before publishing or withdrawing the teaching offer.",
   ],
   required: ["Bitte prüfe dieses Feld.", "Please check this field."],
   view: ["Ansehen", "View"],
@@ -770,8 +766,7 @@ const pairs: Record<string, [string, string]> = {
     "Archivierte Vorlagen bleiben in der Historie erhalten.",
     "Archived templates remain in history.",
   ],
-  confirmPublish: ["Sichtbarkeit ändern", "Change visibility"],
-  visibilitySaved: ["Sichtbarkeit gespeichert.", "Visibility saved."],
+  archiveSaved: ["Archivstatus gespeichert.", "Archive status saved."],
   noCustomer: ["Ohne Organisation", "Without organisation"],
 };
 for (const [language, index] of [

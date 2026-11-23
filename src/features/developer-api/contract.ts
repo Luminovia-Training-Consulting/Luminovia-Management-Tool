@@ -2151,7 +2151,7 @@ const nativePaths = {
     "saveCourseRun",
     "Courses",
     "Create or update a scheduled course",
-    "Use a null ID for a new run. On the internal edition, active company members can only create unpublished drafts using an active template owned by their organisation. Sessions use explicit offsets and must not overlap. Course managers can edit venues and visibility on linked runs. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
+    "Use a null ID for a new run. On the internal edition, active company members can only create unpublished drafts using an active template owned by their organisation. Sessions use explicit offsets and must not overlap. Course managers can edit venues on linked runs. Prospective lecturers discover live offers through the marketplace. Course access follows assignment. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
     {
       p_id: nullableUuid,
       p_payload: {
@@ -2169,7 +2169,7 @@ const nativePaths = {
     "setCourseVisibility",
     "Courses",
     "Apply publication and archive state",
-    "Published runs require a schedule. A run linked to a published or filled job cannot be archived through this operation.",
+    "A run linked to a published or filled job cannot be archived through this operation. The retained publication field requires a schedule and does not list an internal course for lecturers. Publish or withdraw the linked offer through manage_job_offer.",
     { p_id: uuid, p_published: boolean, p_archived: boolean },
   ),
   "/rest/v1/rpc/duplicate_course_run": rpc(

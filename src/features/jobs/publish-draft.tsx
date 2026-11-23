@@ -15,6 +15,26 @@ export function PublishOfferDraft({
   jobId: string;
   onPublished?: () => void;
 }) {
+  return (
+    <OfferPublicationAction
+      jobId={jobId}
+      action="published"
+      onChanged={onPublished}
+    />
+  );
+}
+
+export function OfferPublicationAction({
+  jobId,
+  action,
+  onChanged,
+  disabled = false,
+}: {
+  jobId: string;
+  action: "published" | "draft";
+  onChanged?: () => void;
+  disabled?: boolean;
+}) {
   const { t } = useTranslation("jobLifecycle");
   const actor = useAuth().session!.user.id;
   const cache = useQueryClient();
@@ -23,15 +43,22 @@ export function PublishOfferDraft({
   const publish = useMutation({
     mutationFn: async () => {
       const reviewed = await cache.fetchQuery(lifecycleQuery(actor, jobId));
+      if (
+        action === "draft" &&
+        (!reviewed.can_manage ||
+          (reviewed.confirmed_count ?? 0) > 0 ||
+          reviewed.claims.length > 0)
+      )
+        throw new Error("offer_publication_protected");
       return manageOffer({
         job: jobId,
-        action: "published",
+        action,
         version: reviewed.version,
-        request: request.forInput(`${jobId}:${reviewed.version}`),
+        request: request.forInput(`${action}:${jobId}:${reviewed.version}`),
       });
     },
     onSuccess: () => {
-      onPublished?.();
+      onChanged?.();
       void refreshJobState(cache);
     },
   });
@@ -39,10 +66,10 @@ export function PublishOfferDraft({
     <>
       <Button
         type="button"
-        disabled={!online || publish.isPending || publish.isSuccess}
+        disabled={disabled || !online || publish.isPending || publish.isSuccess}
         onClick={() => publish.mutate()}
       >
-        {t("publishMarketplace")}
+        {t(action === "published" ? "publishMarketplace" : "draft")}
       </Button>
       {publish.isError && <Notice kind="error">{t("failed")}</Notice>}
     </>

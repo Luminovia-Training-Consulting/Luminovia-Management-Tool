@@ -8,13 +8,13 @@
 
 ## Course catalogue orientation and draft deletion
 
-- [x] Explain runs, templates and building blocks in the catalogue with a Linux practice-day example. Display catalogue visibility separately from an active assignment.
+- [x] Explain runs, templates and building blocks in the catalogue with a Linux practice-day example. Show the current marketplace status and any active assignment.
 - [x] Include unused course sessions and the owned dependencies of unaccepted linked offers in one reviewed deletion. Keep accepted, shared and history-bearing records protected. Hide archived runs by default and retain the staff archive filter.
 
 ## Course editor layout
 
 - [x] Combine reusable materials in one company-scoped template library. Distinguish course visibility from marketplace state and provide a direct save-to-offer path.
-- [x] Add direct library links to Courses and the company portal. Let internal company members maintain organisation-owned reusable templates and plan private runs from them. Keep catalogue visibility and marketplace posting explicit management actions.
+- [x] Add direct library links to Courses and the company portal. Let internal company members maintain organisation-owned reusable templates and plan private runs from them. Publish the linked offer as an explicit management action.
 
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.
 
@@ -234,7 +234,7 @@
 
 ## Course visibility and time filters
 
-- The course catalogue and session reads use the current teaching allocation, company membership or enrolled learner identity. Lecturer previews of explicitly published courses stop once a lecturer has a confirmed allocation. Open positions in a multi-position offer remain available through job discovery.
+- The course catalogue and session reads use the current teaching allocation, company membership or enrolled learner identity. Prospective internal lecturers see live offers in the marketplace. Actual course access follows confirmed allocation, company membership or enrolment.
 - The course catalogue and individual workspaces can be filtered by upcoming, current, completed or unscheduled courses. Company requests also have a filter for the requested dates. The teaching period runs from the first session start through the last session end.
 
 ## Internal portal analytics

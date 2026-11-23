@@ -491,6 +491,58 @@ it("links a saved offer draft from the course card without marking it as listed"
   ).not.toBeInTheDocument();
 });
 
+it("treats an independently visible legacy run as a draft without a marketplace offer", async () => {
+  renderCourses({ runs: [{ ...run, published: true }] });
+  expect(await screen.findByText("Entwurf", { exact: true })).toBeVisible();
+  expect(screen.queryByText(/Kurskatalog/)).not.toBeInTheDocument();
+});
+
+it.each([
+  ["draft", "In der Stellenbörse veröffentlichen", "published", "Entwurf"],
+  ["published", "Veröffentlichung zurücknehmen", "draft", "Veröffentlicht"],
+] as const)(
+  "changes a saved %s offer directly from a clean course editor",
+  async (status, label, action, badge) => {
+    renderCourses({
+      permissions: ["courses.manage", "jobs.manage"],
+      runs: [{ ...run, jobs: [{ ...job, status }] }],
+      lifecycle: { ...protectedLifecycle, confirmed_count: 0 },
+    });
+    expect(await screen.findByText(badge, { exact: true })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const editor = screen.getByRole("dialog", { name: "Bearbeiten" });
+    const dialog = within(editor);
+    const change = dialog.getByRole("button", { name: label });
+    const venue = dialog.getByLabelText("Ort / Zugangslink");
+    const originalVenue = (venue as HTMLInputElement).value;
+    fireEvent.change(venue, { target: { value: "Unsaved change" } });
+    expect(change).toBeDisabled();
+    fireEvent.change(venue, { target: { value: originalVenue } });
+    await userEvent.click(change);
+    await waitFor(() => expect(editor).not.toBeInTheDocument());
+    expect(state.rpc).toHaveBeenCalledWith("manage_job_offer", {
+      p_job_id: job.id,
+      p_action: action,
+      p_expected_version: protectedLifecycle.version,
+      p_request_id: expect.any(String),
+      p_payload: {},
+    });
+  },
+);
+
+it("keeps a partially filled listing under the protected job workflow", async () => {
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    runs: [{ ...run, jobs: [job] }],
+    lifecycle: { ...protectedLifecycle, confirmed_count: 1 },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+  const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
+  expect(
+    dialog.queryByRole("button", { name: "Veröffentlichung zurücknehmen" }),
+  ).not.toBeInTheDocument();
+});
+
 it("does not present an expired published offer as open in the marketplace", async () => {
   renderCourses({
     runs: [
@@ -501,7 +553,7 @@ it("does not present an expired published offer as open in the marketplace", asy
       },
     ],
   });
-  expect(await screen.findByText("Im Kurskatalog")).toBeVisible();
+  expect(await screen.findByText("Geschlossen", { exact: true })).toBeVisible();
   expect(screen.getByText("Übernahmefrist abgelaufen")).toBeVisible();
   expect(
     screen.queryByRole("link", { name: /Ausschreibung öffnen/ }),
@@ -599,7 +651,7 @@ it("saves only reusable fields from the shared form without requiring dates", as
   ]);
 });
 
-it("publishes a new run with its confirmed reusable content and retries a failed run without duplicating the template", async () => {
+it("saves a new run as a draft and retries a failed run without duplicating the template", async () => {
   renderCourses({ templates: [] });
   state.rpc
     .mockResolvedValueOnce({ data: templateId, error: null })
@@ -614,14 +666,14 @@ it("publishes a new run with its confirmed reusable content and retries a failed
     "Fictional training",
   );
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
-  const publish = within(dialog).getByRole("button", {
-    name: "Im Kurskatalog anzeigen",
+  const saveDraft = within(dialog).getByRole("button", {
+    name: "Entwurf speichern",
   });
-  await userEvent.click(publish);
+  await userEvent.click(saveDraft);
   await within(dialog).findByText(
     /Die Kursinhalte wurden als Vorlage gespeichert/,
   );
-  await userEvent.click(publish);
+  await userEvent.click(saveDraft);
   await waitFor(() => expect(dialog).not.toBeInTheDocument());
   expect(state.rpc.mock.calls.map(([name]) => name)).toEqual([
     "save_course_template",
@@ -630,7 +682,7 @@ it("publishes a new run with its confirmed reusable content and retries a failed
   ]);
   expect(state.rpc.mock.calls[2][1]).toMatchObject({
     p_id: null,
-    p_payload: { template_id: templateId, published: true },
+    p_payload: { template_id: templateId, published: false },
   });
 });
 
