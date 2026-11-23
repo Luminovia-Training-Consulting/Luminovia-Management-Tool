@@ -127,7 +127,7 @@ test("management preparation and assigned lecturer acknowledgements update actua
         const dialog = page.getByRole("dialog");
         for (const label of [
             "Lehrmaterialien sind erforderlich",
-            "Ein Unternehmen ist erforderlich",
+            "Unternehmen ist erforderlich",
             "Unternehmenskontakt ist erforderlich",
             "Dokumentierte Vereinbarung ist erforderlich",
         ])

@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Acceptance repair
+
+- Resolve effective theme colors in source checks, keep browser labels in sync, and budget 45 minutes per complete application browser project. Verify the exact release without publishing it.
+
 ## Retry, calendar links and personal settings
 
 - Preserve visible pages after temporary continuation failures in search, file discovery, course materials, the notification inbox and global calendar. Retry the same cursor. Discard visible results on access errors and failed full rechecks.

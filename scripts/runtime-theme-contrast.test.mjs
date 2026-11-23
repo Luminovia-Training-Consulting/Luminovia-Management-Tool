@@ -38,9 +38,21 @@ function tokenBlock(selector) {
     const end = styles.indexOf("\n}", start);
     assert.notEqual(end, -1, `Unterminated theme block ${selector}`);
     const tokens = {};
-    for (const match of styles.slice(start, end).matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi))
+    for (const match of styles.slice(start, end).matchAll(/--([\w-]+):\s*(#[0-9a-f]{6}|var\(--[\w-]+\))\s*;/gi))
         tokens[match[1]] = match[2].toLowerCase();
     return tokens;
+}
+
+/** Resolve aliases after applying theme overrides, as the browser does. */
+function resolveColors(tokens) {
+    function resolve(name, seen = new Set()) {
+        assert(!seen.has(name), `Circular color token: ${name}`);
+        const value = tokens[name];
+        assert(value, `Missing color token: ${name}`);
+        if (!value.startsWith("var(")) return value;
+        return resolve(value.slice(6, -1), new Set([...seen, name]));
+    }
+    return Object.fromEntries(Object.keys(tokens).map((name) => [name, resolve(name)]));
 }
 
 const light = tokenBlock(":root {"),
@@ -59,10 +71,11 @@ const officialLight = {
 for (const [name, value] of Object.entries(officialLight))
     assert.equal(light[name], value, `The approved light ${name} was changed.`);
 
-for (const [theme, tokens] of [
+for (const [theme, declarations] of [
     ["light", light],
     ["dark", {...light, ...dark}],
 ]) {
+    const tokens = resolveColors(declarations);
     assert(contrast(tokens.ink, tokens.paper) >= 7, `${theme} body/paper contrast`);
     assert(contrast(tokens.ink, tokens.surface) >= 7, `${theme} body/surface contrast`);
     assert(contrast(tokens.ink, tokens["surface-raised"]) >= 7, `${theme} raised action contrast`);
@@ -87,5 +100,5 @@ for (const [theme, tokens] of [
         );
 }
 
-assert.match(styles, /\[data-theme="dark"\]\s+\.button-primary\s*\{[^}]*\bcolor:\s*#102345\s*;/);
-assert(contrast("#102345", dark.brand) >= 4.5);
+assert.match(styles, /\[data-theme="dark"\]\s+\.button-primary\s*\{[^}]*\bcolor:\s*var\(--on-brand\)\s*;/);
+assert(contrast(resolveColors({...light, ...dark})["on-brand"], dark.brand) >= 4.5);

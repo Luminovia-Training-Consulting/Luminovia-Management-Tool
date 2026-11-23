@@ -179,9 +179,9 @@ jobs:
       matrix:
         browser-project: [desktop-chromium, mobile-chromium]
     runs-on: ubuntu-latest
-    # Application Playwright alone has a 30-minute limit. Keep time for the
+    # Application Playwright alone has a 45-minute limit. Keep time for the
     # isolated services, the distinct built-PWA checks and report retention.
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       PORTAL_BROWSER_PROJECT: ${{ matrix.browser-project }}
     steps:

@@ -1,3 +1,7 @@
+# 23 November 2026 — Repair acceptance regressions
+
+The contrast check resolves dark CSS aliases against the effective theme before applying the existing thresholds. The readiness browser case uses the current accessible company label. The complete application browser budget allows 45 minutes per project and CI reserves 60 minutes for setup, application, PWA and artifacts. The suite retains every existing project and evidence requirement.
+
 # 23 November 2026 — Portal recovery and settings audit
 
 Search, the notification inbox, file discovery, the material library and global calendar retain confirmed rows on a temporary continuation error and retry the same cursor. Permission failures still hide the results. The search shows a clear offline state. The personal calendar recentres on the earliest actual instant when the assignment link changes, and learning analytics returns to the last available page when its result set shrinks.
