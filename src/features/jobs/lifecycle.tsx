@@ -181,6 +181,21 @@ export function JobLifecyclePanel({
         <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       </div>
       {dispatch}
+      {info.can_manage &&
+        info.can_edit &&
+        info.can_reassign_company &&
+        !editing && (
+          <div className="page-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || change.isPending}
+              onClick={() => setEditing(true)}
+            >
+              {t("changeCompany")}
+            </Button>
+          </div>
+        )}
       {info.class_id &&
         info.claims.some(
           (claim) =>
@@ -562,22 +577,26 @@ function ClassField({
           ))}
         </select>
       </Field>
-      {contact && (
+      <div aria-live="polite">
         <p>
           {t("defaultContact")}:{" "}
-          {[contact.name, contact.email, contact.phone]
-            .filter(Boolean)
-            .join(" · ")}
+          {contact
+            ? [contact.name, contact.email, contact.phone]
+                .filter(Boolean)
+                .join(" · ")
+            : t("noDefaultContact")}
         </p>
-      )}
-      {meeting && (
         <p>
           {t("defaultMeeting")}:{" "}
-          <a href={meeting} target="_blank" rel="noopener noreferrer">
-            {t("meetingRoom")}
-          </a>
+          {meeting ? (
+            <a href={meeting} target="_blank" rel="noopener noreferrer">
+              {t("meetingRoom")}
+            </a>
+          ) : (
+            t(selected ? "noDefaultMeeting" : "pickClassForMeeting")
+          )}
         </p>
-      )}
+      </div>
     </>
   );
 }
@@ -876,6 +895,7 @@ function EditOffer({
             onChange={(event) => {
               const nextCompany = event.target.value;
               setCompany(nextCompany);
+              setRefreshDispatchDefaults(false);
               setChosenClass(
                 nextCompany === originalCompany ? originalClass : "",
               );
@@ -1016,19 +1036,22 @@ function EditOffer({
           <p className="muted">{t("scheduleLocked")}</p>
         )}
       </fieldset>
-      <fieldset disabled={pending}>
-        <legend>{common("requirements")}</legend>
+      <details className="offer-topic-picker">
+        <summary>
+          {common("requirements")} ({chosenTopics.length})
+        </summary>
         {topics.isPending ? (
           <Loading />
         ) : topics.isError ? (
           <ErrorState retry={() => void topics.refetch()} />
         ) : (
-          <div className="tags">
+          <div className="offer-topic-options">
             {selectableTopics(topics.data, initialTopics).map((topic) => (
               <label className="checkbox-label" key={topic.id}>
                 <input
                   type="checkbox"
                   checked={chosenTopics.includes(topic.id)}
+                  disabled={pending}
                   onChange={(event) => {
                     const checked = event.target.checked;
                     setChosenTopics((current) =>
@@ -1045,7 +1068,7 @@ function EditOffer({
             ))}
           </div>
         )}
-      </fieldset>
+      </details>
       <Field id="offer-terms" label={t("terms")}>
         <textarea
           id="offer-terms"

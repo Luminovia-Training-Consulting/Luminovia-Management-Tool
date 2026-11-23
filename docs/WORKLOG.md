@@ -1,3 +1,9 @@
+# 23 November 2026 — Offer actions and company-dependent selection
+
+Grouped the post-save offer actions in the standard wrapping row. The creation and edit forms show required topics in a collapsed checkbox picker with a selected count and its own scroll area. Eligible offers expose a direct company-change action. Switching companies clears the previous class and previews the selected company's contact and class room state. The versioned write still saves company and dispatch together under the existing authority rules.
+
+All 40 focused frontend tests passed. A Chromium layout fixture verified the closed picker, keyboard selection, scrolling and 12 px action gap at 320, 390 and 1280 px.
+
 # 23 November 2026 — Company ownership for existing offers and class feedback
 
 The offer editor now shows the assigned company even when it is fixed. An eligible legacy offer with a dedicated unpublished run can change company without a modern creation audit marker. Existing company requests, accepted assignments, financial terms and dependent course activity keep their original ownership. The company and dispatch selection still save atomically.

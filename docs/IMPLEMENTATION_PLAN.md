@@ -21,6 +21,8 @@
 
 ## Company classes and job dispatch
 
+- [x] Expose the company switch on eligible offers, refresh the class, room and contact preview by company, and keep the required-topic picker collapsed by default.
+
 - [x] Provide company-scoped class, meeting room and default contact settings independently of Premium LMS.
 - [x] Add company-filtered class selection and default copying to job edits. Keep company moves subject to existing ownership and assignment guards.
 - [x] Open a company-owned job through a reduced operational projection and verify company access, current versions, and saved contact and room details.

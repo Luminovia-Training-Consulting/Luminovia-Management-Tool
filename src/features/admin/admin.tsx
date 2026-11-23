@@ -641,9 +641,11 @@ function JobForm({
         <textarea id="job-terms" rows={4} {...register("terms")} />
       </Field>
       {!courseRun && (
-        <fieldset>
-          <legend>{t("requirements")}</legend>
-          <div className="tags">
+        <details className="offer-topic-picker">
+          <summary>
+            {t("requirements")} ({selectedTopicIds.length})
+          </summary>
+          <div className="offer-topic-options">
             {selectableTopics(topics.data ?? [], selectedTopicIds).map(
               (topic) => (
                 <label key={topic.id} className="checkbox-label">
@@ -659,7 +661,7 @@ function JobForm({
               ),
             )}
           </div>
-        </fieldset>
+        </details>
       )}
       <Field
         id="job-claim-deadline"
@@ -705,38 +707,36 @@ function JobForm({
         </Notice>
       )}
       {done && <Notice>{t("jobSaved")}</Notice>}
-      {done && courseRun && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            retry.clear();
-            setDone(false);
-            setCreatedId(null);
-            setValue("publish", false);
-          }}
-        >
-          {courseText("addAnother")}
-        </Button>
-      )}
       {createdId && (
-        <Button asChild variant="secondary">
-          <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
-        </Button>
-      )}
-      {createdId && (
-        <Button asChild variant="secondary">
-          <Link to={`/jobs/${createdId}#job-briefing`}>
-            {briefingText("configureLink")}
-          </Link>
-        </Button>
-      )}
-      {createdId && (
-        <Button asChild variant="secondary">
-          <Link to={`/jobs/${createdId}#job-documents`}>
-            {lifeText("manageAttachments")}
-          </Link>
-        </Button>
+        <div className="form-actions">
+          {done && courseRun && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                retry.clear();
+                setDone(false);
+                setCreatedId(null);
+                setValue("publish", false);
+              }}
+            >
+              {courseText("addAnother")}
+            </Button>
+          )}
+          <Button asChild variant="secondary">
+            <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to={`/jobs/${createdId}#job-briefing`}>
+              {briefingText("configureLink")}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to={`/jobs/${createdId}#job-documents`}>
+              {lifeText("manageAttachments")}
+            </Link>
+          </Button>
+        </div>
       )}
     </form>
   );

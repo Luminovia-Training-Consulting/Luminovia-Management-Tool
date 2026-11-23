@@ -488,7 +488,12 @@ it("submits exact per-day times and the edited required labels through the versi
   fireEvent.change(screen.getByLabelText("Start 2"), {
     target: { value: "2039-01-02T10:30" },
   });
-  await user.click(screen.getByLabelText("Networking"));
+  const topic = screen.getByLabelText("Networking");
+  expect(topic.closest("details")).not.toHaveAttribute("open");
+  await user.click(screen.getByText("Required topics (0)"));
+  await user.click(topic);
+  await user.click(screen.getByText("Required topics (1)"));
+  expect(topic.closest("details")).not.toHaveAttribute("open");
   await user.click(screen.getByRole("button", { name: "Save offer" }));
   await waitFor(() =>
     expect(state.rpc).toHaveBeenCalledWith(
@@ -561,12 +566,16 @@ it("switches the class and contact choices when staff select a different company
             {
               id: old ? oldClass : newClass,
               name: old ? "Fictional first class" : "Fictional second class",
-              meeting_url: old ? null : "https://academy.example.invalid/room",
+              meeting_url: old
+                ? "https://academy.example.invalid/old-room"
+                : "https://academy.example.invalid/room",
             },
           ],
-          contact: old
-            ? null
-            : { name: "Fictional contact", email: null, phone: null },
+          contact: {
+            name: old ? "Fictional old contact" : "Fictional contact",
+            email: null,
+            phone: null,
+          },
         },
       };
     },
@@ -581,7 +590,7 @@ it("switches the class and contact choices when staff select a different company
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", {
-      name: "Unangenommenen Auftrag bearbeiten",
+      name: "Unternehmen wechseln",
     }),
   );
   expect(await screen.findByLabelText("Klasse für diesen Auftrag")).toHaveValue(
@@ -595,6 +604,10 @@ it("switches the class and contact choices when staff select a different company
   expect(classes).toHaveValue("");
   expect(
     within(classes).queryByRole("option", { name: "Fictional first class" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/Fictional old contact/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Besprechungsraum öffnen" }),
   ).not.toBeInTheDocument();
   await user.selectOptions(classes, newClass);
   expect(
