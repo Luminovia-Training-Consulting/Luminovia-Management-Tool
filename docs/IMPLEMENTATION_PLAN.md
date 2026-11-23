@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Course editor layout
+
+- [x] Group catalogue choices by kind in scrollable checkbox lists and space the save and publish actions. The course component suite and responsive Chromium layout fixture passed.
+
 ## Teaching subject areas
 
 - [x] Use IT and Computing, Business and Economics and Other Subjects as catalogue roots. A self-declared root or a descendant in a shared area matches an offer. A single matching area is enough for a mixed offer. The existing company, contract, calendar and availability checks still apply.

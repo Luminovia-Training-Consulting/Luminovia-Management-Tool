@@ -17,6 +17,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
+import type { Topic } from "../../lib/types";
 import { CoursesPage } from "./courses";
 import {
   runsQuery,
@@ -78,6 +79,7 @@ function renderCourses({
   templates = [template],
   runs = [] as CourseRun[],
   blocks = [] as BuildingBlock[],
+  topics = [] as Topic[],
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -91,7 +93,7 @@ function renderCourses({
     course_runs: runs,
     organisations: [],
     building_blocks: blocks,
-    topics: [],
+    topics,
   };
   for (const [name, value] of [
     ["templates", templates],
@@ -101,7 +103,7 @@ function renderCourses({
   ] as const)
     client.setQueryData(["operations", name, actor], value);
   client.setQueryData(["permissions", actor], permissions);
-  client.setQueryData(["topics"], []);
+  client.setQueryData(["topics"], topics);
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -227,8 +229,38 @@ it("filters the visible course list by time without requiring administrative per
 });
 
 it("saves only reusable fields from the shared form without requiring dates", async () => {
-  renderCourses({ templates: [] });
+  const topics = [
+    {
+      id: "c4000000-0000-4000-8000-000000000001",
+      kind: "topic",
+      label_de: "Netzwerke",
+      label_en: "Networks",
+    },
+    {
+      id: "c4000000-0000-4000-8000-000000000002",
+      kind: "tool",
+      label_de: "Wireshark",
+      label_en: "Wireshark",
+    },
+    {
+      id: "c4000000-0000-4000-8000-000000000003",
+      kind: "language",
+      label_de: "Python",
+      label_en: "Python",
+    },
+  ];
+  renderCourses({ templates: [], topics });
   const dialog = await newRun(false);
+  for (const [name, topic] of [
+    ["Themen", topics[0]],
+    ["Tools", topics[1]],
+    ["Programmiersprachen", topics[2]],
+  ] as const) {
+    const group = within(dialog).getByRole("group", { name });
+    await userEvent.click(
+      within(group).getByRole("checkbox", { name: topic.label_de }),
+    );
+  }
   await userEvent.type(
     within(dialog).getByLabelText("Titel", { exact: true }),
     "Fictional spreadsheet",
@@ -251,7 +283,7 @@ it("saves only reusable fields from the shared form without requiring dates", as
           description: "",
           syllabus: "",
           prerequisites: "",
-          topic_ids: [],
+          topic_ids: topics.map((topic) => topic.id),
           archived: false,
         },
       },

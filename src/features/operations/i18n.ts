@@ -573,6 +573,9 @@ const pairs: Record<string, [string, string]> = {
   newRun: ["Durchführung anlegen", "Add run"],
   newCourse: ["Kurs anlegen", "Create course"],
   newCourseContent: ["Neue Kursinhalte eingeben", "Enter new course content"],
+  "courseCatalogueKind.topic": ["Themen", "Topics"],
+  "courseCatalogueKind.tool": ["Tools", "Tools"],
+  "courseCatalogueKind.language": ["Programmiersprachen", "Programming languages"],
   saveAsTemplate: ["Als Vorlage speichern", "Save as template"],
   saveRunDraft: ["Entwurf speichern", "Save draft"],
   courseTemplateRetained: [

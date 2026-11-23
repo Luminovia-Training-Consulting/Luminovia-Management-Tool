@@ -144,6 +144,13 @@ function CourseContentFields({
   selectedTopicIds: string[];
 }) {
   const { t, i18n } = useTranslation("operations");
+  const availableTopics = selectableTopics(topics, selectedTopicIds);
+  const topicGroups = (["topic", "tool", "language"] as const)
+    .map((kind) => ({
+      kind,
+      entries: availableTopics.filter((entry) => entry.kind === kind),
+    }))
+    .filter(({ entries }) => entries.length > 0);
   return (
     <>
       <Field
@@ -167,20 +174,30 @@ function CourseContentFields({
           />
         </Field>
       ))}
-      <fieldset className="operations-topic-field">
-        <legend>{t("topics")}</legend>
-        {selectableTopics(topics, selectedTopicIds).map((topic) => (
-          <label className="checkbox-label" key={topic.id}>
-            <input
-              type="checkbox"
-              value={topic.id}
-              {...register("topic_ids")}
-            />
-            {i18n.language === "de" ? topic.label_de : topic.label_en}
-            {topic.archived_at && <> ({t("taxonomy:archived")})</>}
-          </label>
-        ))}
-      </fieldset>
+      {topicGroups.length > 0 && (
+        <div className="operations-topic-groups">
+          {topicGroups.map(({ kind, entries }) => (
+            <fieldset className="operations-topic-field" key={kind}>
+              <legend>{t(`courseCatalogueKind.${kind}`)}</legend>
+              <div className="operations-topic-options">
+                {entries.map((topic) => (
+                  <label className="checkbox-label" key={topic.id}>
+                    <input
+                      type="checkbox"
+                      value={topic.id}
+                      {...register("topic_ids")}
+                    />
+                    <span>
+                      {i18n.language === "de" ? topic.label_de : topic.label_en}
+                      {topic.archived_at && <> ({t("taxonomy:archived")})</>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -634,7 +651,7 @@ function RunForm({
           </label>
         </>
       )}
-      <div className="button-row">
+      <div className="form-actions">
         {needsContent && (
           <Button
             type="button"

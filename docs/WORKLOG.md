@@ -1,3 +1,7 @@
+# 23 November 2026 — Compact course catalogue controls
+
+The shared course and template editors group topics, tools and programming languages into independently scrollable checkbox lists. The course creation actions use the standard wrapping row with a 12 px gap. All 30 course component tests and TypeScript passed. A Chromium layout fixture with production styles confirmed scrolling, keyboard selection, no horizontal overflow and the action gap at 320, 390, 768 and 1280 px.
+
 # 23 November 2026 — Teaching subject areas
 
 Added IT and Computing, Business and Economics, and Other Subjects to the existing catalogue hierarchy and placed them first in the profile. Published offers and course previews use the shared subject area. A single self-declared match suffices, including for mixed-topic offers. Contracts, company restrictions, schedule and pricing rules still apply. Untagged offers stay general and emergency reopenings retain their existing exception. Detailed qualifications and supporting records remain optional. The preparation checklist presents subject alignment as an advisory item, and existing assignments can be amended independently of the lecturer's current topic selection.
