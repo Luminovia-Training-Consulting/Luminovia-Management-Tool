@@ -1,3 +1,9 @@
+# 23 November 2026 — Withdrawal notifications in native acceptance
+
+The withdrawal test now verifies that a lecturer with a different topic in the same subject area receives the reopened-offer notice. Its recipient assertion covers every actor created by that test, including the lecturer without matching expertise. The retained-data baseline can contain other eligible lecturers in that area.
+
+A focused real self-host run replayed all 320 migrations, retained identities, private file bytes and accepted financial records, and passed the native withdrawal API suite. It also checked TLS, WebSockets and 50 concurrent claims. This run selected one API suite. The full exact-revision CI remains the release check.
+
 # 23 November 2026 — Single publishing workflow for internal courses
 
 Course cards and the editor follow the linked teaching offer. Staff save a course draft and prepare the offer, then publish the saved offer from the course editor. Unassigned offers without protected history can return to draft. The previous catalogue toggle no longer grants prospective lecturers access to private course records. Confirmed allocations continue to open the course. Legacy course release values and the dedicated Academy workflow remain supported. A linked published or filled offer also makes new internal courses available through the scoped company enrolment picker.
