@@ -44,6 +44,7 @@ export interface Contact {
 /** Reusable course content without concrete sessions or copies of personal contracts. */
 export interface Template {
   id: string;
+  owner_organisation_id?: string | null;
   title: string;
   description: string;
   syllabus: string;
@@ -133,7 +134,13 @@ export interface CourseRun {
   published: boolean;
   archived_at: string | null;
   course_sessions: { id: string; starts_at: string; ends_at: string }[];
-  jobs?: { id: string; title: string; status: string }[];
+  jobs?: {
+    id: string;
+    title: string;
+    status: string;
+    claim_deadline?: string | null;
+    job_sessions?: { starts_at: string }[];
+  }[];
 }
 
 /** Read organisations through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
@@ -213,7 +220,9 @@ export const runsQuery = (actor: string) =>
       readDirectoryPages<CourseRun>((from, to) =>
         db()
           .from("course_runs")
-          .select("*,course_sessions(*),jobs(id,title,status)")
+          .select(
+            "*,course_sessions(*),jobs(id,title,status,claim_deadline,job_sessions(starts_at))",
+          )
           .order("created_at", { ascending: false })
           .order("id")
           .range(from, to)

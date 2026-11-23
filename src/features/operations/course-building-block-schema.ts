@@ -19,6 +19,7 @@ export const courseTemplateFormSchema = z.object({
 });
 
 export const courseTemplatePayloadSchema = z.strictObject({
+  owner_organisation_id: id.nullable().optional(),
   title: templateFields.title.regex(/[^ ]/),
   description: templateFields.description.nullable().optional(),
   syllabus: z.string().nullable().optional(),

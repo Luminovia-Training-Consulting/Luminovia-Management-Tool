@@ -337,7 +337,7 @@ const pairs: Record<string, [string, string]> = {
   buildingBlocks: ["Kursbausteine", "Course building blocks"],
   blockDetails: ["Bausteindetails", "Building-block details"],
   planRun: ["Durchführung planen", "Plan course run"],
-  createRunOffer: ["Auftrag daraus erstellen", "Create teaching offer"],
+  createRunOffer: ["Ausschreibung vorbereiten", "Prepare teaching offer"],
   reusableBlock: [
     "Inhalte und Quellenbezug wiederverwenden; Unternehmenszuordnung, Termine und Honorar für jede Durchführung festlegen.",
     "Reuse content and source references; set the company, sessions and fee for each run.",
@@ -529,24 +529,24 @@ const pairs: Record<string, [string, string]> = {
   ],
   courses: ["Kurse", "Courses"],
   coursesIntro: [
-    "Wiederverwendbare Inhalte und konkrete Kursdurchführungen mit klaren Terminen.",
-    "Reusable content and actual course runs with clear sessions.",
+    "Wähle eine Vorlage oder erfasse Inhalte, plane die Termine und bereite bei Bedarf einen Lehrauftrag vor.",
+    "Pick a template or add course content, plan the dates and prepare a teaching offer when needed.",
   ],
   courseCatalogueGuide: [
-    "Wie hängen Durchführungen, Vorlagen und Kursbausteine zusammen?",
-    "How do course runs, templates and building blocks fit together?",
+    "Wie plane ich einen Kurs und schreibe ihn aus?",
+    "How do I plan and advertise a course?",
   ],
   courseCatalogueExampleTitle: [
     "Beispiel „Linux – Praxistag“",
     "Example: Linux practice day",
   ],
   courseCatalogueExample: [
-    "Speichere Shell, Dateirechte und Übungen als Vorlage, wenn du die Inhalte erneut nutzen möchtest. Plane daraus eine Durchführung mit deinem konkreten Praxistag, zum Beispiel Freitag von 9 bis 16 Uhr. Falls es einen passenden Kursbaustein gibt, kannst du dessen fertige Vorlage als Ausgangspunkt öffnen.",
-    "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm. If a matching building block exists, you can start from its ready-made template.",
+    "Speichere Shell, Dateirechte und Übungen als Vorlage, wenn du die Inhalte erneut nutzen möchtest. Plane daraus eine Durchführung mit deinem konkreten Praxistag, zum Beispiel Freitag von 9 bis 16 Uhr.",
+    "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm.",
   ],
   courseCatalogueVisibility: [
-    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, legst du den Auftrag über die Durchführung an.",
-    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, create the assignment from the run.",
+    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, wähle „Speichern und Ausschreibung vorbereiten“ und veröffentliche anschließend den Auftrag.",
+    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, select “Save and prepare offer”, then publish the offer.",
   ],
   "courseCatalogueTab.runs": [
     "Hier stehen konkrete Kurse mit Terminen, Ort und Sichtbarkeit. Dazu gehören Entwürfe, im Katalog sichtbare Kurse und das Archiv.",
@@ -555,14 +555,6 @@ const pairs: Record<string, [string, string]> = {
   "courseCatalogueTab.templates": [
     "Hier speicherst du wiederverwendbare Kursinhalte wie Titel, Lehrplan und Voraussetzungen. Eine Vorlage kannst du für mehrere Durchführungen mit unterschiedlichen Terminen verwenden.",
     "Keep reusable course content here, such as the title, syllabus and prerequisites. Use the same template for several runs with different dates.",
-  ],
-  "courseCatalogueTab.blocks": [
-    "Hier findest du vorbereitete Inhalte mit Quellenangaben und einer vorgeschlagenen Dauer. Über „Durchführung planen“ übernimmst du die zugehörige Vorlage und legst die Termine fest.",
-    "Find prepared content with source references and suggested durations here. Select “Plan course run” to use the matching template and choose session dates.",
-  ],
-  hiddenRunCatalogue: [
-    "Im Kurskatalog ausgeblendet",
-    "Hidden from the course catalogue",
   ],
   courseRunWithoutSessions: [
     "Durchführung ohne Termine",
@@ -705,9 +697,35 @@ const pairs: Record<string, [string, string]> = {
     "Für diesen Bereich fehlt dir die Berechtigung.",
     "You do not have permission for this area.",
   ],
+  templateOwner: ["Unternehmen der Vorlage", "Template company"],
+  internalTemplate: ["Interne Vorlage", "Internal template"],
+  noCourseTemplates: ["Keine Vorlagen verfügbar.", "No templates available."],
+  saveAndPrepareOffer: [
+    "Speichern und Ausschreibung vorbereiten",
+    "Save and prepare offer",
+  ],
+  inCourseCatalogue: ["Im Kurskatalog", "In course catalogue"],
+  privateCourseRun: ["Nicht im Kurskatalog", "Outside the course catalogue"],
+  marketplaceStatus: ["Stellenbörse", "Marketplace"],
+  marketplaceMissing: ["Keine Ausschreibung angelegt", "No offer created"],
+  marketplaceExpired: [
+    "Übernahmefrist abgelaufen",
+    "Application deadline passed",
+  ],
+  marketplaceStarted: [
+    "Durchführung hat bereits begonnen",
+    "The course run has already started",
+  ],
+  marketplaceDraft: [
+    "Auftrag als Entwurf gespeichert",
+    "Offer saved as a draft",
+  ],
+  marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
+  marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
+  openListedOffer: ["Ausschreibung öffnen: {{title}}", "Open offer: {{title}}"],
   publishedHint: [
-    "Veröffentlichte Durchführungen sind für Dozierende sichtbar. Zugewiesene Kurse bleiben für die beauftragte Person zugänglich.",
-    "Published runs are visible to lecturers. Assigned courses remain accessible to their lecturer.",
+    "Die Sichtbarkeit im Kurskatalog ist unabhängig von der Stellenbörse. Für die Stellenbörse veröffentlichst du einen Auftrag. Dozierende sehen passende offene Aufträge.",
+    "Course catalogue visibility is separate from the marketplace. Publish a teaching offer to list it in the marketplace. Lecturers see open offers matching their scope.",
   ],
   required: ["Bitte prüfe dieses Feld.", "Please check this field."],
   view: ["Ansehen", "View"],

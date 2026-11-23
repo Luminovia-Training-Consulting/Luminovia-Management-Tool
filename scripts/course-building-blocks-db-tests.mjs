@@ -197,18 +197,18 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Staff can browse approved curriculum; unrelated learner/client/anonymous cannot",
+        "Only course managers can browse the full reusable curriculum",
         async () => {
             assert.equal(
                 await actor(
-                    ids.lecturer,
+                    ids.management,
                     "select count(*) from public.building_blocks",
                 ),
                 "22",
             );
             assert.equal(
                 await actor(
-                    ids.lecturer,
+                    ids.management,
                     "select count(*) from public.course_templates where building_block_id is not null",
                 ),
                 "22",
@@ -476,6 +476,26 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             /course_locked/,
         );
     });
+    await check("Company template library exposes only its own drafts and rejects foreign run links", async () => {
+        const otherOrg = randomUUID();
+        const otherClient = randomUUID();
+        await sql(`insert into public.organisations(id,name) values(${q(otherOrg)},'Fictional second company');
+          insert into auth.users(id,email) values(${q(otherClient)},'template-peer@example.invalid');
+          insert into public.user_roles(user_id,role) values(${q(otherClient)},'client');
+          insert into public.client_organisation_memberships(user_id,organisation_id)
+          values(${q(otherClient)},${q(otherOrg)});`);
+        const own = await rpc("admin", "save_course_template", [
+            null, {title: "Fictional company-only template", owner_organisation_id: org},
+        ], "aal1");
+        const countTemplates = (user) => actor(user, `select count(*) from public.course_templates where id=${q(own)}`);
+        assert.equal(await countTemplates(ids.client), "1");
+        assert.equal(await countTemplates(otherClient), "0");
+        assert.equal(await countTemplates(ids.management), "1");
+        await assert.rejects(
+            sql(`insert into public.course_runs(template_id,organisation_id) values(${q(own)},${q(otherOrg)})`),
+            /belongs to another company/,
+        );
+    });
     await check(
         "Client portal sees the linked course and original company fee until membership is withdrawn",
         async () => {
@@ -487,7 +507,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                     ids.client,
                     `select count(*) from public.building_blocks where id=${q(block.id)}`,
                 ),
-                "1",
+                "0",
             );
             await sql(
                 `update public.client_organisation_memberships set removed_at=now() where user_id=${q(ids.client)}`,

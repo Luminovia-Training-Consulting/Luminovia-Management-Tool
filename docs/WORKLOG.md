@@ -1,3 +1,9 @@
+# 23 November 2026 — Company template library and course publication
+
+The course workspace now offers runs and one template library. The standalone source-catalogue tab was removed from course planning. Management can assign a template to a company; the database restricts company library reads and prevents linking the template to another company's run. Existing source records and historical course references are retained. Legacy reusable templates with a single unambiguous company are backfilled; ambiguous records remain internal.
+
+The course cards show catalogue visibility and marketplace state separately. A course can be saved directly into offer preparation, where publishing the offer is a separate confirmed action. The marketplace indicator distinguishes a draft, an expired deadline, a started schedule and a filled offer. Twenty course PostgreSQL groups and linked job editing passed. A Chromium layout fixture verified 390 and 1280 px in both themes. The installed ZIP was outside this validation.
+
 # 23 November 2026 — Edit linked course planning from Courses
 
 The course editor now uses the linked offer's current capabilities and reviewed version. For an eligible sole offer, future sessions can be edited directly from Courses. Eligible drafts also support changing the company, active template, IANA time zone and delivery mode. Shared changes use the existing job lifecycle transaction. A time-zone change preserves exact scheduled instants. Accepted and otherwise protected planning is shown as readable details, with a direct, preselected amendment form when the assignment allows a schedule proposal.

@@ -15,7 +15,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import type { Topic } from "../../lib/types";
 import { CoursesPage } from "./courses";
@@ -99,9 +99,20 @@ const run: CourseRun = {
 };
 const clients: QueryClient[] = [];
 
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <output data-testid="course-route">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
+
 /** Mount the production page with actor-scoped query data and real form/dialog state. */
 function renderCourses({
   permissions = ["courses.manage"],
+  roles = [] as string[],
   templates = [template],
   runs = [] as CourseRun[],
   blocks = [] as BuildingBlock[],
@@ -132,6 +143,8 @@ function renderCourses({
   ] as const)
     client.setQueryData(["operations", name, actor], value);
   client.setQueryData(["permissions", actor], permissions);
+  client.setQueryData(["user-roles", actor], roles);
+  client.setQueryData(["client-organisations", actor], organisations);
   client.setQueryData(["topics"], topics);
   for (const run of runs)
     for (const job of run.jobs ?? [])
@@ -141,6 +154,7 @@ function renderCourses({
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <CoursesPage />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -274,52 +288,6 @@ it("filters the visible course list by time without requiring administrative per
   }
 });
 
-it("explains the catalogue tabs and the Linux example where the user plans a run", async () => {
-  const user = userEvent.setup();
-  renderCourses({
-    blocks: [
-      {
-        id: "fictional-linux-block",
-        provider: "Fictional",
-        code: "LINUX-DEMO",
-        title: "Fictional Linux block",
-        description: "Shell practice",
-        syllabus: "Commands and permissions",
-        prerequisites: "",
-        duration_days: 1,
-        duration_hours: 7,
-        theory_percent: null,
-        practice_percent: null,
-        notes: "",
-        default_template_id: templateId,
-        building_block_sources: [],
-      },
-    ],
-  });
-  await user.click(
-    screen.getByText(
-      "Wie hängen Durchführungen, Vorlagen und Kursbausteine zusammen?",
-    ),
-  );
-  expect(screen.getByText("Beispiel „Linux – Praxistag“")).toBeVisible();
-  expect(
-    screen.getByText(/Hier stehen konkrete Kurse mit Terminen/),
-  ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Vorlagen" }));
-  expect(
-    screen.getByText(/Hier speicherst du wiederverwendbare Kursinhalte/),
-  ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Kursbausteine" }));
-  expect(
-    screen.getByText(/Hier findest du vorbereitete Inhalte mit Quellenangaben/),
-  ).toBeVisible();
-  await user.click(
-    screen.getByRole("button", { name: "Durchführung planen: LINUX-DEMO" }),
-  );
-  const dialog = await screen.findByRole("dialog", { name: "Kurs anlegen" });
-  expect(within(dialog).getByLabelText("Kursvorlage")).toHaveValue(templateId);
-});
-
 it("opens the exact course schedule from a blocked deletion and focuses its dates", async () => {
   const user = userEvent.setup();
   state.accountRequest.mockImplementation(async (path: string) => {
@@ -364,6 +332,84 @@ it("opens the exact course schedule from a blocked deletion and focuses its date
     "save_course_run",
     expect.anything(),
   );
+});
+
+it("lists one template library and only shows the signed-in company's owned templates", async () => {
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
+    organisations: [organisation],
+    templates: [
+      {
+        ...template,
+        title: "Own company template",
+        owner_organisation_id: companyId,
+      },
+      {
+        ...template,
+        id: runId,
+        title: "Other company template",
+        owner_organisation_id: runId,
+      },
+    ],
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Vorlagen" }),
+  );
+  expect(
+    screen.getByRole("heading", { name: "Own company template" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "Other company template" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Kursbausteine" }),
+  ).not.toBeInTheDocument();
+});
+
+it("does not present an expired published offer as open in the marketplace", async () => {
+  renderCourses({
+    runs: [
+      {
+        ...run,
+        published: true,
+        jobs: [{ ...job, claim_deadline: "2001-01-01T00:00:00Z" }],
+      },
+    ],
+  });
+  expect(await screen.findByText("Im Kurskatalog")).toBeVisible();
+  expect(screen.getByText("Übernahmefrist abgelaufen")).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: /Ausschreibung öffnen/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("saves the run before opening the separate marketplace offer form", async () => {
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    organisations: [organisation],
+    templates: [{ ...template, owner_organisation_id: companyId }],
+  });
+  const dialog = await newRun();
+  interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
+  await userEvent.click(
+    within(dialog).getByRole("button", {
+      name: "Speichern und Ausschreibung vorbereiten",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.getByTestId("course-route")).toHaveTextContent(
+      `/admin?courseRun=${runId}`,
+    ),
+  );
+  expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+    p_id: null,
+    p_payload: expect.objectContaining({
+      template_id: templateId,
+      organisation_id: companyId,
+      published: false,
+    }),
+  });
 });
 
 it("saves only reusable fields from the shared form without requiring dates", async () => {
@@ -445,7 +491,7 @@ it("publishes a new run with its confirmed reusable content and retries a failed
   );
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
   const publish = within(dialog).getByRole("button", {
-    name: /^Veröffentlichen$/,
+    name: "Im Kurskatalog anzeigen",
   });
   await userEvent.click(publish);
   await within(dialog).findByText(
@@ -743,7 +789,7 @@ describe("course form failure and confirmation boundaries", () => {
     ])
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Auftrag daraus erstellen" }),
+      screen.queryByRole("link", { name: "Ausschreibung vorbereiten" }),
     ).not.toBeInTheDocument();
     expect(state.rpc).not.toHaveBeenCalled();
   });
@@ -800,7 +846,11 @@ describe("course form failure and confirmation boundaries", () => {
 
   it("shows an active order on an unpublished run and saves the run venue without changing its source sessions", async () => {
     renderCourses({ runs: [{ ...run, jobs: [job] }] });
-    expect(await screen.findByText("Aktiver Auftrag")).toBeVisible();
+    expect(
+      await screen.findByRole("link", {
+        name: "Ausschreibung öffnen: Fictional active order",
+      }),
+    ).toBeVisible();
     expect(
       screen.queryByText("Entwurf", { exact: true }),
     ).not.toBeInTheDocument();

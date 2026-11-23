@@ -200,7 +200,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog
         .getByLabel("Ende 2", {exact: true})
         .fill(first.plus({days: 1, hours: 5}).toFormat("yyyy-MM-dd'T'HH:mm"));
-    await dialog.getByRole("button", {name: "Veröffentlichen", exact: true}).click();
+    await dialog.getByRole("button", {name: "Im Kurskatalog anzeigen", exact: true}).click();
     await expect(dialog).toBeHidden();
     await page.getByLabel("Suchen", {exact: true}).fill(title);
     let card = page

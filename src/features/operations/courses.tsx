@@ -6,7 +6,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
 import { ResourceComments } from "../comments/comments";
@@ -34,7 +34,12 @@ import { DateTime } from "luxon";
 import "./i18n";
 import "./styles.css";
 import { useAuth } from "../auth/auth-context";
-import { permissionsQuery, topicsQuery } from "../../lib/queries";
+import { clientOrganisationsQuery } from "../commercial/commission-api";
+import {
+  permissionsQuery,
+  topicsQuery,
+  userRolesQuery,
+} from "../../lib/queries";
 import type { Topic } from "../../lib/types";
 import { db } from "../../lib/supabase";
 import {
@@ -64,12 +69,7 @@ import {
   type Template,
   templatesQuery,
 } from "./data";
-import {
-  BuildingBlockCards,
-  BuildingBlockReference,
-  BuildingBlockSources,
-  CourseRunOfferLink,
-} from "./building-blocks";
+import { CourseRunOfferLink } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
@@ -125,11 +125,12 @@ function compareCourseInstants(first: string, second: string): number | null {
 async function saveCourseTemplate(
   values: z.infer<typeof templateSchema>,
   id: string | null,
+  owner?: string,
 ) {
   requireOnline();
   const { data, error } = await db().rpc("save_course_template", {
     p_id: id,
-    p_payload: values,
+    p_payload: owner ? { ...values, owner_organisation_id: owner } : values,
   });
   if (error) throw error;
   return data as string;
@@ -208,15 +209,18 @@ function CourseContentFields({
 /** Edit reusable content templates separately from particular customers and schedules. */
 function TemplateForm({
   original,
+  organisations,
   onDone,
 }: {
   original?: Template;
+  organisations: Organisation[];
   onDone: () => void;
 }) {
   const { t } = useTranslation("operations");
   const client = useQueryClient();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
+  const [owner, setOwner] = useState(original?.owner_organisation_id ?? "");
   const {
     register,
     control,
@@ -237,7 +241,11 @@ function TemplateForm({
   const selectedTopicIds = useWatch({ control, name: "topic_ids" }) ?? [];
   const save = useMutation({
     mutationFn: (values: z.infer<typeof templateSchema>) =>
-      saveCourseTemplate(values, original?.id ?? null),
+      saveCourseTemplate(
+        values,
+        original?.id ?? null,
+        original?.owner_organisation_id ? undefined : owner,
+      ),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["operations"] });
       onDone();
@@ -247,6 +255,26 @@ function TemplateForm({
   if (topics.isError) return <ErrorState retry={() => void topics.refetch()} />;
   return (
     <form noValidate onSubmit={handleSubmit((v) => save.mutate(v))}>
+      <Field id="template-owner" label={t("templateOwner")}>
+        <select
+          id="template-owner"
+          value={owner}
+          disabled={Boolean(original?.owner_organisation_id)}
+          onChange={(event) => setOwner(event.target.value)}
+        >
+          <option value="">{t("internalTemplate")}</option>
+          {organisations
+            .filter(
+              (organisation) =>
+                !organisation.archived_at || organisation.id === owner,
+            )
+            .map((organisation) => (
+              <option key={organisation.id} value={organisation.id}>
+                {organisation.name}
+              </option>
+            ))}
+        </select>
+      </Field>
       <CourseContentFields
         register={register}
         errors={errors}
@@ -275,6 +303,7 @@ function RunForm({
   initialTemplateId,
   focusSchedule,
   blocks,
+  canPrepareOffer,
   onDone,
   onBusy,
 }: {
@@ -284,7 +313,8 @@ function RunForm({
   initialTemplateId?: string;
   focusSchedule: boolean;
   blocks: BuildingBlock[];
-  onDone: (result: "template" | "run") => void;
+  canPrepareOffer: boolean;
+  onDone: (result: "template" | "run", offerRun?: string) => void;
   onBusy: (busy: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("operations");
@@ -307,7 +337,11 @@ function RunForm({
   const topicIds =
     useWatch({ control: content.control, name: "topic_ids" }) ?? [];
   const [templateRetained, setTemplateRetained] = useState(false);
-  const createdTemplate = useRef<{ id: string; value: string } | null>(null);
+  const createdTemplate = useRef<{
+    id: string;
+    value: string;
+    owner: string;
+  } | null>(null);
   const [timeError, setTimeError] = useState(false);
   const [planningDate, setPlanningDate] = useState("");
   const [planningStart, setPlanningStart] = useState("09:00");
@@ -333,7 +367,11 @@ function RunForm({
     resolver: zodResolver(newCourseSchema),
     defaultValues: {
       template_id: original?.template_id ?? initialTemplateId ?? "",
-      organisation_id: original?.organisation_id ?? "",
+      organisation_id:
+        original?.organisation_id ??
+        templates.find(({ id }) => id === initialTemplateId)
+          ?.owner_organisation_id ??
+        "",
       time_zone: original?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
       venue: original?.venue ?? "",
@@ -366,6 +404,7 @@ function RunForm({
   });
   const selectedTemplateId = useWatch({ control, name: "template_id" });
   const zone = useWatch({ control, name: "time_zone" });
+  const selectedOrganisationId = useWatch({ control, name: "organisation_id" });
   const selectedTemplate = templates.find(
     (item) => item.id === selectedTemplateId,
   );
@@ -475,11 +514,12 @@ function RunForm({
     onMutate: () => onBusy(true),
     mutationFn: async (
       intent:
-        | { kind: "template"; content: TemplateValues }
+        | { kind: "template"; content: TemplateValues; owner?: string }
         | {
             kind: "run";
             values: z.infer<typeof newCourseSchema>;
             content?: TemplateValues;
+            offer?: boolean;
           },
     ) => {
       requireOnline();
@@ -488,8 +528,9 @@ function RunForm({
         await saveCourseTemplate(
           intent.content,
           createdTemplate.current?.id ?? null,
+          intent.owner,
         );
-        return "template" as const;
+        return { kind: "template" } as const;
       }
       const { values } = intent;
       const origins = sessionOrigins.current;
@@ -532,15 +573,20 @@ function RunForm({
       }
       let templateId = values.template_id;
       if (!templateId && intent.content) {
-        const value = JSON.stringify(intent.content);
+        const value = JSON.stringify([intent.content, values.organisation_id]);
         const previous = createdTemplate.current;
         if (!previous || previous.value !== value) {
           const id = await saveCourseTemplate(
             intent.content,
-            previous?.id ?? null,
+            previous?.owner === values.organisation_id ? previous.id : null,
+            values.organisation_id,
           );
           if (!id) throw new Error("missing course template");
-          createdTemplate.current = { id, value };
+          createdTemplate.current = {
+            id,
+            value,
+            owner: values.organisation_id,
+          };
           setTemplateRetained(true);
         }
         templateId = createdTemplate.current!.id;
@@ -591,15 +637,18 @@ function RunForm({
           };
         }
       }
-      const { error } = await db().rpc("save_course_run", {
+      const { data, error } = await db().rpc("save_course_run", {
         p_id: original?.id ?? null,
         p_payload: { ...payload, ...offerChange },
       });
       if (error) throw error;
-      return "run" as const;
+      return {
+        kind: "run",
+        offerRun: intent.offer && typeof data === "string" ? data : undefined,
+      } as const;
     },
     onSuccess: (result) => {
-      onDone(result);
+      onDone(result.kind, result.kind === "run" ? result.offerRun : undefined);
       if (linked) void refreshJobState(client);
       else void client.invalidateQueries({ queryKey: ["operations"] });
     },
@@ -610,9 +659,9 @@ function RunForm({
     onSettled: () => onBusy(false),
   });
 
-  const submitRun = (publish?: boolean) =>
+  const submitRun = (publish?: boolean, offer = false) =>
     handleSubmit(async (values) => {
-      if (save.isPending) return;
+      if (save.isPending || (offer && !values.organisation_id)) return;
       const draft = !values.template_id
         ? await content.trigger(undefined, { shouldFocus: true })
         : true;
@@ -624,6 +673,7 @@ function RunForm({
         kind: "run",
         values: { ...values, published: publish ?? values.published },
         content: fields,
+        offer,
       });
     });
   return (
@@ -690,7 +740,17 @@ function RunForm({
             label={t("template")}
             error={Boolean(errors.template_id)}
           >
-            <select id="run-template" {...register("template_id")}>
+            <select
+              id="run-template"
+              {...register("template_id", {
+                onChange: (event) => {
+                  const owner = templates.find(
+                    ({ id }) => id === event.target.value,
+                  )?.owner_organisation_id;
+                  if (owner) setValue("organisation_id", owner);
+                },
+              })}
+            >
               {!original && <option value="">{t("newCourseContent")}</option>}
               {original &&
                 !templates.some(
@@ -709,6 +769,37 @@ function RunForm({
                 .map((template) => (
                   <option value={template.id} key={template.id}>
                     {template.title}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        )}
+        {canEditCompany && (
+          <Field id="run-org" label={t("organisation")}>
+            <select id="run-org" {...register("organisation_id")}>
+              {!selectedTemplate?.owner_organisation_id &&
+                (!linked || !original?.organisation_id) && (
+                  <option value="" disabled={linked}>
+                    {t("none")}
+                  </option>
+                )}
+              {original?.organisation_id && !currentOrganisation && (
+                <option value={original.organisation_id}>
+                  {t("courseRecordUnavailable")}
+                </option>
+              )}
+              {organisations
+                .filter(
+                  (org) =>
+                    (!selectedTemplate?.owner_organisation_id ||
+                      org.id === selectedTemplate.owner_organisation_id) &&
+                    (!linked ||
+                      !org.archived_at ||
+                      org.id === original?.organisation_id),
+                )
+                .map((org) => (
+                  <option value={org.id} key={org.id}>
+                    {org.name}
                   </option>
                 ))}
             </select>
@@ -787,34 +878,6 @@ function RunForm({
               <Notice kind="error">{t("scheduleInvalid")}</Notice>
             )}
           </fieldset>
-        )}
-        {canEditCompany && (
-          <Field id="run-org" label={t("organisation")}>
-            <select id="run-org" {...register("organisation_id")}>
-              {(!linked || !original?.organisation_id) && (
-                <option value="" disabled={linked}>
-                  {t("none")}
-                </option>
-              )}
-              {original?.organisation_id && !currentOrganisation && (
-                <option value={original.organisation_id}>
-                  {t("courseRecordUnavailable")}
-                </option>
-              )}
-              {organisations
-                .filter(
-                  (org) =>
-                    !linked ||
-                    !org.archived_at ||
-                    org.id === original?.organisation_id,
-                )
-                .map((org) => (
-                  <option value={org.id} key={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-            </select>
-          </Field>
         )}
         {canEditCourseDetails && (
           <div className="form-row">
@@ -957,7 +1020,11 @@ function RunForm({
             variant="secondary"
             disabled={!online || save.isPending || !topics.isSuccess}
             onClick={content.handleSubmit((values) =>
-              save.mutate({ kind: "template", content: values }),
+              save.mutate({
+                kind: "template",
+                content: values,
+                owner: selectedOrganisationId,
+              }),
             )}
           >
             {t("saveAsTemplate")}
@@ -980,7 +1047,18 @@ function RunForm({
             }
             onClick={submitRun(true)}
           >
-            {t("publish")}
+            {t("showInCourseCatalogue")}
+          </Button>
+        )}
+        {!original && canPrepareOffer && selectedOrganisationId && (
+          <Button
+            type="button"
+            disabled={
+              !online || save.isPending || (needsContent && !topics.isSuccess)
+            }
+            onClick={submitRun(false, true)}
+          >
+            {t("saveAndPrepareOffer")}
           </Button>
         )}
       </div>
@@ -1013,6 +1091,14 @@ export function CoursesPage() {
   const permissions = useQuery(permissionsQuery(actor));
   const templates = useQuery(templatesQuery(actor));
   const manage = permissions.data?.includes("courses.manage") ?? false;
+  const canPrepareOffer =
+    manage && (permissions.data?.includes("jobs.manage") ?? false);
+  const roles = useQuery(userRolesQuery(actor));
+  const companyViewer = !manage && roles.data?.includes("client");
+  const ownCompanies = useQuery({
+    ...clientOrganisationsQuery(actor),
+    enabled: Boolean(companyViewer),
+  });
   const runs = useQuery({
     ...runsQuery(actor),
     refetchInterval: manage ? false : 10000,
@@ -1020,18 +1106,19 @@ export function CoursesPage() {
   });
   const orgs = useQuery(orgQuery(actor));
   const topics = useQuery(topicsQuery);
-  const blocks = useQuery(buildingBlocksQuery(actor));
+  const blocks = useQuery({ ...buildingBlocksQuery(actor), enabled: manage });
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
-  const [tab, setTab] = useState<"runs" | "templates" | "blocks">("runs");
+  const [tab, setTab] = useState<"runs" | "templates">("runs");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
-  const [templateEdit, setTemplateEdit] = useState<Template>();
+  const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
   const [focusSchedule, setFocusSchedule] = useState(false);
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const workspaceEntitlement = useQuery({
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
@@ -1039,9 +1126,6 @@ export function CoursesPage() {
   });
   const templateDetail = templates.data?.find(
     (template) => template.id === params.get("template"),
-  );
-  const blockDetail = blocks.data?.find(
-    (block) => block.id === params.get("block"),
   );
   const editRun = (run: CourseRun | null, schedule = false) => {
     setFocusSchedule(schedule);
@@ -1113,7 +1197,7 @@ export function CoursesPage() {
     orgs.isPending ||
     topics.isPending ||
     permissions.isPending ||
-    blocks.isPending
+    (manage && blocks.isPending)
   )
     return <Loading />;
   if (
@@ -1122,7 +1206,7 @@ export function CoursesPage() {
     orgs.isError ||
     topics.isError ||
     permissions.isError ||
-    blocks.isError
+    (manage && blocks.isError)
   )
     return (
       <ErrorState
@@ -1153,14 +1237,15 @@ export function CoursesPage() {
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const filteredTemplates = templates.data.filter((template) =>
+  const visibleTemplates = manage
+    ? templates.data
+    : templates.data.filter((template) =>
+        ownCompanies.data?.some(
+          ({ id }) => id === template.owner_organisation_id,
+        ),
+      );
+  const filteredTemplates = visibleTemplates.filter((template) =>
     [template.title, template.description, template.syllabus]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
-  const filteredBlocks = blocks.data.filter((block) =>
-    [block.code, block.title, block.syllabus]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase()),
@@ -1175,12 +1260,15 @@ export function CoursesPage() {
             <Button
               disabled={!online}
               onClick={() => {
-                setInitialTemplateId(undefined);
-                editRun(null);
+                if (tab === "templates") setTemplateEdit(null);
+                else {
+                  setInitialTemplateId(undefined);
+                  editRun(null);
+                }
               }}
             >
               <Plus size={17} />
-              {t("newCourse")}
+              {t(tab === "templates" ? "newTemplate" : "newCourse")}
             </Button>
           ) : (
             <Button asChild variant="secondary">
@@ -1326,22 +1414,13 @@ export function CoursesPage() {
           >
             {t("runs")}
           </Button>
-          {manage && (
+          {(manage || companyViewer) && (
             <Button
               variant={tab === "templates" ? "default" : "ghost"}
               aria-pressed={tab === "templates"}
               onClick={() => setTab("templates")}
             >
               {t("templates")}
-            </Button>
-          )}
-          {blocks.data.length > 0 && (
-            <Button
-              variant={tab === "blocks" ? "default" : "ghost"}
-              aria-pressed={tab === "blocks"}
-              onClick={() => setTab("blocks")}
-            >
-              {t("buildingBlocks")}
             </Button>
           )}
         </div>
@@ -1355,15 +1434,7 @@ export function CoursesPage() {
           {t(visibility.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
-      {tab === "blocks" ? (
-        <BuildingBlockCards
-          blocks={filteredBlocks}
-          canManage={manage}
-          online={online}
-          onView={(id) => setParams({ block: id })}
-          onPlan={planRun}
-        />
-      ) : tab === "runs" && filteredRuns.length === 0 ? (
+      {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
             phase === "all"
@@ -1375,9 +1446,41 @@ export function CoursesPage() {
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {
             const template = findTemplate(run);
-            const hasActiveJob = run.jobs?.some(
-              ({ status }) => status === "published" || status === "filled",
-            );
+            const now = runs.dataUpdatedAt;
+            const liveOffers =
+              run.jobs?.filter(
+                ({ status, claim_deadline, job_sessions }) =>
+                  status === "published" &&
+                  (!claim_deadline || Date.parse(claim_deadline) > now) &&
+                  (!job_sessions ||
+                    (job_sessions.length > 0 &&
+                      job_sessions.every(
+                        ({ starts_at }) => Date.parse(starts_at) > now,
+                      ))),
+              ) ?? [];
+            const jobs = run.jobs ?? [];
+            const closedReason = jobs.some(({ status }) => status === "filled")
+              ? "marketplaceAssigned"
+              : jobs.some(
+                    ({ status, claim_deadline }) =>
+                      status === "published" &&
+                      claim_deadline &&
+                      Date.parse(claim_deadline) <= now,
+                  )
+                ? "marketplaceExpired"
+                : jobs.some(
+                      ({ status, job_sessions }) =>
+                        status === "published" &&
+                        job_sessions?.some(
+                          ({ starts_at }) => Date.parse(starts_at) <= now,
+                        ),
+                    )
+                  ? "marketplaceStarted"
+                  : jobs.some(({ status }) => status === "draft")
+                    ? "marketplaceDraft"
+                    : jobs.length
+                      ? "marketplaceClosed"
+                      : "marketplaceMissing";
             return (
               <article className="panel operations-course" key={run.id}>
                 <div className="section-heading">
@@ -1387,33 +1490,30 @@ export function CoursesPage() {
                       run.archived_at
                         ? "archive"
                         : run.published
-                          ? "published"
-                          : hasActiveJob
-                            ? "hiddenRunCatalogue"
-                            : "draft",
+                          ? "inCourseCatalogue"
+                          : "privateCourseRun",
                     )}
                   </span>
-                  {hasActiveJob && (
-                    <span className="badge">{t("activeRunOrder")}</span>
-                  )}
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
+                {manage && (
+                  <div className="course-marketplace-state">
+                    <strong>{t("marketplaceStatus")}</strong>
+                    {liveOffers.length > 0
+                      ? liveOffers.map((job) => (
+                          <Link key={job.id} to={`/jobs/${job.id}`}>
+                            {t("openListedOffer", { title: job.title })}
+                          </Link>
+                        ))
+                      : t(closedReason)}
+                  </div>
+                )}
                 <p className="muted">
                   {orgs.data.find((org) => org.id === run.organisation_id)
                     ?.name ?? t("noCustomer")}{" "}
                   · {t(run.delivery_type)}
                 </p>
                 <p>{template?.description}</p>
-                {template?.building_block_id && (
-                  <span className="badge">
-                    {t("buildingBlocks")}{" "}
-                    {
-                      blocks.data.find(
-                        (block) => block.id === template.building_block_id,
-                      )?.code
-                    }
-                  </span>
-                )}
                 <div className="tags">
                   {template?.course_template_topics.map((item) => {
                     const topic = topics.data.find(
@@ -1440,7 +1540,11 @@ export function CoursesPage() {
                 </Button>
                 {manage && (
                   <div className="operations-actions">
-                    {!run.archived_at && <CourseRunOfferLink runId={run.id} />}
+                    {canPrepareOffer &&
+                      !run.archived_at &&
+                      run.organisation_id && (
+                        <CourseRunOfferLink runId={run.id} />
+                      )}
                     <Button
                       variant="ghost"
                       disabled={!online}
@@ -1512,6 +1616,12 @@ export function CoursesPage() {
             </div>
           )}
         </div>
+      ) : companyViewer && ownCompanies.isPending ? (
+        <Loading />
+      ) : companyViewer && ownCompanies.isError ? (
+        <ErrorState retry={() => void ownCompanies.refetch()} />
+      ) : filteredTemplates.length === 0 ? (
+        <div className="empty-state">{t("noCourseTemplates")}</div>
       ) : (
         <div className="operations-courses-grid">
           {filteredTemplates.map((template) => (
@@ -1520,6 +1630,17 @@ export function CoursesPage() {
               {template.archived_at && (
                 <span className="badge">{t("archive")}</span>
               )}
+              <p className="muted">
+                {orgs.data.find(
+                  (org) => org.id === template.owner_organisation_id,
+                )?.name ??
+                  ownCompanies.data?.find(
+                    (org) => org.id === template.owner_organisation_id,
+                  )?.name ??
+                  (template.owner_organisation_id
+                    ? t("templateOwner")
+                    : t("internalTemplate"))}
+              </p>
               <p>{template.description}</p>
               <div className="operations-actions">
                 <Button
@@ -1528,7 +1649,7 @@ export function CoursesPage() {
                 >
                   {t("view")}
                 </Button>
-                {!template.archived_at && (
+                {manage && !template.archived_at && (
                   <Button
                     disabled={!online}
                     onClick={() => planRun(template.id)}
@@ -1536,29 +1657,33 @@ export function CoursesPage() {
                     {t("planRun")}
                   </Button>
                 )}
-                <Button
-                  variant="secondary"
-                  disabled={!online}
-                  onClick={() => setTemplateEdit(template)}
-                >
-                  {t("edit")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={!online}
-                  onClick={() => {
-                    duplicate.reset();
-                    setCopy({
-                      type: "template",
-                      id: template.id,
-                      title: template.title,
-                    });
-                    setCopyTitle(`${template.title} · ${t("copySuffix")}`);
-                  }}
-                >
-                  <Copy size={16} />
-                  {t("duplicate")}
-                </Button>
+                {manage && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={!online}
+                      onClick={() => setTemplateEdit(template)}
+                    >
+                      {t("edit")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!online}
+                      onClick={() => {
+                        duplicate.reset();
+                        setCopy({
+                          type: "template",
+                          id: template.id,
+                          title: template.title,
+                        });
+                        setCopyTitle(`${template.title} · ${t("copySuffix")}`);
+                      }}
+                    >
+                      <Copy size={16} />
+                      {t("duplicate")}
+                    </Button>
+                  </>
+                )}
               </div>
             </article>
           ))}
@@ -1569,12 +1694,13 @@ export function CoursesPage() {
         onOpenChange={(open) => {
           if (!open) setTemplateEdit(undefined);
         }}
-        title={t("edit")}
+        title={t(templateEdit ? "edit" : "newTemplate")}
         description={t("template")}
       >
         <TemplateForm
           key={templateEdit?.id}
-          original={templateEdit}
+          original={templateEdit ?? undefined}
+          organisations={orgs.data}
           onDone={() => {
             setTemplateEdit(undefined);
             setMessage(t("saved"));
@@ -1601,91 +1727,70 @@ export function CoursesPage() {
           organisations={orgs.data}
           initialTemplateId={initialTemplateId}
           focusSchedule={focusSchedule}
-          blocks={blocks.data}
+          blocks={blocks.data ?? []}
+          canPrepareOffer={canPrepareOffer}
           onBusy={setRunSaving}
-          onDone={(result) => {
+          onDone={(result, offerRun) => {
             setRunEdit(undefined);
+            if (offerRun) {
+              navigate(`/admin?courseRun=${encodeURIComponent(offerRun)}`);
+              return;
+            }
             setTab(result === "template" ? "templates" : "runs");
             setMessage(t("saved"));
           }}
         />
       </Dialog>
       <Dialog
-        open={Boolean(templateDetail || blockDetail)}
+        open={Boolean(templateDetail)}
         onOpenChange={(open) => {
           if (!open) setParams({}, { replace: true });
         }}
-        title={
-          templateDetail?.title ??
-          (blockDetail
-            ? `${blockDetail.code} · ${blockDetail.title}`
-            : t("template"))
-        }
-        description={t("reusableBlock")}
+        title={templateDetail?.title ?? t("template")}
+        description={t("template")}
       >
-        {(templateDetail || blockDetail) && (
+        {templateDetail && (
           <>
             <h3>{t("description")}</h3>
-            <p className="curriculum-syllabus">
-              {templateDetail?.description ?? blockDetail?.description}
-            </p>
+            <p className="curriculum-syllabus">{templateDetail.description}</p>
             <h3>{t("syllabus")}</h3>
-            <p className="curriculum-syllabus">
-              {templateDetail?.syllabus ?? blockDetail?.syllabus}
-            </p>
-            {(templateDetail?.prerequisites || blockDetail?.prerequisites) && (
+            <p className="curriculum-syllabus">{templateDetail.syllabus}</p>
+            {templateDetail.prerequisites && (
               <>
                 <h3>{t("prerequisites")}</h3>
                 <p className="curriculum-syllabus">
-                  {templateDetail?.prerequisites ?? blockDetail?.prerequisites}
+                  {templateDetail.prerequisites}
                 </p>
               </>
             )}
-            {templateDetail ? (
-              <BuildingBlockReference
-                buildingBlockId={templateDetail.building_block_id}
-                sourceId={templateDetail.building_block_source_id}
-              />
-            ) : (
-              blockDetail && <BuildingBlockSources block={blockDetail} />
-            )}
             {manage && (
-              <Button
-                disabled={!online}
-                onClick={() =>
-                  planRun(
-                    templateDetail?.id ?? blockDetail!.default_template_id,
-                  )
-                }
-              >
-                {t("planRun")}
-              </Button>
+              <div className="form-actions">
+                <Button
+                  disabled={!online || Boolean(templateDetail.archived_at)}
+                  onClick={() => planRun(templateDetail.id)}
+                >
+                  {t("planRun")}
+                </Button>
+                <PermanentDeleteAction
+                  kind="course_template"
+                  id={templateDetail.id}
+                  label={templateDetail.title}
+                  linkedRuns={runs.data
+                    .filter((run) => run.template_id === templateDetail.id)
+                    .map((run) => ({
+                      id: run.id,
+                      title: run.course_sessions.length
+                        ? dateTime(
+                            run.course_sessions[0].starts_at,
+                            i18n.language,
+                            run.time_zone,
+                          )
+                        : t("courseRunWithoutSessions"),
+                    }))}
+                />
+              </div>
             )}
-            {templateDetail && (
-              <PermanentDeleteAction
-                kind="course_template"
-                id={templateDetail.id}
-                label={templateDetail.title}
-                linkedRuns={runs.data
-                  .filter((run) => run.template_id === templateDetail.id)
-                  .map((run) => ({
-                    id: run.id,
-                    title: run.course_sessions.length
-                      ? dateTime(
-                          run.course_sessions[0].starts_at,
-                          i18n.language,
-                          run.time_zone,
-                        )
-                      : t("courseRunWithoutSessions"),
-                  }))}
-              />
-            )}
-            <ResourceComments
-              kind="template"
-              resourceId={
-                templateDetail?.id ?? blockDetail!.default_template_id
-              }
-            />
+            <ResourceComments kind="template" resourceId={templateDetail.id} />
           </>
         )}
       </Dialog>
@@ -1771,13 +1876,11 @@ export function CoursesPage() {
                 }
               />
             </div>
-            <BuildingBlockReference
-              buildingBlockId={findTemplate(detail)?.building_block_id}
-              sourceId={findTemplate(detail)?.building_block_source_id}
-            />
-            {manage && !detail.archived_at && (
-              <CourseRunOfferLink runId={detail.id} />
-            )}
+            {canPrepareOffer &&
+              !detail.archived_at &&
+              detail.organisation_id && (
+                <CourseRunOfferLink runId={detail.id} />
+              )}
             {!detail.archived_at && (
               <div className="page-actions">
                 {workspaceEntitlement.isPending ? (

@@ -13,6 +13,8 @@
 
 ## Course editor layout
 
+- [x] Combine reusable materials in one company-scoped template library. Distinguish course visibility from marketplace state and provide a direct save-to-offer path.
+
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.
 
 - [x] Let course managers edit eligible linked schedules and draft details from Courses. Save shared fields with the linked offer's reviewed version and keep exact session references when their instants are unchanged.
