@@ -133,6 +133,7 @@ export interface CourseRun {
   published: boolean;
   archived_at: string | null;
   course_sessions: { id: string; starts_at: string; ends_at: string }[];
+  jobs?: { id: string; title: string; status: string }[];
 }
 
 /** Read organisations through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
@@ -212,7 +213,7 @@ export const runsQuery = (actor: string) =>
       readDirectoryPages<CourseRun>((from, to) =>
         db()
           .from("course_runs")
-          .select("*,course_sessions(*)")
+          .select("*,course_sessions(*),jobs(id,title,status)")
           .order("created_at", { ascending: false })
           .order("id")
           .range(from, to)

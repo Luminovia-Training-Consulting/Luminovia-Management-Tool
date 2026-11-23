@@ -164,6 +164,11 @@ const pairs: Record<string, [string, string]> = {
     "Geschützte oder gemeinsam genutzte Abhängigkeiten verhindern die Löschung. Die angezeigten Daten bleiben erhalten.",
     "Protected or shared dependencies prevent deletion. The displayed records remain in place.",
   ],
+  linkedAssignments: ["Verknüpfte Aufträge", "Linked assignments"],
+  linkedAssignmentsHelp: [
+    "Öffne den jeweiligen Auftrag, um seinen Status, seine Daten und seine Löschmöglichkeiten zu prüfen. Prüfe danach den Löschumfang der Durchführung erneut.",
+    "Open each assignment to review its status, records and deletion options. Then check the course run’s deletion impact again.",
+  ],
   typeDelete: ["Zur Bestätigung DELETE eingeben", "Type DELETE to confirm"],
   acknowledge: [
     "Ich habe den angezeigten Umfang geprüft und möchte diese Daten endgültig löschen.",

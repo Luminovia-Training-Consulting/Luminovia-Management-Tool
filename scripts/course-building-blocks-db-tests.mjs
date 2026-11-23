@@ -451,6 +451,31 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             );
         },
     );
+    await check("Linked run venue and visibility can change while job and session references stay intact", async () => {
+        const before = await rpc("admin", "course_run_job_defaults", [run], "aal1");
+        const runPayload = {
+            template_id: template,
+            organisation_id: org,
+            time_zone: before.time_zone,
+            delivery_type: before.delivery_type,
+            venue: "Updated fictional course access",
+            published: true,
+            sessions: before.sessions.map(({starts_at, ends_at}) => ({starts_at, ends_at})),
+        };
+        assert.equal(await rpc("admin", "save_course_run", [run, runPayload], "aal1"), run);
+        const after = await rpc("admin", "course_run_job_defaults", [run], "aal1");
+        assert.equal(after.location, runPayload.venue);
+        assert.deepEqual(after.sessions, before.sessions);
+        assert.equal(await sql(`select location from public.jobs where id=${q(job)}`), before.location);
+        await assert.rejects(
+            rpc("admin", "save_course_run", [run, {...runPayload, sessions: runPayload.sessions.slice(0, 1)}], "aal1"),
+            /course_locked/,
+        );
+        await assert.rejects(
+            rpc("admin", "save_course_run", [run, {...runPayload, archived: true}], "aal1"),
+            /course_locked/,
+        );
+    });
     await check(
         "Client portal sees the linked course and original company fee until membership is withdrawn",
         async () => {

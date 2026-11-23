@@ -2150,7 +2150,7 @@ const nativePaths = {
     "saveCourseRun",
     "Courses",
     "Create or update a scheduled course",
-    "Use a null ID for a new course run. Sessions use explicit offsets and must not overlap. A run linked to a job cannot be edited by this operation. The server validates the intended IANA time zone.",
+    "Use a null ID for a new course run. Sessions use explicit offsets and must not overlap. A linked run permits venue and visibility changes while retaining the exact source intervals, time zone, delivery mode, company and template. The server validates the intended IANA time zone.",
     { p_id: nullableUuid, p_payload: courseRunRequest },
     uuid,
   ),

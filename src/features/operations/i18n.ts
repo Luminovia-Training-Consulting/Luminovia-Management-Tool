@@ -620,6 +620,18 @@ const pairs: Record<string, [string, string]> = {
     "Die unveröffentlichte Kopie wurde erstellt.",
     "The unpublished copy was created.",
   ],
+  activeRunOrder: ["Aktiver Auftrag", "Active assignment"],
+  linkedRunConflict: [
+    "Diese Änderung betrifft einen verknüpften Auftrag. Lade die Durchführung neu und öffne für Terminänderungen den Auftrag.",
+    "This change affects a linked assignment. Reload the course run and open the assignment to change its schedule.",
+  ],
+  linkedRunHelp: [
+    "Du kannst Ort oder Zugangslink und die Sichtbarkeit der Durchführung ändern. Für Änderungen an gebundenen Terminen öffne den verknüpften Auftrag. Die Kursvorlage bleibt unverändert.",
+    "You can change the run’s venue or access link and catalogue visibility. To change linked sessions, open the associated assignment. The course template stays intact.",
+  ],
+  runVisibility: ["Sichtbarkeit der Durchführung", "Course run visibility"],
+  hideFromCourseCatalogue: ["Im Kurskatalog ausblenden", "Hide from the course catalogue"],
+  showInCourseCatalogue: ["Im Kurskatalog anzeigen", "Show in the course catalogue"],
   locked: [
     "Diese Inhalte sind mit bestehenden Aufträgen verbunden und geschützt. Erstelle eine Kopie, um neue Termine oder Inhalte zu planen.",
     "This content is linked to existing assignments and protected. Create a copy to plan new dates or content.",

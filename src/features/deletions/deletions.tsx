@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
@@ -36,7 +37,12 @@ import {
 import "./i18n";
 import "./deletions.css";
 
-type Target = { kind: string; id: string; label: string };
+type Target = {
+  kind: string;
+  id: string;
+  label: string;
+  linkedJobs?: readonly { id: string; title: string }[];
+};
 const DialogContext = createContext<((target: Target) => void) | null>(null);
 
 /** Keep a confirmed operation visible when its original resource row disappears. */
@@ -128,7 +134,7 @@ function OperationReceipts({
 }
 
 /** Render a contextual action only under a current server-provided deletion capability. */
-export function PermanentDeleteAction({ kind, id, label }: Target) {
+export function PermanentDeleteAction({ kind, id, label, linkedJobs }: Target) {
   const { session } = useAuth();
   const actor = session!.user.id;
   const { t } = useTranslation("deletions");
@@ -147,7 +153,7 @@ export function PermanentDeleteAction({ kind, id, label }: Target) {
         aria-label={t("actionNamed", {
           name: targetLabel({ kind, id, label }, t),
         })}
-        onClick={() => (launch ? launch({ kind, id, label }) : setLocal(actor))}
+        onClick={() => (launch ? launch({ kind, id, label, linkedJobs }) : setLocal(actor))}
       >
         {t("action")}
       </Button>
@@ -155,7 +161,7 @@ export function PermanentDeleteAction({ kind, id, label }: Target) {
         <AuthorizedDialog
           key={`${actor}:${kind}:${id}`}
           actor={actor}
-          target={{ kind, id, label }}
+          target={{ kind, id, label, linkedJobs }}
           close={() => setLocal(null)}
         />
       )}
@@ -531,6 +537,20 @@ function DeletionDialog({
                 </ul>
               </Notice>
             )}
+            {target.kind === "course_run" && preview.data.blockers.length > 0 &&
+              Boolean(target.linkedJobs?.length) && (
+                <section>
+                  <h4>{t("linkedAssignments")}</h4>
+                  <p>{t("linkedAssignmentsHelp")}</p>
+                  <ul>
+                    {target.linkedJobs?.map((job) => (
+                      <li key={job.id}>
+                        <Link to={`/jobs/${job.id}`} onClick={close}>{job.title}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             {preview.data.can_confirm && !preview.data.blockers.length && (
               <>
                 <label className="deletion-ack">

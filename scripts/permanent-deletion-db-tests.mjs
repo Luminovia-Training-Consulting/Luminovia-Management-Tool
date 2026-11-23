@@ -72,6 +72,25 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
     const document = await reserve();
     const second = await reserve(owner, document.document_id);
 
+    await check("Course management can delete a dependency-free run without deleting the template", async () => {
+        const template = randomUUID();
+        const run = randomUUID();
+        await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional deletion template');
+          insert into public.course_runs(id,template_id) values(${q(run)},${q(template)});`);
+        assert.ok((await call(manager, "deletion_access")).kinds.includes("course_run"));
+        await expectCode(plan("course_run", run, owner), "42501");
+        const preview = await plan("course_run", run, manager);
+        assert.equal(preview.can_confirm, true);
+        const operation = await confirm(preview, manager);
+        await sql(`delete from public.user_roles where user_id=${q(manager)} and role='management'`);
+        await expectCode(permit(operation, manager), "42501");
+        await sql(`insert into public.user_roles(user_id,role) values(${q(manager)},'management')`);
+        const execution = await permit(operation, manager);
+        await worker("apply", key(operation, execution));
+        assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
+        assert.equal(await sql(`select count(*) from public.course_runs where id=${q(run)}`), "0");
+        assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
+    });
     await check(
         "A reviewed job purge includes its briefing and request records",
         async () => {

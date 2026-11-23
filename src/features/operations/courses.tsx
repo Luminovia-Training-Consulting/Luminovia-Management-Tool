@@ -357,6 +357,9 @@ function RunForm({
     (item) => item.id === selectedTemplate?.building_block_id,
   );
   const needsContent = !original && !selectedTemplateId;
+  const linkedJobs = original?.jobs ?? [];
+  const linked = linkedJobs.length > 0;
+  const hasActiveJob = linkedJobs.some(({ status }) => status === "published" || status === "filled");
   const save = useMutation({
     onMutate: () => onBusy(true),
     mutationFn: async (
@@ -471,124 +474,136 @@ function RunForm({
     });
   return (
     <form noValidate onSubmit={submitRun(original ? undefined : false)}>
-      <Field
-        id="run-template"
-        label={t("template")}
-        error={Boolean(errors.template_id)}
-      >
-        <select id="run-template" {...register("template_id")}>
-          {!original && <option value="">{t("newCourseContent")}</option>}
-          {templates
-            .filter(
-              (template) =>
-                !template.archived_at || template.id === original?.template_id,
-            )
-            .map((template) => (
-              <option value={template.id} key={template.id}>
-                {template.title}
-              </option>
+      {linked && (
+        <Notice>
+          <p>{t("linkedRunHelp")}</p>
+          <ul>
+            {linkedJobs.map((job) => (
+              <li key={job.id}><Link to={`/jobs/${job.id}`}>{job.title}</Link></li>
             ))}
-        </select>
-      </Field>
-      {needsContent &&
-        (topics.isPending ? (
-          <Loading />
-        ) : topics.isError ? (
-          <ErrorState retry={() => void topics.refetch()} />
-        ) : (
-          <CourseContentFields
-            register={content.register}
-            errors={content.formState.errors}
-            topics={topics.data}
-            selectedTopicIds={topicIds}
-          />
-        ))}
-      {selectedBlock && (
-        <fieldset className="operations-schedule-planner">
-          <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
-          <p>
-            {t("scheduleHelp", {
-              days: selectedBlock.duration_days,
-              hours: selectedBlock.duration_hours,
-            })}
-          </p>
-          <Field id="planning-start-date" label={t("firstDate")}>
-            <input
-              id="planning-start-date"
-              type="date"
-              value={planningDate}
-              onChange={(event) => setPlanningDate(event.target.value)}
-            />
-          </Field>
-          <div className="form-row">
-            <Field id="planning-start-time" label={t("dailyStart")}>
-              <input
-                id="planning-start-time"
-                type="time"
-                value={planningStart}
-                onChange={(event) => setPlanningStart(event.target.value)}
-              />
-            </Field>
-            <Field id="planning-end-time" label={t("dailyEnd")}>
-              <input
-                id="planning-end-time"
-                type="time"
-                value={planningEnd}
-                onChange={(event) => setPlanningEnd(event.target.value)}
-              />
-            </Field>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              try {
-                replace(
-                  weekdaySessions(
-                    planningDate,
-                    planningStart,
-                    planningEnd,
-                    selectedBlock.duration_days,
-                  ),
-                );
-                setPlanningError(false);
-              } catch {
-                setPlanningError(true);
-              }
-            }}
-          >
-            {t("generateSchedule", { count: selectedBlock.duration_days })}
-          </Button>
-          {planningError && (
-            <Notice kind="error">{t("scheduleInvalid")}</Notice>
-          )}
-        </fieldset>
+          </ul>
+        </Notice>
       )}
-      <Field id="run-org" label={t("organisation")}>
-        <select id="run-org" {...register("organisation_id")}>
-          <option value="">{t("none")}</option>
-          {organisations.map((org) => (
-            <option value={org.id} key={org.id}>
-              {org.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <div className="form-row">
+      <fieldset className="course-run-source-fields" disabled={linked}>
         <Field
-          id="run-zone"
-          label={t("timezone")}
-          error={Boolean(errors.time_zone)}
+          id="run-template"
+          label={t("template")}
+          error={Boolean(errors.template_id)}
         >
-          <input id="run-zone" {...register("time_zone")} />
-        </Field>
-        <Field id="run-delivery" label={t("delivery")}>
-          <select id="run-delivery" {...register("delivery_type")}>
-            <option value="online">{t("online")}</option>
-            <option value="onsite">{t("onsite")}</option>
+          <select id="run-template" {...register("template_id")}>
+            {!original && <option value="">{t("newCourseContent")}</option>}
+            {templates
+              .filter(
+                (template) =>
+                  !template.archived_at || template.id === original?.template_id,
+              )
+              .map((template) => (
+                <option value={template.id} key={template.id}>
+                  {template.title}
+                </option>
+              ))}
           </select>
         </Field>
-      </div>
+        {needsContent &&
+          (topics.isPending ? (
+            <Loading />
+          ) : topics.isError ? (
+            <ErrorState retry={() => void topics.refetch()} />
+          ) : (
+            <CourseContentFields
+              register={content.register}
+              errors={content.formState.errors}
+              topics={topics.data}
+              selectedTopicIds={topicIds}
+            />
+          ))}
+        {selectedBlock && !linked && (
+          <fieldset className="operations-schedule-planner">
+            <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
+            <p>
+              {t("scheduleHelp", {
+                days: selectedBlock.duration_days,
+                hours: selectedBlock.duration_hours,
+              })}
+            </p>
+            <Field id="planning-start-date" label={t("firstDate")}>
+              <input
+                id="planning-start-date"
+                type="date"
+                value={planningDate}
+                onChange={(event) => setPlanningDate(event.target.value)}
+              />
+            </Field>
+            <div className="form-row">
+              <Field id="planning-start-time" label={t("dailyStart")}>
+                <input
+                  id="planning-start-time"
+                  type="time"
+                  value={planningStart}
+                  onChange={(event) => setPlanningStart(event.target.value)}
+                />
+              </Field>
+              <Field id="planning-end-time" label={t("dailyEnd")}>
+                <input
+                  id="planning-end-time"
+                  type="time"
+                  value={planningEnd}
+                  onChange={(event) => setPlanningEnd(event.target.value)}
+                />
+              </Field>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                try {
+                  replace(
+                    weekdaySessions(
+                      planningDate,
+                      planningStart,
+                      planningEnd,
+                      selectedBlock.duration_days,
+                    ),
+                  );
+                  setPlanningError(false);
+                } catch {
+                  setPlanningError(true);
+                }
+              }}
+            >
+              {t("generateSchedule", { count: selectedBlock.duration_days })}
+            </Button>
+            {planningError && (
+              <Notice kind="error">{t("scheduleInvalid")}</Notice>
+            )}
+          </fieldset>
+        )}
+        <Field id="run-org" label={t("organisation")}>
+          <select id="run-org" {...register("organisation_id")}>
+            <option value="">{t("none")}</option>
+            {organisations.map((org) => (
+              <option value={org.id} key={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="form-row">
+          <Field
+            id="run-zone"
+            label={t("timezone")}
+            error={Boolean(errors.time_zone)}
+          >
+            <input id="run-zone" {...register("time_zone")} />
+          </Field>
+          <Field id="run-delivery" label={t("delivery")}>
+            <select id="run-delivery" {...register("delivery_type")}>
+              <option value="online">{t("online")}</option>
+              <option value="onsite">{t("onsite")}</option>
+            </select>
+          </Field>
+        </div>
+      </fieldset>
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
         <input id="run-venue" {...register("venue")} />
       </Field>
@@ -604,6 +619,7 @@ function RunForm({
               <input
                 id={`run-start-${index}`}
                 type="datetime-local"
+                readOnly={linked}
                 {...register(`sessions.${index}.starts_at`)}
               />
             </Field>
@@ -615,6 +631,7 @@ function RunForm({
               <input
                 id={`run-end-${index}`}
                 type="datetime-local"
+                readOnly={linked}
                 {...register(`sessions.${index}.ends_at`)}
               />
             </Field>
@@ -623,7 +640,7 @@ function RunForm({
               size="icon"
               variant="ghost"
               aria-label={`${t("remove")} ${index + 1}`}
-              disabled={fields.length < 2}
+              disabled={linked || fields.length < 2}
               onClick={() => remove(index)}
             >
               <Trash2 size={18} />
@@ -633,23 +650,24 @@ function RunForm({
         <Button
           type="button"
           variant="secondary"
-          disabled={fields.length >= 60}
+          disabled={linked || fields.length >= 60}
           onClick={() => append({ starts_at: "", ends_at: "" })}
         >
           {t("addSession")}
         </Button>
       </fieldset>
       {original && (
-        <>
+        <fieldset className="course-run-visibility">
+          <legend>{t("runVisibility")}</legend>
           <label className="checkbox-label">
             <input type="checkbox" {...register("published")} />
-            {t("published")}
+            {t("showInCourseCatalogue")}
           </label>
           <label className="checkbox-label">
-            <input type="checkbox" {...register("archived")} />
+            <input type="checkbox" disabled={hasActiveJob} {...register("archived")} />
             {t("archive")}
           </label>
-        </>
+        </fieldset>
       )}
       <div className="form-actions">
         {needsContent && (
@@ -694,7 +712,7 @@ function RunForm({
             timeError
               ? "timeInvalid"
               : save.error.message === "course_locked"
-                ? "locked"
+                ? "linkedRunConflict"
                 : "error",
           )}
         </Notice>
@@ -1048,6 +1066,7 @@ export function CoursesPage() {
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {
             const template = findTemplate(run);
+            const hasActiveJob = run.jobs?.some(({ status }) => status === "published" || status === "filled");
             return (
               <article className="panel operations-course" key={run.id}>
                 <div className="section-heading">
@@ -1056,9 +1075,11 @@ export function CoursesPage() {
                     {t(
                       run.archived_at
                         ? "archive"
-                        : run.published
-                          ? "published"
-                          : "draft",
+                        : hasActiveJob
+                          ? "activeRunOrder"
+                          : run.published
+                            ? "published"
+                            : "draft",
                     )}
                   </span>
                 </div>
@@ -1124,7 +1145,9 @@ export function CoursesPage() {
                         })
                       }
                     >
-                      {t(run.published ? "unpublish" : "publish")}
+                      {t(
+                        run.published ? "hideFromCourseCatalogue" : "showInCourseCatalogue",
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1154,6 +1177,12 @@ export function CoursesPage() {
                       <Copy size={15} />
                       {t("duplicate")}
                     </Button>
+                    <PermanentDeleteAction
+                      kind="course_run"
+                      id={run.id}
+                      label={template?.title ?? t("courses")}
+                      linkedJobs={run.jobs}
+                    />
                   </div>
                 )}
               </article>
@@ -1402,6 +1431,7 @@ export function CoursesPage() {
                 kind="course_run"
                 id={detail.id}
                 label={findTemplate(detail)?.title ?? t("courses")}
+                linkedJobs={detail.jobs}
               />
             </div>
             <BuildingBlockReference

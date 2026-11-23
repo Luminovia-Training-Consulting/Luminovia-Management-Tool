@@ -6,6 +6,12 @@ Company and staff class directories now show scoped star ratings and comments an
 
 Native PostgreSQL and isolated PostgREST verified the company move, access by the new company, HTTP 403 for foreign detail, workspace and class feedback calls, and successful notes for the owning company. Course evaluation regressions passed for all three editions. Chromium with a fictional API fixture verified the editor and comments at 390 and 1280 px. The gap after company import was 16 px on mobile and 24 px on desktop, with 12 px between the template actions. The full frontend suite passed 1,605 tests before integration of the concurrent parallel-offer update. The canonical signed-in browser run could not start while another isolated checkout held its QA lock.
 
+# 23 November 2026 — Linked course runs and deletion access
+
+Course runs with published or filled assignments show an active assignment independently of their catalogue visibility. Linked runs allow venue and visibility edits through the existing save operation. Exact source intervals, session IDs, template and linked offer details are kept intact. The form shows the linked assignments for schedule changes and groups the visibility controls separately.
+
+The run card exposes permanent deletion to authorised administrators and internal course managers. The existing preview and confirmation still check protected dependencies. For a blocked run, the dialog links to the known assignments so staff can inspect them directly. An override for protected records is outside this change.
+
 # 23 November 2026 — Multiple offers from one course run
 
 The course-backed offer editor labels its schedule, separates the planning link from the dates and lecturer positions, and lets management explicitly start another offer after a successful save. Additional terms may be omitted; empty terms remain editable and valid in a later amendment. Each new offer has its own request identity and retains the exact reviewed source sessions. Parallel cohorts with independent schedules and enrolment use separate course runs from the same template.

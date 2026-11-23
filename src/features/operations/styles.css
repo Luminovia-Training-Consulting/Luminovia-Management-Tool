@@ -338,3 +338,20 @@
 .company-premium-control > .form-actions {
   margin-block-start: 0;
 }
+
+.course-run-source-fields {
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.course-run-visibility {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}

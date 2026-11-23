@@ -459,7 +459,7 @@ describe("course form failure and confirmation boundaries", () => {
   it.each([
     [
       "course_locked",
-      "Diese Inhalte sind mit bestehenden Aufträgen verbunden und geschützt.",
+      "Diese Änderung betrifft einen verknüpften Auftrag.",
     ],
     [
       "courses.manage permission required",
@@ -645,6 +645,31 @@ describe("course form failure and confirmation boundaries", () => {
     expect(
       screen.queryByText("Gespeichert.", { exact: true }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows an active order on an unpublished run and saves the run venue without changing its source sessions", async () => {
+    const job = { id: "fictional-job", title: "Fictional active order", status: "published" };
+    renderCourses({ runs: [{ ...run, jobs: [job] }] });
+    expect(await screen.findByText("Aktiver Auftrag")).toBeVisible();
+    expect(screen.queryByText("Entwurf", { exact: true })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
+    expect(dialog.getByRole("link", { name: job.title })).toHaveAttribute("href", "/jobs/fictional-job");
+    expect(dialog.getByLabelText("Beginn 1")).toHaveAttribute("readonly");
+    fireEvent.change(dialog.getByLabelText("Ort / Zugangslink"), {
+      target: { value: "Updated course venue" },
+    });
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    await screen.findByText("Gespeichert.", { exact: true });
+    expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+      p_id: run.id,
+      p_payload: expect.objectContaining({
+        venue: "Updated course venue",
+        template_id: run.template_id,
+        published: false,
+        sessions: [expect.objectContaining({ starts_at: run.course_sessions[0].starts_at })],
+      }),
+    });
   });
 
   it("preserves exact pre-existing session instants when only the venue is edited", async () => {
