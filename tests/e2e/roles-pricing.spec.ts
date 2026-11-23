@@ -121,7 +121,7 @@ test("management assigns only subordinate roles while only administration sees a
         );
         const reduced = await checked(managerApi.rpc("commission_access"));
         expect(reduced.can_manage_gross).toBe(false);
-        expect(reduced.can_manage_client_memberships).toBe(false);
+        expect(reduced.can_manage_client_memberships).toBe(true);
         expect("regular_lecturer_percent" in reduced).toBe(false);
         expect("senior_lecturer_percent" in reduced).toBe(false);
         expect("policy_version" in reduced).toBe(false);

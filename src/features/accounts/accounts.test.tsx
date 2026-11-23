@@ -25,6 +25,7 @@ const fake = vi.hoisted(() => ({
   adminCatalog: false,
   capabilities: [] as string[],
   companyAccess: false,
+  directoryFilter: vi.fn(),
   invoke: vi.fn(),
   rpc: vi.fn(),
 }));
@@ -44,7 +45,10 @@ vi.mock("../../lib/supabase", () => ({
       const query = {
         select: () => query,
         is: () => query,
-        eq: () => query,
+        eq: (field: string, value: string) => {
+          fake.directoryFilter(table, field, value);
+          return query;
+        },
         order: () => query,
         then: (resolve: (result: unknown) => unknown) =>
           Promise.resolve({
@@ -82,6 +86,7 @@ beforeEach(() => {
   fake.adminCatalog = false;
   fake.capabilities = [];
   fake.companyAccess = false;
+  fake.directoryFilter.mockClear();
   fake.invoke.mockReset();
   fake.rpc.mockReset();
   fake.rpc.mockImplementation(async (name: string) => ({
@@ -150,6 +155,54 @@ afterEach(async () => {
   });
 });
 describe("Account administration", () => {
+  it("opens profile and expertise for the selected account and preserves profile drafts across views", async () => {
+    fake.capabilities = ["users.manage", "qualifications.verify"];
+    const previous = fake.rpc.getMockImplementation()!;
+    fake.rpc.mockImplementation(async (name: string) =>
+      name === "managed_profile"
+        ? {
+            data: {
+              display_name: "Anna",
+              locale: "de",
+              time_zone: "Europe/Berlin",
+            },
+            error: null,
+          }
+        : previous(name),
+    );
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "Anna" }));
+    const details = within(
+      screen.getByRole("dialog", { name: "Kontodetails" }),
+    );
+    const name = await details.findByLabelText("Anzeigename");
+    await userEvent.type(name, " QA");
+    expect(fake.directoryFilter).not.toHaveBeenCalledWith(
+      "profiles",
+      "id",
+      "teacher-id",
+    );
+    await userEvent.click(
+      details.getByRole("button", { name: "Person & Expertise" }),
+    );
+    expect(
+      details.getByRole("button", { name: "Person & Expertise" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => {
+      expect(fake.directoryFilter).toHaveBeenCalledWith(
+        "profiles",
+        "id",
+        "teacher-id",
+      );
+      expect(fake.directoryFilter).toHaveBeenCalledWith(
+        "lecturer_topics",
+        "user_id",
+        "teacher-id",
+      );
+    });
+    await userEvent.click(details.getByRole("button", { name: "Profil" }));
+    expect(details.getByLabelText("Anzeigename")).toHaveValue("Anna QA");
+  });
   it("does not request the private account directory before administrative permission is available", async () => {
     page();
     await screen.findByText(
@@ -360,11 +413,13 @@ describe("Account administration", () => {
       return result;
     });
     page();
+    await userEvent.click(await screen.findByRole("button", { name: "Anna" }));
     expect(
       await screen.findByRole("link", {
         name: "Mein Profil und meine Expertise",
       }),
     ).toHaveAttribute("href", "/profile");
+    await userEvent.keyboard("{Escape}");
     expect(
       screen.getByRole("link", { name: "Meine Verträge" }),
     ).toHaveAttribute("href", "/contracts");

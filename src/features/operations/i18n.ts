@@ -375,6 +375,10 @@ const pairs: Record<string, [string, string]> = {
     "Die Referenz identifiziert die Originalbeschreibung. Die PDF-Dateien werden nicht öffentlich bereitgestellt.",
     "The reference identifies the original description. Original PDFs are not publicly hosted.",
   ],
+  jobSourceDownloadHelp: [
+    "Original-PDFs lassen sich hier herunterladen, sobald sie als geprüfte Auftragsdatei vorliegen.",
+    "Download an original PDF here once it has been attached to the job and scanned.",
+  ],
   sourceRevision: ["Dokumentstand", "Document revision"],
   sourceCreated: ["Erstellt", "Created"],
   primarySource: ["Katalogquelle", "Catalogue source"],

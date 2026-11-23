@@ -102,14 +102,14 @@ export const guideModules: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne die Einladung und richte dein Passwort ein. Melde dich anschließend mit deiner E-Mail-Adresse oder deinem Benutzernamen und deinem Passwort an.",
+        "Öffne die Einladung und richte dein Passwort ein. Melde dich anschließend mit deiner E-Mail-Adresse und deinem Passwort an.",
         "Falls dein Konto eine zusätzliche Sicherheitsprüfung verlangt, bestätige sie mit der eingerichteten Methode.",
-        "Öffne bei einem vergessenen Passwort die Wiederherstellung auf der Anmeldeseite. Gib deine E-Mail-Adresse oder deinen Benutzernamen ein und öffne den neuesten Link im Postfach des Kontos.",
+        "Öffne bei einem vergessenen Passwort die Wiederherstellung auf der Anmeldeseite. Gib deine E-Mail-Adresse ein und öffne den neuesten Link im Postfach des Kontos.",
       ],
       en: [
-        "Open the invitation and set your password. Then sign in with your email address or username and your password.",
+        "Open the invitation and set your password. Then sign in with your email address and your password.",
         "If your account requires an additional security check, confirm it using the method already set up.",
-        "If you forget your password, open recovery on the sign-in page. Enter your email address or username, then open the latest link in the account's mailbox.",
+        "If you forget your password, open recovery on the sign-in page. Enter your email address, then open the latest link in the account's mailbox.",
       ],
     },
     problem: {

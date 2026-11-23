@@ -48,7 +48,7 @@ async function actor() {
 
 async function login(page: Page, email: string) {
     await page.goto("/login");
-    await page.getByLabel("Benutzername oder E-Mail", {exact: true}).fill(email);
+    await page.getByLabel("E-Mail", {exact: true}).fill(email);
     await page
         .getByLabel("Passwort", {exact: true})
         .fill(process.env.E2E_PASSWORD!);

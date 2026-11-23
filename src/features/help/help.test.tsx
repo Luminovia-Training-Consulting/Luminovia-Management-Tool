@@ -179,7 +179,7 @@ describe("public bilingual help", () => {
       screen.getByRole("heading", { name: "Anmeldung & Sicherheit", level: 2 }),
     ).toHaveFocus();
   });
-  it("documents internal Premium activation and both sign-in identifiers", async () => {
+  it("documents internal Premium activation and email sign-in", async () => {
     const router = page("/help?topic=premium-lms");
     expect(
       screen.getByText(
@@ -188,7 +188,7 @@ describe("public bilingual help", () => {
     ).toBeVisible();
     await act(async () => router.navigate("/help?topic=security"));
     expect(
-      screen.getByText(/E-Mail-Adresse oder deinem Benutzernamen/),
+      screen.getByText(/mit deiner E-Mail-Adresse und deinem Passwort/),
     ).toBeVisible();
     expect(screen.getByText(/Postfach des Kontos/)).toBeVisible();
   });

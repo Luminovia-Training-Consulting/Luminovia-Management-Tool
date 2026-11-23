@@ -15,11 +15,6 @@ Deno.serve(createHumanLoginHandler({
     if (result.error) throw new Error("rate_unavailable");
     return result.data === true;
   },
-  resolveUsername: async (username) => {
-    const result = await service.rpc("login_email_for_alias", { p_username: username });
-    if (result.error) throw new Error("alias_unavailable");
-    return typeof result.data === "string" ? result.data : null;
-  },
   signIn: async (email, password) => {
     const client = createClient(url, anon, {
       auth: { persistSession: false, autoRefreshToken: false },

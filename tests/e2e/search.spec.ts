@@ -266,7 +266,15 @@ test("real portal search combines authorized sources, excludes foreign private r
     await expect(
         results.locator(`a[href="/chats/forum?thread=${thread}"]`),
     ).toBeVisible();
-    await expect(results.locator(`a[href="/chats?room=${room}"]`)).toBeVisible();
+    const message = data.items.find(
+        (item: {kind: string; title: string}) => item.kind === "chats" && item.title === visibleMessage,
+    );
+    expect(message?.id).toEqual(expect.any(String));
+    const messageLink = results.getByRole("link").filter({hasText: visibleMessage});
+    await expect(messageLink).toHaveAttribute(
+        "href",
+        `/chats?room=${room}&message=${message.id}`,
+    );
     await expect(results.locator(`a[href="/people/${peer.id}"]`)).toBeVisible();
 
     const draft = `${marker} unsubmitted text`;
@@ -311,7 +319,7 @@ test("real portal search combines authorized sources, excludes foreign private r
         page.getByRole("heading", {name: wikiTitle, exact: true}),
     ).toBeVisible();
     await page.goto(`/search?q=${encodeURIComponent(marker)}`);
-    await results.locator(`a[href="/chats?room=${room}"]`).click();
+    await messageLink.click();
     await expect(
         page.locator(".chat-message-body").filter({hasText: visibleMessage}),
     ).toBeVisible();

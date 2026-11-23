@@ -111,19 +111,14 @@ test("individual account roles, scoped invitations and linked status management 
         "participant",
         "senior_lecturer",
     ]);
-    await teacherRow
-        .getByRole("link", {
-            name: "Expertise und Qualifikationen verwalten",
-            exact: true,
-        })
-        .click();
-    await expect(page).toHaveURL(
-        new RegExp(`/admin/people\\?user=${teacher.id}`),
-    );
-    await expect(
-        page.getByRole("heading", {name: teacher.name, exact: true}),
-    ).toBeVisible();
-    await page.goto("/admin/accounts");
+    await teacherRow.getByRole("button", {name: teacher.name, exact: true}).click();
+    const details = page.getByRole("dialog", {name: "Kontodetails", exact: true});
+    await expect(details.getByLabel("Anzeigename", {exact: true})).toHaveValue(teacher.name);
+    await details.getByRole("button", {name: "Person & Expertise", exact: true}).click();
+    await expect(details.getByRole("heading", {name: teacher.name, exact: true})).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/accounts$/);
+    await page.keyboard.press("Escape");
+    await expect(details).toBeHidden();
     await page
         .getByLabel("Kontorolle", {exact: true})
         .selectOption("senior_lecturer");

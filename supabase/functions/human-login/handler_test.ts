@@ -6,7 +6,6 @@ const session = {access_token: "access", refresh_token: "refresh", expires_in: 3
 function deps(overrides: Partial<LoginDependencies> = {}): LoginDependencies {
   return {
     reserve: async () => true,
-    resolveUsername: async (name) => name === "course.lead" ? "lead@example.invalid" : null,
     signIn: async (email, password) => email === "lead@example.invalid" && password === "Valid42!" ? session : null,
     active: async () => true,
     ...overrides,
@@ -18,9 +17,9 @@ function post(identifier: string, password: string, origin?: string) {
   }, body: JSON.stringify({identifier, password})});
 }
 
-Deno.test("email and username produce the same Auth session without identity disclosure", async () => {
+Deno.test("email produces an Auth session without identity disclosure", async () => {
   const handler = createHumanLoginHandler(deps(), ["https://portal.example.invalid"]);
-  for (const identifier of ["lead@example.invalid", "course.lead"]) {
+  for (const identifier of ["lead@example.invalid", " LEAD@EXAMPLE.INVALID "]) {
     const response = await handler(post(identifier, "Valid42!", "https://portal.example.invalid"));
     assertEquals(response.status, 200);
     assertEquals(response.headers.get("Access-Control-Allow-Origin"), "https://portal.example.invalid");
@@ -32,17 +31,17 @@ Deno.test("unknown, wrong password and disabled account share the failure", asyn
   const handler = createHumanLoginHandler(deps(), []);
   const disabled = createHumanLoginHandler(deps({active: async () => false}), []);
   const outcomes = await Promise.all([
-    handler(post("unknown", "Valid42!")),
-    handler(post("course.lead", "Wrong42!")),
-    disabled(post("course.lead", "Valid42!")),
+    handler(post("unknown@example.invalid", "Valid42!")),
+    handler(post("lead@example.invalid", "Wrong42!")),
+    disabled(post("lead@example.invalid", "Valid42!")),
   ]);
   for (const response of outcomes) {
     assertEquals(response.status, 401);
     assertEquals(await response.json(), {error: "invalid_credentials"});
   }
 });
-Deno.test("an unresolved alias never receives credentials even if the fallback Auth call succeeds", async () => {
-  const handler = createHumanLoginHandler(deps({signIn: async () => session}), []);
+Deno.test("a username is rejected even if Auth would return a session", async () => {
+  const handler = createHumanLoginHandler(deps({signIn: async () => {throw new Error("username reached Auth");}}), []);
   const response = await handler(post("missing.alias", "Valid42!"));
   assertEquals(response.status, 401);
   assertEquals(await response.json(), {error: "invalid_credentials"});
@@ -50,8 +49,8 @@ Deno.test("an unresolved alias never receives credentials even if the fallback A
 Deno.test("rate cap, disallowed origin and malformed payload do not issue sessions", async () => {
   let calls = 0;
   const handler = createHumanLoginHandler(deps({reserve: async () => false, signIn: async () => {calls++; return session;}}), ["https://portal.example.invalid"]);
-  assertEquals((await handler(post("course.lead", "Valid42!"))).status, 429);
-  assertEquals((await handler(post("course.lead", "Valid42!", "https://evil.example.invalid"))).status, 403);
+  assertEquals((await handler(post("lead@example.invalid", "Valid42!"))).status, 429);
+  assertEquals((await handler(post("lead@example.invalid", "Valid42!", "https://evil.example.invalid"))).status, 403);
   assertEquals((await handler(new Request("https://example.invalid/human-login", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{"}))).status, 400);
   assertEquals(calls, 0);
 });

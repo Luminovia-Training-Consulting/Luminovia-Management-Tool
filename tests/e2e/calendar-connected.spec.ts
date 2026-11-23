@@ -158,12 +158,12 @@ test("calendar secret links and explicit minimal offline schedule survive reload
             ),
         ).toBe(true);
         const panelSummaries = tools.locator(".calendar-tools-content > details > summary");
-        await expect(panelSummaries).toHaveCount(4);
+        await expect(panelSummaries).toHaveCount(5);
         for (const summary of await panelSummaries.all()) {
             await summary.press("Enter");
             await expect(summary).toBeFocused();
         }
-        await expect(tools.locator(".calendar-tools-content > details[open]")).toHaveCount(4);
+        await expect(tools.locator(".calendar-tools-content > details[open]")).toHaveCount(5);
         for (const language of ["en", "de"]) {
             await page.getByLabel(/^(Sprache|Language)$/).selectOption(language);
             const subscriptionButton = page.getByRole("button", {
@@ -193,7 +193,7 @@ test("calendar secret links and explicit minimal offline schedule survive reload
                         const {x, right, y, bottom} = element.getBoundingClientRect();
                         return {x, right, y, bottom};
                     }));
-                    expect(boxes).toHaveLength(6);
+                    expect(boxes).toHaveLength(7);
                     const [group, ...panels] = boxes;
                     const calendar = panels.pop();
                     expect(group!.bottom).toBeLessThanOrEqual(calendar!.y + 1);

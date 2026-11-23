@@ -95,7 +95,7 @@ export async function actor(name: string, role: string) {
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
 export async function login(page: Page, email: string, landing = /\/$/) {
     await page.goto("/login");
-    await page.getByLabel(/^(Benutzername oder E-Mail|Username or email)$/, {exact: true}).fill(email);
+    await page.getByLabel(/^(E-Mail|Email)$/, {exact: true}).fill(email);
     await page
         .getByLabel(/^(Passwort|Password)$/, {exact: true})
         .fill(process.env.E2E_PASSWORD!);

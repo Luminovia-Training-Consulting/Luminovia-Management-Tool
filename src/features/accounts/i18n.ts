@@ -33,7 +33,10 @@ const de = {
     "Die Einladung wurde versandt und der Zugang mit der gewählten Rolle angelegt.",
   alreadyInvited:
     "Die Einladung wurde bereits versandt. Es wurde keine weitere E-Mail gesendet.",
-  manageProfile: "Expertise und Qualifikationen verwalten",
+  accountDetails: "Kontodetails",
+  profileTab: "Profil",
+  expertiseTab: "Person & Expertise",
+  viewProfile: "Profil ansehen",
   manageContracts: "Verträge verwalten",
   manageCompany: "Unternehmen verwalten",
   participantProfileShared:
@@ -141,7 +144,10 @@ const en: typeof de = {
     "The invitation was sent and access was created with the selected role.",
   alreadyInvited:
     "The invitation was already sent. No additional email was sent.",
-  manageProfile: "Manage expertise and qualifications",
+  accountDetails: "Account details",
+  profileTab: "Profile",
+  expertiseTab: "Person & expertise",
+  viewProfile: "View profile",
   manageContracts: "Manage contracts",
   manageCompany: "Manage companies",
   participantProfileShared:

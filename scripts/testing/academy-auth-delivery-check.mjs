@@ -181,7 +181,7 @@ await checked(
 );
 const login = (identifier, password) =>
   post("/functions/v1/human-login", { identifier, password });
-for (const identifier of [email, alias.toUpperCase()]) {
+for (const identifier of [email, email.toUpperCase()]) {
   const response = await login(identifier, selectedPassword);
   assert.equal(response.status, 200);
   const session = await response.json();
@@ -191,6 +191,8 @@ for (const identifier of [email, alias.toUpperCase()]) {
   );
   assert.equal(actor.user.id, account.user_id);
 }
+
+assert.equal((await login(alias, selectedPassword)).status, 401);
 
 const verifier = randomBytes(42).toString("base64url");
 const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -246,10 +248,10 @@ await checked(
   recovered.auth.updateUser({ password: replacementPassword }),
   "Complete recovery by setting the replacement password.",
 );
-const old = await login(alias, selectedPassword);
+const old = await login(email, selectedPassword);
 assert.equal(old.status, 401, "The old password is rejected.");
 await old.body?.cancel();
-const next = await login(alias, replacementPassword);
+const next = await login(email, replacementPassword);
 assert.equal(next.status, 200, "The replacement password signs in.");
 await next.body?.cancel();
 
@@ -261,7 +263,7 @@ console.log(
       "idempotent_delivery",
       "invite_callback",
       "first_password",
-      "email_and_username_login",
+      "email_login_and_username_rejection",
       "username_recovery",
       "recovery_callback",
       "one_time_pkce",

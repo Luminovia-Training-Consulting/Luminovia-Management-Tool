@@ -232,7 +232,7 @@ test("authored staff profiles connect real course history, company reviews and a
         });
         await editDialog
             .getByLabel("Zeitzone", {exact: true})
-            .fill("Australia/Brisbane");
+            .selectOption("Australia/Brisbane");
         await editDialog
             .getByRole("button", {name: "Speichern", exact: true})
             .click();

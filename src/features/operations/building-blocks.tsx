@@ -2,15 +2,17 @@
  * Readable course provenance and template-based course planning entry points. Display source
  * hashes/references without publishing original teaching PDFs.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FileCheck2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
+import { useOnline } from "../../lib/online";
+import { saveDownload } from "../files/api";
 import { Button } from "../../components/ui/button";
-import { ErrorState, Loading } from "../../components/common";
+import { ErrorState, Loading, Notice } from "../../components/common";
 import {
   type BuildingBlock,
   type BuildingBlockSource,
@@ -25,10 +27,12 @@ export function BuildingBlockReference({
   buildingBlockId,
   sourceId,
   templateId,
+  jobId,
 }: {
   buildingBlockId?: string | null;
   sourceId?: string | null;
   templateId?: string;
+  jobId?: string;
 }) {
   const { session } = useAuth();
   const reference = useQuery({
@@ -66,7 +70,11 @@ export function BuildingBlockReference({
   if (blocks.isError) return <ErrorState retry={() => void blocks.refetch()} />;
   const block = blocks.data.find((row) => row.id === selectedBlockId);
   return block ? (
-    <BuildingBlockSources block={block} sourceId={selectedSourceId} />
+    <BuildingBlockSources
+      block={block}
+      sourceId={selectedSourceId}
+      jobId={jobId}
+    />
   ) : null;
 }
 
@@ -81,6 +89,7 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
     <BuildingBlockReference
       buildingBlockId={reference.data.building_block_id}
       sourceId={reference.data.source_id}
+      jobId={jobId}
     />
   ) : null;
 }
@@ -89,9 +98,11 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
 export function BuildingBlockSources({
   block,
   sourceId,
+  jobId,
 }: {
   block: BuildingBlock;
   sourceId?: string | null;
+  jobId?: string;
 }) {
   const { t, i18n } = useTranslation("operations");
   const date = (value: string) =>
@@ -120,11 +131,17 @@ export function BuildingBlockSources({
           hours: block.duration_hours,
         })}
       </p>
-      <p className="muted">{t("sourcePrivacy")}</p>
+      <p className="muted">
+        {t(jobId ? "jobSourceDownloadHelp" : "sourcePrivacy")}
+      </p>
       <ul className="building-block-sources">
         {sources.map((source: BuildingBlockSource) => (
           <li key={source.id}>
-            <strong>{source.file_name}</strong>
+            {jobId ? (
+              <JobSourceDownload jobId={jobId} source={source} />
+            ) : (
+              <strong>{source.file_name}</strong>
+            )}
             <span className="badge">
               {t(
                 source.id === sourceId
@@ -161,5 +178,66 @@ export function CourseRunOfferLink({ runId }: { runId: string }) {
     <Button asChild variant="secondary">
       <Link to={`/admin?courseRun=${runId}`}>{t("createRunOffer")}</Link>
     </Button>
+  );
+}
+
+/** A reference can download only its exact, scanned PDF attached to this job. */
+function JobSourceDownload({
+  jobId,
+  source,
+}: {
+  jobId: string;
+  source: BuildingBlockSource;
+}) {
+  const { session } = useAuth();
+  const { t } = useTranslation("files");
+  const online = useOnline();
+  const attachment = useQuery({
+    queryKey: [
+      "documents",
+      session?.user.id,
+      "job-source",
+      jobId,
+      source.sha256,
+    ],
+    enabled: Boolean(session) && online,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("document_versions")
+        .select(
+          "id,document_id,documents!document_versions_document_id_fkey!inner(job_id,deleted_at)",
+        )
+        .eq("documents.job_id", jobId)
+        .is("documents.deleted_at", null)
+        .eq("status", "clean")
+        .eq("mime_type", "application/pdf")
+        .eq("sha256", source.sha256)
+        .order("id")
+        .limit(1)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; document_id: string } | null;
+    },
+  });
+  const download = useMutation({
+    mutationFn: (file: { id: string; document_id: string }) =>
+      saveDownload(file.document_id, source.file_name, file.id),
+  });
+
+  if (!attachment.data || attachment.isError)
+    return <strong>{source.file_name}</strong>;
+  return (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!online || download.isPending}
+        onClick={() => attachment.data && download.mutate(attachment.data)}
+      >
+        {source.file_name}
+      </Button>
+      {download.isError && <Notice kind="error">{t("error")}</Notice>}
+    </>
   );
 }

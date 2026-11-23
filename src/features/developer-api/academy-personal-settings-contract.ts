@@ -60,7 +60,7 @@ function operation(
 
 const usernameSave = operation(
   "saveOwnAcademyUsername",
-  "Set or clear your academy login username",
+  "Set or clear your academy username",
   "Use the current username version. Submit null to clear the alias. The server trims and lowercases the value. The normalized name must be 3–32 characters, start with a letter and end with a letter or digit. Letters, digits, periods, underscores and hyphens are accepted. Reserved names are refused. The same native Auth account continues to accept its email and password.",
   academyUsernameRequestSchema,
   academyUsernameSchema,
@@ -69,7 +69,7 @@ const usernameSave = operation(
 export const academyPersonalSettingsPaths = {
   "/rest/v1/rpc/academy_personal_settings": operation(
     "readOwnAcademyPersonalSettings",
-    "Read your academy login username and appearance",
+    "Read your academy username and appearance",
     "Requires a confirmed eligible academy account and the current operator-enabled academy profile. Licence grace permits this read. An unset alias is null with version zero for a new account. Appearance includes the current profile locale and the saved theme.",
     noArguments,
     academyPersonalSettingsSchema,

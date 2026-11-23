@@ -14,7 +14,7 @@ test("theme changes keep action labels readable in the first computed frame", as
     });
     await page.goto("/login");
     await expect(
-        page.getByRole("textbox", {name: "Benutzername oder E-Mail", exact: true}),
+        page.getByRole("textbox", {name: "E-Mail", exact: true}),
     ).toBeVisible();
     const samples = await sampleThemeContrast(page);
     for (const sample of samples)

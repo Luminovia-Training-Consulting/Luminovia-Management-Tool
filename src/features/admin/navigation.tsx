@@ -33,12 +33,12 @@ export function AdminNavigation() {
               : "Courses & assignments"}
           </NavLink>
         )}
-        {permissions.data?.includes("users.manage") &&
-          permissions.data.includes("qualifications.verify") && (
-            <NavLink to="/admin/people">{t("people")}</NavLink>
-          )}
         {permissions.data?.includes("users.manage") && (
-          <NavLink to="/admin/accounts">{t("accounts")}</NavLink>
+          <NavLink to="/admin/accounts">
+            {i18n.language.startsWith("de")
+              ? "Konten & Expertise"
+              : "Accounts & expertise"}
+          </NavLink>
         )}
         {permissions.data?.includes("organisations.manage") && (
           <NavLink to="/admin/clients">{t("companies")}</NavLink>

@@ -104,26 +104,7 @@ for (const role of actors) {
         "landing" in role ? new RegExp(`${role.landing}$`) : /\/$/;
       const restricted =
         role.primary === "participant" || role.primary === "guest";
-      let identifier = profile.email;
-      if (isMobile) {
-        const ownApi = api(process.env.SUPABASE_ANON_KEY!);
-        const account = await checked(
-          ownApi.auth.signInWithPassword({
-            email: profile.email,
-            password: process.env.E2E_PASSWORD!,
-          }),
-          { requireData: true },
-        );
-        expect(account.user?.id).toBe(profile.id);
-        identifier = `qa-${profile.id.slice(0, 16)}`;
-        await checked(
-          ownApi.rpc("save_account_username", {
-            p_username: identifier,
-            p_expected_version: 0,
-          }),
-        );
-      }
-      await login(page, identifier, restricted ? destination : /\/$/);
+      await login(page, profile.email, restricted ? destination : /\/$/);
       await expect(page.locator("html")).toHaveAttribute("lang", language);
       const viewport = page.viewportSize()!;
       for (const width of [320, 390, 768, 1024, 1440, 1920]) {
@@ -188,7 +169,15 @@ for (const role of actors) {
       const claim = page.getByRole("button", { name: claimAssignment });
 
       await page.goto(`/jobs/${job}`);
-      if ("landing" in role) {
+      if (role.primary === "client") {
+        await expect(
+          page.getByText(
+            /^(Dieser Auftrag ist derzeit nicht verfügbar\.|This job is currently unavailable\.)$/,
+          ),
+        ).toBeVisible();
+        await expect(page.getByRole("heading", { name: title })).toHaveCount(0);
+        await expect(sidebarLink("/jobs")).toHaveCount(0);
+      } else if ("landing" in role) {
         await expect(page).toHaveURL(destination);
         await expect(sidebarLink("/jobs")).toHaveCount(0);
       } else {

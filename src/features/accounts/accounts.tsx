@@ -12,6 +12,7 @@ import { CreateAccountForm } from "./create-account";
 import { ParticipantPlacementFields } from "../operations/participant-placement-fields";
 import { emptyParticipantPlacement } from "../operations/company-participant-schema";
 import { LecturerCompensation } from "../commercial/lecturer-compensation";
+import { PeopleDirectory } from "../admin/people";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
 import { db } from "../../lib/supabase";
@@ -46,6 +47,83 @@ const ownEditableRoles: readonly AccountRole[] = [
   "client",
 ];
 
+/** Keep the profile editor and expertise review within the selected account. */
+function AccountProfileDialog({
+  person,
+  actorId,
+  canVerify,
+  close,
+}: {
+  person: AccountPerson;
+  actorId: string;
+  canVerify: boolean;
+  close: () => void;
+}) {
+  const { t } = useTranslation("accounts");
+  const [view, setView] = useState<"profile" | "expertise">("profile");
+  const [openedExpertise, setOpenedExpertise] = useState(false);
+  const own = person.id === actorId;
+  const showExpertise = canVerify && view === "expertise";
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+      title={t("accountDetails")}
+      description={
+        person.display_name
+          ? `${person.display_name} · ${person.email}`
+          : person.email
+      }
+    >
+      {canVerify && (
+        <div
+          className="page-actions"
+          role="group"
+          aria-label={t("accountDetails")}
+        >
+          <Button
+            type="button"
+            variant={showExpertise ? "secondary" : "default"}
+            aria-pressed={!showExpertise}
+            onClick={() => setView("profile")}
+          >
+            {t("profileTab")}
+          </Button>
+          <Button
+            type="button"
+            variant={showExpertise ? "default" : "secondary"}
+            aria-pressed={showExpertise}
+            onClick={() => {
+              setOpenedExpertise(true);
+              setView("expertise");
+            }}
+          >
+            {t("expertiseTab")}
+          </Button>
+        </div>
+      )}
+      <div hidden={showExpertise}>
+        {!own && person.can_change_active ? (
+          <ManagedProfileEditor actor={actorId} id={person.id} close={close} />
+        ) : (
+          <Button asChild variant="secondary">
+            <Link to={own ? "/profile" : `/people/${person.id}`}>
+              {t(own ? "ownProfileExpertise" : "viewProfile")}
+            </Link>
+          </Button>
+        )}
+      </div>
+      {canVerify && openedExpertise && (
+        <div hidden={!showExpertise}>
+          <PeopleDirectory actorId={actorId} accountId={person.id} />
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
 /** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
@@ -66,7 +144,7 @@ function AccountsDirectory({
   const cache = useQueryClient();
   const [params] = useSearchParams();
   const [search, setSearch] = useState(params.get("q") ?? "");
-  const [editProfile, setEditProfile] = useState<AccountPerson | null>(null);
+  const [openAccount, setOpenAccount] = useState<AccountPerson | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<AccountPerson | null>(null);
@@ -209,9 +287,15 @@ function AccountsDirectory({
           {accounts.data.items.map((person) => (
             <li key={person.id}>
               <div>
-                <Link to={`/people/${person.id}`}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="account-name-button"
+                  onClick={() => setOpenAccount(person)}
+                >
                   <strong>{person.display_name || person.email}</strong>
-                </Link>
+                </Button>
                 <small>{person.email}</small>
                 <small className="public-user-id">
                   {t("userId")}: <code>{person.luminovia_user_id}</code>
@@ -225,9 +309,6 @@ function AccountsDirectory({
                 {person.id === actorId && (
                   <>
                     <Button asChild variant="secondary">
-                      <Link to="/profile">{t("ownProfileExpertise")}</Link>
-                    </Button>
-                    <Button asChild variant="secondary">
                       <Link
                         to={
                           canManageContracts
@@ -240,34 +321,16 @@ function AccountsDirectory({
                     </Button>
                   </>
                 )}
-                {person.id !== actorId && person.can_change_active && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setEditProfile(person)}
-                  >
-                    {t("editProfile")}
-                  </Button>
-                )}
-                {person.roles.some(
-                  (role) => role === "lecturer" || role === "senior_lecturer",
-                ) && (
-                  <>
-                    {canVerify && (
-                      <Button asChild variant="secondary">
-                        <Link to={`/admin/people?user=${person.id}`}>
-                          {t("manageProfile")}
-                        </Link>
-                      </Button>
-                    )}
-                    {canManageContracts && (
-                      <Button asChild variant="secondary">
-                        <Link to={`/contracts?user=${person.id}`}>
-                          {t("manageContracts")}
-                        </Link>
-                      </Button>
-                    )}
-                  </>
-                )}
+                {canManageContracts &&
+                  person.roles.some(
+                    (role) => role === "lecturer" || role === "senior_lecturer",
+                  ) && (
+                    <Button asChild variant="secondary">
+                      <Link to={`/contracts?user=${person.id}`}>
+                        {t("manageContracts")}
+                      </Link>
+                    </Button>
+                  )}
                 {canManageCompanies && person.roles.includes("client") && (
                   <Button asChild variant="secondary">
                     <Link to="/clients">{t("manageCompany")}</Link>
@@ -340,22 +403,20 @@ function AccountsDirectory({
           />
         )}
       </Dialog>
-      <Dialog
-        open={editProfile !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditProfile(null);
-        }}
-        title={t("editProfile")}
-        description={editProfile?.display_name || editProfile?.email || ""}
-      >
-        {editProfile && (
-          <ManagedProfileEditor
-            actor={actorId}
-            id={editProfile.id}
-            close={() => setEditProfile(null)}
-          />
-        )}
-      </Dialog>
+      {openAccount && (
+        <AccountProfileDialog
+          key={openAccount.id}
+          person={openAccount}
+          actorId={actorId}
+          canVerify={
+            canVerify &&
+            openAccount.roles.some(
+              (role) => role === "lecturer" || role === "senior_lecturer",
+            )
+          }
+          close={() => setOpenAccount(null)}
+        />
+      )}
       <InviteForm allRoles canAssignRoles={canAssign} />
       <Dialog
         open={selected !== null}

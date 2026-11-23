@@ -60,7 +60,7 @@ describe("recoverable Auth request failures", () => {
   it("translates an existing recovery notice after language switching without resending", async () => {
     const page = view(<Login />);
     await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
+      screen.getByLabelText("email"),
       "person@example.invalid",
     );
     await userEvent.click(screen.getByRole("button", { name: "forgot" }));
@@ -73,24 +73,17 @@ describe("recoverable Auth request failures", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("status")).toHaveTextContent("en:recoverSent");
-    expect(screen.getByLabelText("en:usernameOrEmail")).toHaveValue(
+    expect(screen.getByLabelText("en:email")).toHaveValue(
       "person@example.invalid",
     );
     expect(fake.resetPasswordForEmail).toHaveBeenCalledTimes(1);
   });
-  it("accepts a username for the native SDK recovery flow", async () => {
+  it("rejects a username for email recovery", async () => {
     view(<Login />);
-    await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
-      "Course.Lead",
-    );
+    await userEvent.type(screen.getByLabelText("email"), "Course.Lead");
     await userEvent.click(screen.getByRole("button", { name: "forgot" }));
     await userEvent.click(screen.getByRole("button", { name: "recover" }));
-    await waitFor(() =>
-      expect(fake.resetPasswordForEmail).toHaveBeenCalledWith("course.lead", {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      }),
-    );
+    expect(fake.resetPasswordForEmail).not.toHaveBeenCalled();
   });
   it("translates the saved-password notice after language switching without repeating the mutation", async () => {
     const page = view(<Password />);
@@ -129,7 +122,7 @@ describe("recoverable Auth request failures", () => {
   it("does not impose the new-password minimum on existing-account sign-in", async () => {
     view(<Login />);
     await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
+      screen.getByLabelText("email"),
       "legacy@example.invalid",
     );
     await userEvent.type(screen.getByLabelText("password"), "Old7!Aa");
@@ -145,33 +138,25 @@ describe("recoverable Auth request failures", () => {
       refresh_token: "refresh",
     });
   });
-  it("signs in by username through the same session exchange", async () => {
+  it("rejects a username without sending a login request", async () => {
     view(<Login />);
-    await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
-      "course.lead",
-    );
+    await userEvent.type(screen.getByLabelText("email"), "course.lead");
     await userEvent.type(
       screen.getByLabelText("password"),
       "ExamplePassword42!",
     );
     await userEvent.click(screen.getByRole("button", { name: "login" }));
-    expect(fake.invoke).toHaveBeenCalledWith("human-login", {
-      body: {
-        identifier: "course.lead",
-        password: "ExamplePassword42!",
-      },
-    });
-    expect(fake.setSession).toHaveBeenCalledTimes(1);
+    expect(fake.invoke).not.toHaveBeenCalled();
+    expect(fake.setSession).not.toHaveBeenCalled();
   });
   it("submits recovery with Enter instead of trying password sign-in", async () => {
     view(<Login />);
     await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
+      screen.getByLabelText("email"),
       "person@example.invalid",
     );
     await userEvent.click(screen.getByRole("button", { name: "forgot" }));
-    await userEvent.type(screen.getByLabelText("usernameOrEmail"), "{Enter}");
+    await userEvent.type(screen.getByLabelText("email"), "{Enter}");
     await waitFor(() =>
       expect(fake.resetPasswordForEmail).toHaveBeenCalledWith(
         "person@example.invalid",
@@ -193,7 +178,7 @@ describe("recoverable Auth request failures", () => {
     );
     view(<Login />);
     await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
+      screen.getByLabelText("email"),
       "person@example.invalid",
     );
     await userEvent.click(screen.getByRole("button", { name: "forgot" }));
@@ -213,7 +198,7 @@ describe("recoverable Auth request failures", () => {
     fake.invoke.mockRejectedValueOnce(new Error("Transport unavailable"));
     view(<Login />);
     await userEvent.type(
-      screen.getByLabelText("usernameOrEmail"),
+      screen.getByLabelText("email"),
       "person@example.invalid",
     );
     await userEvent.type(
@@ -260,39 +245,5 @@ describe("recoverable Auth request failures", () => {
       token_hash: token,
       type: "invite",
     });
-  });
-});
-
-describe("local preview username", () => {
-  it("translates the alias only for the exact loopback preview and backend", async () => {
-    const { previewLoginEmail } = await import("./preview-login");
-    expect(
-      previewLoginEmail(
-        "admin",
-        "http://127.0.0.1:5373",
-        "http://127.0.0.1:56321",
-      ),
-    ).toBe("local-preview-admin@example.invalid");
-    expect(
-      previewLoginEmail(
-        "admin",
-        "https://cms.luminovia.org",
-        "https://cms.luminovia.org/backend",
-      ),
-    ).toBe("admin");
-    expect(
-      previewLoginEmail(
-        "admin",
-        "http://127.0.0.1:5373",
-        "https://cms.luminovia.org/backend",
-      ),
-    ).toBe("admin");
-    expect(
-      previewLoginEmail(
-        "other@example.invalid",
-        "http://127.0.0.1:5373",
-        "http://127.0.0.1:56321",
-      ),
-    ).toBe("other@example.invalid");
   });
 });

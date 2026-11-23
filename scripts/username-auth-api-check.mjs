@@ -22,7 +22,7 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
       headers: { apikey: key, "Content-Type": "application/json" },
       body: JSON.stringify({ identifier, password }),
     });
-  for (const identifier of [user.email, alias.toUpperCase()]) {
+  for (const identifier of [user.email, user.email.toUpperCase()]) {
     const response = await signIn(identifier, process.env.E2E_PASSWORD);
     assert.equal(
       response.status,
@@ -59,6 +59,7 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
     );
     assert.equal(own?.username, alias);
   }
+  assert.equal((await signIn(alias, process.env.E2E_PASSWORD)).status, 401);
   for (const identifier of [alias, "missing-" + randomUUID().slice(0, 8)]) {
     const response = await signIn(identifier, "FictionalWrongPassword42!");
     assert.equal(response.status, 401);
@@ -139,6 +140,6 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
   );
 
   console.log(
-    "PASS native Auth exchanges username and email for the same account and rejects invalid credentials",
+    "PASS native Auth accepts email and rejects username sign-in and invalid credentials",
   );
 });

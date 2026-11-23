@@ -4819,3 +4819,17 @@ The marketplace date filter uses the shared time-zone selector from lecturer pro
 The course screen explains runs, templates and building blocks in German and English, using a fictional Linux practice day. Catalogue visibility and an active teaching assignment are shown separately. Deletion blockers lead to the course date section, a visible dependent run or the associated assignment.
 
 Reviewed deletion can include unused session rows owned by an unpublished internal draft. The preview lists the row count and the course content can still be reused from the template. Linked courses, published courses and teaching records retain their protection. All 29 native PostgreSQL deletion checks passed, including stale plans, permission loss and concurrent attendance evidence.
+
+# 23 November 2026 — Mobile Chromium failure triage
+
+The supplied run recorded 130 passes and 19 failures. Updated stale browser assertions for calendar tool layout, the profile time-zone selector, article navigation, standalone Swagger, inbox actions, message deep links, and the company and management role boundaries. Assignment cancellation now dismisses its confirmation after the server acknowledges the write, before waiting for cache refetches. The focused unit and component run passed 29 tests, including the deliberately stalled refetch regression.
+
+The isolated mobile Chromium browser phase started successfully and passed the preliminary Auth and Storage retention probe. It subsequently reproduced the missing global calendar course event. A complete browser pass and resolution of the remaining failures are pending.
+
+# 23 November 2026 — Job source downloads, account expertise and email sign-in
+
+Job provenance offers a direct download for an authorized, scanned attachment whose PDF version matches the source checksum. Metadata-only references stay readable. Accounts opens profile and expertise tools for the selected person from a single administration section, with the previous direct directory URL retained for existing links. Password sign-in now requires email in the portal, CLI preview workflow and the shared Edge handler used by all editions. The portal recovery form takes email. The existing username recovery API is retained for compatibility and still requires mailbox access.
+
+Focused frontend suites passed 94 tests, and the Edge handler passed four tests. TypeScript builds passed. The exact new document relationship and checksum filter was accepted by native PostgREST in the isolated database. Full browser acceptance of the new workflows remains pending.
+
+The unified account view now opens from the account name. The selected account's profile and eligible lecturer expertise appear in one dialog, and switching views preserves unsaved profile changes. The focused account, profile and expertise suites passed 21 tests. The browser scenario was updated and remains pending execution.

@@ -58,7 +58,7 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
         await expect(page.locator(".inbox-list>.notification-row")).toHaveCount(45);
         await page
             .getByRole("button", {
-                name: "Alle bisher eingegangenen Meldungen lesen",
+                name: "Gesamten Posteingang als gelesen markieren",
                 exact: true,
             })
             .click();

@@ -39,9 +39,17 @@
   overflow-wrap: anywhere;
 }
 
-.building-block-sources strong {
+.building-block-sources strong,
+.building-block-sources button {
   display: block;
   margin-bottom: 8px;
+}
+
+.building-block-sources button {
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
+  text-align: start;
 }
 
 .building-block-sources code {

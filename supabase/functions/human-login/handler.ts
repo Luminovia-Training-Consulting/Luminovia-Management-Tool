@@ -3,7 +3,6 @@ import { boundedJson } from "../_shared/bounded-body.ts";
 /** Credential exchange: only Supabase Auth verifies passwords and issues sessions. */
 export interface LoginDependencies {
   reserve: (hash: string) => Promise<boolean>;
-  resolveUsername: (username: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<{
     access_token: string;
     refresh_token: string;
@@ -13,12 +12,11 @@ export interface LoginDependencies {
   active: (userId: string) => Promise<boolean>;
 }
 
-const usernamePattern = /^[a-z][a-z0-9._-]{1,30}[a-z0-9]$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const failure = { error: "invalid_credentials" };
 
-/** No email/UUID lookup endpoint exists; both identifier types share one generic failure. */
+/** No email/UUID lookup endpoint exists; invalid credentials share one generic failure. */
 export function createHumanLoginHandler(
   deps: LoginDependencies,
   allowedOrigins: readonly string[],
@@ -57,16 +55,14 @@ export function createHumanLoginHandler(
       /[\x00-\x1f\x7f]/.test(input.password)) return json(400, { error: "invalid_request" });
     const identifier = input.identifier.trim().toLowerCase();
     if (identifier.length > 254 ||
-      !(identifier.includes("@") ? emailPattern.test(identifier) : usernamePattern.test(identifier)))
+      !emailPattern.test(identifier))
       return json(401, failure);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identifier));
     const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     try {
       if (!await deps.reserve(hash)) return json(429, { error: "rate_limited" });
-      const email = identifier.includes("@") ? identifier : await deps.resolveUsername(identifier);
-      // Unknown aliases use an impossible email through the same Auth password flow.
-      const session = await deps.signIn(email ?? "unknown@invalid.invalid", input.password);
-      if (!email || !session || !uuid.test(session.user_id) || !await deps.active(session.user_id))
+      const session = await deps.signIn(identifier, input.password);
+      if (!session || !uuid.test(session.user_id) || !await deps.active(session.user_id))
         return json(401, failure);
       return json(200, {
         access_token: session.access_token,

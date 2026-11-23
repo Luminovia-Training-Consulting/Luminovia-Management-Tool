@@ -13,13 +13,13 @@ const academyGuides: GuideModule[] = [
     steps: {
       de: [
         "Öffne die Einladung zur Akademie und lege ein Passwort an.",
-        "Melde dich mit deiner E-Mail-Adresse oder deinem Benutzernamen und deinem Passwort an. Bestätige eine zusätzliche Sicherheitsprüfung, falls sie für dein Konto eingerichtet ist.",
-        "Nutze bei einem vergessenen Passwort die Wiederherstellung auf der Anmeldeseite. Gib deine E-Mail-Adresse oder deinen Benutzernamen ein und öffne den neuesten Link im hinterlegten Postfach.",
+        "Melde dich mit deiner E-Mail-Adresse und deinem Passwort an. Bestätige eine zusätzliche Sicherheitsprüfung, falls sie für dein Konto eingerichtet ist.",
+        "Nutze bei einem vergessenen Passwort die Wiederherstellung auf der Anmeldeseite. Gib deine E-Mail-Adresse ein und öffne den neuesten Link im hinterlegten Postfach.",
       ],
       en: [
         "Open your academy invitation and set a password.",
-        "Sign in with your email address or username and your password. Confirm the additional security check if your account has one.",
-        "If you forget your password, open recovery on the sign-in page. Enter your email address or username, then open the latest link in the mailbox attached to your account.",
+        "Sign in with your email address and your password. Confirm the additional security check if your account has one.",
+        "If you forget your password, open recovery on the sign-in page. Enter your email address, then open the latest link in the mailbox attached to your account.",
       ],
     },
     problem: {

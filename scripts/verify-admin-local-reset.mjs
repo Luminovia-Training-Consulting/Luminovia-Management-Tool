@@ -75,7 +75,7 @@ try {
   async function signIn(email) {
     await page.goto(config.site + "/login");
     await page
-      .getByLabel(/^(Benutzername oder E-Mail|Username or email)$/)
+      .getByLabel(/^(E-Mail|Email)$/)
       .fill(email);
     await page
       .getByLabel(/^(Passwort|Password)$/, { exact: true })

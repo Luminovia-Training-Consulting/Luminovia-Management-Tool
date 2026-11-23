@@ -2861,6 +2861,14 @@ legend {
   padding: 16px 0;
 }
 
+.account-name-button {
+  max-inline-size: 100%;
+  height: auto;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .account-list small {
   display: block;
   overflow-wrap: anywhere;

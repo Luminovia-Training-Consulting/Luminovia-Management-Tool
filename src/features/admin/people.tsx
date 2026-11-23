@@ -306,33 +306,39 @@ function ExpertiseSelection({
 }
 
 /** Load administrative profiles, expertise and account state; require explicit confirmation for the selected suspension target. */
-function PeopleDirectory({ actorId }: { actorId: string }) {
+export function PeopleDirectory({
+  actorId,
+  accountId,
+}: {
+  actorId: string;
+  accountId?: string;
+}) {
   const { t, i18n } = useTranslation();
   const online = useOnline();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [params, setParams] = useSearchParams();
-  const selectedId = params.get("user");
+  const selectedId = accountId ?? params.get("user");
   const [confirmation, setConfirmation] = useState<AccountChange | null>(null);
   const [updated, setUpdated] = useState<AccountChange | null>(null);
   const profiles = useQuery({
-    queryKey: ["admin-people", actorId],
+    queryKey: ["admin-people", actorId, accountId],
     queryFn: async () => {
-      const { data, error } = await db()
-        .from("profiles")
-        .select("*")
-        .order("display_name");
+      const query = db().from("profiles").select("*");
+      const { data, error } = await (accountId
+        ? query.eq("id", accountId)
+        : query.order("display_name"));
       if (error) throw error;
       return data as Profile[];
     },
   });
   const expertise = useQuery({
-    queryKey: ["admin-expertise", actorId],
+    queryKey: ["admin-expertise", actorId, accountId],
     queryFn: async () => {
-      const { data, error } = await db()
-        .from("lecturer_topics")
-        .select("*")
-        .order("user_id");
+      const query = db().from("lecturer_topics").select("*");
+      const { data, error } = await (accountId
+        ? query.eq("user_id", accountId)
+        : query.order("user_id"));
       if (error) throw error;
       return data as Expertise[];
     },
@@ -397,52 +403,61 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
           })}
         </Notice>
       )}
-      <div className="people-admin-layout">
-        <section
-          className="panel people-directory"
-          aria-labelledby="people-directory-title"
-        >
-          <h2 id="people-directory-title">{t("peopleDirectory")}</h2>
-          <Field id="people-search" label={t("peopleSearch")}>
-            <input
-              id="people-search"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </Field>
-          <p className="muted">
-            {t("peopleCount", { count: filtered.length })}
-          </p>
-          {filtered.length ? (
-            <ul className="people-results">
-              {filtered.map((profile) => (
-                <li key={profile.id}>
-                  <Button
-                    type="button"
-                    variant={selected?.id === profile.id ? "default" : "ghost"}
-                    className="people-person-button"
-                    aria-pressed={selected?.id === profile.id}
-                    onClick={() => {
-                      setParams({ user: profile.id });
-                      setUpdated(null);
-                    }}
-                  >
-                    <UserRound size={18} />
-                    <span>
-                      {name(profile)}{" "}
-                      <small>
-                        {t(profile.active ? "peopleActive" : "peopleInactive")}
-                      </small>
-                    </span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>{t("peopleNoResults")}</p>
-          )}
-        </section>
+      <div className={accountId ? undefined : "people-admin-layout"}>
+        {!accountId && (
+          <section
+            className="panel people-directory"
+            aria-labelledby="people-directory-title"
+          >
+            <h2 id="people-directory-title">{t("peopleDirectory")}</h2>
+            <Field id="people-search" label={t("peopleSearch")}>
+              <input
+                id="people-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </Field>
+            <p className="muted">
+              {t("peopleCount", { count: filtered.length })}
+            </p>
+            {filtered.length ? (
+              <ul className="people-results">
+                {filtered.map((profile) => (
+                  <li key={profile.id}>
+                    <Button
+                      type="button"
+                      variant={
+                        selected?.id === profile.id ? "default" : "ghost"
+                      }
+                      className="people-person-button"
+                      aria-pressed={selected?.id === profile.id}
+                      onClick={() => {
+                        setParams({ user: profile.id });
+                        setUpdated(null);
+                      }}
+                    >
+                      <UserRound size={18} />
+                      <span>
+                        {name(profile)}{" "}
+                        <small>
+                          {t(
+                            profile.active ? "peopleActive" : "peopleInactive",
+                          )}
+                        </small>
+                      </span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>{t("peopleNoResults")}</p>
+            )}
+          </section>
+        )}
+        {accountId && !selected && (
+          <Notice kind="error">{t("peopleNoResults")}</Notice>
+        )}
         {selected && (
           <section
             className="panel people-profile"

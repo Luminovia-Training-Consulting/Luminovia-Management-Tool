@@ -17,12 +17,11 @@ import { useAuth } from "./auth-context";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
-import { previewLoginEmail } from "./preview-login";
 import { signInHuman } from "./human-login-api";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
-  email: z.string().trim().min(3).max(254),
+  email: z.string().trim().max(254).email(),
   password: z.string().min(1),
 });
 
@@ -52,12 +51,7 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
     setFailed(false);
     if (!online) return;
     try {
-      const email = previewLoginEmail(
-        values.email,
-        window.location.origin,
-        import.meta.env.VITE_SUPABASE_URL,
-      );
-      await signInHuman(email, values.password);
+      await signInHuman(values.email, values.password);
       return;
     } catch {
       // Transport/storage failures may reject instead of returning an Auth error.
@@ -71,9 +65,7 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
     setMessage("");
     setFailed(false);
     const identifier = getValues("email").trim().toLowerCase();
-    const valid = identifier.includes("@")
-      ? z.email().safeParse(identifier).success
-      : /^[a-z][a-z0-9._-]{1,30}[a-z0-9]$/.test(identifier);
+    const valid = z.email().safeParse(identifier).success;
     if (!valid) {
       setFailed(true);
       setMessage("validation");
@@ -151,12 +143,12 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
             >
               <Field
                 id="email"
-                label={t("usernameOrEmail")}
+                label={t("email")}
                 error={Boolean(errors.email)}
               >
                 <input
                   id="email"
-                  type="text"
+                  type="email"
                   autoComplete="username"
                   {...register("email")}
                   aria-invalid={Boolean(errors.email)}

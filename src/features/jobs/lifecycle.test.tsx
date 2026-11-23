@@ -166,13 +166,20 @@ it("honours an explicitly protected budget without falling back to a cached pers
 });
 it("requires an explicit reason and server confirmation before releasing another lecturer’s assignment", async () => {
   const meta = structuredClone(assigned);
-  setup(meta, (name) => {
+  const client = setup(meta, (name) => {
     expect(name).toBe("cancel_job_assignment");
     meta.claims[0].status = "cancelled";
     meta.claims[0].can_cancel = false;
     meta.claims[0].sessions[0].released_at = "2026-12-01T12:00Z";
     return { data: "claim" };
   });
+  let finishRefresh!: () => void;
+  const pendingRefresh = new Promise<void>((resolve) => {
+    finishRefresh = resolve;
+  });
+  vi.spyOn(client, "invalidateQueries").mockImplementationOnce(
+    () => pendingRefresh,
+  );
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Zuweisung stornieren" }),
@@ -192,7 +199,8 @@ it("requires an explicit reason and server confirmation before releasing another
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
-  expect(screen.getByText("Storniert", { exact: true })).toBeVisible();
+  finishRefresh();
+  expect(await screen.findByText("Storniert", { exact: true })).toBeVisible();
   expect(screen.getByText("Termine freigegeben")).toBeVisible();
   expect(state.rpc).toHaveBeenCalledWith(
     "cancel_job_assignment",

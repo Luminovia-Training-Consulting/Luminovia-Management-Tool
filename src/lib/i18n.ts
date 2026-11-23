@@ -262,7 +262,6 @@ const pairs: Record<string, [string, string]> = {
   academyAdministration: ["Akademie verwalten", "Academy administration"],
   academySettings: ["Kontoeinstellungen", "Account settings"],
   email: ["E-Mail", "Email"],
-  usernameOrEmail: ["Benutzername oder E-Mail", "Username or email"],
   username: ["Benutzername", "Username"],
   usernameSave: ["Benutzername speichern", "Save username"],
   usernameHelp: [
@@ -278,7 +277,6 @@ const pairs: Record<string, [string, string]> = {
     "Gib einen gültigen Benutzernamen ein.",
     "Enter a valid username.",
   ],
-  previewEmailOrUsername: ["E-Mail oder Benutzername", "Email or username"],
   password: ["Passwort", "Password"],
   authenticatorSettings: ["Authenticator-App", "Authenticator app"],
   authenticatorSetup: [
@@ -491,8 +489,8 @@ const pairs: Record<string, [string, string]> = {
     "Your email address was changed.",
   ],
   accountNameHelp: [
-    "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse oder deinem Benutzernamen.",
-    "Change your display name in your profile below. Sign in with your email address or username.",
+    "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse.",
+    "Change your display name in your profile below. Sign in with your email address.",
   ],
   aboutMe: ["Über mich", "About me"],
   manageExpertise: [

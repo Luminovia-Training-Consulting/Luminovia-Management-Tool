@@ -867,7 +867,7 @@ test("company reviews are current-membership scoped and an unassociated particip
         const participant = await participantContext.newPage();
         await participant.goto("/login");
         await participant
-            .getByLabel("Benutzername oder E-Mail", {exact: true})
+            .getByLabel("E-Mail", {exact: true})
             .fill(f.learner.email);
         await participant
             .getByLabel("Passwort", {exact: true})

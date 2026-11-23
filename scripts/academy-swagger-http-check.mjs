@@ -110,10 +110,11 @@ await checked(
   200,
   "Create own alias",
 );
+assert.equal((await signIn(alias.toUpperCase())).status, 401);
 const aliased = await checked(
-  await signIn(alias.toUpperCase()),
+  await signIn(email.toUpperCase()),
   200,
-  "Case-insensitive alias login",
+  "Case-insensitive email login",
 );
 const nativeUser = await checked(
   await request("/auth/v1/user", { token: aliased.access_token }),
@@ -228,7 +229,7 @@ try {
           await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
           await page
             .locator("#email")
-            .fill(language === "de" ? alias.toUpperCase() : email);
+            .fill(language === "de" ? email.toUpperCase() : email);
           await page.locator("#password").fill(password);
           await page.locator("form button[type=submit]").press("Enter");
           await expect(page).toHaveURL(new RegExp(entry + "$"), {
@@ -394,7 +395,7 @@ try {
       openapi: document.info.version,
       browser_cases: 8,
       checks: [
-        "sign_in_email_and_alias",
+        "sign_in_email_reject_alias",
         "native_alias_parity",
         "swagger_allow_and_deny",
         "theme_locale_keyboard",

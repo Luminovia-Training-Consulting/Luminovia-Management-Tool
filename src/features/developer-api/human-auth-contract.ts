@@ -18,7 +18,7 @@ export const humanAuthPaths = {
     post: {
       operationId: "humanLogin",
       tags: ["Authentication"],
-      summary: "Establish a native Supabase session with a username or email",
+      summary: "Establish a native Supabase session with an email address",
       description:
         "Pass credentials in the TLS request body. Browser origins must be allowed by the installation. Existing users keep their current Supabase identity and permissions. A protected portal session may still require a personal password or an authenticator challenge.",
       security: [],
@@ -29,7 +29,7 @@ export const humanAuthPaths = {
             identifier: {
               ...text,
               description:
-                "An email or username. After trimming and case-folding, the identifier must have at most 254 characters.",
+                "The account email address. After trimming and case-folding, the identifier must have at most 254 characters.",
             },
             password: {
               ...text,

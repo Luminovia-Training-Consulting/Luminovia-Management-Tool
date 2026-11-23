@@ -2775,7 +2775,7 @@ const nativePaths = {
   "/rest/v1/rpc/account_username": rpc(
     "accountUsername",
     "Accounts",
-    "Read your login username",
+    "Read your username",
     "Returns the current actor's username and version. An unset username is null.",
     {},
     object({ username: optionalUsername, version }),
@@ -2783,7 +2783,7 @@ const nativePaths = {
   "/rest/v1/rpc/save_account_username": rpc(
     "saveAccountUsername",
     "Accounts",
-    "Change or clear your login username",
+    "Change or clear your username",
     "The username is normalized to lowercase. Clearing an alias does not change the account email, password, roles or UUID.",
     { p_username: optionalUsername, p_expected_version: version },
     object({ username: optionalUsername, version }),

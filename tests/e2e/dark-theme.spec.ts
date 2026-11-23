@@ -55,7 +55,7 @@ test("dark workspace maintains contrast and a usable layout across the main scre
     await checkContrast(page, path);
   }
   await page.goto("/api/swagger");
-  const documentation = page.locator("main.standalone-swagger");
+  const documentation = page.locator(".standalone-swagger");
   await expect(
     documentation.getByRole("link", { name: "OpenAPI JSON" }),
   ).toBeVisible();

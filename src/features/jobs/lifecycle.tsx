@@ -87,12 +87,12 @@ export function JobLifecyclePanel({
           : manageOffer({ ...input, request: key });
     },
     onSuccess: async (result, input) => {
-      await refreshJobState(client);
       setConfirmation(null);
       setEditing(false);
       setNewCapacity(null);
       if ("action" in input && input.action === "duplicate")
         navigate(`/jobs/${result}`);
+      await refreshJobState(client);
     },
   });
   if (state.isPending) return <Loading />;
