@@ -6,7 +6,8 @@ import {academyPdfBrand} from "./brand.ts";
 
 interface Dependencies {
     origins: string[];
-    authenticate: (token: string) => Promise<boolean>;
+    authenticate: (token: string) => Promise<boolean | string>;
+    recordDownload?: (actor: string, resource: string) => Promise<void>;
     rpc: (
         token: string,
         name: string,
@@ -264,7 +265,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             } else bytes = await dependencies.render(renderKind, first.data);
             // Re-check actual Auth and current database membership after potentially
             // slow storage/font work. Facts changing during rendering fail closed.
-            if (!(await dependencies.authenticate(token))) {
+            const actor = await dependencies.authenticate(token);
+            if (!actor) {
                 return json(403, "document_unavailable");
             }
             const finalArgs = retained ? {...args, p_record_access: true}
@@ -276,6 +278,20 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 JSON.stringify(final.data) !== JSON.stringify(first.data)
             ) {
                 return json(403, "document_changed_or_revoked");
+            }
+            // Do not turn private chat activity or a qualification passport into
+            // an administrative surveillance record. Nothing identifying the file
+            // beyond the authorised resource ID leaves this boundary.
+            const journalled = [
+                "resource", "exam", "wiki_resource", "request_resource",
+                "attendance", "attendance_session", "attendance_evidence",
+                "completion", "assignment_confirmation", "participant_submission",
+                "retained_course_file",
+            ].includes(kind);
+            const resource = submission ? body.version_id : body.id;
+            if (journalled && dependencies.recordDownload) {
+                if (!uuid(actor) || !uuid(resource)) return json(503, "document_unavailable");
+                await dependencies.recordDownload(actor, resource);
             }
             return new Response(new Uint8Array(bytes), {
                 status: 200,

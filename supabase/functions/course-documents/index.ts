@@ -24,7 +24,14 @@ Deno.serve(
             const result = await user.auth.getUser(token);
             if (result.error || !result.data.user) return false;
             const active = await user.rpc("portal_access");
-            return !active.error && active.data === true;
+            return !active.error && active.data === true && result.data.user.id;
+        },
+        recordDownload: async (actor, resource) => {
+            const {error} = await service.rpc("record_admin_file_download", {
+                p_actor_id: actor,
+                p_resource_id: resource,
+            });
+            if (error) throw new Error("document_unavailable");
         },
         rpc: async (token, name, args) => {
             const {data, error} = await caller(token).rpc(name, args);

@@ -1,3 +1,4 @@
+import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
 import { z } from "zod";
@@ -33,6 +34,10 @@ import {
   academyBrandLinkRequest,
   academyBrandLinkSettings,
 } from "../branding/academy-brand-links-schema.ts";
+import {
+  academyWhiteLabelReceipt,
+  academyWhiteLabelRequest,
+} from "../branding/academy-white-label-schema.ts";
 import {
   academyLogoVersion,
   academyLogoVersionRequest,
@@ -1332,6 +1337,30 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           },
         },
       },
+      "/rest/v1/rpc/save_academy_white_label": {
+        post: {
+          operationId: "saveAcademyWhiteLabel",
+          tags: ["Installation"],
+          summary: "Apply presentation and public links to the running Academy",
+          description:
+            "Requires the current confirmed local administrator and an active licence. Send both current versions. A stale, divergent or invalid change saves neither group. A matching retry does not create another revision. All three presentation fields set to null restore the signed defaults. Null links omit their footer entries. The existing edition, licence, origin and data location stay operator-controlled.",
+          security: credentials,
+          "x-portal-licence": "active",
+          requestBody: {
+            required: true,
+            content: content(z.toJSONSchema(academyWhiteLabelRequest)),
+          },
+          responses: {
+            "200": ok(z.toJSONSchema(academyWhiteLabelReceipt)),
+            "400": error("Invalid presentation fields, links or versions"),
+            "401": error("Authentication required"),
+            "403": error(
+              "Current local administrator and active licence required",
+            ),
+            "409": error("Either group changed since the last read"),
+          },
+        },
+      },
       "/rest/v1/rpc/save_academy_public_branding": {
         post: {
           operationId: "saveAcademyPublicBranding",
@@ -1600,6 +1629,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
         },
       },
       ...coursePaths,
+      ...administrationAuditPaths,
       ...humanAuthPaths,
     }),
     webhooks: { companyCourseEvent: companyCourseWebhook },

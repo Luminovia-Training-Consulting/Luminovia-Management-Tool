@@ -83,6 +83,7 @@ describe("API explorer public document and session boundary", () => {
       const { paths } = portalOpenApi(backend, download);
       for (const name of [
         "save_academy_public_branding",
+        "save_academy_white_label",
         "save_academy_public_brand_links",
         "clear_academy_public_logo",
       ]) {

@@ -66,12 +66,14 @@ services:
       - db-config:/etc/postgresql-custom
     healthcheck:
       test:
-        - CMD
-        - pg_isready
-        - -U
-        - postgres
-        - -h
-        - localhost
+        - CMD-SHELL
+        - >-
+          pg_isready -U postgres -h localhost || exit 1;
+          if [ ! -f /tmp/portal-administration-schedule ]; then
+            if psql -wXqAt -U supabase_admin -c 'select private.ensure_administration_activity_schedule()' 2>/dev/null | grep -qx t; then
+              touch /tmp/portal-administration-schedule;
+            fi;
+          fi
       interval: 30s
       timeout: 5s
       retries: 3

@@ -11,6 +11,8 @@ In **Verwaltung → Unternehmen / Administration → Companies**, an active admi
 
 In **Verwaltung → White Label / Administration → White Label**, open setup to prepare a private installation draft with the company account email, brand, domain and licence parameters. Follow [Dedicated Academy installation](deploy/academy/README.md) to review and sign the handoff and bootstrap the initial administrator on the customer's own system.
 
+On an already active customer installation, open **Verwaltung → Kundeninstallation → White-Label-Einrichtung öffnen / Administration → Customer installation → Open White Label setup**. Edit the academy name, short name, accent colour and public links, then choose **Einstellungen übernehmen / Apply settings**. The active installation uses the saved settings directly. Logos and app icons remain available in the same dialog. The current address and connection protocol are shown in the form. The operator configures the actual domain, TLS and data location at the hosting layer.
+
 Knowledge & Help includes Support. The header bell shows recent activity by category, including real invoice/payment updates; the full inbox lets you load more history. The category filter applies to the recent/loaded items indicated on screen.
 
 Calendar **Import ICS file** opens a review before saving private appointments. Choose a recurrence window, select the file and confirm the preview. Reimporting the same UID/start identities skips duplicates. Recurrences become individual appointments; there is no continuing subscription. Floating dates use your chosen calendar time zone; IANA and UTC zones are supported, unknown zones require re-export. An invalid batch or confirmed-assignment conflict rejects the batch atomically. After a lost
@@ -492,9 +494,11 @@ extension. No scheduler, real email or push is implied. See [Announcements](GUID
 
 ## Administrative audit reader
 
-At `/admin/audit`, Owner/Administration with current `audit.read` can inspect the reduced administrative log. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
+At `/admin/audit`, Owner/Administration with current `audit.read` can inspect the administrative log. Dedicated Academy admins open **Administrationsprotokoll / Administration audit trail** from **Verwaltung / Administration**. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
 
-The view includes reviewed account, qualification, organisation, course, job, taxonomy, announcement and global-event administration. It excludes event details and private calendars, availability notes, chats, files, contracts, invoices and personal reviews. A resource UUID is not a link or permission grant. This reader does not edit/delete records, offer a full CSV dump, or establish tamper-proof archival/retention. See [Administration audit](GUIDE.md#section-admin-audit).
+The view covers reviewed setup changes, temporary support grants, customer enquiries, administrative account changes, deletions, approved file transfers and payment events. File receipts record the action and resource identifier. Payment amounts require the corresponding finance authority. Private messages, file contents, secrets and bank references remain outside the view.
+
+Entries stop appearing exactly 30 days after the event and are removed from the operational journal by a scheduled database cleanup. Accounting records and workflow receipts have their own lifecycles. A resource UUID is not a link or permission grant. See [Administration audit](GUIDE.md#section-admin-audit).
 
 <a id="section-user-guide-search-and-remaining-scope"></a>
 

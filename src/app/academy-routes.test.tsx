@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../lib/i18n";
 import type { AcademyBrandLinks } from "../features/branding/academy-brand-links-schema";
+import type { AcademyBrandingSettings } from "../features/branding/academy-branding-schema";
 import type { CourseWorkspace } from "../features/learning/api";
 import { App } from "./app";
 
@@ -43,6 +44,7 @@ const fake = vi.hoisted(() => ({
   administration: false as boolean | "management",
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
   brandName: null as string | null,
+  brandSettings: null as AcademyBrandingSettings | null,
   brandLogo: null as string | null,
   appIcon: { version: 0, custom: false },
   brandLinkConflict: false,
@@ -208,6 +210,7 @@ beforeEach(async () => {
   fake.administration = false;
   fake.brandLinks = null;
   fake.brandName = null;
+  fake.brandSettings = null;
   fake.brandLogo = null;
   fake.appIcon = { version: 0, custom: false };
   fake.brandLinkConflict = false;
@@ -224,6 +227,11 @@ beforeEach(async () => {
         p_legal_url?: string | null;
         p_terms_url?: string | null;
         p_expected_version?: number;
+        p_expected_brand_version?: number;
+        p_expected_links_version?: number;
+        p_name?: string | null;
+        p_short_name?: string | null;
+        p_theme_color?: string | null;
       },
     ) => {
       let data: unknown;
@@ -271,6 +279,7 @@ beforeEach(async () => {
             name: fake.brandName,
             short_name: fake.brandName ? "Training" : null,
             theme_color: fake.brandName ? "#284554" : null,
+            ...fake.brandSettings,
           };
           break;
         case "academy_public_brand_links":
@@ -284,18 +293,38 @@ beforeEach(async () => {
             ...fake.brandLinks,
           };
           break;
-        case "save_academy_public_brand_links":
+        case "save_academy_white_label":
           if (fake.brandLinkConflict) {
             error = { code: "PT409" };
           } else {
             fake.brandLinks = {
-              version: (input?.p_expected_version ?? 0) + 1,
+              version: (input?.p_expected_links_version ?? 0) + 1,
               support_url: input?.p_support_url ?? null,
               privacy_url: input?.p_privacy_url ?? null,
               legal_url: input?.p_legal_url ?? null,
               terms_url: input?.p_terms_url ?? null,
             };
-            data = { installation_id: fake.installation, ...fake.brandLinks };
+            const nextBranding = {
+              name: input?.p_name ?? null,
+              short_name: input?.p_short_name ?? null,
+              theme_color: input?.p_theme_color ?? null,
+            };
+            const updated = Object.entries(nextBranding).some(
+              ([field, value]) =>
+                value !==
+                ((fake.brandSettings as Record<string, unknown> | null)?.[
+                  field
+                ] ?? null),
+            );
+            fake.brandSettings = {
+              installation_id: fake.installation,
+              version: (input?.p_expected_brand_version ?? 0) + Number(updated),
+              ...nextBranding,
+            };
+            data = {
+              branding: fake.brandSettings,
+              links: { installation_id: fake.installation, ...fake.brandLinks },
+            };
           }
           break;
         case "portal_access":
@@ -984,6 +1013,10 @@ it("shows the published app icon and restores the signed package with the last r
   fake.administration = true;
   fake.appIcon = { version: 6, custom: true };
   open("/administration");
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Open White Label setup" }),
+  );
+  await userEvent.click(screen.getByText("Logo and app icons"));
   const icon = await screen.findByRole("img", { name: "Current app icon" });
   expect(icon).toHaveAttribute(
     "src",
@@ -1369,19 +1402,30 @@ it("shows customer legal links before sign-in in German", async () => {
   );
 });
 
-it("saves public links from the admin editor and immediately updates the footer", async () => {
+it("applies White Label branding and public links together in the active installation", async () => {
   fake.administration = true;
   open("/administration");
   const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Open White Label setup" }),
+  );
   const support = await screen.findByLabelText("Support");
-  const save = screen.getByRole("button", { name: "Save links" });
+  const save = screen.getByRole("button", { name: "Apply settings" });
 
   await user.type(support, "http://example.invalid");
   expect(save).toBeDisabled();
   await user.clear(support);
   await user.type(support, "https://help.example.invalid");
+  const name = screen.getByLabelText("Academy name");
+  await user.clear(name);
+  await user.type(name, "Fictional Active Academy");
+  const shortName = screen.getByLabelText("Short name");
+  await user.clear(shortName);
+  await user.type(shortName, "Active Academy");
   await user.click(save);
-  expect(await screen.findByText("Links saved.")).toBeVisible();
+  expect(await screen.findByText("Settings applied.")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  expect(document.title).toBe("Fictional Active Academy");
   const footer = await screen.findByRole("navigation", {
     name: "Support and legal information",
   });
@@ -1389,16 +1433,25 @@ it("saves public links from the admin editor and immediately updates the footer"
     "href",
     "https://help.example.invalid",
   );
-  expect(fake.rpc).toHaveBeenCalledWith("save_academy_public_brand_links", {
-    p_expected_version: 0,
+  expect(fake.rpc).toHaveBeenCalledWith("save_academy_white_label", {
+    p_expected_brand_version: 0,
+    p_expected_links_version: 0,
+    p_name: "Fictional Active Academy",
+    p_short_name: "Active Academy",
+    p_theme_color: "#172b4b",
     p_support_url: "https://help.example.invalid",
     p_privacy_url: null,
     p_legal_url: null,
     p_terms_url: null,
   });
 
-  await user.clear(support);
-  await user.click(save);
+  await user.click(
+    screen.getByRole("button", { name: "Open White Label setup" }),
+  );
+  await user.clear(await screen.findByLabelText("Support"));
+  await user.click(screen.getByRole("button", { name: "Apply settings" }));
+  expect(await screen.findByText("Settings applied.")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Close" }));
   await waitFor(() =>
     expect(
       screen.queryByRole("navigation", {
@@ -1414,11 +1467,14 @@ it("keeps the administrator's draft until they reload links from the server afte
   fake.brandLinkConflict = true;
   open("/administration");
   const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Open White Label setup" }),
+  );
   const support = await screen.findByLabelText("Support");
   await user.type(support, "https://draft.example.invalid");
-  await user.click(screen.getByRole("button", { name: "Save links" }));
+  await user.click(screen.getByRole("button", { name: "Apply settings" }));
   expect(
-    await screen.findByText(/The links were updated elsewhere/),
+    await screen.findByText(/The settings were updated elsewhere/),
   ).toBeVisible();
   expect(support).toHaveValue("https://draft.example.invalid");
   expect(
@@ -1432,7 +1488,7 @@ it("keeps the administrator's draft until they reload links from the server afte
     terms_url: null,
   };
   await user.click(
-    screen.getByRole("button", { name: "Reload current links" }),
+    screen.getByRole("button", { name: "Reload current settings" }),
   );
   await waitFor(() =>
     expect(support).toHaveValue("https://published.example.invalid"),

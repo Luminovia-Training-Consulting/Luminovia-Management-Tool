@@ -16,7 +16,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { permissionsQuery, profileQuery } from "../../lib/queries";
-import { dateTime } from "../../lib/dates";
+import { dateTime, validZone } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import {
   type AuditCursor,
@@ -169,7 +169,36 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
                       <dt>{t("resource")}</dt>
                       <dd>
                         <code>{entry.resource_id || t("noResource")}</code>
+                        {entry.resource_kind && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            {t(`kinds.${entry.resource_kind}`, {
+                              defaultValue: entry.resource_kind,
+                            })}
+                          </>
+                        )}
                       </dd>
+                      {entry.changed_fields?.length ? (
+                        <>
+                          <dt>{t("changedFields")}</dt>
+                          <dd>
+                            {entry.changed_fields
+                              .map((field) =>
+                                t(`fields.${field}`, { defaultValue: field }),
+                              )
+                              .join(", ")}
+                          </dd>
+                        </>
+                      ) : null}
+                      {entry.payment && (
+                        <>
+                          <dt>{t("paymentAmount")}</dt>
+                          <dd>
+                            {entry.payment.amount} {entry.payment.currency}
+                          </dd>
+                        </>
+                      )}
                     </dl>
                   </article>
                 </li>
@@ -218,6 +247,22 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+/** The dedicated reader checks capability and licence on its own scoped RPC. */
+export function AcademyAuditPage() {
+  const { t } = useTranslation("adminAudit");
+  const { session } = useAuth();
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return (
+    <>
+      <PageHeading title={t("title")} description={t("description")} />
+      <AuditReader
+        actor={session!.user.id}
+        zone={validZone(zone) ? zone : "UTC"}
+      />
     </>
   );
 }

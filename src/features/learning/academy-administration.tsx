@@ -11,6 +11,7 @@ import {
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { academyLicenceQuery } from "../accounts/academy-licence-api";
+import { AcademyWhiteLabelSetup } from "../branding/academy-white-label-setup";
 import { AcademyLicencePanel } from "../accounts/academy-licence-panel";
 import {
   academyAdministrationQuery,
@@ -25,10 +26,6 @@ import type {
 } from "../accounts/academy-schema";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
-import { AcademyBrandLinksEditor } from "../branding/academy-brand-links-panel";
-import { AcademyPwaIconEditor } from "../branding/academy-pwa-icon-editor";
-import { AcademyLogoEditor } from "../branding/academy-logo-editor";
-import { AcademyBrandEditor } from "../branding/academy-brand-editor";
 import { AcademyWebhookPanel } from "./academy-webhook-panel";
 import { AcademyRoleEditor } from "./academy-role-editor";
 
@@ -533,10 +530,12 @@ export function AcademyAdministrationPage() {
               )}
             </Link>
           </p>
-          <AcademyBrandEditor />
-          <AcademyLogoEditor />
-          <AcademyPwaIconEditor />
-          <AcademyBrandLinksEditor />
+          <p>
+            <Link to="/administration/audit">
+              {word("Administrationsprotokoll", "Administration log")}
+            </Link>
+          </p>
+          <AcademyWhiteLabelSetup />
         </>
       )}
       {can_create_management && organisations.length > 0 && (

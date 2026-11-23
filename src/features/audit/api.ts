@@ -15,6 +15,9 @@ export interface AuditEvent {
   action: string;
   resource_id: string | null;
   created_at: string;
+  resource_kind?: string;
+  changed_fields?: string[];
+  payment?: { amount: string; currency: string };
 }
 
 /** Stable timestamp/ID position when several events share the same instant. */

@@ -34,6 +34,12 @@
 - [x] Include the observed browser bundle and worker components and their licence texts in signed Academy browser deliveries.
 - [ ] Record runtime-image dependency and licence evidence and complete the independent target, delivery and managed-operator checks in the [White Label roadmap](../WHITELABEL_ROADMAP.md).
 
+## Live White Label and administration activity
+
+- [x] Open one live White Label form in a dedicated Academy. Apply version-checked branding and public links together without rebuilding the installation.
+- [x] Expose a metadata-only administration audit covering the requested events, with exact finance permission checks for amounts and automatic 30-day cleanup of its operational projection.
+- [ ] Verify the exact installed build with a customer domain, licence, deployment-owned TLS and configured data region. Domain or region moves remain part of the operator handoff.
+
 ## HTTP methods in the API explorer
 
 - [x] Publish reviewed read, update and removal aliases through ordinary user sessions for the internal portal and both Academy editions. Keep POST for creation and workflow transitions.

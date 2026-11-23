@@ -327,14 +327,14 @@ const academyGuides: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne als lokaler Admin den Akademie-Auftritt. Speichere den vollständigen Namen, den Kurznamen und die Akzentfarbe.",
-        "Wähle unter Akademie-Logo ein RGB- oder RGBA-PNG ohne Metadaten mit höchstens 512 × 512 Pixeln und 256 KiB. Prüfe die Vorschau vor dem Speichern.",
-        "Trage unter Öffentliche Links die HTTPS-Adressen für die gewünschten Einträge ein. Leere Felder blenden die jeweiligen Links aus. Prüfe die Anmeldeseite anschließend in einem privaten Browserfenster.",
+        "Öffne als lokaler Admin in der Kundeninstallation die White-Label-Einrichtung. Trage den vollständigen Namen, den Kurznamen, die Akzentfarbe und die öffentlichen HTTPS-Links ein und übernimm die Einstellungen.",
+        "Wähle unter Logo und App-Symbole ein RGB- oder RGBA-PNG ohne Metadaten mit höchstens 512 × 512 Pixeln und 256 KiB. Prüfe die Vorschau vor dem Speichern.",
+        "Leere Linkfelder blenden den jeweiligen Link aus. Prüfe die Anmeldeseite anschließend in einem privaten Browserfenster.",
       ],
       en: [
-        "As a local administrator, open Academy branding. Save the full name, short name and accent colour.",
-        "Under Academy logo, choose an RGB or RGBA PNG with no metadata, up to 512 × 512 pixels and 256 KiB. Check the preview before saving.",
-        "Enter the HTTPS addresses you want under Public links. Leaving a field blank hides the corresponding link. Check the sign-in page in a private browser window afterward.",
+        "As a local administrator, open White Label setup under Customer installation. Enter the full name, short name, accent colour and public HTTPS links and apply the settings.",
+        "Under Logo and app icons, choose an RGB or RGBA PNG with no metadata, up to 512 × 512 pixels and 256 KiB. Check the preview before saving.",
+        "Leaving a link field blank hides the corresponding link. Check the sign-in page in a private browser window afterward.",
       ],
     },
     problem: {
@@ -344,11 +344,11 @@ const academyGuides: GuideModule[] = [
     resolution: {
       de: [
         "Lade bei einem Konflikt den aktuellen Stand und übernimm gewünschte Änderungen erneut.",
-        "App-Symbole und die Installationsdomain werden mit dem Installationspaket festgelegt. Bitte den Betreiber um eine passende Paketaktualisierung.",
+        "Logo und App-Symbole kannst du in der White-Label-Einrichtung aktualisieren. Domain, HTTPS und Datenregion werden vom Betreiber eingerichtet.",
       ],
       en: [
         "After a conflict, reload the latest settings and reapply the intended changes.",
-        "App icons and the installation domain are set through the installation package. Ask the operator to prepare the corresponding package update.",
+        "You can update the logo and app icons in White Label setup. The operator configures the domain, HTTPS and data region.",
       ],
     },
     keywords: [

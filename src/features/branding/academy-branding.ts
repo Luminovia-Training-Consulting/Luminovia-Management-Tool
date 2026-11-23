@@ -2,17 +2,13 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { installationBrand } from "../../lib/installation-brand";
-import { requireOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 
-import {
-  type AcademyBrandingValues,
-  academyBrandingSettings,
-} from "./academy-branding-schema";
+import { academyBrandingSettings } from "./academy-branding-schema";
 
-function verifyBranding(value: unknown) {
+export function verifyAcademyBranding(value: unknown) {
   const result = academyBrandingSettings.parse(value);
   if (
     result.installation_id !== installationBrand.installationId ||
@@ -42,24 +38,9 @@ export function useAcademyBrandingQuery() {
         .rpc("academy_public_branding", {}, { get: true })
         .abortSignal(signal);
       if (error) throw error;
-      return verifyBranding(data);
+      return verifyAcademyBranding(data);
     },
   });
-}
-
-export async function saveAcademyBranding(
-  version: number,
-  values: AcademyBrandingValues,
-) {
-  requireOnline();
-  const { data, error } = await db().rpc("save_academy_public_branding", {
-    p_expected_version: version,
-    p_name: values.name,
-    p_short_name: values.short_name,
-    p_theme_color: values.theme_color,
-  });
-  if (error) throw error;
-  return verifyBranding(data);
 }
 
 export const AcademyBrandContext = createContext(installationBrand);

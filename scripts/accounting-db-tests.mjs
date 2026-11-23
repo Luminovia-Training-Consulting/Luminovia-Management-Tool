@@ -327,6 +327,17 @@ await withTestDatabase("accounting", async ({ sql, actor }) => {
         (await rpc(admin, "record_customer_invoice_payment", args, "aal2")).id,
         payment,
       );
+      const audit = (viewer) => rpc(viewer, "admin_audit_events", [
+        "null", "null", q("accounting.customer_payment_recorded"), q(payment),
+      ]);
+      const visible = await audit(admin);
+      assert.deepEqual(visible.items[0].payment, { amount: "33.34", currency: "AUD" });
+      assert.ok(!JSON.stringify(visible).includes("Fictional remittance"));
+      await sql("insert into public.role_permissions(role,permission) values('management','audit.read')");
+      const restricted = await audit(manager);
+      assert.equal(restricted.items[0].resource_id, payment);
+      assert.equal(Object.hasOwn(restricted.items[0], "payment"), false);
+      await sql("delete from public.role_permissions where role='management' and permission='audit.read'");
       const calls = await Promise.allSettled(
         [1, 2].map(() =>
           rpc(

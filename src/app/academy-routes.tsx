@@ -60,6 +60,11 @@ const courseId =
 const courseReturnRoute =
   /^(?:\/administration(?:\/mail)?|\/timetable|\/support\/access|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning|submissions|evaluations))?)$/i;
 
+const AcademyAuditPage = lazy(() =>
+  import("../features/audit/audit").then((module) => ({
+    default: module.AcademyAuditPage,
+  })),
+);
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/academy-explorer").then((module) => ({
     default: module.AcademyApiExplorer,
@@ -287,6 +292,10 @@ export default function AcademyRoutes() {
             <Route
               path="/administration"
               element={<AcademyAdministrationPage />}
+            />
+            <Route
+              path="/administration/audit"
+              element={<AcademyAuditPage />}
             />
             <Route
               path="/administration/mail"

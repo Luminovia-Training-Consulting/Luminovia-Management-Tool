@@ -4560,3 +4560,11 @@ Actions run `44890241359` failed code integrity because its export scanner did n
 The exact-main Portal run `44892137237` reported an unformatted academy licence panel. Applied the repository formatter; the complete source formatting check and whitespace validation pass locally. Other long-running system, self-host and browser checks must finish on the new exact main revision.
 
 The same Portal run found that the branded package test still expected 43 API paths after the administrator licence receipt added the 44th. Updated the count and explicitly assert that receipt path; 22 focused package and contract tests pass locally. Full CI remains pending.
+
+# 23 November 2026 — Active Academy White Label and administration activity
+
+Academy administrators can apply public names, accent colour and public links together from the active customer installation. The database commits both settings groups in one transaction. The form displays the active connection. Origin, TLS and data location require the hosting workflow.
+
+The administration activity view records reviewed actions with minimal metadata. It includes customer enquiries, customer and lecturer changes and deletions, authorised file operations, settings and payment activity. Payment amounts require financial permission. Entries leave the live view at 30 days, and the bundled PostgreSQL scheduler deletes them every 15 minutes. Canonical accounting and business receipts retain their own lifecycle.
+
+Local coverage passed with 1,580 tests before the final main sync. Nine administration activity checks passed after that sync. Isolated database acceptance also covered atomic branding changes, financial visibility and redaction, file receipts, enquiry intake and the real PostgreSQL cleanup worker. Hosted deployment and browser acceptance remain pending.

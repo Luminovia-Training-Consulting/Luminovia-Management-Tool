@@ -1,3 +1,4 @@
+import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { isAcademyExplorerRequest } from "./request-boundary.ts";
 import {
   isPortalHttpAliasRequest,
@@ -1310,8 +1311,6 @@ const organisationPayload = {
   },
 };
 
-const auditCursor = object({ at: { ...text, format: "date-time" }, id: uuid });
-
 const profilePaths = Object.fromEntries(
   Object.entries(profileContracts).map(([name, entry]) => {
     const operationId = `native_${name}`;
@@ -1370,48 +1369,7 @@ const nativePaths = {
     },
     uuid,
   ),
-  "/rest/v1/rpc/admin_audit_events": rpc(
-    "native_admin_audit_events",
-    "Administrative audit",
-    "Read the audited business-event projection",
-    "Requires current audit.read authority. The default window is the last 30 days and the server caps the window at 93 days and two hours to allow for local clock changes. Use a half-open time window and copy both cursor fields from next_cursor. Only the allowed action identifiers and reduced metadata are returned.",
-    {
-      p_from: nullableDateTime,
-      p_to: nullableDateTime,
-      p_action: { ...text, default: "" },
-      p_search: { ...text, maxLength: 160, default: "" },
-      p_before_at: nullableDateTime,
-      p_before_id: nullableUuid,
-      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 40 },
-    },
-    object({
-      items: {
-        type: "array",
-        maxItems: 100,
-        items: object({
-          id: uuid,
-          actor_name: text,
-          action: text,
-          resource_id: nullableUuid,
-          created_at: { ...text, format: "date-time" },
-        }),
-      },
-      has_more: boolean,
-      next_cursor: { anyOf: [auditCursor, { type: "null" }] },
-      from: { ...text, format: "date-time" },
-      to: { ...text, format: "date-time" },
-      actions: { type: "array", items: text },
-    }),
-    [
-      "p_from",
-      "p_to",
-      "p_action",
-      "p_search",
-      "p_before_at",
-      "p_before_id",
-      "p_limit",
-    ],
-  ),
+  ...administrationAuditPaths,
   "/rest/v1/rpc/unified_search": rpc(
     "native_unified_search",
     "Search",

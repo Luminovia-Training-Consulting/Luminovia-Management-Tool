@@ -93,8 +93,8 @@ export function WhiteLabelSetupPage() {
         </label>
         <p className="muted">
           {word(
-            "Der Betreiber benötigt den signierten Installationsübergang und eine aktive Lizenz. Er erstellt das erste Administratorkonto auf dem Kundenserver mit der ausgewählten Firmenadresse.",
-            "The operator needs the signed installation handoff and an active licence. They create the first administrator on the customer server using the selected company email.",
+            "Für eine neue Installation erhält der Betreiber den signierten Übergang und richtet das erste Administratorkonto ein. Öffne für Änderungen an einer laufenden Kundeninstallation die White-Label-Einrichtung direkt in deren Verwaltung.",
+            "For a new installation, the operator receives the signed handoff and creates the first administrator. To change a running customer installation, open White Label setup in that installation’s administration.",
           )}
         </p>
       </section>

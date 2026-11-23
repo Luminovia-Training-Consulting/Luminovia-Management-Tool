@@ -293,6 +293,126 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const retained = { ...publishedLinks, version: 3 };
     assert.deepEqual(await saveLinks(admin, 2), retained);
 
+    const combinedRoute = "save_academy_white_label";
+    const combinedContract = z.fromJSONSchema(
+      paths[`/rest/v1/rpc/${combinedRoute}`].post.responses["200"].content[
+        "application/json"
+      ].schema,
+    );
+    const combinedBrand = {
+      ...defaults,
+      version: 4,
+      name: "Fictional Academy Portal",
+      short_name: "Fictional Academy",
+      theme_color: "#123456",
+    };
+    const combinedLinks = {
+      ...retained,
+      version: 4,
+      support_url: "https://support.example.invalid/new",
+    };
+    const saveCombined = async (
+      who,
+      brandVersion,
+      linksVersion,
+      brand = combinedBrand,
+      values = combinedLinks,
+    ) => {
+      const args = [
+        brandVersion,
+        linksVersion,
+        brand.name,
+        brand.short_name,
+        brand.theme_color,
+        values.support_url,
+        values.privacy_url,
+        values.legal_url,
+        values.terms_url,
+      ]
+        .map((item) => (item === null ? "null" : q(String(item))))
+        .join(",");
+      const result = JSON.parse(
+        await actor(
+          who,
+          `set local request.path=${q(`/rpc/${combinedRoute}`)}; set local request.method='POST';
+          select public.require_portal_access(); select public.${combinedRoute}(${args});`,
+        ),
+      );
+      combinedContract.parse(result);
+      return result;
+    };
+    await assert.rejects(saveCombined(manager, 3, 3), /42501/);
+    await assert.rejects(saveCombined(participant, 3, 3), /42501/);
+    assert.equal(
+      await sql(
+        "select has_function_privilege('anon','public.save_academy_white_label(integer,integer,text,text,text,text,text,text,text)','execute')",
+      ),
+      "f",
+    );
+    await assert.rejects(saveCombined(admin, 3, 2), /PT409/);
+    await assert.rejects(
+      saveCombined(admin, 3, 3, combinedBrand, {
+        ...combinedLinks,
+        support_url: "http://example.invalid/support",
+      }),
+      /23514/,
+    );
+    assert.deepEqual(await read(), { ...defaults, version: 3 });
+    assert.deepEqual(await readLinks(), retained);
+    assert.equal(
+      await sql(
+        "select count(*) from public.audit_events where action='academy.white_label.changed'",
+      ),
+      "0",
+    );
+
+    const combined = { branding: combinedBrand, links: combinedLinks };
+    assert.deepEqual(
+      await Promise.all([saveCombined(admin, 3, 3), saveCombined(admin, 3, 3)]),
+      [combined, combined],
+    );
+    assert.deepEqual(await saveCombined(admin, 3, 3), combined);
+    assert.deepEqual(await saveCombined(admin, 4, 4), combined);
+    await assert.rejects(
+      saveCombined(admin, 3, 3, { ...combinedBrand, name: "Outdated portal" }),
+      /PT409/,
+    );
+    assert.deepEqual(
+      JSON.parse(
+        await sql(
+          "select details from public.audit_events where action='academy.white_label.changed'",
+        ),
+      ),
+      { fields: ["name", "short_name", "theme_color", "support_url"] },
+    );
+
+    const activityRoute = "/rest/v1/rpc/admin_audit_events";
+    const activitySchema = z.fromJSONSchema(
+      paths[activityRoute].post.responses["200"].content["application/json"]
+        .schema,
+    );
+    const activity = (who) =>
+      actor(
+        who,
+        `set local request.path='/rpc/admin_audit_events'; set local request.method='POST';
+        select public.require_portal_access();
+        select public.admin_audit_events(p_action=>'academy.white_label.changed');`,
+      );
+    await assert.rejects(activity(participant), /42501/);
+    const audit = activitySchema.parse(JSON.parse(await activity(admin)));
+    assert.equal(audit.items.length, 1);
+    assert.equal(audit.items[0].resource_id, terms.installation_id);
+    assert.deepEqual(audit.items[0].changed_fields, [
+      "name",
+      "short_name",
+      "support_url",
+      "theme_color",
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(audit),
+      /Fictional Academy Portal|support\.example/,
+    );
+
     const grace = {
       ...terms,
       issued_at: date(-1),
@@ -304,27 +424,28 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         q(JSON.stringify(grace)) +
         "::jsonb)",
     );
-    assert.deepEqual(await read(), { ...defaults, version: 3 });
-    await assert.rejects(save(admin, 3), /42501/);
-    assert.deepEqual(await readLinks(), retained);
-    await assert.rejects(saveLinks(admin, 3), /42501/);
+    assert.deepEqual(await read(), combinedBrand);
+    await assert.rejects(save(admin, 4), /42501/);
+    assert.deepEqual(await readLinks(), combinedLinks);
+    await assert.rejects(saveLinks(admin, 4), /42501/);
+    await assert.rejects(saveCombined(admin, 4, 4), /42501/);
     assert.deepEqual(
       JSON.parse(
         await sql(`select jsonb_agg(details order by (details->>'version')::int)
         from public.audit_events where action='academy.brand_links.changed'`),
       ),
-      [{ version: 1 }, { version: 2 }, { version: 3 }],
+      [{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }],
     );
     assert.equal(
       await sql(
         "select count(*) from public.audit_events where action='academy.branding.changed'",
       ),
-      "3",
+      "4",
     );
     console.log(
       "PASS",
       edition,
-      "public branding and legal/support links, trusted local admin, input validation, atomic revision conflicts, role withdrawal, defaults and licence grace",
+      "public branding and legal/support links, trusted local admin, input validation, atomic White Label rollback and retry, revision conflicts, role withdrawal, defaults and licence grace",
     );
   });
 }

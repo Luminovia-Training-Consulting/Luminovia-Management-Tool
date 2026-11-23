@@ -615,6 +615,60 @@ Deno.test(
     },
 );
 
+Deno.test("administrative download receipts contain only verified identifiers", async () => {
+    const actor = "52b7ddee-2166-485a-bcee-04d0eea958d4";
+    const bytes = new TextEncoder().encode("Fictional attachment");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+        .map((value) => value.toString(16).padStart(2, "0")).join("");
+    const sequence: string[] = [];
+    let available = true;
+    let authorised = true;
+    let receiptAvailable = true;
+    const handler = createCourseDocumentHandler({
+        origins: [origin],
+        authenticate: async () => {
+            sequence.push("authenticate");
+            return authorised ? actor : false;
+        },
+        rpc: async () => {
+            sequence.push("resolve");
+            return {data: {sha256: hash, name: "Private filename.txt",
+                mime_type: "text/plain", object_path: "fictional/exact-private-file"}, error: null};
+        },
+        download: async () => {
+            sequence.push("read");
+            if (!available) throw new Error("resource_unavailable");
+            return bytes;
+        },
+        recordDownload: async (loggedActor, resource) => {
+            assert(loggedActor === actor && resource === id);
+            sequence.push("receipt");
+            if (!receiptAvailable) throw new Error("document_unavailable");
+        },
+        render: async () => { throw new Error("Unexpected render"); },
+    });
+    const file = request({kind: "resource", id});
+    assert((await handler(file)).status === 200);
+    assert(sequence.join(",") === "authenticate,resolve,read,authenticate,resolve,receipt");
+
+    sequence.length = 0;
+    available = false;
+    assert((await handler(request({kind: "resource", id}))).status === 503);
+    assert(!sequence.includes("receipt"));
+
+    sequence.length = 0;
+    available = true;
+    authorised = false;
+    assert((await handler(request({kind: "resource", id}))).status === 401);
+    assert(!sequence.includes("receipt"));
+
+    authorised = true;
+    receiptAvailable = false;
+    const failure = await handler(request({kind: "resource", id}));
+    assert(failure.status === 503);
+    assert(!(await failure.text()).includes("Fictional attachment"));
+});
+
 Deno.test("course chat download checks the exact version, scan hash and post-storage authorization", async () => {
     const bytes = new TextEncoder().encode("Fictional course file");
     const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
@@ -626,7 +680,8 @@ Deno.test("course chat download checks the exact version, scan hash and post-sto
     let downloadBytes = bytes;
     const handler = createCourseDocumentHandler({
         origins: [origin],
-        authenticate: async () => true,
+        authenticate: async () => id,
+        recordDownload: async () => { throw new Error("Private chat must stay out of the activity journal"); },
         rpc: async (_token, name, args) => {
             assert(name === "course_chat_attachment_access");
             assert(args.p_message_id === id);

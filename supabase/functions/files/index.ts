@@ -421,8 +421,14 @@ Deno.serve(async (request: Request) => {
         if (version.error || !version.data || version.data.status !== 'clean') return json(409, {error: 'file_not_clean'});
         const file = await service.storage.from('portal-clean').download(version.data.object_path);
         if (file.error || !file.data) return json(404, {error: 'file_not_found'});
-        await visible(doc.id); // Recheck revocation immediately before returning any bytes.
-        await service.from('audit_events').insert({actor_id: actor, action: 'document.downloaded', resource_id: doc.id});
+        const current = await visible(doc.id); // Recheck revocation immediately before returning any bytes.
+        if (['personal', 'job_before', 'job_after'].includes(current.scope) &&
+            ['material', 'invoice', 'participant_submission'].includes(current.kind)) {
+            const receipt = await service.rpc('record_admin_file_download', {p_actor_id: actor, p_resource_id: doc.id});
+            if (receipt.error) return json(503, {error: 'download_unavailable'});
+        } else {
+            await service.from('audit_events').insert({actor_id: actor, action: 'document.downloaded', resource_id: doc.id});
+        }
         return new Response(file.data, {headers: {...headers, 'Content-Type': version.data.mime_type, 'Content-Disposition': downloadDisposition(version.data.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         // Return only allowed stable error codes, not Storage paths, tokens or internal provider responses.
     } catch (error) {

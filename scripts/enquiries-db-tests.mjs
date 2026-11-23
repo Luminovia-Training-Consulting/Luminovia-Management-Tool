@@ -200,6 +200,11 @@ await withTestDatabase("enquiries_test", async (fixture) => {
                 await sql("select count(*) from private.website_enquiry_events"),
                 "1",
             );
+            assert.equal(await sql(`
+                select count(*) from private.administration_activity
+                where action = 'enquiry.received' and actor_id is null
+                  and resource_id = '${id}'
+            `), "1", "One intake receipt without sender data or fabricated actor");
             assert.equal(
                 await sql(
                     `select count(*)

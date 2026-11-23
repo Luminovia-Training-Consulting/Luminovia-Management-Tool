@@ -175,6 +175,43 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
         },
     );
     await check(
+        "The operational projection expires after exactly 30 days while source receipts are preserved",
+        async () => {
+            const expired = randomUUID(), recent = randomUUID(), target = randomUUID();
+            await sql(`
+                insert into private.administration_activity(id,actor_id,action,resource_id,created_at)
+                values (${q(expired)},${q(users.admin)},'document.file_downloaded',${q(target)}, now()-interval '720 hours'),
+                       (${q(recent)},${q(users.admin)},'document.uploaded',${q(target)},now()-interval '719 hours');
+            `);
+            const range = "now()-interval '31 days',now()";
+            const before = (await read(users.admin, range)).items;
+            assert.equal(before.some(({id}) => id === expired), false);
+            assert.equal(before.some(({id}) => id === recent), true);
+            assert.equal(await sql("select private.prune_administration_activity()"), "1");
+            assert.equal(await sql(`select count(*) from private.administration_activity where id=${q(expired)}`), "0");
+            assert.equal(await sql(`select count(*) from public.audit_events where action='taxonomy.created'`), "1");
+            assert.equal(await sql("select has_function_privilege('authenticated','private.prune_administration_activity()','execute')"), "f");
+            await assert.rejects(actor(users.admin, "select private.write_admin_activity(auth.uid(),'document.uploaded',gen_random_uuid(),'{}')"), /42501/);
+            await sql(`delete from private.administration_activity where id=${q(recent)}`);
+        },
+    );
+    await check(
+        "White Label audit entries publish only reviewed field names, never submitted values",
+        async () => {
+            const id = randomUUID();
+            await sql(`
+                insert into public.audit_events(id,actor_id,action,details)
+                values (${q(id)},${q(users.admin)},'academy.white_label.changed',
+                        ${q(JSON.stringify({fields: ["name", "short_name", secret], new_name: secret}))}::jsonb);
+            `);
+            const record = (await read(users.admin, "null,null,'academy.white_label.changed'")).items[0];
+            assert.equal(record.id, id);
+            assert.deepEqual(record.changed_fields, ["name", "short_name"]);
+            assert.ok(!JSON.stringify(record).includes(secret));
+            await sql(`delete from private.administration_activity where id=${q(id)}`);
+        },
+    );
+    await check(
         "Concurrent equal-timestamp events page by timestamp plus UUID without duplicates or gaps",
         async () => {
             const at = await sql("select now()-interval '1 hour'"),

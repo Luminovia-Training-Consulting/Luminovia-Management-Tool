@@ -192,6 +192,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   rename_document: "PUT",
   save_academy_public_brand_links: "PUT",
   save_academy_public_branding: "PUT",
+  save_academy_white_label: "PUT",
   save_account_username: "PUT",
   save_assignment_change: "PUT",
   save_attention_preferences: "PUT",

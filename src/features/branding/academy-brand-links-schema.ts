@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const academyPublicLinkFields = [
+  ["support_url", "Support", "Support"],
+  ["privacy_url", "Datenschutz", "Privacy policy"],
+  ["legal_url", "Impressum", "Legal notice"],
+  ["terms_url", "Nutzungsbedingungen", "Terms of use"],
+] as const;
+
 export const academyBrandLinkMaxLength = 500;
 const url = z
   .string()
