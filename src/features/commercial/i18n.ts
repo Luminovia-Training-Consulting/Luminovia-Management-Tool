@@ -36,8 +36,8 @@ const pairs: Record<string, [string, string]> = {
   ownOnly: ["Meine Unterlagen", "My documents"],
   register: ["Ausgeführten Vertrag hinterlegen", "Register executed contract"],
   registerHint: [
-    "Wähle einen von der dozierenden Person hochgeladenen ausgeführten Vertrag. Eine Empfangsbestätigung ersetzt keine rechtsverbindliche Unterzeichnung.",
-    "Select an executed contract uploaded by the lecturer. A portal receipt acknowledgement does not replace a legally binding signature.",
+    "Lade den ausgeführten Vertrag für die ausgewählte Person hoch oder wähle eine bereits geprüfte Datei aus. Eine Empfangsbestätigung ersetzt keine rechtsverbindliche Unterzeichnung.",
+    "Upload the executed contract for the selected lecturer or choose an existing checked file. A portal receipt acknowledgement does not replace a legally binding signature.",
   ],
   ownContractUploadHint: [
     "Lade deinen ausgeführten Vertrag selbst hoch. Die Verwaltung kann ihn für den Vertragseintrag auswählen, aber nicht herunterladen.",
@@ -45,8 +45,8 @@ const pairs: Record<string, [string, string]> = {
   ],
   contractCandidate: ["Hochgeladene Vertragsdatei", "Uploaded contract file"],
   contractCandidateHint: [
-    "Nur die dozierende Person kann den Dateiinhalt öffnen.",
-    "Only the lecturer can open the file contents.",
+    "Die Datei ist für die dozierende Person und die Person zugänglich, die sie berechtigt für sie hochgeladen hat.",
+    "The lecturer and the staff member who uploaded the file on their behalf can access it.",
   ],
   selectContractCandidate: ["Datei auswählen", "Select a file"],
   person: ["Dozent:in", "Lecturer"],

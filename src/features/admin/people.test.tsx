@@ -135,6 +135,44 @@ async function selectLecturer() {
 }
 
 describe("people administration interactions (mocked backend)", () => {
+  it("assigns a new topic to the selected lecturer before separate verification", async () => {
+    state.expertise = [];
+    state.rpc.mockImplementation(async (name) => {
+      if (name === "commercial_people")
+        return { data: [{ id: "lecturer" }], error: null };
+      if (name === "get_my_permissions")
+        return { data: state.permissions, error: null };
+      if (name === "set_lecturer_expertise") {
+        state.expertise = [
+          {
+            user_id: "lecturer",
+            topic_id: "python",
+            verified: false,
+            valid_until: null,
+          },
+        ];
+      }
+      return { data: null, error: null };
+    });
+    page();
+    const lecturer = within(await selectLecturer());
+    const user = userEvent.setup();
+    await user.selectOptions(
+      await lecturer.findByLabelText("Thema auswählen"),
+      "python",
+    );
+    await user.click(
+      lecturer.getByRole("button", { name: "Expertise hinzufügen" }),
+    );
+    expect(await lecturer.findByText("Expertise gespeichert.")).toBeVisible();
+    expect(state.rpc).toHaveBeenCalledWith("set_lecturer_expertise", {
+      p_user_id: "lecturer",
+      p_topic_id: "python",
+      p_selected: true,
+    });
+    expect(state.expertise[0].verified).toBe(false);
+  });
+
   it("requires both capabilities before querying private profiles", async () => {
     state.permissions = ["users.manage"];
     page();

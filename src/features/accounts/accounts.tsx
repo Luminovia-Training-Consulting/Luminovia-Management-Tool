@@ -32,15 +32,22 @@ import {
   accountOrganisationsQuery,
   accountRoleCatalogQuery,
 } from "./api";
+import { ManagedProfileEditor } from "./managed-profile-editor";
 import "./i18n";
 
 /** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
   canAssign,
+  canVerify,
+  canManageContracts,
+  canManageCompanies,
 }: {
   actorId: string;
   canAssign: boolean;
+  canVerify: boolean;
+  canManageContracts: boolean;
+  canManageCompanies: boolean;
 }) {
   const { t } = useTranslation("accounts");
   const common = useTranslation().t;
@@ -48,6 +55,7 @@ function AccountsDirectory({
   const cache = useQueryClient();
   const [params] = useSearchParams();
   const [search, setSearch] = useState(params.get("q") ?? "");
+  const [editProfile, setEditProfile] = useState<AccountPerson | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<AccountPerson | null>(null);
@@ -157,11 +165,41 @@ function AccountsDirectory({
                   {t(person.active ? "active" : "inactive")}
                 </span>
                 <p>{person.roles.map((role) => t(role)).join(" · ")}</p>
-                <Link to={`/admin/people?user=${person.id}`}>
-                  {t("manageProfile")}
-                </Link>
               </div>
               <div className="account-list-actions">
+                {person.can_change_active && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setEditProfile(person)}
+                  >
+                    {t("editProfile")}
+                  </Button>
+                )}
+                {person.roles.some(
+                  (role) => role === "lecturer" || role === "senior_lecturer",
+                ) && (
+                  <>
+                    {canVerify && (
+                      <Button asChild variant="secondary">
+                        <Link to={`/admin/people?user=${person.id}`}>
+                          {t("manageProfile")}
+                        </Link>
+                      </Button>
+                    )}
+                    {canManageContracts && (
+                      <Button asChild variant="secondary">
+                        <Link to={`/contracts?user=${person.id}`}>
+                          {t("manageContracts")}
+                        </Link>
+                      </Button>
+                    )}
+                  </>
+                )}
+                {canManageCompanies && person.roles.includes("client") && (
+                  <Button asChild variant="secondary">
+                    <Link to="/clients">{t("manageCompany")}</Link>
+                  </Button>
+                )}
                 <PermanentDeleteAction
                   kind="account"
                   id={person.id}
@@ -218,6 +256,22 @@ function AccountsDirectory({
             actor={actorId}
             roles={catalog.data}
             canLinkOrganisations={canLinkOrganisations}
+          />
+        )}
+      </Dialog>
+      <Dialog
+        open={editProfile !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditProfile(null);
+        }}
+        title={t("editProfile")}
+        description={editProfile?.display_name || editProfile?.email || ""}
+      >
+        {editProfile && (
+          <ManagedProfileEditor
+            actor={actorId}
+            id={editProfile.id}
+            close={() => setEditProfile(null)}
           />
         )}
       </Dialog>
@@ -406,6 +460,9 @@ export function AccountsPage() {
         <AccountsDirectory
           actorId={session!.user.id}
           canAssign={permissions.data.includes("users.roles.manage")}
+          canVerify={permissions.data.includes("qualifications.verify")}
+          canManageContracts={permissions.data.includes("contracts.manage")}
+          canManageCompanies={permissions.data.includes("organisations.manage")}
         />
       )}
     </>

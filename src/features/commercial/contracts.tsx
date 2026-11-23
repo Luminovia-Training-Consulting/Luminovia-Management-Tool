@@ -3,6 +3,7 @@
  * reference exact clean versions; acknowledgement is not an electronic signature.
  */
 import { useRequestKey } from "../../lib/request-key";
+import { useSearchParams } from "react-router-dom";
 import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -58,11 +59,13 @@ function RegisterContract({
   actor,
   zone,
   records,
+  initialUser,
   onDone,
 }: {
   actor: string;
   zone: string;
   records: ContractRecord[];
+  initialUser: string;
   onDone: () => void;
 }) {
   const { t } = useTranslation("commercial");
@@ -78,7 +81,7 @@ function RegisterContract({
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
-      user: "",
+      user: initialUser,
       title: "",
       kind: "master",
       parent: "",
@@ -87,10 +90,11 @@ function RegisterContract({
     },
   });
   const person = useWatch({ control: form.control, name: "user" });
+  const eligiblePerson = people.data?.some(({ id }) => id === person) === true;
   const kind = useWatch({ control: form.control, name: "kind" });
   const candidates = useQuery({
     queryKey: ["contract-registration-candidates", actor, person],
-    enabled: Boolean(person),
+    enabled: eligiblePerson,
     queryFn: async () => {
       const { data, error } = await db().rpc(
         "contract_registration_candidates",
@@ -115,7 +119,11 @@ function RegisterContract({
         setInvalidDates(true);
         throw new Error("invalid_date");
       }
-      if (!document || (values.kind === "addendum" && !values.parent))
+      if (
+        !eligiblePerson ||
+        !document ||
+        (values.kind === "addendum" && !values.parent)
+      )
         throw new Error("document_required");
       const payload = {
         p_user_id: values.user,
@@ -241,7 +249,7 @@ function RegisterContract({
           />
         </Field>
       </div>
-      {person && (
+      {eligiblePerson && (
         <CommercialPdfUpload
           key={person}
           kind="contract"
@@ -279,7 +287,9 @@ function RegisterContract({
       </Field>
       {candidates.isError && <Notice kind="error">{t("failed")}</Notice>}
       <div className="form-actions">
-        <Button disabled={!online || save.isPending || !document}>
+        <Button
+          disabled={!online || save.isPending || !eligiblePerson || !document}
+        >
           {t("registerSave")}
         </Button>
       </div>
@@ -493,9 +503,13 @@ export function ContractsPage() {
   const actor = session!.user.id;
   const access = useQuery(commercialAccessQuery(actor));
   const profile = useQuery(profileQuery(actor));
+  const [params, setParams] = useSearchParams();
   const [all, setAll] = useState(false);
+  const target = params.get("user") ?? "";
   const manager = access.data?.can_manage_contracts ?? false;
-  const effectiveAll = all && manager;
+  const selectedUser =
+    manager && z.string().uuid().safeParse(target).success ? target : "";
+  const effectiveAll = manager && (all || Boolean(selectedUser));
   const records = useQuery({
     ...contractsQuery(actor, effectiveAll),
     enabled: !access.isPending,
@@ -507,10 +521,12 @@ export function ContractsPage() {
   const [registering, setRegistering] = useState(false);
   const [search, setSearch] = useState("");
   const filtered =
-    records.data?.filter((record) =>
-      `${record.title} ${record.user_name}`
-        .toLocaleLowerCase()
-        .includes(search.toLocaleLowerCase()),
+    records.data?.filter(
+      (record) =>
+        (!selectedUser || record.user_id === selectedUser) &&
+        `${record.title} ${record.user_name}`
+          .toLocaleLowerCase()
+          .includes(search.toLocaleLowerCase()),
     ) ?? [];
   return (
     <>
@@ -526,24 +542,43 @@ export function ContractsPage() {
           )
         }
       />
-      {manager && (
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={all}
-            onChange={(event) => setAll(event.target.checked)}
-          />
-          {t("allPeople")}
-        </label>
+      {selectedUser ? (
+        <div className="page-actions">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setAll(true);
+              setParams((current) => {
+                current.delete("user");
+                return current;
+              });
+            }}
+          >
+            {t("allPeople")}
+          </Button>
+        </div>
+      ) : (
+        manager && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={all}
+              onChange={(event) => setAll(event.target.checked)}
+            />
+            {t("allPeople")}
+          </label>
+        )
       )}
-      <section className="panel">
-        <p>{t("ownContractUploadHint")}</p>
-        <CommercialPdfUpload
-          kind="contract"
-          ownerId={actor}
-          label={t("contractPdf")}
-        />
-      </section>
+      {!selectedUser && (
+        <section className="panel">
+          <p>{t("ownContractUploadHint")}</p>
+          <CommercialPdfUpload
+            kind="contract"
+            ownerId={actor}
+            label={t("contractPdf")}
+          />
+        </section>
+      )}
       <div className="commercial-search panel">
         <Search size={18} />
         <Field id="contract-search" label={t("contracts")}>
@@ -598,6 +633,7 @@ export function ContractsPage() {
               actor={actor}
               zone={profile.data?.time_zone ?? "Europe/Berlin"}
               records={allRecords.data ?? []}
+              initialUser={selectedUser}
               onDone={() => setRegistering(false)}
             />
           ))}

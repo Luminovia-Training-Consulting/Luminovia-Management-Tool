@@ -33,7 +33,11 @@ const de = {
     "Die Einladung wurde versandt und der Zugang mit der gewählten Rolle angelegt.",
   alreadyInvited:
     "Die Einladung wurde bereits versandt. Es wurde keine weitere E-Mail gesendet.",
-  manageProfile: "Profil, Nachweise und Kontostatus verwalten",
+  manageProfile: "Expertise und Qualifikationen verwalten",
+  manageContracts: "Verträge verwalten",
+  manageCompany: "Unternehmen verwalten",
+  participantProfileShared:
+    "Das gemeinsame Kontoprofil wird von der Verwaltung gepflegt. Die Kurszuweisungen und die Firmenreferenz kannst du hier bearbeiten.",
   hint: "Eigene Konten, nachvollziehbare Rollen und klar zugeordnete Unternehmen.",
   search: "Konten suchen",
   roles: "Rollen bearbeiten",
@@ -126,7 +130,11 @@ const en: typeof de = {
     "The invitation was sent and access was created with the selected role.",
   alreadyInvited:
     "The invitation was already sent. No additional email was sent.",
-  manageProfile: "Manage profile, evidence and account status",
+  manageProfile: "Manage expertise and qualifications",
+  manageContracts: "Manage contracts",
+  manageCompany: "Manage companies",
+  participantProfileShared:
+    "Staff manage the shared account profile. You can edit course assignments and the company reference here.",
   hint: "Individual accounts, audited roles and clearly assigned companies.",
   search: "Search accounts",
   roles: "Edit roles",

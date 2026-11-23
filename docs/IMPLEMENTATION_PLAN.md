@@ -11,6 +11,13 @@
 - [x] Open the scoped course workspace when company Premium is off. Return standard course details and scheduled sessions for authorised staff, assigned lecturers and contacts of the course company. Keep retained learning data and participant workflows guarded.
 - [ ] Run the authenticated assignment-to-standard-workspace browser journey when the isolated QA port is available.
 
+## Delegated lecturer, company and participant settings
+
+- [x] Add account actions for authorised staff to edit subordinate profiles and navigate directly to the selected lecturer's contract or qualification records. Assign or remove expertise independently of qualification verification. Preserve the existing PDF access and qualification history.
+- [x] Expose name, language and time zone editing in the internal Premium participant centre with a current company association. Require staff authority to edit shared profiles. Keep course assignments and company references scoped to the current company.
+- [x] Verify staff and company permissions, archived topics, cross-company denial, stale updates, Premium revocation and audit records on migrated PostgreSQL. Cover the new forms and targeted contract link in component tests.
+- [ ] Run the signed-in desktop and mobile commercial journey through a free isolated browser stack.
+
 ## Portal spacing, calendar selection and company API key validity
 
 - [x] Space course catalogue controls, administration cards, company controls and course-readiness actions using shared wrapping and stack styles. Check desktop and mobile administration layouts in the local browser.

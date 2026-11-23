@@ -243,7 +243,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         timeout: 45_000,
     });
     await login(adminPage, administrator);
-    await adminPage.goto("/contracts");
+    await adminPage.goto(`/contracts?user=${lecturer.id}`);
     await adminPage
         .getByRole("button", {
             name: "Ausgeführten Vertrag hinterlegen",
@@ -252,9 +252,9 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         .click();
     let dialog = adminPage.getByRole("dialog");
     const title = `Rahmenvertrag QA ${randomUUID().slice(0, 8)}`;
-    await dialog
-        .getByLabel("Dozent:in", {exact: true})
-        .selectOption(lecturer.id);
+    await expect(dialog.getByLabel("Dozent:in", {exact: true})).toHaveValue(
+        lecturer.id,
+    );
     await dialog.getByLabel("Titel", {exact: true}).fill(title);
     await dialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
     await expect(

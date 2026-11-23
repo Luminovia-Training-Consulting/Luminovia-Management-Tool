@@ -1,3 +1,11 @@
+# 23 November 2026 — Delegated lecturer and participant settings
+
+The account directory now exposes basic profile editing, targeted lecturer contracts and qualification management with the current staff capabilities. Staff can add or remove an expertise topic. Verified topics require revocation before removal, preserving the existing evidence and decision history. The contract registration link preselects the lecturer and uses the existing restricted PDF workflow.
+
+The internal Premium participant centre lets a company edit the name, language and time zone of its own exclusively linked, participant-only accounts. Authorised staff can edit shared profiles. Writes require the current association, entitlement and original profile snapshot and record the actor and company. The same centre retains its course assignments and company reference controls.
+
+Disposable PostgreSQL checks covered staff and company authority, verified-topic removal, archived topics, cross-company denial, stale edits, audit, shared profiles and Premium revocation. Existing qualification, contract privacy, profile API, course assignment and company dispatch checks passed. All 1,592 frontend tests and 13 code-integrity tests passed before integrating the concurrent White Label update. The combined revision passed 421 focused frontend tests. The production build and bundle budgets passed. The authenticated desktop and mobile browser command stopped before startup because port 55322 was occupied.
+
 # 23 November 2026 — Self-host migration replay compatibility
 
 The candidate checker and updater wrap the exact released job-material migration in a transaction and preserve its original source in the migration ledger. The digest gate retains the strict envelope requirement for all other sources. The candidate/package suites passed 64 checks and the Python updater suites passed 68.

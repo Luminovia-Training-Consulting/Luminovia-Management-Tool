@@ -114,16 +114,28 @@ const pairs: Record<string, [string, string]> = {
     "The account status could not be changed. Check your permissions and whether another active administrator account is available.",
   ],
   peopleExpertiseTitle: [
-    "Angegebene Expertise prüfen",
-    "Review declared expertise",
+    "Expertise und Qualifikationen verwalten",
+    "Manage expertise and qualifications",
   ],
   peopleVerificationHint: [
     "Prüfe die Qualifikationsnachweise vor der Freigabe. Nachweisdateien werden derzeit außerhalb des Portals verwaltet.",
     "Review qualification evidence before verifying expertise. Evidence files are currently managed outside the portal.",
   ],
+  peopleExpertiseTopic: ["Thema auswählen", "Choose a topic"],
+  peopleExpertiseAdd: ["Expertise hinzufügen", "Add expertise"],
+  peopleExpertiseRemove: ["Expertise entfernen", "Remove expertise"],
+  peopleExpertiseRevokeFirst: [
+    "Hebe zuerst die Qualifikationsbestätigung für dieses Thema auf.",
+    "Revoke the qualification verification for this topic first.",
+  ],
+  peopleExpertiseSaveFailed: [
+    "Die Expertise konnte nicht gespeichert werden.",
+    "Could not save the expertise.",
+  ],
+  peopleExpertiseSaved: ["Expertise gespeichert.", "Expertise saved."],
   peopleNoExpertise: [
-    "Diese Person hat noch keine Expertise angegeben.",
-    "This person has not declared any expertise yet.",
+    "Für dieses Konto sind noch keine Themen hinterlegt.",
+    "No expertise topics are assigned to this account yet.",
   ],
   peopleReviewTopic: [
     "Expertise prüfen: {{topic}}",

@@ -10,6 +10,7 @@ import {
 const jsonSchema = z.toJSONSchema;
 const uuid = z.string().meta({ format: "uuid" });
 const user = { p_user_id: jsonSchema(uuid) };
+const companyParticipant = { ...user, p_organisation_id: jsonSchema(uuid) };
 const version = { type: "integer", minimum: 0, maximum: 2_147_483_647 };
 const profileDetails = z.object({
   country: z.string().max(100),
@@ -165,6 +166,36 @@ export const profileContracts: Record<string, ProfileContract> = {
     },
     result: managedProfile,
     staleCode: "40001",
+  },
+  company_participant_profile: {
+    summary: "Read manageable profile fields for a company participant",
+    description:
+      "Requires current Premium and an active association. Company staff can manage a participant-only account exclusively associated with their company. Portal staff with current subordinate account authority can manage a shared account.",
+    request: companyParticipant,
+    result: managedProfile,
+  },
+  save_company_participant_profile: {
+    summary: "Update a company participant's basic account fields",
+    description:
+      "Uses the same live company and account checks as company_participant_profile. Send all three account fields and the complete previous result. Writes are audited.",
+    request: {
+      ...companyParticipant,
+      p_payload: jsonSchema(managedProfileInput),
+      p_expected: jsonSchema(managedProfile),
+    },
+    result: managedProfile,
+    staleCode: "40001",
+  },
+  set_lecturer_expertise: {
+    summary: "Add or remove a topic for a subordinate lecturer",
+    description:
+      "Requires qualification verification and subordinate account authority. Adding a topic does not attest the qualification. Revoke an existing verification before removing the topic.",
+    request: {
+      ...user,
+      p_topic_id: jsonSchema(uuid),
+      p_selected: { type: "boolean" },
+    },
+    result: null,
   },
   profile_avatar: {
     summary: "Read the current visible avatar reference",

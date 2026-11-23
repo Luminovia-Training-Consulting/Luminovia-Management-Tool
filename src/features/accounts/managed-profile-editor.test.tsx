@@ -4,7 +4,10 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
-import { ManagedProfileEditor } from "./managed-profile-editor";
+import {
+  CompanyParticipantProfileSettings,
+  ManagedProfileEditor,
+} from "./managed-profile-editor";
 
 const fake = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
@@ -53,4 +56,59 @@ it("sends the original snapshot, keeps draft on conflict, then closes only after
   fail = false;
   await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
+});
+
+it("shows company-scoped profile controls only after authorisation and saves against the original snapshot", async () => {
+  await i18n.changeLanguage("de");
+  const old = {
+    display_name: "Fictional learner",
+    locale: "de",
+    time_zone: "Europe/Berlin",
+  };
+  const canEdit = { data: old, error: null };
+  fake.rpc.mockImplementation((name: string, input: { p_user_id: string }) =>
+    name === "company_participant_profile"
+      ? {
+          abortSignal: async () =>
+            input.p_user_id === "shared"
+              ? { data: null, error: { code: "42501" } }
+              : canEdit,
+        }
+      : Promise.resolve(canEdit),
+  );
+  cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={cache}>
+      <CompanyParticipantProfileSettings
+        actor="company"
+        id="shared"
+        organisationId="org-a"
+        name="Shared learner"
+      />
+      <CompanyParticipantProfileSettings
+        actor="company"
+        id="learner"
+        organisationId="org-a"
+        name={old.display_name}
+      />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText(/Das gemeinsame Kontoprofil/)).toBeVisible();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Profil bearbeiten" }),
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Anzeigesprache" }),
+    "en",
+  );
+  await user.click(screen.getByRole("button", { name: "Speichern" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("save_company_participant_profile", {
+      p_user_id: "learner",
+      p_organisation_id: "org-a",
+      p_payload: { ...old, locale: "en" },
+      p_expected: old,
+    }),
+  );
 });

@@ -13,6 +13,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { CompanyParticipantProfileSettings } from "../accounts/managed-profile-editor";
 import { courseWorkspaceKey } from "../learning/api";
 import { PublishedExamResults } from "../learning/timed-exam";
 import { attendanceRegistersKey } from "../learning/attendance-api";
@@ -216,14 +217,22 @@ export function CompanyParticipantDetails({
         />
       ) : (
         <>
-          <Button
-            type="button"
-            variant="secondary"
-            aria-expanded={examResults}
-            onClick={() => setExamResults((open) => !open)}
-          >
-            {t("results", { ns: "timedExam" })}
-          </Button>
+          <div className="company-participant-row-actions">
+            <CompanyParticipantProfileSettings
+              actor={actor}
+              id={participant.user_id}
+              organisationId={organisationId}
+              name={participant.display_name}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              aria-expanded={examResults}
+              onClick={() => setExamResults((open) => !open)}
+            >
+              {t("results", { ns: "timedExam" })}
+            </Button>
+          </div>
           {examResults && (
             <PublishedExamResults
               actor={actor}

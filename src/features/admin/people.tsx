@@ -3,6 +3,7 @@
  * Changes require confirmed server responses and invalidate related queries;
  * private profile fields retain their resource-specific database access controls.
  */
+import { commercialPeopleQuery } from "../commercial/api";
 import { qualificationKey } from "../qualifications/api";
 import { QualificationEvidenceReview } from "../qualifications/evidence";
 import { ProfileEvidence } from "../files/profile-evidence";
@@ -209,6 +210,101 @@ function ExpertiseReview({
   );
 }
 
+function ExpertiseSelection({
+  actor,
+  lecturer,
+  topics,
+  current,
+}: {
+  actor: string;
+  lecturer: string;
+  topics: Topic[];
+  current: Expertise[];
+}) {
+  const { t, i18n } = useTranslation();
+  const online = useOnline();
+  const cache = useQueryClient();
+  const [topicId, setTopicId] = useState("");
+  const currentTopic = current.find((item) => item.topic_id === topicId);
+  const save = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      const { error } = await db().rpc("set_lecturer_expertise", {
+        p_user_id: lecturer,
+        p_topic_id: topicId,
+        p_selected: !currentTopic,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: ["admin-expertise", actor] }),
+        cache.invalidateQueries({ queryKey: ["expertise", lecturer] }),
+        cache.invalidateQueries({ queryKey: ["person", actor, lecturer] }),
+        cache.invalidateQueries({ queryKey: ["people-directory", actor] }),
+      ]);
+      setTopicId("");
+    },
+  });
+  return (
+    <form
+      className="form-row"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save.mutate();
+      }}
+    >
+      <Field id="managed-expertise-topic" label={t("peopleExpertiseTopic")}>
+        <select
+          id="managed-expertise-topic"
+          value={topicId}
+          disabled={save.isPending}
+          onChange={(event) => {
+            setTopicId(event.target.value);
+            save.reset();
+          }}
+        >
+          <option value="">—</option>
+          {topics
+            .filter(
+              (topic) =>
+                !topic.archived_at ||
+                current.some((item) => item.topic_id === topic.id),
+            )
+            .map((topic) => (
+              <option key={topic.id} value={topic.id}>
+                {i18n.language.startsWith("de")
+                  ? topic.label_de
+                  : topic.label_en}
+              </option>
+            ))}
+        </select>
+      </Field>
+      <div>
+        <Button
+          disabled={
+            !online ||
+            !topicId ||
+            Boolean(currentTopic?.verified) ||
+            save.isPending
+          }
+        >
+          {t(currentTopic ? "peopleExpertiseRemove" : "peopleExpertiseAdd")}
+        </Button>
+        {currentTopic?.verified && (
+          <p className="muted">{t("peopleExpertiseRevokeFirst")}</p>
+        )}
+        {save.isError && (
+          <Notice kind="error">{t("peopleExpertiseSaveFailed")}</Notice>
+        )}
+        {save.isSuccess && (
+          <Notice kind="success">{t("peopleExpertiseSaved")}</Notice>
+        )}
+      </div>
+    </form>
+  );
+}
+
 /** Load administrative profiles, expertise and account state; require explicit confirmation for the selected suspension target. */
 function PeopleDirectory({ actorId }: { actorId: string }) {
   const { t, i18n } = useTranslation();
@@ -242,6 +338,7 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
     },
   });
   const topics = useQuery(topicsQuery);
+  const lecturers = useQuery(commercialPeopleQuery(actorId));
   const activation = useMutation({
     mutationFn: async (change: AccountChange) => {
       requireOnline();
@@ -402,6 +499,16 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
             <ProfileEvidence ownerId={selected.id} readOnly kinds={["cv"]} />
             <h3>{t("peopleExpertiseTitle")}</h3>
             <p>{t("intro", { ns: "qualifications" })}</p>
+            {selected.id !== actorId &&
+              lecturers.data?.some(({ id }) => id === selected.id) && (
+                <ExpertiseSelection
+                  key={selected.id}
+                  actor={actorId}
+                  lecturer={selected.id}
+                  topics={topics.data}
+                  current={selectedExpertise}
+                />
+              )}
             <div className="people-expertise-list">
               {selectedExpertise.length ? (
                 selectedExpertise.map((item) => {
