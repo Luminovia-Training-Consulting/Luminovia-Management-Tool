@@ -247,15 +247,22 @@ export function assertCandidateConfiguration(configuration, scope) {
 // Store exact migration source in a real ledger entry, not only its version number.
 export function migrationWithHistory(filename, source) {
     assert.match(filename, /^\d{14}_[a-z0-9_]+\.sql$/);
+    // This released function replacement predates the explicit transaction envelope.
+    // Keep the original bytes in the ledger and wrap only the pinned SQL.
+    const command = filename === "20261123021230_job_material_archiving.sql" &&
+        hash(source) === "6f818242ba0b1da6f4e001f1ca1b374940cc329c36be49564a6c0e9fe59fafd2"
+        ? `BEGIN;\n${source}\nCOMMIT;\n`
+        : source;
     assert(
-        /^\s*(?:--[^\n]*\n\s*)*begin;/i.test(source) && /commit;\s*$/i.test(source),
+        /^\s*(?:--[^\n]*\n\s*)*begin;/i.test(command) && /commit;\s*$/i.test(command),
+        `Migration requires a transaction envelope: ${filename}`,
     );
     const version = filename.slice(0, 14),
         name = filename.slice(15, -4);
     const delimiter = "$candidate_history_" + version + "$";
     assert(!source.includes(delimiter));
     const record = `INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES ('${version}','${name}',ARRAY[${delimiter}${source}${delimiter}]);\n`;
-    return source.replace(/commit;\s*$/i, () => record + "COMMIT;\n");
+    return command.replace(/commit;\s*$/i, () => record + "COMMIT;\n");
 }
 
 // Copy allowed source files without private data or unrelated checkout artifacts.

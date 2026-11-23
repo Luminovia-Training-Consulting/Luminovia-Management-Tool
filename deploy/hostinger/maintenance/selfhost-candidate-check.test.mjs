@@ -526,6 +526,15 @@ test("every actual application migration can be atomically replayed with its exa
     }
 });
 
+test("the released job material migration is wrapped only with its exact source", () => {
+    const name = "20261123021230_job_material_archiving.sql";
+    const source = readFileSync(join("supabase/migrations", name), "utf8");
+    const replay = migrationWithHistory(name, source);
+    assert(replay.startsWith("BEGIN;\n" + source));
+    assert(replay.includes("ARRAY[$candidate_history_20261123021230$" + source));
+    assert.throws(() => migrationWithHistory(name, source + "\n-- modified"), /transaction envelope/);
+});
+
 test("job briefing upgrade follows the accepted enquiry migration", () => {
     // An empty database accepts interleaving, but a retained installation cannot
     // replay a newly introduced version older than its applied migration history.

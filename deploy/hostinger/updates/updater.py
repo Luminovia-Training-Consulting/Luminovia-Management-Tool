@@ -296,8 +296,16 @@ def visible_sql(source):
     return "".join(result)
 
 
+def migration_execution_source(source):
+    """Keep the released archive migration byte-for-byte in history."""
+    if hashlib.sha256(source.encode()).hexdigest() == "6f818242ba0b1da6f4e001f1ca1b374940cc329c36be49564a6c0e9fe59fafd2":
+        return "BEGIN;\n" + source + "\nCOMMIT;\n"
+    return source
+
+
 def migration_statements(source):
     """Validate the envelope shared by automatic and reviewed migration paths."""
+    source = migration_execution_source(source)
     visible = visible_sql(source)
     statements = [part.strip() for part in visible.split(";") if part.strip()]
     if len(statements) < 2 or statements[0].lower() not in ("begin", "begin transaction") or statements[-1].lower() != "commit":
@@ -401,8 +409,9 @@ def migration_sql(source, version, name, *, operator_reviewed=False):
     if delimiter in source:
         raise UpdateError("invalid_migration_delimiter")
     record = "INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES ('" + version + "','" + name + "',ARRAY[" + delimiter + source + delimiter + "]);\n"
-    ending = MIGRATION_COMMIT.search(source)
-    command = source[:ending.start()] + "\n" + record + "COMMIT;\n"
+    execution = migration_execution_source(source)
+    ending = MIGRATION_COMMIT.search(execution)
+    command = execution[:ending.start()] + "\n" + record + "COMMIT;\n"
     opening = MIGRATION_BEGIN.match(command)
     return command[:opening.end()] + "\nSELECT pg_advisory_xact_lock(hashtext('luminovia.schema_migrations'));\n" + command[opening.end():]
 

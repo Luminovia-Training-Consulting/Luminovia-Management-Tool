@@ -1,3 +1,7 @@
+# 23 November 2026 — Self-host migration replay compatibility
+
+The candidate checker and updater wrap the exact released job-material migration in a transaction and preserve its original source in the migration ledger. The digest gate retains the strict envelope requirement for all other sources. The candidate/package suites passed 64 checks and the Python updater suites passed 68.
+
 # 23 November 2026 — Company classes and job dispatch defaults
 
 Companies can maintain classes, HTTPS meeting rooms and an assignment contact without Premium. Own job details use a company-scoped projection without lecturer compensation or contract terms. Staff choose the class for the selected company inside the versioned offer editor. Saving records the current room and contact, while existing offer ownership and accepted-term restrictions remain in force.
