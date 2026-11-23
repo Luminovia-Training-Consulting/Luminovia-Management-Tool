@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  portalHttpActions,
   portalHttpMethods,
   portalHttpPutTargets,
   portalHttpPutVersions,
@@ -33,8 +34,11 @@ describe("Portal HTTP aliases", () => {
       for (const includeNonInteractive of [true, false]) {
         const document = portalOpenApi(backend, includeNonInteractive, brand);
         const paths: Record<string, Record<string, unknown>> = document.paths;
-        const expected = Object.entries(portalHttpMethods)
-          .filter(([name]) => {
+        const expected = [
+          ...Object.keys(portalHttpMethods),
+          ...Object.keys(portalHttpActions),
+        ]
+          .filter((name) => {
             const operation = paths[rpcPrefix + name]?.post as
               | { requestBody?: unknown; "x-portal-document-only"?: boolean }
               | undefined;
@@ -42,7 +46,7 @@ describe("Portal HTTP aliases", () => {
               operation?.requestBody && !operation["x-portal-document-only"]
             );
           })
-          .map(([name]) => aliasPrefix + name)
+          .map((name) => aliasPrefix + name)
           .sort();
         const methods = new Set<string>();
         const aliases = Object.entries(paths).filter(([path]) =>
@@ -52,20 +56,85 @@ describe("Portal HTTP aliases", () => {
         expect(aliases.map(([path]) => path).sort()).toEqual(expected);
         for (const [path, item] of aliases) {
           const name = path.slice(aliasPrefix.length);
-          const method = portalHttpMethods[name].toLowerCase();
-          methods.add(method);
-          expect(Object.keys(item)).toEqual([method]);
-          expect((item as Record<string, unknown>)[method]).toMatchObject({
-            operationId: `http_${method}_${name}`,
-            responses: (paths[rpcPrefix + name].post as { responses: object })
-              .responses,
-          });
+          const expectedMethods = Object.keys(
+            portalHttpActions[name] ?? { [portalHttpMethods[name]]: true },
+          ).map((method) => method.toLowerCase());
+          expect(Object.keys(item)).toEqual(expectedMethods);
+          for (const method of expectedMethods) {
+            methods.add(method);
+            expect(item[method]).toMatchObject({
+              operationId: `http_${method}_${name}`,
+              responses: (paths[rpcPrefix + name].post as { responses: object })
+                .responses,
+            });
+          }
         }
         expect(methods).toEqual(new Set(["get", "put", "delete"]));
         expect(paths[rpcPrefix + "course_workspace"]).toHaveProperty("post");
       }
     },
   );
+
+  it("publishes distinct update and removal branches while keeping the original POST", () => {
+    const { paths } = portalOpenApi(backend);
+    const route = aliasPrefix + "manage_wiki_attachment";
+    for (const [method, remove] of [
+      ["put", false],
+      ["delete", true],
+    ] as const) {
+      expect(paths[route][method]).toMatchObject({
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                allOf: [
+                  expect.any(Object),
+                  expect.objectContaining({
+                    required: ["p_remove"],
+                    properties: { p_remove: { enum: [remove] } },
+                  }),
+                ],
+              },
+            },
+          },
+        },
+      });
+      expect(isDocumentedRequest(backend + route, method, backend)).toBe(true);
+    }
+    expect(paths[rpcPrefix + "manage_wiki_attachment"]).toHaveProperty("post");
+    expect(isDocumentedRequest(backend + route, "GET", backend)).toBe(false);
+  });
+
+  it("omits the create-new example from calendar PUT", () => {
+    const { paths } = portalOpenApi(backend);
+    expect(paths[aliasPrefix + "manage_global_event"].put).toMatchObject({
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                {
+                  oneOf: [
+                    expect.objectContaining({
+                      properties: expect.objectContaining({
+                        p_id: { type: "string", format: "uuid" },
+                      }),
+                    }),
+                    expect.objectContaining({
+                      properties: expect.objectContaining({
+                        p_id: { type: "string", format: "uuid" },
+                      }),
+                    }),
+                  ],
+                },
+                expect.any(Object),
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
 
   it("describes the GET JSON argument and requires an existing identifier for mixed PUT operations", () => {
     const { paths } = portalOpenApi(backend);

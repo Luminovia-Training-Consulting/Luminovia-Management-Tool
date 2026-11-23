@@ -1,4 +1,6 @@
 import {
+  portalHttpActions,
+  type PortalHttpAction,
   portalHttpMethods,
   portalHttpPutTargets,
   portalHttpPutVersions,
@@ -43,110 +45,159 @@ function gatewayError(description: string, code: string) {
   };
 }
 
+type ActionSchema = {
+  oneOf?: readonly {
+    properties?: Record<
+      string,
+      { const?: unknown; enum?: readonly unknown[]; type?: unknown }
+    >;
+  }[];
+};
+
+/** Omit mutually exclusive native alternatives so Swagger starts with a compatible example. */
+function branchSchema(schema: unknown, action: PortalHttpAction | undefined) {
+  if (!action || !schema || typeof schema !== "object") return schema;
+  const original = schema as ActionSchema;
+  if (!Array.isArray(original.oneOf)) return schema;
+  const oneOf = original.oneOf.filter((branch) => {
+    const fields = branch.properties;
+    const discriminator = fields?.[action.argument];
+    if (action.target && fields?.[action.target]?.type === "null") return false;
+    if (!discriminator) return true;
+    if ("const" in discriminator)
+      return action.values.some((value) => value === discriminator.const);
+    const choices = discriminator.enum;
+    return !choices || action.values.some((value) => choices.includes(value));
+  });
+  return oneOf.length ? { ...original, oneOf } : schema;
+}
+
 /** Derive each HTTP method from the current edition's documented RPC contract. */
 export function withPortalHttpAliases<T extends Paths>(
   paths: T,
 ): T & HttpPaths {
-  const aliases = Object.entries(portalHttpMethods).flatMap(
-    ([name, method]) => {
-      const path = paths[rpcPrefix + name];
-      if (!path || !("post" in path)) return [];
-      const { requestBody, ...source } = path.post as RpcPost;
-      if (source["x-portal-document-only"]) return [];
-      const json = requestBody?.content["application/json"];
-      if (!json) return [];
-      const verb = method.toLowerCase();
-      const target = method === "PUT" ? portalHttpPutTargets[name] : undefined;
-      const version =
-        method === "PUT" ? portalHttpPutVersions[name] : undefined;
-      const properties = {
-        ...(target && { [target]: { type: "string", format: "uuid" } }),
-        ...(version && { [version]: { type: "integer", minimum: 1 } }),
-      };
-      const required = Object.keys(properties);
-      const body = required.length
-        ? {
-            required: true,
-            content: {
-              "application/json": {
-                ...json,
-                schema: {
-                  allOf: [
-                    json.schema,
-                    {
-                      type: "object",
-                      required,
-                      properties,
-                    },
-                  ],
-                },
-              },
-            },
-          }
-        : requestBody;
-      const operation = {
-        ...source,
-        operationId: `http_${verb}_${name}`,
-        responses: {
-          ...source.responses,
-          "405": {
-            ...gatewayError(
-              "Method is not enabled for this operation",
-              "method_not_allowed",
-            ),
-            headers: {
-              Allow: {
-                schema: { type: "string", example: `${method}, OPTIONS` },
+  const definitions = [
+    ...Object.entries(portalHttpMethods),
+    ...Object.entries(portalHttpActions).flatMap(([name, methods]) =>
+      Object.keys(methods).map((method) => [name, method] as const),
+    ),
+  ];
+  const aliases: HttpPaths = {};
+  for (const [name, method] of definitions) {
+    const path = paths[rpcPrefix + name];
+    if (!path || !("post" in path)) continue;
+    const { requestBody, ...source } = path.post as RpcPost;
+    if (source["x-portal-document-only"]) continue;
+    const json = requestBody?.content["application/json"];
+    if (!json) continue;
+    const verb = method.toLowerCase();
+    const action =
+      method === "PUT" || method === "DELETE"
+        ? portalHttpActions[name]?.[method]
+        : undefined;
+    const target =
+      action?.target ??
+      (method === "PUT" ? portalHttpPutTargets[name] : undefined);
+    const version =
+      action?.version ??
+      (method === "PUT" ? portalHttpPutVersions[name] : undefined);
+    const properties = {
+      ...(action && { [action.argument]: { enum: action.values } }),
+      ...(target && { [target]: { type: "string", format: "uuid" } }),
+      ...(version && { [version]: { type: "integer", minimum: 1 } }),
+    };
+    const required = Object.keys(properties);
+    const body = required.length
+      ? {
+          required: true,
+          content: {
+            "application/json": {
+              ...json,
+              schema: {
+                allOf: [
+                  branchSchema(json.schema, action),
+                  {
+                    type: "object",
+                    required,
+                    properties,
+                  },
+                ],
               },
             },
           },
-          ...(method === "GET"
-            ? {
-                "414": gatewayError(
-                  "Query arguments are too large",
-                  "request_uri_too_large",
-                ),
-              }
-            : {
-                "413": gatewayError(
-                  "Request body is too large",
-                  "request_too_large",
-                ),
-                "415": gatewayError(
-                  "The request body must be JSON",
-                  "unsupported_media_type",
-                ),
-              }),
-          "502": gatewayError(
-            "The native operation did not return JSON",
-            "upstream_unavailable",
+        }
+      : requestBody;
+    const operation = {
+      ...source,
+      operationId: `http_${verb}_${name}`,
+      responses: {
+        ...source.responses,
+        "405": {
+          ...gatewayError(
+            "Method is not enabled for this operation",
+            "method_not_allowed",
           ),
+          headers: {
+            Allow: {
+              schema: {
+                type: "string",
+                example: [
+                  ...(action ? Object.keys(portalHttpActions[name]) : [method]),
+                  "OPTIONS",
+                ].join(", "),
+              },
+            },
+          },
         },
-        description: [
-          source.description,
-          method === "GET"
-            ? "Send RPC arguments as a JSON object in the input query parameter."
-            : "Send the same JSON arguments as the native RPC, including any required version, request ID or confirmation.",
-        ]
-          .filter(Boolean)
-          .join(" "),
         ...(method === "GET"
           ? {
-              parameters: [
-                {
-                  name: "input",
-                  in: "query",
-                  required: requestBody?.required ?? false,
-                  content: { "application/json": json },
-                },
-              ],
+              "414": gatewayError(
+                "Query arguments are too large",
+                "request_uri_too_large",
+              ),
             }
-          : { requestBody: body }),
-      };
-      return [[portalHttpAliasPrefix + name, { [verb]: operation }] as const];
-    },
-  );
-  return { ...paths, ...(Object.fromEntries(aliases) as HttpPaths) };
+          : {
+              "413": gatewayError(
+                "Request body is too large",
+                "request_too_large",
+              ),
+              "415": gatewayError(
+                "The request body must be JSON",
+                "unsupported_media_type",
+              ),
+            }),
+        "502": gatewayError(
+          "The native operation did not return JSON",
+          "upstream_unavailable",
+        ),
+      },
+      description: [
+        source.description,
+        method === "GET"
+          ? "Send RPC arguments as a JSON object in the input query parameter."
+          : "Send the same JSON arguments as the native RPC, including any required version, request ID or confirmation.",
+        action &&
+          `${method} accepts only ${action.argument}: ${action.values.map((value) => JSON.stringify(value)).join(", ")}.`,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      ...(method === "GET"
+        ? {
+            parameters: [
+              {
+                name: "input",
+                in: "query",
+                required: requestBody?.required ?? false,
+                content: { "application/json": json },
+              },
+            ],
+          }
+        : { requestBody: body }),
+    };
+    const route = `${portalHttpAliasPrefix}${name}` as const;
+    (aliases[route] ??= {})[verb] = operation;
+  }
+  return { ...paths, ...aliases };
 }
 
 /** Check a concrete gateway alias against an already edition-filtered catalogue. */

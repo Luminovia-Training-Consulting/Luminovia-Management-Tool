@@ -29,6 +29,8 @@ Reviewed HTTP aliases are relative to the configured Supabase API URL:
 | DELETE | /functions/v1/portal-api/v1/delete_forum_post   | JSON object with the exact target and required revision. The operation keeps its domain-specific deletion or withdrawal behavior. |
 | DELETE | /functions/v1/accounts/v1/deletions/confirm     | JSON object with plan_id, request_id and confirmation set to DELETE. Create the actor-bound preview first.                        |
 
+Multi-action workflows can expose PUT and DELETE on the same path with a method-specific action field. For example, manage_wiki_attachment uses p_remove=false with PUT and p_remove=true with DELETE. For subscribe_forum_thread, use p_subscribed=true with PUT and false with DELETE. Course enrolment removal, course material removal and completion revocation have explicit DELETE branches. A conflicting action is rejected with 400 before the database operation is called.
+
 The aliases pass the original RPC arguments through the caller's live session and existing authorization rules. They never grant table-level CRUD or replace permission checks. Scope, conflict handling, audit and reviewed deletion dependencies stay with their existing operations. Authenticated clients must use the current publishable API key and user bearer token. Sensitive inputs and credential issuance keep their original POST contracts. Consult the edition-specific schema and operation descriptions for the full list.
 
 ## Account HTTP facade

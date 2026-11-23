@@ -1,3 +1,9 @@
+# 23 November 2026 — Method-specific branches for mixed Portal commands
+
+Swagger exposes update and removal branches of multi-action native RPCs with separate method schemas. Examples include course resource and enrolment removal, chat membership, article attachments and course references, forum subscriptions, announcements, events and support ticket updates. The gateway rejects mismatched actions before dispatch and requires an existing ID and version for mixed event and announcement updates. Original POST contracts retain their creation and workflow branches.
+
+Scoped Edge tests exercised wrong actions and native caller dispatch. OpenAPI tests checked both editions and verified that the calendar PUT example omits the creation branch. The isolated PostgreSQL replay checks the underlying operation names, SQL argument types and invoker boundaries. The disposable native HTTP suite also covers forum subscription and removal via the new methods.
+
 # 23 November 2026 — GET, PUT and DELETE in the Portal API
 
 The internal interactive explorer lists 167 GET, 369 POST, 62 PUT and 19 DELETE operations, plus two existing PATCH operations. The dedicated Academy explorer lists 42 GET, 84 POST, 20 PUT and eight DELETE operations. Aliases forward the current user's bearer token to the existing scoped database operation. Permanent DELETE requires the existing actor-bound preview, typed confirmation and completion receipt. A stale update or removal returns 409 through the aliases. Creation and workflow commands retain their existing POST contracts.

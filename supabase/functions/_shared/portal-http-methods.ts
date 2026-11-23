@@ -290,3 +290,86 @@ export const portalHttpPutTargets: Readonly<Record<string, string>> = {
 export const portalHttpPutVersions: Readonly<Record<string, string>> = {
   save_job_view: "p_expected_version",
 };
+
+export type PortalHttpAction = {
+  argument: string;
+  values: readonly (string | boolean)[];
+  target?: string;
+  version?: string;
+};
+
+type PortalHttpWriteMethod = "PUT" | "DELETE";
+
+/** Narrow an existing multi-action RPC to the branch valid for the HTTP method. */
+export const portalHttpActions: Readonly<
+  Record<string, Partial<Record<PortalHttpWriteMethod, PortalHttpAction>>>
+> = {
+  academy_course_material_action: {
+    DELETE: { argument: "p_action", values: ["resource_remove"] },
+  },
+  academy_learning_action: {
+    PUT: { argument: "p_action", values: ["preparation_toggle", "quiz_config"] },
+    DELETE: { argument: "p_action", values: ["completion_revoke"] },
+  },
+  assignment_change_action: {
+    DELETE: { argument: "p_action", values: ["withdraw"] },
+  },
+  course_workspace_action: {
+    PUT: {
+      argument: "p_action",
+      values: ["preparation_toggle", "contact_select", "quiz_config"],
+    },
+    DELETE: { argument: "p_action", values: ["resource_remove", "completion_revoke"] },
+  },
+  manage_announcement: {
+    PUT: {
+      argument: "p_action",
+      values: ["save", "publish", "archive", "recover"],
+      target: "p_id",
+      version: "p_expected_version",
+    },
+  },
+  manage_chat_member: {
+    PUT: { argument: "p_remove", values: [false] },
+    DELETE: { argument: "p_remove", values: [true] },
+  },
+  manage_course_enrolment: {
+    PUT: { argument: "p_status", values: ["enrolled", "completed"] },
+    DELETE: { argument: "p_status", values: ["removed"] },
+  },
+  manage_enquiry: {
+    PUT: { argument: "p_action", values: ["status", "assign", "link_customer"] },
+  },
+  manage_global_event: {
+    PUT: {
+      argument: "p_action",
+      values: ["save", "publish", "unpublish", "archive", "recover"],
+      target: "p_id",
+      version: "p_expected_version",
+    },
+  },
+  manage_job_offer: {
+    PUT: { argument: "p_action", values: ["edit", "archived"] },
+  },
+  manage_wiki_attachment: {
+    PUT: { argument: "p_remove", values: [false] },
+    DELETE: { argument: "p_remove", values: [true] },
+  },
+  manage_wiki_course_template: {
+    PUT: { argument: "p_remove", values: [false] },
+    DELETE: { argument: "p_remove", values: [true] },
+  },
+  respond_job_substitution: {
+    DELETE: { argument: "p_action", values: ["withdraw"] },
+  },
+  subscribe_forum_thread: {
+    PUT: { argument: "p_subscribed", values: [true] },
+    DELETE: { argument: "p_subscribed", values: [false] },
+  },
+  update_support_ticket: {
+    PUT: {
+      argument: "p_action",
+      values: ["status", "assign", "priority", "reopen", "links"],
+    },
+  },
+};

@@ -1,5 +1,7 @@
 import { boundedBytes, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 
+import { portalHttpActions } from "../_shared/portal-http-methods.ts";
+
 type OperationMethod = "GET" | "PUT" | "DELETE";
 
 interface PortalHttpDependencies {
@@ -80,19 +82,27 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
 
     const url = new URL(request.url);
     const operation = pathPattern.exec(url.pathname)?.[1];
-    if (!operation || !Object.hasOwn(deps.operations, operation)) {
-      return error(404, "not_found");
-    }
-    const method = deps.operations[operation];
-    headers.set("Allow", `${method}, OPTIONS`);
+    if (!operation) return error(404, "not_found");
+    const actions = Object.hasOwn(portalHttpActions, operation)
+      ? portalHttpActions[operation]
+      : undefined;
+    const allowed = actions
+      ? Object.keys(actions)
+      : Object.hasOwn(deps.operations, operation)
+      ? [deps.operations[operation]]
+      : [];
+    if (!allowed.length) return error(404, "not_found");
+    const method = request.method as OperationMethod;
+    const allow = [...allowed, "OPTIONS"].join(", ");
+    headers.set("Allow", allow);
     if (origin !== null) {
-      headers.set("Access-Control-Allow-Methods", `${method}, OPTIONS`);
+      headers.set("Access-Control-Allow-Methods", allow);
       headers.set("Access-Control-Expose-Headers", "Allow");
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
     }
-    if (request.method !== method) return error(405, "method_not_allowed");
+    if (!allowed.includes(method)) return error(405, "method_not_allowed");
 
     const bearer = request.headers.get("authorization");
     if (!bearer || !/^Bearer [^\s,]+$/i.test(bearer)) {
@@ -115,18 +125,28 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
       return error(400, "invalid_request");
     }
 
-    if (method === "PUT" && Object.hasOwn(deps.putTargets, operation)) {
-      const target = input.args[deps.putTargets[operation]];
+    const action = method === "GET" ? undefined : actions?.[method];
+    if (
+      action && !action.values.some((value) => input.args[action.argument] === value)
+    ) {
+      return error(400, "action_not_allowed");
+    }
+
+    const targetField = action?.target ??
+      (method === "PUT" ? deps.putTargets[operation] : undefined);
+    if (targetField) {
+      const target = input.args[targetField];
       if (typeof target !== "string" || !uuid.test(target)) {
         return error(400, "existing_record_id_required");
       }
     }
 
-    if (method === "PUT" && Object.hasOwn(deps.putVersions, operation)) {
-      const version = input.args[deps.putVersions[operation]];
+    const versionField = action?.version ??
+      (method === "PUT" ? deps.putVersions[operation] : undefined);
+    if (versionField) {
+      const version = input.args[versionField];
       if (
-        typeof version !== "number" || !Number.isSafeInteger(version) ||
-        version < 1
+        typeof version !== "number" || !Number.isSafeInteger(version) || version < 1
       ) {
         return error(400, "existing_record_version_required");
       }
@@ -182,9 +202,7 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
       }
       let status = result.status;
       if (status === 500) {
-        const nativeError: unknown = await result.clone().json().catch(() =>
-          null
-        );
+        const nativeError: unknown = await result.clone().json().catch(() => null);
         if (
           nativeError && typeof nativeError === "object" &&
           "code" in nativeError && nativeError.code === "40001"

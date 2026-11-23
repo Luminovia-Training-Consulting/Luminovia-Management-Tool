@@ -317,3 +317,42 @@ Deno.test("invalid sessions stop dispatch; live callers receive native denials a
   assertEquals(result.status, 502);
   assertEquals(await result.json(), { error: "upstream_unavailable" });
 });
+
+Deno.test("multi-action RPCs accept only the branch assigned to the HTTP method", async () => {
+  const { handle, calls } = fixture();
+  const request = (method: string, operation: string, payload: object) =>
+    new Request(example + "/" + operation, {
+      method,
+      headers: { authorization: bearer, "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+  const rejectedRemoval = await handle(
+    request("DELETE", "manage_wiki_attachment", { p_remove: false }),
+  );
+  assertEquals(rejectedRemoval.status, 400);
+  assertEquals(await rejectedRemoval.json(), { error: "action_not_allowed" });
+  assertEquals(rejectedRemoval.headers.get("allow"), "PUT, DELETE, OPTIONS");
+  assertEquals(
+    (await handle(request("PUT", "manage_global_event", {
+      p_id: null,
+      p_action: "save",
+      p_expected_version: 0,
+    }))).status,
+    400,
+  );
+  assertEquals(
+    (await handle(request("PUT", "update_support_ticket", { p_action: "reply" })))
+      .status,
+    400,
+  );
+  assertEquals(calls.length, 0);
+
+  const args = { p_page_id: actor, p_version_id: actor, p_revision: 3, p_remove: true };
+  assertEquals(
+    (await handle(request("DELETE", "manage_wiki_attachment", args))).status,
+    200,
+  );
+  assertEquals(calls[1].url, backend + "/rest/v1/rpc/manage_wiki_attachment");
+  assertEquals(await calls[1].json(), args);
+});

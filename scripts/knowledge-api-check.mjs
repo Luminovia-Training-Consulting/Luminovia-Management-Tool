@@ -429,11 +429,26 @@ try {
         "22023",
         "Changed idempotent content is explicitly rejected",
     );
-    // Subscription rows remain personal; unsubscribe must stop later fanout without deleting old history.
-    await documentedRpc(b.client, "subscribe_forum_thread", {
-        p_thread_id: thread,
-        p_subscribed: true,
-    }, 204);
+    // Subscription aliases use the same personal scope and persistent notifications.
+    const {session: forumSession} = await checked(b.client.auth.getSession());
+    const forumSubscription = (method, subscribed) => fetch(
+        new URL("/functions/v1/portal-api/v1/subscribe_forum_thread", url),
+        {
+            method,
+            headers: {
+                apikey: process.env.SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${forumSession.access_token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({p_thread_id: thread, p_subscribed: subscribed}),
+            redirect: "error",
+            signal: AbortSignal.timeout(15000),
+        },
+    );
+    const wrongAction = await forumSubscription("DELETE", true);
+    assert.equal(wrongAction.status, 400);
+    assert.deepEqual(await wrongAction.json(), {error: "action_not_allowed"});
+    assert.equal((await forumSubscription("PUT", true)).status, 204);
     await checked(
         b.client.rpc("subscribe_forum_thread", {
             p_thread_id: thread,
@@ -497,13 +512,7 @@ try {
         )
     ).items.find((item) => item.id === subscriptionNotice.id);
     assert.equal(linkedNotice.href, `/forum?thread=${thread}`);
-    await checked(
-        b.client.rpc("subscribe_forum_thread", {
-            p_thread_id: thread,
-            p_subscribed: false,
-        }),
-        "Unsubscribe actual reader",
-    );
+    assert.equal((await forumSubscription("DELETE", false)).status, 204);
     await checked(
         b.client.rpc("mark_notifications", {
             p_ids: [subscriptionNotice.id],

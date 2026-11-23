@@ -8,7 +8,7 @@ import {fileURLToPath} from "node:url";
 import {scanFrontendRpcReferences} from "./code-integrity.mjs";
 import {assertNativeRpcCatalogue, assertRpcArgumentShapes} from "./native-rpc-catalogue.mjs";
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
-import {portalHttpMethods, portalHttpPutTargets, portalHttpPutVersions} from "../supabase/functions/_shared/portal-http-methods.ts";
+import {portalHttpActions, portalHttpMethods, portalHttpPutTargets, portalHttpPutVersions} from "../supabase/functions/_shared/portal-http-methods.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 await withTestDatabase("api_surface", async ({sql}) => {
@@ -24,11 +24,16 @@ await withTestDatabase("api_surface", async ({sql}) => {
         `PASS All ${references.length} finite delivered frontend RPC references resolve to executable migrated APIs`,
     );
     console.log("PASS Native OpenAPI requests, responses and REST role gates match the migration replay");
-    const methodRows = Object.entries(portalHttpMethods).map(([name, method]) =>
-        `(${quoteSql(name)},${quoteSql(method)},${portalHttpPutTargets[name] ? quoteSql(portalHttpPutTargets[name]) : "null"},${portalHttpPutVersions[name] ? quoteSql(portalHttpPutVersions[name]) : "null"})`,
-    ).join(",");
+    const methodRows = [
+        ...Object.entries(portalHttpMethods).map(([name, method]) =>
+            [name, method, portalHttpPutTargets[name], portalHttpPutVersions[name], null, null]),
+        ...Object.entries(portalHttpActions).flatMap(([name, methods]) =>
+            Object.entries(methods).map(([method, action]) =>
+                [name, method, action.target, action.version, action.argument,
+                    typeof action.values[0] === "boolean" ? "boolean" : "text"])),
+    ].map((row) => `(${row.map((value) => value ? quoteSql(value) : "null").join(",")})`).join(",");
     assert.equal(await sql(`
-        with aliases(name,method,target,version) as (values ${methodRows}),
+        with aliases(name,method,target,version,action,action_type) as (values ${methodRows}),
         reviewed as (
           select alias.*, p.oid, p.provolatile, p.prosecdef, p.proargnames, p.proargtypes
           from aliases alias left join pg_proc p on p.pronamespace='public'::regnamespace
@@ -40,10 +45,11 @@ await withTestDatabase("api_surface", async ({sql}) => {
           (method='GET' and provolatile not in ('i','s')) or
           (method<>'GET' and provolatile<>'v') or
           (target is not null and not coalesce(proargtypes[array_position(proargnames,target)-1]='uuid'::regtype,false)) or
-          (version is not null and not coalesce(proargtypes[array_position(proargnames,version)-1]='integer'::regtype,false))
+          (version is not null and not coalesce(proargtypes[array_position(proargnames,version)-1]='integer'::regtype,false)) or
+          (action is not null and not coalesce(proargtypes[array_position(proargnames,action)-1]=action_type::regtype,false))
     `), "", "HTTP aliases must keep their authenticated invoker, read/write and version boundaries");
     assert.ok(!Object.hasOwn(portalHttpMethods, "deletion_confirm"), "Permanent delete uses its protected account facade");
-    console.log(`PASS Reviewed HTTP aliases match ${Object.keys(portalHttpMethods).length} migrated RPC signatures`);
+    console.log(`PASS Reviewed HTTP aliases match ${Object.keys(portalHttpMethods).length + Object.keys(portalHttpActions).length} migrated RPC names and their argument types`);
 
     assertRpcArgumentShapes(catalogue, references);
     const verifiedPayloads = references.filter(({argumentShapes}) => argumentShapes.some(Boolean));
