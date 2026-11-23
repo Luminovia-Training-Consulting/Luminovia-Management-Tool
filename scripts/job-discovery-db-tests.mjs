@@ -110,7 +110,8 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
         async () => {
             const id = "d7000000-0000-4000-8000-000000000001";
             await sql(
-                `insert into public.job_requirements(job_id,topic_id)values('${id}','${topic}')`,
+                `insert into public.job_requirements(job_id,topic_id)values('${id}','${topic}');
+                 insert into public.lecturer_topics(user_id,topic_id)values('${teacher}','${topic}')`,
             );
             let p = await rpc(teacher, {
                 q: "Exact%_Alias",
@@ -401,7 +402,8 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             assert.equal(summary.next_session_count, 1);
             assert.equal(summary.next_assignments[0].job.id, id);
             await sql(
-                `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until)values('${teacher}','${topic}',true,'2061-01-01T00:00:00Z')`,
+                `update public.lecturer_topics set verified=true,valid_until=now()+interval '1 day'
+                 where user_id='${teacher}' and topic_id='${topic}'`,
             );
             summary = JSON.parse(
                 await actor(teacher, "select public.job_dashboard()"),
@@ -412,7 +414,7 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 "d7000000-0000-4000-8000-000000000001",
             );
             await sql(
-                `update public.lecturer_topics set valid_until='2059-01-01T00:00:00Z'where user_id='${teacher}'and topic_id='${topic}'`,
+                `update public.lecturer_topics set valid_until=now()-interval '1 day' where user_id='${teacher}'and topic_id='${topic}'`,
             );
             assert.equal(
                 JSON.parse(await actor(teacher, "select public.job_dashboard()"))
