@@ -52,7 +52,7 @@ await withApiFixture(
                 );
         });
         const catalogue = await checked(
-            teacher.client
+            manager.client
                 .from("building_blocks")
                 .select("id,code,default_template_id,building_block_sources(*)")
                 .order("code"),
@@ -67,6 +67,11 @@ await withApiFixture(
                 (row) => row.is_primary,
             );
         assert.equal(primary.file_name, "Bausteinbeschreibung-LPIC3.pdf");
+        assert.deepEqual(
+            await checked(teacher.client.from("building_blocks").select("id")),
+            [],
+            "Lecturers without a readable course or offer cannot browse the source library",
+        );
         assert.deepEqual(
             await checked(client.client.from("building_blocks").select("id")),
             [],
@@ -284,6 +289,11 @@ await withApiFixture(
         );
         assertLmsResponse("job_building_block_reference", source);
         assert.equal(source.source_id, primary.id);
+        assert.deepEqual(
+            await checked(teacher.client.from("building_blocks").select("id")),
+            [{id: block.id}],
+            "Only the source linked to the readable teaching offer becomes available",
+        );
         assert.ok(
             (
                 await learner.client.rpc("job_building_block_reference", {

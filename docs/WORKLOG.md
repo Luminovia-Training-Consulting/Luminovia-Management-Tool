@@ -1,3 +1,9 @@
+# 23 November 2026 — Automatic updates after the KVM 1 rebuild
+
+Re-enabled the five-minute systemd update timer and matched the GitHub public build configuration to the rebuilt installation. The first timer-triggered service run returned the exact installed main commit as current. Public Auth and TLS passed. The next eligible release will exercise the installation path on the live host.
+
+The release archive now includes the timer alongside its service. All 31 packaging tests and 68 updater/migration-plan tests passed. An isolated native run replayed 320 migrations, preserved the sample accounts and private bytes, and passed the course source-library API test with the current staff and lecturer access boundaries.
+
 # 23 November 2026 — Retired public practice bookmarks
 
 Return an uncached HTTP 404 for the old public practice path and its subpaths in Caddy, Vite development and built preview. Exclude those paths from the service worker's navigation fallback. Public help keeps its existing offline support.
