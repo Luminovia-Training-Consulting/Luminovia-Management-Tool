@@ -55,7 +55,7 @@ export function JobRelatedNavigation({
     );
   if (!query.data.course_id && !query.data.rooms.length) return null;
   return (
-    <nav aria-label={t("related")} className="form-actions">
+    <nav aria-label={t("related")} className="page-actions">
       {query.data.course_id && (
         <Button asChild variant="secondary">
           <Link to={`/courses/${query.data.course_id}/workspace`}>
