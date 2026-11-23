@@ -1,3 +1,7 @@
+# 23 November 2026 — Timed exam deletion lint fix
+
+A follow-up migration explicitly types the empty deletion-filter array. A rolled-back PostgreSQL check reproduced warning 42804 before the change, found zero function lint issues after it, and compared identical results across five filter combinations. The complete CI run is separate.
+
 # 23 November 2026 — Timed LMS exams and published grades
 
 Course editors can schedule an exam in the course time zone, name the paper and choose the announcement, start, deadline and pass threshold. The database and download gateway enforce the exact window. New student papers require a saved schedule. Existing untimed publications retain their original behavior until a schedule is saved.
