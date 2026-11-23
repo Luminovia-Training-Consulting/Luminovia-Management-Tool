@@ -385,9 +385,7 @@ describe("Account administration", () => {
       "Kursteilnehmer:in",
       "Unternehmen",
     ])
-      await userEvent.click(
-        dialog.getByRole("checkbox", { name }),
-      );
+      await userEvent.click(dialog.getByRole("checkbox", { name }));
     const save = dialog.getByRole("button", { name: "Rollen speichern" });
     expect(save).toBeDisabled();
     await userEvent.selectOptions(

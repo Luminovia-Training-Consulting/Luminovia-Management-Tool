@@ -1,3 +1,7 @@
+# 23 November 2026 — Current-main formatting gate
+
+The Portal workflow for `fefc3f40` reported a Formatting failure. Running the same checks locally isolated it to `src/features/accounts/accounts.test.tsx`, introduced with the latest account-role flow. Applied Prettier to that test and reran `npm run format:check` plus `npx prettier --check .github`; both pass. Other jobs for `fefc3f40` were still running when this formatting repair was prepared, so the complete result must be rechecked on the next exact main commit.
+
 # 23 November 2026 — Workbench recommendation regression
 
 The full local system phase on `85427729` reached the workbench PostgreSQL suite after the readiness regression passed, then found an obsolete assertion that expired verification metadata should suppress recommendations. Current policy matches recommendations to the lecturer's self-selected subject area; attestation expiry is optional metadata. Updated the regression to retain the matching offer while preserving the separate schedule-conflict exclusion. The focused workbench PostgreSQL suite passed all 11 groups against the current migrated local schema. The exact-main Portal workflow for `7f04d0a8` is still running; its Security workflow passed. The full CI result for the next pushed main commit remains pending.

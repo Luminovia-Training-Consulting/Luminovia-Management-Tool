@@ -1949,3 +1949,9 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Update the recommendation regression to follow self-selected subject-area matching; do not gate discovery on optional verification expiry metadata. Preserve schedule-conflict exclusion.
 - [x] Run the focused PostgreSQL workbench suite against the current migrated schema: 11 groups passed.
 - [ ] Complete all Portal and Security workflow jobs on the exact current `main` SHA, including system, browser and self-host acceptance.
+
+
+## Exact-main formatting follow-up — 23 November 2026
+
+- [x] Format the account-role regression test identified by the Portal Formatting job; `npm run format:check` and `.github` formatting pass locally.
+- [ ] Re-run all required Portal and Security checks on the resulting exact main revision.
