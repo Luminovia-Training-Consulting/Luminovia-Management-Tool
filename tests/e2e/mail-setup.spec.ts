@@ -28,9 +28,9 @@ test("reports invitation and relay switches only to current mail administrators"
   expect(denied.response?.status).toBe(403);
   expect(denied.data).toBeNull();
 
-  await page.getByRole("link", { name: "Systembetrieb" }).click();
+  await page.getByRole("link", { name: "Vollreset" }).click();
   await expect(
-    page.getByRole("heading", { name: "Systembetrieb" }),
+    page.getByRole("heading", { name: "Vollreset" }),
   ).toBeVisible();
   await expect(page.getByText("Dauerhafte Datenlöschung")).toBeVisible();
   await expect(

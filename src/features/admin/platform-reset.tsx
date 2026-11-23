@@ -10,7 +10,6 @@ const endpoint = "/__portal/local-reset";
 
 const copy = {
   title: ["Plattform zurücksetzen", "Reset platform"],
-  operations: ["Systembetrieb", "System operations"],
   irreversible: ["Dauerhafte Datenlöschung", "Permanent data deletion"],
   denied: [
     "Diese Seite ist nur für aktive Administratoren und Owner.",
@@ -85,6 +84,7 @@ function PlatformResetForm({
   token: string;
   language: 0 | 1;
 }) {
+  const { t: common } = useTranslation();
   const t = (key: keyof typeof copy) => copy[key][language];
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
@@ -143,7 +143,7 @@ function PlatformResetForm({
 
   return (
     <div className="stack">
-      <h1>{t("operations")}</h1>
+      <h1>{common("fullPlatformReset")}</h1>
       <section className="panel stack" aria-labelledby="platform-reset-title">
         <h2 id="platform-reset-title">{t("title")}</h2>
         <p className="notice error">{t("irreversible")}</p>

@@ -1,3 +1,7 @@
+# 23 November 2026 — Full reset in administration
+
+The full local platform reset is directly labelled in the German and English administration navigation. It uses the existing scoped launcher reset with current-password verification and typed confirmation. Chromium exercised the admin navigation, rejected the wrong password and confirmed that the disposable portal erased its database, Auth and Storage data and stayed stopped. Seven reset tests, TypeScript and focused lint also passed.
+
 # 23 November 2026 — Shared training taxonomy
 
 Reviewed 24 training-module PDFs and extracted 160 customer-neutral bilingual entries for the shared catalogue. The migration covers 128 topics, including certification and exam labels, 30 tools and two languages. It preserves existing labels, edits and references and reuses the local fixture identities for Linux and Python. Qualification evidence continues to use the shared topic IDs. Eleven taxonomy checks and 25 database RPC checks passed, including lookup by exam code, migration replay and concurrent claims.

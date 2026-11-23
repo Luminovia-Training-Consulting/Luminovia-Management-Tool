@@ -587,6 +587,7 @@ const pairs: Record<string, [string, string]> = {
     "Dein Portal wächst weiter. Weitere Bereiche werden nach geprüfter Fertigstellung freigeschaltet.",
     "Your portal is growing. More areas will become available when they have been verified.",
   ],
+  fullPlatformReset: ["Vollreset", "Full reset"],
   resetFilters: ["Filter zurücksetzen", "Reset filters"],
   minRate: ["Mindesthonorar", "Minimum fee"],
   dateFrom: ["Ab Datum", "From date"],

@@ -707,7 +707,7 @@ The reviewed SQL still requires one explicit `BEGIN;`/`COMMIT;` transaction with
 
 ### Full reset of the existing CMS installation
 
-In an owned local portal started with `./portal start`, open **Administration → System operations → Reset platform** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
+In an owned local portal started with `./portal start`, open **Verwaltung → Vollreset / Administration → Full reset** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
 
 On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's current password and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
 

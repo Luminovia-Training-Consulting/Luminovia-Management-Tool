@@ -93,7 +93,8 @@ try {
   await page.context().clearCookies();
   await page.evaluate(() => localStorage.clear());
   await signIn("admin@example.invalid");
-  await page.goto(config.site + "/reset");
+  await page.goto(config.site + "/admin");
+  await page.getByRole("link", { name: /^(Vollreset|Full reset)$/ }).click();
   await expect(page).toHaveURL(/\/admin\/reset$/);
   await expect(page.getByText(config.id, { exact: true })).toBeVisible();
   const button = page.getByRole("button", {
