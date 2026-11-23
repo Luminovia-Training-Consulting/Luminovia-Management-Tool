@@ -189,6 +189,37 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(session)}`), "1");
         assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
     });
+    await check("A reviewed course cascade includes its accepted assignment, dedicated rooms and dispatch", async () => {
+        const company = randomUUID(), template = randomUUID(), run = randomUUID();
+        const sibling = randomUUID(), job = randomUUID(), claim = randomUUID(), room = randomUUID(), otherRoom = randomUUID();
+        await sql(`insert into public.organisations(id,name) values(${q(company)},'Fictional dispatch customer');
+          insert into public.course_templates(id,title) values(${q(template)},'Fictional shared template');
+          insert into public.course_runs(id,template_id,organisation_id,published) values
+            (${q(run)},${q(template)},${q(company)},true),(${q(sibling)},${q(template)},${q(company)},true);
+          insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+            values(${q(job)},${q(run)},'Fictional accepted offer','Fictional dispatch customer','online','filled',50,50,'EUR','fixed_total','Fictional terms');
+          insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
+            values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},50,50,'EUR','fixed_total','Fictional terms',1);
+          insert into public.chat_rooms(id,job_id,owner_id) values(${q(room)},${q(job)},${q(owner)});
+          insert into public.chat_rooms(id,kind,course_run_id) values(${q(otherRoom)},'participant_course',${q(sibling)});
+          insert into public.chat_members(room_id,user_id) values(${q(room)},${q(owner)});
+          insert into public.messages(room_id,sender_id,client_id,request_hash,body)
+            values(${q(room)},${q(owner)},${q(randomUUID())},'fictional-hash','Fictional course message');
+          insert into private.job_dispatch(job_id,organisation_id) values(${q(job)},${q(company)});`);
+        const preview = await plan("course_run", run, manager);
+        assert.equal(preview.can_confirm, true, JSON.stringify(preview.blockers));
+        for (const relation of ["public.jobs", "public.job_claims", "public.chat_rooms", "public.messages", "private.job_dispatch"]) {
+            assert.equal(preview.counts[relation], 1, relation);
+        }
+        const operation = await confirm(preview, manager), execution = await permit(operation, manager);
+        await worker("apply", key(operation, execution));
+        assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
+        assert.equal(await sql(`select count(*) from public.course_runs where id=${q(run)}`), "0");
+        assert.equal(await sql(`select count(*) from public.job_claims where id=${q(claim)}`), "0");
+        assert.equal(await sql(`select count(*) from public.chat_rooms where id=${q(room)}`), "0");
+        assert.equal(await sql(`select count(*) from public.chat_rooms where id=${q(otherRoom)}`), "1");
+        assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
+    });
     await check(
         "A reviewed job purge includes its briefing and request records",
         async () => {

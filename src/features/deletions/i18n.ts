@@ -63,6 +63,15 @@ const pairs: Record<string, [string, string]> = {
     "Company course requests",
   ],
   jobPricingRecords: ["Auftragskonditionen", "Job pricing records"],
+  jobDispatchRecords: ["Auftragsplanung", "Job dispatch records"],
+  assignmentPricingRecords: [
+    "Zuweisungskonditionen",
+    "Assignment pricing records",
+  ],
+  companyLecturerDecisions: [
+    "Entscheidungen zur Lehrkraft",
+    "Company lecturer decisions",
+  ],
   courseJobRecords: ["Kurs-Auftragszuordnungen", "Course job records"],
   organisationDetails: [
     "Interne Unternehmensangaben",
@@ -161,6 +170,10 @@ const pairs: Record<string, [string, string]> = {
     "This deletion is irreversible. There is no trash or restore.",
   ],
   impact: ["Umfang der Löschung", "Deletion impact"],
+  courseDeliveryCascade: [
+    "Die Bestätigung löscht diese Durchführung mit den oben aufgeführten Zuweisungen, Chaträumen und zugehörigen Einträgen.",
+    "Confirmation deletes this course run together with the assignments, chat rooms and related records listed above.",
+  ],
   blockers: ["Löschung derzeit gesperrt", "Deletion currently blocked"],
   blocked: [
     "Geschützte oder gemeinsam genutzte Abhängigkeiten verhindern die Löschung. Die angezeigten Daten bleiben erhalten.",

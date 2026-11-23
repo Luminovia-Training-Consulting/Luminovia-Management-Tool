@@ -247,6 +247,9 @@ function resourceLabel(
     job_briefing_requests: "jobBriefingRequests",
     client_course_requests: "companyCourseRequests",
     job_commission_offers: "jobPricingRecords",
+    job_dispatch: "jobDispatchRecords",
+    claim_revenue_ledger: "assignmentPricingRecords",
+    company_lecturer_decisions: "companyLecturerDecisions",
     course_run_job_requests: "courseJobRecords",
     organisation_private_details: "organisationDetails",
     course_template_topics: "courseTopicAssignments",
@@ -529,6 +532,12 @@ function DeletionDialog({
                   </div>
                 ))}
             </dl>
+            {target.kind === "course_run" &&
+              preview.data.can_confirm &&
+              (preview.data.counts["public.job_claims"] > 0 ||
+                preview.data.counts["public.chat_rooms"] > 0) && (
+                <p>{t("courseDeliveryCascade")}</p>
+              )}
             {preview.data.blockers.length > 0 && (
               <Notice kind="error">
                 <strong>{t("blockers")}</strong>
