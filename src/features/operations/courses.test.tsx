@@ -120,6 +120,7 @@ function renderCourses({
   organisations = [] as Organisation[],
   lifecycle = protectedLifecycle,
   changeCandidates = [] as ChangeCandidate[],
+  path = "/courses",
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -152,7 +153,7 @@ function renderCourses({
   client.setQueryData(["changeable-assignments", actor], changeCandidates);
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <CoursesPage />
         <LocationProbe />
       </MemoryRouter>
@@ -365,6 +366,116 @@ it("lists one template library and only shows the signed-in company's owned temp
   expect(
     screen.queryByRole("button", { name: "Kursbausteine" }),
   ).not.toBeInTheDocument();
+});
+
+it.each([
+  { permissions: [], roles: ["client"] },
+  { permissions: ["courses.manage", "jobs.manage"], roles: ["admin"] },
+])("creates a draft from the template shortcut ($roles)", async (access) => {
+  renderCourses({
+    ...access,
+    organisations: [organisation],
+    templates: [{ ...template, owner_organisation_id: companyId }],
+  });
+  await userEvent.click(
+    await screen.findByRole("link", { name: "Kursvorlagen öffnen" }),
+  );
+  expect(screen.getByTestId("course-route")).toHaveTextContent(
+    "/courses?tab=templates",
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Aus Vorlage erstellen" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "Kurs anlegen" });
+  expect(within(dialog).getByLabelText("Kursvorlage")).toHaveValue(templateId);
+  expect(within(dialog).getByLabelText("Organisation")).toHaveValue(companyId);
+  expect(
+    within(dialog).queryByRole("button", { name: "Im Kurskatalog anzeigen" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(dialog).queryByRole("button", {
+      name: "Speichern und Ausschreibung vorbereiten",
+    }),
+  ).not.toBeInTheDocument();
+  interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Entwurf speichern" }),
+  );
+  expect(
+    await screen.findByText("Durchführung als Entwurf gespeichert."),
+  ).toBeVisible();
+  expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/);
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name.startsWith("save_course")),
+  ).toEqual([
+    [
+      "save_course_run",
+      {
+        p_id: null,
+        p_payload: expect.objectContaining({
+          template_id: templateId,
+          organisation_id: companyId,
+          published: false,
+          archived: false,
+        }),
+      },
+    ],
+  ]);
+});
+
+it("opens the company library directly and saves new and existing company templates", async () => {
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
+    organisations: [organisation],
+    templates: [{ ...template, owner_organisation_id: companyId }],
+    path: "/courses?tab=templates",
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Vorlage anlegen" }),
+  );
+  let dialog = screen.getByRole("dialog", { name: "Vorlage anlegen" });
+  const owner = within(dialog).getByLabelText("Unternehmen der Vorlage");
+  expect(owner).toHaveValue(companyId);
+  expect(within(owner).getAllByRole("option")).toHaveLength(1);
+  await userEvent.type(
+    within(dialog).getByLabelText("Titel", { exact: true }),
+    "Linux practice day",
+  );
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Speichern" }),
+  );
+  await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  expect(state.rpc).toHaveBeenCalledWith("save_course_template", {
+    p_id: null,
+    p_payload: expect.objectContaining({
+      owner_organisation_id: companyId,
+      title: "Linux practice day",
+    }),
+  });
+
+  await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+  dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
+  expect(
+    within(dialog).getByLabelText("Unternehmen der Vorlage"),
+  ).toBeDisabled();
+  const title = within(dialog).getByLabelText("Titel", { exact: true });
+  await userEvent.clear(title);
+  await userEvent.type(title, "Revised Linux practice day");
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Speichern" }),
+  );
+  await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  expect(state.rpc).toHaveBeenCalledWith("save_course_template", {
+    p_id: templateId,
+    p_payload: expect.not.objectContaining({
+      owner_organisation_id: expect.anything(),
+    }),
+  });
+  expect(state.rpc).toHaveBeenLastCalledWith("save_course_template", {
+    p_id: templateId,
+    p_payload: expect.objectContaining({ title: "Revised Linux practice day" }),
+  });
 });
 
 it("does not present an expired published offer as open in the marketplace", async () => {

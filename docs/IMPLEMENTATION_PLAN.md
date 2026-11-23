@@ -14,6 +14,7 @@
 ## Course editor layout
 
 - [x] Combine reusable materials in one company-scoped template library. Distinguish course visibility from marketplace state and provide a direct save-to-offer path.
+- [x] Add direct library links to Courses and the company portal. Let internal company members maintain organisation-owned reusable templates and plan private runs from them. Keep catalogue visibility and marketplace posting explicit management actions.
 
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.
 

@@ -2150,7 +2150,7 @@ const nativePaths = {
     "saveCourseRun",
     "Courses",
     "Create or update a scheduled course",
-    "Use a null ID for a new run. Sessions use explicit offsets and must not overlap. Linked runs allow course venue and visibility edits. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
+    "Use a null ID for a new run. On the internal edition, active company members can only create unpublished drafts using an active template owned by their organisation. Sessions use explicit offsets and must not overlap. Course managers can edit venues and visibility on linked runs. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
     {
       p_id: nullableUuid,
       p_payload: {

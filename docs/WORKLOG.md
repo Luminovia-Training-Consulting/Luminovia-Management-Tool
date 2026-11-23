@@ -1,3 +1,9 @@
+# 23 November 2026 — Company course template authoring and drafts
+
+Courses and the company portal now link directly to the template library. Internal company members can create and edit templates owned by their organisations. The same template action opens the planning form for management and company members and saves a private run. Catalogue visibility and offers remain explicit management actions. Staff can still search by source code and review source metadata in the template details. Lecturers can read the linked reference through an authorised offer when its course run remains private.
+
+The local unit and component suite passed 1,623 tests. PostgreSQL verified role and organisation boundaries, draft-only creation, and protection of live or source-backed templates with the latest course deletion migration applied. The 59 focused API contract checks passed. Both the company authoring flow and the management source-template flow passed on desktop and mobile Chromium with local Auth and PostgREST. No production environment was targeted.
+
 # 23 November 2026 — Permanent deletion of unused courses and their offers
 
 The course run deletion preview now includes its last session and the owned records of its unaccepted offers in one reviewed operation. Course managers and administrators use the existing confirmation and fencing. Accepted claims, coursework, financial history and other protected incoming references still block deletion. The course template and unrelated runs stay independent. Archived runs are hidden from the default course list and can be shown by staff using its filter.

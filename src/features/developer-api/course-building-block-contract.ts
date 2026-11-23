@@ -45,7 +45,7 @@ export const courseBuildingBlockPaths = {
   "/rest/v1/rpc/save_course_template": operation(
     "saveCourseTemplate",
     "Save an editable course template",
-    "Requires current course management. Send a null template ID to create one. The supplied topics replace the template's current topics. A template backing a published or filled job is locked. Returns the saved template ID.",
+    "Course management can save templates. On the internal edition, active company members can create templates with their organisation as owner and edit their company's reusable templates. A company member cannot change ownership, edit a source-backed template, or edit a template used by a live course. Send a null template ID to create one. The supplied topics replace the current topics. A template backing a published or filled job is locked. Returns the saved template ID.",
     z.strictObject({
       p_id: courseRecordId.nullable(),
       p_payload: courseTemplatePayloadSchema,

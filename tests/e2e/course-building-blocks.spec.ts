@@ -81,13 +81,16 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await adminLogin(page, admin);
     await page.goto("/courses");
     await page
-        .getByRole("button", {name: "Kursbausteine", exact: true})
+        .getByRole("link", {name: "Kursvorlagen öffnen", exact: true})
         .click();
     await page
         .getByRole("searchbox", {name: "Suchen", exact: true})
         .fill("LPC3");
+    const sourceCard = page.locator("article").filter({
+        has: page.getByText("LPC3", {exact: true}),
+    });
     await expect(
-        page.getByRole("button", {name: "Bausteindetails: LPC3", exact: true}),
+        sourceCard.getByRole("button", {name: "Ansehen", exact: true}),
     ).toBeVisible();
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
     await expect(
@@ -95,14 +98,8 @@ test("Course source template plans ten real sessions and one linked net-only tea
     ).toHaveValue("LPC3");
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(
-        page.getByRole("button", {
-            name: "Building-block details: LPC3",
-            exact: true,
-        }),
+        sourceCard.getByRole("button", {name: "View", exact: true}),
     ).toBeVisible();
-    await expect(
-        page.locator(".building-block-cards .operations-course").first(),
-    ).toHaveCSS("border-top-width", "5px");
     await a11y(page);
     await page.screenshot({
         path: `.local/screenshots/${testInfo.project.name}-course-building-blocks-catalogue-dark-en.png`,
@@ -110,13 +107,15 @@ test("Course source template plans ten real sessions and one linked net-only tea
     });
     await page.getByLabel("Language", {exact: true}).selectOption("de");
     await page.getByLabel("Farbschema", {exact: true}).selectOption("light");
-    const sourceAction = page.getByRole("button", {
-        name: "Bausteindetails: LPC3",
+    const sourceAction = sourceCard.getByRole("button", {
+        name: "Ansehen",
         exact: true,
     });
     await assertPointerReady(sourceAction, "course source details");
     await sourceAction.click();
-    const sourceDialog = page.getByRole("dialog", {name: /LPC3/});
+    const sourceDialog = page.getByRole("dialog").filter({
+        has: page.getByRole("region", {name: "Quellenreferenz", exact: true}),
+    });
     await expect(
         sourceDialog.getByText("Bausteinbeschreibung-LPIC3.pdf", {exact: true}),
     ).toBeVisible();
@@ -140,7 +139,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         fullPage: true,
     });
     await sourceDialog
-        .getByRole("button", {name: "Durchführung planen", exact: true})
+        .getByRole("button", {name: "Aus Vorlage erstellen", exact: true})
         .click();
     const runDialog = page.getByRole("dialog", {
         name: "Kurs anlegen",
@@ -177,7 +176,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await page.goto(`/courses?run=${run.id}`);
     const courseDialog = page.getByRole("dialog", {name: /LPC3/});
     await courseDialog
-        .getByRole("link", {name: "Auftrag daraus erstellen", exact: true})
+        .getByRole("link", {name: "Ausschreibung vorbereiten", exact: true})
         .click();
     await expect(page).toHaveURL(new RegExp(`/admin\\?courseRun=${run.id}`));
     await expect(
@@ -192,7 +191,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .getByLabel("Voller Auftragspreis gesamt", {exact: true})
         .fill("1000");
     await page
-        .getByLabel("Konditionen", {exact: true})
+        .getByLabel("Konditionen (optional)", {exact: true})
         .fill(`Fictional Course complete-block terms ${tag}`);
     await page.getByLabel("Sofort veröffentlichen", {exact: true}).check();
     await page
@@ -277,4 +276,58 @@ test("Course source template plans ten real sessions and one linked net-only tea
     } finally {
         await context.close();
     }
+});
+test("Company portal authors a template and saves an unpublished run", async ({page}) => {
+    const tag = randomUUID().slice(0, 8);
+    const company = await actor(`Fictional template planner ${tag}`, "client");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const organisationId = randomUUID();
+    const organisationName = `Fictional practice academy ${tag}`;
+    const title = `Linux practice day ${tag}`;
+    await checked(service.from("organisations").insert({
+        id: organisationId,
+        name: organisationName,
+    }));
+    await checked(service.from("client_organisation_memberships").insert({
+        organisation_id: organisationId,
+        user_id: company.id,
+    }));
+    await login(page, company.email);
+    await page.goto("/client");
+    await page.getByRole("link", {name: "Kursvorlagen öffnen", exact: true}).click();
+    await expect(page).toHaveURL("/courses?tab=templates");
+    await page.getByRole("button", {name: "Vorlage anlegen", exact: true}).click();
+    const create = page.getByRole("dialog", {name: "Vorlage anlegen", exact: true});
+    await expect(create.getByLabel("Unternehmen der Vorlage")).toHaveValue(organisationId);
+    await create.getByLabel("Titel", {exact: true}).fill(title);
+    await create.getByRole("button", {name: "Speichern", exact: true}).click();
+    await expect(create).not.toBeVisible();
+
+    const template = page.locator("article").filter({
+        has: page.getByRole("heading", {name: title, exact: true}),
+    });
+    await template.getByRole("button", {name: "Bearbeiten", exact: true}).click();
+    const edit = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
+    const editedTitle = `${title} · Workshop`;
+    await edit.getByLabel("Titel", {exact: true}).fill(editedTitle);
+    await edit.getByRole("button", {name: "Speichern", exact: true}).click();
+    await expect(edit).not.toBeVisible();
+
+    await page.locator("article").filter({
+        has: page.getByRole("heading", {name: editedTitle, exact: true}),
+    }).getByRole("button", {name: "Aus Vorlage erstellen", exact: true}).click();
+    const run = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+    await expect(run.getByLabel("Organisation", {exact: true})).toHaveValue(organisationId);
+    await expect(run.getByRole("button", {name: /Kurskatalog anzeigen|Ausschreibung vorbereiten/})).toHaveCount(0);
+    await run.getByLabel("Beginn 1", {exact: true}).fill("2037-07-06T09:00");
+    await run.getByLabel("Ende 1", {exact: true}).fill("2037-07-06T16:00");
+    await run.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
+    await expect(page.getByText("Durchführung als Entwurf gespeichert.", {exact: true})).toBeVisible();
+    await expect(page.getByRole("heading", {name: editedTitle, exact: true})).toBeVisible();
+    const saved = await checked(service.from("course_runs")
+        .select("published,archived_at,course_sessions(id),jobs(id)")
+        .eq("organisation_id", organisationId)
+        .single(), {requireData: true});
+    expect(saved).toMatchObject({published: false, archived_at: null, jobs: []});
+    expect(saved.course_sessions).toHaveLength(1);
 });

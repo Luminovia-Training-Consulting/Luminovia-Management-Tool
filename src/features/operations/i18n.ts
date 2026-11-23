@@ -336,7 +336,28 @@ const pairs: Record<string, [string, string]> = {
   webhookAttempts: ["Versuche: {{count}}", "Attempts: {{count}}"],
   buildingBlocks: ["Kursbausteine", "Course building blocks"],
   blockDetails: ["Bausteindetails", "Building-block details"],
-  planRun: ["Durchführung planen", "Plan course run"],
+  openTemplateLibrary: ["Kursvorlagen öffnen", "Open course templates"],
+  createRunFromTemplate: ["Aus Vorlage erstellen", "Create from template"],
+  courseDraftFromTemplateHint: [
+    "Lege die Termine für diese Durchführung fest und speichere sie als Entwurf. Sie erscheint in der Übersicht „Durchführungen“.",
+    "Set dates for this course run and save it as a draft. Find it under “Runs”.",
+  ],
+  courseDraftCreated: [
+    "Durchführung als Entwurf gespeichert.",
+    "Course run saved as a draft.",
+  ],
+  companyTemplateLocked: [
+    "Diese Vorlage gehört zu einer veröffentlichten Durchführung oder einem geschützten Auftrag. Lege für neue Inhalte eine weitere Vorlage an.",
+    "This template belongs to a published run or a protected teaching offer. Add another template for new content.",
+  ],
+  companyCoursesIntro: [
+    "Sieh dir die Kurse deines Unternehmens an und plane neue Durchführungen mit euren Vorlagen.",
+    "View your company’s courses and plan new runs using your templates.",
+  ],
+  companyTemplateHelp: [
+    "Hier findest du die Vorlagen deiner Organisation. Du kannst ihre Inhalte bearbeiten oder damit eine Durchführung mit eigenen Terminen als Entwurf speichern.",
+    "Find your organisation’s templates here. Edit their content or use one to schedule a course run and save it as a draft.",
+  ],
   createRunOffer: ["Ausschreibung vorbereiten", "Prepare teaching offer"],
   reusableBlock: [
     "Inhalte und Quellenbezug wiederverwenden; Unternehmenszuordnung, Termine und Honorar für jede Durchführung festlegen.",

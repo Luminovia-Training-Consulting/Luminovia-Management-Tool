@@ -69,7 +69,7 @@ import {
   type Template,
   templatesQuery,
 } from "./data";
-import { CourseRunOfferLink } from "./building-blocks";
+import { BuildingBlockSources, CourseRunOfferLink } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
@@ -98,6 +98,8 @@ const runSchema = z.object({
 });
 
 type TemplateValues = z.infer<typeof templateSchema>;
+type PlanningOrganisation = Pick<Organisation, "id" | "name"> &
+  Partial<Pick<Organisation, "archived_at">>;
 const newCourseSchema = runSchema.extend({
   template_id: z.union([z.uuid(), z.literal("")]),
 });
@@ -210,17 +212,23 @@ function CourseContentFields({
 function TemplateForm({
   original,
   organisations,
+  companyOnly,
   onDone,
 }: {
   original?: Template;
-  organisations: Organisation[];
+  organisations: PlanningOrganisation[];
+  companyOnly: boolean;
   onDone: () => void;
 }) {
   const { t } = useTranslation("operations");
   const client = useQueryClient();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
-  const [owner, setOwner] = useState(original?.owner_organisation_id ?? "");
+  const [owner, setOwner] = useState(
+    original?.owner_organisation_id ??
+      (companyOnly ? organisations[0]?.id : "") ??
+      "",
+  );
   const {
     register,
     control,
@@ -262,7 +270,7 @@ function TemplateForm({
           disabled={Boolean(original?.owner_organisation_id)}
           onChange={(event) => setOwner(event.target.value)}
         >
-          <option value="">{t("internalTemplate")}</option>
+          {!companyOnly && <option value="">{t("internalTemplate")}</option>}
           {organisations
             .filter(
               (organisation) =>
@@ -285,10 +293,18 @@ function TemplateForm({
         <input type="checkbox" {...register("archived")} />
         {t("archive")}
       </label>
-      <Button disabled={!online || save.isPending}>{t("save")}</Button>
+      <Button disabled={!online || save.isPending || (companyOnly && !owner)}>
+        {t("save")}
+      </Button>
       {save.isError && (
         <Notice kind="error">
-          {t(save.error.message === "course_locked" ? "locked" : "error")}
+          {t(
+            save.error.message === "course_locked"
+              ? companyOnly
+                ? "companyTemplateLocked"
+                : "locked"
+              : "error",
+          )}
         </Notice>
       )}
     </form>
@@ -301,6 +317,7 @@ function RunForm({
   templates,
   organisations,
   initialTemplateId,
+  companyOnly,
   focusSchedule,
   blocks,
   canPrepareOffer,
@@ -309,8 +326,9 @@ function RunForm({
 }: {
   original?: CourseRun;
   templates: Template[];
-  organisations: Organisation[];
+  organisations: PlanningOrganisation[];
   initialTemplateId?: string;
+  companyOnly: boolean;
   focusSchedule: boolean;
   blocks: BuildingBlock[];
   canPrepareOffer: boolean;
@@ -318,6 +336,7 @@ function RunForm({
   onBusy: (busy: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("operations");
+  const draftOnly = Boolean(initialTemplateId) && !original;
   const { session } = useAuth();
   const actor = session!.user.id;
   const online = useOnline();
@@ -751,7 +770,9 @@ function RunForm({
                 },
               })}
             >
-              {!original && <option value="">{t("newCourseContent")}</option>}
+              {!original && !companyOnly && (
+                <option value="">{t("newCourseContent")}</option>
+              )}
               {original &&
                 !templates.some(
                   (template) => template.id === original.template_id,
@@ -1042,7 +1063,7 @@ function RunForm({
         >
           {t(original ? "save" : "saveRunDraft")}
         </Button>
-        {!original && (
+        {!original && !draftOnly && (
           <Button
             type="button"
             disabled={
@@ -1053,17 +1074,20 @@ function RunForm({
             {t("showInCourseCatalogue")}
           </Button>
         )}
-        {!original && canPrepareOffer && selectedOrganisationId && (
-          <Button
-            type="button"
-            disabled={
-              !online || save.isPending || (needsContent && !topics.isSuccess)
-            }
-            onClick={submitRun(false, true)}
-          >
-            {t("saveAndPrepareOffer")}
-          </Button>
-        )}
+        {!original &&
+          !draftOnly &&
+          canPrepareOffer &&
+          selectedOrganisationId && (
+            <Button
+              type="button"
+              disabled={
+                !online || save.isPending || (needsContent && !topics.isSuccess)
+              }
+              onClick={submitRun(false, true)}
+            >
+              {t("saveAndPrepareOffer")}
+            </Button>
+          )}
       </div>
       {save.isError && needsContent && templateRetained && (
         <Notice>{t("courseTemplateRetained")}</Notice>
@@ -1115,13 +1139,31 @@ export function CoursesPage() {
   const [search, setSearch] = useState("");
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [showArchivedRuns, setShowArchivedRuns] = useState(false);
-  const [tab, setTab] = useState<"runs" | "templates">("runs");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
   const [focusSchedule, setFocusSchedule] = useState(false);
   const [params, setParams] = useSearchParams();
+  const tab =
+    (manage || companyViewer) && params.get("tab") === "templates"
+      ? "templates"
+      : "runs";
+  const setTab = (next: "runs" | "templates") => {
+    setParams(next === "templates" ? { tab: next } : {});
+  };
+  const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
+  const canCreateTemplate = manage || companyOrganisations.length > 0;
+  const canManageTemplate = (template: Template) =>
+    manage ||
+    companyOrganisations.some(
+      ({ id }) => id === template.owner_organisation_id,
+    );
+  const canEditTemplate = (template: Template) =>
+    manage ||
+    (canManageTemplate(template) &&
+      !template.building_block_id &&
+      !template.building_block_source_id);
   const navigate = useNavigate();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const workspaceEntitlement = useQuery({
@@ -1137,12 +1179,11 @@ export function CoursesPage() {
   };
   const reviewSchedule = (run: CourseRun) => {
     setParams({}, { replace: true });
-    setTab("runs");
     editRun(run, true);
   };
   const planRun = (templateId: string) => {
     setInitialTemplateId(templateId);
-    setParams({});
+    setTab(tab);
     editRun(null);
   };
   const [copy, setCopy] = useState<{
@@ -1242,15 +1283,21 @@ export function CoursesPage() {
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const visibleTemplates = manage
-    ? templates.data
-    : templates.data.filter((template) =>
-        ownCompanies.data?.some(
-          ({ id }) => id === template.owner_organisation_id,
-        ),
-      );
+  const visibleTemplates = templates.data.filter(canManageTemplate);
+  const planningOrganisations = manage ? orgs.data : companyOrganisations;
+  const templateBlock = blocks.data?.find(
+    (block) => block.id === templateDetail?.building_block_id,
+  );
+  const blockCodes = new Map(
+    blocks.data?.map((block) => [block.id, block.code]),
+  );
   const filteredTemplates = visibleTemplates.filter((template) =>
-    [template.title, template.description, template.syllabus]
+    [
+      template.title,
+      template.description,
+      template.syllabus,
+      blockCodes.get(template.building_block_id ?? ""),
+    ]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase()),
@@ -1259,9 +1306,9 @@ export function CoursesPage() {
     <>
       <PageHeading
         title={t("courses")}
-        description={t("coursesIntro")}
+        description={t(companyViewer ? "companyCoursesIntro" : "coursesIntro")}
         action={
-          manage ? (
+          (tab === "templates" ? canCreateTemplate : manage) ? (
             <Button
               disabled={!online}
               onClick={() => {
@@ -1389,6 +1436,11 @@ export function CoursesPage() {
           />
         )}
       <div className="page-actions">
+        {(manage || companyViewer) && tab === "runs" && (
+          <Button asChild variant="secondary">
+            <Link to="/courses?tab=templates">{t("openTemplateLibrary")}</Link>
+          </Button>
+        )}
         <Button asChild variant="secondary">
           <Link to="/learning?view=materials">
             {t("learning:materialLibrary")}
@@ -1440,7 +1492,11 @@ export function CoursesPage() {
           )}
         </div>
         <p className="course-catalogue-tab-help">
-          {t(`courseCatalogueTab.${tab}`)}
+          {t(
+            tab === "templates" && companyViewer
+              ? "companyTemplateHelp"
+              : `courseCatalogueTab.${tab}`,
+          )}
         </p>
       </section>
       {message && <Notice>{message}</Notice>}
@@ -1525,7 +1581,11 @@ export function CoursesPage() {
                 )}
                 <p className="muted">
                   {orgs.data.find((org) => org.id === run.organisation_id)
-                    ?.name ?? t("noCustomer")}{" "}
+                    ?.name ??
+                    companyOrganisations.find(
+                      (org) => org.id === run.organisation_id,
+                    )?.name ??
+                    t("noCustomer")}{" "}
                   · {t(run.delivery_type)}
                 </p>
                 <p>{template?.description}</p>
@@ -1642,6 +1702,12 @@ export function CoursesPage() {
           {filteredTemplates.map((template) => (
             <article className="panel operations-course" key={template.id}>
               <h2>{template.title}</h2>
+              {template.building_block_id &&
+                blockCodes.has(template.building_block_id) && (
+                  <span className="badge">
+                    {blockCodes.get(template.building_block_id)}
+                  </span>
+                )}
               {template.archived_at && (
                 <span className="badge">{t("archive")}</span>
               )}
@@ -1660,44 +1726,46 @@ export function CoursesPage() {
               <div className="operations-actions">
                 <Button
                   variant="secondary"
-                  onClick={() => setParams({ template: template.id })}
+                  onClick={() =>
+                    setParams({ tab: "templates", template: template.id })
+                  }
                 >
                   {t("view")}
                 </Button>
-                {manage && !template.archived_at && (
+                {!template.archived_at && (
                   <Button
                     disabled={!online}
                     onClick={() => planRun(template.id)}
                   >
-                    {t("planRun")}
+                    {t("createRunFromTemplate")}
+                  </Button>
+                )}
+                {canEditTemplate(template) && (
+                  <Button
+                    variant="secondary"
+                    disabled={!online}
+                    onClick={() => setTemplateEdit(template)}
+                  >
+                    {t("edit")}
                   </Button>
                 )}
                 {manage && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      disabled={!online}
-                      onClick={() => setTemplateEdit(template)}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      disabled={!online}
-                      onClick={() => {
-                        duplicate.reset();
-                        setCopy({
-                          type: "template",
-                          id: template.id,
-                          title: template.title,
-                        });
-                        setCopyTitle(`${template.title} · ${t("copySuffix")}`);
-                      }}
-                    >
-                      <Copy size={16} />
-                      {t("duplicate")}
-                    </Button>
-                  </>
+                  <Button
+                    variant="ghost"
+                    disabled={!online}
+                    onClick={() => {
+                      duplicate.reset();
+                      setCopy({
+                        type: "template",
+                        id: template.id,
+                        title: template.title,
+                      });
+                      setCopyTitle(`${template.title} · ${t("copySuffix")}`);
+                    }}
+                  >
+                    <Copy size={16} />
+                    {t("duplicate")}
+                  </Button>
                 )}
               </div>
             </article>
@@ -1715,7 +1783,8 @@ export function CoursesPage() {
         <TemplateForm
           key={templateEdit?.id}
           original={templateEdit ?? undefined}
-          organisations={orgs.data}
+          organisations={planningOrganisations}
+          companyOnly={!manage}
           onDone={() => {
             setTemplateEdit(undefined);
             setMessage(t("saved"));
@@ -1732,15 +1801,20 @@ export function CoursesPage() {
         description={
           runEdit
             ? (findTemplate(runEdit)?.title ?? t("courseRecordUnavailable"))
-            : t("publishedHint")
+            : t(
+                initialTemplateId
+                  ? "courseDraftFromTemplateHint"
+                  : "publishedHint",
+              )
         }
       >
         <RunForm
           key={runEdit?.id ?? `new:${initialTemplateId ?? "default"}`}
           original={runEdit ?? undefined}
-          templates={templates.data}
-          organisations={orgs.data}
+          templates={manage ? templates.data : visibleTemplates}
+          organisations={planningOrganisations}
           initialTemplateId={initialTemplateId}
+          companyOnly={!manage}
           focusSchedule={focusSchedule}
           blocks={blocks.data ?? []}
           canPrepareOffer={canPrepareOffer}
@@ -1752,14 +1826,20 @@ export function CoursesPage() {
               return;
             }
             setTab(result === "template" ? "templates" : "runs");
-            setMessage(t("saved"));
+            if (initialTemplateId && !runEdit) {
+              setSearch("");
+              setPhase("all");
+              setMessage(t("courseDraftCreated"));
+            } else {
+              setMessage(t("saved"));
+            }
           }}
         />
       </Dialog>
       <Dialog
         open={Boolean(templateDetail)}
         onOpenChange={(open) => {
-          if (!open) setParams({}, { replace: true });
+          if (!open) setParams({ tab: "templates" }, { replace: true });
         }}
         title={templateDetail?.title ?? t("template")}
         description={t("template")}
@@ -1778,32 +1858,52 @@ export function CoursesPage() {
                 </p>
               </>
             )}
-            {manage && (
+            {canManageTemplate(templateDetail) && (
               <div className="form-actions">
                 <Button
                   disabled={!online || Boolean(templateDetail.archived_at)}
                   onClick={() => planRun(templateDetail.id)}
                 >
-                  {t("planRun")}
+                  {t("createRunFromTemplate")}
                 </Button>
-                <PermanentDeleteAction
-                  kind="course_template"
-                  id={templateDetail.id}
-                  label={templateDetail.title}
-                  linkedRuns={runs.data
-                    .filter((run) => run.template_id === templateDetail.id)
-                    .map((run) => ({
-                      id: run.id,
-                      title: run.course_sessions.length
-                        ? dateTime(
-                            run.course_sessions[0].starts_at,
-                            i18n.language,
-                            run.time_zone,
-                          )
-                        : t("courseRunWithoutSessions"),
-                    }))}
-                />
+                {canEditTemplate(templateDetail) && (
+                  <Button
+                    variant="secondary"
+                    disabled={!online}
+                    onClick={() => {
+                      setTab("templates");
+                      setTemplateEdit(templateDetail);
+                    }}
+                  >
+                    {t("edit")}
+                  </Button>
+                )}
+                {manage && (
+                  <PermanentDeleteAction
+                    kind="course_template"
+                    id={templateDetail.id}
+                    label={templateDetail.title}
+                    linkedRuns={runs.data
+                      .filter((run) => run.template_id === templateDetail.id)
+                      .map((run) => ({
+                        id: run.id,
+                        title: run.course_sessions.length
+                          ? dateTime(
+                              run.course_sessions[0].starts_at,
+                              i18n.language,
+                              run.time_zone,
+                            )
+                          : t("courseRunWithoutSessions"),
+                      }))}
+                  />
+                )}
               </div>
+            )}
+            {manage && templateBlock && (
+              <BuildingBlockSources
+                block={templateBlock}
+                sourceId={templateDetail.building_block_source_id}
+              />
             )}
             <ResourceComments kind="template" resourceId={templateDetail.id} />
           </>

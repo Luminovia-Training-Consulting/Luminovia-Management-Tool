@@ -70,6 +70,7 @@ import {
   validRequestBrief,
 } from "./request-brief-api";
 import "./platform-i18n";
+import "../operations/i18n";
 import "./platform.css";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
@@ -683,6 +684,13 @@ export function ClientPortalPage() {
         }
       />
       <div className="page-actions">
+        {access.data.can_request && (
+          <Button asChild variant="secondary">
+            <Link to="/courses?tab=templates">
+              {t("operations:openTemplateLibrary")}
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="secondary">
           <Link to="/learning">{t("learning:hub")}</Link>
         </Button>
