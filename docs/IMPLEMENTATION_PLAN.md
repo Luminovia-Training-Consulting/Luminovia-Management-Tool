@@ -8,6 +8,12 @@
 - [x] Let job managers attach a missing original PDF at the source reference with exact digest validation and explicit visibility.
 - [x] Import the exact catalogue PDFs into private Storage and serve them to authorised staff and assigned lecturers through job source links.
 
+## Hosted administrator reset
+
+- [x] Implement the CMS confirmation form, current-account reauthentication, backup gate and private socket connection to the existing reset operation.
+- [x] Verify the UI, socket request handling, reset state machine, packaging and Caddy ingress using disposable evidence.
+- [ ] Enable the socket on KVM 1 and verify the live endpoint without deleting active data.
+
 ## Local launcher
 
 - [x] Detect a busy frontend port and an already-running local project before installing dependencies. Report the conflicting port or project and preserve the existing local stack during checkout handoffs.

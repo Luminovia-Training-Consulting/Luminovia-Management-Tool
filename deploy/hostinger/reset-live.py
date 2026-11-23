@@ -3,6 +3,7 @@
 import argparse
 import base64
 import getpass
+from http.server import BaseHTTPRequestHandler
 import ipaddress
 import json
 import os
@@ -10,6 +11,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import socket
 import stat
 import sys
 import urllib.request
@@ -26,6 +28,9 @@ MOUNTS = {
     "mailpit": ("mailpit", "/data"),
 }
 NETWORK = "luminovia-portal-backend"
+WEB_PATH = "/__portal/hosted-reset"
+WEB_CONFIRMATION = "RESET CONFIRM"
+MAX_REQUEST = 24 * 1024
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -83,7 +88,8 @@ def auth_request(gateway, key, route, body=None, token=None):
         raise UpdateError("auth_request_failed") from error
 
 
-def assert_current_admin(updater, user, session):
+def assert_current_admin(updater, user, session, *, fresh=True):
+    age_check = "and s.created_at > statement_timestamp() - interval '5 minutes'" if fresh else ""
     allowed = updater.sql(f"""
       select exists (
         select 1 from public.user_roles r
@@ -91,23 +97,27 @@ def assert_current_admin(updater, user, session):
         join auth.users u on u.id=r.user_id and u.email_confirmed_at is not null
         join auth.sessions s on s.user_id=u.id and s.id='{session}'::uuid
         where u.id='{user}'::uuid and r.role in ('admin','owner')
-          and s.created_at > statement_timestamp() - interval '5 minutes'
+          {age_check}
           and (s.not_after is null or s.not_after > statement_timestamp())
       );""")
     require(allowed == "t", "current_administrator_required")
+
+
+def verified_identity(gateway, key, token):
+    # Trust the decoded session identifier only after native Auth has verified the JWT.
+    identity = auth_request(gateway, key, "/user", token=token)
+    segment = token.split(".")[1]
+    claims = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+    user = UUID(identity["id"])
+    require(UUID(claims["sub"]) == user, "session_identity_mismatch")
+    return user, UUID(claims["session_id"]), identity.get("email")
 
 
 def authenticate(updater, env, email, password):
     gateway, key = private_gateway(updater), env["SUPABASE_PUBLISHABLE_KEY"]
     signed_in = auth_request(gateway, key, "/token?grant_type=password",
                              {"email": email, "password": password})
-    token = signed_in["access_token"]
-    identity = auth_request(gateway, key, "/user", token=token)
-    segment = token.split(".")[1]
-    claims = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
-    user = UUID(identity["id"])
-    require(UUID(claims["sub"]) == user, "password_session_identity_mismatch")
-    session = UUID(claims["session_id"])
+    user, session, _ = verified_identity(gateway, key, signed_in["access_token"])
     assert_current_admin(updater, user, session)
     return user, session
 
@@ -129,7 +139,7 @@ def installed_migrations(updater):
     return [found[version] for version in sorted(found)]
 
 
-def preflight(updater):
+def instance_environment(updater):
     require(os.geteuid() == 0, "host_root_required")
     for path in (ROOT, ROOT / "source", ROOT / "private", ROOT / "data", ROOT / "www"):
         trusted_directory(path)
@@ -143,6 +153,12 @@ def preflight(updater):
     data = ROOT / "data"
     require(env.get("PORTAL_APP_ORIGIN") == ORIGIN and env.get("SUPABASE_PUBLIC_URL") == ORIGIN + "/backend"
             and env.get("PORTAL_DATA_DIR") == str(data), "unexpected_portal_instance")
+    return env
+
+
+def preflight(updater):
+    env = instance_environment(updater)
+    data = ROOT / "data"
     active = updater.state.get("currentCommit", "")
     require(SHA.fullmatch(active) and (updater.www / "current").readlink() == Path("releases") / active,
             "active_release_mismatch")
@@ -246,13 +262,113 @@ def reset(updater, env, data, migrations, actor, email, password):
     atomic_json(journal, {**result, "status": "complete", "finishedAt": now()})
 
 
+def apply_web_reset(token, current_password, new_password):
+    updater = Updater(ROOT)
+    env = instance_environment(updater)
+    try:
+        gateway = private_gateway(updater)
+        user, session, email = verified_identity(gateway, env["SUPABASE_PUBLISHABLE_KEY"], token)
+        assert_current_admin(updater, user, session, fresh=False)
+        require(isinstance(email, str) and email, "missing_administrator_email")
+    except (UpdateError, KeyError, TypeError, ValueError) as error:
+        raise PermissionError("reset_authorization_failed") from error
+    with updater.reviewed_host_lock():
+        env, data, _, migrations = preflight(updater)
+        try:
+            assert_current_admin(updater, user, session, fresh=False)
+            actor = authenticate(updater, env, email, current_password)
+            require(actor[0] == user, "password_session_identity_mismatch")
+        except (UpdateError, KeyError, TypeError, ValueError) as error:
+            raise PermissionError("reset_authorization_failed") from error
+        reset(updater, env, data, migrations, actor, email, new_password)
+
+
+class WebResetRequest(BaseHTTPRequestHandler):
+    # The accepting socket is Unix-only and root-owned. Caddy is the sole HTTP ingress.
+    def log_message(self, *args):
+        pass  # Never log request headers, paths or credential-bearing bodies.
+
+    def respond(self, status, result):
+        body = json.dumps(result).encode("ascii")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def expected_target(self):
+        return self.path == WEB_PATH and self.headers.get_all("Host") == ["cms.luminovia.org"]
+
+    def do_GET(self):
+        if not self.expected_target():
+            return self.respond(404, {"status": "unavailable"})
+        return self.respond(200, {"instance": ORIGIN})
+
+    def do_POST(self):
+        if not self.expected_target() or self.headers.get_all("Origin") != [ORIGIN]:
+            return self.respond(403, {"status": "denied"})
+        authorization = self.headers.get_all("Authorization") or []
+        match = re.fullmatch(r"Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)",
+                             authorization[0]) if len(authorization) == 1 else None
+        if not match or len(match[1]) > 8192:
+            return self.respond(403, {"status": "denied"})
+        lengths = self.headers.get_all("Content-Length") or []
+        if (self.headers.get_all("Content-Type") != ["application/json"]
+                or self.headers.get("Transfer-Encoding") is not None
+                or len(lengths) != 1 or not re.fullmatch(r"[0-9]{1,5}", lengths[0])
+                or not 0 < int(lengths[0]) <= MAX_REQUEST):
+            return self.respond(400, {"status": "invalid"})
+        try:
+            length = int(lengths[0])
+            raw = self.rfile.read(length)
+            require(len(raw) == length, "incomplete_request")
+            data = json.loads(raw.decode("utf-8"))
+            require(isinstance(data, dict) and data.keys() == {"confirmation", "password", "newPassword"}
+                    and data["confirmation"] == WEB_CONFIRMATION, "invalid_confirmation")
+            password, new_password = data["password"], data["newPassword"]
+            require(isinstance(password, str) and 0 < len(password) <= 1024
+                    and isinstance(new_password, str) and 16 <= len(new_password) <= 1024
+                    and new_password != password, "invalid_password")
+        except (UpdateError, UnicodeError, ValueError):
+            return self.respond(400, {"status": "invalid"})
+        # A disconnect during the operation does not interrupt the locked reset or rollback.
+        try:
+            apply_web_reset(match[1], password, new_password)
+        except PermissionError:
+            return self.respond(403, {"status": "denied"})
+        except (UpdateError, OSError, KeyError, TypeError, ValueError, RuntimeError) as error:
+            if isinstance(error, UpdateError) and str(error) == "reviewed_migration_requires_fresh_complete_backup":
+                return self.respond(412, {"status": "backup_required"})
+            print("Hosted reset failed. Inspect the private reset state and backup status.", file=sys.stderr)
+            return self.respond(503, {"status": "unconfirmed"})
+        return self.respond(200, {"status": "complete"})
+
+
+def serve_web_request():
+    # systemd socket activation passes the accepted connection on standard input.
+    require(os.geteuid() == 0, "host_root_required")
+    with socket.socket(fileno=0) as connection:
+        require(connection.family == socket.AF_UNIX, "private_reset_socket_required")
+        connection.settimeout(10)
+        try:
+            WebResetRequest(connection, "", None)
+        except (ConnectionError, TimeoutError):
+            pass
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--plan", action="store_true", help="Inspect the verified live reset target.")
     modes.add_argument("--apply", action="store_true", help="Interactively reset the verified live target.")
+    modes.add_argument("--serve-web-request", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     try:
+        if args.serve_web_request:
+            serve_web_request()
+            return 0
         require(os.geteuid() == 0, "host_root_required")
         updater = Updater(ROOT)
         with updater.reviewed_host_lock():

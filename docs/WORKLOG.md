@@ -1,3 +1,9 @@
+# 23 November 2026 — Hosted administrator reset
+
+The CMS reset page accepts `RESET CONFIRM`, the signed-in administrator's current password and a confirmed replacement owner password. Caddy forwards the request through a private socket to the existing locked reset workflow, including the encrypted backup gate, rollback and fresh owner verification.
+
+Verified the browser form, nine Python reset and socket checks, 31 package tests, TypeScript, targeted lint and the pinned Caddy ingress with a disposable handler fixture. The read-only plan also verified the current KVM target and backup. Live activation is tracked separately from a destructive reset.
+
 # 23 November 2026 — Private shared catalogue originals
 
 The KVM received all 24 catalogue PDFs. ClamAV scanned the entire batch and the operator import verified each stored SHA-256 against the active catalogue. The job file gateway binds each original to the job’s source catalogue and checks current authority before returning verified bytes. Job managers and confirmed assigned lecturers can use the original without reuploading it for each job. Existing job-specific file sharing still applies to individual attachments. The related frontend and gateway tests passed.

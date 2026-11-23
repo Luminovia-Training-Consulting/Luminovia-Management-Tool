@@ -1,10 +1,14 @@
 """Run the reset state machine against disposable directories only."""
 import base64
+from contextlib import nullcontext
+import http.client
 import importlib.util
 import json
 from pathlib import Path
+import socket
 import tempfile
 import unittest
+from threading import Thread
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -122,6 +126,90 @@ class ResetTest(unittest.TestCase):
         with self.assertRaisesRegex(module.UpdateError, "unsafe_data_path"):
             module.check_mounts(self.data, "")
         self.assertTrue((self.root / "unrelated" / "old").is_file())
+
+
+class WebResetTest(unittest.TestCase):
+    token = "header.claims.signature"
+    password = "fictional-current"
+    replacement = "fictional-replacement"
+    fields = {"confirmation": "RESET CONFIRM", "password": password, "newPassword": replacement}
+
+    def request(self, *, method="POST", fields=None, headers=None):
+        client, server = socket.socketpair()
+        with client, server:
+            client.settimeout(3)
+            server.settimeout(3)
+            handler = Thread(target=module.WebResetRequest, args=(server, "", None))
+            handler.start()
+            try:
+                connection = http.client.HTTPConnection("cms.luminovia.org")
+                connection.sock = client
+                connection.request(method, module.WEB_PATH, json.dumps(self.fields if fields is None else fields), {
+                    "Origin": module.ORIGIN, "Content-Type": "application/json",
+                    "Authorization": "Bearer " + self.token, **(headers or {}),
+                })
+                response = connection.getresponse()
+                self.assertEqual(response.getheader("Cache-Control"), "no-store")
+                return response.status, json.loads(response.read())
+            finally:
+                handler.join(timeout=3)
+
+    def test_discovery_and_success_use_the_private_socket(self):
+        with patch.object(module, "apply_web_reset") as reset:
+            self.assertEqual(self.request(method="GET"), (200, {"instance": module.ORIGIN}))
+            reset.assert_not_called()
+            self.assertEqual(self.request(), (200, {"status": "complete"}))
+            reset.assert_called_once_with(self.token, self.password, self.replacement)
+
+    def test_rejects_wrong_origin_host_confirmation_and_body_before_controller(self):
+        with patch.object(module, "apply_web_reset") as reset:
+            for headers in [
+                {"Origin": "https://example.invalid"},
+                {"Host": "example.invalid"},
+                {"Authorization": "Bearer invalid"},
+            ]:
+                self.assertEqual(self.request(headers=headers)[0], 403)
+            for fields in [
+                {**self.fields, "confirmation": "DELETE"},
+                {**self.fields, "newPassword": self.password},
+                {**self.fields, "email": "different@example.invalid"},
+                {**self.fields, "password": "x" * module.MAX_REQUEST},
+            ]:
+                self.assertEqual(self.request(fields=fields)[0], 400)
+            reset.assert_not_called()
+
+    def test_missing_backup_and_rejected_auth_are_never_reported_as_success(self):
+        for failure, status, result in [
+            (PermissionError(), 403, "denied"),
+            (module.UpdateError("reviewed_migration_requires_fresh_complete_backup"), 412, "backup_required"),
+            (module.UpdateError("reset_rollback_requires_operator"), 503, "unconfirmed"),
+        ]:
+            with patch.object(module, "apply_web_reset", side_effect=failure):
+                self.assertEqual(self.request(), (status, {"status": result}))
+
+    def test_different_password_identity_cannot_reset_the_browser_account(self):
+        user, browser_session, password_session = uuid4(), uuid4(), uuid4()
+        env = {"SUPABASE_PUBLISHABLE_KEY": "fictional"}
+        email = "owner@example.invalid"
+        with patch.object(module, "Updater") as updater, \
+                patch.object(module, "instance_environment", return_value=env), \
+                patch.object(module, "private_gateway", return_value="http://fictional"), \
+                patch.object(module, "verified_identity", return_value=(user, browser_session, email)), \
+                patch.object(module, "assert_current_admin") as authorized, \
+                patch.object(module, "preflight", return_value=(env, "data", "release", [])), \
+                patch.object(module, "authenticate", return_value=(uuid4(), password_session)) as authenticate, \
+                patch.object(module, "reset") as reset:
+            updater.return_value.reviewed_host_lock.return_value = nullcontext()
+            with self.assertRaises(PermissionError):
+                module.apply_web_reset(self.token, self.password, self.replacement)
+            reset.assert_not_called()
+            authenticate.assert_called_once_with(updater.return_value, env, email, self.password)
+            self.assertEqual(authorized.call_count, 2)
+            authorized.assert_called_with(updater.return_value, user, browser_session, fresh=False)
+            authenticate.return_value = user, password_session
+            module.apply_web_reset(self.token, self.password, self.replacement)
+            reset.assert_called_once_with(updater.return_value, env, "data", [], (user, password_session),
+                                          email, self.replacement)
 
 
 if __name__ == "__main__":

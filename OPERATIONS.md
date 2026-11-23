@@ -733,7 +733,21 @@ The reviewed SQL still requires one explicit `BEGIN;`/`COMMIT;` transaction with
 
 In an owned local portal started with `./portal start`, open **Verwaltung → Vollreset / Administration → Full reset** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
 
-On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's current password and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
+On the named CMS server, open **Verwaltung → Vollreset / Administration → Full reset** as an active administrator or owner. Verify the displayed domain, type `RESET CONFIRM`, enter your current password, and enter the new owner password twice. The browser shows completion after the server verifies the fresh installation. The replacement owner uses the same email address and the new password.
+
+After installing a CMS package containing the web reset, enable its Unix socket on the host once. Enabling the socket connects Caddy to the reset handler. It does not run a reset.
+
+```bash
+sudo install -m 0644 /opt/luminovia-portal/source/deploy/hostinger/luminovia-web-reset.socket /etc/systemd/system/
+sudo install -m 0644 /opt/luminovia-portal/source/deploy/hostinger/luminovia-web-reset@.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now luminovia-web-reset.socket
+curl --fail --silent https://cms.luminovia.org/__portal/hosted-reset
+```
+
+Discovery should return the exact CMS origin. The root-owned socket is available to Caddy through the existing read-only web mount. The packaged handler accepts only this instance's same-origin request, verifies the live signed-in session and re-authenticates the same account with its current password. Disable the browser entry point with `sudo systemctl disable --now luminovia-web-reset.socket` when no reset is in progress.
+
+The terminal route remains available. Run `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. Both entry points check the installation, active release, owned data mounts, applied migration source and a fresh complete encrypted backup. In the terminal, `--apply` requires host-root access, current administrator credentials, a replacement password and the displayed site-specific confirmation.
 
 The reset stops the backend under the shared maintenance lock. It recreates PostgreSQL with the current installed schema and replaces local Storage bytes and private captured mail. The old data stays in a private quarantine until the fresh owner can sign in and the private runtime is healthy. An early failure attempts to restore the original data paths. Inspect `private/reset-state.json` before recovering an interrupted reset. The command keeps the deployed application, server configuration and separately managed encrypted backup sets. It does not access the public Website or third-party storage.
 

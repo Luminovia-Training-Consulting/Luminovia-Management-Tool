@@ -1,0 +1,17 @@
+[Unit]
+Description=Handle one verified Luminovia CMS reset request
+After=docker.service
+
+[Service]
+Type=exec
+User=root
+ExecStart=/usr/bin/python3 -IB /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --serve-web-request
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+RestrictSUIDSGID=yes
+UMask=0077

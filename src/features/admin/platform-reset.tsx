@@ -5,8 +5,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { profileQuery, userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
+import { useSignOut } from "../auth/sign-out-state";
 
-const endpoint = "/__portal/local-reset";
+const local = () => import.meta.env.DEV;
+const hostedOrigin = "https://cms.luminovia.org";
 
 const copy = {
   title: ["Plattform zurücksetzen", "Reset platform"],
@@ -20,15 +22,28 @@ const copy = {
     "Reset deletes this installation's database contents, accounts, sessions, LMS courses, messages, uploads and local email. The local portal stays stopped.",
   ],
   hosted: [
-    "Für den veröffentlichten CMS-Server ist der Reset eine Host-Operation. Starte die Zielprüfung im Server-Terminal. Der anschließende interaktive Reset prüft die Sicherung, dein Admin-Konto und das aktuelle Passwort und legt einen neuen Owner an.",
-    "Resetting the hosted CMS requires host access. Start by checking the target in the server terminal. The interactive reset then checks the backup, your administrator account and current password, and creates a new owner.",
+    "Der Browser-Reset ist auf dieser Installation gerade nicht verfügbar.",
+    "Browser reset is currently unavailable on this installation.",
+  ],
+  hostedScope: [
+    "Der Reset löscht die aktiven Daten dieser CMS-Installation einschließlich Konten, Dateien, Kursen und Nachrichten. Dein Konto wird mit derselben E-Mail-Adresse als neuer Owner angelegt. Das Portal startet danach neu. Verschlüsselte Sicherungen bleiben erhalten.",
+    "Reset deletes this CMS installation’s active data, including accounts, files, courses and messages. Your email address is used to create the new owner account. The portal restarts afterwards. Encrypted backups are retained.",
   ],
   localUnavailable: [
     "Der Browser-Reset ist nur im eigenen lokalen Portal verfügbar. Starte die Installation mit ./portal start.",
     "Browser reset is available in the owned local portal. Start the installation with ./portal start.",
   ],
   confirm: ["Zur Bestätigung DELETE eingeben", "Type DELETE to confirm"],
+  hostedConfirm: [
+    "Zur Bestätigung RESET CONFIRM eingeben",
+    "Type RESET CONFIRM to confirm",
+  ],
   password: ["Aktuelles Passwort", "Current password"],
+  replacement: [
+    "Neues Owner-Passwort (mindestens 16 Zeichen)",
+    "New owner password (at least 16 characters)",
+  ],
+  repeat: ["Neues Passwort wiederholen", "Repeat the new password"],
   action: [
     "Alle Daten dieser Installation löschen",
     "Delete all data in this installation",
@@ -36,6 +51,22 @@ const copy = {
   accepted: [
     "Der Reset wurde angefordert. Das lokale Portal wird gestoppt. Prüfe im Terminal mit ./portal status, ob die Löschung abgeschlossen ist.",
     "Reset requested. The local portal is shutting down. Check ./portal status in your terminal to confirm deletion.",
+  ],
+  complete: [
+    "Der Reset ist abgeschlossen. Melde dich mit deiner E-Mail-Adresse und dem neuen Owner-Passwort an.",
+    "Reset is complete. Sign in with your email address and the new owner password.",
+  ],
+  working: [
+    "Der Server prüft die Sicherung und führt den Reset aus. Lass diese Seite geöffnet.",
+    "The server is checking the backup and running the reset. Keep this page open.",
+  ],
+  hostedFailed: [
+    "Der Reset wurde nicht als abgeschlossen bestätigt. Lass den Serverstatus prüfen, bevor du es erneut versuchst.",
+    "Reset completion could not be confirmed. Check the server status before trying again.",
+  ],
+  backupRequired: [
+    "Für den Reset fehlt eine aktuelle, vollständige verschlüsselte Sicherung.",
+    "Reset requires a recent, complete encrypted backup.",
   ],
   failed: [
     "Der Reset konnte nicht bestätigt werden. Prüfe vor einem erneuten Versuch lokal den Portalstatus mit ./portal status.",
@@ -88,12 +119,18 @@ function PlatformResetForm({
   const t = (key: keyof typeof copy) => copy[key][language];
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [repeat, setRepeat] = useState("");
   const [pending, setPending] = useState(false);
   const navigate = useNavigate();
-  const [result, setResult] = useState<"failed" | "invalid">();
+  const [result, setResult] = useState<
+    "failed" | "hostedFailed" | "invalid" | "backupRequired"
+  >();
+  const isLocal = local();
+  const endpoint = isLocal ? "/__portal/local-reset" : "/__portal/hosted-reset";
+  const phrase = isLocal ? "DELETE" : "RESET CONFIRM";
   const target = useQuery({
-    queryKey: ["local-platform-reset-target"],
-    enabled: import.meta.env.DEV,
+    queryKey: ["platform-reset-target", endpoint],
     retry: false,
     queryFn: async () => {
       const response = await fetch(endpoint, { cache: "no-store" });
@@ -103,18 +140,32 @@ function PlatformResetForm({
       )
         return null;
       const data = await response.json();
+      if (!isLocal) return data.instance === hostedOrigin ? hostedOrigin : null;
       return typeof data.project === "string" ? (data.project as string) : null;
     },
   });
+  const canSubmit =
+    !!target.data &&
+    confirmation === phrase &&
+    !!password &&
+    (isLocal ||
+      (Array.from(newPassword).length >= 16 &&
+        newPassword !== password &&
+        newPassword === repeat));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!target.data || confirmation !== "DELETE" || !password || pending)
-      return;
+    if (!canSubmit || pending) return;
     setPending(true);
     setResult(undefined);
-    const body = JSON.stringify({ confirmation, password });
+    const body = JSON.stringify({
+      confirmation,
+      password,
+      ...(!isLocal && { newPassword }),
+    });
     setPassword("");
+    setNewPassword("");
+    setRepeat("");
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -128,6 +179,20 @@ function PlatformResetForm({
         setResult("invalid");
         return;
       }
+      if (!isLocal) {
+        const data = await response.json();
+        if (response.status === 412 && data.status === "backup_required") {
+          setResult("backupRequired");
+          return;
+        }
+        if (response.status !== 200 || data.status !== "complete")
+          throw new Error();
+        navigate("/reset-status", {
+          replace: true,
+          state: { hostedResetComplete: true },
+        });
+        return;
+      }
       if (response.status !== 202) throw new Error();
       const data = await response.json();
       if (typeof data.receipt !== "string") throw new Error();
@@ -135,7 +200,7 @@ function PlatformResetForm({
         replace: true,
       });
     } catch {
-      setResult("failed");
+      setResult(isLocal ? "failed" : "hostedFailed");
     } finally {
       setPending(false);
     }
@@ -151,7 +216,7 @@ function PlatformResetForm({
           <p role="status">{t("checking")}</p>
         ) : target.data ? (
           <>
-            <p>{t("scope")}</p>
+            <p>{t(isLocal ? "scope" : "hostedScope")}</p>
             {target.data && (
               <p>
                 {t("target")} <code>{target.data}</code>
@@ -160,7 +225,7 @@ function PlatformResetForm({
             <div className="grid max-w-md gap-4">
               {/* This confirmation is not a username in the password form. */}
               <label className="grid gap-1.5" htmlFor="reset-confirmation">
-                {t("confirm")}
+                {t(isLocal ? "confirm" : "hostedConfirm")}
                 <input
                   id="reset-confirmation"
                   name="reset-confirmation"
@@ -168,6 +233,7 @@ function PlatformResetForm({
                   autoComplete="off"
                   autoCapitalize="none"
                   spellCheck={false}
+                  disabled={pending}
                   value={confirmation}
                   onChange={(event) =>
                     setConfirmation(event.currentTarget.value)
@@ -184,50 +250,109 @@ function PlatformResetForm({
                     type="password"
                     autoComplete="current-password"
                     required
+                    disabled={pending}
                     maxLength={1024}
                     value={password}
                     onChange={(event) => setPassword(event.currentTarget.value)}
                   />
                 </label>
+                {!isLocal && (
+                  <>
+                    <label
+                      className="grid gap-1.5"
+                      htmlFor="reset-owner-password"
+                    >
+                      {t("replacement")}
+                      <input
+                        id="reset-owner-password"
+                        className="input"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        maxLength={1024}
+                        disabled={pending}
+                        value={newPassword}
+                        onChange={(event) =>
+                          setNewPassword(event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                    <label
+                      className="grid gap-1.5"
+                      htmlFor="reset-repeat-password"
+                    >
+                      {t("repeat")}
+                      <input
+                        id="reset-repeat-password"
+                        className="input"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        maxLength={1024}
+                        disabled={pending}
+                        value={repeat}
+                        onChange={(event) =>
+                          setRepeat(event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+                {pending && !isLocal && <p role="status">{t("working")}</p>}
                 {result && <p role="alert">{t(result)}</p>}
                 <Button
                   className="max-w-full justify-self-start whitespace-normal"
                   type="submit"
                   variant="danger"
-                  disabled={confirmation !== "DELETE" || !password || pending}
+                  disabled={!canSubmit || pending}
                 >
                   {t("action")}
                 </Button>
               </form>
             </div>
           </>
-        ) : import.meta.env.DEV ? (
+        ) : isLocal ? (
           <p>{t("localUnavailable")}</p>
         ) : (
-          <>
-            <p>{t("hosted")}</p>
-            <code className="break-words">./portal reset-live --plan</code>
-            <code className="break-words">./portal reset-live --apply</code>
-          </>
+          <p>{t("hosted")}</p>
         )}
       </section>
     </div>
   );
 }
 
-/** The browser confirms the request before the local web server shuts down. */
+/** Report only the result confirmed by the corresponding reset endpoint. */
 export function PlatformResetStatus() {
-  const receipt = useLocation().hash.slice(1);
-  const { i18n } = useTranslation();
+  const location = useLocation();
+  const receipt = location.hash.slice(1);
+  const { i18n, t } = useTranslation();
   const language = i18n.language.startsWith("de") ? 0 : 1;
-  const valid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(receipt);
+  const navigate = useNavigate();
+  const { pending, failed, signOut } = useSignOut(() =>
+    navigate("/login", { replace: true }),
+  );
+  const complete = !local() && location.state?.hostedResetComplete === true;
+  const valid =
+    local() && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(receipt);
 
-  if (!valid) return <Navigate to="/login" replace />;
+  if (!valid && !complete) return <Navigate to="/login" replace />;
   return (
     <main className="mx-auto max-w-lg p-4">
       <section className="card stack">
         <h1>{copy.title[language]}</h1>
-        <p role="status">{copy.accepted[language]}</p>
+        <p role="status">
+          {copy[complete ? "complete" : "accepted"][language]}
+        </p>
+        {complete && (
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={() => void signOut()}
+          >
+            {t("logout")}
+          </Button>
+        )}
+        {failed && <p role="alert">{t("signOutFailed")}</p>}
       </section>
     </main>
   );

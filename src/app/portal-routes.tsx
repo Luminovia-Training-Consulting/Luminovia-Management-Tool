@@ -283,9 +283,7 @@ export default function PortalRoutes() {
         }
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
-      {import.meta.env.DEV && (
-        <Route path="/reset-status" element={<PlatformResetStatus />} />
-      )}
+      <Route path="/reset-status" element={<PlatformResetStatus />} />
       <Route element={<Protected />}>
         <Route
           path="/api/swagger"

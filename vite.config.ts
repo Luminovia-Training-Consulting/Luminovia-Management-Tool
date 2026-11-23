@@ -294,6 +294,7 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [
             retiredDemoPath,
             /^\/backend(?:\/|$)/,
+            /^\/__portal(?:\/|$)/,
             /^\/auth\//,
             /^\/rest\//,
             /^\/storage\//,

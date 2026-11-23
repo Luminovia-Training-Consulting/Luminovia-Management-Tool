@@ -8,6 +8,7 @@ services:
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
       PORTAL_CADDY_ALIAS_PROFILE: cms_legacy_aliases
+      PORTAL_CADDY_RESET_PROFILE: cms_hosted_reset
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${PORTAL_WWW_DIR:-/opt/luminovia-portal/www}:/srv:ro

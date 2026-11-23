@@ -37,6 +37,49 @@
 (portal_standard_errors) {
 }
 
+(portal_no_reset) {
+	handle /__portal/hosted-reset {
+		header Cache-Control no-store
+		respond 404
+	}
+}
+
+(cms_hosted_reset) {
+	handle /__portal/hosted-reset {
+		route {
+			header >Cache-Control "no-store"
+			@discovery method GET
+			reverse_proxy @discovery unix//srv/.platform-reset.sock {
+				header_up -Cookie
+				header_up -Authorization
+				header_up -Referer
+				transport http {
+					dial_timeout 2s
+					response_header_timeout 5s
+				}
+			}
+			@confirmed {
+				method POST
+				header Origin https://cms.luminovia.org
+				header Authorization "Bearer *"
+				header Content-Type application/json
+			}
+			request_body @confirmed {
+				max_size 24576
+			}
+			reverse_proxy @confirmed unix//srv/.platform-reset.sock {
+				header_up -Cookie
+				header_up -Referer
+				transport http {
+					dial_timeout 2s
+					response_header_timeout 45m
+				}
+			}
+			respond 403
+		}
+	}
+}
+
 # Dedicated installations may overlay these public assets while the signed
 # package stays byte-exact and readable through the package query.
 (academy_pwa_asset) {
@@ -119,6 +162,7 @@
 		header @retiredDemo Cache-Control no-store
 		respond @retiredDemo 404
 		import {$PORTAL_CADDY_PWA_PROFILE:portal_static_pwa}
+		import {$PORTAL_CADDY_RESET_PROFILE:portal_no_reset}
 		# Apply no-store to private business responses; block Auth administration routes and check maintenance before proxying.
 		handle_path /backend/* {
 			route {

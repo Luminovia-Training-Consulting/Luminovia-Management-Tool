@@ -46,6 +46,8 @@ const REQUIRED_FILES = [
 ];
 const OPTIONAL_FILES = [
     "deploy/hostinger/reset-live.py",
+    "deploy/hostinger/luminovia-web-reset.socket",
+    "deploy/hostinger/luminovia-web-reset@.service",
     PG_PROOF,
     "deploy/hostinger/backups/luminovia-complete-backup.service",
     "deploy/hostinger/backups/luminovia-complete-backup.timer",

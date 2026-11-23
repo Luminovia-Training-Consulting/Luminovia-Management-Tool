@@ -1,0 +1,15 @@
+[Unit]
+Description=Private Caddy socket for the Luminovia CMS reset
+ConditionPathIsDirectory=/opt/luminovia-portal/www
+
+[Socket]
+ListenStream=/opt/luminovia-portal/www/.platform-reset.sock
+Accept=yes
+SocketMode=0600
+SocketUser=root
+SocketGroup=root
+MaxConnections=8
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target
