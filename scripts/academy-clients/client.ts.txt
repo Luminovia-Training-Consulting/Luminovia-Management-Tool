@@ -1,0 +1,99 @@
+export type OperationId = keyof typeof operations;
+export type Credentials = {
+  apiKey?: string;
+  accessToken?: string;
+  integrationKey?: string;
+};
+type JSONValue = string | number | boolean | null | JSONValue[] | {
+  [key: string]: JSONValue;
+};
+export type AcademyRequest = {
+  credentials?: Credentials;
+  query?: Readonly<Record<string, string | number | boolean>>;
+  signal?: AbortSignal;
+} & (
+  | { mediaType?: "application/json"; body?: JSONValue }
+  | { mediaType: "image/png"; body: Blob }
+  | { mediaType: "multipart/form-data"; body: FormData }
+);
+
+function jwtRole(token?: string): string | undefined {
+  try {
+    if (!token || !/^[\w-]+\.[\w-]+\.[\w-]+$/.test(token)) return;
+    return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role;
+  } catch {
+    return undefined;
+  }
+}
+
+function requestHeaders(required: readonly string[], values: Credentials) {
+  const headers = new Headers();
+  for (const type of required) {
+    switch (type) {
+      case "apiKey":
+        if (
+          !values.apiKey ||
+          (!/^sb_publishable_[\w-]+$/.test(values.apiKey) && jwtRole(values.apiKey) !== "anon")
+        ) throw new Error("A publishable or legacy anon Academy key is required.");
+        headers.set("apikey", values.apiKey);
+        break;
+      case "bearerAuth":
+        if (!values.accessToken || jwtRole(values.accessToken) !== "authenticated")
+          throw new Error("An Academy account access token is required.");
+        headers.set("Authorization", "Bearer " + values.accessToken);
+        break;
+      case "integrationKey":
+        if (!values.integrationKey || !/^lvi_[0-9a-f-]{36}_[0-9a-f]{64}$/.test(values.integrationKey))
+          throw new Error("An Academy integration key is required.");
+        headers.set("Authorization", "Bearer " + values.integrationKey);
+        break;
+    }
+  }
+  return headers;
+}
+
+/** Returns the native Response, including documented errors and binary downloads.
+ * No automatic retry, token refresh, redirect or operation is performed. */
+export function request(operationId: OperationId, input: AcademyRequest = {}): Promise<Response> {
+  if (!Object.hasOwn(operations, operationId))
+    throw new Error("Unknown operation for this Academy contract.");
+  const operation = operations[operationId];
+  const baseUrl: string = installation.baseUrl;
+  if (baseUrl === "/") throw new Error("Academy API base is unavailable.");
+  const url = new URL(baseUrl + operation.path);
+  const query = input.query ?? {};
+  for (const key of operation.requiredQuery as readonly string[]) {
+    if (!Object.hasOwn(query, key)) throw new Error("Missing query parameter: " + key);
+  }
+  for (const [key, value] of Object.entries(query)) {
+    if (!(operation.query as readonly string[]).includes(key) ||
+        !["string", "number", "boolean"].includes(typeof value))
+      throw new Error("Undocumented query parameter: " + key);
+    url.searchParams.set(key, String(value));
+  }
+  const headers = requestHeaders(operation.credentials, input.credentials ?? {});
+  if (operation.originHeader) headers.set("Origin", url.origin);
+  let body: BodyInit | undefined;
+  if (input.body !== undefined) {
+    const media = input.mediaType ?? "application/json";
+    if (!(operation.content as readonly string[]).includes(media))
+      throw new Error("Undocumented request media type.");
+    if (input.mediaType === "multipart/form-data") {
+      if (!(input.body instanceof FormData)) throw new Error("FormData is required.");
+      body = input.body; // Fetch generates the matching MIME boundary.
+    } else if (input.mediaType === "image/png") {
+      if (!(input.body instanceof Blob)) throw new Error("A PNG Blob is required.");
+      body = input.body;
+      headers.set("Content-Type", media);
+    } else {
+      body = JSON.stringify(input.body);
+      headers.set("Content-Type", media);
+    }
+  } else if (operation.requiredBody) {
+    throw new Error("A request body is required.");
+  }
+  return fetch(url, {
+    method: operation.method, headers, body, signal: input.signal,
+    credentials: "omit", redirect: "error", cache: "no-store",
+  });
+}

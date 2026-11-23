@@ -1,5 +1,39 @@
 # Integration examples · Integrationsbeispiele
 
+## Edition-bound Academy clients · Editionsgebundene Academy-Clients
+
+Download **TypeScript** or **Python** from the Academy API explorer or standalone Swagger page. Each client is generated from that installation's signed `/api/openapi.json`. It contains the Academy edition, installation ID, API base, OpenAPI version and callable operation IDs. Keep the matching OpenAPI document for request and response schemas. Webhook receivers are documented separately.
+
+Lade **TypeScript** oder **Python** im API-Explorer oder auf der Swagger-Seite deiner Academy herunter. Beide Clients entstehen aus der signierten `/api/openapi.json` der Installation. Edition, Installations-ID, API-Adresse, OpenAPI-Version und aufrufbare Operations-IDs sind enthalten. Die passende OpenAPI-Datei beschreibt Eingaben und Antworten. Webhook-Empfänger haben eine eigene Dokumentation.
+
+Use Node.js 22.12+ with TypeScript stripping or Python 3.8+. Supply the publishable key, current account access token or integration key required by the operation. The generated client returns the original status and response data, including binary document contents. Callers handle pagination, retries, expired sessions and rotating keys explicitly.
+
+Nutze Node.js 22.12+ mit TypeScript-Stripping oder Python 3.8+. Übergib den öffentlichen Schlüssel, das aktuelle Konto-Zugriffstoken oder den Integrationsschlüssel für die jeweilige Operation. Die Clients liefern den HTTP-Status und die Antwortdaten samt binären Dokumentbytes. Die Integration entscheidet über Folgeseiten, Wiederholungen, abgelaufene Sitzungen und Schlüsselwechsel.
+
+```ts
+import { installation, request } from "./client.ts";
+
+const result = await request("readAcademyInstallationCapabilities", {
+  credentials: { apiKey: process.env.ACADEMY_PUBLISHABLE_KEY },
+});
+console.log(installation.openApiVersion, result.status, await result.json());
+```
+
+```python
+import os
+from client import INSTALLATION, request
+
+result = request(
+    "readAcademyInstallationCapabilities",
+    api_key=os.environ["ACADEMY_PUBLISHABLE_KEY"],
+)
+print(INSTALLATION["openApiVersion"], result.status, result.json())
+```
+
+After an upgrade, download the new contract and clients together. Additive releases preserve existing operation IDs and request shapes. Check the `deprecated` flag in the generated operation catalogue and the matching OpenAPI operation description before moving to a replacement. Keep the previous signed package and matching client for supported rollback. Historic signed packages from before client distribution still provide the contract and can use the manual examples below.
+
+Lade nach einem Upgrade Vertrag und Clients gemeinsam erneut herunter. Additive Releases erhalten bestehende Operations-IDs und Aufrufformen. Prüfe vor dem Wechsel einer Operation ihr Feld `deprecated` im generierten Katalog und die Beschreibung in OpenAPI. Halte das vorherige signierte Paket und den passenden Client für einen freigegebenen Rückfall bereit. Ältere signierte Pakete aus der Zeit vor der Client-Auslieferung stellen den Vertrag und die folgenden manuellen Beispiele bereit.
+
 ## Deutsch
 
 Lies den veröffentlichten Kurskatalog deiner Organisation mit [curl](course-index.sh), [Python](course-index.py) oder [TypeScript](course-index.ts). Verwende die Serveradresse aus dem OpenAPI-Download deiner Installation, zum Beispiel `https://akademie.example.invalid/backend`. Erstelle in der Integrationsverwaltung einen Kurskatalog-Schlüssel und speichere ihn auf dem Server, auf dem dein Client läuft.

@@ -67,6 +67,7 @@ import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-sche
 import { humanAuthPaths } from "./human-auth-contract.ts";
 import { sessionPaths } from "./session-contract.ts";
 import { academyAdministrationPaths } from "./academy-administration-contract.ts";
+import { academySupportPaths } from "./academy-support-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { academyClassPaths } from "./academy-class-contract.ts";
 import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
@@ -911,6 +912,7 @@ const coursePaths = {
     true,
   ),
   ...academyAdministrationPaths,
+  ...academySupportPaths,
   ...academyLicencePaths,
   ...academyClassPaths,
   ...academyChatProtectionPaths,
@@ -1277,7 +1279,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
-      version: "1.36.0",
+      version: "1.37.0",
       description:
         "This catalogue covers the dedicated edition’s operator-enabled course profile for the exact licensed release. The installation readiness marker remains false. An active licence permits authorised reads and writes. A grace-period licence permits authorised reads only. A disabled profile, a mismatched release, or an unlicensed, scheduled or expired licence denies course access. Capability bootstrap remains available.",
     },

@@ -525,6 +525,14 @@ export function AcademyAdministrationPage() {
       <AcademyLicencePanel actor={actor} />
       {can_create_management && (
         <>
+          <p>
+            <Link to="/support/access">
+              {word(
+                "Befristeten Supportzugriff verwalten",
+                "Manage temporary support access",
+              )}
+            </Link>
+          </p>
           <AcademyBrandEditor />
           <AcademyLogoEditor />
           <AcademyPwaIconEditor />

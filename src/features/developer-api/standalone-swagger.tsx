@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { SwaggerView } from "./swagger-view";
 import { Preferences } from "../../components/preferences";
+import { portalInternalEdition } from "../../lib/installation-brand";
 import "./explorer.css";
 
 const openApiUrl = "/api/openapi.json";
@@ -34,6 +35,18 @@ export function StandaloneSwagger() {
             <a href={openApiUrl} download>
               OpenAPI JSON
             </a>
+            {!portalInternalEdition && (
+              <>
+                {" · "}
+                <a href="/api/client.ts" download>
+                  TypeScript
+                </a>
+                {" · "}
+                <a href="/api/client.py" download>
+                  Python
+                </a>
+              </>
+            )}
             {" · "}
             <Link to="/api/docs">
               {de ? "Interaktiver API-Explorer" : "Interactive API explorer"}

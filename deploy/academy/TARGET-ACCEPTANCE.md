@@ -4,6 +4,10 @@ Use this procedure for one authorised customer-operated or managed installation.
 
 Record each applicable check as **passed**, **failed** or **pending**. Optional delivery channels disabled by the agreed configuration can be marked **disabled by agreement** after their runtime settings are checked. For every pass, retain the evidence listed below. Open normal traffic and enable delivery only with the agreed release approval.
 
+## Host preflight before activation
+
+Run the [signed staging plan](README.md#prepare-the-runtime-and-signed-browser) with `--check-host` on the intended host. Save the non-secret report with the exact release. In an isolated rehearsal, verify that a blocked check exits with status 1 without publishing a browser package or starting services. Correct the blocker and repeat on the same runtime and release. Require a verified host report before proceeding.
+
 ## Public domain and exact release
 
 After the approved DNS change and ingress activation, run this command from an independent machine with public Internet access and up-to-date trusted roots. Use absolute paths for the original [signed runtime handoff](RUNTIME-HANDOFF.md), target JSON and licensing inputs. Protect the handoff, target JSON and signed licence with mode `0600`. The public environment file contains only the two values intended for the browser. The trust keys come from the previously verified issuer and release signer.
@@ -18,6 +22,12 @@ node scripts/academy-check-public.mjs \
 The check verifies the signed target and the exact current signed archive locally before contacting its approved origin. It connects directly to every resolved public IPv4 and IPv6 address using the approved TLS name. The receipt binds the signed release and handoff fingerprints to matching public shell, callback and password route bytes, entry assets, PWA manifest, service worker and OpenAPI download. It also verifies the anonymous licensed installation identity, the cache controls on the shell files and capability response, and HTTP 404 on raw Storage and Auth administration routes. A certificate error, unexpected status, redirect, stale file or mismatched address fails the receipt.
 
 For `acme`, the command requires the Caddy HTTP redirect to the same HTTPS origin and preserves the path and query. For `operator-terminated`, record the approved terminal proxy and independently confirm the agreed HTTP policy. The receipt reports that check as required. Verify DNS ownership, intended names and records in the operator's DNS console, including any CDN or regional records beyond what the test vantage point sees. Retain the public receipt, DNS record review reference and any terminal proxy evidence.
+
+## Browser dependency handoff
+
+For new browser packages, retain the signed archive entries `api/browser-sbom.cdx.json` and `api/dependency-licenses.txt`. The CycloneDX report binds the edition and built commit and identifies delivered files for each npm or Workbox dependency and the packaged Space Grotesk font. The licence index includes the publisher's notices, including the separately sourced upstream MIT notice for `react-remove-scroll-bar@2.3.8`. Both entries are covered by the package inventory and the release signature. Compare the verified archive with the public downloads on the target.
+
+The browser report covers the static ZIP. Obtain component and licence evidence for the exact separately pinned runtime images and for any target-specific provider or proxy. Record those references alongside the browser handoff.
 
 ## Operational health and signed-in browser
 

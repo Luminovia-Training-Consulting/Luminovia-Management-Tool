@@ -6,6 +6,11 @@ import https from "node:https";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
+import {
+  academyNoticesPath,
+  academySbomPath,
+} from "./academy-browser-inventory.ts";
+import { academyClientPaths } from "./academy-client-assets.mjs";
 import { describeAcademyRuntime } from "./academy-runtime-config.mjs";
 import {
   readRuntimeHandoffFile,
@@ -171,11 +176,15 @@ export async function checkAcademyPublic(
     entryAssets.length > 0 && entryAssets.length <= 16,
     "entry_assets",
   );
+  const downloadPaths = [...academyClientPaths, academySbomPath, academyNoticesPath]
+    .filter((path) => files.has(path))
+    .map((path) => "/" + path);
   const signedPaths = new Map([
     ...shellPaths.map((path) => [path, "index.html"]),
     ...[
       ...uncachedPaths,
       "/api/openapi.json",
+      ...downloadPaths,
       ...entryAssets.map((file) => "/" + file),
     ].map((path) => [path, path.slice(1).split("?", 1)[0]]),
   ]);
@@ -201,7 +210,7 @@ export async function checkAcademyPublic(
         response.status === 200 && sha256(response.body) === digest,
         "signed_bytes",
       );
-      if (uncachedPaths.includes(path))
+      if (uncachedPaths.includes(path) || downloadPaths.includes(path))
         requireEvidence(cacheDirective(response, "no-store"), "shell_cache");
     }
     const response = await get(capabilitiesPath, {

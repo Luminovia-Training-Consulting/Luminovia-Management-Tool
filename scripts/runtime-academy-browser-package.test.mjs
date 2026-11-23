@@ -35,6 +35,10 @@ import {
   writeAcademyBrowserPackage,
 } from "./academy-browser-package.mjs";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
+import {
+  academyClientAssets,
+  academyClientPaths,
+} from "./academy-client-assets.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import {
   acquireAcademyBrowserMaintenanceLock,
@@ -81,6 +85,7 @@ const fixture = (t, buildMetadata = metadata) => {
   };
   const api = academyOpenApi(buildMetadata.backend, buildMetadata);
   file("api/openapi.json", api);
+  for (const [path, source] of academyClientAssets(api)) file(path, source);
   file(
     "index.html",
     `<!doctype html><html lang="en"><head>
@@ -200,6 +205,10 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 /** Rewrite only the catalogue in a fixture and recalculate its archive inventory. */
 async function rewriteCatalogue({ dist, output }, original, api) {
   const records = structuredClone(original);
+  // Retained releases predate packaged developer clients.
+  records.files = records.files.filter(
+    ({ path }) => !academyClientPaths.includes(path),
+  );
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     level: 0,
     unixMode: 0o100644,
@@ -268,6 +277,24 @@ test("rejects a changed installation, undocumented API operation or wrong custom
   ]);
   file("brand/academy-logo.png", "wrong fictional logo bytes");
   await assert.rejects(write(output, allowed), /different|match/);
+});
+
+test("requires both exact generated Academy clients in newly written archives", async (t) => {
+  const { dist, file, api, write } = fixture(t);
+  rmSync(join(dist, "api/client.py"));
+  await assert.rejects(write(), /API client differs from its packaged contract/);
+  for (const [path, source] of academyClientAssets(api)) file(path, source);
+  file("api/client.ts", "export const substitutedClient = true;");
+  await assert.rejects(
+    write(),
+    /API client differs from its packaged contract/,
+  );
+  for (const [path, source] of academyClientAssets(api)) file(path, source);
+  const manifest = await write();
+  for (const path of academyClientPaths)
+    assert.ok(
+      manifest.files.some((entry) => entry.path === path && entry.bytes > 0),
+    );
 });
 
 test("verifies the exact historic empty catalogue as an existing archive", async (t) => {
@@ -430,6 +457,7 @@ for (const version of [
   "1.32.0",
   "1.33.0",
   "1.34.0",
+  "1.36.0",
 ]) {
   test(`still authenticates a signed ${version} catalogue after the contract changed`, async (t) => {
     const files = releaseFixture(t);
@@ -881,6 +909,8 @@ test("binds public Academy ingress to the signed current release on each DNS add
       "/auth/password",
       "/sw.js",
       "/api/openapi.json",
+      "/api/client.ts",
+      "/api/client.py",
       "/backend/rest/v1/rpc/installation_capabilities",
       "/backend/auth/v1/admin/users",
       "/backend/storage/v1/bucket",
@@ -1214,10 +1244,20 @@ test("offline CLI consumes only its closed public env file and emits no credenti
   const cli = fileURLToPath(
     new URL("./academy-staging-plan.mjs", import.meta.url),
   );
-  const run = () =>
+  const run = (...options) =>
     spawnSync(
       process.execPath,
-      [cli, target, publicEnv, output, sig, envelope, issuerFile, signerFile],
+      [
+        cli,
+        target,
+        publicEnv,
+        output,
+        sig,
+        envelope,
+        issuerFile,
+        signerFile,
+        ...options,
+      ],
       {
         encoding: "utf8",
         env: { PATH: "" },
@@ -1229,6 +1269,17 @@ test("offline CLI consumes only its closed public env file and emits no credenti
   assert.equal(JSON.parse(valid.stdout).customer_ready, false);
   assert.ok(!valid.stdout.includes(key));
   assert.ok(!valid.stdout.includes(licence));
+
+  const absentRuntime = join(root, "absent-runtime");
+  const hostPreflight = run("--check-host", absentRuntime);
+  assert.equal(hostPreflight.status, 1);
+  assert.equal(hostPreflight.stderr, "");
+  const hostReceipt = JSON.parse(hostPreflight.stdout);
+  assert.equal(hostReceipt.customer_ready, false);
+  assert.equal(hostReceipt.host.status, "blocked");
+  assert.equal(existsSync(absentRuntime), false);
+  assert.ok(!hostPreflight.stdout.includes(key));
+  assert.ok(!hostPreflight.stdout.includes(licence));
 
   const fixtureSecret = "must-never-appear-in-operator-output";
   writeFileSync(

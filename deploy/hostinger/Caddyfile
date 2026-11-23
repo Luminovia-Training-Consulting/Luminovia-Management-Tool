@@ -169,6 +169,15 @@
 				file_server
 			}
 		}
+		@academyDeliverables path /api/client.ts /api/client.py /api/browser-sbom.cdx.json /api/dependency-licenses.txt
+		handle @academyDeliverables {
+			root * /srv/current
+			@clientSources path /api/client.ts /api/client.py
+			header @clientSources Content-Type "text/plain; charset=utf-8"
+			header X-Content-Type-Options nosniff
+			header Cache-Control no-store
+			file_server
+		}
 		# Preserve SPA deep links while keeping the app shell and service worker revalidatable for updates.
 		handle {
 			route {

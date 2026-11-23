@@ -1,0 +1,113 @@
+import base64
+import json
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+from email.message import Message
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, msg, headers, fp)
+
+
+@dataclass
+class ClientResponse:
+    status: int
+    headers: Message
+    body: bytes
+
+    def json(self):
+        return json.loads(self.body)
+
+
+def _jwt_role(token):
+    if not isinstance(token, str) or not re.fullmatch(r"[\w-]+\.[\w-]+\.[\w-]+", token, re.ASCII):
+        return None
+    try:
+        segment = token.split(".")[1]
+        data = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+        return data.get("role") if isinstance(data, dict) else None
+    except (ValueError, UnicodeError):
+        return None
+
+
+def _headers(required, api_key, access_token, integration_key):
+    headers = {}
+    if "apiKey" in required:
+        if not isinstance(api_key, str) or (
+            not re.fullmatch(r"sb_publishable_[\w-]+", api_key, re.ASCII)
+            and _jwt_role(api_key) != "anon"
+        ):
+            raise ValueError("A publishable or legacy anon Academy key is required.")
+        headers["apikey"] = api_key
+    if "bearerAuth" in required:
+        if _jwt_role(access_token) != "authenticated":
+            raise ValueError("An Academy account access token is required.")
+        headers["Authorization"] = "Bearer " + access_token
+    if "integrationKey" in required:
+        if not isinstance(integration_key, str) or not re.fullmatch(
+            r"lvi_[0-9a-f-]{36}_[0-9a-f]{64}", integration_key
+        ):
+            raise ValueError("An Academy integration key is required.")
+        headers["Authorization"] = "Bearer " + integration_key
+    return headers
+
+
+_MISSING = object()
+
+
+def request(operation_id, *, api_key=None, access_token=None, integration_key=None,
+            query=None, body=_MISSING, content_type="application/json", timeout=30):
+    """Return the exact HTTP status and bytes. No redirects or automatic retries."""
+    operation = OPERATIONS.get(operation_id)
+    if not operation:
+        raise ValueError("Unknown operation for this Academy contract.")
+    base = INSTALLATION["baseUrl"]
+    if base == "/":
+        raise ValueError("Academy API base is unavailable.")
+    query = query or {}
+    for name in operation["requiredQuery"]:
+        if name not in query:
+            raise ValueError("Missing query parameter: " + name)
+    for name, value in query.items():
+        if name not in operation["query"] or not isinstance(value, (str, int, float, bool)):
+            raise ValueError("Undocumented query parameter: " + name)
+    query_string = urllib.parse.urlencode({
+        name: str(value).lower() if isinstance(value, bool) else value
+        for name, value in query.items()
+    })
+    url = base + operation["path"] + ("?" + query_string if query_string else "")
+    headers = _headers(operation["credentials"], api_key, access_token, integration_key)
+    if operation["originHeader"]:
+        parsed = urllib.parse.urlsplit(base)
+        headers["Origin"] = parsed.scheme + "://" + parsed.netloc
+
+    data = None
+    if body is not _MISSING:
+        media = content_type.split(";", 1)[0]
+        if media not in operation["content"]:
+            raise ValueError("Undocumented request media type.")
+        if media == "application/json":
+            data = json.dumps(body, allow_nan=False).encode("utf-8")
+        else:
+            if not isinstance(body, bytes):
+                raise ValueError("An encoded binary body is required.")
+            if media == "multipart/form-data" and not re.fullmatch(
+                r"multipart/form-data; boundary=[A-Za-z0-9._-]{1,70}", content_type
+            ):
+                raise ValueError("Supply the boundary of the encoded multipart body.")
+            data = body
+        headers["Content-Type"] = content_type
+    elif operation["requiredBody"]:
+        raise ValueError("A request body is required.")
+    req = urllib.request.Request(url, data, headers, method=operation["method"])
+    opener = urllib.request.build_opener(_NoRedirect())
+    try:
+        response = opener.open(req, timeout=timeout)
+    except urllib.error.HTTPError as problem:
+        response = problem
+    with response:
+        return ClientResponse(response.code, response.headers, response.read())

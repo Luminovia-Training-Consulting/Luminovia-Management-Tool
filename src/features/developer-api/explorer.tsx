@@ -183,6 +183,20 @@ function ExplorerSession({
             OpenAPI JSON
           </a>
         </Button>
+        {brand.edition !== "internal" && (
+          <>
+            <Button asChild variant="secondary">
+              <a href="/api/client.ts" download>
+                TypeScript
+              </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <a href="/api/client.py" download>
+                Python
+              </a>
+            </Button>
+          </>
+        )}
       </div>
       <p role="status">
         {authorized

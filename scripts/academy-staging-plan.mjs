@@ -6,6 +6,7 @@ import { isAbsolute, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 import { z } from "zod";
+import { checkAcademyHost } from "./academy-host-preflight.mjs";
 import { verifyAcademyBrowserRelease } from "./academy-browser-package.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
 import { validatePublicConfig } from "./public-config.ts";
@@ -352,23 +353,46 @@ if (
     ...extra
   ] = process.argv.slice(2);
   try {
-    if (!releaseKey || extra.length) throw new Error("academy_staging_usage");
+    if (
+      !releaseKey ||
+      (extra.length !== 0 &&
+        !(
+          extra.length === 2 &&
+          extra[0] === "--check-host" &&
+          isAbsolute(extra[1])
+        ))
+    )
+      throw new Error("academy_staging_usage");
     const [target, browser, detached, envelope, issuer, signer] =
       await Promise.all(
         [config, publicEnv, signature, licence, licenceKey, releaseKey].map(
           (path) => readAcademyOperatorInput(path),
         ),
       );
+    const settings = JSON.parse(utf8.decode(target));
+    const publicConfig = parseEnv(utf8.decode(browser));
     const plan = await planAcademyStaging({
-      config: JSON.parse(utf8.decode(target)),
-      publicConfig: parseEnv(utf8.decode(browser)),
+      config: settings,
+      publicConfig,
       directory,
       signature: utf8.decode(detached).trim(),
       licence: utf8.decode(envelope).trim(),
       licencePublicKey: issuer,
       releasePublicKey: signer,
     });
-    process.stdout.write(JSON.stringify(plan, null, 2) + "\n");
+    if (extra.length) {
+      const host = await checkAcademyHost({
+        root: extra[1],
+        config: settings,
+        publicConfig,
+        plan,
+        readPrivate: readAcademyOperatorInput,
+      });
+      process.stdout.write(JSON.stringify({ ...plan, host }, null, 2) + "\n");
+      if (host.status === "blocked") process.exitCode = 1;
+    } else {
+      process.stdout.write(JSON.stringify(plan, null, 2) + "\n");
+    }
   } catch (error) {
     const reason = /^academy_staging_[a-z_]+$/.test(error?.message)
       ? ` (${error.message})`
@@ -376,7 +400,7 @@ if (
     process.stderr.write(
       "Academy staging plan rejected" +
         reason +
-        ". Check TARGET_JSON PUBLIC_ENV PACKAGE_DIR RELEASE_SIG LICENCE LICENCE_PUBLIC_KEY RELEASE_PUBLIC_KEY.\n",
+        ". Check TARGET_JSON PUBLIC_ENV PACKAGE_DIR RELEASE_SIG LICENCE LICENCE_PUBLIC_KEY RELEASE_PUBLIC_KEY [--check-host RUNTIME_ROOT].\n",
     );
     process.exitCode = 1;
   }

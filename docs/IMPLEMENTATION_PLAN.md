@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## White Label delivery and support
+
+- [x] Allow confirmed Academy administrators to grant and revoke temporary, audited installation or exact-course diagnostics for a dedicated local support identity. Verify both Academy profiles, expiry, revoked access and private-content denial in native PostgreSQL.
+- [x] Add a read-only signed staging-plan host preflight for platform, resources, listening ports and local Docker/Compose prerequisites. Check real local port collisions and repeat after correcting a failed preflight.
+- [x] Generate downloadable TypeScript and Python clients from the exact Academy OpenAPI contract. Verify edition and installation binding, real loopback HTTP behavior and legacy signed contract compatibility.
+- [x] Include the observed browser bundle and worker components and their licence texts in signed Academy browser deliveries.
+- [ ] Record runtime-image dependency and licence evidence and complete the independent target, delivery and managed-operator checks in the [White Label roadmap](../WHITELABEL_ROADMAP.md).
+
 ## HTTP methods in the API explorer
 
 - [x] Publish reviewed read, update and removal aliases through ordinary user sessions for the internal portal and both Academy editions. Keep POST for creation and workflow transitions.

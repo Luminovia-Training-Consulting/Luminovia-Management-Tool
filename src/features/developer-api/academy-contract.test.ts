@@ -66,6 +66,7 @@ const withdrawalWindow = "/rest/v1/rpc/course_withdrawal_window";
 const withdraw = "/rest/v1/rpc/cancel_own_course_enrolment";
 const administrationPaths = [
   "/rest/v1/rpc/academy_administration",
+  "/rest/v1/rpc/academy_support_access",
   "/rest/v1/rpc/academy_create_organisation",
   "/rest/v1/rpc/academy_set_member_active",
   "/rest/v1/rpc/academy_set_management",
@@ -216,7 +217,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.36.0");
+      expect(spec.info.version).toBe("1.37.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({

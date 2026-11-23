@@ -1,12 +1,14 @@
 # White-Label-Roadmap
 
-Offene Arbeiten für Academy Self-Hosted und Academy Managed. Der aktuelle [Funktionskatalog](FEATURES.md#editionen) beschreibt die vorhandenen Funktionen. Für die Abnahme gilt die konkrete, autorisierte Kundeninstallation mit ihrer Edition, signierten Lizenz und exakten Release-Revision. Die Schritte und Nachweise stehen in der [Zielabnahme](deploy/academy/TARGET-ACCEPTANCE.md).
+Produktstand und offene Abnahmen für Academy Self-Hosted und Academy Managed. Der aktuelle [Funktionskatalog](FEATURES.md#editionen) beschreibt die vorhandenen Funktionen. Für die Abnahme gilt die konkrete, autorisierte Kundeninstallation mit ihrer Edition, signierten Lizenz und exakten Release-Revision. Die Schritte und Nachweise stehen in der [Zielabnahme](deploy/academy/TARGET-ACCEPTANCE.md).
 
 ## Produktlücken
 
-- [ ] **Befristete Supportfreigabe · WL-T39.** Einen vom Kunden aktiv erteilten, auf konkreten Umfang und Zeitraum begrenzten Supportzugriff umsetzen. Wer zugreifen darf, wofür und bis wann muss prüfbar sein. Widerruf, Ablauf und Zugriffe protokollieren und testen. Private Lerninhalte bleiben ohne passende Freigabe geschützt.
-- [ ] **Installations- und Lieferprüfung · WL-T31, WL-T36, WL-T40.** Den nicht-interaktiven Preflight um die vollständige Prüfung von Betriebssystem, Architektur, CPU, RAM, freiem Speicher, Ports und benötigten Werkzeugen ergänzen. Fehler und Wiederanlauf ohne Teilaktivierung abnehmen. Eine SBOM und ein Verzeichnis der Abhängigkeitslizenzen für die tatsächlich ausgelieferten Artefakte bereitstellen.
-- [ ] **API-Entwicklerpaket · WL-T16–WL-T18, WL-T37.** Die editionsbezogene Client-Generierung und den Download der unterstützten Clients vervollständigen. Versionswechsel, Kompatibilität und dokumentierte Ablösung alter Verträge anhand der ausgelieferten Artefakte prüfen.
+- [x] **Befristete Supportfreigabe · WL-T39.** Kundenadmins können einem bestätigten, lokalen Supportkonto ohne Academy-Rolle eine Freigabe für Installationsdiagnosen oder einen bestimmten Kurs erteilen. Zweck, Dauer, Ablauf, Widerruf und Zugriff sind nachvollziehbar. Die Freigabe umfasst ausschließlich Diagnosen. Lerninhalte, Dateien und Nachrichten bleiben geschützt. Auf nativem PostgreSQL für beide Academy-Profile geprüft.
+- [x] **Nicht-interaktiver Host-Preflight · WL-T31, WL-T36.** Der Preflight prüft den signierten Installationsplan gegen Betriebssystem, Architektur, CPU, RAM, freien Speicher, lokale Docker-/Compose-Konfiguration, Werkzeuge und Ports. Fehler beenden die Prüfung vor der Aktivierung. Der Wiederanlauf und eine echte lokale Portkollision wurden geprüft.
+- [x] **Browser-SBOM und Abhängigkeitslizenzen · WL-T40.** Beide Academy-Browserpakete enthalten ein CycloneDX-Inventar der ausgelieferten Komponenten und deren Lizenztexte. Die Paketprüfung bindet beide Dateien an Edition, Git-Revision und Browserarchiv.
+- [x] **API-Entwicklerpaket · WL-T16–WL-T18, WL-T37.** Die Academy-API liefert editions- und installationsgebundene TypeScript- und Python-Clients zum Download. Lokale Tests prüfen echte HTTP-Antworten und die Prüfung früherer signierter Verträge.
+- [ ] **Abhängigkeitsnachweis der Runtime-Images · WL-T40.** SBOM und Lizenztexte für die tatsächlich übernommenen Container-Image-Digests dokumentieren.
 
 ## Abnahme je Kundeninstallation
 

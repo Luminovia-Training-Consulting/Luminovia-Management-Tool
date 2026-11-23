@@ -11,6 +11,8 @@ import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
 import { portalOpenApi } from "./src/features/developer-api/contract.ts";
 import { academyExplorerOpenApi } from "./src/features/developer-api/academy-contract.ts";
+import { academyClientAssets } from "./scripts/academy-client-assets.mjs";
+import { recordAcademyBrowserModules } from "./scripts/academy-browser-inventory.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
 import editionModules from "./scripts/edition-modules.json" with { type: "json" };
 
@@ -29,6 +31,7 @@ export default defineConfig(({ mode }) => {
   );
   const assets = new Map(brandAssets);
   const internal = brand.edition === "internal";
+  const deliveryTrace = !internal && process.env.PORTAL_ACADEMY_DELIVERY_TRACE;
   const webManifest = {
     name: brand.name,
     short_name: brand.shortName,
@@ -54,12 +57,16 @@ export default defineConfig(({ mode }) => {
   const escapeHtml = (value: string) =>
     value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const openApiPath = "/api/openapi.json";
-  const openApi =
-    JSON.stringify(
-      portalOpenApi(env.VITE_SUPABASE_URL ?? "", true, brand),
-      null,
-      2,
-    ) + "\n";
+  const openApiDocument = portalOpenApi(
+    env.VITE_SUPABASE_URL ?? "",
+    true,
+    brand,
+  );
+  const openApi = JSON.stringify(openApiDocument, null, 2) + "\n";
+  if (!internal) {
+    for (const [path, source] of academyClientAssets(openApiDocument))
+      assets.set(path, Buffer.from(source));
+  }
   return {
     publicDir: internal ? "public" : false,
     // Both editions load Swagger lazily. Prebundle its UMD entry on startup
@@ -153,10 +160,13 @@ export default defineConfig(({ mode }) => {
                     : "text/plain; charset=utf-8";
             res.setHeader("Content-Type", contentType);
             res.setHeader("X-Content-Type-Options", "nosniff");
+            if (path.startsWith("api/client."))
+              res.setHeader("Cache-Control", "no-store");
             res.end(req.method === "HEAD" ? undefined : bytes);
           });
         },
         generateBundle(_options, output) {
+          if (deliveryTrace) recordAcademyBrowserModules(output, deliveryTrace);
           if (!internal) {
             for (const entry of Object.values(output)) {
               if (entry.type !== "chunk") continue;
@@ -229,6 +239,7 @@ export default defineConfig(({ mode }) => {
         manifest: internal ? webManifest : false,
         workbox: {
           importScripts: ["/push-sw.js"],
+          ...(deliveryTrace ? { sourcemap: true } : {}),
 
           // Precache built public files only. Authenticated API/Storage responses
           // deliberately have no runtime-caching rule.
@@ -252,6 +263,7 @@ export default defineConfig(({ mode }) => {
             /^\/functions\//,
             /^\/realtime\//,
             /^\/api\/openapi\.json$/,
+            /^\/api\/client\.(?:ts|py)(?:\?|$)/,
             ...(!internal
               ? [
                   /^\/(?:manifest\.webmanifest|icons\/apple-touch-icon\.png)(?:\?|$)/,

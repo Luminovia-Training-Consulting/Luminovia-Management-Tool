@@ -39,7 +39,17 @@ import {
 } from "@zip.js/zip.js";
 import { z } from "zod";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
+import {
+  academySbomPath,
+  academyNoticesPath,
+  validateAcademyBrowserInventory,
+  writeAcademyBrowserInventory,
+} from "./academy-browser-inventory.ts";
 import { loadAcademyBrand } from "./academy-brand-config.ts";
+import {
+  academyClientAssets,
+  academyClientPaths,
+} from "./academy-client-assets.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
 import { validatePublicConfig } from "./public-config.ts";
 
@@ -106,7 +116,12 @@ const manifestSchema = z.strictObject({
 
 function approvedPath(path) {
   return (
-    fixedFiles.has(path) || workerPattern.test(path) || assetPattern.test(path)
+    fixedFiles.has(path) ||
+    academyClientPaths.includes(path) ||
+    path === academySbomPath ||
+    path === academyNoticesPath ||
+    workerPattern.test(path) ||
+    assetPattern.test(path)
   );
 }
 
@@ -261,6 +276,8 @@ const reviewedHistoricCatalogueDigests = new Set([
   "a26045e621e5519cbfe4580bfdcf00e68fc2712c795671a74c90e283fb9b5296", // 1.33.0 at bb83068f
   "d4c139a21fa64fb6a39d8a0596b828afb2162e59f6033ccbcbfed6150d0a5b5d", // 1.34.0 at dc5d10bb
   "2aa99ba92870cbe472fd9a44ec688ce2017321140bc25f5d3275b2a9bf344530", // 1.35.0 at a47ed0da
+  "ed65d5c0c0e5d3e100f44dea53978c37c06c97d391eb7dbb8f5123348a2df6a9", // 1.36.0 at a7acbdfb
+  "2cdb94859a7ad8264987406b1b3add7fa2563c007c01f1f017d81667c22ff93d", // 1.36.0 at ca0ef6e9
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */
@@ -306,6 +323,7 @@ function validateBrowserOutput(
   brand,
   approvedBrandAssets,
   apiHistory = "none",
+  requireClients = false,
 ) {
   for (const name of fixedFiles)
     if (!files.has(name))
@@ -423,6 +441,14 @@ function validateBrowserOutput(
   ) {
     throw new Error("Customer API differs from the reviewed course profile.");
   }
+  if (requireClients || academyClientPaths.some((path) => files.has(path))) {
+    for (const [path, source] of academyClientAssets(api)) {
+      if (!files.get(path)?.equals(Buffer.from(source)))
+        throw new Error(
+          "Customer API client differs from its packaged contract.",
+        );
+    }
+  }
   if (
     !worker.includes("brand/academy-logo.png") ||
     !worker.includes("icons/icon-512.png") ||
@@ -444,6 +470,7 @@ function validateBrowserOutput(
         "Build output does not match the reviewed customer asset bytes.",
       );
   }
+  validateAcademyBrowserInventory(files, brand.sourceRevision, brand.edition);
 }
 
 function inventory(files) {
@@ -469,7 +496,7 @@ export async function writeAcademyBrowserPackage({
       "An owned browser build and a new absolute output directory are required.",
     );
   const files = readBrowserOutput(dist);
-  validateBrowserOutput(files, metadata, approvedBrandAssets);
+  validateBrowserOutput(files, metadata, approvedBrandAssets, "none", true);
   const records = inventory(files);
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     level: 0,
@@ -726,6 +753,7 @@ async function buildAcademyBrowserPackage(output) {
     const source = join(stage, "source");
     const tar = join(stage, "source.tar");
     const dist = join(stage, "browser");
+    const tracePath = join(stage, "browser-module-trace.json");
     mkdirSync(source);
     git("archive", "--format=tar", `--output=${tar}`, sourceRevision);
     execFileSync("tar", ["-xf", tar, "-C", source], { timeout: 30_000 });
@@ -748,6 +776,7 @@ async function buildAcademyBrowserPackage(output) {
             PATH,
             NODE_ENV: "production",
             PORTAL_ACADEMY_BRAND_FILE: brandFile,
+            PORTAL_ACADEMY_DELIVERY_TRACE: tracePath,
             VITE_SUPABASE_URL: backend,
             VITE_SUPABASE_PUBLISHABLE_KEY: key,
           },
@@ -767,6 +796,14 @@ async function buildAcademyBrowserPackage(output) {
       defaultLanguage,
       themeColor,
     } = brand;
+    writeAcademyBrowserInventory({
+      dist,
+      tracePath,
+      modules,
+      packageLock: join(source, "package-lock.json"),
+      revision: sourceRevision,
+      edition,
+    });
     return await writeAcademyBrowserPackage({
       dist,
       output,

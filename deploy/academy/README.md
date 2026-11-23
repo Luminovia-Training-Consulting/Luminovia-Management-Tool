@@ -75,12 +75,15 @@ The target JSON copies `version`, `installation_id`, `edition`, `portal_origin`,
 }
 ```
 
-Run the offline plan to review the approved target. The plan contains no credentials and does not write the deployment directories.
+Run the offline plan to review the approved target. On the intended host, repeat the same signed plan with `--check-host "$runtime_root"` before publishing the browser package or starting any private services. The host report exits with status 1 for any blocked check and never starts services, pulls images, writes stages, or prints credentials.
+
+The host check requires the reviewed checkout and its pinned Node version, a Linux distribution, a matching 64-bit Docker architecture, a local rootful Unix-socket Docker daemon, and quiet Compose validation of the dedicated profiles. It checks for Python 3.12, `flock` and `age`. Allow at least two CPU cores and 3.5 GiB usable RAM. Reserve 2 GiB for the runtime, 6 GiB for Docker, the signed Storage quota for data, and the same quota plus 2 GiB for one backup. Free bytes on a shared filesystem are counted once. The report checks that the IPv4 ingress address is local and TCP ports 80 and 443 are free on it for the supplied Caddy profile. The checks describe current host conditions; additional retained backups, workload and the actual network path need target validation.
 
 ```sh
 node scripts/academy-staging-plan.mjs "$target_json" \
   "$runtime_root/runtime.env.public.env" "$package_directory" "$release_signature" \
-  "$signed_licence" "$licence_public_key" "$release_public_key"
+  "$signed_licence" "$licence_public_key" "$release_public_key" \
+  --check-host "$runtime_root"
 
 node scripts/academy-install-browser.mjs "$runtime_root" "$target_json" \
   "$package_directory" "$release_signature" "$signed_licence" \
@@ -286,3 +289,11 @@ In Academy administration, select the organisation under Course integrations and
 The preparation command reads the name, short name and accent colour from the staged signed web manifest and pins them to the exact licensed release. Use `PORTAL_ACADEMY_STAGED_BROWSER_ROOT` with the equivalent private runtime root if the operator connects through private libpq. Administrators can override the presentation under **Academy administration → Academy branding**. A published PNG also supplies the browser tab icon. Resetting the logo restores the signed favicon. Open **Academy administration → App icon** to publish a 512 × 512 PNG up to 1 MB. The portal creates the smaller and maskable variants. The scanner must approve all three before the new version becomes public. Choose **Use package icon** and confirm to restore the default. The stable manifest URL and app identity are preserved. Each browser and operating system chooses when a previously installed launcher refreshes its icon. The public verification command still reads the exact signed package files.
 
 A new completion document records the issuer at issuance. Attendance PDFs use the current academy presentation. Retained completion records with no issuer snapshot keep their original facts and use the current academy brand when exported. File uploads are delivered as their exact approved bytes.
+
+## Temporary diagnostic support
+
+The installation operator approves and verifies the support person's mailbox before creating a dedicated account in this installation's **private** Auth service. From a trusted operator process on the private Docker network, initialise a server-only Supabase client for `http://api-gw:8000` with the installation service key. Use `auth.admin.createUser({ email, email_confirm: true, password })` with the approved address and a strong one-time password. Deliver the initial credential through the agreed private channel and have the recipient sign in at `/support/access` and set their own password at `/auth/password` before granting access. Keep the service key and credentials out of shell history, tickets and the browser. The Auth trigger creates the profile. Leave the profile active and assign **no** Academy role, teaching assignment, organisation membership or course membership. Do this separately per installation. The public gateway does not expose the Auth administration route.
+
+A current local administrator goes to **Administration → Temporary support access**, selects either installation diagnostics or one course UUID from its workspace URL, and enters the verified support email, purpose and duration. The supported duration is 15 minutes to 24 hours. Share the installation's `/support/access` link with the support person. They sign in with the dedicated account and explicitly open the permitted diagnostics. The installation scope shows the edition, verified release and licence state. The course scope shows the selected course ID, publication state and session count. This surface omits course materials, enrolments, learner identities, grades, chat, documents, credentials and secrets.
+
+Use **Revoke** to immediately deny subsequent reads, or let the recorded end time lapse. The access history lists grant, expiry and revocation with their recorded timestamps and the latest 100 successful reads with actor IDs. Expiry is derived from the recorded end time and does not require a worker. An inactive account, a changed recipient identity, loss of the required active licence or a newly assigned business role ends diagnostic access. Suspend the dedicated account in the private Auth administration when the engagement ends. For API clients, see `POST /rest/v1/rpc/academy_support_access` in the edition's OpenAPI.

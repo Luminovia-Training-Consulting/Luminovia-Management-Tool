@@ -17,6 +17,7 @@ import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { Button } from "../components/ui/button";
 import { academyAdministrationQuery } from "../features/accounts/academy-api";
+import { AcademySupportAccessPage } from "../features/accounts/academy-support";
 import {
   AcademyAppearancePreferences,
   AcademyPersonalSettingsPage,
@@ -57,7 +58,7 @@ const StandaloneSwagger = lazy(() =>
 const courseId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const courseReturnRoute =
-  /^(?:\/administration(?:\/mail)?|\/timetable|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning|submissions|evaluations))?)$/i;
+  /^(?:\/administration(?:\/mail)?|\/timetable|\/support\/access|\/analytics\/learning|\/notifications|\/settings|\/api\/docs|\/courses\/[0-9a-f-]{36}\/workspace(?:#course-(?:overview|materials|chat|enrolments|register|exam|learning|submissions|evaluations))?)$/i;
 
 const AcademyApiExplorer = lazy(() =>
   import("../features/developer-api/academy-explorer").then((module) => ({
@@ -275,6 +276,10 @@ export default function AcademyRoutes() {
                 <PasswordRecovery />
               </div>
             }
+          />
+          <Route
+            path="/support/access"
+            element={<AcademySupportAccessPage />}
           />
           <Route element={<AcademyCourseProfile />}>
             <Route index element={<Navigate to="/learning" replace />} />

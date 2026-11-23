@@ -86,6 +86,14 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
     "href",
     "/api/openapi.json",
   );
+  for (const [name, href] of [
+    ["TypeScript", "/api/client.ts"],
+    ["Python", "/api/client.py"],
+  ]) {
+    const link = screen.getByRole("link", { name });
+    expect(link).toHaveAttribute("href", href);
+    expect(link).toHaveAttribute("download");
+  }
   expect(latest().supportedSubmitMethods).toEqual([]);
   await expect(latest().requestInterceptor(workspace)).rejects.toThrow(
     "api_session_required",
@@ -157,6 +165,12 @@ it("preserves the internal explorer catalogue and interactive methods", async ()
   const user = userEvent.setup();
   render(<ApiExplorer />);
   expect(latest().spec.info.title).toBe("Luminovia Portal API");
+  expect(
+    screen.queryByRole("link", { name: "TypeScript" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Python" }),
+  ).not.toBeInTheDocument();
   expect(latest().spec.paths).toHaveProperty("/functions/v1/accounts/v1/me");
   await user.click(
     screen.getByRole("button", { name: "Authorize with my account" }),
