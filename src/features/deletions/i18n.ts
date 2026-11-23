@@ -169,6 +169,19 @@ const pairs: Record<string, [string, string]> = {
     "Öffne den jeweiligen Auftrag, um seinen Status, seine Daten und seine Löschmöglichkeiten zu prüfen. Prüfe danach den Löschumfang der Durchführung erneut.",
     "Open each assignment to review its status, records and deletion options. Then check the course run’s deletion impact again.",
   ],
+  courseSessionsHelp: [
+    "Prüfe hier die gespeicherten Termine der Durchführung. Bei gebundenen Aufträgen findest du die Terminänderung im jeweiligen Auftrag.",
+    "Review the sessions saved for this run. For linked assignments, open the assignment to change its schedule.",
+  ],
+  draftCourseDatesIncluded: [
+    "Diese ungenutzten Kurstermine werden zusammen mit dem Entwurf gelöscht. Für spätere Durchführungen kannst du die Kursvorlage weiterverwenden.",
+    "These unused sessions will be deleted with the draft. The course template is available for future runs.",
+  ],
+  reviewCourseSessions: ["Zu den Kursterminen", "Go to course sessions"],
+  linkedCourseRuns: [
+    "Durchführungen mit dieser Vorlage",
+    "Runs using this template",
+  ],
   typeDelete: ["Zur Bestätigung DELETE eingeben", "Type DELETE to confirm"],
   acknowledge: [
     "Ich habe den angezeigten Umfang geprüft und möchte diese Daten endgültig löschen.",

@@ -5,7 +5,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
@@ -270,6 +270,7 @@ function RunForm({
   templates,
   organisations,
   initialTemplateId,
+  focusSchedule,
   blocks,
   onDone,
   onBusy,
@@ -278,6 +279,7 @@ function RunForm({
   templates: Template[];
   organisations: Organisation[];
   initialTemplateId?: string;
+  focusSchedule: boolean;
   blocks: BuildingBlock[];
   onDone: (result: "template" | "run") => void;
   onBusy: (busy: boolean) => void;
@@ -345,6 +347,12 @@ function RunForm({
         : [{ starts_at: "", ends_at: "" }],
     },
   });
+  const schedule = useRef<HTMLFieldSetElement>(null);
+  useEffect(() => {
+    if (!focusSchedule) return;
+    const frame = requestAnimationFrame(() => schedule.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [focusSchedule]);
   const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
@@ -612,7 +620,7 @@ function RunForm({
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
         <input id="run-venue" {...register("venue")} />
       </Field>
-      <fieldset className="operations-topic-field">
+      <fieldset className="operations-topic-field" ref={schedule} tabIndex={-1}>
         <legend>{t("sessions")}</legend>
         {fields.map((field, index) => (
           <div className="session-form-row" key={field.id}>
@@ -755,6 +763,7 @@ export function CoursesPage() {
   const [templateEdit, setTemplateEdit] = useState<Template>();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
+  const [focusSchedule, setFocusSchedule] = useState(false);
   const [params, setParams] = useSearchParams();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const workspaceEntitlement = useQuery({
@@ -767,10 +776,19 @@ export function CoursesPage() {
   const blockDetail = blocks.data?.find(
     (block) => block.id === params.get("block"),
   );
+  const editRun = (run: CourseRun | null, schedule = false) => {
+    setFocusSchedule(schedule);
+    setRunEdit(run);
+  };
+  const reviewSchedule = (run: CourseRun) => {
+    setParams({}, { replace: true });
+    setTab("runs");
+    editRun(run, true);
+  };
   const planRun = (templateId: string) => {
     setInitialTemplateId(templateId);
     setParams({});
-    setRunEdit(null);
+    editRun(null);
   };
   const [copy, setCopy] = useState<{
     type: "template" | "run";
@@ -891,7 +909,7 @@ export function CoursesPage() {
               disabled={!online}
               onClick={() => {
                 setInitialTemplateId(undefined);
-                setRunEdit(null);
+                editRun(null);
               }}
             >
               <Plus size={17} />
@@ -904,6 +922,16 @@ export function CoursesPage() {
           )
         }
       />
+      {manage && (
+        <details className="panel course-catalogue-guide">
+          <summary>{t("courseCatalogueGuide")}</summary>
+          <p>
+            <strong>{t("courseCatalogueExampleTitle")}</strong>{" "}
+            {t("courseCatalogueExample")}
+          </p>
+          <p>{t("courseCatalogueVisibility")}</p>
+        </details>
+      )}
       {manage && tab === "templates" && (
         <TableImport
           label={
@@ -1026,6 +1054,7 @@ export function CoursesPage() {
         <div className="segmented" role="group" aria-label={t("catalogue")}>
           <Button
             variant={tab === "runs" ? "default" : "ghost"}
+            aria-pressed={tab === "runs"}
             onClick={() => setTab("runs")}
           >
             {t("runs")}
@@ -1033,6 +1062,7 @@ export function CoursesPage() {
           {manage && (
             <Button
               variant={tab === "templates" ? "default" : "ghost"}
+              aria-pressed={tab === "templates"}
               onClick={() => setTab("templates")}
             >
               {t("templates")}
@@ -1041,13 +1071,16 @@ export function CoursesPage() {
           {blocks.data.length > 0 && (
             <Button
               variant={tab === "blocks" ? "default" : "ghost"}
+              aria-pressed={tab === "blocks"}
               onClick={() => setTab("blocks")}
             >
               {t("buildingBlocks")}
             </Button>
           )}
         </div>
-        {manage && <p className="muted">{t("publishedHint")}</p>}
+        <p className="course-catalogue-tab-help">
+          {t(`courseCatalogueTab.${tab}`)}
+        </p>
       </section>
       {message && <Notice>{message}</Notice>}
       {visibility.isError && (
@@ -1086,13 +1119,16 @@ export function CoursesPage() {
                     {t(
                       run.archived_at
                         ? "archive"
-                        : hasActiveJob
-                          ? "activeRunOrder"
-                          : run.published
-                            ? "published"
+                        : run.published
+                          ? "published"
+                          : hasActiveJob
+                            ? "hiddenRunCatalogue"
                             : "draft",
                     )}
                   </span>
+                  {hasActiveJob && (
+                    <span className="badge">{t("activeRunOrder")}</span>
+                  )}
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
                 <p className="muted">
@@ -1141,7 +1177,7 @@ export function CoursesPage() {
                     <Button
                       variant="ghost"
                       disabled={!online}
-                      onClick={() => setRunEdit(run)}
+                      onClick={() => editRun(run)}
                     >
                       {t("edit")}
                     </Button>
@@ -1195,6 +1231,7 @@ export function CoursesPage() {
                       id={run.id}
                       label={template?.title ?? t("courses")}
                       linkedJobs={run.jobs}
+                      onReviewSessions={() => reviewSchedule(run)}
                     />
                   </div>
                 )}
@@ -1292,6 +1329,7 @@ export function CoursesPage() {
           templates={templates.data}
           organisations={orgs.data}
           initialTemplateId={initialTemplateId}
+          focusSchedule={focusSchedule}
           blocks={blocks.data}
           onBusy={setRunSaving}
           onDone={(result) => {
@@ -1357,6 +1395,18 @@ export function CoursesPage() {
                 kind="course_template"
                 id={templateDetail.id}
                 label={templateDetail.title}
+                linkedRuns={runs.data
+                  .filter((run) => run.template_id === templateDetail.id)
+                  .map((run) => ({
+                    id: run.id,
+                    title: run.course_sessions.length
+                      ? dateTime(
+                          run.course_sessions[0].starts_at,
+                          i18n.language,
+                          run.time_zone,
+                        )
+                      : t("courseRunWithoutSessions"),
+                  }))}
               />
             )}
             <ResourceComments
@@ -1420,7 +1470,7 @@ export function CoursesPage() {
                     disabled={!online}
                     onClick={() => {
                       setParams({}, { replace: true });
-                      setRunEdit(detail);
+                      editRun(detail);
                     }}
                   >
                     {t("edit")}
@@ -1445,6 +1495,9 @@ export function CoursesPage() {
                 id={detail.id}
                 label={findTemplate(detail)?.title ?? t("courses")}
                 linkedJobs={detail.jobs}
+                onReviewSessions={
+                  manage ? () => reviewSchedule(detail) : undefined
+                }
               />
             </div>
             <BuildingBlockReference

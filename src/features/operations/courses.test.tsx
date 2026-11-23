@@ -32,6 +32,7 @@ const templateId = "c1000000-0000-4000-8000-000000000001";
 const runId = "c2000000-0000-4000-8000-000000000001";
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
+  accountRequest: vi.fn(),
   from: vi.fn(),
   online: true,
   tables: {} as Record<string, unknown[]>,
@@ -39,6 +40,7 @@ const state = vi.hoisted(() => ({
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "fictional-course-manager" } } }),
 }));
+vi.mock("../accounts/api", () => ({ accountRequest: state.accountRequest }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({ rpc: state.rpc, from: state.from }),
 }));
@@ -148,6 +150,11 @@ beforeEach(async () => {
   vi.spyOn(navigator, "onLine", "get").mockImplementation(() => state.online);
   state.rpc.mockReset();
   state.rpc.mockResolvedValue({ data: runId, error: null });
+  state.accountRequest.mockReset().mockImplementation(async (path: string) => {
+    if (path === "deletions/access") return { can_admin: false, kinds: [] };
+    if (path === "deletions/operations") return { items: [] };
+    throw new Error("Unexpected account request");
+  });
   state.from.mockReset();
   state.from.mockImplementation((table: string) => {
     const query = {
@@ -226,6 +233,98 @@ it("filters the visible course list by time without requiring administrative per
         ).toBeNull();
     }
   }
+});
+
+it("explains the catalogue tabs and the Linux example where the user plans a run", async () => {
+  const user = userEvent.setup();
+  renderCourses({
+    blocks: [
+      {
+        id: "fictional-linux-block",
+        provider: "Fictional",
+        code: "LINUX-DEMO",
+        title: "Fictional Linux block",
+        description: "Shell practice",
+        syllabus: "Commands and permissions",
+        prerequisites: "",
+        duration_days: 1,
+        duration_hours: 7,
+        theory_percent: null,
+        practice_percent: null,
+        notes: "",
+        default_template_id: templateId,
+        building_block_sources: [],
+      },
+    ],
+  });
+  await user.click(
+    screen.getByText(
+      "Wie hängen Durchführungen, Vorlagen und Kursbausteine zusammen?",
+    ),
+  );
+  expect(screen.getByText("Beispiel „Linux – Praxistag“")).toBeVisible();
+  expect(
+    screen.getByText(/Hier stehen konkrete Kurse mit Terminen/),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Vorlagen" }));
+  expect(
+    screen.getByText(/Hier speicherst du wiederverwendbare Kursinhalte/),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Kursbausteine" }));
+  expect(
+    screen.getByText(/Hier findest du vorbereitete Inhalte mit Quellenangaben/),
+  ).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Durchführung planen: LINUX-DEMO" }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Kurs anlegen" });
+  expect(within(dialog).getByLabelText("Kursvorlage")).toHaveValue(templateId);
+});
+
+it("opens the exact course schedule from a blocked deletion and focuses its dates", async () => {
+  const user = userEvent.setup();
+  state.accountRequest.mockImplementation(async (path: string) => {
+    if (path === "deletions/access")
+      return { can_admin: true, kinds: ["course_run"] };
+    if (path === "deletions/operations") return { items: [] };
+    if (path === "deletions/preview")
+      return {
+        plan_id: "fictional-preview",
+        kind: "course_run",
+        id: runId,
+        label: template.title,
+        counts: { "public.course_runs": 1 },
+        blockers: [
+          { code: "referenced", kind: "public.course_sessions", count: 1 },
+        ],
+        can_confirm: false,
+        expires_at: "2099-01-01T00:00:00Z",
+      };
+    throw new Error("Deletion must stay blocked");
+  });
+  renderCourses({ runs: [{ ...run, published: true }] });
+  await user.click(
+    await screen.findByRole("button", {
+      name: `Endgültig löschen: ${template.title}`,
+    }),
+  );
+  expect(await screen.findByText(/Löschung derzeit gesperrt/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Jetzt unwiderruflich löschen" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Zu den Kursterminen" }));
+  const editor = within(
+    await screen.findByRole("dialog", { name: "Bearbeiten" }),
+  );
+  const dates = editor.getByRole("group", { name: "Termine" });
+  await waitFor(() => expect(dates).toHaveFocus());
+  expect(within(dates).getByLabelText("Beginn 1")).toHaveValue(
+    "2030-04-01T09:00",
+  );
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_course_run",
+    expect.anything(),
+  );
 });
 
 it("saves only reusable fields from the shared form without requiring dates", async () => {

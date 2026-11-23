@@ -6,6 +6,11 @@
 
 - [x] Use the shared time-zone selector in the marketplace date filter while preserving saved filters, valid historical aliases and local date boundaries.
 
+## Course catalogue orientation and draft deletion
+
+- [x] Explain runs, templates and building blocks in the catalogue with a Linux practice-day example. Display catalogue visibility separately from an active assignment.
+- [x] Show unused sessions in the internal draft's reviewed deletion scope. Keep linked, published and history-bearing records protected. Navigate from dependency warnings to the dates, linked runs or assignments.
+
 ## Course editor layout
 
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.

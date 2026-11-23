@@ -4670,3 +4670,9 @@ Dedicated Academy migration replay fixed the transaction envelope for one exact 
 # 23 November 2026 — Marketplace date search time zone
 
 The marketplace date filter uses the shared time-zone selector from lecturer profiles. The existing date-range interpretation and saved filter contract are preserved, including valid time-zone aliases in old links. The focused discovery tests passed 29 cases and verified selecting Brisbane, applying it with the existing start date and reopening the filter from the URL.
+
+# 23 November 2026 — Course catalogue guidance and draft deletion
+
+The course screen explains runs, templates and building blocks in German and English, using a fictional Linux practice day. Catalogue visibility and an active teaching assignment are shown separately. Deletion blockers lead to the course date section, a visible dependent run or the associated assignment.
+
+Reviewed deletion can include unused session rows owned by an unpublished internal draft. The preview lists the row count and the course content can still be reused from the template. Linked courses, published courses and teaching records retain their protection. All 29 native PostgreSQL deletion checks passed, including stale plans, permission loss and concurrent attendance evidence.

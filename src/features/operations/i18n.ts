@@ -532,6 +532,42 @@ const pairs: Record<string, [string, string]> = {
     "Wiederverwendbare Inhalte und konkrete Kursdurchführungen mit klaren Terminen.",
     "Reusable content and actual course runs with clear sessions.",
   ],
+  courseCatalogueGuide: [
+    "Wie hängen Durchführungen, Vorlagen und Kursbausteine zusammen?",
+    "How do course runs, templates and building blocks fit together?",
+  ],
+  courseCatalogueExampleTitle: [
+    "Beispiel „Linux – Praxistag“",
+    "Example: Linux practice day",
+  ],
+  courseCatalogueExample: [
+    "Speichere Shell, Dateirechte und Übungen als Vorlage, wenn du die Inhalte erneut nutzen möchtest. Plane daraus eine Durchführung mit deinem konkreten Praxistag, zum Beispiel Freitag von 9 bis 16 Uhr. Falls es einen passenden Kursbaustein gibt, kannst du dessen fertige Vorlage als Ausgangspunkt öffnen.",
+    "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm. If a matching building block exists, you can start from its ready-made template.",
+  ],
+  courseCatalogueVisibility: [
+    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, legst du den Auftrag über die Durchführung an.",
+    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, create the assignment from the run.",
+  ],
+  "courseCatalogueTab.runs": [
+    "Hier stehen konkrete Kurse mit Terminen, Ort und Sichtbarkeit. Dazu gehören Entwürfe, im Katalog sichtbare Kurse und das Archiv.",
+    "This tab contains scheduled courses with sessions, venue and visibility. It includes drafts, courses visible in the catalogue and archived runs.",
+  ],
+  "courseCatalogueTab.templates": [
+    "Hier speicherst du wiederverwendbare Kursinhalte wie Titel, Lehrplan und Voraussetzungen. Eine Vorlage kannst du für mehrere Durchführungen mit unterschiedlichen Terminen verwenden.",
+    "Keep reusable course content here, such as the title, syllabus and prerequisites. Use the same template for several runs with different dates.",
+  ],
+  "courseCatalogueTab.blocks": [
+    "Hier findest du vorbereitete Inhalte mit Quellenangaben und einer vorgeschlagenen Dauer. Über „Durchführung planen“ übernimmst du die zugehörige Vorlage und legst die Termine fest.",
+    "Find prepared content with source references and suggested durations here. Select “Plan course run” to use the matching template and choose session dates.",
+  ],
+  hiddenRunCatalogue: [
+    "Im Kurskatalog ausgeblendet",
+    "Hidden from the course catalogue",
+  ],
+  courseRunWithoutSessions: [
+    "Durchführung ohne Termine",
+    "Course run without sessions",
+  ],
   workspaceUnavailable: [
     "Dieser Kursarbeitsraum ist für dein Konto nicht verfügbar.",
     "This course workspace is unavailable to your account.",

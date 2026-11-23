@@ -42,6 +42,8 @@ type Target = {
   id: string;
   label: string;
   linkedJobs?: readonly { id: string; title: string }[];
+  linkedRuns?: readonly { id: string; title: string }[];
+  onReviewSessions?: () => void;
 };
 const DialogContext = createContext<((target: Target) => void) | null>(null);
 
@@ -134,7 +136,8 @@ function OperationReceipts({
 }
 
 /** Render a contextual action only under a current server-provided deletion capability. */
-export function PermanentDeleteAction({ kind, id, label, linkedJobs }: Target) {
+export function PermanentDeleteAction(target: Target) {
+  const { kind, id } = target;
   const { session } = useAuth();
   const actor = session!.user.id;
   const { t } = useTranslation("deletions");
@@ -151,11 +154,9 @@ export function PermanentDeleteAction({ kind, id, label, linkedJobs }: Target) {
         variant="danger"
         disabled={!online}
         aria-label={t("actionNamed", {
-          name: targetLabel({ kind, id, label }, t),
+          name: targetLabel(target, t),
         })}
-        onClick={() =>
-          launch ? launch({ kind, id, label, linkedJobs }) : setLocal(actor)
-        }
+        onClick={() => (launch ? launch(target) : setLocal(actor))}
       >
         {t("action")}
       </Button>
@@ -163,7 +164,7 @@ export function PermanentDeleteAction({ kind, id, label, linkedJobs }: Target) {
         <AuthorizedDialog
           key={`${actor}:${kind}:${id}`}
           actor={actor}
-          target={{ kind, id, label, linkedJobs }}
+          target={target}
           close={() => setLocal(null)}
         />
       )}
@@ -556,8 +557,47 @@ function DeletionDialog({
                   </ul>
                 </section>
               )}
+            {target.onReviewSessions &&
+              preview.data.blockers.some(
+                ({ kind }) => kind.split(".").at(-1) === "course_sessions",
+              ) && (
+                <section>
+                  <p>{t("courseSessionsHelp")}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      close();
+                      target.onReviewSessions?.();
+                    }}
+                  >
+                    {t("reviewCourseSessions")}
+                  </Button>
+                </section>
+              )}
+            {Boolean(target.linkedRuns?.length) &&
+              preview.data.blockers.some(
+                ({ kind }) => kind.split(".").at(-1) === "course_runs",
+              ) && (
+                <section>
+                  <h4>{t("linkedCourseRuns")}</h4>
+                  <ul>
+                    {target.linkedRuns?.map((run) => (
+                      <li key={run.id}>
+                        <Link to={`/courses?run=${run.id}`} onClick={close}>
+                          {run.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             {preview.data.can_confirm && !preview.data.blockers.length && (
               <>
+                {target.kind === "course_run" &&
+                  preview.data.counts["public.course_sessions"] > 0 && (
+                    <p>{t("draftCourseDatesIncluded")}</p>
+                  )}
                 <label className="deletion-ack">
                   <input
                     type="checkbox"

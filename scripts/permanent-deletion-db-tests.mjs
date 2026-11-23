@@ -72,16 +72,26 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
     const document = await reserve();
     const second = await reserve(owner, document.document_id);
 
-    await check("Course management can delete a dependency-free run without deleting the template", async () => {
-        const template = randomUUID();
-        const run = randomUUID();
+    await check("Course management can delete an unused draft with dates without touching its template or another run", async () => {
+        const template = randomUUID(), run = randomUUID(), sibling = randomUUID();
+        const session = randomUUID(), siblingSession = randomUUID();
         await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional deletion template');
-          insert into public.course_runs(id,template_id) values(${q(run)},${q(template)});`);
+          insert into public.course_runs(id,template_id) values(${q(run)},${q(template)}),(${q(sibling)},${q(template)});
+          insert into public.course_sessions(id,course_run_id,starts_at,ends_at) values
+            (${q(session)},${q(run)},'2044-01-05 09:00+00','2044-01-05 10:00+00'),
+            (${q(siblingSession)},${q(sibling)},'2044-01-06 09:00+00','2044-01-06 10:00+00');`);
         assert.ok((await call(manager, "deletion_access")).kinds.includes("course_run"));
         await expectCode(plan("course_run", run, owner), "42501");
+        const stale = await plan("course_run", run, manager);
+        await sql(`update public.course_sessions set ends_at='2044-01-05 11:00+00' where id=${q(session)}`);
+        await expectCode(confirm(stale, manager), "40001");
         const preview = await plan("course_run", run, manager);
         assert.equal(preview.can_confirm, true);
+        assert.equal(preview.counts["public.course_sessions"], 1);
         const operation = await confirm(preview, manager);
+        await expectCode(sql(`insert into private.course_attendance_evidence(
+          session_id,version_id,attached_by,source
+        ) values(${q(session)},${q(randomUUID())},${q(admin)},'academy_scan')`), "55000");
         await sql(`delete from public.user_roles where user_id=${q(manager)} and role='management'`);
         await expectCode(permit(operation, manager), "42501");
         await sql(`insert into public.user_roles(user_id,role) values(${q(manager)},'management')`);
@@ -89,7 +99,33 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         await worker("apply", key(operation, execution));
         assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
         assert.equal(await sql(`select count(*) from public.course_runs where id=${q(run)}`), "0");
+        assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(session)}`), "0");
+        assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(siblingSession)}`), "1");
         assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
+    });
+    await check("Published, linked and attended course dates remain protected", async () => {
+        const template = randomUUID(), published = randomUUID(), linked = randomUUID(), attended = randomUUID(), session = randomUUID();
+        await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional protected template');
+          insert into public.course_runs(id,template_id,published) values
+            (${q(published)},${q(template)},true),(${q(linked)},${q(template)},false),(${q(attended)},${q(template)},false);
+          insert into public.course_sessions(course_run_id,starts_at,ends_at)
+            values (${q(published)},'2044-01-05 09:00+00','2044-01-05 10:00+00'),
+                   (${q(linked)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
+          insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+            values (${q(session)},${q(attended)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
+          insert into public.jobs(course_run_id,title,customer_name,delivery_type,amount,total_amount,currency,rate_unit,terms)
+            values(${q(linked)},'Fictional offer','Fictional organisation','online',50,50,'EUR','fixed_total','Fictional terms');
+          insert into private.course_attendance(session_id,user_id,state) values(${q(session)},${q(owner)},'attended');`);
+        const hidden = await plan("course_run", attended, manager);
+        assert.equal(hidden.can_confirm, false);
+        assert.ok(hidden.blockers.some((item) => item.kind === "private.course_attendance"));
+        await expectCode(confirm(hidden, manager), "23503");
+        for (const run of [published, linked]) {
+            const preview = await plan("course_run", run, manager);
+            assert.equal(preview.can_confirm, false);
+            assert.ok(preview.blockers.some((item) => item.kind === "public.course_sessions"));
+            await expectCode(confirm(preview, manager), "23503");
+        }
     });
     await check(
         "A reviewed job purge includes its briefing and request records",

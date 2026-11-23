@@ -127,6 +127,8 @@ apply to subsequent authorised API requests and preserve accepted assignments an
 
 Open **Endgültig löschen / Delete permanently** from the permitted account, job, course or organisation detail with current required permissions. Archiving remains a separate action. A company account's own-job list contains only jobs linked consistently to its current organisations; names, old lecturer assignments or former membership do not grant access.
 
+For an unpublished internal course draft with unused dates and no linked assignment or teaching records, the preview includes the dates. Review the total scope, then confirm to remove the draft and dates together. Open **Zu den Kursterminen / Go to course sessions** when the dates block deletion. If an assignment owns the schedule, follow its link in the preview. A blocked template also links to the visible runs using it.
+
 Review the server-provided target, affected record counts and protected dependencies. If deletion is permitted, acknowledge the irreversible impact, enter `DELETE`, and confirm. There is no trash, restore or undo. A blocked preview removes nothing. Accepted/invoiced/shared dependencies can require separate resolution; administrator status does not reveal private message bodies, calendars or personal contracts.
 
 Wait for **Die endgültige Löschung wurde vollständig bestätigt / Permanent deletion has been fully confirmed**. Pending cleanup is not success: it can be waiting for a running upload or unavailable Auth/Storage. Use **Vorgang erneut prüfen / fortsetzen / Check / resume operation**. Incomplete operations remain reachable after navigation/reload under current server permissions. A changed or expired preview requires a new unchecked review. Do not confuse suspension/archive with physical
@@ -533,6 +535,10 @@ See [Support](GUIDE.md#section-support-desk), [readiness](GUIDE.md#section-cours
 
 ## Course building blocks, profile pictures and comments
 
+**Durchführungen / Runs** lists concrete courses, including drafts, published courses and archived runs. **Vorlagen / Templates** holds reusable content. **Kursbausteine / Course building blocks** provides prepared content and its suggested duration as a starting point.
+
+For example, use **Kurs anlegen / Create course** to save the shell, file permissions and exercises for a Linux practice day as a template. Start a run from that template for a Friday from 9 am to 4 pm, and save it as a draft while planning. When ready, display the run in the catalogue. Create a separate teaching offer from the run if a lecturer needs to claim the teaching assignment.
+
 Under **Courses → Course building blocks**, find the 22 subject templates derived from the 24 supplied PDF versions. Search by short code or content and open the description. Source references show the exact version with filename, revision, pages and an expandable checksum; original files are not publicly hosted. Both versions remain visible for LPC3/LPC4.
 
 Under **Kurse → Kurs anlegen / Courses → Create course**, enter reusable course content or select an existing template. Choose **Als Vorlage speichern / Save as template** to keep only title, description, syllabus, prerequisites and topics. Enter a company, delivery details and sessions when needed for a run, then choose **Entwurf speichern / Save draft** or **Veröffentlichen / Publish**. If the server saves new reusable content but does not confirm the run, the dialog reports that state and uses the same template on retry.
@@ -540,7 +546,7 @@ Under **Kurse → Kurs anlegen / Courses → Create course**, enter reusable cou
 As authorised management, choose **Plan course run**, assign the client and adjust delivery mode, location/link, time zone and sessions. The scheduling template can distribute the ten teaching days over weekdays; review holidays, breaks and actual teaching times yourself. A new run does not copy other people's personal data, contracts or allocations.
 
 Choose **Create teaching offer** to use the existing course as the basis for an offer. Its content and sessions are visible for review; adjust them in course planning beforehand if needed. Enter the fee, currency, unit and terms, then decide whether to publish. Admin/owner accounts see the full client price and platform share; management without that permission works with its own net offer contract. The server detects changed source revisions and existing active offers. Open the confirmed offer
-through the result link. A course-linked offer retains one lecturer position and its original total budget; the editor does not yet support several independently claimable sub-jobs for the same run.
+through the result link. Each accepted offer retains its own position and financial terms. An authorised manager can create separate offers from the same course run.
 
 Under **My profile**, choose a PNG, JPEG or WebP profile picture. The editor explains the square centre crop. The new picture becomes selected only after confirmed processing and storage; a rejected image does not replace the existing one. **Remove profile picture** clears the current selection. Authorised team/course contacts can see the selected image; it is not published as a public Internet file. Initials appear offline and editing is disabled.
 
