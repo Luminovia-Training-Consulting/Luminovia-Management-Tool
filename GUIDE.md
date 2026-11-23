@@ -320,7 +320,7 @@ Archive rather than deleting a used identity. Active children must be archived f
 
 ## Chats and course channels
 
-At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. An eligible lecturer can join the general lecturer room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
+At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. Active owners, administrators and lecturers can open **Dozierenden-Lounge / Lecturer lounge** and join the shared room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
 
 Use **Filtern nach / Filter by** to show conversations by company, staff member, course or lecturer. Choose a specific entry when available. Text search matches names and course or company labels from your accessible rooms. The filters work in both the active list and the archive. On mobile, use the back arrow in a conversation to return to the same filtered list.
 

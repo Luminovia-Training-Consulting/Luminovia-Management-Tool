@@ -470,25 +470,23 @@ try {
         },
     );
     await check(
-        "General room accepts explicit teaching roles, excludes other accounts and is singleton",
+        "General room accepts administrators and lecturers, excludes participants and is singleton",
         async () => {
             const ids = await Promise.all([
                 value(a, "ensure_general_chat"),
                 value(b, "ensure_general_chat"),
             ]);
             assert.equal(ids[0], ids[1]);
-            await assert.rejects(
-                value(admin, "ensure_general_chat", [], "aal1"),
-                /Lecturer role required/,
-            );
-            await sql(`insert into public.user_roles(user_id,role) values('${admin}','lecturer')`);
             assert.equal(
                 await value(admin, "ensure_general_chat", [], "aal1"),
                 ids[0],
             );
+            assert.ok((await rows(admin, "chat_rooms_list")).some((room) => room.id === ids[0]));
+            const announcement = await msg(admin, ids[0], "Fictional lounge message");
+            assert.ok((await rows(a, "chat_messages", [ids[0]])).some((entry) => entry.id === announcement));
             await assert.rejects(
                 value(participant, "ensure_general_chat"),
-                /Lecturer role required/,
+                /Lecturer lounge access denied/,
             );
             await sql(
                 `delete from public.user_roles where user_id='${b}';insert into public.user_roles(user_id,role) values('${b}','participant')`,

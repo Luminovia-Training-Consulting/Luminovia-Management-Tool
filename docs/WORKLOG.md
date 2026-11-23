@@ -1,3 +1,7 @@
+# 23 November 2026 — Lecturer lounge access for administrators
+
+Aligned the lounge join and room access rules with the role-specific button. All 21 isolated PostgreSQL chat checks passed, including administrator membership, message access and private direct-message boundaries. Reproduced HTTP 403 in the downloaded local portal, applied the additive migration there and verified the administrator click and message composer in Chromium.
+
 # 23 November 2026 — Verified local credentials output
 
 The local credentials command now checks each fictional account on the owned loopback stack and lists the accepted password or its recovery status. The last verified output remains privately readable when stopped. The downloaded portal returned 15 individual verified entries with an empty saved password field. No passwords were changed.

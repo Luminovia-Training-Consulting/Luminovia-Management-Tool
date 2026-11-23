@@ -3003,7 +3003,7 @@ const nativePaths = {
     "native_ensure_general_chat",
     "Chat",
     "Join the shared lecturer chat",
-    "Requires a current lecturer or senior lecturer role. Exact and concurrent retries return the same shared room ID and keep one membership per caller.",
+    "Requires an active owner, administrator, lecturer or senior lecturer role. Exact and concurrent retries return the same shared room ID and keep one membership per caller.",
     {},
     uuid,
   ),
