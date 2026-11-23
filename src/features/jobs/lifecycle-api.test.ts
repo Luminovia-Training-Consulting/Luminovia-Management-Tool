@@ -9,9 +9,11 @@ import { readinessQuery } from "../readiness/api";
 import { supportContextQuery, supportTicketQuery } from "../support/api";
 import {
   cancelAssignment,
+  jobDispatchOptionsQuery,
   lifecycleQuery,
   manageOffer,
   refreshJobState,
+  saveJobDispatch,
   setCapacity,
 } from "./lifecycle-api";
 
@@ -127,6 +129,17 @@ describe("server-confirmed job lifecycle operations", () => {
     },
   );
 
+  it("propagates the stale-version error when saving a dispatch assignment", async () => {
+    const error = { code: "40001", message: "stale_version" };
+    rpc.mockResolvedValue({ data: null, error });
+    await expect(saveJobDispatch("job-a", null, 8)).rejects.toBe(error);
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("save_job_dispatch", {
+      p_job_id: "job-a",
+      p_class_id: null,
+      p_expected_version: 8,
+    });
+  });
+
   it("preserves an accepted request identity and the authored edit payload", async () => {
     rpc.mockResolvedValue({ data: "job-a", error: null });
     const payload = { title: "Fictional <course>", claim_deadline: null };
@@ -208,6 +221,46 @@ describe("lifecycle reads and connected cache refresh", () => {
     expect(cache.getQueryState(query.queryKey)?.status).toBe("error");
   });
 
+  it("loads validated dispatch options and saves the selected class", async () => {
+    const classId = "3ab086dd-b049-4de4-9f60-cffdf3df6666";
+    const data = {
+      classes: [{ id: classId, name: "Fictional class", meeting_url: null }],
+      contact: null,
+    };
+    rpc.mockReturnValueOnce({
+      abortSignal: vi.fn().mockResolvedValue({ data, error: null }),
+    });
+    rpc.mockResolvedValueOnce({ data: null, error: null });
+
+    await expect(
+      client().fetchQuery(
+        jobDispatchOptionsQuery("actor-a", "job-a", "company-a"),
+      ),
+    ).resolves.toEqual(data);
+    await expect(saveJobDispatch("job-a", classId, 8)).resolves.toBeUndefined();
+    expect(rpc).toHaveBeenLastCalledWith("save_job_dispatch", {
+      p_job_id: "job-a",
+      p_class_id: classId,
+      p_expected_version: 8,
+    });
+  });
+
+  it("keeps a forbidden dispatch options request out of the cache", async () => {
+    const error = { code: "42501", message: "not_authorized" };
+    const abortSignal = vi.fn().mockResolvedValue({ data: null, error });
+    rpc.mockReturnValue({ abortSignal });
+    const cache = client();
+    const query = jobDispatchOptionsQuery("actor-a", "job-a", "company-a");
+
+    await expect(cache.fetchQuery(query)).rejects.toBe(error);
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("job_dispatch_options", {
+      p_job_id: "job-a",
+      p_organisation_id: "company-a",
+    });
+    expect(abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(cache.getQueryData(query.queryKey)).toBeUndefined();
+  });
+
   it("aborts the in-flight lifecycle request when its query is cancelled", async () => {
     let signal: AbortSignal | undefined;
     rpc.mockReturnValue({
@@ -232,6 +285,7 @@ describe("lifecycle reads and connected cache refresh", () => {
       ["jobs", "actor-a"],
       ["job-board", "actor-a", "published"],
       ["job-lifecycle", "actor-a", "job-a"],
+      ["job-dispatch-options", "actor-a", "job-a", "company-a"],
       ["claims", "actor-a"],
       ["finance", "actor-a", "earnings"],
       ["commission-report", "actor-a"],
