@@ -343,6 +343,14 @@ try {
         "lecturer",
         "participant",
     ]);
+    const invalidRole = await request(admin, `users/${peer.id}/roles`, "PUT", {
+        roles: ["unknown"],
+    });
+    assert.equal(invalidRole.status, 400);
+    assert.deepEqual((await request(peer, "me")).body.roles, [
+        "lecturer",
+        "participant",
+    ]);
     assert.equal(
         (
             await request(admin, `users/${admin.id}/roles`, "PUT", {

@@ -50,6 +50,19 @@ test("diagnostics stay bounded and do not disclose arbitrary text on a PostgreSQ
     assert.deepEqual(candidateServiceDiagnostics("auth", logs, []), []);
 });
 
+test("scanner diagnostics retain update warnings with secrets redacted", () => {
+    const secret = "fictional-candidate-secret-value";
+    const logs = [
+        "ClamAV update process started",
+        `WARNING: FreshClam received a CDN rate limit for ${secret}`,
+        "ERROR: Database update failed",
+    ].join("\n");
+    assert.deepEqual(candidateServiceDiagnostics("clamav", logs, [secret]), [
+        "WARNING: FreshClam received a CDN rate limit for [redacted]",
+        "ERROR: Database update failed",
+    ]);
+});
+
 test("the scratch database retains memory defaults and emits the PostgreSQL signal log", () => {
     const command = Object.freeze([
         "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c",

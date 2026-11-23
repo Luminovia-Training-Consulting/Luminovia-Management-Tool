@@ -1,3 +1,7 @@
+# 23 November 2026 — Publish remaining local checks
+
+The retained-data candidate now records bounded, redacted scanner warnings on failure. The Account HTTP fixture checks that an unknown role returns HTTP 400 and preserves the existing teaching and participant roles. All 34 candidate tests, targeted ESLint and Node syntax checks passed. The Account HTTP fixture was not run in this pass.
+
 # 23 November 2026 — Direct job attachment downloads
 
 The job source section links to the attachments and explains when the original PDF is unavailable. A matching scanned PDF opens the existing authenticated download for the exact revision. Other clean job attachments download from their names. The 89 focused source, job, lifecycle and file tests passed, along with TypeScript and targeted ESLint.

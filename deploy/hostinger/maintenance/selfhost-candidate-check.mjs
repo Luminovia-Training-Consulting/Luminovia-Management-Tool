@@ -63,7 +63,9 @@ export function candidateServiceDiagnostics(service, logs, secrets) {
             : [];
     const severity = service === "db"
         ? /(?:^|\s)(?:ERROR|FATAL|PANIC):\s/
-        : /\b(error|fatal|panic)\b/i;
+        : service === "clamav"
+            ? /\b(error|fatal|panic|warning)\b/i
+            : /\b(error|fatal|panic)\b/i;
     const errors = lines
         .filter(
             (line) => !crash.test(line) && severity.test(line) &&
@@ -1218,8 +1220,8 @@ export async function checkCandidate({
     } catch (error) {
         failure = error;
         // Preserve bounded, redacted service errors before owned cleanup destroys
-        // the only evidence for intermittent Auth/PostgreSQL failures.
-        for (const service of ["auth", "db"]) {
+        // the only evidence for Auth, PostgreSQL or scanner failures.
+        for (const service of ["auth", "db", "clamav"]) {
             try {
                 const id = await compose(["ps", "--all", "-q", service]);
                 if (!id) continue;
