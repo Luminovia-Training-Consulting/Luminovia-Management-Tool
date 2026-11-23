@@ -686,7 +686,7 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
         },
     );
     await check(
-        "Cancellation removes preparation access rather than relying on published course visibility",
+        "Cancellation removes preparation access and internal discovery remains offer-based",
         async () => {
             const {run, claim} = await create();
             await actor(
@@ -700,8 +700,17 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                     teacher,
                     `select count(*) from public.course_runs where id='${run}'`,
                 ),
+                "0",
+                "An internal course run is private after its assignment ends",
+            );
+            assert.equal(
+                await actor(
+                    admin,
+                    `select count(*) from public.course_runs where id='${run}'`,
+                    "aal1",
+                ),
                 "1",
-                "Published course itself remains discoverable; checklist does not",
+                "Management retains access to the course run",
             );
         },
     );

@@ -1,3 +1,7 @@
+# 23 November 2026 — Exact-main SQL lint and visibility regression follow-up
+
+Added a forward migration that gives the empty `tstzrange[]` initializer an explicit type in `private.save_course_run`; this removes the strict PL/pgSQL type warning without rewriting a previously released migration. Updated the readiness PostgreSQL regression to assert that an internal lecturer cannot discover a course after cancellation while management retains access. Local verification so far: the full frontend suite passed 1,631 tests, 475 runtime/code-integrity tests passed, 26 core PostgreSQL groups passed (including 50 concurrent claims), `supabase db lint` reported no warnings, and database advisors reported no issues. The complete system phase is still running through isolated SQL/API checks. GitHub run 45127689488 on `b604e037` has its `verify` job failed; detailed logs remain unavailable until that workflow run completes. Exact-head CI and the remaining local system/browser phases are still pending.
+
 # 23 November 2026 — Delete individual company contacts
 
 The company directory now exposes the reviewed permanent-deletion action on each contact card. Staff with current company management permission can delete an individual contact in the internal portal. The preview shows the contact's name and identifies active course contact and company assignment default references. Those references must be changed before removal.

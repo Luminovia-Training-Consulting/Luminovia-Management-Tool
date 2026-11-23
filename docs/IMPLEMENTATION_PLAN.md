@@ -1933,3 +1933,10 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Format the academy licence panel flagged by Portal run `44892137237`; full source formatting passes locally.
 - [ ] Complete current-main system, security, native self-host and desktop/mobile browser CI before accepting the remaining core roadmap.
 - [x] Update the branded package contract test for the added licence receipt; 22 focused contract/package tests pass.
+
+
+## Exact-main SQL lint follow-up — 23 November 2026
+
+- [x] Add a forward-only typed empty-array initializer for `private.save_course_run`; current local `supabase db lint` and database advisors pass without warnings or findings.
+- [x] Align readiness SQL acceptance with internal offer-based course discovery: a lecturer loses access after assignment cancellation while management retains access.
+- [ ] Finish isolated system and browser phases, then verify every required Portal and Security job on the exact pushed main SHA.
