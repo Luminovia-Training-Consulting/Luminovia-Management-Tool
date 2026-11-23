@@ -1,5 +1,18 @@
 /** Business rules that the replayed SQL signatures cannot express for internal portal operations. */
 const id = { type: "string", format: "uuid" };
+const accountRole = {
+  type: "string",
+  enum: [
+    "owner",
+    "admin",
+    "management",
+    "senior_lecturer",
+    "lecturer",
+    "client",
+    "participant",
+    "guest",
+  ],
+};
 const requestId = {
   ...id,
   description: "Caller-generated UUID. Keep it for an identical retry.",
@@ -175,6 +188,35 @@ export const operationsRpcDocumentation = {
       "403": "The active caller lacks job-management authority.",
       "500":
         "SQLSTATE 40001 if the lifecycle version changed. Reload current capacity before retrying.",
+    },
+  },
+  set_account_roles: {
+    summary: "Replace a managed account's roles",
+    description:
+      "Requires users.roles.manage and current authority over the target and requested roles. An internal administrator or owner can toggle their own regular lecturer role by sending the complete role list with all other roles unchanged. Active teaching assignments protect the last teaching role. Company memberships are managed separately. Returns the authoritative normalized role list.",
+    parameters: {
+      p_user_id: id,
+      p_roles: { type: "array", minItems: 1, maxItems: 8, items: accountRole },
+    },
+    result: {
+      type: "object",
+      properties: {
+        id,
+        roles: {
+          type: "array",
+          minItems: 1,
+          uniqueItems: true,
+          items: accountRole,
+        },
+      },
+      required: ["id", "roles"],
+      additionalProperties: false,
+    },
+    errors: {
+      "400":
+        "Invalid role list, an active teaching assignment, or the last active administrator would lose their role.",
+      "403":
+        "The caller lacks role assignment authority or attempted an unsupported change to their own account.",
     },
   },
   set_user_active: {

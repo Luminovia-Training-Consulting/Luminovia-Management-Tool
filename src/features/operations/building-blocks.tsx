@@ -4,7 +4,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BookOpen, FileCheck2 } from "lucide-react";
+import { FileCheck2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
@@ -151,57 +151,6 @@ export function BuildingBlockSources({
       </ul>
       <p className="muted">{block.notes}</p>
     </section>
-  );
-}
-
-/** Select existing canonical blocks for a new course template or run. */
-export function BuildingBlockCards({
-  blocks,
-  canManage,
-  online,
-  onView,
-  onPlan,
-}: {
-  blocks: BuildingBlock[];
-  canManage: boolean;
-  online: boolean;
-  onView: (id: string) => void;
-  onPlan: (id: string) => void;
-}) {
-  const { t } = useTranslation("operations");
-  return (
-    <div className="operations-courses-grid building-block-cards">
-      {blocks.map((block) => (
-        <article className="panel operations-course" key={block.id}>
-          <div className="section-heading">
-            <BookOpen className="blue" />
-            <span className="badge">{block.code}</span>
-          </div>
-          <h2>{block.title}</h2>
-          <p>
-            {t("sourceDuration", {
-              days: block.duration_days,
-              hours: block.duration_hours,
-            })}
-          </p>
-          <p className="muted">{t("reusableBlock")}</p>
-          <div className="operations-actions">
-            <Button variant="secondary" onClick={() => onView(block.id)}>
-              {t("blockDetails")}: {block.code}
-            </Button>
-            {canManage && (
-              <Button
-                disabled={!online}
-                onClick={() => onPlan(block.default_template_id)}
-              >
-                {t("planRun")}: {block.code}
-              </Button>
-            )}
-          </div>
-        </article>
-      ))}
-      {!blocks.length && <p className="panel">{t("empty")}</p>}
-    </div>
   );
 }
 

@@ -1,3 +1,7 @@
+# 23 November 2026 — Code integrity and native account role contract
+
+Removed the unused source-catalogue card export and styles after merging course planning into the template library. The native account role endpoint now publishes its role list request and normalized account response schemas, including the scope of the internal self-service teaching role. Both OpenAPI suites passed all 50 tests, and the code integrity suite passed all 13 checks.
+
 # 23 November 2026 — Company template library and course publication
 
 The course workspace now offers runs and one template library. The standalone source-catalogue tab was removed from course planning. Management can assign a template to a company; the database restricts company library reads and prevents linking the template to another company's run. Existing source records and historical course references are retained. Legacy reusable templates with a single unambiguous company are backfilled; ambiguous records remain internal.
