@@ -19,7 +19,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  align-items: end;
+  align-items: start;
   margin: 18px 0;
 }
 
@@ -414,23 +414,6 @@
   max-width: 220px;
 }
 
-.file-discovery-filters > .field {
-  display: grid;
-  grid-template-rows: minmax(2.5em, auto) auto;
-  align-content: end;
-  margin-bottom: 0;
-}
-
-.file-discovery-filters label {
-  align-self: end;
-}
-
-.file-discovery-filters input,
-.file-discovery-filters select {
-  min-height: 44px;
-  width: 100%;
-}
-
 @media (max-width: 600px) {
   .document-list > li {
     grid-template-columns: 42px minmax(0, 1fr);
@@ -451,47 +434,43 @@
     grid-column: 2;
     max-width: 100%;
   }
-
-  .file-discovery-filters > .field {
-    grid-template-rows: auto auto;
-  }
 }
 
-/* Only text filters stretch to the grid width; the folder checkbox keeps native size. */
-.file-discovery-filters > .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  grid-column: 1 / -1;
+.file-discovery-folder {
+  display: grid;
+  gap: 8px;
   min-width: 0;
-  line-height: 1.5;
 }
 
-.file-discovery-filters input[type="checkbox"] {
+.file-discovery-folder .checkbox-label {
+  margin: 0;
+  min-height: 44px;
+}
+
+.file-discovery-folder input[type="checkbox"] {
   width: 18px;
-  min-width: 18px;
   height: 18px;
-  min-height: 18px;
   flex: 0 0 18px;
 }
 
-.file-discovery-filters > .field {
-  min-width: 0;
-}
-
-.file-discovery-filters > .field small {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* Align text inputs by their labels, not by variable-height explanatory hints. */
-.file-discovery-filters {
-  align-items: start;
-}
-
-.file-discovery-filters > .field {
+/* Align text inputs by their labels and let variable-length hints wrap below. */
+.file-discovery-filters .field {
+  display: grid;
   grid-template-rows: minmax(2.5em, auto) 44px auto;
-  align-content: start;
+  margin-bottom: 0;
+}
+
+.file-discovery-filters .field label {
+  align-self: end;
+}
+
+.file-discovery-filters .field input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.file-discovery-filters .field small {
+  overflow-wrap: anywhere;
 }
 
 .file-discovery-filters > .button {
@@ -499,7 +478,7 @@
 }
 
 @media (max-width: 760px) {
-  .file-discovery-filters > .field {
+  .file-discovery-filters .field {
     grid-template-rows: auto 44px auto;
   }
 }

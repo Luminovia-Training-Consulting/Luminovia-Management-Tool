@@ -105,26 +105,28 @@ export function DocumentExplorer({
             onChange={(e) => setTag(e.target.value)}
           />
         </Field>
-        <Field
-          id={`${id}-folder`}
-          label={t("folderFilter")}
-          hint={t("exactFilter")}
-        >
-          <input
-            maxLength={80}
-            disabled={unfiled}
-            value={folder}
-            onChange={(e) => setFolder(e.target.value)}
-          />
-        </Field>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={unfiled}
-            onChange={(e) => setUnfiled(e.target.checked)}
-          />
-          {t("unfiledOnly")}
-        </label>
+        <div className="file-discovery-folder">
+          <Field
+            id={`${id}-folder`}
+            label={t("folderFilter")}
+            hint={t("exactFilter")}
+          >
+            <input
+              maxLength={80}
+              disabled={unfiled}
+              value={folder}
+              onChange={(e) => setFolder(e.target.value)}
+            />
+          </Field>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={unfiled}
+              onChange={(e) => setUnfiled(e.target.checked)}
+            />
+            {t("unfiledOnly")}
+          </label>
+        </div>
         <Button
           variant="secondary"
           disabled={!online || query.isFetching}

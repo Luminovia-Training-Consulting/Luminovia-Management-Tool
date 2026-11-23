@@ -1,3 +1,7 @@
+# 23 November 2026 — File explorer folder filter
+
+The unfiled option now sits below the personal folder filter. The component suite passed all 45 cases, including switching to unfiled results and restoring the previous folder name. Chromium checked the filter layout with production CSS at 320, 390 and 1280 px in both themes. The production build and bundle budgets passed.
+
 # 23 November 2026 — Reset form spacing and autofill
 
 The reset confirmation is separate from the password form, so browsers can identify the password field without treating the DELETE field as a sign-in identifier. The reset inputs and action use consistent spacing. A component test checks that a filled password and an email in the confirmation field cannot submit. Chromium measured 16 px at 320, 390 and 1280 px using the production styles. No reset was executed.

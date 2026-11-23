@@ -223,6 +223,39 @@ it("requests an actual returned tuple cursor and deduplicates a row across loade
     screen.queryByRole("button", { name: "Weitere Dateien laden" }),
   ).not.toBeInTheDocument();
 });
+it("shows unfiled files instead of the selected folder until the option is cleared", async () => {
+  state.rpc.mockReturnValue(
+    response({ items: [], has_more: false, next_cursor: null }),
+  );
+  mount();
+  const user = userEvent.setup();
+  const folder = screen.getByRole("textbox", {
+    name: "Eigenen Ordner filtern",
+  });
+  const unfiled = screen.getByRole("checkbox", {
+    name: "Nur ohne eigenen Ordner",
+  });
+  await user.type(folder, "Unterricht");
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenLastCalledWith(
+      "document_discovery",
+      expect.objectContaining({ p_folder: "Unterricht" }),
+    ),
+  );
+
+  await user.click(unfiled);
+  expect(folder).toBeDisabled();
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenLastCalledWith(
+      "document_discovery",
+      expect.objectContaining({ p_folder: "" }),
+    ),
+  );
+
+  await user.click(unfiled);
+  expect(folder).toBeEnabled();
+  expect(folder).toHaveValue("Unterricht");
+});
 it("keeps filter inputs focused while pending and preserves drafts across language changes", async () => {
   state.rpc.mockReturnValue(
     response({ items: [item()], has_more: false, next_cursor: null }),
