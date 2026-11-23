@@ -3,7 +3,7 @@
  * and isolated component tests. Private backend responses must not be cached.
  */
 import { defineConfig } from "vitest/config";
-import { loadEnv } from "vite";
+import { loadEnv, type Connect } from "vite";
 import { validatePublicConfig } from "./scripts/public-config.ts";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -19,6 +19,19 @@ import { academyClientAssets } from "./scripts/academy-client-assets.mjs";
 import { recordAcademyBrowserModules } from "./scripts/academy-browser-inventory.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";
 import editionModules from "./scripts/edition-modules.json" with { type: "json" };
+
+// Give retired bookmarks the same result in development, preview and the PWA.
+const retiredDemoPath = /^\/demo(?:[/?]|$)/i;
+const rejectRetiredDemoPath: Connect.NextHandleFunction = (
+  request,
+  response,
+  next,
+) => {
+  if (!retiredDemoPath.test(request.url ?? "")) return next();
+  response.statusCode = 404;
+  response.setHeader("Cache-Control", "no-store");
+  response.end();
+};
 
 export default defineConfig(({ mode }) => {
   // VITE_ values enter the browser bundle. The shared validator rejects
@@ -115,6 +128,15 @@ export default defineConfig(({ mode }) => {
       },
     }),
     plugins: [
+      {
+        name: "portal-retired-demo-path",
+        configureServer(server) {
+          server.middlewares.use(rejectRetiredDemoPath);
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use(rejectRetiredDemoPath);
+        },
+      },
       {
         name: "portal-local-reset",
         async configureServer(server) {
@@ -270,6 +292,7 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           runtimeCaching: [],
           navigateFallbackDenylist: [
+            retiredDemoPath,
             /^\/backend(?:\/|$)/,
             /^\/auth\//,
             /^\/rest\//,

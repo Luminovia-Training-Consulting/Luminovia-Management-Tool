@@ -209,7 +209,8 @@ await withTestDatabase(
                     "private.request_assignment_withdrawal(uuid,text,uuid)",
                     "private.review_assignment_withdrawal(uuid,boolean,text,uuid)",
                     "private.job_lifecycle(uuid)",
-                    "private.notification_target(text,uuid)",
+                    // The final SQL dispatcher delegates to the original PL/pgSQL withdrawal handler.
+                    "private.notification_target_before_finance_inbox(text,uuid)",
                     "private.check_substitution_claim(uuid)",
                     "private.respond_job_substitution(uuid,text,text,uuid,boolean)",
                     "private.request_replacement(uuid,text,text,uuid[],boolean,uuid)",

@@ -11,7 +11,7 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
         other = await actor("withdrawal-without-topic", "lecturer");
     const users = [teacher, peer, admin, manager, other].map((item) => item.id);
     const jobs = [];
-    const topic = randomUUID();
+    const topic = randomUUID(), peerTopic = randomUUID();
     // Delete only the explicit fictional resource IDs created by this fixture.
     // Private request ledgers reference claims/accounts and must be removed first.
     defer(async () => {
@@ -34,20 +34,23 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
         delete from public.job_sessions where job_id in(${j});
         delete from public.jobs where id in(${j});`);
         }
-        await sql(`delete from public.lecturer_topics where topic_id='${topic}';
-          delete from public.topics where id='${topic}';`);
+        await sql(`delete from public.lecturer_topics where topic_id in ('${topic}','${peerTopic}');
+          delete from public.topics where id in ('${topic}','${peerTopic}');`);
     });
-    // A disposable expertise requirement makes the two expected recipients
-    // independent of lecturers retained by the native upgrade fixture.
-    await checked(service.from("topics").insert({
-        id: topic,
-        kind: "topic",
-        label_de: `Fiktives Rücktrittsthema ${topic}`,
-        label_en: `Fictional withdrawal topic ${topic}`,
-    }));
-    await checked(service.from("lecturer_topics").insert(
-        [teacher.id, peer.id].map((user_id) => ({user_id, topic_id: topic})),
+    // Distinct unclassified topics share Other Subjects under the current
+    // teaching policy. A peer can match the area without the same topic tag.
+    await checked(service.from("topics").insert(
+        [topic, peerTopic].map((id) => ({
+            id,
+            kind: "topic",
+            label_de: `Fiktives Rücktrittsthema ${id}`,
+            label_en: `Fictional withdrawal topic ${id}`,
+        })),
     ));
+    await checked(service.from("lecturer_topics").insert([
+        {user_id: teacher.id, topic_id: topic},
+        {user_id: peer.id, topic_id: peerTopic},
+    ]));
     let checks = 0;
     /** Record a group only after its real HTTP assertions complete. */
     const check = async (name, run) => {
@@ -388,7 +391,10 @@ await withApiFixture(async ({service, actor, sql, defer, checked}) => {
                     .from("notifications")
                     .select("user_id,read_at")
                     .eq("kind", "job_reopened")
-                    .eq("resource_id", late.job),
+                    .eq("resource_id", late.job)
+                    // Other matching lecturers may exist in the retained-data
+                    // baseline. Assert the complete set of this fixture's actors.
+                    .in("user_id", users),
             );
             assert.deepEqual(
                 reopened.map((notice) => notice.user_id).sort(),

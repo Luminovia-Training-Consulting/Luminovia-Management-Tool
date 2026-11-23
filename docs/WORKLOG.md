@@ -1,3 +1,15 @@
+# 23 November 2026 — Retired public practice bookmarks
+
+Return an uncached HTTP 404 for the old public practice path and its subpaths in Caddy, Vite development and built preview. Exclude those paths from the service worker's navigation fallback. Public help keeps its existing offline support.
+
+All 14 proxy HTTP checks passed. Desktop and mobile Chromium verified the installed worker serves public help offline and does not respond to the retired bookmark. The build stayed within all three bundle budgets. The route and corrected worker were independently verified on KVM 1 over HTTPS.
+
+# 23 November 2026 — Withdrawal notifications in native acceptance
+
+The withdrawal test now verifies that a lecturer with a different topic in the same subject area receives the reopened-offer notice. Its recipient assertion covers every actor created by that test, including the lecturer without matching expertise. The retained-data baseline can contain other eligible lecturers in that area. The withdrawal linter follows the original PL/pgSQL resolver behind the current SQL dispatcher. The isolated PostgreSQL withdrawal checks passed.
+
+A focused real self-host run replayed all 320 migrations, retained identities, private file bytes and accepted financial records, and passed the native withdrawal API suite. It also checked TLS, WebSockets and 50 concurrent claims. This run selected one API suite. The company-deletion suite now checks the current lifecycle fields, own-company dispatch access, budget redaction and foreign-company denial. All eight PostgreSQL groups passed. The full exact-revision CI remains the release check.
+
 # 23 November 2026 — Single publishing workflow for internal courses
 
 Course cards and the editor follow the linked teaching offer. Staff save a course draft and prepare the offer, then publish the saved offer from the course editor. Unassigned offers without protected history can return to draft. The previous catalogue toggle no longer grants prospective lecturers access to private course records. Confirmed allocations continue to open the course. Legacy course release values and the dedicated Academy workflow remain supported. A linked published or filled offer also makes new internal courses available through the scoped company enrolment picker.

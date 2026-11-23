@@ -591,6 +591,15 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
                 "can_manage",
                 "can_edit",
                 "can_duplicate",
+                "can_edit_course_details",
+                "can_edit_dispatch",
+                "can_edit_schedule",
+                "can_reassign_company",
+                "class_id",
+                "class_name",
+                "dispatch_contact",
+                "meeting_url",
+                "organisation_id",
                 "claims",
             ].sort();
             for (const [who, aal, privileged] of [
@@ -606,6 +615,9 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
                 assert.equal(current.gross_budget, privileged ? 300.03 : null);
                 assert.equal(current.max_net_budget, privileged ? 300.03 : null);
                 assert.deepEqual(current.claims, []);
+                assert.equal(current.organisation_id, [admin, owner, manager].includes(who) ? org : null);
+                for (const field of ["class_id", "class_name", "dispatch_contact", "meeting_url"])
+                    assert.equal(current[field], null, field);
                 // Exact legacy net totals already belong to this authorized offer's
                 // commercial contract; adding company isolation must not reinterpret them.
                 const old = await read(who, legacy, aal);
@@ -639,7 +651,15 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
             );
             assert.deepEqual(await earnings(manager, "false", "aal1"), []);
 
-            await assert.rejects(read(company, rolePriced, "aal1"), /42501|denied/i);
+            const ownDispatch = await read(company, rolePriced, "aal1");
+            assert.deepEqual(Object.keys(ownDispatch).sort(), fields);
+            assert.equal(ownDispatch.organisation_id, org);
+            assert.equal(ownDispatch.can_edit_dispatch, true);
+            assert.equal(ownDispatch.can_manage, false);
+            assert.equal(ownDispatch.gross_budget, null);
+            assert.equal(ownDispatch.max_net_budget, null);
+            assert.deepEqual(ownDispatch.claims, []);
+            await assert.rejects(read(otherCompany, rolePriced, "aal1"), /42501|denied/i);
             const publicRate = JSON.parse(
                 await sql(
                     `select jsonb_build_object('amount',amount,'total_amount',total_amount) from public.jobs where id=${q(rolePriced)}`,

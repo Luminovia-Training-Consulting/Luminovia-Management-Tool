@@ -219,6 +219,17 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
     }
     assert.equal(readinessStatus, 200, "Caddy must proxy the allowed backend before its 404 fallback");
 
+    await check("Retired demo URLs return an uncached 404 before SPA fallback", async () => {
+        for (const path of ["/demo", "/demo/", "/demo/courses?from=bookmark", "/DEMO", "/%64emo"]) {
+            const response = await request(path);
+            assert.equal(response.status, 404, path);
+            assert.equal(response.headers.get("cache-control"), "no-store");
+        }
+        const ordinaryRoute = await request("/help");
+        assert.equal(ordinaryRoute.status, 200);
+        assert.match(await ordinaryRoute.text(), /Fictional portal shell/);
+    });
+
     await check("legacy HTTP hostnames preserve deep links and query strings", async () => {
         const aliasBinding = docker(["port", caddy, "80/tcp"]);
         assert.match(aliasBinding, /^127\.0\.0\.1:\d+$/);
