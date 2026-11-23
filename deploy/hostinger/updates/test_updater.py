@@ -292,9 +292,9 @@ class MigrationTests(unittest.TestCase):
                 updater.plan_migrations(target, manifest)
 
 
-# GitHub fixtures must jointly prove current main, its immutable release and actual successful CI.
+# GitHub fixtures prove exact current main and immutable release identity; CI status is deliberately not consulted.
 class ReleaseTests(unittest.TestCase):
-    def test_only_immutable_current_main_successful_push_ci_is_eligible(self):
+    def test_immutable_current_main_release_is_eligible_without_ci_results(self):
         with tempfile.TemporaryDirectory() as directory:
             updater = u.Updater(instance(directory))
             tag = "cms-dev-" + COMMIT
@@ -310,18 +310,13 @@ class ReleaseTests(unittest.TestCase):
                     return {"commit": {"sha": COMMIT}}
                 if path.startswith("/git/ref"):
                     return {"object": {"type": "commit", "sha": COMMIT}}
-                return {"workflow_runs": [run]}
+                if path.startswith("/actions/"):
+                    raise AssertionError("The automatic updater must ignore CI status.")
+                raise AssertionError("Unexpected GitHub API path: " + path)
 
             updater.api = api
             self.assertEqual(updater.candidate()["status"], "candidate")
-            self.assertEqual(len(calls), 4)
-            self.assertEqual(calls[:2], ["/branches/main", "/releases/tags/" + tag])
-            run["event"] = "pull_request"
-            self.assertEqual(updater.candidate()["status"], "waiting_for_successful_main_checks")
-            run["event"] = "workflow_dispatch"
-            self.assertEqual(updater.candidate()["status"], "candidate")
-            run["event"] = "repository_dispatch"
-            self.assertEqual(updater.candidate()["status"], "waiting_for_successful_main_checks")
+            self.assertEqual(calls, ["/branches/main", "/releases/tags/" + tag, "/git/ref/tags/" + tag])
             release["immutable"] = False
             with self.assertRaisesRegex(u.UpdateError, "immutable"):
                 updater.candidate()
@@ -356,12 +351,12 @@ class ReleaseTests(unittest.TestCase):
                     return next((item for item in releases if path.endswith(item["tag_name"])), None)
                 if path.startswith("/git/ref"):
                     return {"object": {"type": "commit", "sha": COMMIT}}
-                return {"workflow_runs": [{"head_sha": COMMIT, "head_branch": "main", "event": "push", "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml"}]}
+                raise AssertionError("Unexpected GitHub API path: " + path)
 
             updater.api = api
             self.assertEqual(updater.candidate()["commit"], COMMIT)
             self.assertNotIn("/releases?per_page=5", calls)
-            self.assertEqual(len(calls), 4)
+            self.assertEqual(len(calls), 3)
 
     def test_missing_exact_release_404_is_normal_waiting_but_other_errors_fail(self):
         with tempfile.TemporaryDirectory() as directory:

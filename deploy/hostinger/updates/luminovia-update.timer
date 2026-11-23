@@ -1,4 +1,4 @@
-# Poll for a verified immutable main release. The updater decides eligibility from CI, state and maintenance fences.
+# Poll for an immutable current-main release. The updater decides eligibility from package, migration, backup, state and maintenance checks.
 [Unit]
 Description=Check for verified CMS updates every five minutes
 

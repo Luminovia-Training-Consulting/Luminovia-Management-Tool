@@ -1,3 +1,9 @@
+# 23 November 2026 — Publish and install main updates without waiting for CI
+
+Changed the CMS delivery policy at the user's explicit request: every exact-current `main` push now runs the production typecheck/build and creates an immutable package without waiting for Portal or Security CI. The KVM updater no longer queries CI status; it still requires the exact current-main SHA, immutable tag and manifest, complete archive/member hashes, pinned runtime identity, compatible migration history, backup/checkpoint, health and rollback checks. The separate manual release workflow retains its full CI gates.
+
+Local validation passed: `npm run build`, all 68 updater/migration-plan tests and all 10 delivery-policy tests. The preceding application run `45135621352` on `fa4e80c4` had passed unit/coverage, build, lint, typecheck, code quality, full local verification and native self-host compatibility; its mobile browser lane reported 19 failures while desktop was still running. Per the user's explicit direction, those CI results do not gate the immutable package/update path. A new package and actual KVM installation are still pending for the policy commit.
+
 # 23 November 2026 — Course and assignment documents
 
 Course materials and reports keep their exact scanned download through the workspace and library. Teaching Day downloads the selected course resource or job document directly. Company contacts can confirm withdrawal of a visible share in their own course. Assigned lecturers can withdraw their own material shares, and scoped course managers can withdraw regular course shares. The source stays in Files. The owner may permanently delete unused personal material after withdrawal, using the reviewed deletion flow. Acknowledgements, active shares and attendance evidence retain their protection. Standard job attachments now follow current job visibility as well as the before/after-claim rule.

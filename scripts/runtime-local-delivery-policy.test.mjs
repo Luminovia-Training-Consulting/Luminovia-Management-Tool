@@ -373,22 +373,18 @@ test("release shell preflight independently rejects missing or mismatched revisi
     }
 });
 
-test("automatic CMS publication requires current main and both exact successful push runs", () => {
+test("automatic CMS publication follows current main without consulting CI results", () => {
     const automatic = workflow("automatic-cms-release");
-    assert.deepEqual(automatic.on.workflow_run.workflows, [
-        "Portal checks",
-        "Security analysis",
-    ]);
-    assert.deepEqual(automatic.on.workflow_run.types, ["completed"]);
+    assert.deepEqual(automatic.on.push.branches, ["main"]);
     const job = automatic.jobs.publish;
-    assert.match(job.if, /workflow_run\.event == 'push'/);
-    assert.match(job.if, /workflow_run\.head_branch == 'main'/);
-    assert.match(job.if, /workflow_run\.conclusion == 'success'/);
+    assert.match(job.if, /github\.event_name == 'push'/);
+    assert.match(job.if, /github\.ref == 'refs\/heads\/main'/);
+    assert.doesNotMatch(job.if, /workflow_run|conclusion|success/);
     assert.equal(job.permissions.contents, "write");
-    assert.equal(job.permissions.actions, "read");
+    assert.equal(job.permissions.actions, undefined);
     assert.equal(
         job.concurrency.group,
-        "cms-release-${{ github.event.workflow_run.head_sha }}",
+        "cms-release-${{ github.sha }}",
     );
     assert.equal(
         workflow("ci").jobs["release-cms"].concurrency.group,
@@ -410,7 +406,7 @@ test("automatic CMS publication requires current main and both exact successful 
         const gh = join(dir, "gh");
         writeFileSync(
             gh,
-            '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; elif [[ "$*" == *"/ci.yml/runs"* ]]; then printf "%s\\n" "$FAKE_CI"; elif [[ "$*" == *"/security.yml/runs"* ]]; then printf "%s\\n" "$FAKE_SECURITY"; else exit 7; fi\n',
+            '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; else exit 7; fi\n',
         );
         chmodSync(gh, 0o700);
         const git = join(dir, "git");
@@ -421,10 +417,6 @@ test("automatic CMS publication requires current main and both exact successful 
         for (const [changes, allowed] of [
             [{}, true],
             [{FAKE_MAIN: "b".repeat(40)}, false],
-            [{FAKE_CI: "in_progress:pending"}, false],
-            [{FAKE_CI: "completed:failure"}, false],
-            [{FAKE_SECURITY: "missing"}, false],
-            [{FAKE_SECURITY: "completed:failure"}, false],
         ]) {
             writeFileSync(output, "");
             const result = spawnSync(
@@ -437,8 +429,6 @@ test("automatic CMS publication requires current main and both exact successful 
                         TARGET_SHA: sha,
                         GITHUB_OUTPUT: output,
                         FAKE_MAIN: sha,
-                        FAKE_CI: "completed:success",
-                        FAKE_SECURITY: "completed:success",
                         ...changes,
                     },
                     encoding: "utf8",
@@ -479,8 +469,6 @@ test("automatic CMS publication requires current main and both exact successful 
                     TARGET_SHA: "bad",
                     GITHUB_OUTPUT: output,
                     FAKE_MAIN: sha,
-                    FAKE_CI: "completed:success",
-                    FAKE_SECURITY: "completed:success",
                 },
                 encoding: "utf8",
                 timeout: 1000,
@@ -497,6 +485,7 @@ test("automatic CMS publication requires current main and both exact successful 
             /existing draft requires operator inspection/,
         );
         assert.doesNotMatch(publication.run, /--clobber/);
+        assert.ok(job.steps.some((step) => step.run?.includes("npm run build")));
     } finally {
         rmSync(dir, {recursive: true, force: true});
     }

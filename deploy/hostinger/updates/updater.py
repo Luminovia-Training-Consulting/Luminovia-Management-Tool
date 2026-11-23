@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# CMS development updater bound to exact main/CI/release identity. Fence public writers, back up data and retain recovery state before runtime changes; never automatically rewind data after the API reopens.
+# CMS development updater bound to exact main/release identity. Fence public writers, back up data and retain recovery state before runtime changes; never automatically rewind data after the API reopens.
 """Pull verified public main releases; keep all credentials and data on this VM."""
 
 from __future__ import annotations
@@ -492,7 +492,7 @@ class Updater:
         except (OSError, ValueError, urllib.error.URLError) as error:
             raise UpdateError("github_request_failed") from error
 
-    # Bind the candidate to current main, its exact immutable release tag and successful complete CI.
+    # Bind the candidate to current main and its exact immutable release tag. CI results do not gate customer-requested automatic updates.
     def candidate(self):
         # GitHub's release list order is not a deployment ordering guarantee.
         # Read current main first, then resolve that commit's exact release tag.
@@ -504,7 +504,7 @@ class Updater:
             return {"status": "current", "commit": commit}
         if commit == self.state.get("failedCommit"):
             return {"status": "failed_release_suppressed", "commit": commit}
-        # Four API calls only for a new release; normal polls use one.
+        # Three API calls only for a new release; normal polls use one.
         tag_name = "cms-dev-" + commit
         release = self.api("/releases/tags/" + tag_name, missing_ok=True)
         if release is None or isinstance(release, dict) and release.get("draft"):
@@ -516,9 +516,6 @@ class Updater:
         tag = self.api("/git/ref/tags/" + release["tag_name"])
         if tag.get("object", {}).get("type") != "commit" or tag.get("object", {}).get("sha") != commit:
             raise UpdateError("release_tag_commit_mismatch")
-        runs = self.api("/actions/workflows/ci.yml/runs?branch=main&status=success&head_sha=" + commit + "&per_page=10")
-        if not any(run.get("head_sha") == commit and run.get("head_branch") == BRANCH and run.get("event") in {"push", "workflow_dispatch"} and run.get("status") == "completed" and run.get("conclusion") == "success" and run.get("path", "").split("@")[0] == ".github/workflows/ci.yml" for run in runs.get("workflow_runs", [])):
-            return {"status": "waiting_for_successful_main_checks", "commit": commit}
         assets = {}
         prefix = "https://github.com/" + REPOSITORY + "/releases/download/" + release["tag_name"] + "/"
         for name in ("cms-release.tar.gz", "cms-release.json"):

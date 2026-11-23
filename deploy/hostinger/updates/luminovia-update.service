@@ -1,4 +1,4 @@
-# One bounded updater attempt under the shared maintenance lock. Secrets stay in private instance files; the unit alone proves neither successful CI nor installation.
+# One bounded updater attempt under the shared maintenance lock. Secrets stay in private instance files; the unit alone proves neither package installation nor health.
 [Unit]
 Description=Install a verified Luminovia CMS release from GitHub
 Wants=network-online.target docker.service
