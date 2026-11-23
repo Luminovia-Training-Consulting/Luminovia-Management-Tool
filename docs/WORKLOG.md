@@ -1,3 +1,7 @@
+# 23 November 2026 — Clarify short-notice withdrawal
+
+The withdrawal panel labels the first assigned session and explains that an existing short-notice request awaits review by a different administrator or manager. The seven-day rule and existing authorization remain in effect. All nine withdrawal component tests, targeted lint and TypeScript passed.
+
 # 23 November 2026 — Compact job schedule
 
 The job detail keeps the delivery period and time zone above a height-limited date list. Every session remains reachable by scrolling the named, keyboard-focusable region. Desktop and mobile Chromium verified all 40 fixture sessions, scrolling to the final item, and no horizontal page overflow. All 24 job-component tests, TypeScript and targeted lint passed.

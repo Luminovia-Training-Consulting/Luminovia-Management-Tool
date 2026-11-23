@@ -14,6 +14,10 @@
 - [x] Verify the UI, socket request handling, reset state machine, packaging and Caddy ingress using disposable evidence.
 - [x] Enable the socket on KVM 1 and verify the live endpoint and administrator form on `9f10e24a` with active data retained.
 
+## Assignment withdrawal
+
+- [x] Show the first assigned session and explain who reviews a pending withdrawal. Verify that the requester sees no self-approval action.
+
 ## Local launcher
 
 - [x] Detect a busy frontend port and an already-running local project before installing dependencies. Report the conflicting port or project and preserve the existing local stack during checkout handoffs.

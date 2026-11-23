@@ -69,6 +69,15 @@ export function JobWithdrawalPanel({
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
   if (!query.data.claims.length && !query.data.items.length) return null;
   const required = action?.kind !== "request" || action.requiresApproval;
+  const ownStarts = new Map(
+    query.data.claims.map((claim) => [claim.claim_id, claim.starts_at]),
+  );
+  const firstSession = (start: string | null) =>
+    start && (
+      <p>
+        {t("firstSession", { start: dateTime(start, i18n.language, zone) })}
+      </p>
+    );
   return (
     <section className="panel job-lifecycle" aria-label={t("heading")}>
       <h2>{t("heading")}</h2>
@@ -78,7 +87,7 @@ export function JobWithdrawalPanel({
         .filter((claim) => claim.can_withdraw)
         .map((claim) => (
           <div key={claim.claim_id}>
-            <p>{dateTime(claim.starts_at, i18n.language, zone)}</p>
+            {firstSession(claim.starts_at)}
             <Button
               variant="secondary"
               disabled={!online || change.isPending}
@@ -100,6 +109,12 @@ export function JobWithdrawalPanel({
             <strong>{item.lecturer_name}</strong>
             <p>{t(item.status)}</p>
             <small>{dateTime(item.created_at, i18n.language, zone)}</small>
+            {item.status === "pending" && item.lecturer_id === actor && (
+              <>
+                {firstSession(ownStarts.get(item.claim_id) ?? null)}
+                <p>{t("ownPending")}</p>
+              </>
+            )}
             {item.reason && <p className="preserve-text">{item.reason}</p>}
             {item.review_reason && (
               <p className="preserve-text">

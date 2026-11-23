@@ -13,8 +13,9 @@ import i18n from "../../lib/i18n";
 import { JobWithdrawalPanel } from "./withdrawal";
 
 const state = vi.hoisted(() => ({ rpc: vi.fn(), online: true }));
+const actor = "6feeb0f3-a57f-4541-9cbe-34c80a922323";
 vi.mock("../auth/auth-context", () => ({
-  useAuth: () => ({ session: { user: { id: "actor" } } }),
+  useAuth: () => ({ session: { user: { id: actor } } }),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
 vi.mock("../../lib/online", () => ({
@@ -106,7 +107,7 @@ it("requires a reason for short-notice requests and retains the assignment while
   setup(snapshot, (name) => {
     expect(name).toBe("request_assignment_withdrawal");
     snapshot.claims[0].can_withdraw = false;
-    snapshot.items.push(pendingItem());
+    snapshot.items.push({ ...pendingItem(), lecturer_id: actor });
     return { data: { id, status: "pending" } };
   });
   const user = userEvent.setup();
@@ -130,6 +131,13 @@ it("requires a reason for short-notice requests and retains the assignment while
   expect(await screen.findByRole("status")).toHaveTextContent(
     "In Prüfung — Zuweisung bleibt bestätigt",
   );
+  expect(
+    screen.getByText(/Eine andere Person aus Administration oder Management/),
+  ).toBeVisible();
+  expect(screen.getByText(/Erster zugewiesener Termin:/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Rücktritt genehmigen" }),
+  ).not.toBeInTheDocument();
   expect(state.rpc).toHaveBeenCalledWith("request_assignment_withdrawal", {
     p_claim_id: claim,
     p_reason: "Fictional family commitment",

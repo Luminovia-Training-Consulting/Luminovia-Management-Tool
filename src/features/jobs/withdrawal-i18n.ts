@@ -2,7 +2,10 @@ import i18n from "../../lib/i18n";
 
 const en = {
   heading: "Withdraw from assignment",
-  help: "With at least seven days (168 hours) before the first session, you can withdraw directly. With less notice, Administration or Management must approve your reasoned request. Until approval, all sessions remain assigned to you.",
+  help: "You can withdraw immediately if the first session is still at least 168 hours (seven full days) away. With less notice, Administration or Management must approve your request.",
+  firstSession: "First assigned session: {{start}}",
+  ownPending:
+    "Your request has been submitted. Another person in Administration or Management must review it. All sessions remain assigned to you until approval. You’ll receive the decision in your inbox.",
   withdraw: "Withdraw from this assignment",
   request: "Request withdrawal",
   directHelp:
@@ -37,7 +40,10 @@ const en = {
 };
 const de: Record<keyof typeof en, string> = {
   heading: "Vom Auftrag zurücktreten",
-  help: "Ab sieben Tagen (168 Stunden) vor dem ersten Termin kannst du direkt zurücktreten. Bei weniger Vorlauf muss Administration oder Management deinen begründeten Antrag genehmigen. Bis dahin bleiben dir alle Termine zugewiesen.",
+  help: "Du kannst direkt zurücktreten, wenn bis zum ersten Termin noch mindestens 168 Stunden (sieben volle Tage) bleiben. Bei weniger Vorlauf muss Administration oder Management deinen Antrag genehmigen.",
+  firstSession: "Erster zugewiesener Termin: {{start}}",
+  ownPending:
+    "Dein Antrag ist eingegangen. Eine andere Person aus Administration oder Management muss ihn prüfen. Bis zur Genehmigung bleiben dir alle Termine zugewiesen. Die Entscheidung erhältst du im Posteingang.",
   withdraw: "Von diesem Auftrag zurücktreten",
   request: "Rücktritt beantragen",
   directHelp:
