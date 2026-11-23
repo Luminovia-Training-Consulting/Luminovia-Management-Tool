@@ -36,6 +36,7 @@ const REQUIRED_FILES = [
     "deploy/hostinger/supabase/upstream/volumes/functions/deno.jsonc",
     "deploy/hostinger/updates/updater.py",
     "deploy/hostinger/updates/luminovia-update.service",
+    "deploy/hostinger/updates/luminovia-update.timer",
     "deploy/hostinger/maintenance/pg_preflight.py",
     "deploy/hostinger/maintenance/atomic_recovery.py",
     "deploy/hostinger/maintenance/configure-os-daily.sh",

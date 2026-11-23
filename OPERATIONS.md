@@ -424,6 +424,20 @@ The state and journal contain commit IDs and reason codes, not credential values
 
 Initial adoption uses a root-owned private state with `bootstrapApproved: true`, allowing the first real GitHub release to be adopted without inventing a current commit. A successful installation records `currentCommit` and clears that flag. The installed control program updates itself only from the same verified release. Unit/timer or OS policy changes remain a reviewed operator task.
 
+After a clean KVM rebuild, install both unit files from the verified source snapshot that matches the installed controller. Compare the GitHub `CMS_SUPABASE_PUBLISHABLE_KEY` build variable with the new installation's public key before publishing a release. A key generated for the old installation makes the updater reject the new bundle. The API origin must also match.
+
+```bash
+portal_updates=/opt/luminovia-portal/source/deploy/hostinger/updates
+sudo systemd-analyze verify "$portal_updates/luminovia-update.service" "$portal_updates/luminovia-update.timer"
+sudo install -m 0644 "$portal_updates/luminovia-update.service" "$portal_updates/luminovia-update.timer" /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now luminovia-update.timer
+sudo systemctl list-timers luminovia-update.timer --no-pager
+```
+
+Verify one completed service run and the next scheduled check. A result of `current` proves that the VPS reached GitHub and found its running commit already installed. Installation and migration acceptance require a later eligible release.
+
+
 Current operational evidence and the actual first GitHub installation are recorded in QA evidence. Development SMTP remains internal Mailpit; 100 GB capacity, recurring encrypted off-site retention and production operations remain separate work.
 
 <a id="section-hostinger-automatic-updates-reviewed-initial-m3-history-exception"></a>

@@ -2,6 +2,12 @@
 
 - [x] Expose own profile, expertise, contracts and a scoped regular lecturer toggle from the internal account directory.
 
+## Automatic updates on KVM 1
+
+- [x] Restore the existing five-minute systemd timer on the rebuilt instance and match the GitHub public build configuration to the deployed key and API origin.
+- [x] Include both systemd units in the CMS release archive and document re-enabling them after a clean install.
+- [ ] Observe the next eligible immutable release install on KVM 1. Record its commit, applied migration versions and live health checks.
+
 ## Marketplace date search time zone
 
 - [x] Use the shared time-zone selector in the marketplace date filter while preserving saved filters, valid historical aliases and local date boundaries.

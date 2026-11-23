@@ -23,6 +23,7 @@ const pgProofPath = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const newRuntimeFiles = [
     "deploy/hostinger/updates/luminovia-update.service",
+    "deploy/hostinger/updates/luminovia-update.timer",
     "deploy/hostinger/selfhost/migrate-mail-relay-env.mjs",
     "deploy/hostinger/maintenance/pg_preflight.py",
     "deploy/hostinger/maintenance/atomic_recovery.py",
