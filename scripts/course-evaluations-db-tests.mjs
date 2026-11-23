@@ -170,7 +170,8 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(comments(teacher,"learner","company",organisation), denied);
         const companyView = await list(company);
         assert.deepEqual(companyView.summaries.map(({rater_role,subject_kind,can_read_comments}) => [rater_role,subject_kind,can_read_comments]),
-            [["learner","company",true]]);
+            [["learner","company",true], ["lecturer","class",true]]);
+        assert.deepEqual((await comments(company,"lecturer","class",classId)).items.map(({comment}) => comment), ["Ready for the next lab"]);
         assert.equal((await comments(company,"learner","company",organisation)).items[0].comment, "Helpful coordination");
         await assert.rejects(comments(company,"lecturer","company",organisation), denied);
         assert.equal((await list(manager)).summaries.length, 6);

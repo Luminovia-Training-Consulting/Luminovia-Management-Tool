@@ -22,6 +22,9 @@
 - [x] Provide company-scoped class, meeting room and default contact settings independently of Premium LMS.
 - [x] Add company-filtered class selection and default copying to job edits. Keep company moves subject to existing ownership and assignment guards.
 - [x] Open a company-owned job through a reduced operational projection and verify company access, current versions, and saved contact and room details.
+- [x] Show the assigned company on locked offers and allow eligible legacy offers to move with their own course run. Verify company scope and revocation through native PostgREST and RLS.
+- [x] Add class stars and scoped comments to company settings and completed lecturer assignments. Reuse Premium class ratings where both routes address the same class.
+- [x] Space the import panel, template actions and company search on desktop and mobile.
 
 ## Standard course workspace
 

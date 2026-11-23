@@ -385,7 +385,7 @@ function ClientWorkspace({
         refresh={refresh}
       />
       {saved && <Notice>{t("saved")}</Notice>}
-      <div className="operations-layout">
+      <div className="operations-layout company-directory-layout">
         <section className="panel operations-directory">
           <Field id="client-search" label={t("search")}>
             <input

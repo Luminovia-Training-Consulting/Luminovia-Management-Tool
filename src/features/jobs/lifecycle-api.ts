@@ -193,6 +193,7 @@ export async function refreshJobState(client: QueryClient) {
       "accounting",
       "commission-report",
       "client-requests",
+      "company-decision-jobs",
       "client-spend",
       "company-monthly-spending",
       "notifications",

@@ -35,6 +35,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import { JobDateRange } from "./session-range";
 import { localSessionTime, resolveJobSessions } from "./session-schedule";
 import { orgQuery } from "../operations/data";
+import { JobClassFeedback } from "../operations/company-class-feedback";
 import { briefingWebUrl } from "./briefing-api";
 
 /** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
@@ -180,6 +181,18 @@ export function JobLifecyclePanel({
         <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       </div>
       {dispatch}
+      {info.class_id &&
+        info.claims.some(
+          (claim) =>
+            claim.lecturer_id === session!.user.id &&
+            claim.status === "confirmed",
+        ) && (
+          <JobClassFeedback
+            actor={session!.user.id}
+            jobId={job.id}
+            classId={info.class_id}
+          />
+        )}
       {info.can_manage && (
         <div className="page-actions">
           <ManualAssignment
@@ -761,7 +774,7 @@ function EditOffer({
   const { session } = useAuth();
   const organisations = useQuery({
     ...orgQuery(session!.user.id),
-    enabled: canReassignCompany,
+    enabled: canReassignCompany || Boolean(organisationId),
   });
   const [originalCompany] = useState(organisationId ?? "");
   const [company, setCompany] = useState(originalCompany);
@@ -771,16 +784,13 @@ function EditOffer({
   const companyChanged = Boolean(
     canReassignCompany && company && company !== originalCompany,
   );
+  const editDispatch = canEditDispatch || companyChanged;
   const classChanged =
-    canEditDispatch &&
+    editDispatch &&
     (companyChanged ||
       chosenClass !== originalClass ||
       refreshDispatchDefaults);
-  const options = useDispatchOptions(
-    job.id,
-    company,
-    online && canEditDispatch,
-  );
+  const options = useDispatchOptions(job.id, company, online && editDispatch);
   const dispatchValid =
     !classChanged ||
     (options.isSuccess &&
@@ -841,42 +851,57 @@ function EditOffer({
           onChange={(event) => setTitle(event.target.value)}
         />
       </Field>
-      {canReassignCompany && (
-        <Field id="offer-organisation" label={t("company")}>
-          {organisations.isPending ? (
-            <Loading />
-          ) : organisations.isError ? (
-            <ErrorState retry={() => void organisations.refetch()} />
-          ) : (
-            <select
-              id="offer-organisation"
-              value={company}
-              onChange={(event) => {
-                const nextCompany = event.target.value;
-                setCompany(nextCompany);
-                setChosenClass(
-                  nextCompany === originalCompany ? originalClass : "",
-                );
-              }}
-              disabled={pending}
-            >
-              {!organisations.data.some(
-                (organisation) =>
-                  organisation.id === originalCompany &&
-                  !organisation.archived_at,
-              ) && <option value={originalCompany}>{job.customer_name}</option>}
-              {organisations.data
-                .filter((organisation) => !organisation.archived_at)
-                .map((organisation) => (
-                  <option key={organisation.id} value={organisation.id}>
-                    {organisation.name}
-                  </option>
-                ))}
-            </select>
-          )}
-        </Field>
-      )}
-      {canEditDispatch && company && (
+      <Field
+        id="offer-organisation"
+        label={t("company")}
+        hint={canReassignCompany ? undefined : t("companyFixed")}
+      >
+        {!canReassignCompany ? (
+          <input
+            id="offer-organisation"
+            readOnly
+            value={
+              organisations.data?.find(({ id }) => id === originalCompany)
+                ?.name ?? (originalCompany ? job.customer_name : t("noCompany"))
+            }
+          />
+        ) : organisations.isPending ? (
+          <Loading />
+        ) : organisations.isError ? (
+          <ErrorState retry={() => void organisations.refetch()} />
+        ) : (
+          <select
+            id="offer-organisation"
+            value={company}
+            onChange={(event) => {
+              const nextCompany = event.target.value;
+              setCompany(nextCompany);
+              setChosenClass(
+                nextCompany === originalCompany ? originalClass : "",
+              );
+            }}
+            disabled={pending}
+          >
+            {!organisations.data.some(
+              (organisation) =>
+                organisation.id === originalCompany &&
+                !organisation.archived_at,
+            ) && (
+              <option value={originalCompany} disabled={!originalCompany}>
+                {originalCompany ? job.customer_name : t("noCompany")}
+              </option>
+            )}
+            {organisations.data
+              .filter((organisation) => !organisation.archived_at)
+              .map((organisation) => (
+                <option key={organisation.id} value={organisation.id}>
+                  {organisation.name}
+                </option>
+              ))}
+          </select>
+        )}
+      </Field>
+      {editDispatch && company && (
         <>
           <ClassField
             options={options}

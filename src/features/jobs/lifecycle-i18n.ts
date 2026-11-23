@@ -67,6 +67,9 @@ const en = {
   edit: "Edit unaccepted offer",
   title: "Offer title",
   company: "Company assigned to this job",
+  companyFixed:
+    "This offer's company is fixed by its source or linked course activity.",
+  noCompany: "No company assigned",
   dispatch: "Company and class",
   editDispatch: "Edit class",
   class: "Class assigned to this job",
@@ -165,6 +168,9 @@ const de: typeof en = {
   edit: "Unangenommenen Auftrag bearbeiten",
   title: "Auftragstitel",
   company: "Unternehmen für diesen Auftrag",
+  companyFixed:
+    "Die Firma ist durch die Herkunft des Auftrags oder die verknüpfte Kursaktivität festgelegt.",
+  noCompany: "Kein Unternehmen zugeordnet",
   dispatch: "Unternehmen und Klasse",
   editDispatch: "Klasse bearbeiten",
   class: "Klasse für diesen Auftrag",

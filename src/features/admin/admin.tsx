@@ -333,7 +333,9 @@ function JobForm({
               t(courseRun.delivery_type),
               courseRun.location,
               courseRun.time_zone,
-            ].filter(Boolean).join(" · ")}
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
           <section
             className="course-offer-schedule"
@@ -352,7 +354,11 @@ function JobForm({
                       )}
                     </strong>
                     <span>
-                      {dateTime(row.ends_at, i18n.language, courseRun.time_zone)}
+                      {dateTime(
+                        row.ends_at,
+                        i18n.language,
+                        courseRun.time_zone,
+                      )}
                     </span>
                   </div>
                 </li>
@@ -692,7 +698,8 @@ function JobForm({
         <Notice kind="error">
           {courseRun && create.error.message === "course_run_source_changed"
             ? courseText("sourceChanged")
-            : courseRun && create.error.message === "course_run_customer_required"
+            : courseRun &&
+                create.error.message === "course_run_customer_required"
               ? courseText("customerRequired")
               : t(invalidTime ? "invalidTime" : "error")}
         </Notice>

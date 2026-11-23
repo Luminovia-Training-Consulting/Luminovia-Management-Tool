@@ -188,7 +188,7 @@ export function TableImport<T>({
           ? "Ersetze die Beispielzeile durch deine Daten und prüfe die Vorschau. Der Import legt neue Einträge an und stoppt bei einem Speicherfehler."
           : "Replace the example row with your data and review the preview. Import creates new records and stops if a save fails."}
       </p>
-      <div className="button-row">
+      <div className="page-actions">
         <Button
           variant="secondary"
           type="button"

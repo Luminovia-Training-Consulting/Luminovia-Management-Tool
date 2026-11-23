@@ -9,6 +9,10 @@
   align-items: start;
 }
 
+.company-directory-layout {
+  margin-block-start: clamp(1rem, 2vw, 1.5rem);
+}
+
 .operations-directory ul {
   display: grid;
   gap: 8px;

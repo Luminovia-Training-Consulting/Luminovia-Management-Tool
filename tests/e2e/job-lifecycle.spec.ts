@@ -22,6 +22,8 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
     const template = randomUUID(),
         run = randomUUID(),
         job = randomUUID(),
+        originalCompany = randomUUID(),
+        destinationCompany = randomUUID(),
         sessions = [
             {
                 id: randomUUID(),
@@ -36,6 +38,10 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
                 ends_at: "2049-01-11T09:00:00Z",
             },
         ];
+    await checked(service.from("organisations").insert([
+        {id: originalCompany, name: `Fictional initial company ${job.slice(0, 8)}`},
+        {id: destinationCompany, name: `Fictional destination company ${job.slice(0, 8)}`},
+    ]));
     await checked(
         service
             .from("course_templates")
@@ -44,7 +50,7 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
     await checked(
         service
             .from("course_runs")
-            .insert({id: run, template_id: template, time_zone: "Europe/Berlin"}),
+            .insert({id: run, template_id: template, organisation_id: originalCompany, time_zone: "Europe/Berlin"}),
     );
     await checked(service.from("course_sessions").insert(sessions));
     await checked(
@@ -85,6 +91,9 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
             exact: true,
         })
         .click();
+    const company = page.getByLabel("Unternehmen für diesen Auftrag", {exact: true});
+    await expect(company).toHaveValue(originalCompany);
+    await company.selectOption(destinationCompany);
     await page
         .getByLabel("Auftragsbedingungen", {exact: true})
         .fill("Reviewed fictional terms preserved forever");
@@ -105,6 +114,10 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
             .single(),
         {requireData: true},
     );
+    expect(await checked(
+        service.from("course_runs").select("organisation_id").eq("id", run).single(),
+        {requireData: true},
+    )).toEqual({organisation_id: destinationCompany});
     expect(edited.terms_version).toBe(2);
     expect(Date.parse(edited.claim_deadline)).toBe(
         Date.parse("2048-12-01T11:00:00Z"),

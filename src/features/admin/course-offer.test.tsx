@@ -221,7 +221,10 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   const user = userEvent.setup();
   setup();
   await screen.findByRole("heading", { name: "Auftrag aus diesem Kurs" });
-  await user.type(screen.getByLabelText("Konditionen (optional)"), "Management net offer");
+  await user.type(
+    screen.getByLabelText("Konditionen (optional)"),
+    "Management net offer",
+  );
   await user.selectOptions(screen.getByLabelText("Einheit"), "fixed_total");
   const total = screen.getByLabelText("Gesamtvergütung");
   await user.clear(total);
@@ -283,20 +286,31 @@ it("saves a scoped management override and previews the lecturer fee and platfor
 it("allows publishing without additional terms and uses a fresh key for an intentional second offer", async () => {
   const user = userEvent.setup();
   setup();
-  expect(await screen.findByRole("heading", { name: "Geplante Kurstermine" })).toBeVisible();
+  expect(
+    await screen.findByRole("heading", { name: "Geplante Kurstermine" }),
+  ).toBeVisible();
   const save = screen.getByRole("button", { name: "Auftrag speichern" });
-  const publish = screen.getByRole("checkbox", { name: "Sofort veröffentlichen" });
+  const publish = screen.getByRole("checkbox", {
+    name: "Sofort veröffentlichen",
+  });
   await user.click(publish);
   await user.click(save);
-  await user.click(await screen.findByRole("button", {
-    name: "Weiteren Auftrag für diesen Kurs erstellen",
-  }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Weiteren Auftrag für diesen Kurs erstellen",
+    }),
+  );
   expect(publish).not.toBeChecked();
   await user.click(publish);
   await user.click(save);
   await screen.findByText("Auftrag gespeichert.");
-  const calls = mock.rpc.mock.calls.filter(([name]) => name === "create_course_run_job");
+  const calls = mock.rpc.mock.calls.filter(
+    ([name]) => name === "create_course_run_job",
+  );
   expect(calls).toHaveLength(2);
-  expect(calls[0][1].p_payload).toMatchObject({ terms: "", status: "published" });
+  expect(calls[0][1].p_payload).toMatchObject({
+    terms: "",
+    status: "published",
+  });
   expect(calls[1][1].p_client_id).not.toBe(calls[0][1].p_client_id);
 });

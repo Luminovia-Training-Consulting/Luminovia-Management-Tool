@@ -230,6 +230,10 @@ Use fictional customers and documents locally. [Job lifecycle](GUIDE.md#section-
 
 In the internal portal, open **Klassen und Auftragskontakt / Classes and assignment contact** to create company classes, set their HTTPS meeting rooms and choose a standard contact. This is available with Premium off. Open an own job from the company portal and choose **Klasse bearbeiten / Edit class**. Management and administrators choose the company in the offer editor where a company move is permitted and then choose an available class. Saving the selection stores the current class room and company contact on the job. An explicit reapply copies revised defaults. Confirmed lecturers can see these details in the assigned job.
 
+The offer editor always shows the job's company. Management and administrators can move a draft or unaccepted open job attached to its own unpublished course run, including older offers. Company requests, existing assignments, financial records and dependent course activity keep their original organisation. Company accounts open their current organisation's jobs in the company portal.
+
+Open **Klassenfeedback / Class feedback** beside a company class to see stars and comments and add a class comment. Assigned lecturers can open the same section on their job and submit or revise a rating after their last confirmed session. If the same class is linked to the Premium course workspace, both entry points use the same rating.
+
 
 `/client` is the **Kundenportal / Client portal** for an associated client account and authorised platform management. It differs from `/clients`, the internal customer/contact directory. A client sees only its active associated organisations, their course requests and full client fees, confirmed assignment sums and assigned teachers. EUR and AUD remain separate. The request volume and confirmed assignment sum are agreement values, not proof of a bank payment.
 

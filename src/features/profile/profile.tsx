@@ -270,7 +270,9 @@ export function ProfilePage() {
               (expertise.data ?? []).map((entry) => entry.topic_id),
             )
               .sort(
-                (a, b) => Number(isTeachingSubject(b.id)) - Number(isTeachingSubject(a.id)),
+                (a, b) =>
+                  Number(isTeachingSubject(b.id)) -
+                  Number(isTeachingSubject(a.id)),
               )
               .map((topic) => {
                 const selected = (expertise.data ?? []).find(
@@ -288,7 +290,9 @@ export function ProfilePage() {
                     />
                     <span>
                       <strong>
-                        {i18n.language === "de" ? topic.label_de : topic.label_en}
+                        {i18n.language === "de"
+                          ? topic.label_de
+                          : topic.label_en}
                         {topic.archived_at && <> ({t("taxonomy:archived")})</>}
                       </strong>
                       {selected && <small>{t("selfDeclaredExpertise")}</small>}

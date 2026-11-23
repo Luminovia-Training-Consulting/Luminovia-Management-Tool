@@ -1,3 +1,11 @@
+# 23 November 2026 — Company ownership for existing offers and class feedback
+
+The offer editor now shows the assigned company even when it is fixed. An eligible legacy offer with a dedicated unpublished run can change company without a modern creation audit marker. Existing company requests, accepted assignments, financial terms and dependent course activity keep their original ownership. The company and dispatch selection still save atomically.
+
+Company and staff class directories now show scoped star ratings and comments and accept new class comments. Confirmed lecturers can rate their assigned class after the last session. Job and Premium course entry points reuse the same versioned rating. Current company membership and lecturer blocks apply to the API.
+
+Native PostgreSQL and isolated PostgREST verified the company move, access by the new company, HTTP 403 for foreign detail, workspace and class feedback calls, and successful notes for the owning company. Course evaluation regressions passed for all three editions. Chromium with a fictional API fixture verified the editor and comments at 390 and 1280 px. The gap after company import was 16 px on mobile and 24 px on desktop, with 12 px between the template actions. The full frontend suite passed 1,605 tests before integration of the concurrent parallel-offer update. The canonical signed-in browser run could not start while another isolated checkout held its QA lock.
+
 # 23 November 2026 — Multiple offers from one course run
 
 The course-backed offer editor labels its schedule, separates the planning link from the dates and lecturer positions, and lets management explicitly start another offer after a successful save. Additional terms may be omitted; empty terms remain editable and valid in a later amendment. Each new offer has its own request identity and retains the exact reviewed source sessions. Parallel cohorts with independent schedules and enrolment use separate course runs from the same template.

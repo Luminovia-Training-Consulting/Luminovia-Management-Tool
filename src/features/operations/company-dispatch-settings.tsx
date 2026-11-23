@@ -11,6 +11,7 @@ import {
   companyClassDirectorySchema,
 } from "./company-class-directory-api";
 import { contactsQuery } from "./data";
+import { CompanyClassFeedback } from "./company-class-feedback";
 
 const messages = {
   heading: ["Klassen und Auftragskontakt", "Classes and assignment contact"],
@@ -324,6 +325,7 @@ function CompanyDispatchEditor({
                   {word("editClass")}
                 </Button>
               </div>
+              <CompanyClassFeedback actor={actor} classId={entry.id} />
             </li>
           ))}
         </ul>

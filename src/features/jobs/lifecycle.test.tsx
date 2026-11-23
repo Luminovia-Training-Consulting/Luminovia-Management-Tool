@@ -262,11 +262,19 @@ it("captures the reviewed edit version across background refresh and language ch
   );
 });
 it("uses the selected active company only when the server allows reassignment", async () => {
-  const client = setup({
-    ...empty,
-    organisation_id: "original-company",
-    can_reassign_company: true,
-  });
+  const client = setup(
+    {
+      ...empty,
+      organisation_id: "original-company",
+      can_reassign_company: true,
+    },
+    (name) => ({
+      data:
+        name === "job_dispatch_options"
+          ? { classes: [], contact: null }
+          : "job",
+    }),
+  );
   client.setQueryData(
     ["operations", "organisations", "actor"],
     [
@@ -293,7 +301,9 @@ it("uses the selected active company only when the server allows reassignment", 
     within(company).queryByText("Fictional archived operator"),
   ).not.toBeInTheDocument();
   await user.selectOptions(company, "new-company");
-  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  const save = screen.getByRole("button", { name: "Auftrag speichern" });
+  await waitFor(() => expect(save).toBeEnabled());
+  await user.click(save);
   await waitFor(() =>
     expect(state.rpc).toHaveBeenCalledWith(
       "manage_job_offer",
@@ -505,6 +515,30 @@ it("submits exact per-day times and the edited required labels through the versi
       }),
     ),
   );
+});
+
+it("keeps the company visible in the editor when a source-bound offer cannot move", async () => {
+  const client = setup({
+    ...empty,
+    organisation_id: "source-company",
+    can_reassign_company: false,
+  });
+  client.setQueryData(
+    ["operations", "organisations", "actor"],
+    [{ id: "source-company", name: "Fictional current company" }],
+  );
+
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "Unangenommenen Auftrag bearbeiten",
+    }),
+  );
+  const field = screen.getByRole("textbox", {
+    name: "Unternehmen für diesen Auftrag",
+  });
+  expect(field).toHaveValue("Fictional current company");
+  expect(field).toHaveAttribute("readonly");
+  expect(field).toHaveAccessibleDescription(/verknüpfte Kursaktivität/);
 });
 
 it("switches the class and contact choices when staff select a different company", async () => {

@@ -47,6 +47,7 @@ import {
 } from "./enquiries-support-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
+import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import {
@@ -1439,6 +1440,7 @@ const nativePaths = {
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
   ...courseEvaluationPaths(false),
+  ...companyClassFeedbackPaths,
   ...learningAnalyticsPaths(false),
   ...timedExamPaths(false),
   ...notificationPaths,
@@ -2561,7 +2563,7 @@ const nativePaths = {
               organisation_id: {
                 ...uuid,
                 description:
-                  "Assign an active company to an unaccepted, standalone net offer only when its course has no dependent activity.",
+                  "Assign an active company to a draft or open unaccepted offer attached to its own unpublished course run, including legacy offers. Company requests, pricing records and dependent course activity prevent reassignment.",
               },
               class_id: nullableUuid,
               description: { ...text, maxLength: 12000 },
