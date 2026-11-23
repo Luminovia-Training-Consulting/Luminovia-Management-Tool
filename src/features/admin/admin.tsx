@@ -34,6 +34,7 @@ import {
   courseOfferCurrencySchema,
   courseOfferRateUnitSchema,
   courseRecordId,
+  courseTemplateFormSchema,
   type CourseRunOfferPayload,
 } from "../operations/course-building-block-schema";
 import "./course-i18n";
@@ -129,7 +130,11 @@ function JobForm({
     formState: { errors, isDirty },
   } = useForm<Values>({
     resolver: zodResolver(
-      courseRun ? schema : schema.extend({ terms: schema.shape.terms.min(1) }),
+      courseRun
+        ? schema.extend({
+            description: courseTemplateFormSchema.shape.description,
+          })
+        : schema.extend({ terms: schema.shape.terms.min(1) }),
     ),
     defaultValues: {
       title: courseRun?.title ?? "",
@@ -234,6 +239,12 @@ function JobForm({
       if (courseRun) {
         const payload: CourseRunOfferPayload = {
           source_revision: courseRun.source_revision,
+          ...(values.title !== courseRun.title.trim()
+            ? { title: values.title }
+            : {}),
+          ...(values.description !== courseRun.description
+            ? { description: values.description }
+            : {}),
           currency: values.currency,
           rate_unit: values.rate_unit,
           terms: values.terms,
@@ -332,7 +343,6 @@ function JobForm({
         <>
           <p>{courseText("sourceHelp")}</p>
           <h3>{courseRun.title}</h3>
-          <p className="preserve-text">{courseRun.description}</p>
           <p>
             {[
               courseRun.customer_name,
@@ -382,6 +392,30 @@ function JobForm({
         </>
       )}
       <fieldset className="contents" disabled={Boolean(courseRun && done)}>
+        {courseRun && (
+          <fieldset>
+            <legend>{courseText("listingHeading")}</legend>
+            <Field
+              id="job-title"
+              label={courseText("listingTitle")}
+              error={Boolean(errors.title)}
+            >
+              <input id="job-title" maxLength={200} {...register("title")} />
+            </Field>
+            <Field
+              id="job-description"
+              label={courseText("listingDescription")}
+              error={Boolean(errors.description)}
+            >
+              <textarea
+                id="job-description"
+                rows={5}
+                maxLength={12000}
+                {...register("description")}
+              />
+            </Field>
+          </fieldset>
+        )}
         {!courseRun && (
           <>
             <Field id="job-organisation" label={priceText("existingCustomer")}>
@@ -828,7 +862,14 @@ export function CourseOfferForm({ runId }: { runId: string }) {
   if (course.isPending) return <Loading />;
   if (course.isError) return <ErrorState retry={() => void course.refetch()} />;
   if (!course.data.organisation_id)
-    return <Notice kind="error">{courseText("customerRequired")}</Notice>;
+    return (
+      <>
+        <Notice kind="error">{courseText("customerRequired")}</Notice>
+        <Button asChild variant="secondary">
+          <Link to={`/courses?run=${runId}`}>{courseText("plan")}</Link>
+        </Button>
+      </>
+    );
   return <JobForm key={runId} courseRun={course.data} />;
 }
 

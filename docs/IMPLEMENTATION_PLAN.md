@@ -21,6 +21,8 @@
 
 ## Course editor layout
 
+- [x] Put course-backed listing creation beside the marketplace status and guide staff to the company selector when an active company is required. Edit listing title and description independently while preserving the course's company, sessions and source references.
+
 - [x] Combine reusable materials in one company-scoped template library. Distinguish course visibility from marketplace state and provide a direct save-to-offer path.
 - [x] Add direct library links to Courses and the company portal. Let internal company members maintain organisation-owned reusable templates and plan private runs from them. Publish the linked offer as an explicit management action.
 

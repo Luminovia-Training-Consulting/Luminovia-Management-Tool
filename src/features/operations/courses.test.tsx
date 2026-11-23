@@ -478,6 +478,42 @@ it("opens the company library directly and saves new and existing company templa
   });
 });
 
+it("opens the organisation field from the marketplace section and continues after saving", async () => {
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    organisations: [organisation],
+    runs: [run],
+  });
+  const card = within(await screen.findByRole("article"));
+  await userEvent.click(
+    card.getByRole("button", {
+      name: "Unternehmen für Ausschreibung zuordnen",
+    }),
+  );
+  const form = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
+  const company = form.getByLabelText("Organisation");
+  await waitFor(() => expect(company).toHaveFocus());
+  const continueToOffer = form.getByRole("button", {
+    name: "Speichern und zum Auftrag",
+  });
+  expect(continueToOffer).toBeDisabled();
+  await userEvent.selectOptions(company, companyId);
+  await userEvent.click(continueToOffer);
+  await waitFor(() =>
+    expect(screen.getByTestId("course-route")).toHaveTextContent(
+      `/admin?courseRun=${runId}`,
+    ),
+  );
+  expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+    p_id: runId,
+    p_payload: expect.objectContaining({ organisation_id: companyId }),
+  });
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "create_course_run_job",
+    expect.anything(),
+  );
+});
+
 it("links a saved offer draft from the course card without marking it as listed", async () => {
   renderCourses({ runs: [{ ...run, jobs: [{ ...job, status: "draft" }] }] });
   expect(

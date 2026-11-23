@@ -1,3 +1,9 @@
+# 23 November 2026 — Publish a course-backed marketplace listing
+
+The course's marketplace section now opens the offer form directly or guides staff through attaching an active company first. The offer form starts from the course title and description and saves edits to the listing while retaining the course text, company and exact session references. Assigning a company to an unlinked run with unchanged dates preserves its session IDs. Publication remains an explicit action under the current lecturer eligibility rules.
+
+Four isolated desktop and mobile Chromium journeys passed, including going from a course without a company to a customised published listing and a claim by an eligible lecturer. All 22 course/source PostgreSQL groups passed. The full frontend suite passed 1,630 tests, and 99 focused component and API tests passed after integrating the latest navigation changes.
+
 # 23 November 2026 — Retained data and recovery after the KVM 1 rebuild
 
 The rebuilt host's 320 migration entries matched the installed SQL bytes through `20261123064701`. The timer was enabled and active and its first check reported the installed revision as current. The read-only host check found no portal full-backup timer or retained portal backup on the rebuilt installation. Hostinger displayed a weekly VM backup. The first eligible live update and an isolated restore from a current encrypted KVM 1 backup remain pending.

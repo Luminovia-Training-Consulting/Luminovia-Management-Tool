@@ -647,7 +647,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 base = financial(preview.source_revision);
             for (const extra of [
-                {title: "Forged source"},
+                {template_id: randomUUID()},
                 {sessions: []},
                 {source_revision: null},
                 {gross_amount: "100"},
@@ -799,6 +799,139 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal1"),
                 /unaccepted offers/,
             );
+        },
+    );
+    await check(
+        "Assigning a company retains exact session IDs when the schedule has not changed",
+        async () => {
+            const draft = {
+                template_id: template,
+                organisation_id: null,
+                time_zone: "UTC",
+                delivery_type: "online",
+                venue: "",
+                published: false,
+                sessions: [
+                    {starts_at: "2060-02-01T10:00:00Z", ends_at: "2060-02-01T14:00:00Z"},
+                    {starts_at: "2060-02-02T10:00:00Z", ends_at: "2060-02-02T14:00:00Z"},
+                ],
+            };
+            const target = await rpc("admin", "save_course_run", [null, draft]);
+            const read = () => rpc("admin", "course_run_job_defaults", [target]);
+            const before = await read();
+            const assigned = {
+                ...draft,
+                organisation_id: org,
+                time_zone: "Europe/Berlin",
+                venue: "Fictional course room",
+                sessions: [
+                    {starts_at: "2060-02-02T11:00:00+01:00", ends_at: "2060-02-02T15:00:00+01:00"},
+                    {starts_at: "2060-02-01T11:00:00+01:00", ends_at: "2060-02-01T15:00:00+01:00"},
+                ],
+            };
+            await rpc("admin", "save_course_run", [target, assigned]);
+            const updated = await read();
+            assert.equal(updated.organisation_id, org);
+            assert.equal(updated.time_zone, assigned.time_zone);
+            assert.equal(updated.location, assigned.venue);
+            assert.deepEqual(updated.sessions, before.sessions);
+
+            await assert.rejects(rpc("admin", "save_course_run", [target, {
+                ...assigned,
+                venue: "Invalid save must roll back",
+                sessions: [assigned.sessions[0], assigned.sessions[0]],
+            }]), /Invalid or overlapping sessions/);
+            assert.deepEqual(await read(), updated);
+
+            await rpc("admin", "save_course_run", [target, {
+                ...assigned,
+                sessions: [
+                    {...assigned.sessions[0], ends_at: "2060-02-02T16:00:00+01:00"},
+                    assigned.sessions[1],
+                ],
+            }]);
+            const rescheduled = await read();
+            assert.notEqual(rescheduled.sessions[1].ends_at, updated.sessions[1].ends_at);
+            const oldSessionIds = new Set(updated.sessions.map(({source_course_session_id}) => source_course_session_id));
+            assert.ok(rescheduled.sessions.every(({source_course_session_id}) =>
+                !oldSessionIds.has(source_course_session_id)));
+        },
+    );
+    await check(
+        "Marketplace copy is independent of course content and editable only before a claim",
+        async () => {
+            const copyRun = await createRun(template, 81);
+            const preview = await rpc("admin", "course_run_job_defaults", [copyRun]);
+            const settings = {...financial(preview.source_revision), status: "draft"};
+            const create = (payload, key = randomUUID(), who = "admin") =>
+                rpc(who, "create_course_run_job", [copyRun, payload, null, key]);
+            for (const bad of [
+                {title: null},
+                {title: " \t "},
+                {title: "x".repeat(201)},
+                {description: false},
+                {description: "x".repeat(12001)},
+                {sessions: []},
+                {organisation_id: randomUUID()},
+            ]) {
+                await assert.rejects(create({...settings, ...bad}), /22023/);
+            }
+            const draftCopy = {...settings, title: "  Fictional marketplace listing  ", description: ""};
+            await assert.rejects(create(draftCopy, randomUUID(), "lecturer"), /42501/);
+            const key = randomUUID();
+            const listing = await create(draftCopy, key);
+            assert.equal(await create(draftCopy, key), listing);
+            await assert.rejects(create({...draftCopy, title: "Changed retry"}, key), /idempotency conflict/i);
+            const stored = async () =>
+                JSON.parse(await sql(
+                    `select jsonb_build_object('title',title,'description',description,'status',status,'version',lifecycle_version)
+                     from public.jobs where id=${q(listing)}`,
+                ));
+            const {title, description, status} = await stored();
+            assert.deepEqual(
+                {title, description, status},
+                {title: "Fictional marketplace listing", description: "", status: "draft"},
+            );
+            assert.deepEqual(
+                await rpc("admin", "course_run_job_defaults", [copyRun]),
+                preview,
+            );
+            const sourceRequest = JSON.parse(await sql(
+                `select payload from private.client_course_requests where job_id=${q(listing)}`,
+            ));
+            assert.equal(sourceRequest.title, preview.title);
+            assert.equal(sourceRequest.description, preview.description);
+            await assert.rejects(rpc("lecturer", "job_detail", [listing]), /42501/);
+
+            const edit = {title: "Fictional published training offer", description: "x".repeat(12000)};
+            const initialVersion = (await stored()).version;
+            const manage = (action, version, changes = {}, who = "admin") =>
+                rpc(who, "manage_job_offer", [listing, action, version, randomUUID(), changes]);
+            await assert.rejects(manage("edit", initialVersion, edit, "lecturer"), /42501/);
+            await manage("edit", initialVersion, edit);
+            await assert.rejects(manage("published", initialVersion), /40001/);
+            await manage("published", (await stored()).version);
+            const published = await rpc("lecturer", "job_detail", [listing]);
+            assert.equal(published.title, edit.title);
+            assert.equal(published.description, edit.description);
+            assert.equal(
+                await sql(
+                    `select count(*) from public.job_sessions js
+                     join public.course_sessions cs on cs.id=js.course_session_id
+                     where js.job_id=${q(listing)} and cs.course_run_id=${q(copyRun)}
+                       and cs.starts_at=js.starts_at and cs.ends_at=js.ends_at`,
+                ),
+                "2",
+            );
+            assert.equal(
+                (await rpc("lecturer", "claim_job", [listing, randomUUID(), published.terms_version])).status,
+                "confirmed",
+            );
+            await assert.rejects(
+                manage("edit", (await stored()).version, {title: "Attempt to rewrite accepted listing"}),
+                /Cancel confirmed work|accepted history/i,
+            );
+            assert.equal((await stored()).title, edit.title);
         },
     );
     await check(

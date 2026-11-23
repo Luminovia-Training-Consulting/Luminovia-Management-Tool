@@ -92,6 +92,18 @@ describe("course template and run-backed offer contracts", () => {
     expect(input("create_course_run_job", { ...base, p_payload: gross })).toBe(
       true,
     );
+    for (const [copy, allowed] of [
+      [{ title: "Fictional listing", description: "" }, true],
+      [{ title: "   " }, false],
+      [{ description: "x".repeat(12001) }, false],
+    ] as const) {
+      expect(
+        input("create_course_run_job", {
+          ...base,
+          p_payload: { ...gross, ...copy },
+        }),
+      ).toBe(allowed);
+    }
     for (const [capacity, allowed] of [
       [1, true],
       [2, true],

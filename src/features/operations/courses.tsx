@@ -321,7 +321,7 @@ function RunForm({
   organisations,
   initialTemplateId,
   companyOnly,
-  focusSchedule,
+  focusTarget,
   blocks,
   canPrepareOffer,
   onDone,
@@ -332,7 +332,7 @@ function RunForm({
   organisations: PlanningOrganisation[];
   initialTemplateId?: string;
   companyOnly: boolean;
-  focusSchedule: boolean;
+  focusTarget?: "schedule" | "organisation";
   blocks: BuildingBlock[];
   canPrepareOffer: boolean;
   onDone: (
@@ -388,6 +388,7 @@ function RunForm({
     getValues,
     handleSubmit,
     setValue,
+    setFocus,
     formState: { errors, isDirty },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
@@ -419,10 +420,13 @@ function RunForm({
   });
   const schedule = useRef<HTMLFieldSetElement>(null);
   useEffect(() => {
-    if (!focusSchedule) return;
-    const frame = requestAnimationFrame(() => schedule.current?.focus());
+    if (!focusTarget) return;
+    const frame = requestAnimationFrame(() => {
+      if (focusTarget === "schedule") schedule.current?.focus();
+      else setFocus("organisation_id");
+    });
     return () => cancelAnimationFrame(frame);
-  }, [focusSchedule]);
+  }, [focusTarget, setFocus]);
   const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
@@ -430,6 +434,9 @@ function RunForm({
   const selectedTemplateId = useWatch({ control, name: "template_id" });
   const zone = useWatch({ control, name: "time_zone" });
   const selectedOrganisationId = useWatch({ control, name: "organisation_id" });
+  const activeOrganisation = organisations.some(
+    (org) => org.id === selectedOrganisationId && !org.archived_at,
+  );
   const selectedTemplate = templates.find(
     (item) => item.id === selectedTemplateId,
   );
@@ -706,7 +713,7 @@ function RunForm({
 
   const submitRun = (offer = false) =>
     handleSubmit(async (values) => {
-      if (save.isPending || (offer && !values.organisation_id)) return;
+      if (save.isPending || (offer && !activeOrganisation)) return;
       const draft = !values.template_id
         ? await content.trigger(undefined, { shouldFocus: true })
         : true;
@@ -818,7 +825,15 @@ function RunForm({
           </Field>
         )}
         {canEditCompany && (
-          <Field id="run-org" label={t("organisation")}>
+          <Field
+            id="run-org"
+            label={t("organisation")}
+            hint={
+              focusTarget === "organisation"
+                ? t("offerOrganisationRequired")
+                : undefined
+            }
+          >
             <select id="run-org" {...register("organisation_id")}>
               {!selectedTemplate?.owner_organisation_id &&
                 (!linked || !original?.organisation_id) && (
@@ -836,12 +851,14 @@ function RunForm({
                   (org) =>
                     (!selectedTemplate?.owner_organisation_id ||
                       org.id === selectedTemplate.owner_organisation_id) &&
-                    (!linked ||
-                      !org.archived_at ||
-                      org.id === original?.organisation_id),
+                    (!org.archived_at || org.id === original?.organisation_id),
                 )
                 .map((org) => (
-                  <option value={org.id} key={org.id}>
+                  <option
+                    value={org.id}
+                    key={org.id}
+                    disabled={Boolean(org.archived_at)}
+                  >
                     {org.name}
                   </option>
                 ))}
@@ -1073,7 +1090,9 @@ function RunForm({
         )}
         <Button
           type="submit"
-          variant={original ? "default" : "secondary"}
+          variant={
+            original && focusTarget !== "organisation" ? "default" : "secondary"
+          }
           disabled={
             !online || save.isPending || (needsContent && !topics.isSuccess)
           }
@@ -1086,11 +1105,14 @@ function RunForm({
             ["draft", "published", "filled"].includes(status),
           ) &&
           canPrepareOffer &&
-          selectedOrganisationId && (
+          (activeOrganisation || focusTarget === "organisation") && (
             <Button
               type="button"
               disabled={
-                !online || save.isPending || (needsContent && !topics.isSuccess)
+                !online ||
+                !activeOrganisation ||
+                save.isPending ||
+                (needsContent && !topics.isSuccess)
               }
               onClick={submitRun(true)}
             >
@@ -1177,7 +1199,7 @@ export function CoursesPage() {
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
-  const [focusSchedule, setFocusSchedule] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
   const tab =
     (manage || companyViewer) && params.get("tab") === "templates"
@@ -1207,13 +1229,16 @@ export function CoursesPage() {
   const templateDetail = templates.data?.find(
     (template) => template.id === params.get("template"),
   );
-  const editRun = (run: CourseRun | null, schedule = false) => {
-    setFocusSchedule(schedule);
+  const editRun = (
+    run: CourseRun | null,
+    target?: "schedule" | "organisation",
+  ) => {
+    setFocusTarget(target);
     setRunEdit(run);
   };
   const reviewSchedule = (run: CourseRun) => {
     setParams({}, { replace: true });
-    editRun(run, true);
+    editRun(run, "schedule");
   };
   const planRun = (templateId: string) => {
     setInitialTemplateId(templateId);
@@ -1318,6 +1343,42 @@ export function CoursesPage() {
   );
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
+  const marketplaceAction = (run: CourseRun) => {
+    if (!manage || run.archived_at) return null;
+    if (!canPrepareOffer)
+      return <p className="muted">{t("offerPermissionRequired")}</p>;
+    const hasCompany = orgs.data.some(
+      (org) => org.id === run.organisation_id && !org.archived_at,
+    );
+    if (hasCompany) return <CourseRunOfferLink runId={run.id} />;
+    if (!orgs.data.some((org) => !org.archived_at)) {
+      return (
+        <>
+          <p className="muted">{t("offerNeedsActiveOrganisation")}</p>
+          {permissions.data.includes("organisations.manage") && (
+            <Button asChild variant="secondary">
+              <Link to="/clients">{t("translation:companies")}</Link>
+            </Button>
+          )}
+        </>
+      );
+    }
+    return (
+      <div className="operations-actions">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!online}
+          onClick={() => {
+            if (detail) setParams({}, { replace: true });
+            editRun(run, "organisation");
+          }}
+        >
+          {t("assignOrganisationForOffer")}
+        </Button>
+      </div>
+    );
+  };
   const templateBlock = blocks.data?.find(
     (block) => block.id === templateDetail?.building_block_id,
   );
@@ -1639,6 +1700,7 @@ export function CoursesPage() {
                           )}
                         </div>
                       ))}
+                    {marketplaceAction(run)}
                   </div>
                 )}
                 <p className="muted">
@@ -1677,11 +1739,6 @@ export function CoursesPage() {
                 </Button>
                 {manage && (
                   <div className="operations-actions">
-                    {canPrepareOffer &&
-                      !run.archived_at &&
-                      run.organisation_id && (
-                        <CourseRunOfferLink runId={run.id} />
-                      )}
                     <Button
                       variant="ghost"
                       disabled={!online}
@@ -1860,7 +1917,7 @@ export function CoursesPage() {
           organisations={planningOrganisations}
           initialTemplateId={initialTemplateId}
           companyOnly={!manage}
-          focusSchedule={focusSchedule}
+          focusTarget={focusTarget}
           blocks={blocks.data ?? []}
           canPrepareOffer={canPrepareOffer}
           onBusy={setRunSaving}
@@ -2038,11 +2095,7 @@ export function CoursesPage() {
                 }
               />
             </div>
-            {canPrepareOffer &&
-              !detail.archived_at &&
-              detail.organisation_id && (
-                <CourseRunOfferLink runId={detail.id} />
-              )}
+            {marketplaceAction(detail)}
             {!detail.archived_at && (
               <div className="page-actions">
                 {workspaceEntitlement.isPending ? (

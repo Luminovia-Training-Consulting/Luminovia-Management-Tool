@@ -88,6 +88,15 @@ export const courseOfferRateUnitSchema = z.enum([
 const amount = z.number().min(0.01).max(9999999999.99).multipleOf(0.01);
 const offerFields = {
   source_revision: sourceRevision,
+  title: templateFields.title
+    .regex(/\S/)
+    .optional()
+    .describe("Marketplace title. Omit to use the course template title."),
+  description: templateFields.description
+    .optional()
+    .describe(
+      "Marketplace description. Omit to use the course template description. An empty string clears the listing description.",
+    ),
   capacity: z
     .int()
     .min(1)

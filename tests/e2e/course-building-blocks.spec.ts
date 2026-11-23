@@ -148,7 +148,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await expect(
         runDialog.getByLabel("Kursvorlage", {exact: true}),
     ).toHaveValue(block.default_template_id);
-    await runDialog.getByLabel("Organisation", {exact: true}).selectOption(org);
+    await expect(runDialog.getByLabel("Organisation", {exact: true})).toHaveValue("");
     await runDialog
         .getByLabel("Erster Unterrichtstag", {exact: true})
         .fill("2037-07-06");
@@ -157,9 +157,10 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .click();
     await expect(runDialog.getByLabel(/^Beginn \d+$/)).toHaveCount(10);
     await expect(runDialog.getByLabel(/^Ende \d+$/)).toHaveCount(10);
+    const venue = `Fictional Course online classroom ${tag}`;
     await runDialog
         .getByLabel("Ort / Zugangslink", {exact: true})
-        .fill("Fictional Course online classroom");
+        .fill(venue);
     await runDialog
         .getByRole("button", {name: "Entwurf speichern", exact: true})
         .click();
@@ -167,22 +168,29 @@ test("Course source template plans ten real sessions and one linked net-only tea
     const run = await checked(
         service
             .from("course_runs")
-            .select("id,template_id,course_sessions(*)")
-            .eq("organisation_id", org)
+            .select("id,template_id,organisation_id,course_sessions(*)")
+            .eq("venue", venue)
             .single(),
     );
     expect(run.template_id).toBe(block.default_template_id);
     expect(run.course_sessions).toHaveLength(10);
-    await page.goto(`/courses?run=${run.id}`);
-    const courseDialog = page.getByRole("dialog", {name: /LPC3/});
-    await courseDialog
-        .getByRole("link", {name: "Auftrag für die Stellenbörse erstellen", exact: true})
-        .click();
+    expect(run.organisation_id).toBeNull();
+    const courseCard = page.locator("article").filter({
+        has: page.getByRole("heading", {name: /LPC3/}),
+    });
+    await courseCard.getByRole("button", {name: "Unternehmen für Ausschreibung zuordnen", exact: true}).click();
+    const companyDialog = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
+    await expect(companyDialog.getByLabel("Organisation", {exact: true})).toBeFocused();
+    await companyDialog.getByLabel("Organisation", {exact: true}).selectOption(org);
+    await companyDialog.getByRole("button", {name: "Speichern und zum Auftrag", exact: true}).click();
     await expect(page).toHaveURL(new RegExp(`/admin\\?courseRun=${run.id}`));
     await expect(
         page.getByRole("heading", {name: "Auftrag aus diesem Kurs", exact: true}),
     ).toBeVisible();
-    await expect(page.getByLabel("Titel", {exact: true})).toHaveCount(0);
+    const listingTitle = `Fictional Linux listing ${tag}`;
+    const listingDescription = `Fictional edited description ${tag}`;
+    await page.getByLabel("Titel der Stellenanzeige", {exact: true}).fill(listingTitle);
+    await page.getByLabel("Beschreibung der Stellenanzeige", {exact: true}).fill(listingDescription);
     await expect(page.getByLabel(/^Beginn \d+$/)).toHaveCount(0);
     await page
         .getByLabel("Voller Auftragspreis je Einheit", {exact: true})
@@ -205,11 +213,12 @@ test("Course source template plans ten real sessions and one linked net-only tea
     const created = await checked(
         service
             .from("jobs")
-            .select("id,course_run_id,total_amount,job_sessions(*)")
+            .select("id,course_run_id,title,description,status,total_amount,job_sessions(*)")
             .eq("course_run_id", run.id)
             .single(),
     );
     expect(created.course_run_id).toBe(run.id);
+    expect(created).toMatchObject({title: listingTitle, description: listingDescription, status: "published"});
     expect(created.total_amount).toBe(0);
     expect(created.job_sessions).toHaveLength(10);
     expect(
@@ -234,6 +243,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         const lecturerPage = await context.newPage();
         await login(lecturerPage, teacher.email);
         await lecturerPage.goto(`/jobs/${created.id}`);
+        await expect(lecturerPage.getByRole("heading", {name: listingTitle, exact: true})).toBeVisible();
         await expect(lecturerPage.locator(".claim-panel .amount")).toHaveText(
             /310,00/,
         );

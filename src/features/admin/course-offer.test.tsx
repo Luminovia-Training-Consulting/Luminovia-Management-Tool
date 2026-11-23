@@ -130,7 +130,14 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
   setup();
   await screen.findByRole("heading", { name: "Auftrag aus diesem Kurs" });
   expect(screen.getByRole("heading", { name: source.title })).toBeVisible();
-  expect(screen.queryByLabelText("Titel")).not.toBeInTheDocument();
+  const title = screen.getByLabelText("Titel der Stellenanzeige");
+  const description = screen.getByLabelText("Beschreibung der Stellenanzeige");
+  expect(title).toHaveValue(source.title);
+  expect(description).toHaveValue(source.description);
+  await user.clear(title);
+  await user.type(title, "Fictional listing title");
+  await user.clear(description);
+  await user.type(description, "Fictional listing copy");
   const positions = screen.getByRole("spinbutton", {
     name: "Dozierendenplätze",
   });
@@ -179,6 +186,8 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
     p_course_run_id: source.course_run_id,
     p_payload: {
       source_revision: source.source_revision,
+      title: "Fictional listing title",
+      description: "Fictional listing copy",
       status: "draft",
       gross_amount: 1000,
       gross_total_amount: 1000,

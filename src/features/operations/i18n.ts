@@ -730,6 +730,22 @@ const pairs: Record<string, [string, string]> = {
     "Save and open offer form",
   ],
   marketplaceStatus: ["Stellenbörse", "Marketplace"],
+  offerPermissionRequired: [
+    "Für das Anlegen und Veröffentlichen von Ausschreibungen brauchst du die Berechtigung zur Auftragsverwaltung.",
+    "Creating and publishing offers requires permission to manage teaching offers.",
+  ],
+  assignOrganisationForOffer: [
+    "Unternehmen für Ausschreibung zuordnen",
+    "Assign a company for the offer",
+  ],
+  offerNeedsActiveOrganisation: [
+    "Für eine Ausschreibung braucht die Durchführung ein aktives Unternehmen. Lege ein Unternehmen an und ordne es dem Kurs zu.",
+    "A course run needs an active company for its offer. Add a company and assign it to the course.",
+  ],
+  offerOrganisationRequired: [
+    "Wähle ein aktives Unternehmen und klicke auf „Speichern und zum Auftrag“. Dort bearbeitest du die Anzeige vor der Veröffentlichung.",
+    "Select an active company and choose “Save and open offer form”. You can edit the listing there before publishing.",
+  ],
   marketplaceMissing: ["Keine Ausschreibung angelegt", "No offer created"],
   marketplaceExpired: [
     "Übernahmefrist abgelaufen",

@@ -7,7 +7,10 @@ import i18n from "../../lib/i18n";
 const en = {
   fromCourse: "Teaching offer from this course",
   sourceHelp:
-    "Content, company and sessions come from the selected course. Set the fee here. For a separate group with its own schedule, duplicate the course run in course planning.",
+    "The course supplies the company and sessions. Edit the listing text and fee below. Once published, the offer appears in the marketplace for eligible lecturers.",
+  listingHeading: "Marketplace listing",
+  listingTitle: "Listing title",
+  listingDescription: "Listing description",
   plan: "Open course planning",
   openJob: "Open created teaching offer",
   publishOffer: "Publish in the marketplace",
@@ -26,7 +29,10 @@ const en = {
 const de: typeof en = {
   fromCourse: "Auftrag aus diesem Kurs",
   sourceHelp:
-    "Inhalte, Unternehmen und Termine stammen aus dem gewählten Kurs. Trage hier das Honorar ein. Für eine separate Gruppe mit eigenem Zeitplan kannst du die Durchführung in der Kursplanung duplizieren.",
+    "Unternehmen und Termine stammen aus dem gewählten Kurs. Bearbeite hier Anzeigentext und Honorar. Nach der Veröffentlichung sehen berechtigte Dozierende den Auftrag in der Stellenbörse.",
+  listingHeading: "Stellenanzeige",
+  listingTitle: "Titel der Stellenanzeige",
+  listingDescription: "Beschreibung der Stellenanzeige",
   plan: "Kursplanung öffnen",
   openJob: "Erstellten Auftrag öffnen",
   publishOffer: "In der Stellenbörse veröffentlichen",
