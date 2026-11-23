@@ -1,11 +1,11 @@
 # Poll for an immutable current-main release. The updater decides eligibility from package, migration, backup, state and maintenance checks.
 [Unit]
-Description=Check for verified CMS updates every five minutes
+Description=Check for verified CMS updates every hour
 
 [Timer]
-OnBootSec=3min
-OnUnitActiveSec=5min
-RandomizedDelaySec=20s
+OnCalendar=hourly
+AccuracySec=1min
+Persistent=true
 Unit=luminovia-update.service
 
 [Install]

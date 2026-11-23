@@ -381,7 +381,7 @@ After a push to `main`, the `Automatic CMS release` workflow checks that the pus
 
 The publishing workflow creates a draft, uploads both `cms-release.tar.gz` and `cms-release.json`, and only then publishes the immutable prerelease tagged `cms-dev-<full source SHA>`. Repository immutable releases are enabled. The VPS downloads public artifacts directly; it does not need a GitHub token or a fresh clone.
 
-`luminovia-update.timer` checks approximately every five minutes, with a short random delay. The updater accepts an immutable release only when its tag and manifest match the exact current `main` SHA; it does not consult CI status. Every archive member is checked against its path, length and SHA-256; links and traversal paths are rejected. The public endpoint/key hash must
+`luminovia-update.timer` is configured to check at the start of each hour, with a one-minute scheduling window. It catches up after downtime. A push starts the package build immediately and KVM 1 installs the latest eligible package at the next scheduled check. The updater accepts an immutable release only when its tag and manifest match the exact current `main` SHA; it does not consult CI status. Every archive member is checked against its path, length and SHA-256; links and traversal paths are rejected. The public endpoint/key hash must
 match the existing instance configuration.
 
 Application updates include the self-hosted Supabase functions and compatible new application migrations. Existing migration sources must match exactly. The updater never resets or seeds the database, changes existing passwords/keys, or reapplies development quotas. Destructive/top-level data-rewrite SQL, changed historical migrations, unreviewed runtime changes, PostgreSQL major upgrades and unexpected collation changes stop for operator review. Container images remain pinned. The separate
@@ -431,6 +431,7 @@ sudo systemd-analyze verify "$portal_updates/luminovia-update.service" "$portal_
 sudo install -m 0644 "$portal_updates/luminovia-update.service" "$portal_updates/luminovia-update.timer" /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now luminovia-update.timer
+sudo systemctl restart luminovia-update.timer
 sudo systemctl list-timers luminovia-update.timer --no-pager
 ```
 
@@ -702,7 +703,7 @@ to be payroll, tax/accounting software or a bank integration.
 
 # Explicit reviewed migration plans
 
-The ordinary five-minute updater keeps its strict SQL classifier. A plan file is never discovered automatically. An operator may explicitly approve one complete, immutable current-main release with `--once --package … --manifest … --reviewed-migration-plan …` after reviewing its exact pending SQL. This route uses the existing stopped-writer backup, physical checkpoint, runtime installation, transactional migration, private-health and rollback lifecycle. It does not run manual SQL beside that
+The scheduled updater keeps its strict SQL classifier. A plan file is never discovered automatically. An operator may explicitly approve one complete, immutable current-main release with `--once --package … --manifest … --reviewed-migration-plan …` after reviewing its exact pending SQL. This route uses the existing stopped-writer backup, physical checkpoint, runtime installation, transactional migration, private-health and rollback lifecycle. It does not run manual SQL beside that
 lifecycle.
 
 This document describes source behavior and local test evidence. It does not assert that this controller, any plan, a migration or notification worker has been installed on a VPS. Normal deployment authorisation and current coordination holds still apply.

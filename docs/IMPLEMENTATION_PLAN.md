@@ -14,6 +14,8 @@
 - [x] Include both systemd units in the CMS release archive and document re-enabling them after a clean install.
 - [x] Rehearse reviewed and automatic migrations, failed transactions and retained records on an isolated Compose stack. Verify physical rollback with a stopped PostgreSQL cluster and encrypted recovery under a restrictive umask.
 - [x] Publish an immutable package for every exact-current `main` push after the release typecheck/build, without waiting for CI; keep package integrity, exact SHA, migration, backup, health and rollback gates in the VPS updater.
+- [x] Package an hourly systemd update check with catch-up following server downtime.
+- [ ] Install and verify the hourly timer on KVM 1. The account currently connected to Hostinger does not list the VPS.
 - [ ] Configure encrypted full backups for the rebuilt KVM 1 with a recovery key held separately from the server. Restore a current backup on an isolated target before approving a reviewed live migration.
 - [ ] Observe the next eligible immutable release install on KVM 1. Record its commit, applied migration versions and live health checks.
 

@@ -1,3 +1,7 @@
+# 23 November 2026 — Hourly KVM 1 package checks
+
+The packaged timer checks once per hour and catches up after downtime. Pushes to main continue to start the immutable package build immediately. The hourly unit still needs installation on KVM 1. The connected Hostinger account did not list the VM, and SSH rejected the available key. The previous live verification recorded e45c01c2, 327 migrations and an active update timer.
+
 # 23 November 2026 — One active marketplace draft per course run
 
 The course card and course details open the existing draft and offer publication of that same record. Saving a draft hides the create-another action until publication. A stale offer form that receives the native conflict can open the existing draft directly. The course-run lock handles concurrent RPC callers, the unique partial index guards all draft writes, and identical request retries still return their saved job ID.
