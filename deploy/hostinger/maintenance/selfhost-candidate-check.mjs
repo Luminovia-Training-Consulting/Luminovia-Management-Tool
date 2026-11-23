@@ -1133,8 +1133,32 @@ export async function checkCandidate({
             env: childEnvironment,
             timeout: 240000,
         });
+        // Migration history does not guarantee that a restored baseline retained
+        // the canonical public curriculum rows. Restore them idempotently in this
+        // owned disposable candidate only, after retained customer data was proven.
+        const catalogueSql = (
+            await run(
+                process.execPath,
+                [join(scratch, "scripts/course-catalogue.mjs"), "--sql"],
+                {env: childEnvironment, timeout: 30000},
+            )
+        ).trim();
+        assert.match(
+            catalogueSql,
+            /^-- BEGIN GENERATED COURSE CATALOGUE[\s\S]*-- END GENERATED COURSE CATALOGUE$/,
+            "Only the reviewed canonical catalogue SQL may be restored.",
+        );
+        await run(
+            "docker",
+            [
+                "exec", "-i", "supabase_db_" + project,
+                "psql", "-U", "postgres", "-d", "postgres", "-X", "-q",
+                "-v", "ON_ERROR_STOP=1",
+            ],
+            {env: childEnvironment, input: catalogueSql, timeout: 30000},
+        );
         console.log(
-            "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
+            "Candidate: TLS/public boundaries, retained-data proof and canonical curriculum fixture passed; running actual API suites.",
         );
         adaptStagedCandidateApiFixture(scratch, {
             project,

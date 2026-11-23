@@ -227,7 +227,7 @@ export async function runOperationalForwardChecks({
                 );
                 await check(
                     mode +
-                    ": resolver, fallback and reconciliation helpers are owner-only and lint clean",
+                    ": resolver language, fallback and reconciliation helpers are owner-only and PL/pgSQL implementations lint clean",
                     async () => {
                         const functions = [
                             "private.notification_target(text,uuid)",
@@ -236,12 +236,24 @@ export async function runOperationalForwardChecks({
                         ];
                         await sql("create extension plpgsql_check with schema extensions");
                         for (const name of functions) {
-                            const diagnostics = JSON.parse(
-                                await sql(
-                                    `select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from extensions.plpgsql_check_function_tb(${q(name)}::regprocedure)t`,
-                                ),
+                            const language = await sql(
+                                `select l.lanname from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=${q(name)}::regprocedure`,
                             );
-                            assert.deepEqual(diagnostics, [], name);
+                            if (name === "private.notification_target(text,uuid)") {
+                                // A later calendar-invitation migration intentionally
+                                // replaces this API-compatible resolver with SQL. The
+                                // PL/pgSQL checker rejects SQL functions by definition;
+                                // runtime resolution above and SQL compilation cover it.
+                                assert.equal(language, "sql", name);
+                            } else {
+                                assert.equal(language, "plpgsql", name);
+                                const diagnostics = JSON.parse(
+                                    await sql(
+                                        `select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from extensions.plpgsql_check_function_tb(${q(name)}::regprocedure)t`,
+                                    ),
+                                );
+                                assert.deepEqual(diagnostics, [], name);
+                            }
                         }
                         for (const name of functions)
                             for (const role of ["anon", "authenticated", "service_role"])
