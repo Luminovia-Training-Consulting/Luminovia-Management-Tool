@@ -1,3 +1,7 @@
+# 23 November 2026 — Combined Portal and Academy changes
+
+Integrated the Academy support and browser delivery work, the published offer editor and the calendar, spacing and company key changes with the current Portal HTTP aliases. Regenerated the API reference from the combined migrations. The Academy browser verifier recognises the previously signed 1.36 contracts with both successive HTTP alias sets.
+
 # 23 November 2026 — Portal spacing, calendar selection and company API keys
 
 Added responsive spacing between administration cards, between company controls, around catalogue actions and between course-readiness buttons. The local signed-in Chromium check inspected the 14 primary administration navigation destinations at 1280 and 390 px. At the reported points it measured 16 px around the materials action, 24 px between administration cards and between adjacent company controls, and 12 px between the mobile readiness actions. The reported areas were checked in light and dark where applicable.
