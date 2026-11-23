@@ -1,3 +1,9 @@
+# 23 November 2026 — Edit linked course planning from Courses
+
+The course editor now uses the linked offer's current capabilities and reviewed version. For an eligible sole offer, future sessions can be edited directly from Courses. Eligible drafts also support changing the company, active template, IANA time zone and delivery mode. Shared changes use the existing job lifecycle transaction. A time-zone change preserves exact scheduled instants. Accepted and otherwise protected planning is shown as readable details, with a direct, preselected amendment form when the assignment allows a schedule proposal.
+
+The focused frontend suites passed 67 tests. Desktop and mobile Chromium with fictional API responses verified the protected and editable forms, zone conversion, spacing and direct amendment navigation. The migrated PostgreSQL tests verified changes to course and offer together, retained session IDs, stale revision and role denial, and rejection of direct edits to accepted work. The internal build stayed within all size budgets. Complete hosted acceptance remains separate.
+
 # 23 November 2026 — HTTP method coverage in Swagger and OpenAPI
 
 Swagger and the interactive explorer now show method filters with counts across all matching pages. The internal OpenAPI 1.15.0 adds GET for class feedback, participant profiles, course submissions and other read-only RPCs. PostgreSQL checks the active documented read surface in all three editions. PATCH updates notification state and selected existing records. Each endpoint keeps its current role, organisation and version checks. Existing native POST contracts and signed Academy 1.38.0 developer files remain compatible with the current Academy 1.39.0 release format.

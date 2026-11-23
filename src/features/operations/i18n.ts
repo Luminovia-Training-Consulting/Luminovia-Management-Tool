@@ -658,12 +658,30 @@ const pairs: Record<string, [string, string]> = {
   ],
   activeRunOrder: ["Aktiver Auftrag", "Active assignment"],
   linkedRunConflict: [
-    "Diese Änderung betrifft einen verknüpften Auftrag. Lade die Durchführung neu und öffne für Terminänderungen den Auftrag.",
-    "This change affects a linked assignment. Reload the course run and open the assignment to change its schedule.",
+    "Der verknüpfte Auftrag hat sich geändert oder schützt diese Angaben. Öffne die Kursbearbeitung erneut, um den aktuellen Stand zu laden.",
+    "The linked assignment changed or protects these details. Reopen the course editor to load the current version.",
   ],
   linkedRunHelp: [
-    "Du kannst Ort oder Zugangslink und die Sichtbarkeit der Durchführung ändern. Für Änderungen an gebundenen Terminen öffne den verknüpften Auftrag. Die Kursvorlage bleibt unverändert.",
-    "You can change the run’s venue or access link and catalogue visibility. To change linked sessions, open the associated assignment. The course template stays intact.",
+    "Verknüpfte Aufträge verwenden diese Kursdaten. Hier kannst du die freigegebenen Angaben ändern.",
+    "Linked assignments use these course details. You can edit the available fields here.",
+  ],
+  linkedRunEditableHelp: [
+    "Änderungen an den Terminen gelten auch für den verknüpften Auftrag.",
+    "Changes to sessions also update the linked assignment.",
+  ],
+  openLinkedJob: ["Auftrag öffnen: {{title}}", "Open assignment: {{title}}"],
+  proposeLinkedSchedule: [
+    "Terminänderung vorschlagen",
+    "Propose a schedule change",
+  ],
+  proposeLinkedScheduleFor: [
+    "Terminänderung für {{name}} vorschlagen",
+    "Propose a schedule change for {{name}}",
+  ],
+  courseRecordUnavailable: ["Eintrag nicht verfügbar", "Record unavailable"],
+  courseZoneHelp: [
+    "Beim Wechsel der Zeitzone werden die vorhandenen Termine umgerechnet. Der Zeitpunkt bleibt gleich.",
+    "Changing the time zone updates how existing sessions are shown. The scheduled instants stay the same.",
   ],
   runVisibility: ["Sichtbarkeit der Durchführung", "Course run visibility"],
   hideFromCourseCatalogue: [

@@ -43,6 +43,7 @@ export interface JobLifecycle {
   can_manage: boolean;
   can_edit: boolean;
   can_edit_schedule?: boolean;
+  can_edit_course_details?: boolean;
   can_duplicate: boolean;
   organisation_id?: string | null;
   can_reassign_company?: boolean;

@@ -19,10 +19,13 @@ import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import type { Topic } from "../../lib/types";
 import { CoursesPage } from "./courses";
+import type { ChangeCandidate } from "../changes/api";
+import type { JobLifecycle } from "../jobs/lifecycle-api";
 import {
   runsQuery,
   type BuildingBlock,
   type CourseRun,
+  type Organisation,
   type Template,
 } from "./data";
 
@@ -30,6 +33,27 @@ import {
 const actor = "fictional-course-manager";
 const templateId = "c1000000-0000-4000-8000-000000000001";
 const runId = "c2000000-0000-4000-8000-000000000001";
+const jobId = "c2100000-0000-4000-8000-000000000001";
+const claimId = "c2200000-0000-4000-8000-000000000001";
+const companyId = "c2300000-0000-4000-8000-000000000001";
+const job = { id: jobId, title: "Fictional active order", status: "published" };
+const organisation: Organisation = {
+  id: companyId,
+  name: "Fictional company",
+  country: null,
+  time_zone: "Europe/Berlin",
+  industry: "",
+  city: "",
+  tags: [],
+  archived_at: null,
+};
+const protectedLifecycle: JobLifecycle = {
+  version: 4,
+  can_manage: true,
+  can_edit: false,
+  can_duplicate: true,
+  claims: [],
+};
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   accountRequest: vi.fn(),
@@ -82,6 +106,9 @@ function renderCourses({
   runs = [] as CourseRun[],
   blocks = [] as BuildingBlock[],
   topics = [] as Topic[],
+  organisations = [] as Organisation[],
+  lifecycle = protectedLifecycle,
+  changeCandidates = [] as ChangeCandidate[],
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -93,19 +120,23 @@ function renderCourses({
   state.tables = {
     course_templates: templates,
     course_runs: runs,
-    organisations: [],
+    organisations,
     building_blocks: blocks,
     topics,
   };
   for (const [name, value] of [
     ["templates", templates],
     ["runs", runs],
-    ["organisations", []],
+    ["organisations", organisations],
     ["building-blocks", blocks],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
   client.setQueryData(["permissions", actor], permissions);
   client.setQueryData(["topics"], topics);
+  for (const run of runs)
+    for (const job of run.jobs ?? [])
+      client.setQueryData(["job-lifecycle", actor, job.id], lifecycle);
+  client.setQueryData(["changeable-assignments", actor], changeCandidates);
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -149,7 +180,15 @@ beforeEach(async () => {
   state.online = true;
   vi.spyOn(navigator, "onLine", "get").mockImplementation(() => state.online);
   state.rpc.mockReset();
-  state.rpc.mockResolvedValue({ data: runId, error: null });
+  state.rpc.mockImplementation((name: string) => {
+    if (name === "job_lifecycle")
+      return {
+        abortSignal: async () => ({ data: protectedLifecycle, error: null }),
+      };
+    if (name === "changeable_assignments")
+      return { abortSignal: async () => ({ data: [], error: null }) };
+    return Promise.resolve({ data: runId, error: null });
+  });
   state.accountRequest.mockReset().mockImplementation(async (path: string) => {
     if (path === "deletions/access") return { can_admin: false, kinds: [] };
     if (path === "deletions/operations") return { items: [] };
@@ -508,28 +547,30 @@ describe("course form failure and confirmation boundaries", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("keeps an invalid IANA zone visible and marks its input without making an RPC", async () => {
+  it("preserves already entered instants when the draft zone is changed", async () => {
     renderCourses();
-    const dialog = await newRun();
-    interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
-    fireEvent.change(within(dialog).getByLabelText("Zeitzone"), {
-      target: { value: "Fictional/Unknown" },
-    });
+    const editor = await newRun();
+    const dialog = within(editor);
+    interval(editor, "2030-04-01T09:00", "2030-04-01T10:00");
+    await userEvent.selectOptions(dialog.getByLabelText("Zeitzone"), "UTC");
+    expect(dialog.getByLabelText("Beginn 1")).toHaveValue("2030-04-01T07:00");
+    expect(dialog.getByLabelText("Ende 1")).toHaveValue("2030-04-01T08:00");
     await userEvent.click(
-      within(dialog).getByRole("button", {
-        name: /^(Speichern|Entwurf speichern)$/,
+      dialog.getByRole("button", { name: "Entwurf speichern" }),
+    );
+    await screen.findByText("Gespeichert.", { exact: true });
+    expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+      p_id: null,
+      p_payload: expect.objectContaining({
+        time_zone: "UTC",
+        sessions: [
+          {
+            starts_at: "2030-04-01T07:00:00.000Z",
+            ends_at: "2030-04-01T08:00:00.000Z",
+          },
+        ],
       }),
-    );
-    await waitFor(() =>
-      expect(within(dialog).getByLabelText("Zeitzone")).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      ),
-    );
-    expect(within(dialog).getByLabelText("Zeitzone")).toHaveValue(
-      "Fictional/Unknown",
-    );
-    expect(state.rpc).not.toHaveBeenCalled();
+    });
   });
 
   it("marks the missing session endpoint without falsely confirming a saved course", async () => {
@@ -556,7 +597,10 @@ describe("course form failure and confirmation boundaries", () => {
   });
 
   it.each([
-    ["course_locked", "Diese Änderung betrifft einen verknüpften Auftrag."],
+    [
+      "course_locked",
+      "Der verknüpfte Auftrag hat sich geändert oder schützt diese Angaben.",
+    ],
     [
       "courses.manage permission required",
       "Die Änderung konnte nicht gespeichert werden.",
@@ -603,7 +647,18 @@ describe("course form failure and confirmation boundaries", () => {
       ).not.toBeInTheDocument();
       expect(state.from).not.toHaveBeenCalled();
       const rejected = structuredClone(state.rpc.mock.calls[0]);
-      state.rpc.mockResolvedValue({ data: runId, error: null });
+      state.rpc.mockImplementation((name: string) => {
+        if (name === "job_lifecycle")
+          return {
+            abortSignal: async () => ({
+              data: protectedLifecycle,
+              error: null,
+            }),
+          };
+        if (name === "changeable_assignments")
+          return { abortSignal: async () => ({ data: [], error: null }) };
+        return Promise.resolve({ data: runId, error: null });
+      });
       await userEvent.click(
         within(dialog).getByRole("button", {
           name: /^(Speichern|Entwurf speichern)$/,
@@ -744,11 +799,6 @@ describe("course form failure and confirmation boundaries", () => {
   });
 
   it("shows an active order on an unpublished run and saves the run venue without changing its source sessions", async () => {
-    const job = {
-      id: "fictional-job",
-      title: "Fictional active order",
-      status: "published",
-    };
     renderCourses({ runs: [{ ...run, jobs: [job] }] });
     expect(await screen.findByText("Aktiver Auftrag")).toBeVisible();
     expect(
@@ -756,11 +806,11 @@ describe("course form failure and confirmation boundaries", () => {
     ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
-    expect(dialog.getByRole("link", { name: job.title })).toHaveAttribute(
-      "href",
-      "/jobs/fictional-job",
-    );
-    expect(dialog.getByLabelText("Beginn 1")).toHaveAttribute("readonly");
+    expect(
+      dialog.getByRole("link", { name: "Auftrag öffnen: " + job.title }),
+    ).toHaveAttribute("href", "/jobs/" + job.id);
+    expect(dialog.queryByLabelText("Beginn 1")).not.toBeInTheDocument();
+    expect(dialog.queryByRole("combobox")).not.toBeInTheDocument();
     fireEvent.change(dialog.getByLabelText("Ort / Zugangslink"), {
       target: { value: "Updated course venue" },
     });
@@ -777,6 +827,103 @@ describe("course form failure and confirmation boundaries", () => {
             starts_at: run.course_sessions[0].starts_at,
           }),
         ],
+      }),
+    });
+  });
+
+  it("offers the authorized amendment for a confirmed assignment and keeps its schedule out of direct edit controls", async () => {
+    const candidate: ChangeCandidate = {
+      claim_id: claimId,
+      title: job.title,
+      lecturer_name: "Fictional lecturer",
+      time_zone: run.time_zone,
+      can_price: false,
+      commissioned: false,
+      schedule_editable: true,
+      current: {
+        claim_id: claimId,
+        job_id: job.id,
+        course_run_id: run.id,
+        lecturer_id: "c2400000-0000-4000-8000-000000000001",
+        title: job.title,
+        time_zone: run.time_zone,
+        delivery_type: run.delivery_type,
+        location: run.venue,
+        scope: "",
+        amount: null,
+        total_amount: null,
+        currency: null,
+        rate_unit: null,
+        terms: null,
+        cancel: false,
+        sessions: run.course_sessions,
+      },
+    };
+    renderCourses({
+      runs: [{ ...run, jobs: [{ ...job, status: "filled" }] }],
+      changeCandidates: [candidate],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
+    expect(
+      dialog.getByRole("link", { name: "Terminänderung vorschlagen" }),
+    ).toHaveAttribute("href", `/changes?claim=${claimId}&new=1`);
+    expect(dialog.getByLabelText("Ort / Zugangslink")).toBeEnabled();
+    expect(dialog.queryByLabelText("Beginn 1")).not.toBeInTheDocument();
+  });
+
+  it("submits permitted linked course changes together with the reviewed offer version", async () => {
+    const nextTemplateId = "c1000000-0000-4000-8000-000000000002";
+    renderCourses({
+      runs: [{ ...run, jobs: [{ ...job, status: "draft" }] }],
+      templates: [
+        template,
+        { ...template, id: nextTemplateId, title: "Replacement template" },
+      ],
+      organisations: [organisation],
+      lifecycle: {
+        ...protectedLifecycle,
+        can_edit: true,
+        can_edit_course_details: true,
+        can_edit_schedule: true,
+        can_reassign_company: true,
+      },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const editor = screen.getByRole("dialog", { name: "Bearbeiten" });
+    const dialog = within(editor);
+    await userEvent.selectOptions(
+      dialog.getByLabelText("Kursvorlage"),
+      nextTemplateId,
+    );
+    await userEvent.selectOptions(
+      dialog.getByLabelText("Organisation"),
+      companyId,
+    );
+    await userEvent.selectOptions(
+      dialog.getByLabelText("Durchführung"),
+      "onsite",
+    );
+    await userEvent.selectOptions(dialog.getByLabelText("Zeitzone"), "UTC");
+    expect(dialog.getByLabelText("Beginn 1")).toHaveValue("2030-04-01T07:00");
+    interval(editor, "2030-04-01T08:00", "2030-04-01T09:00");
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    await screen.findByText("Gespeichert.", { exact: true });
+    expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+      p_id: run.id,
+      p_payload: expect.objectContaining({
+        template_id: nextTemplateId,
+        organisation_id: companyId,
+        delivery_type: "onsite",
+        time_zone: "UTC",
+        sessions: [
+          {
+            starts_at: "2030-04-01T08:00:00.000Z",
+            ends_at: "2030-04-01T09:00:00.000Z",
+          },
+        ],
+        expected_job_version: protectedLifecycle.version,
+        job_request_id: expect.stringMatching(/^[a-f0-9-]{36}$/i),
       }),
     });
   });
@@ -971,7 +1118,7 @@ describe("course form failure and confirmation boundaries", () => {
     });
   });
 
-  it("rejects a newly chosen zone's ambiguous time instead of retaining an instant from the previous zone", async () => {
+  it("keeps the exact first repeated hour when the display zone changes across an autumn clock change", async () => {
     renderCourses({
       runs: [
         {
@@ -996,10 +1143,19 @@ describe("course form failure and confirmation boundaries", () => {
         name: /^(Speichern|Entwurf speichern)$/,
       }),
     );
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "Beginn und Ende müssen eindeutig sein.",
-    );
-    expect(state.rpc).not.toHaveBeenCalled();
+    await screen.findByText("Gespeichert.", { exact: true });
+    expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+      p_id: run.id,
+      p_payload: expect.objectContaining({
+        time_zone: "Europe/Paris",
+        sessions: [
+          {
+            starts_at: "2030-10-27T00:30:37.123Z",
+            ends_at: "2030-10-27T02:30:42.456Z",
+          },
+        ],
+      }),
+    });
   });
 
   it("compares edited and preserved endpoints as instants when the original uses a different ISO offset", async () => {

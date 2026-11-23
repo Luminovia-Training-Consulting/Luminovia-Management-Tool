@@ -149,6 +149,27 @@ afterEach(() => {
   clients.length = 0;
   vi.restoreAllMocks();
 });
+it("opens a course schedule proposal for the exact allowed claim and can dismiss it", async () => {
+  const path = `/changes?claim=${claim}&new=1`;
+  mount(path);
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog.querySelector("#change-assignment")).toHaveValue(claim);
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_assignment_change",
+    expect.anything(),
+  );
+});
+
+it("does not open a course schedule proposal for an unavailable claim", async () => {
+  mount("/changes?claim=ed000000-0000-4000-8000-000000000099&new=1");
+  await screen.findByRole("button", { name: "Änderungsantrag erstellen" });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
 it("compares original/proposed persisted versions without executing authored markup", async () => {
   const { container } = mount();
   await screen.findByRole("heading", { name: "Versionsvergleich" });

@@ -2150,8 +2150,18 @@ const nativePaths = {
     "saveCourseRun",
     "Courses",
     "Create or update a scheduled course",
-    "Use a null ID for a new course run. Sessions use explicit offsets and must not overlap. A linked run permits venue and visibility changes while retaining the exact source intervals, time zone, delivery mode, company and template. The server validates the intended IANA time zone.",
-    { p_id: nullableUuid, p_payload: courseRunRequest },
+    "Use a null ID for a new run. Sessions use explicit offsets and must not overlap. Linked runs allow course venue and visibility edits. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
+    {
+      p_id: nullableUuid,
+      p_payload: {
+        ...courseRunRequest,
+        properties: {
+          ...courseRunRequest.properties,
+          expected_job_version: { ...version, minimum: 1 },
+          job_request_id: uuid,
+        },
+      },
+    },
     uuid,
   ),
   "/rest/v1/rpc/set_course_visibility": voidRpc(
@@ -2503,6 +2513,7 @@ const nativePaths = {
       can_manage: boolean,
       can_edit: boolean,
       can_edit_schedule: boolean,
+      can_edit_course_details: boolean,
       can_duplicate: boolean,
       organisation_id: nullableUuid,
       can_reassign_company: boolean,
@@ -2566,6 +2577,17 @@ const nativePaths = {
                   "Assign an active company to a draft or open unaccepted offer attached to its own unpublished course run, including legacy offers. Company requests, pricing records and dependent course activity prevent reassignment.",
               },
               class_id: nullableUuid,
+              course_template_id: {
+                ...uuid,
+                description:
+                  "Select an active template for an eligible linked draft.",
+              },
+              time_zone: {
+                ...text,
+                description:
+                  "Set the IANA zone on both an eligible linked draft and its course.",
+              },
+              delivery_type: { enum: ["online", "onsite"] },
               description: { ...text, maxLength: 12000 },
               sessions: {
                 type: "array",
@@ -4824,7 +4846,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.15.0",
+      version: "1.16.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

@@ -692,7 +692,7 @@ export function ChangeRequestsPage() {
   const { t, i18n } = useTranslation("changes"),
     { session } = useAuth(),
     { id } = useParams<{ id: string }>(),
-    [params] = useSearchParams(),
+    [params, setParams] = useSearchParams(),
     navigate = useNavigate(),
     online = useOnline();
   const changes = useQuery(changesQuery(session!.user.id, id)),
@@ -717,6 +717,21 @@ export function ChangeRequestsPage() {
     ]),
   );
   const selectedLecturer = selected && lecturerNames.get(selected.claim_id);
+  const initialClaim = params.get("claim") ?? undefined;
+  const openRequestedDraft =
+    !id &&
+    online &&
+    params.get("new") === "1" &&
+    candidates.data.some((candidate) => candidate.claim_id === initialClaim);
+  const draftOpen = edit !== undefined || openRequestedDraft;
+  function closeDraft() {
+    setEdit(undefined);
+    if (params.has("new")) {
+      const next = new URLSearchParams(params);
+      next.delete("new");
+      setParams(next, { replace: true });
+    }
+  }
   return (
     <>
       <PageHeading
@@ -911,21 +926,23 @@ export function ChangeRequestsPage() {
         </>
       )}
       <Dialog
-        open={edit !== undefined}
+        open={draftOpen}
         onOpenChange={(open) => {
-          if (!open) setEdit(undefined);
+          if (!open) closeDraft();
         }}
         title={t(edit ? "edit" : "new")}
         description={t("intro")}
       >
-        {edit !== undefined && (
+        {draftOpen && (
           <ChangeForm
             candidates={candidates.data}
             original={edit ?? undefined}
-            initialClaim={params.get("claim") ?? undefined}
+            initialClaim={initialClaim}
             onDone={(change) => {
-              setEdit(undefined);
-              if (change) void navigate(`/changes/${change}`);
+              if (change) {
+                setEdit(undefined);
+                void navigate(`/changes/${change}`);
+              } else closeDraft();
             }}
           />
         )}

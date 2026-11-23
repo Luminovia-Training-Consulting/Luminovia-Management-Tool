@@ -10,6 +10,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
 import { ResourceComments } from "../comments/comments";
+import { changeCandidatesQuery } from "../changes/api";
+import { lifecycleQuery, refreshJobState } from "../jobs/lifecycle-api";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 import {
   useFieldArray,
   useForm,
@@ -284,7 +287,9 @@ function RunForm({
   onDone: (result: "template" | "run") => void;
   onBusy: (busy: boolean) => void;
 }) {
-  const { t } = useTranslation("operations");
+  const { t, i18n } = useTranslation("operations");
+  const { session } = useAuth();
+  const actor = session!.user.id;
   const online = useOnline();
   const client = useQueryClient();
   const topics = useQuery(topicsQuery);
@@ -308,19 +313,21 @@ function RunForm({
   const [planningStart, setPlanningStart] = useState("09:00");
   const [planningEnd, setPlanningEnd] = useState("17:00");
   const [planningError, setPlanningError] = useState(false);
-  const [sessionOrigins] = useState(() => ({
-    zone: original?.time_zone,
+  const sessionOrigins = useRef({
+    zone: original?.time_zone ?? "Europe/Berlin",
     sessions: new Map(
-      original?.course_sessions.map((session) => [
-        session.id,
-        Object.freeze({ ...session }),
+      original?.course_sessions.map(({ id, starts_at, ends_at }) => [
+        id,
+        { starts_at, ends_at },
       ]) ?? [],
     ),
-  }));
+  });
   const {
     register,
     control,
+    getValues,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
@@ -358,8 +365,12 @@ function RunForm({
     name: "sessions",
   });
   const selectedTemplateId = useWatch({ control, name: "template_id" });
+  const zone = useWatch({ control, name: "time_zone" });
   const selectedTemplate = templates.find(
     (item) => item.id === selectedTemplateId,
+  );
+  const currentOrganisation = organisations.find(
+    (item) => item.id === original?.organisation_id,
   );
   const selectedBlock = blocks.find(
     (item) => item.id === selectedTemplate?.building_block_id,
@@ -367,9 +378,99 @@ function RunForm({
   const needsContent = !original && !selectedTemplateId;
   const linkedJobs = original?.jobs ?? [];
   const linked = linkedJobs.length > 0;
+  const linkedJob = linkedJobs.length === 1 ? linkedJobs[0] : undefined;
+  const lifecycle = useQuery({
+    ...lifecycleQuery(actor, linkedJob?.id ?? ""),
+    enabled: Boolean(linkedJob) && online,
+  });
+  const candidates = useQuery({
+    ...changeCandidatesQuery(actor),
+    enabled: linked && online,
+  });
+  const linkedDetails =
+    lifecycle.isSuccess && online ? lifecycle.data : undefined;
+  const canEditCourseDetails =
+    !linked || linkedDetails?.can_edit_course_details === true;
+  const canEditCompany =
+    !linked || linkedDetails?.can_reassign_company === true;
+  const canEditSchedule = !linked || linkedDetails?.can_edit_schedule === true;
+  const scheduleCandidates =
+    candidates.isSuccess && online
+      ? candidates.data.filter(
+          (candidate) =>
+            candidate.schedule_editable &&
+            linkedJobs.some((job) => job.id === candidate.current.job_id),
+        )
+      : [];
+  const reviewedJobVersion = useRef<number>(undefined);
+  useEffect(() => {
+    if (reviewedJobVersion.current === undefined && linkedDetails) {
+      reviewedJobVersion.current = linkedDetails.version;
+    }
+  }, [linkedDetails]);
+  const linkedRequest = useRef<{ payloadKey: string; id: string }>(undefined);
+
   const hasActiveJob = linkedJobs.some(
     ({ status }) => status === "published" || status === "filled",
   );
+  function changeZone(next: string) {
+    if (!validZone(next) || next === zone) return;
+    const previous = sessionOrigins.current;
+    const rebased = [];
+    for (const row of getValues("sessions")) {
+      const source = previous.sessions.get(row.source_session_id ?? "");
+      const starts_at = row.starts_at
+        ? zonedInstantForScheduleEdit(
+            row.starts_at,
+            zone,
+            source?.starts_at,
+            previous.zone,
+          )
+        : "";
+      const ends_at = row.ends_at
+        ? zonedInstantForScheduleEdit(
+            row.ends_at,
+            zone,
+            source?.ends_at,
+            previous.zone,
+          )
+        : "";
+      if (starts_at === null || ends_at === null) {
+        setTimeError(true);
+        return;
+      }
+      rebased.push({
+        id: row.source_session_id ?? crypto.randomUUID(),
+        starts_at,
+        ends_at,
+      });
+    }
+    sessionOrigins.current = {
+      zone: next,
+      sessions: new Map(
+        rebased.map(({ id, starts_at, ends_at }) => [
+          id,
+          { starts_at, ends_at },
+        ]),
+      ),
+    };
+    for (const [index, row] of rebased.entries()) {
+      setValue(`sessions.${index}.source_session_id`, row.id);
+      for (const endpoint of ["starts_at", "ends_at"] as const) {
+        setValue(
+          `sessions.${index}.${endpoint}`,
+          row[endpoint]
+            ? DateTime.fromISO(row[endpoint], { zone: next }).toFormat(
+                "yyyy-MM-dd'T'HH:mm",
+              )
+            : "",
+        );
+      }
+    }
+    setValue("time_zone", next, { shouldDirty: true, shouldValidate: true });
+    setTimeError(false);
+  }
+
   const save = useMutation({
     onMutate: () => onBusy(true),
     mutationFn: async (
@@ -391,27 +492,23 @@ function RunForm({
         return "template" as const;
       }
       const { values } = intent;
+      const origins = sessionOrigins.current;
       const sessions = values.sessions.map((s) => {
-        const source = sessionOrigins.sessions.get(s.source_session_id ?? "");
+        const source = origins.sessions.get(s.source_session_id ?? "");
         const start = zonedInstantForScheduleEdit(
           s.starts_at,
           values.time_zone,
           source?.starts_at,
-          sessionOrigins.zone,
+          origins.zone,
         );
         const end = zonedInstantForScheduleEdit(
           s.ends_at,
           values.time_zone,
           source?.ends_at,
-          sessionOrigins.zone,
+          origins.zone,
         );
-        const unchanged =
-          start === source?.starts_at && end === source?.ends_at;
         const order = start && end ? compareCourseInstants(end, start) : null;
-        // Stored intervals already satisfy the database range constraint, even
-        // below JavaScript's millisecond precision. Edited ranges are compared
-        // as instants; ISO strings can legitimately contain different offsets.
-        if (!start || !end || order === null || (!unchanged && order <= 0)) {
+        if (!start || !end || order === null || order <= 0) {
           setTimeError(true);
           throw new Error("time");
         }
@@ -448,16 +545,63 @@ function RunForm({
         }
         templateId = createdTemplate.current!.id;
       }
+      const payload = { ...values, template_id: templateId, sessions };
+      let offerChange:
+        { expected_job_version: number; job_request_id: string } | undefined;
+      if (linked && original) {
+        const originalSessions = [...original.course_sessions].sort(
+          (a, b) => compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+        );
+        const scheduleChanged =
+          ordered.length !== originalSessions.length ||
+          ordered.some(
+            (row, index) =>
+              compareCourseInstants(
+                row.starts_at,
+                originalSessions[index].starts_at,
+              ) !== 0 ||
+              compareCourseInstants(
+                row.ends_at,
+                originalSessions[index].ends_at,
+              ) !== 0,
+          );
+        const detailsChanged =
+          templateId !== original.template_id ||
+          values.delivery_type !== original.delivery_type ||
+          values.time_zone !== original.time_zone;
+        const companyChanged =
+          (values.organisation_id || null) !== original.organisation_id;
+        if (detailsChanged || companyChanged || scheduleChanged) {
+          const version = reviewedJobVersion.current;
+          if (
+            version === undefined ||
+            !linkedDetails ||
+            (detailsChanged && !canEditCourseDetails) ||
+            (companyChanged && !canEditCompany) ||
+            (scheduleChanged && !canEditSchedule)
+          ) {
+            throw new Error("course_locked");
+          }
+          const payloadKey = JSON.stringify(payload);
+          if (linkedRequest.current?.payloadKey !== payloadKey)
+            linkedRequest.current = { payloadKey, id: crypto.randomUUID() };
+          offerChange = {
+            expected_job_version: version,
+            job_request_id: linkedRequest.current.id,
+          };
+        }
+      }
       const { error } = await db().rpc("save_course_run", {
         p_id: original?.id ?? null,
-        p_payload: { ...values, template_id: templateId, sessions },
+        p_payload: { ...payload, ...offerChange },
       });
       if (error) throw error;
       return "run" as const;
     },
-    onSuccess: async (result) => {
-      await client.invalidateQueries({ queryKey: ["operations"] });
+    onSuccess: (result) => {
       onDone(result);
+      if (linked) void refreshJobState(client);
+      else void client.invalidateQueries({ queryKey: ["operations"] });
     },
     onError: async () => {
       if (createdTemplate.current)
@@ -483,40 +627,93 @@ function RunForm({
       });
     });
   return (
-    <form noValidate onSubmit={submitRun(original ? undefined : false)}>
+    <form
+      className="course-run-editor"
+      noValidate
+      onSubmit={submitRun(original ? undefined : false)}
+    >
       {linked && (
         <Notice>
-          <p>{t("linkedRunHelp")}</p>
-          <ul>
+          <p>
+            {t(canEditSchedule ? "linkedRunEditableHelp" : "linkedRunHelp")}
+          </p>
+          <ul className="course-linked-actions">
             {linkedJobs.map((job) => (
               <li key={job.id}>
-                <Link to={`/jobs/${job.id}`}>{job.title}</Link>
+                <Link className="text-link" to={`/jobs/${job.id}`}>
+                  {t("openLinkedJob", { title: job.title })}
+                </Link>
               </li>
             ))}
           </ul>
         </Notice>
       )}
-      <fieldset className="course-run-source-fields" disabled={linked}>
-        <Field
-          id="run-template"
-          label={t("template")}
-          error={Boolean(errors.template_id)}
-        >
-          <select id="run-template" {...register("template_id")}>
-            {!original && <option value="">{t("newCourseContent")}</option>}
-            {templates
-              .filter(
-                (template) =>
-                  !template.archived_at ||
-                  template.id === original?.template_id,
-              )
-              .map((template) => (
-                <option value={template.id} key={template.id}>
-                  {template.title}
-                </option>
-              ))}
-          </select>
-        </Field>
+      <div className="course-run-source-fields">
+        {(!canEditCourseDetails || !canEditCompany) && (
+          <dl className="course-run-retained-details">
+            {!canEditCourseDetails && (
+              <>
+                <div>
+                  <dt>{t("template")}</dt>
+                  <dd>
+                    {selectedTemplate?.title ?? t("courseRecordUnavailable")}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("timezone")}</dt>
+                  <dd>{zone}</dd>
+                </div>
+                <div>
+                  <dt>{t("delivery")}</dt>
+                  <dd>{t(original!.delivery_type)}</dd>
+                </div>
+              </>
+            )}
+            {!canEditCompany && (
+              <div>
+                <dt>{t("organisation")}</dt>
+                <dd>
+                  {currentOrganisation?.name ??
+                    t(
+                      original?.organisation_id
+                        ? "courseRecordUnavailable"
+                        : "none",
+                    )}
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {canEditCourseDetails && (
+          <Field
+            id="run-template"
+            label={t("template")}
+            error={Boolean(errors.template_id)}
+          >
+            <select id="run-template" {...register("template_id")}>
+              {!original && <option value="">{t("newCourseContent")}</option>}
+              {original &&
+                !templates.some(
+                  (template) => template.id === original.template_id,
+                ) && (
+                  <option value={original.template_id}>
+                    {t("courseRecordUnavailable")}
+                  </option>
+                )}
+              {templates
+                .filter(
+                  (template) =>
+                    !template.archived_at ||
+                    template.id === original?.template_id,
+                )
+                .map((template) => (
+                  <option value={template.id} key={template.id}>
+                    {template.title}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        )}
         {needsContent &&
           (topics.isPending ? (
             <Loading />
@@ -530,7 +727,7 @@ function RunForm({
               selectedTopicIds={topicIds}
             />
           ))}
-        {selectedBlock && !linked && (
+        {selectedBlock && canEditSchedule && (
           <fieldset className="operations-schedule-planner">
             <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
             <p>
@@ -591,87 +788,154 @@ function RunForm({
             )}
           </fieldset>
         )}
-        <Field id="run-org" label={t("organisation")}>
-          <select id="run-org" {...register("organisation_id")}>
-            <option value="">{t("none")}</option>
-            {organisations.map((org) => (
-              <option value={org.id} key={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="form-row">
-          <Field
-            id="run-zone"
-            label={t("timezone")}
-            error={Boolean(errors.time_zone)}
-          >
-            <input id="run-zone" {...register("time_zone")} />
-          </Field>
-          <Field id="run-delivery" label={t("delivery")}>
-            <select id="run-delivery" {...register("delivery_type")}>
-              <option value="online">{t("online")}</option>
-              <option value="onsite">{t("onsite")}</option>
+        {canEditCompany && (
+          <Field id="run-org" label={t("organisation")}>
+            <select id="run-org" {...register("organisation_id")}>
+              {(!linked || !original?.organisation_id) && (
+                <option value="" disabled={linked}>
+                  {t("none")}
+                </option>
+              )}
+              {original?.organisation_id && !currentOrganisation && (
+                <option value={original.organisation_id}>
+                  {t("courseRecordUnavailable")}
+                </option>
+              )}
+              {organisations
+                .filter(
+                  (org) =>
+                    !linked ||
+                    !org.archived_at ||
+                    org.id === original?.organisation_id,
+                )
+                .map((org) => (
+                  <option value={org.id} key={org.id}>
+                    {org.name}
+                  </option>
+                ))}
             </select>
           </Field>
-        </div>
-      </fieldset>
+        )}
+        {canEditCourseDetails && (
+          <div className="form-row">
+            <Field
+              id="run-zone"
+              label={t("timezone")}
+              hint={t("courseZoneHelp")}
+              error={Boolean(errors.time_zone)}
+            >
+              <select
+                id="run-zone"
+                {...register("time_zone")}
+                value={zone}
+                onChange={(event) => changeZone(event.target.value)}
+              >
+                <TimeZoneOptions current={original?.time_zone ?? zone} />
+              </select>
+            </Field>
+            <Field id="run-delivery" label={t("delivery")}>
+              <select id="run-delivery" {...register("delivery_type")}>
+                <option value="online">{t("online")}</option>
+                <option value="onsite">{t("onsite")}</option>
+              </select>
+            </Field>
+          </div>
+        )}
+      </div>
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
         <input id="run-venue" {...register("venue")} />
       </Field>
       <fieldset className="operations-topic-field" ref={schedule} tabIndex={-1}>
         <legend>{t("sessions")}</legend>
-        {fields.map((field, index) => (
-          <div className="session-form-row" key={field.id}>
-            <Field
-              id={`run-start-${index}`}
-              label={`${t("start")} ${index + 1}`}
-              error={Boolean(errors.sessions?.[index]?.starts_at)}
-            >
-              <input
-                id={`run-start-${index}`}
-                type="datetime-local"
-                readOnly={linked}
-                {...register(`sessions.${index}.starts_at`)}
-              />
-            </Field>
-            <Field
-              id={`run-end-${index}`}
-              label={`${t("end")} ${index + 1}`}
-              error={Boolean(errors.sessions?.[index]?.ends_at)}
-            >
-              <input
-                id={`run-end-${index}`}
-                type="datetime-local"
-                readOnly={linked}
-                {...register(`sessions.${index}.ends_at`)}
-              />
-            </Field>
+        {canEditSchedule ? (
+          <>
+            {fields.map((field, index) => (
+              <div className="session-form-row" key={field.id}>
+                <Field
+                  id={`run-start-${index}`}
+                  label={`${t("start")} ${index + 1}`}
+                  error={Boolean(errors.sessions?.[index]?.starts_at)}
+                >
+                  <input
+                    id={`run-start-${index}`}
+                    type="datetime-local"
+                    {...register(`sessions.${index}.starts_at`)}
+                  />
+                </Field>
+                <Field
+                  id={`run-end-${index}`}
+                  label={`${t("end")} ${index + 1}`}
+                  error={Boolean(errors.sessions?.[index]?.ends_at)}
+                >
+                  <input
+                    id={`run-end-${index}`}
+                    type="datetime-local"
+                    {...register(`sessions.${index}.ends_at`)}
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`${t("remove")} ${index + 1}`}
+                  disabled={fields.length < 2}
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 size={18} />
+                </Button>
+              </div>
+            ))}
             <Button
               type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={`${t("remove")} ${index + 1}`}
-              disabled={linked || fields.length < 2}
-              onClick={() => remove(index)}
+              variant="secondary"
+              disabled={fields.length >= 60}
+              onClick={() => append({ starts_at: "", ends_at: "" })}
             >
-              <Trash2 size={18} />
+              {t("addSession")}
             </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={linked || fields.length >= 60}
-          onClick={() => append({ starts_at: "", ends_at: "" })}
-        >
-          {t("addSession")}
-        </Button>
+          </>
+        ) : (
+          <>
+            <ol className="course-run-retained-sessions">
+              {[...(original?.course_sessions ?? [])]
+                .sort(
+                  (a, b) =>
+                    compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+                )
+                .map((slot) => (
+                  <li key={slot.id}>
+                    <time dateTime={slot.starts_at}>
+                      {dateTime(slot.starts_at, i18n.language, zone)}
+                    </time>
+                    {" – "}
+                    <time dateTime={slot.ends_at}>
+                      {dateTime(slot.ends_at, i18n.language, zone)}
+                    </time>
+                  </li>
+                ))}
+            </ol>
+            {scheduleCandidates.length > 0 && (
+              <div className="form-actions">
+                {scheduleCandidates.map((candidate) => (
+                  <Button asChild variant="secondary" key={candidate.claim_id}>
+                    <Link to={`/changes?claim=${candidate.claim_id}&new=1`}>
+                      {scheduleCandidates.length === 1
+                        ? t("proposeLinkedSchedule")
+                        : t("proposeLinkedScheduleFor", {
+                            name: candidate.lecturer_name,
+                          })}
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </fieldset>
       {original && (
         <fieldset className="course-run-visibility">
           <legend>{t("runVisibility")}</legend>
+          <p className="course-run-visibility-hint">{t("publishedHint")}</p>
           <label className="checkbox-label">
             <input type="checkbox" {...register("published")} />
             {t("showInCourseCatalogue")}
@@ -723,12 +987,15 @@ function RunForm({
       {save.isError && needsContent && templateRetained && (
         <Notice>{t("courseTemplateRetained")}</Notice>
       )}
-      {save.isError && (
+      {(save.isError || timeError) && (
         <Notice kind="error">
           {t(
             timeError
               ? "timeInvalid"
-              : save.error.message === "course_locked"
+              : save.error?.message === "course_locked" ||
+                  (save.error &&
+                    "code" in save.error &&
+                    save.error.code === "40001")
                 ? "linkedRunConflict"
                 : "error",
           )}
@@ -1321,7 +1588,11 @@ export function CoursesPage() {
         }}
         closeDisabled={runSaving}
         title={t(runEdit ? "edit" : "newCourse")}
-        description={t("publishedHint")}
+        description={
+          runEdit
+            ? (findTemplate(runEdit)?.title ?? t("courseRecordUnavailable"))
+            : t("publishedHint")
+        }
       >
         <RunForm
           key={runEdit?.id ?? `new:${initialTemplateId ?? "default"}`}

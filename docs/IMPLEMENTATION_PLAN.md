@@ -15,6 +15,9 @@
 
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.
 
+- [x] Let course managers edit eligible linked schedules and draft details from Courses. Save shared fields with the linked offer's reviewed version and keep exact session references when their instants are unchanged.
+- [x] Present protected planning values as readable details and open the existing, permission-scoped schedule proposal directly for confirmed assignments.
+
 - [x] Label the offer schedule, space the planning link, and support optional additional terms and separate offers from the same course run. Preserve exact source sessions and idempotent retries.
 
 - [x] Group catalogue choices by kind in scrollable checkbox lists and space the save and publish actions. The course component suite and responsive Chromium layout fixture passed.
