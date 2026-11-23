@@ -1324,6 +1324,36 @@ legend {
   margin-top: 4px;
 }
 
+.job-session-scroll {
+  max-block-size: min(19rem, 45dvh);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding-inline: 0.875rem;
+}
+
+.job-session-scroll:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.job-session-scroll .session-list {
+  margin: 0;
+  padding: 0;
+}
+
+.job-session-scroll li {
+  padding-block: 0.625rem;
+}
+
+.job-session-scroll li:last-child {
+  border-bottom: 0;
+}
+
+.job-session-scroll li > svg {
+  flex-shrink: 0;
+}
+
 .claim-panel {
   align-self: start;
   position: sticky;

@@ -255,34 +255,48 @@ export function JobDetail() {
                 </p>
               </>
             )}
-            <h2>{t("sessions")}</h2>
+            <h2 id="job-sessions-heading">{t("sessions")}</h2>
             <p className="muted">
               {t("timezone")}: {zone}
               {zone !== job.time_zone && ` · ${job.time_zone}`}
             </p>
-            <ol className="session-list">
-              {sessions.map((s) => (
-                <li key={s.id}>
-                  <CalendarDays size={18} />
-                  <div>
-                    <strong>
-                      {dateTime(s.starts_at, i18n.language, zone)}
-                    </strong>
-                    <span>
-                      {t("end")}: {dateTime(s.ends_at, i18n.language, zone)}
-                    </span>
-                    {zone !== job.time_zone && (
-                      <small>
-                        {dateTime(s.starts_at, i18n.language, job.time_zone)} –{" "}
-                        {dateTime(s.ends_at, i18n.language, job.time_zone)}
-                        {" · "}
-                        {job.time_zone}
-                      </small>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
+            {sessions.length > 0 && (
+              <div
+                className="job-session-scroll"
+                role="region"
+                aria-labelledby="job-sessions-heading"
+                tabIndex={0}
+              >
+                <ol className="session-list">
+                  {sessions.map((s) => (
+                    <li key={s.id}>
+                      <CalendarDays size={18} aria-hidden="true" />
+                      <div>
+                        <strong>
+                          {dateTime(s.starts_at, i18n.language, zone)}
+                        </strong>
+                        <span>
+                          {t("end")}: {dateTime(s.ends_at, i18n.language, zone)}
+                        </span>
+                        {zone !== job.time_zone && (
+                          <small>
+                            {dateTime(
+                              s.starts_at,
+                              i18n.language,
+                              job.time_zone,
+                            )}{" "}
+                            –{" "}
+                            {dateTime(s.ends_at, i18n.language, job.time_zone)}
+                            {" · "}
+                            {job.time_zone}
+                          </small>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
             {!companyDispatchOnly && (
               <>
                 <h2>{t("requirements")}</h2>

@@ -102,6 +102,7 @@
 
 ## Published job details and schedules
 
+- [x] Keep the date range and time-zone labels above a compact, keyboard-scrollable list of all job sessions.
 - [x] Show title, location, description, date range and exact sessions. Generate an inclusive range for standalone staff offers and company requests and keep editable times per day.
 - [x] Use a canonical existing company for staff offers without requiring gross pricing. Keep company-originated offers attached to the submitting organisation and restrict reassignment when dependent activity exists.
 - [x] Expose versioned required-topic changes and transactional edits to eligible future schedules. Preserve accepted work and shared course schedules through their existing change workflows.

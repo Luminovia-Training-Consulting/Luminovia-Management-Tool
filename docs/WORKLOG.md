@@ -1,3 +1,7 @@
+# 23 November 2026 — Compact job schedule
+
+The job detail keeps the delivery period and time zone above a height-limited date list. Every session remains reachable by scrolling the named, keyboard-focusable region. Desktop and mobile Chromium verified all 40 fixture sessions, scrolling to the final item, and no horizontal page overflow. All 24 job-component tests, TypeScript and targeted lint passed.
+
 # 23 November 2026 — Save White Label settings in the portal
 
 The internal administration stores the selected company's settings and restores the confirmed revision when reopened. The browser download is removed. Current internal administrators and owners can save after the server verifies the designated administrator's company membership. Exact retries reuse the saved receipt and a conflicting revision returns 409. A company with a verified address links to its dedicated administration. The operator can pipe the stored settings directly into the existing signed review. Live branding remains editable within the dedicated Academy, where the application applies it without reinstalling. Actual domain, TLS and data location depend on the hosting environment.

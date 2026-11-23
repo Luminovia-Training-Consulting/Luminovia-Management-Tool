@@ -296,3 +296,38 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
         await context.close();
     }
 });
+
+test("a long job schedule scrolls inside its own keyboard-accessible box", async ({page}) => {
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const job = randomUUID();
+    const title = `Fictional long schedule ${job.slice(0, 8)}`;
+    const start = Date.parse("2049-02-01T08:00:00Z");
+    const sessions = Array.from({length: 40}, (_, day) => ({
+        job_id: job,
+        starts_at: new Date(start + day * 86400000).toISOString(),
+        ends_at: new Date(start + day * 86400000 + 3600000).toISOString(),
+    }));
+    try {
+        await checked(service.from("jobs").insert({
+            id: job, title, customer_name: "Fictional academy", delivery_type: "online",
+            time_zone: "Europe/Berlin", status: "published", amount: 100, total_amount: 4000,
+            currency: "EUR", rate_unit: "per_day", terms: "",
+        }));
+        await checked(service.from("job_sessions").insert(sessions));
+        await login(page, process.env.E2E_ADMIN_EMAIL!);
+        await page.goto(`/jobs/${job}`);
+        await expect(page.getByRole("heading", {name: "Durchführungszeitraum"})).toBeVisible();
+        const schedule = page.getByRole("region", {name: "Termine", exact: true});
+        await expect(schedule.getByRole("listitem")).toHaveCount(sessions.length);
+        expect(await schedule.evaluate(box => box.scrollHeight > box.clientHeight)).toBe(true);
+        await expect(schedule.getByRole("listitem").last()).not.toBeInViewport();
+        await schedule.focus();
+        await schedule.press("End");
+        await expect.poll(() => schedule.evaluate(box => box.scrollTop)).toBeGreaterThan(0);
+        await expect(schedule.getByRole("listitem").last()).toBeInViewport();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    } finally {
+        await checked(service.from("job_sessions").delete().eq("job_id", job));
+        await checked(service.from("jobs").delete().eq("id", job));
+    }
+});
