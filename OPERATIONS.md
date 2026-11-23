@@ -183,6 +183,12 @@ Reusable `course_templates` hold title, description, syllabus, prerequisites, ar
 
 <a id="section-operations-safe-copies"></a>
 
+## Private catalogue originals
+
+On KVM 1, stage only the selected catalogue PDFs in a private directory. Name each file by its lowercase SHA-256 followed by `.pdf`. Run `python3 scripts/import-job-source-pdfs.py <private-staging-directory>` from a reviewed source copy on the VPS. The importer verifies the names against the live catalogue, scans the complete batch with ClamAV, uploads verified bytes under the private Storage prefix, and checks the stored hashes. Repeating the import verifies existing objects without replacing them. Remove the private staging copy after verification. Standard Storage backups include these objects.
+
+Managers and confirmed assigned lecturers can download a catalogue original from the job source section. A separately uploaded job attachment still follows the visibility selected for that attachment.
+
 ## Safe copies
 
 `duplicate_course_template(p_id,p_title)` copies content and topic links into a new active template with the caller's explicit title. `duplicate_course_run(p_id)` creates a new unpublished run and new session identities at the original instants. The administrator reviews/edits those dates before publication.

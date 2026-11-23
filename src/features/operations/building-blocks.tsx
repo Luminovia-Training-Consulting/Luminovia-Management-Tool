@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
-import { saveDownload } from "../files/api";
+import { jobSourceAvailable, saveDownload, saveJobSource } from "../files/api";
 import { FileUpload } from "../files/files";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, Notice } from "../../components/common";
@@ -243,16 +243,38 @@ function JobSourceDownload({
       return data as { id: string; document_id: string } | null;
     },
   });
+  const librarySource = useQuery({
+    queryKey: [
+      "documents",
+      session?.user.id,
+      "job-source-library",
+      jobId,
+      source.id,
+    ],
+    enabled:
+      Boolean(session) && online && attachment.isSuccess && !attachment.data,
+    queryFn: ({ signal }) => jobSourceAvailable(jobId, source.id, signal),
+  });
   const download = useMutation({
-    mutationFn: (file: { id: string; document_id: string }) =>
-      saveDownload(file.document_id, source.file_name, file.id),
+    mutationFn: () =>
+      attachment.data
+        ? saveDownload(
+            attachment.data.document_id,
+            source.file_name,
+            attachment.data.id,
+          )
+        : saveJobSource(jobId, source.id, source.file_name),
   });
 
-  if (!attachment.data || attachment.isError)
+  if (
+    (!attachment.data && !librarySource.data) ||
+    attachment.isError ||
+    librarySource.isError
+  )
     return (
       <>
         <strong>{source.file_name}</strong>
-        {online && attachment.isSuccess && (
+        {online && attachment.isSuccess && librarySource.isSuccess && (
           <>
             <p className="muted">{sourceText("jobSourceUnavailable")}</p>
             {canUpload && (
@@ -269,6 +291,9 @@ function JobSourceDownload({
         {attachment.isError && (
           <ErrorState retry={() => void attachment.refetch()} />
         )}
+        {librarySource.isError && (
+          <ErrorState retry={() => void librarySource.refetch()} />
+        )}
       </>
     );
   return (
@@ -278,7 +303,7 @@ function JobSourceDownload({
         variant="secondary"
         aria-label={`${t("download")}: ${source.file_name}`}
         disabled={!online || download.isPending}
-        onClick={() => attachment.data && download.mutate(attachment.data)}
+        onClick={() => download.mutate()}
       >
         {source.file_name}
       </Button>

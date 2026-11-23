@@ -561,11 +561,20 @@ const fileGateway = {
               action: { const: "qualification_evidence_download" },
               evidence_id: uuid,
             }),
+            object({
+              action: { enum: ["job_source_available", "job_source_download"] },
+              job_id: uuid,
+              source_id: uuid,
+            }),
           ],
         }),
       },
     },
     responses: {
+      "204": {
+        description:
+          "The requested private job source is available to the caller.",
+      },
       "200": {
         description:
           "Clean document metadata after upload or authorized bytes for a download.",
@@ -615,7 +624,12 @@ const fileGateway = {
       ),
       "503": documentGatewayError(
         "Scanner or upload unavailable",
-        ["scanner_unavailable", "upload_failed", "deletion_unavailable"],
+        [
+          "scanner_unavailable",
+          "upload_failed",
+          "deletion_unavailable",
+          "download_unavailable",
+        ],
         true,
       ),
     },

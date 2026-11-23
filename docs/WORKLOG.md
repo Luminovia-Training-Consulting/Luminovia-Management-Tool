@@ -1,3 +1,7 @@
+# 23 November 2026 — Private shared catalogue originals
+
+The KVM received all 24 catalogue PDFs. ClamAV scanned the entire batch and the operator import verified each stored SHA-256 against the active catalogue. The job file gateway binds each original to the job’s source catalogue and checks current authority before returning verified bytes. Job managers and confirmed assigned lecturers can use the original without reuploading it for each job. Existing job-specific file sharing still applies to individual attachments. The related frontend and gateway tests passed.
+
 # 23 November 2026 — Attach a missing original from the job source section
 
 Job managers can attach the referenced original PDF inside the job. The form verifies the exact source digest before uploading, defaults to visibility after claim, and uses the existing scoped upload and scan. The download appears when the scanned version becomes available. All 73 focused component tests, TypeScript and targeted ESLint passed. The existing hosted source reference had no attachment at inspection.

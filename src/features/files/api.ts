@@ -225,7 +225,10 @@ async function transferUpload(
 }
 
 /** Fetch authenticated gateway bytes with the exact request context and no browser cache. */
-async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
+async function downloadFile(
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<Blob> {
   const session = await requireSession();
   const response = await fetch(endpoint(), {
     method: "POST",
@@ -235,6 +238,7 @@ async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
     },
     body: JSON.stringify(body),
     cache: "no-store",
+    signal,
   });
   if (!response.ok) {
     let code = "download_failed";
@@ -252,6 +256,42 @@ async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
   if (error || data.session?.user.id !== session.user.id)
     throw new Error("account_changed");
   return blob;
+}
+
+/** Check the private source library without retrieving document bytes. */
+export async function jobSourceAvailable(
+  jobId: string,
+  sourceId: string,
+  signal: AbortSignal,
+) {
+  try {
+    await downloadFile(
+      { action: "job_source_available", job_id: jobId, source_id: sourceId },
+      signal,
+    );
+    return true;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      ["access_denied", "file_not_found"].includes(error.message)
+    )
+      return false;
+    throw error;
+  }
+}
+
+/** Save the verified original associated with an authorized job. */
+export async function saveJobSource(
+  jobId: string,
+  sourceId: string,
+  name: string,
+) {
+  const blob = await downloadFile({
+    action: "job_source_download",
+    job_id: jobId,
+    source_id: sourceId,
+  });
+  saveBlob(blob, name);
 }
 
 /** Download the selected version so replacement cannot silently substitute newer bytes. */

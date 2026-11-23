@@ -6,6 +6,7 @@
 - [x] Download an authorised original PDF or other scanned job attachment directly from the job by its filename.
 - [x] Preserve saved mail transport settings and support an SMTP test message to the administrator’s confirmed account address.
 - [x] Let job managers attach a missing original PDF at the source reference with exact digest validation and explicit visibility.
+- [x] Import the exact catalogue PDFs into private Storage and serve them to authorised staff and assigned lecturers through job source links.
 
 ## Local launcher
 

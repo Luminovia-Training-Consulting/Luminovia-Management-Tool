@@ -7,10 +7,18 @@ import "../../lib/i18n";
 import { BuildingBlockSources } from "./building-blocks";
 import type { BuildingBlock } from "./data";
 
-const { from, saveDownload, uploadDocument } = vi.hoisted(() => ({
+const {
+  from,
+  saveDownload,
+  uploadDocument,
+  jobSourceAvailable,
+  saveJobSource,
+} = vi.hoisted(() => ({
   from: vi.fn(),
   saveDownload: vi.fn(),
   uploadDocument: vi.fn(),
+  jobSourceAvailable: vi.fn(),
+  saveJobSource: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ from }) }));
 vi.mock("../auth/auth-context", () => ({
@@ -20,6 +28,8 @@ vi.mock("../files/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../files/api")>()),
   saveDownload,
   uploadDocument,
+  jobSourceAvailable,
+  saveJobSource,
 }));
 
 const source = {
@@ -61,6 +71,7 @@ function mount(
   data: { id: string; document_id: string } | null,
   jobId?: string,
   canManageJobSource = false,
+  sourceInLibrary = false,
 ) {
   const query = {
     select: vi.fn().mockReturnThis(),
@@ -72,6 +83,7 @@ function mount(
     maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
   };
   from.mockReturnValue(query);
+  jobSourceAvailable.mockResolvedValue(sourceInLibrary);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -172,4 +184,20 @@ it("lets job managers attach only bytes matching the referenced original", async
     expect.objectContaining({ jobId: "job-a", scope: "job_after" }),
     expect.any(Function),
   );
+});
+
+it("downloads an original from the private library without a separate job attachment", async () => {
+  mount(null, "job-a", true, true);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /Source\.pdf/ }),
+  );
+  expect(saveJobSource).toHaveBeenCalledExactlyOnceWith(
+    "job-a",
+    source.id,
+    "Source.pdf",
+  );
+  expect(uploadDocument).not.toHaveBeenCalled();
+  expect(
+    screen.queryByText(/Original-PDF anhängen|Attach original PDF/),
+  ).toBeNull();
 });

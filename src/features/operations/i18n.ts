@@ -376,8 +376,8 @@ const pairs: Record<string, [string, string]> = {
     "The reference identifies the original description. Original PDFs are not publicly hosted.",
   ],
   jobSourceDownloadHelp: [
-    "Original-PDFs lassen sich hier herunterladen, sobald sie als geprüfte Auftragsdatei vorliegen.",
-    "Download an original PDF here once it has been attached to the job and scanned.",
+    "Verfügbare Original-PDFs kannst du hier direkt herunterladen. Auftragsdateien haben ihre eigene Freigabe.",
+    "Download available original PDFs here. Job attachments have their own sharing settings.",
   ],
   attachJobSource: ["Original-PDF anhängen", "Attach original PDF"],
   openJobAttachments: ["Zu den Auftragsdateien", "Go to job attachments"],

@@ -14,6 +14,7 @@ import {uploadAcademyPwaIcon} from './academy-pwa-icon.ts';
 import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
 import {serveAcademyPwaAsset} from './academy-pwa-assets.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
+import {readJobSource} from './job-source.ts';
 import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
@@ -359,6 +360,48 @@ Deno.serve(async (request: Request) => {
         const payload = await boundedJson(request, 4096);
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(400, {error: 'invalid_request'});
         const data = payload as Record<string, unknown>;
+        if (data.action === 'job_source_available' || data.action === 'job_source_download') {
+            const jobId = data.job_id, sourceId = data.source_id;
+            if (!uuid(jobId) || !uuid(sourceId)) return json(400, {error: 'invalid_request'});
+            const storage = service.storage.from('portal-clean');
+            const result = await readJobSource(data.action === 'job_source_available', {
+                select: async () => {
+                    const reference = await user.rpc('job_building_block_reference', {p_job_id: jobId});
+                    if (reference.error || !reference.data?.building_block_id) return null;
+                    const permissions = await user.rpc('get_my_permissions');
+                    if (permissions.error) return null;
+                    if (!Array.isArray(permissions.data) || !permissions.data.includes('jobs.manage')) {
+                        const assignment = await user.from('job_claims').select('id')
+                            .eq('job_id', jobId).eq('lecturer_id', actor).eq('status', 'confirmed').limit(1).maybeSingle();
+                        if (assignment.error || !assignment.data) return null;
+                    }
+                    const source = await user.from('building_block_sources').select('sha256,file_name')
+                        .eq('id', sourceId).eq('building_block_id', reference.data.building_block_id).maybeSingle();
+                    return source.error ? null : source.data;
+                },
+                exists: async (path) => {
+                    const result = await storage.info(path);
+                    return !result.error && Boolean(result.data);
+                },
+                download: async (path) => {
+                    const result = await storage.download(path);
+                    return result.error ? null : result.data;
+                },
+            });
+            if (result.status === 204) return new Response(null, {status: 204, headers});
+            if (result.status === 403) return json(403, {error: 'access_denied'});
+            if (result.status === 404) return json(404, {error: 'file_not_found'});
+            if (result.status === 409) return json(409, {error: 'file_not_clean'});
+            if (result.status !== 200) return json(503, {error: 'download_unavailable'});
+            const audit = await service.from('audit_events').insert({
+                actor_id: actor, action: 'job.source_downloaded', resource_id: jobId, details: {source_id: sourceId},
+            });
+            if (audit.error) return json(503, {error: 'download_unavailable'});
+            return new Response(result.bytes, {headers: {
+                ...headers, 'Content-Type': 'application/pdf', 'Content-Disposition': downloadDisposition(result.name),
+                'Content-Security-Policy': "default-src 'none'; sandbox",
+            }});
+        }
         // Avatar selection is a narrow projection, not a general grant to personal files.
         if (data.action === 'avatar') {
             if (!uuid(data.user_id)) return json(400, {error: 'invalid_request'});
