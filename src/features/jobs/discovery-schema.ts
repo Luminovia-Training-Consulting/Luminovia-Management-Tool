@@ -1,4 +1,5 @@
 /** Database projections and filters shared by job browsing and OpenAPI. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 import { validZone } from "../../lib/dates.ts";
 
@@ -15,7 +16,7 @@ export const jobFilterFieldsSchema = z
     from: z.string().default(""),
     to: z.string().default(""),
     zone: z.string().refine(validZone).default("Europe/Berlin"),
-    currency: z.enum(["", "EUR", "AUD"]).default(""),
+    currency: z.enum(["", ...currencyCodes]).default(""),
     unit: z
       .enum(["", "per_day", "per_hour", "per_teaching_unit", "fixed_total"])
       .default(""),
@@ -103,7 +104,7 @@ export const jobSchema = z.object({
   // Accept numeric or restricted-null values explicitly; coercion invents zero fees.
   amount: z.number().finite().nonnegative().nullable(),
   total_amount: z.number().finite().nonnegative().nullable(),
-  currency: z.enum(["EUR", "AUD"]),
+  currency: z.enum(currencyCodes),
   rate_unit: z.enum([
     "per_day",
     "per_hour",

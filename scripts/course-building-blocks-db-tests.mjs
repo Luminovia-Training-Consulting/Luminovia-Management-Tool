@@ -652,7 +652,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 {source_revision: null},
                 {gross_amount: "100"},
                 {gross_amount: -1},
-                {currency: "USD"},
+                {currency: "GBP"},
                 {claim_deadline: "2037-01-01T09:00"},
                 {claim_deadline: "2020-01-01T09:00:00Z"},
                 {requires_contract: "false"},
@@ -670,6 +670,13 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                     `select count(*) from public.jobs where course_run_id=${q(invalidRun)}`,
                 ),
                 "0",
+            );
+            const usdOffer = await rpc("admin", "create_course_run_job", [
+                invalidRun, {...base, currency: "USD", status: "draft"}, null, randomUUID(),
+            ], "aal1");
+            assert.equal(
+                await sql(`select currency from public.jobs where id=${q(usdOffer)}`),
+                "USD",
             );
         },
     );

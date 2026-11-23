@@ -1,10 +1,11 @@
 /** Shared database response contracts for the accounting UI and OpenAPI. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
 export const accountingDecimal = z.string().regex(/^(0|[1-9]\d{0,9})\.\d{2}$/);
 const instant = z.string().datetime({ offset: true });
 const uuid = z.string().uuid();
-export const accountingCurrency = z.enum(["EUR", "AUD"]);
+export const accountingCurrency = z.enum(currencyCodes);
 export const accountingSourceSchema = z.enum([
   "own",
   "lecturer_all",

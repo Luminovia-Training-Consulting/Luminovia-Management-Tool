@@ -2,6 +2,7 @@
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
  * source while editing; the server checks actual sessions and prices on save.
  */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
 import { OfferBoard } from "../jobs/board";
 import { JobDateRange } from "../jobs/session-range";
@@ -561,8 +562,11 @@ function JobForm({
         </Field>
         <Field id="job-currency" label={t("currency")}>
           <select id="job-currency" {...register("currency")}>
-            <option>EUR</option>
-            <option>AUD</option>
+            {currencyCodes.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
           </select>
         </Field>
         <Field id="job-unit" label={t("unit")}>

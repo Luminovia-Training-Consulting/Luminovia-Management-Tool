@@ -1,4 +1,5 @@
 /** Responsive, accessible monthly trend from the current actor-scoped original-currency projections. */
+import { currencyCodes, type CurrencyCode } from "../../lib/currencies.ts";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { money } from "../../lib/dates";
@@ -7,7 +8,7 @@ import type { EarningRecord, InvoiceRecord } from "./types";
 import "./i18n";
 
 type TrendPoint = {
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   month: string;
   amount: number;
   details: string;
@@ -56,7 +57,6 @@ export function FinanceTrendChart({
           details: `${t("invoicePaidTrend")}: ${money(month.paid, month.currency, i18n.language)} · ${t("invoiceOutstandingTrend")}: ${money(month.outstanding, month.currency, i18n.language)}`,
         }));
   if (!points.length) return null;
-  const groups = ["EUR", "AUD"] as const;
   const sourceLabel =
     source === "earnings" ? t("earningsTrendSource") : t("invoiceTrendSource");
   return (
@@ -71,7 +71,7 @@ export function FinanceTrendChart({
         </div>
       </div>
       <div className="finance-trend-currencies">
-        {groups.map((currency) => {
+        {currencyCodes.map((currency) => {
           const months = points
             .filter((point) => point.currency === currency)
             .slice(-12);

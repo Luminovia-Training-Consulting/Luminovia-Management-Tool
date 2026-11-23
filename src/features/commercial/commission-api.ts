@@ -2,6 +2,7 @@
  * Private gross/platform/net projections and cent-exact display helpers. Legacy net-only offers
  * keep unknown gross values as null; a local preview never replaces an accepted server snapshot.
  */
+import type { CurrencyCode } from "../../lib/currencies.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 
@@ -35,7 +36,7 @@ export interface ClientRequest {
   time_zone: string;
   gross_amount: number;
   gross_total_amount: number;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   rate_unit: string;
   sessions: { starts_at: string; ends_at: string }[];
   topic_ids: string[];
@@ -56,7 +57,7 @@ export interface CommissionRecord {
   title: string;
   status: string;
   pricing_model: "commission" | "legacy_net";
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   gross_amount: number | null;
   gross_total_amount: number | null;
   platform_percent: number | null;
@@ -73,7 +74,7 @@ export interface CommissionRecord {
 export interface ClientSpend {
   organisation_id: string;
   organisation_name: string;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   request_count: number;
   published_count: number;
   assigned_count: number;
@@ -87,7 +88,7 @@ export interface CompanyMonthlySpending {
   organisation_id: string;
   organisation_name: string;
   time_zone: string;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   month_start: string;
   gross_amount: number;
   claim_count: number;
@@ -247,7 +248,7 @@ export function revenueTotals(rows: CommissionRecord[]) {
   const groups = new Map<
     string,
     {
-      currency: "EUR" | "AUD";
+      currency: CurrencyCode;
       offered: number;
       accepted: number;
       lecturer: number;

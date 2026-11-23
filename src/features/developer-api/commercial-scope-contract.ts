@@ -1,10 +1,11 @@
 /** Exact PostgREST projections for internal commercial capabilities and company decisions. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const retainedInstant = z.union([instant, z.enum(["infinity", "-infinity"])]);
-const currency = z.enum(["EUR", "AUD"]);
+const currency = z.enum(currencyCodes);
 const count = z.number().int().nonnegative();
 const percent = z.number().min(0).max(100).multipleOf(0.01);
 const dailyRate = z.number().min(0).max(999_999_999_999.99).multipleOf(0.01);

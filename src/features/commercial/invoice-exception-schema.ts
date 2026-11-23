@@ -1,6 +1,7 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
-const currency = z.enum(["EUR", "AUD"]);
+const currency = z.enum(currencyCodes);
 const version = z.int().positive();
 const amount = z.number().positive();
 

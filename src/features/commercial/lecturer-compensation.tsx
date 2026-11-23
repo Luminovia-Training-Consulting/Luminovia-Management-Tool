@@ -1,4 +1,5 @@
 /** Administrators maintain future recipient-specific terms; accepted agreements remain snapshots. */
+import { currencyCodes, type CurrencyCode } from "../../lib/currencies.ts";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -13,7 +14,7 @@ interface Compensation {
   mode: "percent" | "daily";
   percent: number;
   daily_rate: number;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   version: number;
   is_customized: boolean;
 }
@@ -152,8 +153,11 @@ function Editor({
                   setCurrency(e.target.value as Compensation["currency"])
                 }
               >
-                <option>EUR</option>
-                <option>AUD</option>
+                {currencyCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
               </select>
             </Field>
           </>

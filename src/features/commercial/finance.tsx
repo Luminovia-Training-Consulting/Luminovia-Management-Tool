@@ -2,6 +2,7 @@
  * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
  * confirmed server rows; payment reversals require their own auditable action.
  */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -1410,8 +1411,11 @@ export function FinancePage() {
                   onChange={(event) => setInvoiceCurrency(event.target.value)}
                 >
                   <option value="">{platformText("allCurrencies")}</option>
-                  <option>EUR</option>
-                  <option>AUD</option>
+                  {currencyCodes.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </div>

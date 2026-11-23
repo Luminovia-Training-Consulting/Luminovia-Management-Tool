@@ -1,3 +1,4 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 import {
   invoiceSeriesOptionsSchema,
@@ -22,7 +23,7 @@ const invoiceSeriesCorrectionEntrySchema = z.strictObject({
   id: z.uuid(),
   claim_id: z.uuid(),
   title: z.string(),
-  currency: z.enum(["EUR", "AUD"]),
+  currency: z.enum(currencyCodes),
   contract_version: z.int().positive(),
   reviewed_total: nonnegativeAmount,
   credited: z.number().positive(),

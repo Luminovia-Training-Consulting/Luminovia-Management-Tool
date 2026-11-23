@@ -1,4 +1,5 @@
 /** Shared runtime and OpenAPI shapes for permission-scoped assignment amendments. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
 const uuid = z.string().uuid(),
@@ -17,7 +18,7 @@ const snapshotSchema = z.object({
   scope: z.string(),
   amount: z.number().nullable(),
   total_amount: z.number().nullable(),
-  currency: z.enum(["EUR", "AUD"]).nullable(),
+  currency: z.enum(currencyCodes).nullable(),
   rate_unit: z
     .enum(["per_day", "per_hour", "per_teaching_unit", "fixed_total"])
     .nullable(),

@@ -1,4 +1,5 @@
 /** Responses shared by the operations screens and the native OpenAPI catalogue. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 import { validZone } from "../../lib/dates.ts";
 
@@ -16,7 +17,7 @@ export const forecastSchema = z.object({
   months: z.array(
     z.object({
       month: z.iso.date(),
-      currency: z.enum(["EUR", "AUD"]),
+      currency: z.enum(currencyCodes),
       accepted_lecturer_cost: z.number(),
       accepted_gross_known: z.number().nullable(),
       accepted_margin_known: z.number().nullable(),

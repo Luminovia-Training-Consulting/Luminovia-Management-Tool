@@ -189,6 +189,8 @@
 
 ## Finance workspace
 
+- [x] Accept USD alongside EUR and AUD for course offers, company requests, lecturer rates, invoices and settlement. Keep filter, API and original-currency report coverage aligned.
+
 - Keep the finance overview, accounting exports and analytics together, with tabs driven by the current account and existing server authority. Retain old route links and keep the standalone Academy scoped to learning.
 
 ## Spreadsheet imports

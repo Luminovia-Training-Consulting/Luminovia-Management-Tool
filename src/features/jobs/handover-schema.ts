@@ -1,4 +1,5 @@
 /** Wire schemas for the assignment waitlist and the direct substitution workflow. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 import { validZone } from "../../lib/dates.ts";
 
@@ -57,7 +58,7 @@ const substitutionSchema = z
       location: z.string(),
       amount: z.number().nonnegative().nullable(),
       total_amount: z.number().nonnegative().nullable(),
-      currency: z.enum(["EUR", "AUD"]).nullable(),
+      currency: z.enum(currencyCodes).nullable(),
       rate_unit: z
         .enum(["per_day", "per_hour", "per_teaching_unit", "fixed_total"])
         .nullable(),

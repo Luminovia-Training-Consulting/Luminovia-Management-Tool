@@ -3,6 +3,7 @@
  * request a projection rather than granting access; keep original currencies separate and
  * protect CSV cells against formula execution.
  */
+import type { CurrencyCode } from "../../lib/currencies.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import {
@@ -158,12 +159,12 @@ export const paymentsQuery = (actor: string, invoice: string) =>
 
 export { csvCell, csvText, downloadCsv } from "../../lib/csv";
 
-/** Sum fee states in integer cents per original currency, without combining EUR and AUD. */
+/** Sum fee states in integer cents per original currency, without mixing currencies. */
 export function groupedEarnings(rows: EarningRecord[]) {
   const groups = new Map<
     string,
     {
-      currency: "EUR" | "AUD";
+      currency: CurrencyCode;
       expected: number;
       review: number;
       completed: number;
@@ -261,7 +262,7 @@ export function invoicesDueFirst(rows: InvoiceRecord[], today: string) {
 }
 
 export type MonthlyEarningsTrend = {
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   month: string;
   expected: number;
   review: number;
@@ -320,7 +321,7 @@ export function monthlyEarningsTrend(
 
 /** Aggregate company invoice volumes by issue month while retaining received payments separately. */
 export type MonthlyInvoiceTrend = {
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   month: string;
   invoiced: number;
   paid: number;

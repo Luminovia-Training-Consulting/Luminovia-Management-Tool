@@ -2,6 +2,7 @@
  * Capability-gated revenue grouped by currency. Keep offers, accepted revenue and historically
  * unknown gross values visibly distinct.
  */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -103,8 +104,11 @@ export function RevenuePanel() {
             onChange={(event) => setCurrency(event.target.value)}
           >
             <option value="">{t("allCurrencies")}</option>
-            <option>EUR</option>
-            <option>AUD</option>
+            {currencyCodes.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
           </select>
         </Field>
       </div>

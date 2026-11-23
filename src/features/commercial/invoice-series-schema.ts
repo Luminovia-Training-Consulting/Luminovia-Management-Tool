@@ -1,3 +1,4 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 import { invoiceExceptionOptionsSchema } from "./invoice-exception-schema.ts";
 
@@ -15,7 +16,7 @@ export const invoiceSeriesRecordSchema = z.strictObject({
   id: z.uuid(),
   claim_id: z.uuid(),
   title: z.string(),
-  currency: z.enum(["EUR", "AUD"]),
+  currency: z.enum(currencyCodes),
   kind: invoiceSeriesKindSchema,
   contract_version: z.int().positive(),
   gross_amount: z.number().positive(),
@@ -33,7 +34,7 @@ export const invoiceSeriesRecordSchema = z.strictObject({
 export const invoiceSeriesRecordsSchema = z.array(invoiceSeriesRecordSchema);
 export const invoiceSeriesOptionsSchema = z.strictObject({
   claim_id: z.uuid(),
-  currency: z.enum(["EUR", "AUD"]),
+  currency: z.enum(currencyCodes),
   ceiling: amount,
   credited: amount,
   contracts: invoiceExceptionOptionsSchema.shape.contracts,

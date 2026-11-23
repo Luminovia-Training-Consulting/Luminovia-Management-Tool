@@ -319,7 +319,7 @@ try {
                 {...payload(), amount: 999},
                 {...payload(), status: "published"},
                 {...payload(), gross_amount: 100.001, gross_total_amount: 100.001},
-                {...payload(), currency: "USD"},
+                {...payload(), currency: "GBP"},
                 {
                     ...payload(),
                     sessions: [payload().sessions[0], payload().sessions[0]],
@@ -847,6 +847,21 @@ try {
                 1,
                 "Only actual publication changes the published counter",
             );
+        },
+    );
+    await check(
+        "Client requests and individual compensation preserve USD",
+        async () => {
+            const submitted = await request(client, org, payload(48, 123.45, "USD"));
+            assert.equal(
+                (await rows(client, "client_requests")).find((row) => row.id === submitted)?.currency,
+                "USD",
+            );
+            await value(admin, "save_lecturer_compensation", [
+                lecturer, "daily", 50, 123.45, "USD", 1,
+            ]);
+            const compensation = JSON.parse(await value(admin, "lecturer_compensation", [lecturer]));
+            assert.equal(compensation.currency, "USD");
         },
     );
     await check(

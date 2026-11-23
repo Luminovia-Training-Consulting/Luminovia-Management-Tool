@@ -3,6 +3,7 @@
  * versions and accepted claims retain distinct references so template changes cannot reinterpret
  * old agreements.
  */
+import type { CurrencyCode } from "../../lib/currencies.ts";
 /** Current commercial view/manage capabilities, not a UI role hierarchy. */
 export interface CommercialAccess {
   can_submit_invoice: boolean;
@@ -48,7 +49,7 @@ export interface EarningRecord {
   amount: number;
   rate_unit: string;
   total_amount: number;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   stage: "expected" | "completed" | "invoiced" | "paid" | "review";
   invoice_id: string | null;
   invoice_eligible_at: string | null;
@@ -84,7 +85,7 @@ export interface InvoiceReviewCase {
   requested_at: string;
   scheduled_end: string | null;
   accepted_total: number;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
 }
 
 /** Invoice projection with exact PDF version, server-calculated totals and review/payment state. */
@@ -96,7 +97,7 @@ export interface InvoiceRecord {
   number: string;
   issued_on: string;
   due_on: string;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   total_amount: number;
   paid_amount: number;
   status: "submitted" | "approved" | "paid" | "rejected" | "cancelled";
@@ -112,7 +113,7 @@ export interface InvoiceRecord {
 export interface InvoicePayment {
   id: string;
   amount: number;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   paid_at: string;
   reference: string;
   recorded_by_name: string;

@@ -566,6 +566,16 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
   const unchanged = await rpc(finance, "accounting_export", [q(paidExport.id)]);
   assert.deepEqual(unchanged, paidExport);
 
+  const usd = await invoice("Fictional USD invoice", "USD");
+  const usdCredit = await note("Fictional USD credit", "10.00", usd.id, "USD");
+  await apply(finance, usdCredit.id, randomUUID(), usd.id);
+  await payment("21.25", "Fictional USD payment", usd.id);
+  const usdBalance = await read(finance, usd.id);
+  assert.equal(usdBalance.currency, "USD");
+  assert.equal(usdBalance.credit_total, "10.00");
+  assert.equal(usdBalance.received_total, "21.25");
+  assert.equal(usdBalance.outstanding_total, "68.75");
+
   // Saturate an independent fixture date to verify the cap without silently discarding rows.
   await sql(`
     insert into private.accounting_customer_credit_applications(invoice_id,credit_note_id,reason,recorded_by,created_at)

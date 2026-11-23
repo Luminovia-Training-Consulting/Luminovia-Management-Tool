@@ -2,6 +2,7 @@
  * Shared DTOs for the original profile/job/calendar contract. Keep ISO instants, IANA zones and
  * accepted terms distinct; feature extensions own their additional types.
  */
+import type { CurrencyCode } from "./currencies.ts";
 /** Own profile fields and display zone; never a substitute for current role/capability queries. */
 export interface Profile {
   id: string;
@@ -58,7 +59,7 @@ export interface Job {
   time_zone: string;
   status: "draft" | "published" | "filled" | "archived";
   amount: number | null;
-  currency: "EUR" | "AUD";
+  currency: CurrencyCode;
   rate_unit: "per_day" | "per_hour" | "per_teaching_unit" | "fixed_total";
   total_amount: number | null;
   terms: string;

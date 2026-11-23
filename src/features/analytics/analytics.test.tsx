@@ -39,13 +39,15 @@ function fakeReport(scope: string): AnalyticsReport {
         future_minutes: 360,
         open_positions: scope === "staff" ? 4 : null,
         currencies: Object.fromEntries(
-          (["EUR", "AUD"] as const).map((currency) => [
+          (["EUR", "AUD", "USD"] as const).map((currency) => [
             currency,
             {
               past_net: scope === "personal" ? 50 : null,
               future_net: scope === "personal" ? 100 : null,
               past_gross:
-                scope === "company" ? (currency === "EUR" ? 250 : 450) : null,
+                scope === "company"
+                  ? { EUR: 250, AUD: 450, USD: 650 }[currency]
+                  : null,
               future_gross: scope === "company" ? 100 : null,
               missing_gross: scope === "company" ? 1 : null,
               lecturer_cash: scope === "personal" ? 25 : null,
@@ -155,6 +157,8 @@ it("keeps company finance separate from teaching income and uses original curren
   expect(
     screen.queryByRole("option", { name: "Recorded lecturer payments" }),
   ).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("Currency"), "USD");
+  expect(screen.getByText("$650.00", { selector: "dd" })).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("Currency"), "AUD");
   expect(screen.getByText("A$450.00", { selector: "dd" })).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("Metric"), "customerCash");

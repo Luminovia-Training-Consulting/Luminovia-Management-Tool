@@ -1,3 +1,9 @@
+# 23 November 2026 — USD commercial currency
+
+USD is available alongside EUR and AUD for offers, company requests, lecturer compensation, invoicing and settlement. The catalogue filters, Swagger contracts and finance reports use the same supported currencies. Financial totals remain separate by original currency.
+
+The local unit and component suite passed 1,623 tests, and 415 focused tests passed after integrating the latest course changes. PostgreSQL verified USD offer and request writes, compensation, invoice and credit-note settlement, and separate monthly totals. The generated API reference, code integrity and production build budgets passed.
+
 # 23 November 2026 — Explicit marketplace publication
 
 Course-backed offers now have separate actions to publish in the marketplace and save a draft. Each outcome gives a specific receipt and link. Course cards link their draft offers so staff can publish them later through the existing lifecycle action. Course catalogue visibility remains a separate setting.

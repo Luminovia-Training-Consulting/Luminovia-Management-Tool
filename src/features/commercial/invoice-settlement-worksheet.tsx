@@ -1,4 +1,5 @@
 /** Finance decision support. Private input stays in memory; only lecturer totals may be shared. */
+import type { CurrencyCode } from "../../lib/currencies.ts";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Field, Notice } from "../../components/common";
@@ -167,7 +168,7 @@ export function InvoiceSettlementWorksheet({
   attached,
   onSummary,
 }: {
-  currency: "AUD" | "EUR";
+  currency: CurrencyCode;
   attached: boolean;
   onSummary: (text: string, openCents?: number) => void;
 }) {

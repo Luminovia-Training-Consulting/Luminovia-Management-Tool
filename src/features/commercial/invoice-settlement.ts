@@ -34,7 +34,7 @@ export type SettlementUnit = {
   receivedCustomerCompensation: string;
 };
 
-/** Parse nonnegative EUR/AUD monetary input without binary floating point rounding. */
+/** Parse nonnegative monetary input without binary floating point rounding. */
 function cents(value: string): number | null {
   const parts = /^(\d{1,9})(?:[.,](\d{1,2}))?$/.exec(value.trim());
   if (!parts) return null;

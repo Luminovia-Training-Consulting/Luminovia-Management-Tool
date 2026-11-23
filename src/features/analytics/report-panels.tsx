@@ -1,3 +1,4 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Field } from "../../components/common";
@@ -11,8 +12,6 @@ import {
 } from "./charts";
 import type { AnalyticsCurrency, AnalyticsReport } from "./schema";
 import { Totals } from "./report-ui";
-
-const currencyCodes = ["EUR", "AUD"] as const;
 
 export function ReportPanels({
   report,
@@ -194,7 +193,12 @@ function MoneyPanel({
 }) {
   const { t } = useTranslation("analytics");
   const [selected, setSelected] = useState<Metric | null>(null);
-  const first = report.months[0].currencies[currency];
+  const currencies = currencyCodes.filter((code) =>
+    report.months.some((month) => month.currencies[code] !== undefined),
+  );
+  const first = report.months.find((month) => month.currencies[currency])
+    ?.currencies[currency];
+  if (!first) return null;
   const available = metrics.filter(
     (metric) => first[keyByMetric[metric][0]] !== null,
   );
@@ -207,7 +211,7 @@ function MoneyPanel({
       name: t(futureKey ? "pastConfirmed" : "cash"),
       tone: "past",
       values: report.months.map((month) =>
-        month.history ? month.currencies[currency][pastKey] : null,
+        month.history ? (month.currencies[currency]?.[pastKey] ?? null) : null,
       ),
     },
   ];
@@ -216,11 +220,13 @@ function MoneyPanel({
       name: t("futureConfirmed"),
       tone: "future",
       values: report.months.map((month) =>
-        month.forecast ? month.currencies[currency][futureKey] : null,
+        month.forecast
+          ? (month.currencies[currency]?.[futureKey] ?? null)
+          : null,
       ),
     });
   const unknown = report.months.reduce(
-    (total, month) => total + (month.currencies[currency].missing_gross ?? 0),
+    (total, month) => total + (month.currencies[currency]?.missing_gross ?? 0),
     0,
   );
 
@@ -248,7 +254,7 @@ function MoneyPanel({
                 setCurrency(event.target.value as AnalyticsCurrency)
               }
             >
-              {currencyCodes.map((code) => (
+              {currencies.map((code) => (
                 <option key={code} value={code}>
                   {code}
                 </option>

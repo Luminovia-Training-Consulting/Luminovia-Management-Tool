@@ -289,7 +289,7 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
         "Saved views are private, canonical, retry safe and compare-and-swap concurrent changes",
         async () => {
             const id = randomUUID(),
-                filters = {q: "%_", currency: "AUD", sort: "total_desc"};
+                filters = {q: "%_", currency: "USD", sort: "total_desc"};
             const save = (who, name, version = 0, values = filters) =>
                 actor(
                     who,
@@ -297,6 +297,7 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 );
             const first = JSON.parse(await save(teacher, "Fictional personal view"));
             assert.equal(first.version, 1);
+            assert.equal(first.filters.currency, "USD");
             assert.equal(
                 JSON.parse(await save(teacher, "Fictional personal view")).id,
                 id,

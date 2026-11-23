@@ -1,3 +1,4 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { isAcademyExplorerRequest } from "./request-boundary.ts";
 import {
@@ -681,7 +682,7 @@ const clientRequestFields = {
   topic_ids: { type: "array", items: uuid, maxItems: 100, default: [] },
   gross_amount: proposedAmount,
   gross_total_amount: proposedAmount,
-  currency: { enum: ["EUR", "AUD"] },
+  currency: { enum: [...currencyCodes] },
   rate_unit: rateUnit,
 };
 const clientRequestInput = {
@@ -914,7 +915,7 @@ const replacementRefusal = {
 const lecturerQuote = {
   amount: { type: "number", minimum: 0 },
   total_amount: { type: "number", minimum: 0 },
-  currency: { enum: ["EUR", "AUD"] },
+  currency: { enum: [...currencyCodes] },
   rate_unit: rateUnit,
 };
 const replacementQuote = object({
@@ -4161,7 +4162,7 @@ const nativePaths = {
         organisation_id: uuid,
         organisation_name: text,
         time_zone: text,
-        currency: { enum: ["EUR", "AUD"] },
+        currency: { enum: [...currencyCodes] },
         month_start: { type: "string", format: "date" },
         gross_amount: { type: "number" },
         claim_count: { type: "integer", minimum: 0 },

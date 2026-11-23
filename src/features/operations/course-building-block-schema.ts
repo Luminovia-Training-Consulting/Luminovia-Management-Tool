@@ -1,4 +1,5 @@
 /** Shared validation for course authoring, reviewed job previews and provenance. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
 export const courseRecordId = z.uuid();
@@ -77,7 +78,7 @@ export type JobBuildingBlockSource = NonNullable<
   z.infer<typeof jobBuildingBlockReferenceSchema>
 >;
 
-export const courseOfferCurrencySchema = z.enum(["EUR", "AUD"]);
+export const courseOfferCurrencySchema = z.enum(currencyCodes);
 export const courseOfferRateUnitSchema = z.enum([
   "per_day",
   "per_teaching_unit",

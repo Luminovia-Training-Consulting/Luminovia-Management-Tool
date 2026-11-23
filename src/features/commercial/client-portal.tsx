@@ -1,3 +1,4 @@
+import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyDispatchSettings } from "../operations/company-dispatch-settings";
@@ -83,7 +84,7 @@ const schema = z.object({
   time_zone: z.string().refine(validZone),
   gross_amount: z.number().positive().max(1000000),
   gross_total_amount: z.number().positive().max(1000000),
-  currency: z.enum(["EUR", "AUD"]),
+  currency: z.enum(currencyCodes),
   rate_unit: z.enum([
     "per_day",
     "per_teaching_unit",
@@ -373,8 +374,11 @@ function RequestForm({
             {...form.register("currency")}
             disabled={save.isPending}
           >
-            <option>EUR</option>
-            <option>AUD</option>
+            {currencyCodes.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
           </select>
         </Field>
         <Field id="request-unit" label={common("unit")}>

@@ -1,9 +1,10 @@
 /** Read projections for retained contracts, invoices and invoice payments. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
 
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
-const currency = z.enum(["EUR", "AUD"]);
+const currency = z.enum(currencyCodes);
 // Unlike new UI submissions, historic PostgreSQL rows can hold unbounded dates.
 const unbounded = z.enum(["infinity", "-infinity"]);
 const retainedInstant = z.union([instant, unbounded]);

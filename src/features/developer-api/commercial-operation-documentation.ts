@@ -1,9 +1,10 @@
 /** Business rules for the replayed commercial RPCs in the internal API. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import nativeRpc from "../../../data/native-rpc.generated.json" with { type: "json" };
 
 const text = { type: "string" };
 const uuid = { ...text, format: "uuid" };
-const currency = { type: "string", enum: ["EUR", "AUD"] };
+const currency = { type: "string", enum: [...currencyCodes] };
 const reviewReason = ["cancelled", "partial_delivery", "schedule_mismatch"];
 const reviewState = {
   type: ["string", "null"],

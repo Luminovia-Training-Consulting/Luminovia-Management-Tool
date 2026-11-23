@@ -1,4 +1,5 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { currencyCodes } from "../../lib/currencies.ts";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist } from "./lifecycle-extra";
 import { useRef, useState } from "react";
@@ -158,8 +159,11 @@ function FilterForm({
         >
           <select {...register("currency")}>
             <option value="">{common("all")}</option>
-            <option>EUR</option>
-            <option>AUD</option>
+            {currencyCodes.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
           </select>
         </Field>
         <Field

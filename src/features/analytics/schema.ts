@@ -44,6 +44,7 @@ export const analyticsReportSchema = z.object({
         currencies: z.object({
           EUR: timelineMoneySchema,
           AUD: timelineMoneySchema,
+          USD: timelineMoneySchema.optional(),
         }),
       }),
     )
