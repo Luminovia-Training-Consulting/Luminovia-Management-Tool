@@ -77,9 +77,18 @@ describe("course template and run-backed offer contracts", () => {
       gross_total_amount: 300.03,
     };
     const net = { ...fields, amount: 50, total_amount: 150 };
-    const { terms: _terms, ...withoutTerms } = gross;
-    expect(input("create_course_run_job", { ...base, p_payload: withoutTerms })).toBe(true);
-    expect(input("create_course_run_job", { ...base, p_payload: { ...gross, terms: "" } })).toBe(true);
+    const withoutTerms = Object.fromEntries(
+      Object.entries(gross).filter(([key]) => key !== "terms"),
+    );
+    expect(
+      input("create_course_run_job", { ...base, p_payload: withoutTerms }),
+    ).toBe(true);
+    expect(
+      input("create_course_run_job", {
+        ...base,
+        p_payload: { ...gross, terms: "" },
+      }),
+    ).toBe(true);
     expect(input("create_course_run_job", { ...base, p_payload: gross })).toBe(
       true,
     );

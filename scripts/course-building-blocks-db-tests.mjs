@@ -399,7 +399,9 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 /idempotency conflict/,
             );
-            const {terms: _terms, ...optionalPayload} = payload;
+            const optionalPayload = Object.fromEntries(
+                Object.entries(payload).filter(([key]) => key !== "terms"),
+            );
             const anotherId = randomUUID();
             const another = await rpc(
                 "admin", "create_course_run_job", [run, optionalPayload, null, anotherId], "aal1",

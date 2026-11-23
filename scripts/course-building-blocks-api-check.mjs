@@ -248,7 +248,9 @@ await withApiFixture(
             ),
             job,
         );
-        const {terms: _terms, ...optionalPayload} = payload;
+        const optionalPayload = Object.fromEntries(
+            Object.entries(payload).filter(([key]) => key !== "terms"),
+        );
         const another = await checked(admin.client.rpc("create_course_run_job", {
             p_course_run_id: run,
             p_payload: optionalPayload,
