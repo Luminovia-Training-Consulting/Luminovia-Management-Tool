@@ -4654,3 +4654,7 @@ The internal commercial scenario passed in both Chromium projects from the scann
 The built Website submitted fictional DE/EN enquiries through the existing relay and native Portal intake. The permitted management account received the correct inbox entry and one matching notice after a lost-receipt retry. The lecturer did not receive access or a notice. The public Website remains on the existing email contact by request.
 
 Dedicated Academy migration replay fixed the transaction envelope for one exact released source and intermediate output that made the migration receipt unparseable. Native PostgreSQL 17.12 retained accounts, roles, enrolments, chat and file metadata through the upgrade. A separate encrypted cold restore retained Auth metadata and exact protected bytes. Local monitor checks verify the exact migration inventory, quota states, scanner and backup handling. Customer DNS, TLS, PWA on the target origin, provider mail, webhook destination and monitoring remain outside this local rehearsal.
+
+# 23 November 2026 — Marketplace date search time zone
+
+The marketplace date filter uses the shared time-zone selector from lecturer profiles. The existing date-range interpretation and saved filter contract are preserved, including valid time-zone aliases in old links. The focused discovery tests passed 29 cases and verified selecting Brisbane, applying it with the existing start date and reopening the filter from the URL.

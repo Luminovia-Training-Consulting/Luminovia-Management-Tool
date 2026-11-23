@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Marketplace date search time zone
+
+- [x] Use the shared time-zone selector in the marketplace date filter while preserving saved filters, valid historical aliases and local date boundaries.
+
 ## Course editor layout
 
 - [x] Show active linked assignments independently of catalogue visibility, permit course-only venue and visibility edits, and expose scoped run deletion with linked assignment navigation.

@@ -95,6 +95,7 @@ function setup({
   topics = [] as Topic[],
   queryRetry = false,
   expandFilters = true,
+  initialEntry = "/",
 }: {
   role?: string;
   write?: (
@@ -105,6 +106,7 @@ function setup({
   topics?: Topic[];
   queryRetry?: boolean | number;
   expandFilters?: boolean;
+  initialEntry?: string;
 } = {}) {
   state.roles = [role];
   state.rpc.mockImplementation(
@@ -150,7 +152,7 @@ function setup({
   client.setQueryData(["topics"], topics);
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <JobDiscovery />
         <Location />
       </MemoryRouter>
@@ -204,6 +206,43 @@ it("submits combined filters once instead of requesting every typed character an
   expect(
     state.rpc.mock.calls.filter(([n]) => n === "job_discovery"),
   ).toHaveLength(3);
+});
+it("keeps a saved date-search time zone selected and applies a choice from the shared catalogue", async () => {
+  setup({ initialEntry: "/?from=2040-01-02&zone=US%2FEastern" });
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Fictional discovery 1" });
+  const select = screen.getByRole("combobox", {
+    name: "Zeitzone der Datumssuche",
+  });
+  expect(select).toHaveValue("US/Eastern");
+  expect(
+    within(select).getByRole("option", { name: "Europe/Berlin" }),
+  ).toBeInTheDocument();
+
+  await user.selectOptions(select, "Australia/Brisbane");
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name === "job_discovery"),
+  ).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+
+  await waitFor(() =>
+    expect(
+      state.rpc.mock.calls
+        .filter(([name]) => name === "job_discovery")
+        .at(-1)?.[1].p_filters,
+    ).toMatchObject({
+      from: "2040-01-02",
+      zone: "Australia/Brisbane",
+    }),
+  );
+  expect(
+    new URLSearchParams(screen.getByLabelText("route").textContent ?? "").get(
+      "zone",
+    ),
+  ).toBe("Australia/Brisbane");
+  expect(
+    screen.getByRole("combobox", { name: "Zeitzone der Datumssuche" }),
+  ).toHaveValue("Australia/Brisbane");
 });
 it("matches any selected subject, combines other filters, and keeps history opt-in", async () => {
   const topics: Topic[] = [

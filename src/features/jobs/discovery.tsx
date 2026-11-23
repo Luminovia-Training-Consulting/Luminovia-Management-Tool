@@ -22,6 +22,7 @@ import { topicsQuery, userRolesQuery } from "../../lib/queries";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
+import { TimeZoneOptions } from "../../components/time-zone-options";
 import {
   ErrorState,
   Field,
@@ -146,7 +147,9 @@ function FilterForm({
           label={t("zone")}
           error={Boolean(errors.zone)}
         >
-          <input {...register("zone")} />
+          <select {...register("zone")}>
+            <TimeZoneOptions current={initial.zone} />
+          </select>
         </Field>
         <Field
           id="discovery-currency"
