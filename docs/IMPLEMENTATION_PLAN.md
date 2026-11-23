@@ -1970,3 +1970,5 @@ The migration-order regression now accepts later independent migrations while pr
 Mobile browser failure triage remains open. The component regression covers cancellation feedback during a stalled refresh. Re-run the mobile browser phase against the final revision and use the generated traces to resolve the remaining cases before recording acceptance.
 
 Account directory now opens a unified profile and expertise dialog. The focused regression covers actor-scoped reads and preservation of a draft across views. Browser acceptance for the updated journey remains pending.
+
+Personnel and expertise account details now expose individual lecturer compensation using the existing authorized, versioned workflow.

@@ -188,6 +188,10 @@ describe("Account administration", () => {
     expect(
       details.getByRole("button", { name: "Person & Expertise" }),
     ).toHaveAttribute("aria-pressed", "true");
+    expect(details.getByTestId("lecturer-compensation")).toHaveTextContent(
+      "teacher-id",
+    );
+    expect(details.getByTestId("lecturer-compensation")).toBeVisible();
     await waitFor(() => {
       expect(fake.directoryFilter).toHaveBeenCalledWith(
         "profiles",

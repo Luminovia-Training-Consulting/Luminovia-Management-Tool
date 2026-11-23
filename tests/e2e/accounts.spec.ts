@@ -115,6 +115,7 @@ test("individual account roles, scoped invitations and linked status management 
     const details = page.getByRole("dialog", {name: "Kontodetails", exact: true});
     await expect(details.getByLabel("Anzeigename", {exact: true})).toHaveValue(teacher.name);
     await details.getByRole("button", {name: "Person & Expertise", exact: true}).click();
+    await expect(details.getByRole("heading", {name: "Dozentenhonorar", exact: true})).toBeVisible();
     await expect(details.getByRole("heading", {name: teacher.name, exact: true})).toBeVisible();
     await expect(page).toHaveURL(/\/admin\/accounts$/);
     await page.keyboard.press("Escape");

@@ -117,6 +117,7 @@ function AccountProfileDialog({
       </div>
       {canVerify && openedExpertise && (
         <div hidden={!showExpertise}>
+          {!own && <LecturerCompensation userId={person.id} />}
           <PeopleDirectory actorId={actorId} accountId={person.id} />
         </div>
       )}

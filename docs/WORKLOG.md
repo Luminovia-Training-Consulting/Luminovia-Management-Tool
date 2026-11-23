@@ -4845,3 +4845,5 @@ Job provenance offers a direct download for an authorized, scanned attachment wh
 Focused frontend suites passed 94 tests, and the Edge handler passed four tests. TypeScript builds passed. The exact new document relationship and checksum filter was accepted by native PostgREST in the isolated database. Full browser acceptance of the new workflows remains pending.
 
 The unified account view now opens from the account name. The selected account's profile and eligible lecturer expertise appear in one dialog, and switching views preserves unsaved profile changes. The focused account, profile and expertise suites passed 21 tests. The browser scenario was updated and remains pending execution.
+
+The merged account details expose the existing individual lecturer compensation editor directly in Person & Expertise. The editor uses the existing commercial permission and versioned save operation. The focused account and compensation tests cover placement for the selected lecturer and saving individual terms. The browser scenario also checks that the heading is visible on the tab.
