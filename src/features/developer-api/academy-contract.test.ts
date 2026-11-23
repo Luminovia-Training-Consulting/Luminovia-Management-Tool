@@ -149,6 +149,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(byId.get("issueAcademyScopedIntegrationKey")?.endpoints).toEqual([
         expect.objectContaining({ method: "POST", interactive: false }),
       ]);
+      expect(byId.get("publishAcademyCourseMaterial")?.actions).toEqual({
+        argument: "p_action",
+        values: ["resource_share", "resource_remove"],
+      });
       for (const exception of inventory.exceptions) {
         expect(exception.reason.de).toBeTruthy();
         expect(exception.reason.en).toBeTruthy();

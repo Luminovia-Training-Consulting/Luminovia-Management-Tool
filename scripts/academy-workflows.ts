@@ -195,20 +195,26 @@ type Paths = Record<string, object>;
 const aliasPrefix = "/functions/v1/portal-api/v1/";
 const rpcPrefix = "/rest/v1/rpc/";
 
+type WorkflowOperation = {
+  operationId: string;
+  actions?: { argument: string; values: string[] };
+  endpoints: {
+    method: string;
+    path: string;
+    operationId: string;
+    statuses: string[];
+    interactive: boolean;
+  }[];
+};
+
 /** Assemble the downloadable workflow index and fail the build on orphaned operations. */
 function academyWorkflows(paths: Paths, explorerPaths: Paths) {
   const workflows = Object.entries(groups).map(([id, [[de, en], ids]]) => ({
     id,
     title: { de, en },
-    operations: ids.split(" ").map((operationId) => ({
+    operations: ids.split(" ").map<WorkflowOperation>((operationId) => ({
       operationId,
-      endpoints: [] as {
-        method: string;
-        path: string;
-        operationId: string;
-        statuses: string[];
-        interactive: boolean;
-      }[],
+      endpoints: [],
     })),
   }));
   const assigned = workflows.flatMap((workflow) => workflow.operations);
@@ -240,6 +246,20 @@ function academyWorkflows(paths: Paths, explorerPaths: Paths) {
         throw new Error(
           "Missing Academy workflow for " + operation.operationId,
         );
+      if (!path.startsWith(aliasPrefix)) {
+        const selectors =
+          operation.requestBody?.content?.["application/json"]?.schema
+            ?.properties;
+        for (const argument of ["p_action", "action"]) {
+          const values: unknown = selectors?.[argument]?.enum;
+          if (
+            Array.isArray(values) &&
+            values.every((value) => typeof value === "string")
+          ) {
+            entry.actions = { argument, values };
+          }
+        }
+      }
       entry.endpoints.push({
         method: method.toUpperCase(),
         path,

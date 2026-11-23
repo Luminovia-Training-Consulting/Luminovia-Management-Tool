@@ -327,7 +327,9 @@ test("requires both exact generated Academy clients in newly written archives", 
 test("verifies the exact historic empty catalogue as an existing archive", async (t) => {
   const { api, dist, file, output, write } = fixture(t);
   const historicApi = {
-    ...api,
+    openapi: "3.1.0",
+    "x-portal-installation": api["x-portal-installation"],
+    servers: api.servers,
     paths: {},
     components: { securitySchemes: {} },
     info: {
@@ -340,12 +342,21 @@ test("verifies the exact historic empty catalogue as an existing archive", async
   file("api/openapi.json", historicApi);
   await assert.rejects(write(), /differs from the reviewed course profile/);
   file("api/openapi.json", api);
+  const original = await write();
   const manifest = await rewriteCatalogue(
     { dist, output },
-    await write(),
+    original,
     historicApi,
   );
   assert.deepEqual(await verifyAcademyBrowserPackage(output), manifest);
+  await rewriteCatalogue({ dist, output }, original, {
+    ...historicApi,
+    webhooks: api.webhooks,
+  });
+  await assert.rejects(
+    verifyAcademyBrowserPackage(output),
+    /Historic customer API differs/,
+  );
 });
 
 test("rejects a current Academy worker that caches the live PWA manifest", async (t) => {

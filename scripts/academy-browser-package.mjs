@@ -428,7 +428,13 @@ function validateBrowserOutput(
     deepStrictEqual(
       api,
       {
-        ...expectedApi,
+        openapi: "3.1.0",
+        servers: [{ url: apiBackend }],
+        "x-portal-installation": {
+          installation_id: brand.installationId,
+          edition: brand.edition,
+          customer_ready: false,
+        },
         info: {
           title: `${brand.name} API`,
           version: "1.1.0",
