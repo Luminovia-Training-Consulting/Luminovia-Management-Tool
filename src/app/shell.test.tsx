@@ -29,7 +29,11 @@ import i18n from "../lib/i18n";
 const { signOut, access, refetchPermissions, refetchRoles, loadUi, saveUi } =
   vi.hoisted(() => ({
     signOut: vi.fn(),
-    access: { failed: false, roles: [] as string[] },
+    access: {
+      failed: false,
+      roles: [] as string[],
+      permissions: [] as string[],
+    },
     refetchPermissions: vi.fn(),
     refetchRoles: vi.fn(),
     loadUi: vi
@@ -62,14 +66,16 @@ vi.mock("@tanstack/react-query", async (original) => {
             }
           : options.queryKey[0] === "user-roles"
             ? access.roles
-            : options.queryKey[0] === "notifications" &&
-                options.queryKey[2] === "preview"
-              ? ({
-                  items: [],
-                  unread_count: 0,
-                  as_of: "2026-11-15T12:00:00Z",
-                } satisfies InboxPage)
-              : [],
+            : options.queryKey[0] === "permissions"
+              ? access.permissions
+              : options.queryKey[0] === "notifications" &&
+                  options.queryKey[2] === "preview"
+                ? ({
+                    items: [],
+                    unread_count: 0,
+                    as_of: "2026-11-15T12:00:00Z",
+                  } satisfies InboxPage)
+                : [],
       isPending: false,
       isSuccess: !access.failed,
       isError:
@@ -89,6 +95,7 @@ afterEach(() => {
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
   access.roles = [];
+  access.permissions = [];
   vi.clearAllMocks();
   loadUi
     .mockReset()
@@ -294,9 +301,10 @@ it("guest-only navigation exposes own profile/settings/help and no operational c
   expect(document.querySelector(".portal-tour")).toBeNull();
 });
 it.each(["admin", "management"])(
-  "keeps %s on live routes with ordinary header controls",
+  "shows the Control Center to %s with jobs.manage",
   (role) => {
     access.roles = [role];
+    access.permissions = ["jobs.manage"];
     setup("/courses", false);
     expect(screen.getByText("Live courses route")).toBeVisible();
     expect(screen.getByRole("search")).toBeVisible();
@@ -304,8 +312,24 @@ it.each(["admin", "management"])(
     expect(
       screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
     ).toBeNull();
+    expect(
+      within(screen.getByRole("complementary")).getByRole("link", {
+        name: "Leitstand",
+      }),
+    ).toHaveAttribute("href", "/control-center");
   },
 );
+
+it("hides the Control Center without its current management permission", () => {
+  access.roles = ["management"];
+  access.permissions = ["announcements.manage"];
+  setup("/courses", false);
+  expect(
+    within(screen.getByRole("complementary")).queryByRole("link", {
+      name: "Leitstand",
+    }),
+  ).not.toBeInTheDocument();
+});
 
 /** Observe real router transitions; the history action is outside the More disclosure. */
 function NavigationTarget() {

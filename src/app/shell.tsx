@@ -21,6 +21,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  ChartNoAxesCombined,
   FileCheck2,
   FolderOpen,
   GraduationCap,
@@ -254,6 +255,15 @@ export function Shell() {
             financeAccess.accounting ||
             financeAccess.analytics)
             ? [financeNavItem]
+            : []),
+          ...(permissions.data?.includes("jobs.manage")
+            ? [
+                {
+                  to: "/control-center",
+                  icon: ChartNoAxesCombined,
+                  label: "controlCenter",
+                },
+              ]
             : []),
           ...(staff || clientPortalAccess
             ? [{ to: "/changes", icon: FileCheck2, label: "assignmentChanges" }]
