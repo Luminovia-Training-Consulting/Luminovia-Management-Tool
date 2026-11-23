@@ -165,6 +165,9 @@ describe("course template and run-backed offer contracts", () => {
     expect(
       operation("create_course_run_job").responses["400"].description,
     ).toContain("course_run_source_changed");
+    expect(
+      operation("create_course_run_job").responses["409"]?.description,
+    ).toContain("course_run_draft_exists");
   });
 
   it("describes a complete preview with exact source sessions and paired provenance", () => {

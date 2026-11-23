@@ -42,6 +42,7 @@
 - [x] Let course managers edit eligible linked schedules and draft details from Courses. Save shared fields with the linked offer's reviewed version and keep exact session references when their instants are unchanged.
 - [x] Present protected planning values as readable details and open the existing, permission-scoped schedule proposal directly for confirmed assignments.
 
+- [x] Limit each course run to one active marketplace draft, including concurrent API writes. Keep the newest existing draft active and archive older copies with their contents.
 - [x] Label the offer schedule, space the planning link, and support optional additional terms and separate offers from the same course run. Preserve exact source sessions and idempotent retries.
 
 - [x] Group catalogue choices by kind in scrollable checkbox lists and space the save and publish actions. The course component suite and responsive Chromium layout fixture passed.

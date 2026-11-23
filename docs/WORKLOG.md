@@ -1,3 +1,9 @@
+# 23 November 2026 — One active marketplace draft per course run
+
+The course card and course details open the existing draft and offer publication of that same record. Saving a draft hides the create-another action until publication. A stale offer form that receives the native conflict can open the existing draft directly. The course-run lock handles concurrent RPC callers, the unique partial index guards all draft writes, and identical request retries still return their saved job ID.
+
+The migration keeps the newest draft active and archives older duplicates in the same transaction, preserving their original content and links. The historical PostgreSQL replay verified both draft states and preserved text and terms, with an independent draft and a published job as controls. The 23 course-building-block SQL groups, the historical upgrade case, 57 focused component and API contract tests, typecheck and the production build passed. Native local Auth/PostgREST returned the original ID on an exact retry and HTTP 409 with the active draft ID for a new request. The production updater classifies the archived-data migration as requiring operator review.
+
 # 23 November 2026 — Downloaded source startup conflict
 
 The downloaded source failed before starting database services because an existing checkout owned port 5173. The launcher reports the occupied frontend port or the active local project directly before dependency installation. The fallback stop path refuses a running project without its local supervisor. No process or database reset is attempted when a conflicting start is refused.

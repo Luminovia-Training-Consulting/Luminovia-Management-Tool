@@ -18,6 +18,8 @@ const en = {
   publishedOffer: "Offer published in the marketplace.",
   savedOfferDraft: "Saved as a draft. Open the saved offer or publish it now.",
   openOfferDraft: "Open draft",
+  draftExists:
+    "A draft already exists for this course. Open it to edit or publish it.",
   sourceChanged:
     "The course changed since this preview. Review the current course and reopen its teaching-offer form.",
   schedule: "Scheduled course sessions",
@@ -41,6 +43,8 @@ const de: typeof en = {
   savedOfferDraft:
     "Als Entwurf gespeichert. Du kannst den gespeicherten Auftrag jetzt öffnen oder direkt veröffentlichen.",
   openOfferDraft: "Entwurf öffnen",
+  draftExists:
+    "Für diesen Kurs gibt es bereits einen Entwurf. Öffne ihn zum Bearbeiten oder Veröffentlichen.",
   sourceChanged:
     "Der Kurs wurde seit dieser Vorschau geändert. Prüfe den aktuellen Kurs und öffne sein Auftragsformular erneut.",
   schedule: "Geplante Kurstermine",

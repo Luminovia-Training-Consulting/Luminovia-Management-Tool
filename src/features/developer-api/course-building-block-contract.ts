@@ -19,6 +19,7 @@ function operation(
   request: z.ZodType,
   response: z.ZodType,
   invalid = "Invalid arguments or unavailable course source.",
+  conflict?: string,
 ) {
   return {
     post: {
@@ -36,6 +37,7 @@ function operation(
         "401": error("Authentication required."),
         "403": error("Current authority or resource access is required."),
         "404": error("The supplied named arguments do not match this RPC."),
+        ...(conflict ? { "409": error(conflict) } : {}),
       },
     },
   };
@@ -63,10 +65,11 @@ export const courseBuildingBlockPaths = {
   "/rest/v1/rpc/create_course_run_job": operation(
     "createCourseRunJob",
     "Create one administrative offer from an existing course run",
-    "Requires current course and job management, a linked current customer, and one to sixty future non-overlapping sessions. Supply the source_revision from the reviewed preview. The server copies the persisted template, customer, topics and exact session references. Set capacity to 1–20 lecturer positions on the same schedule. Fees are per position. Accounts with finance.gross.read supply gross values with an optional platform share. Authorised Management can supply gross values with an explicit platform share for its own offers. Other authorised accounts supply legacy net values. Fixed-total values must agree. A deadline requires an explicit offset and may be no later than the first session. Additional terms are optional. Use a new p_client_id for each separate offer on the same run. Reuse p_client_id for the same actor and unchanged request. Returns the job ID.",
+    "Requires current course and job management, a linked current customer, and one to sixty future non-overlapping sessions. Supply the source_revision from the reviewed preview. The server copies the persisted template, customer, topics and exact session references. Set capacity to 1–20 lecturer positions on the same schedule. Fees are per position. Accounts with finance.gross.read supply gross values with an optional platform share. Authorised Management can supply gross values with an explicit platform share for its own offers. Other authorised accounts supply legacy net values. Fixed-total values must agree. A deadline requires an explicit offset and may be no later than the first session. Additional terms are optional. A course run has at most one active draft. Edit or publish the existing draft before creating another offer. Reuse p_client_id for the same actor and unchanged request. Returns the job ID.",
     createCourseRunJobRequestSchema,
     courseRecordId,
     "Invalid financial terms, deadline, source or request identity. A stale preview returns course_run_source_changed.",
+    "A draft already exists (course_run_draft_exists). The details field contains the existing draft UUID.",
   ),
   "/rest/v1/rpc/job_building_block_reference": operation(
     "readJobBuildingBlockReference",

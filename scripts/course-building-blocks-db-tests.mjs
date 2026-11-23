@@ -588,6 +588,38 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             assert.equal((await rpc("management", "commission_offer_policy", [made])).platform_percent_override, 20);
         },
     );
+    await check("One active course draft survives concurrent saves and remains editable", async () => {
+        const draftRun = await createRun(template, 82);
+        const preview = await rpc("admin", "course_run_job_defaults", [draftRun]);
+        const requests = [
+            ["admin", {...financial(preview.source_revision), status: "draft"}, randomUUID()],
+            ["management", {...financial(preview.source_revision, false), status: "draft"}, randomUUID()],
+        ];
+        const create = ([who, settings, key]) =>
+            rpc(who, "create_course_run_job", [draftRun, settings, null, key]);
+        const attempts = await Promise.allSettled(requests.map(create));
+        const winner = attempts.findIndex(({status}) => status === "fulfilled");
+        assert.notEqual(winner, -1);
+        const saved = attempts[winner].value;
+        assert.equal(attempts[1 - winner].status, "rejected");
+        assert.match(attempts[1 - winner].reason.message, /course_run_draft_exists/);
+        assert.equal(await create(requests[winner]), saved);
+        await assert.rejects(create(["admin", financial(preview.source_revision), randomUUID()]), /course_run_draft_exists/);
+        await assert.rejects(sql(`insert into public.jobs (
+            course_run_id,title,customer_name,delivery_type,amount,total_amount,currency,rate_unit,terms
+          ) values (${q(draftRun)},'Second draft','Fictional academy','online',10,10,'EUR','fixed_total','')`),
+        /jobs_one_course_draft_idx/);
+        const version = await sql(`select lifecycle_version from public.jobs where id=${q(saved)}`);
+        await rpc("admin", "manage_job_offer", [saved, "published", version, randomUUID(), {}]);
+        const next = await create(requests[1 - winner]);
+        assert.notEqual(next, saved);
+        assert.equal(await sql(`select count(*) from public.jobs where course_run_id=${q(draftRun)} and status='draft'`), "1");
+        const currentVersion = await sql(`select lifecycle_version from public.jobs where id=${q(saved)}`);
+        await assert.rejects(
+            rpc("admin", "manage_job_offer", [saved, "draft", currentVersion, randomUUID(), {}]),
+            /jobs_one_course_draft_idx/,
+        );
+    });
     await check(
         "Two independent management actors can publish separate whole-block offers for one run",
         async () => {
@@ -963,3 +995,35 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         `\n${count} course building-block curriculum/source/run-offer PostgreSQL checks passed.`,
     );
 });
+
+await withTestDatabase("course_draft_upgrade", async ({sql}) => {
+    const [template, run, otherRun, old, newest, other, published] =
+        Array.from({length: 7}, randomUUID);
+    await sql(`
+        insert into public.course_templates(id,title) values (${q(template)},'Fictional course');
+        insert into public.course_runs(id,template_id)
+        values (${q(run)},${q(template)}), (${q(otherRun)},${q(template)});
+        insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,
+                                amount,total_amount,currency,rate_unit,terms,status,created_at)
+        values
+          (${q(old)},${q(run)},'Earlier text','Fictional academy','online',10,10,'EUR','fixed_total','Original terms','draft','2026-06-01'),
+          (${q(newest)},${q(run)},'Latest text','Fictional academy','online',12,12,'EUR','fixed_total','Updated terms','draft','2026-06-02'),
+          (${q(other)},${q(otherRun)},'Other course','Fictional academy','online',10,10,'EUR','fixed_total','','draft','2026-06-01'),
+          (${q(published)},${q(run)},'Listed','Fictional academy','online',20,20,'EUR','fixed_total','','published','2026-06-01');
+    `);
+    await sql(readFileSync(new URL(
+        "../supabase/migrations/20261123085923_single_active_course_offer_draft.sql",
+        import.meta.url,
+    ), "utf8"));
+    const rows = JSON.parse(await sql(`
+        select jsonb_object_agg(id, jsonb_build_array(status,title,terms,lifecycle_version))
+        from public.jobs where id in (${[old, newest, other, published].map(q).join(",")})
+    `));
+    assert.deepEqual(rows, {
+        [old]: ["archived", "Earlier text", "Original terms", 2],
+        [newest]: ["draft", "Latest text", "Updated terms", 1],
+        [other]: ["draft", "Other course", "", 1],
+        [published]: ["published", "Listed", "", 1],
+    });
+    console.log("PASS Existing duplicate drafts are archived without losing text and terms or changing other jobs.");
+}, {migrationsThrough: "20261123073248"});

@@ -310,6 +310,14 @@ function JobForm({
       ]);
     },
   });
+  const draftConflict =
+    courseRun && create.error?.message === "course_run_draft_exists";
+  const existingDraft = courseRecordId.safeParse(
+    create.error && "details" in create.error
+      ? create.error.details
+      : undefined,
+  );
+
   if (
     topics.isPending ||
     pricing.isPending ||
@@ -772,7 +780,21 @@ function JobForm({
       {Object.keys(errors).length > 0 && (
         <Notice kind="error">{t("invalidForm")}</Notice>
       )}
-      {create.isError && (
+      {draftConflict && (
+        <Notice kind="error">
+          {courseText("draftExists")}{" "}
+          <Link
+            to={
+              existingDraft.success
+                ? `/jobs/${existingDraft.data}`
+                : `/courses?run=${courseRun.course_run_id}`
+            }
+          >
+            {courseText(existingDraft.success ? "openOfferDraft" : "plan")}
+          </Link>
+        </Notice>
+      )}
+      {create.isError && !draftConflict && (
         <Notice kind="error">
           {courseRun && create.error.message === "course_run_source_changed"
             ? courseText("sourceChanged")
@@ -801,21 +823,23 @@ function JobForm({
               onPublished={() => setPublishedDraft(true)}
             />
           )}
-          {done && courseRun && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                retry.clear();
-                setDone(false);
-                setPublishedDraft(false);
-                setCreatedId(null);
-                setValue("publish", false);
-              }}
-            >
-              {courseText("addAnother")}
-            </Button>
-          )}
+          {done &&
+            courseRun &&
+            (create.variables?.publish || publishedDraft) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  retry.clear();
+                  setDone(false);
+                  setPublishedDraft(false);
+                  setCreatedId(null);
+                  setValue("publish", false);
+                }}
+              >
+                {courseText("addAnother")}
+              </Button>
+            )}
           <Button asChild variant="secondary">
             <Link to={`/jobs/${createdId}`}>
               {courseText(

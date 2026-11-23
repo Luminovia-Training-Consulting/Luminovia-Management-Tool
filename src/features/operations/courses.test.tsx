@@ -517,13 +517,26 @@ it("opens the organisation field from the marketplace section and continues afte
 });
 
 it("links a saved offer draft from the course card without marking it as listed", async () => {
-  renderCourses({ runs: [{ ...run, jobs: [{ ...job, status: "draft" }] }] });
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    runs: [{ ...run, jobs: [{ ...job, status: "draft" }] }],
+  });
   expect(
     await screen.findByText("Auftrag als Entwurf gespeichert"),
   ).toBeVisible();
   expect(
     screen.getByRole("link", { name: `Entwurf öffnen: ${job.title}` }),
   ).toHaveAttribute("href", `/jobs/${job.id}`);
+  expect(
+    screen.queryByRole("link", {
+      name: "Auftrag für die Stellenbörse erstellen",
+    }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getAllByRole("button", {
+      name: "In der Stellenbörse veröffentlichen",
+    }),
+  ).toHaveLength(1);
   expect(
     screen.queryByRole("link", { name: /Ausschreibung öffnen/ }),
   ).not.toBeInTheDocument();

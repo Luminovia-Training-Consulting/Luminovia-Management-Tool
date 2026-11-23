@@ -343,6 +343,25 @@ await withApiFixture(
                     p_course_run_id: raceRun,
                 }),
             );
+        const draftRun = await createRun(12);
+        const draftSource = await checked(
+            admin.client.rpc("course_run_job_defaults", {p_course_run_id: draftRun}),
+        );
+        const draftArgs = {
+            p_course_run_id: draftRun,
+            p_payload: {...fee(draftSource.source_revision), status: "draft"},
+            p_client_id: randomUUID(),
+        };
+        const activeDraft = await checked(admin.client.rpc("create_course_run_job", draftArgs));
+        assert.equal(await checked(admin.client.rpc("create_course_run_job", draftArgs)), activeDraft);
+        const duplicateDraft = await manager.client.rpc("create_course_run_job", {
+            p_course_run_id: draftRun,
+            p_payload: {...fee(draftSource.source_revision, false), status: "draft"},
+            p_client_id: randomUUID(),
+        });
+        assert.equal(duplicateDraft.status, 409);
+        assert.equal(duplicateDraft.error?.message, "course_run_draft_exists");
+        assert.equal(duplicateDraft.error?.details, activeDraft);
         // Real simultaneous publication requests use the same source revision; sequential calls would not prove concurrency.
         const race = await Promise.all([
             admin.client.rpc("create_course_run_job", {

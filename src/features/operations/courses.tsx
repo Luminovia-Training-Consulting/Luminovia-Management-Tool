@@ -1344,7 +1344,20 @@ export function CoursesPage() {
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
   const marketplaceAction = (run: CourseRun) => {
-    if (!manage || run.archived_at) return null;
+    if (!manage) return null;
+    const draft = run.jobs?.find(({ status }) => status === "draft");
+    if (draft)
+      return (
+        <div className="operations-actions">
+          <Link to={`/jobs/${draft.id}`}>
+            {t("openMarketplaceDraft", { title: draft.title })}
+          </Link>
+          {canPrepareOffer && !run.archived_at && (
+            <PublishOfferDraft jobId={draft.id} />
+          )}
+        </div>
+      );
+    if (run.archived_at) return null;
     if (!canPrepareOffer)
       return <p className="muted">{t("offerPermissionRequired")}</p>;
     const hasCompany = orgs.data.some(
@@ -1688,18 +1701,6 @@ export function CoursesPage() {
                           </Link>
                         ))
                       : t(closedReason)}
-                    {jobs
-                      .filter(({ status }) => status === "draft")
-                      .map((job) => (
-                        <div key={job.id} className="operations-actions">
-                          <Link to={`/jobs/${job.id}`}>
-                            {t("openMarketplaceDraft", { title: job.title })}
-                          </Link>
-                          {canPrepareOffer && !run.archived_at && (
-                            <PublishOfferDraft jobId={job.id} />
-                          )}
-                        </div>
-                      ))}
                     {marketplaceAction(run)}
                   </div>
                 )}

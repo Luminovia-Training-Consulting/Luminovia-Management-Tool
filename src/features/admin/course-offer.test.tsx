@@ -342,6 +342,30 @@ it("allows publishing without additional terms and uses a fresh key for an inten
   expect(calls[1][1].p_client_id).not.toBe(calls[0][1].p_client_id);
 });
 
+it("opens the existing draft when another tab saved it first", async () => {
+  const respond = mock.rpc.getMockImplementation()!;
+  const draft = "f4f59e7e-30c4-4599-80c3-f53341f45eb4";
+  mock.rpc.mockImplementation((name, args) =>
+    name === "create_course_run_job"
+      ? Promise.resolve({
+          data: null,
+          error: {
+            message: "course_run_draft_exists",
+            code: "23505",
+            details: draft,
+          },
+        })
+      : respond(name, args),
+  );
+  setup();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Als Entwurf speichern" }),
+  );
+  expect(
+    await screen.findByRole("link", { name: "Entwurf öffnen" }),
+  ).toHaveAttribute("href", `/jobs/${draft}`);
+});
+
 it("publishes the saved draft using its ID and version without creating another offer", async () => {
   const user = userEvent.setup();
   setup();
