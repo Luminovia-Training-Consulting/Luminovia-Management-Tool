@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Timed LMS exams
+
+- [x] Validate the exam window against the course's dates and time zone. Apply announcement visibility and paper access rules at the database and download gateway.
+- [x] Reuse the scanned upload pipeline. Require the enrolled participant's separate final confirmation before the deadline and retain the exact confirmed version.
+- [x] Stage percentage grades, publish them explicitly, and show authorised participant results and course averages. Suppress the exam grade block for exam-free courses.
+- [ ] Exercise the new workflow in an authenticated Chromium session with real browser file transfers through the disposable stack.
+
 ## Teaching preparation and class attendance
 
 - Give the assigned instructor a readiness checklist from the course schedule, meeting/venue, material and shared preparation records. Link to the relevant course controls.

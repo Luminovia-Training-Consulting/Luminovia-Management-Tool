@@ -1,4 +1,5 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
+import { PublishedExamResults } from "./timed-exam";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -124,6 +125,8 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const [params] = useSearchParams();
   const materials = params.get("view") === "materials";
+  const results = params.get("view") === "results";
+  const dashboard = !materials && !results;
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
@@ -136,8 +139,8 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   return (
     <>
       <nav className="page-actions" aria-label={t("hub")}>
-        <Button asChild variant={materials ? "secondary" : "default"}>
-          <Link to="/learning" aria-current={materials ? undefined : "page"}>
+        <Button asChild variant={dashboard ? "default" : "secondary"}>
+          <Link to="/learning" aria-current={dashboard ? "page" : undefined}>
             {t("hub")}
           </Link>
         </Button>
@@ -149,15 +152,25 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
             {t("materialLibrary")}
           </Link>
         </Button>
+        <Button asChild variant={results ? "default" : "secondary"}>
+          <Link
+            to="/learning?view=results"
+            aria-current={results ? "page" : undefined}
+          >
+            {t("results", { ns: "timedExam" })}
+          </Link>
+        </Button>
       </nav>
-      {!materials && academy === "active" && (
+      {dashboard && academy === "active" && (
         <AcademyCourseDraft actor={actor} />
       )}
-      {!materials && academy && <AcademyCompanyLecturerBlocks actor={actor} />}
-      {!materials && !academy && roles.data?.includes("participant") && (
+      {dashboard && academy && <AcademyCompanyLecturerBlocks actor={actor} />}
+      {dashboard && !academy && roles.data?.includes("participant") && (
         <CompanyInvitations actor={actor} />
       )}
-      {query.isPending || !query.isFetchedAfterMount ? (
+      {results ? (
+        <PublishedExamResults actor={actor} />
+      ) : query.isPending || !query.isFetchedAfterMount ? (
         <Loading />
       ) : query.isError ? (
         <ErrorState retry={() => void query.refetch()} />

@@ -57,14 +57,23 @@ function course(
 }
 
 const clients: QueryClient[] = [];
-function show(value: CourseWorkspace, academy?: "active" | "grace") {
+function show(
+  value: CourseWorkspace,
+  academy?: "active" | "grace",
+  examTitle?: string,
+) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
-      <CourseExams course={value} actor="learner" academy={academy} />
+      <CourseExams
+        course={value}
+        actor="learner"
+        academy={academy}
+        examTitle={examTitle}
+      />
     </QueryClientProvider>,
   );
 }
@@ -114,13 +123,35 @@ it("lets a company editor share student papers without offering staff answer key
   ).toBeNull();
 });
 
+it("requires a saved schedule for a new student exam paper", async () => {
+  const user = userEvent.setup();
+  show(course(false, true));
+  expect(
+    screen.getByText("Save the exam schedule before publishing the paper."),
+  ).toBeVisible();
+  await user.upload(
+    screen.getByLabelText("Exam file (PDF)"),
+    new File(["%PDF-1.7 fictional"], "Fictional exam.pdf", {
+      type: "application/pdf",
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Upload and share PDF" }),
+  ).toBeDisabled();
+  expect(fake.upload).not.toHaveBeenCalled();
+});
+
 it("publishes only the scanner-confirmed exact version through the editor RPC", async () => {
   const user = userEvent.setup();
   fake.rpc.mockResolvedValue({ data: "published-exam", error: null });
-  show(course(false, true));
-  expect(
-    screen.getByText(/participants can see it once the exam is required/i),
-  ).toBeVisible();
+  show(
+    {
+      ...course(true, true),
+      exams: { ...course(true, true).exams, documents: [] },
+    },
+    undefined,
+    "Scheduled exam",
+  );
   await user.upload(
     screen.getByLabelText("Exam file (PDF)"),
     new File(["%PDF-1.7 fictional"], "Fictional exam.pdf", {

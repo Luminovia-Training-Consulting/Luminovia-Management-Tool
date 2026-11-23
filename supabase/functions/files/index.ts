@@ -131,7 +131,8 @@ Deno.serve(async (request: Request) => {
         const academyChat = query === academyCourseChatQuery;
         const academyAttendance = query === academyAttendanceQuery;
         const academyIntake = academyChat || academyAttendance || examReservation !== null || query === academyMaterialQuery;
-        const submissionIntake = query === courseSubmissionQuery;
+        const examSubmission = query === '?mode=exam-submission';
+        const submissionIntake = query === courseSubmissionQuery || examSubmission;
         const scopedIntake = academyIntake || submissionIntake;
         const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
@@ -179,7 +180,7 @@ Deno.serve(async (request: Request) => {
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
             const reserved = submissionRun
-                ? await user.rpc('reserve_course_submission', {p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc(examSubmission ? 'reserve_course_exam_submission' : 'reserve_course_submission', {p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : attendanceSession
                 ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : chatRoom

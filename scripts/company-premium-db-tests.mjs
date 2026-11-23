@@ -217,6 +217,9 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             await sql(`update public.document_versions set status='quarantined' where id=${q(examPaperVersion)}`);
             await assert.rejects(rpc(admin, "share_course_exam_pdf", [runA, examPaperVersion, "students"]), /42501/);
             await sql(`update public.document_versions set status='clean' where id=${q(examPaperVersion)}`);
+            await assert.rejects(rpc(admin, "share_course_exam_pdf", [runA, examPaperVersion, "students"]), /42501/);
+            // Represent a course with a student paper published before timed exams were introduced.
+            await sql(`insert into private.course_exam_settings(run_id,allow_untimed_papers) values(${q(runA)},true)`);
             examPaperId = await rpc(admin, "share_course_exam_pdf", [runA, examPaperVersion, "students"]);
             examKeyId = await rpc(admin, "share_course_exam_pdf", [runA, examKeyVersion, "exam_staff"]);
             await assert.rejects(rpc(client, "share_course_exam_pdf", [runA, examKeyVersion, "exam_staff"]), /42501/);

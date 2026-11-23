@@ -160,6 +160,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           ...writePaths,
           ...draftPaths,
           ...academyParityPaths,
+          "/rest/v1/rpc/course_exam_state",
+          "/rest/v1/rpc/published_course_exam_results",
+          "/rest/v1/rpc/save_course_exam_grades",
+          "/rest/v1/rpc/save_course_exam_schedule",
+          "/rest/v1/rpc/submit_course_exam",
         ].sort(),
       );
       expect(spec.webhooks.companyCourseEvent.post.operationId).toBe(
@@ -619,6 +624,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-logo",
                 "academy-pwa-icon",
                 "course-submission",
+                "exam-submission",
               ],
             },
           },

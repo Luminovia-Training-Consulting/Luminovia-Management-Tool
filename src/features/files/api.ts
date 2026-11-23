@@ -84,6 +84,7 @@ export function uploadCourseSubmission(
   file: File,
   courseId: string,
   clientId: string,
+  exam = false,
 ) {
   if (file.size < 1 || file.size > courseSubmissionMaxBytes)
     throw new Error("file_size");
@@ -91,7 +92,10 @@ export function uploadCourseSubmission(
   form.set("file", file);
   form.set("course_run_id", courseId);
   form.set("client_id", clientId);
-  return transferUpload(form, endpoint() + "?mode=course-submission");
+  return transferUpload(
+    form,
+    endpoint() + (exam ? "?mode=exam-submission" : "?mode=course-submission"),
+  );
 }
 
 /** Upload a single exact version through the assigned lecturer's course scope. */

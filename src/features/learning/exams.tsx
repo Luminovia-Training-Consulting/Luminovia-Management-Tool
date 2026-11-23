@@ -16,18 +16,25 @@ import {
   downloadCourseDocument,
   type CourseWorkspace,
 } from "./api";
+import { timedExamKey } from "./timed-exam-api";
 import "./exam-i18n";
+import "./timed-exam-i18n";
 
 export function CourseExams({
   course,
   actor,
   academy,
+  examTitle,
+  examPaperOpen,
 }: {
   course: CourseWorkspace;
   actor: string;
   academy?: "active" | "grace";
+  examTitle?: string;
+  examPaperOpen?: boolean;
 }) {
   const { t } = useTranslation("learningExams");
+  const { t: timed } = useTranslation("timedExam");
   const online = useOnline();
   const queries = useQueryClient();
   const [required, setRequired] = useState(course.exams.required);
@@ -44,12 +51,15 @@ export function CourseExams({
   );
   const [fileInputRevision, setFileInputRevision] = useState(0);
   const canEdit = course.exams.can_edit && academy !== "grace";
+  const hasStudentPaper =
+    Boolean(examTitle) ||
+    course.exams.documents.some((document) => document.audience === "students");
   const canPublishStudentPaper =
     academy === "active" && canEdit && course.exams.required;
   const canUploadExam = academy ? canPublishStudentPaper : canEdit;
   const options = useQuery({
     queryKey: ["academy-student-exam-pdf-options", actor, course.id],
-    enabled: Boolean(canPublishStudentPaper && online),
+    enabled: Boolean(canPublishStudentPaper && hasStudentPaper && online),
     retry: false,
     staleTime: 0,
     queryFn: async ({ signal }) => {
@@ -64,9 +74,12 @@ export function CourseExams({
     },
   });
   const refresh = () =>
-    queries.invalidateQueries({
-      queryKey: courseWorkspaceKey(actor, course.id),
-    });
+    Promise.all([
+      queries.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course.id),
+      }),
+      queries.invalidateQueries({ queryKey: timedExamKey(actor, course.id) }),
+    ]);
   const setting = useMutation({
     mutationFn: async (choice: boolean) => {
       const version = course.exams.version;
@@ -90,6 +103,7 @@ export function CourseExams({
     if (
       !online ||
       !canUploadExam ||
+      (target === "students" && !hasStudentPaper) ||
       (target === "exam_staff" && !course.access.staff)
     )
       throw new Error("exam_editor_required");
@@ -185,6 +199,7 @@ export function CourseExams({
     "code" in setting.error &&
     setting.error.code === "PT409";
   const uploadBlocked = !online || uploadPending || setting.isPending || stale;
+  const paperBlocked = audience === "students" && !hasStudentPaper;
   const uploadLabel = scannedExamVersion
     ? "retryStudentPublication"
     : !academy
@@ -192,13 +207,19 @@ export function CourseExams({
       : audience === "exam_staff"
         ? "scanAnswerKey"
         : "scanStudentPdf";
-  const documents = academy
+  const workspaceDocuments = academy
     ? course.exams.documents.filter((item) =>
         item.audience === "students"
           ? course.exams.required
           : course.access.staff,
       )
     : course.exams.documents;
+  const documents =
+    course.access.learner && !canEdit && examPaperOpen === false
+      ? workspaceDocuments.filter(
+          (document) => document.audience !== "students",
+        )
+      : workspaceDocuments;
 
   // No exam area is rendered for a participant while this course's switch is OFF.
   if (
@@ -242,11 +263,13 @@ export function CourseExams({
           </form>
         </>
       )}
+      {canEdit && !hasStudentPaper && <p>{timed("requiredSchedule")}</p>}
       {canUploadExam && (!academy || online) && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (examFile && !uploadBlocked) uploadExam.mutate();
+            if (examFile && !uploadBlocked && !paperBlocked)
+              uploadExam.mutate();
           }}
         >
           {(!academy || course.access.staff) && (
@@ -292,7 +315,7 @@ export function CourseExams({
               )}
             </p>
           )}
-          <Button disabled={!examFile || uploadBlocked}>
+          <Button disabled={!examFile || uploadBlocked || paperBlocked}>
             {t(uploadLabel)}
           </Button>
         </form>
@@ -343,7 +366,11 @@ export function CourseExams({
         <ul className="learning-resources">
           {documents.map((document) => (
             <li key={document.id}>
-              <strong>{document.name}</strong>
+              <strong>
+                {document.audience === "students" && examTitle
+                  ? examTitle
+                  : document.name}
+              </strong>
               <span>
                 {t("version", { version: document.version })} ·{" "}
                 {t(document.audience)}
@@ -353,7 +380,13 @@ export function CourseExams({
                   variant="secondary"
                   disabled={!online || download.isPending}
                   onClick={() =>
-                    download.mutate({ id: document.id, name: document.name })
+                    download.mutate({
+                      id: document.id,
+                      name:
+                        document.audience === "students" && examTitle
+                          ? `${examTitle.replace(/\.pdf$/i, "")}.pdf`
+                          : document.name,
+                    })
                   }
                 >
                   {t("download")}

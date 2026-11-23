@@ -44,6 +44,13 @@ import { CourseMeetingLinkEditor } from "./meeting-link";
 import { CourseTeachingChecklist } from "./course-teaching-checklist";
 import { courseClassroom } from "./meeting-url";
 import { CourseExams } from "./exams";
+import {
+  ExamGrades,
+  ExamSchedule,
+  LearnerExam,
+  PublishedExamResults,
+} from "./timed-exam";
+import { timedExamQuery } from "./timed-exam-api";
 import { AttendancePanel } from "./attendance";
 import { CourseParticipationReport } from "./course-participation-report";
 import { AcademyInstructors } from "./academy-instructors";
@@ -961,13 +968,35 @@ function CourseWorkspaceLayout({
     offerPermissions.data?.includes("jobs.manage") &&
     offerPermissions.data.includes("courses.manage");
   const [offerOpen, setOfferOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const online = useOnline();
+  const examState = useQuery({
+    ...timedExamQuery(actor, course.id),
+    enabled: course.lms_enabled && online,
+  });
+  const exam = examState.isError ? null : examState.data;
+  const examWindow = exam?.open;
+  useEffect(() => {
+    if (online && learner) {
+      void queryClient.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course.id),
+      });
+    }
+  }, [actor, course.id, examWindow, learner, online, queryClient]);
   const examVisible = Boolean(
     course.exams &&
-    (course.exams.required || course.exams.can_edit || (academy && editor)),
+    (exam ||
+      course.exams.required ||
+      course.exams.can_edit ||
+      (academy && editor)),
   );
   const hasActivities = learner || editor;
   const hasSubmissions = course.lms_enabled && hasActivities;
   const hasEvaluations = course.lms_enabled && course.ended && hasActivities;
+  const hasExamGrades = Boolean(
+    exam?.required && (exam.can_grade || exam.published || exam.rows.length),
+  );
+  const hasRatingSection = hasEvaluations || hasExamGrades;
   const hasRegister = editor && course.sessions.length > 0;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
@@ -988,7 +1017,7 @@ function CourseWorkspaceLayout({
     ...(hasActivities
       ? [{ id: "course-learning", label: t("workspaceActivities") }]
       : []),
-    ...(hasEvaluations
+    ...(hasRatingSection
       ? [{ id: "course-evaluations", label: t("evaluations") }]
       : []),
   ];
@@ -1258,9 +1287,30 @@ function CourseWorkspaceLayout({
           )}
           {examVisible && (
             <div className={sectionClass("course-exam")} id="course-exam">
+              {course.exams.can_edit && canEdit && (
+                <ExamSchedule
+                  key={exam?.version ?? 0}
+                  actor={actor}
+                  run={course.id}
+                  zone={course.time_zone}
+                  exam={exam}
+                />
+              )}
+              {learner && exam?.required && (
+                <LearnerExam
+                  key={course.id}
+                  actor={actor}
+                  run={course.id}
+                  zone={course.time_zone}
+                  exam={exam}
+                  now={now}
+                />
+              )}
               <CourseExams
                 key={`${actor}:${course.id}:${course.exams.version ?? course.exams.required}`}
                 course={course}
+                examTitle={exam?.title}
+                examPaperOpen={exam?.open}
                 actor={actor}
                 academy={academy}
               />
@@ -1355,13 +1405,25 @@ function CourseWorkspaceLayout({
                 )}
             </div>
           )}
-          {hasEvaluations && (
-            <div className={sectionClass("course-evaluations")}>
-              <CourseEvaluations
-                actor={actor}
-                courseId={course.id}
-                readOnly={!canEdit}
-              />
+          {hasRatingSection && (
+            <div
+              className={sectionClass("course-evaluations")}
+              id="course-evaluations"
+            >
+              {hasExamGrades &&
+                exam &&
+                (learner ? (
+                  <PublishedExamResults actor={actor} run={course.id} />
+                ) : (
+                  <ExamGrades actor={actor} run={course.id} exam={exam} />
+                ))}
+              {hasEvaluations && (
+                <CourseEvaluations
+                  actor={actor}
+                  courseId={course.id}
+                  readOnly={!canEdit}
+                />
+              )}
             </div>
           )}
         </div>

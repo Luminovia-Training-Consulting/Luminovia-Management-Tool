@@ -157,4 +157,95 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     await assert.rejects(actor(peer, "set local request.method='POST';set local request.path='/rpc/course_submission_scan';select public.require_portal_access()"), denied);
     await assert.rejects(sql("begin;set local role anon;select public.course_submissions(null);commit;"), denied);
     console.log("PASS allowlisted participant PostgREST methods and worker denial");
+
+    await rpc(admin, "set_company_premium", company, true, 2, randomUUID());
+    await enable(admin, false);
+    const paperDocument = randomUUID(), paperVersion = randomUUID();
+    await sql(`
+      insert into public.course_sessions(course_run_id,starts_at,ends_at)
+        values (${q(run)},now()-interval '3 hours',now()+interval '3 hours');
+      insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+        values (${q(paperDocument)},${q(teacher)},${q(teacher)},'personal','material','exam.pdf','application/pdf',24,'clean',${q(randomUUID())});
+      insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+        values (${q(paperVersion)},${q(paperDocument)},${q(teacher)},${q(randomUUID())},1,'fictional/exam.pdf','exam.pdf','application/pdf',24,'clean',${q(digest)});
+    `);
+    const schedule = (who, visible, start, end, version) => actor(who,`
+        select to_jsonb(public.save_course_exam_schedule(${q(run)},'Timed exam',
+          now()+interval ${q(visible)},now()+interval ${q(start)},now()+interval ${q(end)},60,${version}))
+    `).then(JSON.parse);
+    const state = (who) => actor(who, call("course_exam_state", run)).then((raw) => raw ? JSON.parse(raw) : null);
+    const examReserve = (who) => rpc(who, "reserve_course_exam_submission", run, "filled.txt", "text/plain", 12, randomUUID(), digest);
+    let paperShare;
+    const paperAccess = (who) => rpc(who, "course_document_access", "exam", paperShare);
+    const submit = (who, exam) => rpc(who, "submit_course_exam", run, exam.version_id);
+    const grades = (who, scores, version, publish) =>
+        rpc(who, "save_course_exam_grades", run, JSON.stringify(scores), version, publish);
+    const results = (who, participant = null, organisation = null) =>
+        rpc(who, "published_course_exam_results", participant, organisation);
+
+    await assert.rejects(schedule(teacher, "10 minutes", "20 minutes", "2 days", 0), /22023/);
+    await assert.rejects(schedule(learner, "10 minutes", "20 minutes", "40 minutes", 0), denied);
+    await assert.rejects(rpc(teacher, "share_course_exam_pdf", run, paperVersion, "students"), denied);
+    assert.equal(await schedule(teacher, "10 minutes", "20 minutes", "40 minutes", 0), true);
+    paperShare = await rpc(teacher, "share_course_exam_pdf", run, paperVersion, "students");
+    assert.ok(paperShare);
+    await actor(learner, "set local request.method='POST';set local request.path='/rpc/course_exam_state';select public.require_portal_access()");
+    await assert.rejects(actor(peer, "set local request.method='POST';set local request.path='/rpc/save_course_exam_grades';select public.require_portal_access()"), denied);
+    assert.equal(await state(learner), null);
+    await assert.rejects(examReserve(learner), denied);
+    await assert.rejects(paperAccess(learner), denied);
+    assert.equal(await schedule(teacher, "-10 minutes", "20 minutes", "40 minutes", 1), true);
+    assert.equal((await state(learner)).open, false);
+    await assert.rejects(paperAccess(learner), denied);
+    assert.equal(await schedule(teacher, "-10 minutes", "-5 minutes", "30 minutes", 2), true);
+    assert.equal((await state(learner)).can_submit, true);
+    assert.ok(await paperAccess(learner));
+
+    const timed = await examReserve(learner);
+    await assert.rejects(submit(learner, timed), denied);
+    const timedLease = await scan(timed, "begin", null, digest);
+    assert.equal(await scan(timed, "clean", timedLease, digest, "ClamAV fixture"), timedLease);
+    assert.equal(await scan(timed, "end", timedLease), timedLease);
+    assert.equal((await state(learner)).draft.version_id, timed.version_id);
+    assert.ok(!(await list(teacher)).entries.some((row) => row.version_id === timed.version_id));
+    await assert.rejects(rpc(teacher, "course_submissions", run, timed.version_id), denied);
+    await assert.rejects(submit(peer, timed), denied);
+    await assert.rejects(access(teacher, timed.version_id), denied);
+    await assert.rejects(schedule(teacher, "-10 minutes", "-5 minutes", "30 minutes", 3), /PT409/);
+    await assert.rejects(grades(teacher, {[learner]: 82}, 3, false), denied);
+    const submittedAt = await submit(learner, timed);
+    assert.ok(submittedAt);
+    assert.equal(await submit(learner, timed), submittedAt);
+    assert.equal((await state(learner)).can_submit, false);
+    await assert.rejects(examReserve(learner), denied);
+    await assert.rejects(withdraw(learner, timed), denied);
+    assert.ok(await access(teacher, timed.version_id));
+    await assert.rejects(access(client, timed.version_id), denied);
+
+    // Advance the deadline in this isolated fixture without waiting on wall time.
+    await sql(`update private.course_timed_exams set ends_at=clock_timestamp()-interval '1 millisecond' where run_id=${q(run)}`);
+    assert.equal((await state(learner)).submitted_at, submittedAt);
+    await assert.rejects(paperAccess(learner), denied);
+    await assert.rejects(examReserve(peer), denied);
+    await assert.rejects(grades(client, {[learner]: 82}, 3, false), denied);
+    await assert.rejects(grades(teacher, {[learner]: 101}, 3, false), /22023/);
+    await assert.rejects(grades(teacher, {}, 3, true), /22023/);
+    assert.equal(await grades(teacher, {[learner]: 82}, 3, false), true);
+    assert.deepEqual(await results(learner), {average: null, results: []});
+    assert.deepEqual(await results(client, learner, company), {average: null, results: []});
+    assert.equal(await grades(teacher, {}, 4, true), true);
+    for (const result of [await results(learner), await results(teacher, learner), await results(client, learner, company)]) {
+        assert.equal(result.average, 82);
+        assert.equal(result.results[0]?.passed, true);
+        assert.equal(result.results[0]?.score, 82);
+    }
+    for (const result of [await results(peer, learner), await results(unrelated, learner, company), await results(client, learner, otherCompany)]) {
+        assert.deepEqual(result, {average: null, results: []});
+    }
+    const examRequiredVersion = Number(await sql(`select version from private.course_exam_settings where run_id=${q(run)}`));
+    await rpc(teacher, "set_course_exam_required", run, false, examRequiredVersion);
+    assert.equal((await state(teacher)).required, false);
+    assert.deepEqual((await state(teacher)).rows, []);
+    assert.deepEqual(await results(learner), {average: null, results: []});
+    console.log("PASS timed exam announcement, paper window, scanned final submission, staged grades, publication and scoped averages");
 });

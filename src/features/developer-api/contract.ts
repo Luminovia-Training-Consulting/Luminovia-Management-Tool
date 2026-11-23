@@ -41,6 +41,7 @@ import {
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
+import { timedExamPaths } from "./timed-exam-contract.ts";
 import {
   calendarExpectedRevision,
   calendarInvitationRecipients,
@@ -458,14 +459,17 @@ const fileGateway = {
     tags: ["Files"],
     summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. This mode accepts only course_run_id, client_id and file.",
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. Use ?mode=exam-submission for a scanned draft during the current exam window, then confirm it with submit_course_exam. Both modes accept only course_run_id, client_id and file.",
     parameters: [
       gatewayOriginHeader,
       {
         name: "mode",
         in: "query",
         required: false,
-        schema: { const: "course-submission", type: "string" },
+        schema: {
+          enum: ["course-submission", "exam-submission"],
+          type: "string",
+        },
       },
     ],
     requestBody: {
@@ -482,7 +486,7 @@ const fileGateway = {
               course_run_id: {
                 ...uuid,
                 description:
-                  "Required for mode=course-submission. Omit for all generic transfers.",
+                  "Required for course-submission and exam-submission. Omit for generic transfers.",
               },
               scope: {
                 enum: ["personal", "room", "job_before", "job_after"],
@@ -1449,6 +1453,7 @@ const nativePaths = {
   ...courseBuildingBlockPaths,
   ...courseEvaluationPaths(false),
   ...learningAnalyticsPaths(false),
+  ...timedExamPaths(false),
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,

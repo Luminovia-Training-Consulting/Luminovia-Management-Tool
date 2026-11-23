@@ -291,6 +291,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       new Set([version, latest]),
     );
     await assert.rejects(share(teacher, version, "exam_staff"), /42501/);
+    await assert.rejects(share(teacher, version), /42501/);
+    // Represent an existing publication migrated from before timed exams.
+    await sql(`update private.course_exam_settings set allow_untimed_papers=true where run_id=${q(run)}`);
     const published = await share(teacher, version);
     assert.equal(await share(teacher, version), published);
     const companyLegacyShare = await share(client, companyVersion);

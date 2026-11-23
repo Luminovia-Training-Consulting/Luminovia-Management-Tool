@@ -1,3 +1,11 @@
+# 23 November 2026 — Timed LMS exams and published grades
+
+Course editors can schedule an exam in the course time zone, name the paper and choose the announcement, start, deadline and pass threshold. The database and download gateway enforce the exact window. New student papers require a saved schedule. Existing untimed publications retain their original behavior until a schedule is saved.
+
+An enrolled learner can upload a scanned draft and separately confirm the exact version before the deadline. Confirmation is final and an identical retry returns the existing receipt. Assigned instructors can record whole percentage scores after the deadline and publish them together. Learners, assigned instructors and company contacts see only published results in their own scope. Exam-free courses have no exam grade block.
+
+Local verification covered percentage publication and scoped reads in an isolated PostgreSQL database, both dedicated Academy exam document suites, internal Company Premium and targeted component tests. The authenticated browser suite could not start because QA port 55322 was already in use. A real browser download-to-submit run remains pending.
+
 # 23 November 2026 — Feature catalogue and White-Label checklist
 
 The [feature catalogue](../FEATURES.md) describes the available internal and dedicated Academy workflows. The [White-Label roadmap](../WHITELABEL_ROADMAP.md) now keeps open product work, customer-target acceptance and handover in one checklist. Existing WL-T01–WL-T40 acceptance references remain traceable. Verified the two documents and their inbound links with all seven documentation checks. This review records no additional installation acceptance.

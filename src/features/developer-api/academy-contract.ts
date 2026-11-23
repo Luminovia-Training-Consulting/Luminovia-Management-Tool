@@ -59,6 +59,7 @@ import {
 } from "../learning/course-participation-report-schema.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
+import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
@@ -356,7 +357,7 @@ const materialUpload = {
     tags: ["Licensed course profile"],
     summary:
       "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan. Use academy-pwa-icon with expected_version and the three named PNG variants. All three are scanned before the active local administrator publishes one replacement.`,
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. Use exam-submission with course_run_id to scan an enrolled participant’s draft during the current exam window, then call submit_course_exam to confirm the exact version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan. Use academy-pwa-icon with expected_version and the three named PNG variants. All three are scanned before the active local administrator publishes one replacement.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -375,6 +376,7 @@ const materialUpload = {
             "academy-logo",
             "academy-pwa-icon",
             "course-submission",
+            "exam-submission",
           ],
         },
       },
@@ -913,6 +915,7 @@ const coursePaths = {
   ...academyChatProtectionPaths,
   ...courseEvaluationPaths(true),
   ...learningAnalyticsPaths(true),
+  ...timedExamPaths(true),
   ...academyCompanyLecturerBlockPaths,
   ...academyMailPaths,
   ...academyPersonalSettingsPaths,

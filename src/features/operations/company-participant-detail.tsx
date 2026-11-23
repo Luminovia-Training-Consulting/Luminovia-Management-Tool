@@ -14,6 +14,7 @@ import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { courseWorkspaceKey } from "../learning/api";
+import { PublishedExamResults } from "../learning/timed-exam";
 import { attendanceRegistersKey } from "../learning/attendance-api";
 import { CompanyParticipantCourseAssignment } from "./company-participant-course-assignment";
 import {
@@ -48,6 +49,7 @@ export function CompanyParticipantDetails({
   const assignButton = useRef<HTMLButtonElement>(null);
   const restoreAssignFocus = useRef(false);
   const [assigning, setAssigning] = useState(false);
+  const [examResults, setExamResults] = useState(false);
   const membershipKey = [
     "company-participants",
     actor,
@@ -214,6 +216,21 @@ export function CompanyParticipantDetails({
         />
       ) : (
         <>
+          <Button
+            type="button"
+            variant="secondary"
+            aria-expanded={examResults}
+            onClick={() => setExamResults((open) => !open)}
+          >
+            {t("results", { ns: "timedExam" })}
+          </Button>
+          {examResults && (
+            <PublishedExamResults
+              actor={actor}
+              participant={participant.user_id}
+              organisation={organisationId}
+            />
+          )}
           <section
             className="company-participant-courses"
             aria-label={t("participantCourseActivity")}
