@@ -101,7 +101,7 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
             .fill(end);
         await quietSettings
             .getByLabel("Zeitzone der Ruhezeit", {exact: true})
-            .fill("UTC");
+            .selectOption("UTC");
         await page
             .locator(".settings-section .preferences select[aria-label='Sprache']")
             .selectOption("en");

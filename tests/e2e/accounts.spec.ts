@@ -113,7 +113,7 @@ test("individual account roles, scoped invitations and linked status management 
     ]);
     await teacherRow
         .getByRole("link", {
-            name: "Profil, Nachweise und Kontostatus verwalten",
+            name: "Expertise und Qualifikationen verwalten",
             exact: true,
         })
         .click();
