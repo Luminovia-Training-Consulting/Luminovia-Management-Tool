@@ -1,10 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { type ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AcademyApiExplorer } from "./academy-explorer";
 import { ApiExplorer } from "./portal-explorer";
+import { ApiCatalogue } from "./api-catalogue";
 import type { ExplorerRequest } from "./request-boundary";
 
 const fake = vi.hoisted(() => ({
@@ -54,6 +55,7 @@ const latest = () =>
     spec: {
       info: { title: string };
       paths: Record<string, unknown>;
+      webhooks?: Record<string, unknown>;
       components: Record<string, unknown>;
     };
     supportedSubmitMethods: string[];
@@ -117,6 +119,7 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
   expect(latest().supportedSubmitMethods).toEqual([
     "get",
     "post",
+    "patch",
     "put",
     "delete",
   ]);
@@ -321,4 +324,69 @@ it("keeps large catalogues bounded and searches beyond the visible page", async 
     "href",
     "/api/swagger",
   );
+});
+
+it("ranks HTTP endpoints first and keeps per-method totals stable across pages", async () => {
+  const operation = {};
+  const compatibility = Object.fromEntries(
+    Array.from({ length: 26 }, (_, index) => [
+      `/rest/v1/rpc/legacy_${index}`,
+      { post: operation },
+    ]),
+  );
+  const user = userEvent.setup();
+  await show(
+    <ApiCatalogue
+      document={{
+        paths: {
+          ...compatibility,
+          "/documents": {
+            get: operation,
+            put: operation,
+            patch: operation,
+            delete: operation,
+          },
+          "/reports": { get: operation, head: operation },
+          "/exports": { get: operation },
+        },
+        webhooks: { deliveryComplete: { post: operation } },
+      }}
+      supportedSubmitMethods={[]}
+      requestInterceptor={async (request) => request}
+    />,
+  );
+  const choices = within(screen.getByRole("group", { name: "HTTP methods" }));
+  const method = (name: string) => choices.getByRole("button", { name });
+  expect(method("All 34")).toHaveAttribute("aria-pressed", "true");
+  expect(method("POST 27")).toBeVisible();
+  expect(method("GET 3")).toBeVisible();
+  expect(method("PUT 1")).toBeVisible();
+  expect(method("HEAD 1")).toBeVisible();
+  expect(choices.queryByRole("button", { name: /OPTIONS/ })).toBeNull();
+  expect(Object.keys(latest().spec.paths).slice(0, 3)).toEqual([
+    "/documents",
+    "/reports",
+    "/exports",
+  ]);
+  await user.click(screen.getByRole("button", { name: "Next page" }));
+  expect(method("POST 27")).toBeVisible();
+  await user.click(method("PATCH 1"));
+  expect(method("PATCH 1")).toHaveAttribute("aria-pressed", "true");
+  expect(latest().spec.paths).toEqual({ "/documents": { patch: operation } });
+  expect(screen.getByText("Operations 1–1 of 1")).toBeVisible();
+  await user.click(method("POST 27"));
+  expect(latest().spec.webhooks).toEqual({
+    deliveryComplete: { post: operation },
+  });
+  const search = screen.getByRole("searchbox", { name: "Search operations" });
+  await user.type(search, "GET /documents{Enter}");
+  expect(method("GET 1")).toHaveAttribute("aria-pressed", "true");
+  expect(method("DELETE 1")).toBeVisible();
+  expect(latest().spec.paths).toEqual({ "/documents": { get: operation } });
+  await user.clear(search);
+  await user.type(search, "POST /rest/v1/rpc/legacy_25{Enter}");
+  expect(method("POST 1")).toHaveAttribute("aria-pressed", "true");
+  expect(latest().spec.paths).toEqual({
+    "/rest/v1/rpc/legacy_25": { post: operation },
+  });
 });

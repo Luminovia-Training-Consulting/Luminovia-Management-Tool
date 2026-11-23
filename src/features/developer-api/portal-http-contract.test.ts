@@ -28,6 +28,7 @@ describe("Portal HTTP aliases", () => {
   it.each([
     ["internal", internalInstallationBrand],
     ["dedicated", academy],
+    ["managed", { ...academy, edition: "customer-managed" as const }],
   ])(
     "publishes the registered intersection of %s operations and preserves their RPC contracts",
     (_, brand) => {
@@ -69,7 +70,7 @@ describe("Portal HTTP aliases", () => {
             });
           }
         }
-        expect(methods).toEqual(new Set(["get", "put", "delete"]));
+        expect(methods).toEqual(new Set(["get", "put", "patch", "delete"]));
         expect(paths[rpcPrefix + "course_workspace"]).toHaveProperty("post");
       }
     },
@@ -103,6 +104,43 @@ describe("Portal HTTP aliases", () => {
     }
     expect(paths[rpcPrefix + "manage_wiki_attachment"]).toHaveProperty("post");
     expect(isDocumentedRequest(backend + route, "GET", backend)).toBe(false);
+  });
+
+  it("documents only the editable branch and keeps audited reads on POST", () => {
+    const { paths } = portalOpenApi(backend);
+    const offer = paths[aliasPrefix + "manage_job_offer"];
+    expect(offer.patch).toMatchObject({
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                {
+                  oneOf: [
+                    expect.objectContaining({
+                      properties: expect.objectContaining({
+                        p_action: { enum: ["edit"] },
+                      }),
+                    }),
+                  ],
+                },
+                expect.objectContaining({
+                  properties: {
+                    p_action: { enum: ["edit"] },
+                    p_expected_version: { type: "integer", minimum: 1 },
+                  },
+                }),
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(paths[aliasPrefix + "class_feedback"]).toHaveProperty("get");
+    expect(paths[aliasPrefix + "own_profile_details"]).toHaveProperty("get");
+    expect(paths[rpcPrefix + "retained_company_lms"]).toHaveProperty("post");
+    expect(paths[aliasPrefix + "retained_company_lms"]).toBeUndefined();
+    expect(paths[aliasPrefix + "claim_job"]).toBeUndefined();
   });
 
   it("omits the create-new example from calendar PUT", () => {
@@ -240,6 +278,20 @@ describe("Portal HTTP aliases", () => {
       method: "DELETE",
     };
     expect(isAcademyExplorerRequest(request, backend, paths)).toBe(true);
+    expect(
+      isAcademyExplorerRequest(
+        { url: backend + aliasPrefix + "mark_notifications", method: "PATCH" },
+        backend,
+        paths,
+      ),
+    ).toBe(true);
+    expect(
+      isAcademyExplorerRequest(
+        { url: backend + aliasPrefix + "manage_job_offer", method: "PATCH" },
+        backend,
+        paths,
+      ),
+    ).toBe(false);
     expect(
       isAcademyExplorerRequest(
         { ...request, url: backend + aliasPrefix + "delete_forum_post" },

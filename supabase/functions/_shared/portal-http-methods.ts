@@ -1,5 +1,7 @@
 /** Reviewed aliases for the existing authenticated RPCs. All original POST routes remain available. */
-export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE">> = {
+export type PortalHttpMethod = "GET" | "PUT" | "PATCH" | "DELETE";
+
+export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   // GET
   academy_administration: "GET",
   academy_course_draft_options: "GET",
@@ -47,6 +49,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   chat_room_members: "GET",
   chat_rooms_with_manual_unread: "GET",
   chat_topic_pinned_messages: "GET",
+  class_feedback: "GET",
   client_organisations: "GET",
   client_request_brief: "GET",
   client_request_history: "GET",
@@ -58,6 +61,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   commission_access: "GET",
   commission_offer_policy: "GET",
   commission_report: "GET",
+  company_class_directory: "GET",
   company_course_webhook_list: "GET",
   company_integration_keys: "GET",
   company_invoice_reviews: "GET",
@@ -68,6 +72,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   company_participant_assignable_courses: "GET",
   company_participant_history: "GET",
   company_participant_overview: "GET",
+  company_participant_profile: "GET",
   company_participants: "GET",
   company_premium_settings: "GET",
   company_rejected_lecturers: "GET",
@@ -89,6 +94,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   course_readiness: "GET",
   course_run_job_defaults: "GET",
   course_session_register: "GET",
+  course_submissions: "GET",
   course_welcome_content: "GET",
   course_withdrawal_window: "GET",
   course_workspace: "GET",
@@ -128,6 +134,7 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   job_dashboard: "GET",
   job_detail: "GET",
   job_discovery: "GET",
+  job_dispatch_options: "GET",
   job_lifecycle: "GET",
   job_picker: "GET",
   job_related_navigation: "GET",
@@ -138,6 +145,8 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   learning_analytics_access: "GET",
   learning_analytics_report: "GET",
   lecturer_compensation: "GET",
+  lecturer_reviews: "GET",
+  managed_profile: "GET",
   manual_assignment_candidates: "GET",
   my_calendar_subscriptions: "GET",
   my_company_participant_invitations: "GET",
@@ -148,10 +157,14 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   my_push_devices: "GET",
   notification_inbox: "GET",
   notification_preferences: "GET",
+  own_profile_details: "GET",
   own_qualification_certificates: "GET",
+  people_directory: "GET",
   person_contact: "GET",
+  person_profile: "GET",
   portal_access: "GET",
   profile_avatar: "GET",
+  profile_courses: "GET",
   profile_topic_preferences: "GET",
   published_course_exam_results: "GET",
   qualification_history: "GET",
@@ -159,12 +172,14 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   replacement_assignments: "GET",
   replacement_marketplace: "GET",
   resource_comments: "GET",
+  reviewable_courses: "GET",
   saved_job_views: "GET",
   search_course_materials: "GET",
   substitution_candidates: "GET",
   support_context: "GET",
   support_ticket: "GET",
   support_tickets: "GET",
+  taxonomy_catalogue: "GET",
   teaching_day: "GET",
   topic_invitation_inbox: "GET",
   topic_invitation_only: "GET",
@@ -185,18 +200,25 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   academy_set_management: "PUT",
   academy_set_member_active: "PUT",
   academy_set_member_role: "PUT",
+  attest_qualification: "PUT",
+  complete_readiness_task: "PUT",
   edit_forum_post: "PUT",
   edit_forum_thread_metadata: "PUT",
   edit_message_with_mentions: "PUT",
   edit_resource_comment: "PUT",
   rename_document: "PUT",
+  reply_calendar_invitation: "PUT",
+  resolve_forum_report: "PUT",
   save_academy_public_brand_links: "PUT",
   save_academy_public_branding: "PUT",
   save_academy_white_label: "PUT",
   save_account_username: "PUT",
   save_assignment_change: "PUT",
   save_attention_preferences: "PUT",
+  save_calendar_subscription: "PUT",
   save_client_request_brief: "PUT",
+  save_company_dispatch_class: "PUT",
+  save_company_participant_profile: "PUT",
   save_contact_visibility_preferences: "PUT",
   save_course_evaluation: "PUT",
   save_course_exam_grades: "PUT",
@@ -209,6 +231,8 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   save_delivery_preferences: "PUT",
   save_document_organisation: "PUT",
   save_job_briefing: "PUT",
+  save_job_class_rating: "PUT",
+  save_job_dispatch: "PUT",
   save_job_view: "PUT",
   save_knowledge_category: "PUT",
   save_lecturer_compensation: "PUT",
@@ -249,6 +273,11 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   set_topic_invitation_only: "PUT",
   set_user_active: "PUT",
   update_chat_group_settings: "PUT",
+  // PATCH
+  mark_notifications: "PATCH",
+  moderate_course_review: "PATCH",
+  moderate_forum_thread: "PATCH",
+  moderate_resource_comment: "PATCH",
   // DELETE
   academy_release_course_instructor: "DELETE",
   academy_revoke_course_webhook: "DELETE",
@@ -268,6 +297,8 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
   remove_push_device: "DELETE",
   revoke_calendar_subscription: "DELETE",
   revoke_company_integration_key: "DELETE",
+  revoke_invoice_exception: "DELETE",
+  revoke_invoice_series_entry: "DELETE",
   revoke_topic_invitation: "DELETE",
   withdraw_course_submission: "DELETE",
   withdraw_resource_comment: "DELETE",
@@ -276,6 +307,8 @@ export const portalHttpMethods: Readonly<Record<string, "GET" | "PUT" | "DELETE"
 /** These RPCs can create on POST. PUT only accepts the UUID of an existing record. */
 export const portalHttpPutTargets: Readonly<Record<string, string>> = {
   save_assignment_change: "p_id",
+  save_calendar_subscription: "p_id",
+  save_company_dispatch_class: "p_class_id",
   save_course_run: "p_id",
   save_course_template: "p_id",
   save_job_view: "p_id",
@@ -289,6 +322,7 @@ export const portalHttpPutTargets: Readonly<Record<string, string>> = {
 
 /** Creation through these writers uses version zero even with a caller-supplied UUID. */
 export const portalHttpPutVersions: Readonly<Record<string, string>> = {
+  save_calendar_subscription: "p_expected_version",
   save_job_view: "p_expected_version",
 };
 
@@ -299,7 +333,7 @@ export type PortalHttpAction = {
   version?: string;
 };
 
-type PortalHttpWriteMethod = "PUT" | "DELETE";
+type PortalHttpWriteMethod = Exclude<PortalHttpMethod, "GET">;
 
 /** Narrow an existing multi-action RPC to the branch valid for the HTTP method. */
 export const portalHttpActions: Readonly<
@@ -309,7 +343,10 @@ export const portalHttpActions: Readonly<
     DELETE: { argument: "p_action", values: ["resource_remove"] },
   },
   academy_learning_action: {
-    PUT: { argument: "p_action", values: ["preparation_toggle", "quiz_config"] },
+    PUT: {
+      argument: "p_action",
+      values: ["preparation_toggle", "quiz_config"],
+    },
     DELETE: { argument: "p_action", values: ["completion_revoke"] },
   },
   assignment_change_action: {
@@ -320,7 +357,10 @@ export const portalHttpActions: Readonly<
       argument: "p_action",
       values: ["preparation_toggle", "contact_select", "quiz_config"],
     },
-    DELETE: { argument: "p_action", values: ["resource_remove", "completion_revoke"] },
+    DELETE: {
+      argument: "p_action",
+      values: ["resource_remove", "completion_revoke"],
+    },
   },
   manage_announcement: {
     PUT: {
@@ -339,7 +379,14 @@ export const portalHttpActions: Readonly<
     DELETE: { argument: "p_status", values: ["removed"] },
   },
   manage_enquiry: {
-    PUT: { argument: "p_action", values: ["status", "assign", "link_customer"] },
+    PUT: {
+      argument: "p_action",
+      values: ["status", "assign", "link_customer"],
+    },
+    PATCH: {
+      argument: "p_action",
+      values: ["status", "assign", "link_customer"],
+    },
   },
   manage_global_event: {
     PUT: {
@@ -351,6 +398,11 @@ export const portalHttpActions: Readonly<
   },
   manage_job_offer: {
     PUT: { argument: "p_action", values: ["edit", "archived"] },
+    PATCH: {
+      argument: "p_action",
+      values: ["edit"],
+      version: "p_expected_version",
+    },
   },
   manage_wiki_attachment: {
     PUT: { argument: "p_remove", values: [false] },
@@ -363,11 +415,19 @@ export const portalHttpActions: Readonly<
   respond_job_substitution: {
     DELETE: { argument: "p_action", values: ["withdraw"] },
   },
+  set_lecturer_expertise: {
+    PUT: { argument: "p_selected", values: [true] },
+    DELETE: { argument: "p_selected", values: [false] },
+  },
   subscribe_forum_thread: {
     PUT: { argument: "p_subscribed", values: [true] },
     DELETE: { argument: "p_subscribed", values: [false] },
   },
   update_support_ticket: {
+    PATCH: {
+      argument: "p_action",
+      values: ["status", "assign", "priority", "links"],
+    },
     PUT: {
       argument: "p_action",
       values: ["status", "assign", "priority", "reopen", "links"],

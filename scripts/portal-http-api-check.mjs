@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {testActorHeaders, withApiFixture} from "./testing/api.mjs";
 
-await withApiFixture(async ({actor, url, recoveryEndpoints}) => {
+await withApiFixture(async ({actor, checked, defer, service, url, recoveryEndpoints}) => {
     const owner = await actor("http-view-owner", "lecturer");
     const peer = await actor("http-view-peer", "lecturer");
     const ownerHeaders = await testActorHeaders(owner, recoveryEndpoints.appOrigin);
@@ -99,5 +99,27 @@ await withApiFixture(async ({actor, url, recoveryEndpoints}) => {
     assert.equal(deleted.status, 204);
     assert.equal(await deleted.text(), "");
     assert.deepEqual(await expectJson(request("GET", list, ownerHeaders), 200), []);
-    console.log("Verified live scoped GET, POST, PUT and DELETE through ordinary local Auth.");
+    const profile = prefix + "own_profile_details";
+    const nativeProfile = await expectJson(
+        request("POST", "/rest/v1/rpc/own_profile_details", ownerHeaders, {}),
+        200,
+    );
+    assert.deepEqual(await expectJson(request("GET", profile, ownerHeaders), 200), nativeProfile);
+
+    const notice = randomUUID();
+    await checked(service.from("notifications").insert({
+        id: notice, user_id: owner.id, kind: "activity", resource_id: randomUUID(),
+    }), "Create a fictional HTTP notice");
+    defer(() => checked(service.from("notifications").delete().eq("id", notice), "Remove the test notice"));
+    const state = prefix + "mark_notifications";
+    const body = {p_ids: [notice], p_read: true};
+    assert.equal((await expectJson(request("PATCH", state, peerHeaders, body), 403)).code, "42501");
+    assert.equal(await expectJson(request("PATCH", state, ownerHeaders, body), 200), 1);
+    const inbox = await expectJson(request("GET", prefix + "notification_inbox", ownerHeaders), 200);
+    assert.ok(inbox.items.find(({id}) => id === notice)?.read_at, "PATCH persists the owner's read state");
+    assert.equal(await expectJson(request("PATCH", state, ownerHeaders, {...body, p_read: false}), 200), 1);
+    const putState = await request("PUT", state, ownerHeaders, body);
+    assert.equal(putState.status, 405);
+    assert.equal(putState.headers.get("allow"), "PATCH, OPTIONS");
+    console.log("Verified live scoped GET, POST, PUT, PATCH and DELETE through ordinary local Auth.");
 });

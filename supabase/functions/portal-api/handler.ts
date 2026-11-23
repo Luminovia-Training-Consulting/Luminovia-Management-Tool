@@ -1,14 +1,15 @@
 import { boundedBytes, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 
-import { portalHttpActions } from "../_shared/portal-http-methods.ts";
-
-type OperationMethod = "GET" | "PUT" | "DELETE";
+import {
+  portalHttpActions,
+  type PortalHttpMethod,
+} from "../_shared/portal-http-methods.ts";
 
 interface PortalHttpDependencies {
   backend: string;
   publicKey: string;
   origins: readonly string[];
-  operations: Readonly<Record<string, OperationMethod>>;
+  operations: Readonly<Record<string, PortalHttpMethod>>;
   putTargets: Readonly<Record<string, string>>;
   putVersions: Readonly<Record<string, string>>;
   transport?: typeof fetch;
@@ -92,7 +93,7 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
       ? [deps.operations[operation]]
       : [];
     if (!allowed.length) return error(404, "not_found");
-    const method = request.method as OperationMethod;
+    const method = request.method as PortalHttpMethod;
     const allow = [...allowed, "OPTIONS"].join(", ");
     headers.set("Allow", allow);
     if (origin !== null) {
@@ -127,7 +128,8 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
 
     const action = method === "GET" ? undefined : actions?.[method];
     if (
-      action && !action.values.some((value) => input.args[action.argument] === value)
+      action &&
+      !action.values.some((value) => input.args[action.argument] === value)
     ) {
       return error(400, "action_not_allowed");
     }
@@ -146,7 +148,8 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
     if (versionField) {
       const version = input.args[versionField];
       if (
-        typeof version !== "number" || !Number.isSafeInteger(version) || version < 1
+        typeof version !== "number" || !Number.isSafeInteger(version) ||
+        version < 1
       ) {
         return error(400, "existing_record_version_required");
       }
@@ -202,7 +205,9 @@ export function createPortalHttpHandler(deps: PortalHttpDependencies) {
       }
       let status = result.status;
       if (status === 500) {
-        const nativeError: unknown = await result.clone().json().catch(() => null);
+        const nativeError: unknown = await result.clone().json().catch(() =>
+          null
+        );
         if (
           nativeError && typeof nativeError === "object" &&
           "code" in nativeError && nativeError.code === "40001"

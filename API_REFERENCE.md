@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **308 migration files** through version **20261123044602**, containing **555 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `f9c079ed15078bd4d7a73e2ed186eedd92ffecb15f69867ccb095b133331ef84`.
+This reference describes the current repository API. It is generated from a disposable replay of **312 migration files** through version **20261123050601**, containing **555 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `fbd7b5c2da5b38a2950695bfc08401ce7e91b9110ce03cb8841543fa331ec909`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and [QA results](DEVELOPMENT.md#section-test-plan) define that evidence.
 
@@ -18,16 +18,17 @@ Use Supabase Auth for invitation-only password login, recovery, sessions and pas
 
 ## HTTP methods for Portal workflows
 
-The Swagger method filter and OpenAPI JSON list the operations available in the current edition. Keep using existing POST /rest/v1/rpc calls for creation and transactional commands such as publishing, claiming and recording a payment. Existing clients can continue using those contracts.
+The Swagger method filters count all matching operations in the current edition, including matches on later pages. Use GET for reads, PUT for updates to a known record or setting, PATCH for supported partial changes and DELETE for supported removals and revocations. Creation, publishing, claims and finance commands keep their established POST contracts. Existing POST clients remain compatible. Reads that record an audit receipt also keep POST.
 
 Reviewed HTTP aliases are relative to the configured Supabase API URL:
 
-| Method | Example path                                    | Input                                                                                                                             |
-| ------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | /functions/v1/portal-api/v1/course_workspace    | One optional URL-encoded JSON object named input. Supply the RPC arguments required by the operation.                             |
-| PUT    | /functions/v1/portal-api/v1/save_ui_preferences | JSON object with the current update parameters. When the same RPC can also create, PUT requires an existing record ID.            |
-| DELETE | /functions/v1/portal-api/v1/delete_forum_post   | JSON object with the exact target and required revision. The operation keeps its domain-specific deletion or withdrawal behavior. |
-| DELETE | /functions/v1/accounts/v1/deletions/confirm     | JSON object with plan_id, request_id and confirmation set to DELETE. Create the actor-bound preview first.                        |
+| Method | Example path                                    | Input                                                                                                                                                                  |
+| ------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | /functions/v1/portal-api/v1/course_workspace    | One optional URL-encoded JSON object named input. Supply the RPC arguments required by the operation.                                                                  |
+| PUT    | /functions/v1/portal-api/v1/save_ui_preferences | JSON object with the current update parameters. When the same RPC can also create, PUT requires an existing record ID.                                                 |
+| PATCH  | /functions/v1/portal-api/v1/mark_notifications  | JSON containing the IDs or cutoff and the requested read state. For versioned edits such as manage_job_offer, send the current version and the documented edit action. |
+| DELETE | /functions/v1/portal-api/v1/delete_forum_post   | JSON object with the exact target and required revision. The operation keeps its domain-specific deletion or withdrawal behavior.                                      |
+| DELETE | /functions/v1/accounts/v1/deletions/confirm     | JSON object with plan_id, request_id and confirmation set to DELETE. Create the actor-bound preview first.                                                             |
 
 Multi-action workflows can expose PUT and DELETE on the same path with a method-specific action field. For example, manage_wiki_attachment uses p_remove=false with PUT and p_remove=true with DELETE. For subscribe_forum_thread, use p_subscribed=true with PUT and false with DELETE. Course enrolment removal, course material removal and completion revocation have explicit DELETE branches. A conflicting action is rejected with 400 before the database operation is called.
 

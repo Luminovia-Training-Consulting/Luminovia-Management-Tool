@@ -1154,6 +1154,8 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
                 env: {
                     ...process.env,
                     PORTAL_TEST_MODE: "1",
+                    // This fixture owns its candidate HTTPS ports independently.
+                    PORTAL_TEST_RANDOM_SERVICE_PORTS: "0",
                     PORTAL_CANDIDATE_OWNER: project,
                     SUPABASE_URL: url,
                     SUPABASE_SERVICE_ROLE_KEY: "fictional-key",

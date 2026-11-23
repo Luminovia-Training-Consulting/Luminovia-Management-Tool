@@ -88,7 +88,7 @@ const apiMethodProbes = [
   ["/functions/v1/portal-api/v1/remove_course_exam_pdf", "DELETE", 200],
   ["/functions/v1/portal-api/v1/course_workspace", "OPTIONS", 200],
   ["/functions/v1/portal-api/v1/course_workspace", "POST", 404],
-  ["/functions/v1/portal-api/v1/course_workspace", "PATCH", 404],
+  ["/functions/v1/portal-api/v1/mark_notifications", "PATCH", 200],
 ];
 const pwaRequests = 10;
 let publishedVersion = null;

@@ -265,7 +265,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       };
       const maintenance =
         "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly.";
-      expect(spec.info.version).toBe("1.38.0");
+      expect(spec.info.version).toBe("1.39.0");
       for (const methods of Object.values(spec.paths)) {
         for (const { responses } of Object.values(methods)) {
           expect(responses["429"]).toMatchObject({

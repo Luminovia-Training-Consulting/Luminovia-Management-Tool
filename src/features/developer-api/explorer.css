@@ -57,6 +57,24 @@
   overflow-wrap: anywhere;
 }
 
+.api-method-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 0.75rem;
+}
+
+.api-method-filter > .button {
+  min-height: 44px;
+  gap: 0.4rem;
+  padding-inline: 0.65rem;
+}
+
+.api-method-filter > .button span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 .api-explorer-search {
   display: flex;
   flex-wrap: wrap;

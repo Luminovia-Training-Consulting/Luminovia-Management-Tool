@@ -117,7 +117,7 @@ Use Supabase Auth for invitation-only password login, recovery, sessions and pas
 
 ## HTTP methods for Portal workflows
 
-The Swagger method filter and OpenAPI JSON list the operations available in the current edition. Keep using existing POST /rest/v1/rpc calls for creation and transactional commands such as publishing, claiming and recording a payment. Existing clients can continue using those contracts.
+The Swagger method filters count all matching operations in the current edition, including matches on later pages. Use GET for reads, PUT for updates to a known record or setting, PATCH for supported partial changes and DELETE for supported removals and revocations. Creation, publishing, claims and finance commands keep their established POST contracts. Existing POST clients remain compatible. Reads that record an audit receipt also keep POST.
 
 Reviewed HTTP aliases are relative to the configured Supabase API URL:
 
@@ -125,6 +125,7 @@ Reviewed HTTP aliases are relative to the configured Supabase API URL:
 | --- | --- | --- |
 | GET | /functions/v1/portal-api/v1/course_workspace | One optional URL-encoded JSON object named input. Supply the RPC arguments required by the operation. |
 | PUT | /functions/v1/portal-api/v1/save_ui_preferences | JSON object with the current update parameters. When the same RPC can also create, PUT requires an existing record ID. |
+| PATCH | /functions/v1/portal-api/v1/mark_notifications | JSON containing the IDs or cutoff and the requested read state. For versioned edits such as manage_job_offer, send the current version and the documented edit action. |
 | DELETE | /functions/v1/portal-api/v1/delete_forum_post | JSON object with the exact target and required revision. The operation keeps its domain-specific deletion or withdrawal behavior. |
 | DELETE | /functions/v1/accounts/v1/deletions/confirm | JSON object with plan_id, request_id and confirmation set to DELETE. Create the actor-bound preview first. |
 

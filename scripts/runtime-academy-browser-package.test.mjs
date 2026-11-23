@@ -214,12 +214,13 @@ function releaseFixture(
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 /** Rewrite only the catalogue in a fixture and recalculate its archive inventory. */
-async function rewriteCatalogue({ dist, output }, original, api) {
+async function rewriteCatalogue({ dist, output }, original, api, workflows) {
   const records = structuredClone(original);
   // Retained releases predate packaged developer clients.
   records.files = records.files.filter(
     ({ path }) =>
-      !academyClientPaths.includes(path) && path !== "api/workflows.json",
+      !academyClientPaths.includes(path) &&
+      (workflows || path !== "api/workflows.json"),
   );
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     level: 0,
@@ -230,7 +231,9 @@ async function rewriteCatalogue({ dist, output }, original, api) {
     const bytes =
       entry.path === "api/openapi.json"
         ? Buffer.from(JSON.stringify(api))
-        : readFileSync(join(dist, entry.path));
+        : entry.path === "api/workflows.json"
+          ? Buffer.from(JSON.stringify(workflows))
+          : readFileSync(join(dist, entry.path));
     await writer.add(`browser/${entry.path}`, new Uint8ArrayReader(bytes));
     entry.bytes = bytes.length;
     entry.sha256 = sha256(bytes);
@@ -546,6 +549,57 @@ for (const version of [
     );
   });
 }
+
+test("verifies the signed 1.38.0 catalogue with its exact workflow index", async (t) => {
+  const files = releaseFixture(t);
+  const { api, workflows } = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          "./testing/fixtures/academy-contract-workflows-1.38.0.json.gz",
+          import.meta.url,
+        ),
+      ),
+    ),
+  );
+  api.info.title = metadata.name + " API";
+  api.servers[0].url = metadata.backend;
+  Object.assign(api["x-portal-installation"], {
+    installation_id: metadata.installationId,
+    edition: metadata.edition,
+  });
+  const capabilities =
+    api.paths["/rest/v1/rpc/installation_capabilities"].get.responses["200"]
+      .content["application/json"].schema.properties;
+  capabilities.installation_id.const = metadata.installationId;
+  capabilities.edition.const = metadata.edition;
+  workflows.installation = api["x-portal-installation"];
+  const current = await files.write();
+  const seal = () =>
+    sign(
+      null,
+      Buffer.from(
+        "Luminovia Academy Browser Release v1\n" +
+          sha256(readFileSync(join(files.output, "manifest.json"))) +
+          "\n" +
+          sha256(files.inputs.licence),
+      ),
+      files.signer.privateKey,
+    ).toString("base64url");
+
+  const manifest = await rewriteCatalogue(files, current, api, workflows);
+  assert.deepEqual(await files.verifyRelease(seal()), {
+    manifest,
+    licenceState: "active",
+  });
+  for (const substitute of [undefined, { ...workflows, workflows: [] }]) {
+    await rewriteCatalogue(files, current, api, substitute);
+    await assert.rejects(
+      files.verifyRelease(seal()),
+      /Customer workflow index differs/,
+    );
+  }
+});
 
 test("rejects hidden, runtime, vendor and private build paths", async (t) => {
   const { dist, file, write } = fixture(t);
@@ -1430,7 +1484,7 @@ test("publishes exactly the verified bytes using the dedicated Caddy layout and 
   assert.ok(
     ingress.includes("regex: /functions/v1/portal-api/v1/[a-z][a-z0-9_]*"),
   );
-  assert.match(ingress, /regex: GET\|PUT\|DELETE\|OPTIONS\b/);
+  assert.match(ingress, /regex: GET\|PUT\|PATCH\|DELETE\|OPTIONS\b/);
   assert.deepEqual(
     JSON.parse(readFileSync(join(browser, "release.json"), "utf8")),
     receipt,

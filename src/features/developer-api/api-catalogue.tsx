@@ -17,16 +17,22 @@ export type ApiDocument = {
 };
 
 const pageSize = 24;
-const methods = new Set([
+const httpMethods = [
   "get",
-  "put",
   "post",
-  "delete",
-  "options",
-  "head",
+  "put",
   "patch",
+  "delete",
+  "head",
+  "options",
   "trace",
-]);
+] as const;
+type HttpMethod = (typeof httpMethods)[number];
+const methods: ReadonlySet<string> = new Set(httpMethods);
+
+function isHttpMethod(value: string): value is HttpMethod {
+  return methods.has(value);
+}
 
 /** Count and filter individual HTTP operations, including multiple methods on one path. */
 function indexOperations(
@@ -40,7 +46,7 @@ function indexOperations(
       entries.filter(([key]) => !methods.has(key)),
     );
     return entries.flatMap(([method, operation]) => {
-      if (!methods.has(method) || !operation || typeof operation !== "object")
+      if (!isHttpMethod(method) || !operation || typeof operation !== "object")
         return [];
       const { operationId, summary, tags } = operation;
       const text = [
@@ -53,7 +59,8 @@ function indexOperations(
         .filter((part): part is string => typeof part === "string")
         .join(" ")
         .toLowerCase();
-      return [{ section, path, method, operation, metadata, text }];
+      const rpcPost = method === "post" && path.startsWith("/rest/v1/rpc/");
+      return [{ section, path, method, operation, metadata, text, rpcPost }];
     });
   });
 }
@@ -73,23 +80,40 @@ export function ApiCatalogue({
   const searchInput = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
+  const [method, setMethod] = useState<HttpMethod | "all">("all");
   const [page, setPage] = useState(0);
   const operations = useMemo(
-    () => [
-      ...indexOperations(document.paths, "paths"),
-      ...indexOperations(document.webhooks ?? {}, "webhooks"),
-    ],
+    () =>
+      [
+        ...indexOperations(document.paths, "paths"),
+        ...indexOperations(document.webhooks ?? {}, "webhooks"),
+      ].sort((left, right) => Number(left.rpcPost) - Number(right.rpcPost)),
     [document],
   );
-  const filtered = useMemo(() => {
+  const availableMethods = useMemo(
+    () => new Set(operations.map(({ method }) => method)),
+    [operations],
+  );
+  const matches = useMemo(() => {
     if (!filter) return operations;
-    const terms = filter.toLowerCase().split(/\s+/);
-    return operations.filter(({ method, text }) =>
-      terms.every((term) =>
-        methods.has(term) ? term === method : text.includes(term),
-      ),
+    const terms = filter.split(/\s+/);
+    return operations.filter(({ text }) =>
+      terms.every((term) => text.includes(term)),
     );
   }, [operations, filter]);
+  const counts = useMemo(() => {
+    const totals = new Map<HttpMethod, number>();
+    for (const { method } of matches)
+      totals.set(method, (totals.get(method) ?? 0) + 1);
+    return totals;
+  }, [matches]);
+  const filtered = useMemo(
+    () =>
+      method === "all"
+        ? matches
+        : matches.filter((item) => item.method === method),
+    [matches, method],
+  );
   const lastPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1);
   const currentPage = Math.min(page, lastPage);
   const start = currentPage * pageSize;
@@ -121,11 +145,51 @@ export function ApiCatalogue({
       className="api-explorer"
       aria-label={de ? "API-Katalog" : "API catalogue"}
     >
+      <div
+        className="api-method-filter"
+        role="group"
+        aria-label={de ? "HTTP-Methoden" : "HTTP methods"}
+      >
+        {(
+          [
+            "all",
+            ...httpMethods.filter((value) => availableMethods.has(value)),
+          ] as const
+        ).map((value) => (
+          <Button
+            key={value}
+            type="button"
+            variant={method === value ? "default" : "secondary"}
+            aria-pressed={method === value}
+            onClick={() => {
+              setMethod(value);
+              setPage(0);
+            }}
+          >
+            {value === "all" ? (de ? "Alle" : "All") : value.toUpperCase()}{" "}
+            <span>
+              {(value === "all"
+                ? matches.length
+                : (counts.get(value) ?? 0)
+              ).toLocaleString(i18n.language)}
+            </span>
+          </Button>
+        ))}
+      </div>
       <form
         className="api-explorer-search"
         onSubmit={(event) => {
           event.preventDefault();
-          setFilter(search.trim());
+          const terms = search.trim().split(/\s+/);
+          const verb = terms
+            .map((term) => term.toLowerCase())
+            .find(isHttpMethod);
+          const query = terms
+            .filter((term) => !isHttpMethod(term.toLowerCase()))
+            .join(" ");
+          if (verb) setMethod(verb);
+          setSearch(query);
+          setFilter(query.toLowerCase());
           setPage(0);
         }}
       >

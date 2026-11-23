@@ -10,6 +10,9 @@ import {assertNativeRpcCatalogue, assertRpcArgumentShapes} from "./native-rpc-ca
 import {quoteSql, withTestDatabase} from "./testing/database.mjs";
 import {portalHttpActions, portalHttpMethods, portalHttpPutTargets, portalHttpPutVersions} from "../supabase/functions/_shared/portal-http-methods.ts";
 
+import {portalOpenApi} from "../src/features/developer-api/contract.ts";
+import {internalInstallationBrand} from "../src/lib/installation-brand.ts";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 await withTestDatabase("api_surface", async ({sql}) => {
     const references = scanFrontendRpcReferences(root);
@@ -50,6 +53,30 @@ await withTestDatabase("api_surface", async ({sql}) => {
     `), "", "HTTP aliases must keep their authenticated invoker, read/write and version boundaries");
     assert.ok(!Object.hasOwn(portalHttpMethods, "deletion_confirm"), "Permanent delete uses its protected account facade");
     console.log(`PASS Reviewed HTTP aliases match ${Object.keys(portalHttpMethods).length + Object.keys(portalHttpActions).length} migrated RPC names and their argument types`);
+
+    const stable = JSON.parse(await sql(`
+        select json_agg(distinct p.proname)
+        from pg_proc p where p.pronamespace='public'::regnamespace
+          and p.prokind='f' and not p.prosecdef and p.provolatile in ('i','s')
+          and has_function_privilege('authenticated',p.oid,'execute')
+    `));
+    const rpcPrefix = "/rest/v1/rpc/";
+    const aliasPrefix = "/functions/v1/portal-api/v1/";
+    for (const edition of ["internal", "customer-self-hosted", "customer-managed"]) {
+        const {paths} = portalOpenApi("https://fixture.example.invalid", true, {
+            ...internalInstallationBrand, edition,
+        });
+        const missing = stable.filter((name) => {
+            const path = paths[rpcPrefix + name];
+            return path?.post?.requestBody &&
+                !path.post["x-portal-document-only"] &&
+                !path.post.deprecated &&
+                !path.get &&
+                !paths[aliasPrefix + name]?.get;
+        });
+        assert.deepEqual(missing.sort(), [], `${edition} documented stable RPCs need a GET route`);
+    }
+    console.log("PASS Every active read-only advertised RPC has GET in all supported editions");
 
     assertRpcArgumentShapes(catalogue, references);
     const verifiedPayloads = references.filter(({argumentShapes}) => argumentShapes.some(Boolean));

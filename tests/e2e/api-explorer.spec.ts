@@ -164,6 +164,18 @@ test("Swagger and OpenAPI links remain usable while browsing and returning to th
   await page.getByRole("link", { name: "OpenAPI JSON" }).click();
   expect((await download).suggestedFilename()).toBe("openapi.json");
 
+  const methods = page.getByRole("group", { name: "HTTP-Methoden" });
+  const reads = methods.getByRole("button", { name: /^GET [1-9]/ });
+  await reads.focus();
+  await reads.press("Enter");
+  await expect(reads).toHaveAttribute("aria-pressed", "true");
+  await expect(swagger.locator(".opblock-get").first()).toBeVisible();
+  await expect(
+    swagger.locator(
+      ".opblock-post, .opblock-put, .opblock-patch, .opblock-delete",
+    ),
+  ).toHaveCount(0);
+
   const search = page.getByRole("searchbox", { name: "Schnittstellen suchen" });
   await search.fill("post /rest/v1/rpc/portal_access");
   await search.press("Enter");

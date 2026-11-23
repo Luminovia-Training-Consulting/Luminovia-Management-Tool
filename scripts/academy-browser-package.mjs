@@ -288,6 +288,14 @@ const reviewedHistoricCatalogueDigests = new Set([
   "b67f2a025e0df68b1933c4e5cc98225326a58b743aefbe870e46da6c11cec035", // 1.37.0 at dc159a63
   "7f59813264e4c5dbad1ab5a71506828674d84901d12bda640068dc1458e5398f", // 1.37.0 at ad17eff0
   "76a6e18c85ff66cf4e235a740e899486b376a9a87c1a24bae8873203807cc96a", // 1.37.0 at 9b828637
+  "7a4d993d7e5892114913041d8f22414a2ad26a4854f6ff2295966a2022d13c1c", // 1.38.0 at 1a5d90d5
+]);
+
+const reviewedHistoricWorkflowDigests = new Map([
+  [
+    "7a4d993d7e5892114913041d8f22414a2ad26a4854f6ff2295966a2022d13c1c",
+    "16b7001de9c8063ae58fd278b139e82f12492eb7adad774fdcafd93201757f0b",
+  ],
 ]);
 
 /** Check the template identity before removing only its installation-specific values. */
@@ -314,8 +322,12 @@ function historicCatalogueDigest(api, brand, backend) {
   identity.edition = null;
   capabilities.installation_id.const = null;
   capabilities.edition.const = null;
+  return canonicalDigest(normalized);
+}
+
+function canonicalDigest(document) {
   return sha256(
-    JSON.stringify(normalized, (_key, value) =>
+    JSON.stringify(document, (_key, value) =>
       value && typeof value === "object" && !Array.isArray(value)
         ? Object.fromEntries(
             Object.keys(value)
@@ -325,6 +337,25 @@ function historicCatalogueDigest(api, brand, backend) {
         : value,
     ),
   );
+}
+
+function historicWorkflowMatches(workflows, api, digest) {
+  if (
+    !workflows ||
+    workflows.apiVersion !== api.info.version ||
+    !isDeepStrictEqual(workflows.installation, api["x-portal-installation"])
+  ) {
+    return false;
+  }
+  const normalized = {
+    ...workflows,
+    installation: {
+      ...workflows.installation,
+      installation_id: null,
+      edition: null,
+    },
+  };
+  return canonicalDigest(normalized) === digest;
 }
 
 /** Associate every render surface and its dormant public contract with the same customer build. */
@@ -422,6 +453,11 @@ function validateBrowserOutput(
       "The PWA cache cannot contain runtime-managed branding assets.",
     );
   }
+  const matchesCurrentCatalogue = isDeepStrictEqual(api, expectedApi);
+  const historicalCatalogue =
+    !matchesCurrentCatalogue && apiHistory === "verified-release"
+      ? historicCatalogueDigest(api, brand, apiBackend)
+      : null;
   // Keep the original empty-catalogue exception exact. Nonempty catalogue
   // history requires a verified release signature in addition to its digest.
   if (apiHistory !== "none" && api.info?.version === "1.1.0") {
@@ -447,29 +483,30 @@ function validateBrowserOutput(
       "Historic customer API differs from the original catalogue.",
     );
   } else if (
-    !isDeepStrictEqual(api, expectedApi) &&
-    !(
-      apiHistory === "verified-release" &&
-      reviewedHistoricCatalogueDigests.has(
-        historicCatalogueDigest(api, brand, apiBackend),
-      )
-    )
+    !matchesCurrentCatalogue &&
+    !reviewedHistoricCatalogueDigests.has(historicalCatalogue)
   ) {
     throw new Error("Customer API differs from the reviewed course profile.");
   }
+  const workflowFile = files.get("api/workflows.json");
+  const historicalWorkflow =
+    reviewedHistoricWorkflowDigests.get(historicalCatalogue);
   if (
     api.info.version === expectedApi.info.version ||
-    files.has("api/workflows.json")
+    historicalWorkflow ||
+    workflowFile
   ) {
-    const workflowFile = files.get("api/workflows.json");
-    const expectedWorkflows = academyWorkflowIndex(
-      expectedApi,
-      academyExplorerOpenApi(apiBackend, brand),
-    );
-    if (
-      !workflowFile ||
-      !isDeepStrictEqual(JSON.parse(text(workflowFile)), expectedWorkflows)
-    ) {
+    const workflows = workflowFile && JSON.parse(text(workflowFile));
+    const matches = historicalWorkflow
+      ? historicWorkflowMatches(workflows, api, historicalWorkflow)
+      : isDeepStrictEqual(
+          workflows,
+          academyWorkflowIndex(
+            expectedApi,
+            academyExplorerOpenApi(apiBackend, brand),
+          ),
+        );
+    if (!matches) {
       throw new Error(
         "Customer workflow index differs from the reviewed contract.",
       );

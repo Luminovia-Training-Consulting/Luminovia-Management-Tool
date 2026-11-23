@@ -149,7 +149,7 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/portal-api/v1/remove_course_exam_pdf", 503, "portal-function-portal-api", "DELETE"],
             ["/functions/v1/portal-api/v1/course_workspace", 503, "portal-function-portal-api", "OPTIONS"],
             ["/functions/v1/portal-api/v1/course_workspace", 404, null, "POST"],
-            ["/functions/v1/portal-api/v1/course_workspace", 404, null, "PATCH"],
+            ["/functions/v1/portal-api/v1/mark_notifications", 503, "portal-function-portal-api", "PATCH"],
             ["/functions/v1/portal-api/v1/course_workspace/extra", 404],
             ["/functions/v1/portal-api/v1/Course_Workspace", 404],
             ["/functions/v1/portal-api", 404],

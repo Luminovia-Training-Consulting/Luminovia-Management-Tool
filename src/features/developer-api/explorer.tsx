@@ -24,7 +24,6 @@ type ExplorerProperties = {
 };
 
 const disabledMethods = [] as const;
-const academyMethods = ["get", "post", "put", "delete"] as const;
 const portalMethods = ["get", "post", "patch", "put", "delete"] as const;
 
 /** The composition root supplies only the current edition's catalogue and request guard. */
@@ -147,13 +146,7 @@ function ExplorerSession({
       <div className="panel">
         <ApiCatalogue
           document={document}
-          supportedSubmitMethods={
-            authorized
-              ? academy
-                ? academyMethods
-                : portalMethods
-              : disabledMethods
-          }
+          supportedSubmitMethods={authorized ? portalMethods : disabledMethods}
           requestInterceptor={async (request) => {
             if (!approval || !actor || permit.current !== approval)
               throw new Error("api_session_required");

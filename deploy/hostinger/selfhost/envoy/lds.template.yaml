@@ -514,7 +514,7 @@ resources:
                             - name: ':method'
                               string_match:
                                 safe_regex:
-                                  regex: GET|PUT|DELETE|OPTIONS
+                                  regex: GET|PUT|PATCH|DELETE|OPTIONS
                         route:
                           cluster: functions
                           timeout: 35s

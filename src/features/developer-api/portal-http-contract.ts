@@ -2,6 +2,7 @@ import {
   portalHttpActions,
   type PortalHttpAction,
   portalHttpMethods,
+  type PortalHttpMethod,
   portalHttpPutTargets,
   portalHttpPutVersions,
 } from "../../../supabase/functions/_shared/portal-http-methods.ts";
@@ -79,7 +80,9 @@ export function withPortalHttpAliases<T extends Paths>(
   const definitions = [
     ...Object.entries(portalHttpMethods),
     ...Object.entries(portalHttpActions).flatMap(([name, methods]) =>
-      Object.keys(methods).map((method) => [name, method] as const),
+      (Object.keys(methods) as PortalHttpMethod[]).map(
+        (method) => [name, method] as const,
+      ),
     ),
   ];
   const aliases: HttpPaths = {};
@@ -92,9 +95,7 @@ export function withPortalHttpAliases<T extends Paths>(
     if (!json) continue;
     const verb = method.toLowerCase();
     const action =
-      method === "PUT" || method === "DELETE"
-        ? portalHttpActions[name]?.[method]
-        : undefined;
+      method === "GET" ? undefined : portalHttpActions[name]?.[method];
     const target =
       action?.target ??
       (method === "PUT" ? portalHttpPutTargets[name] : undefined);

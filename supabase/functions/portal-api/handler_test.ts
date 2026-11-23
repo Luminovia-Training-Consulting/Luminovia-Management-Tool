@@ -20,6 +20,7 @@ function fixture(
     operations: {
       example_read: "GET",
       example_save: "PUT",
+      example_patch: "PATCH",
       example_remove: "DELETE",
     },
     putTargets: { example_save: "p_id" },
@@ -36,7 +37,7 @@ function fixture(
   return { handle, calls };
 }
 
-Deno.test("GET, PUT and DELETE preserve caller authorization and arguments in the native RPC", async () => {
+Deno.test("GET, PUT, PATCH and DELETE preserve caller authorization and arguments in the native RPC", async () => {
   const args = {
     p_id: actor,
     p_request_id: "ec357fc7-2ed1-4750-b6a2-f8eb5d417572",
@@ -52,6 +53,7 @@ Deno.test("GET, PUT and DELETE preserve caller authorization and arguments in th
     const [method, operation] of [
       ["GET", "example_read"],
       ["PUT", "example_save"],
+      ["PATCH", "example_patch"],
       ["DELETE", "example_remove"],
     ] as const
   ) {
@@ -95,6 +97,53 @@ Deno.test("GET, PUT and DELETE preserve caller authorization and arguments in th
     assertEquals(rpc.headers.get("x-http-method-override"), null);
     assertEquals(await rpc.json(), args);
   }
+});
+
+Deno.test("PATCH restricts edits to the correct versioned action and advertises its methods in CORS", async () => {
+  const { handle, calls } = fixture();
+  const url = example + "/manage_job_offer";
+  const headers = {
+    origin,
+    authorization: bearer,
+    "content-type": "application/json",
+  };
+  const preflight = await handle(
+    new Request(url, {
+      method: "OPTIONS",
+      headers: { origin, "access-control-request-method": "PATCH" },
+    }),
+  );
+  assertEquals(preflight.status, 204);
+  assertEquals(
+    preflight.headers.get("access-control-allow-methods"),
+    "PUT, PATCH, OPTIONS",
+  );
+
+  const update = (p_action: string, p_expected_version: number) =>
+    handle(
+      new Request(url, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ p_job_id: actor, p_action, p_expected_version }),
+      }),
+    );
+  for (
+    const [action, version, error] of [
+      ["archived", 1, "action_not_allowed"],
+      ["edit", 0, "existing_record_version_required"],
+    ] as const
+  ) {
+    const denied = await update(action, version);
+    assertEquals(denied.status, 400);
+    assertEquals(await denied.json(), { error });
+  }
+  assertEquals(calls.length, 0);
+  assertEquals((await update("edit", 3)).status, 200);
+  assertEquals(await calls[1].json(), {
+    p_job_id: actor,
+    p_action: "edit",
+    p_expected_version: 3,
+  });
 });
 
 Deno.test("JSON numeric precision is preserved when passing arguments", async () => {
@@ -342,13 +391,20 @@ Deno.test("multi-action RPCs accept only the branch assigned to the HTTP method"
     400,
   );
   assertEquals(
-    (await handle(request("PUT", "update_support_ticket", { p_action: "reply" })))
+    (await handle(
+      request("PUT", "update_support_ticket", { p_action: "reply" }),
+    ))
       .status,
     400,
   );
   assertEquals(calls.length, 0);
 
-  const args = { p_page_id: actor, p_version_id: actor, p_revision: 3, p_remove: true };
+  const args = {
+    p_page_id: actor,
+    p_version_id: actor,
+    p_revision: 3,
+    p_remove: true,
+  };
   assertEquals(
     (await handle(request("DELETE", "manage_wiki_attachment", args))).status,
     200,
