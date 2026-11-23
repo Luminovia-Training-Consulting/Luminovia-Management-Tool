@@ -1,3 +1,9 @@
+# 23 November 2026 — Retired public practice bookmarks
+
+Return an uncached HTTP 404 for the old public practice path and its subpaths in Caddy, Vite development and built preview. Exclude those paths from the service worker's navigation fallback. Public help keeps its existing offline support.
+
+All 14 proxy HTTP checks passed. Desktop and mobile Chromium verified the installed worker serves public help offline and does not respond to the retired bookmark. The build stayed within all three bundle budgets. The route and corrected worker were independently verified on KVM 1 over HTTPS.
+
 # 23 November 2026 — Withdrawal notifications in native acceptance
 
 The withdrawal test now verifies that a lecturer with a different topic in the same subject area receives the reopened-offer notice. Its recipient assertion covers every actor created by that test, including the lecturer without matching expertise. The retained-data baseline can contain other eligible lecturers in that area. The withdrawal linter follows the original PL/pgSQL resolver behind the current SQL dispatcher. The isolated PostgreSQL withdrawal checks passed.

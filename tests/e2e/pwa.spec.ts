@@ -139,6 +139,8 @@ test("built PWA serves a public help deep link offline without a session", async
         await page.goto("/help?topic=profile");
         await expect(page.getByRole("heading", {name: "Hilfe & Anleitungen", exact: true})).toBeVisible();
         await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+        // The worker must not answer the retired bookmark with its cached shell.
+        await expect(page.goto("/demo?retired=1")).rejects.toThrow(/ERR_INTERNET_DISCONNECTED/);
     } finally {
         await context.setOffline(false);
     }

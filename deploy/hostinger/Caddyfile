@@ -114,6 +114,10 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 	}
 	route {
+		# Retired bookmarks must not fall through to the application shell.
+		@retiredDemo path /demo /demo/*
+		header @retiredDemo Cache-Control no-store
+		respond @retiredDemo 404
 		import {$PORTAL_CADDY_PWA_PROFILE:portal_static_pwa}
 		# Apply no-store to private business responses; block Auth administration routes and check maintenance before proxying.
 		handle_path /backend/* {
