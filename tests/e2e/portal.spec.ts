@@ -382,17 +382,15 @@ test("admin uses password-only access and publishes a five-session job through t
     await page
         .getByLabel("Konditionen", {exact: true})
         .fill("Fiktive lokale QA-Konditionen.");
+    await page.getByLabel("Erster Tag", {exact: true}).fill("2028-06-12");
+    await page.getByLabel("Letzter Tag", {exact: true}).fill("2028-06-16");
+    await page.getByRole("button", {name: "Zeitraum übernehmen", exact: true}).click();
     const starts = page.getByLabel(/^Beginn \d+$/);
     const ends = page.getByLabel(/^Ende \d+$/);
     await expect(starts).toHaveCount(5);
-    for (let index = 0; index < 5; index++) {
-        await starts
-            .nth(index)
-            .fill(`2028-06-${String(index + 12).padStart(2, "0")}T09:00`);
-        await ends
-            .nth(index)
-            .fill(`2028-06-${String(index + 12).padStart(2, "0")}T15:00`);
-    }
+    await expect(starts.first()).toHaveValue("2028-06-12T09:00");
+    await starts.nth(1).fill("2028-06-13T10:30");
+    await ends.nth(1).fill("2028-06-13T16:00");
     await page.getByLabel("Sofort veröffentlichen", {exact: true}).check();
     const [publication] = await Promise.all([
         page.waitForResponse(
@@ -419,6 +417,15 @@ test("admin uses password-only access and publishes a five-session job through t
     expect(job!.id).toBe(publishedId);
     expect(job!.status).toBe("published");
     expect(job!.job_sessions).toHaveLength(5);
+    const secondDay = job!.job_sessions.find((session) =>
+        new Date(session.starts_at).toISOString().startsWith("2028-06-13"));
+    expect(new Date(secondDay!.starts_at).toISOString()).toBe("2028-06-13T08:30:00.000Z");
+    expect(new Date(secondDay!.ends_at).toISOString()).toBe("2028-06-13T14:00:00.000Z");
+    await page.goto(`/jobs/${publishedId}`);
+    await expect(page.getByRole("heading", {name: title, exact: true})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Durchführungszeitraum", exact: true})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Dateizentrale", exact: true})).toBeVisible();
+
     // Account invitations live on their own current-authority administration page.
     await page.goto("/admin/accounts");
     const email = `ui-invite-${randomUUID()}@example.invalid`;

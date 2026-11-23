@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Published job details and schedules
+
+- [x] Show title, location, description, date range and exact sessions. Generate an inclusive range for standalone staff offers and company requests and keep editable times per day.
+- [x] Use a canonical existing company for staff offers without requiring gross pricing. Keep company-originated offers attached to the submitting organisation and restrict reassignment when dependent activity exists.
+- [x] Expose versioned required-topic changes and transactional edits to eligible future schedules. Preserve accepted work and shared course schedules through their existing change workflows.
+- [x] Make scoped briefing and scanned job attachments reachable from the saved offer and allow confirmed archival of permitted attachments.
+- [ ] Run the updated authenticated desktop/mobile Chromium workflow when the disposable runner's ports are available.
+
 ## White Label delivery and support
 
 - [x] Allow confirmed Academy administrators to grant and revoke temporary, audited installation or exact-course diagnostics for a dedicated local support identity. Verify both Academy profiles, expiry, revoked access and private-content denial in native PostgreSQL.

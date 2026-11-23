@@ -1,0 +1,19 @@
+.job-date-range {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.job-date-range .field {
+  min-width: 0;
+}
+
+.job-date-range p {
+  margin: 0;
+}
+
+.job-date-range > .button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}

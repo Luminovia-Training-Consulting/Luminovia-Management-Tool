@@ -294,6 +294,7 @@
 
 .job-documents {
   margin-top: 22px;
+  scroll-margin-top: 5rem;
 }
 
 .job-documents > details {
@@ -301,8 +302,9 @@
   border-bottom: 1px solid var(--line);
 }
 
-.job-documents summary {
-  font-size: 13px;
+.job-documents > details > summary {
+  cursor: pointer;
+  font-size: 0.95rem;
   font-weight: 600;
   margin-bottom: 15px;
 }

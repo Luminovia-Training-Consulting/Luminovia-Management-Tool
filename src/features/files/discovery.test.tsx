@@ -1622,3 +1622,89 @@ it.each(["denied", "confirmed"] as const)(
     }
   },
 );
+
+it("removes another staff member’s attachment only from its exact managed job after confirmation", async () => {
+  const jobId = "47000000-0000-4000-8000-000000000098";
+  const record = {
+    ...item(),
+    owner_id: "47000000-0000-4000-8000-000000000099",
+    job_id: jobId,
+    scope: "job_after",
+  };
+  state.reads.mockReturnValue({ data: [record], error: null });
+  state.exact.mockImplementation((id) =>
+    response(id === record.id ? record : null),
+  );
+  state.rpc.mockImplementation((name) => {
+    if (name === "rename_document") {
+      state.reads.mockReturnValue({ data: [], error: null });
+      return response(null);
+    }
+    return response({ kinds: [] });
+  });
+
+  const user = userEvent.setup();
+  mount(<JobDocuments jobId={jobId} canManage />);
+  const section = screen.getByRole("region", { name: "Auftragsdateien" });
+  await user.click(within(section).getByText("Auftragsdatei hinzufügen"));
+  expect(within(section).getByLabelText("Freigabe")).toHaveValue("job_before");
+  await user.selectOptions(
+    within(section).getByLabelText("Freigabe"),
+    "job_after",
+  );
+  expect(within(section).getByLabelText("Datei auswählen")).toBeEnabled();
+
+  await user.click(
+    await within(section).findByRole("button", {
+      name: `Anhang entfernen: ${record.original_name}`,
+    }),
+  );
+  const dialog = screen.getByRole("dialog", {
+    name: "Anhang vom Auftrag entfernen?",
+  });
+  expect(dialog).toHaveTextContent(record.original_name);
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+  ).toEqual([]);
+  const confirm = within(dialog).getByRole("button", {
+    name: "Anhang entfernen",
+  });
+  await waitFor(() => expect(confirm).toBeEnabled());
+  await user.click(confirm);
+
+  expect(
+    await within(section).findByText("Noch keine Dateien vorhanden."),
+  ).toBeVisible();
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+  ).toEqual([
+    [
+      "rename_document",
+      { p_id: record.id, p_name: record.original_name, p_delete: true },
+    ],
+  ]);
+});
+
+it("exposes the attachment for reading without providing job-management actions", async () => {
+  await i18n.changeLanguage("en");
+  const jobId = "47000000-0000-4000-8000-000000000098";
+  const record = {
+    ...item(),
+    owner_id: "47000000-0000-4000-8000-000000000099",
+    job_id: jobId,
+    scope: "job_before",
+  };
+  state.reads.mockReturnValue({ data: [record], error: null });
+  state.rpc.mockReturnValue(response({ kinds: [] }));
+  mount(<JobDocuments jobId={jobId} canManage={false} />);
+  const section = screen.getByRole("region", { name: "Job attachments" });
+  expect(await within(section).findByText(record.original_name)).toBeVisible();
+  expect(
+    within(section).queryByText("Add job attachment"),
+  ).not.toBeInTheDocument();
+  expect(
+    within(section).queryByRole("button", {
+      name: `Remove attachment: ${record.original_name}`,
+    }),
+  ).not.toBeInTheDocument();
+});

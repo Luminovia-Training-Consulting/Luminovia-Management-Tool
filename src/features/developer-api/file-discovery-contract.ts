@@ -135,8 +135,8 @@ export const fileDiscoveryPaths = {
   ),
   "/rest/v1/rpc/rename_document": operation(
     "renameOrArchiveOwnedDocument",
-    "Rename or archive my accessible document",
-    "Requires current document ownership and access. The new filename updates document metadata. Set p_delete to true to archive the document.",
+    "Rename or archive an accessible document",
+    "Owners can rename or archive their accessible document. Set p_delete to true to archive it. Staff with jobs.manage may also archive accessible job materials while retaining their original metadata and prior versions.",
     z.strictObject({
       p_id: id,
       p_name: documentNameSchema,

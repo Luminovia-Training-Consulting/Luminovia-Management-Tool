@@ -12,7 +12,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   FileDown,
   FileUp,
@@ -429,11 +429,13 @@ function DocumentList({
   pending = false,
   verificationEpoch,
   renewalEpoch,
+  managedJobId,
 }: {
   files: PortalDocument[];
   pending?: boolean;
   verificationEpoch?: string;
   renewalEpoch?: string;
+  managedJobId?: string;
 }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
@@ -445,7 +447,13 @@ function DocumentList({
   const online = useOnline();
   const [selected, setSelected] = useState<PortalDocument | null>(null);
   const [mode, setMode] = useState<
-    "preview" | "versions" | "details" | "rename" | "archive" | "replace"
+    | "preview"
+    | "versions"
+    | "details"
+    | "rename"
+    | "archive"
+    | "removeJobAttachment"
+    | "replace"
   >("preview");
   const [name, setName] = useState<{ id: string | null; value: string }>({
     id: null,
@@ -536,6 +544,14 @@ function DocumentList({
     setMode(value);
     setSelected(file);
   };
+  const canRemoveJobFile = (file: PortalDocument) =>
+    Boolean(
+      managedJobId &&
+      file.job_id === managedJobId &&
+      (file.scope === "job_before" || file.scope === "job_after"),
+    );
+  const removingJobFile = mode === "removeJobAttachment";
+  const archiving = mode === "archive" || removingJobFile;
   return (
     <>
       {/* Empty results do not cancel an already captured operation. The
@@ -645,6 +661,19 @@ function DocumentList({
               >
                 <History size={18} />
               </Button>
+              {canRemoveJobFile(file) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("jobRemoveNamed", { name: file.original_name })}
+                  title={t("jobRemove")}
+                  disabled={!online}
+                  onClick={() => select(file, "removeJobAttachment")}
+                >
+                  <Trash2 size={18} />
+                </Button>
+              )}
               {(file.owner_id === session!.user.id || canDelete) && (
                 <details open={openMenuId === file.id}>
                   <summary
@@ -676,13 +705,15 @@ function DocumentList({
                         >
                           {t("replace")}
                         </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => select(file, "archive")}
-                        >
-                          <Trash2 size={14} />
-                          {t("archive")}
-                        </Button>
+                        {!canRemoveJobFile(file) && (
+                          <Button
+                            variant="danger"
+                            onClick={() => select(file, "archive")}
+                          >
+                            <Trash2 size={14} />
+                            {t("archive")}
+                          </Button>
+                        )}
                       </>
                     )}
                     <PermanentDeleteAction
@@ -739,8 +770,8 @@ function DocumentList({
                   );
               }}
               title={
-                mode === "archive"
-                  ? t("archiveTitle")
+                archiving
+                  ? t(removingJobFile ? "jobRemoveTitle" : "archiveTitle")
                   : mode === "rename"
                     ? t("rename")
                     : mode === "replace"
@@ -752,8 +783,15 @@ function DocumentList({
                           : t("preview")
               }
               description={
-                mode === "archive"
-                  ? t("archiveDescription", { name: selected?.original_name })
+                archiving
+                  ? t(
+                      removingJobFile
+                        ? "jobRemoveDescription"
+                        : "archiveDescription",
+                      {
+                        name: selected.original_name,
+                      },
+                    )
                   : mode === "details"
                     ? ""
                     : (selected?.original_name ?? "")
@@ -762,7 +800,10 @@ function DocumentList({
               {accessStatus}
               {selected && (
                 <fieldset
-                  disabled={!authorised}
+                  disabled={
+                    !authorised ||
+                    (removingJobFile && !(exact && canRemoveJobFile(exact)))
+                  }
                   style={{ border: 0, padding: 0, margin: 0 }}
                 >
                   {mode === "details" ? (
@@ -796,11 +837,18 @@ function DocumentList({
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        if (authorised)
+                        if (
+                          authorised &&
+                          !change.isPending &&
+                          (!removingJobFile ||
+                            (exact && canRemoveJobFile(exact)))
+                        )
                           change.mutate({
                             id: selected.id,
-                            name: name.value,
-                            archive: mode === "archive",
+                            name: removingJobFile
+                              ? exact!.original_name
+                              : name.value,
+                            archive: archiving,
                           });
                       }}
                     >
@@ -822,9 +870,15 @@ function DocumentList({
                       )}
                       <Button
                         disabled={!online || change.isPending}
-                        variant={mode === "archive" ? "danger" : "default"}
+                        variant={archiving ? "danger" : "default"}
                       >
-                        {t(mode === "archive" ? "archive" : "rename")}
+                        {t(
+                          removingJobFile
+                            ? "jobRemove"
+                            : archiving
+                              ? "archive"
+                              : "rename",
+                        )}
                       </Button>
                       {change.isError &&
                         change.variables?.id === selected.id && (
@@ -877,6 +931,14 @@ export function JobDocuments({
   canManage: boolean;
 }) {
   const { t } = useTranslation("files");
+  const { hash } = useLocation();
+  const section = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (hash === "#job-documents") {
+      section.current?.focus({ preventScroll: true });
+      section.current?.scrollIntoView({ block: "start" });
+    }
+  }, [hash, jobId]);
   const { session } = useAuth();
   const client = useQueryClient();
   const options = documentsQuery(session!.user.id, undefined, undefined, jobId);
@@ -884,11 +946,17 @@ export function JobDocuments({
   const epoch = `${JSON.stringify(options.queryKey)}:${client.getQueryState(options.queryKey)?.dataUpdateCount}`;
   const [scope, setScope] = useState<UploadContext["scope"]>("job_before");
   return (
-    <section className="panel job-documents">
-      <h2>{t("title")}</h2>
+    <section
+      id="job-documents"
+      ref={section}
+      tabIndex={-1}
+      aria-labelledby="job-documents-heading"
+      className="panel job-documents"
+    >
+      <h2 id="job-documents-heading">{t("jobTitle")}</h2>
       {canManage && (
         <details>
-          <summary>{t("upload")}</summary>
+          <summary>{t("jobAdd")}</summary>
           <Field id="job-file-visibility" label={t("scope")}>
             <select
               id="job-file-visibility"
@@ -907,10 +975,11 @@ export function JobDocuments({
       {files.isPending ? (
         <Loading />
       ) : files.isError ? (
-        <ErrorState />
+        <ErrorState retry={() => void files.refetch()} />
       ) : (
         <DocumentList
           files={files.data}
+          managedJobId={canManage ? jobId : undefined}
           verificationEpoch={epoch}
           renewalEpoch={
             files.isFetchedAfterMount && !files.isFetching ? epoch : undefined

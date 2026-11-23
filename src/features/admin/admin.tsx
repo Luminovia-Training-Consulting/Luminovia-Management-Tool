@@ -4,6 +4,8 @@
  */
 import { useRequestKey } from "../../lib/request-key";
 import { OfferBoard } from "../jobs/board";
+import { JobDateRange } from "../jobs/session-range";
+import { resolveJobSessions } from "../jobs/session-schedule";
 import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -15,7 +17,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { CourseCommissionField, RoleFeePreview } from "../commercial/pricing";
 import {
-  clientOrganisationsQuery,
   commissionAccessQuery,
   commissionKeys,
   parseCourseCommission,
@@ -104,17 +105,10 @@ function JobForm({
   const gross = fullFinance || (scopedPricing && commission !== "");
   const percent = gross ? parseCourseCommission(commission) : null;
   const commissionArg = percent === null ? {} : { p_platform_percent: percent };
-  const financeOrganisations = useQuery({
-    ...clientOrganisationsQuery(actor),
-    enabled: fullFinance && !courseRun,
-  });
-  const managedOrganisations = useQuery({
+  const organisations = useQuery({
     ...orgQuery(actor),
-    enabled: scopedPricing && gross && !courseRun,
+    enabled: !courseRun,
   });
-  const organisations = fullFinance
-    ? financeOrganisations
-    : managedOrganisations;
   const retry = useRequestKey();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
@@ -181,7 +175,7 @@ function JobForm({
   const selectedTopicIds = useWatch({ control, name: "topic_ids" });
   const valuesTimeZone = useWatch({ control, name: "time_zone" });
   const selectedOrganisation = useWatch({ control, name: "organisation" });
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
   });
@@ -197,20 +191,11 @@ function JobForm({
             starts_at,
             ends_at,
           }))
-        : values.sessions.map((s) => {
-            const starts = zonedInstant(s.starts_at, values.time_zone);
-            const ends = zonedInstant(s.ends_at, values.time_zone);
-            if (
-              !starts ||
-              !ends ||
-              ends <= starts ||
-              new Date(starts) <= new Date()
-            ) {
-              setInvalidTime(true);
-              throw new Error("invalid_time");
-            }
-            return { starts_at: starts, ends_at: ends };
-          });
+        : resolveJobSessions(values.sessions, values.time_zone);
+      if (!sessions) {
+        setInvalidTime(true);
+        throw new Error("invalid_time");
+      }
       const {
         publish,
         claim_deadline,
@@ -283,7 +268,7 @@ function JobForm({
         p_payload: payload,
         p_capacity: capacity,
         p_request_id: retryId,
-        p_organisation_id: gross ? organisation || null : null,
+        p_organisation_id: organisation || null,
         ...commissionArg,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
@@ -311,20 +296,20 @@ function JobForm({
   if (
     topics.isPending ||
     pricing.isPending ||
-    (fullFinance && !courseRun && organisations.isPending)
+    (!courseRun && organisations.isPending)
   )
     return <Loading />;
   if (
     topics.isError ||
     pricing.isError ||
-    (gross && !courseRun && organisations.isError)
+    (!courseRun && organisations.isError)
   )
     return (
       <ErrorState
         retry={() => {
           void topics.refetch();
           void pricing.refetch();
-          if (gross) void organisations.refetch();
+          if (!courseRun) void organisations.refetch();
         }}
       />
     );
@@ -372,33 +357,31 @@ function JobForm({
       )}
       {!courseRun && (
         <>
-          {gross && (
-            <Field id="job-organisation" label={priceText("existingCustomer")}>
-              <select
-                id="job-organisation"
-                {...register("organisation", {
-                  onChange: (event) => {
-                    const selected = organisations.data?.find(
-                      (org) => org.id === event.target.value,
-                    );
-                    if (selected)
-                      setValue("customer_name", selected.name, {
-                        shouldDirty: true,
-                      });
-                  },
-                })}
-              >
-                <option value="">{priceText("newCustomer")}</option>
-                {organisations.data
-                  ?.filter((org) => !("archived_at" in org && org.archived_at))
-                  .map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-              </select>
-            </Field>
-          )}
+          <Field id="job-organisation" label={priceText("existingCustomer")}>
+            <select
+              id="job-organisation"
+              {...register("organisation", {
+                onChange: (event) => {
+                  const selected = organisations.data?.find(
+                    (org) => org.id === event.target.value,
+                  );
+                  setValue("customer_name", selected?.name ?? "", {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                },
+              })}
+            >
+              <option value="">{priceText("newCustomer")}</option>
+              {organisations.data
+                ?.filter((org) => !org.archived_at)
+                .map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
           <div className="form-row">
             <Field
               id="job-title"
@@ -415,7 +398,7 @@ function JobForm({
               <input
                 id="job-customer"
                 {...register("customer_name")}
-                readOnly={gross && Boolean(selectedOrganisation)}
+                readOnly={Boolean(selectedOrganisation)}
               />
             </Field>
           </div>
@@ -453,6 +436,12 @@ function JobForm({
           </div>
           <fieldset>
             <legend>{t("sessions")}</legend>
+            <JobDateRange
+              prefix="job"
+              sessions={getValues("sessions")}
+              onApply={replace}
+              disabled={create.isPending}
+            />
             {fields.map((field, index) => (
               <div className="session-form-row" key={field.id}>
                 <Field
@@ -707,6 +696,13 @@ function JobForm({
         <Button asChild variant="secondary">
           <Link to={`/jobs/${createdId}#job-briefing`}>
             {briefingText("configureLink")}
+          </Link>
+        </Button>
+      )}
+      {createdId && (
+        <Button asChild variant="secondary">
+          <Link to={`/jobs/${createdId}#job-documents`}>
+            {lifeText("manageAttachments")}
           </Link>
         </Button>
       )}

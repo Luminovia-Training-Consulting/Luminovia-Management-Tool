@@ -36,7 +36,9 @@ import { useAuth } from "../auth/auth-context";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import { profileQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { dateTime, money, validZone, zonedInstant } from "../../lib/dates";
+import { JobDateRange } from "../jobs/session-range";
+import { resolveJobSessions } from "../jobs/session-schedule";
+import { dateTime, money, validZone } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -139,7 +141,7 @@ function RequestForm({
       sessions: [initial],
     },
   });
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "sessions",
   });
@@ -147,20 +149,11 @@ function RequestForm({
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
       setInvalidSessions(false);
-      const sessions = values.sessions.map((item) => {
-        const starts_at = zonedInstant(item.starts_at, values.time_zone);
-        const ends_at = zonedInstant(item.ends_at, values.time_zone);
-        if (
-          !starts_at ||
-          !ends_at ||
-          ends_at <= starts_at ||
-          new Date(starts_at) <= new Date()
-        ) {
-          setInvalidSessions(true);
-          throw new Error("invalid_sessions");
-        }
-        return { starts_at, ends_at };
-      });
+      const sessions = resolveJobSessions(values.sessions, values.time_zone);
+      if (!sessions) {
+        setInvalidSessions(true);
+        throw new Error("invalid_sessions");
+      }
       const { organisation, ...rest } = values;
       const payload = { ...rest, sessions };
       const cleanedBrief = cleanRequestBrief(brief);
@@ -271,6 +264,12 @@ function RequestForm({
       </div>
       <fieldset className="platform-sessions">
         <legend>{common("sessions")}</legend>
+        <JobDateRange
+          prefix="request"
+          sessions={form.getValues("sessions")}
+          onApply={replace}
+          disabled={save.isPending}
+        />
         {fields.map((field, index) => (
           <div className="session-form-row" key={field.id}>
             <Field

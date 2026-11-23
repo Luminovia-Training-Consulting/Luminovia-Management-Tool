@@ -1,3 +1,11 @@
+# 23 November 2026 — Published offer details and daily schedules
+
+The published offer shows the delivery period and precise sessions in the offer's time zone. The date-range control generates individual days for staff offers and company requests and keeps existing times within the selected period. Admin and Management can select an existing company independently of gross-pricing authority. Company-originated offers retain the submitting company. Only unaccepted, standalone net offers without dependent course activity expose reassignment.
+
+A versioned offer edit can update required topics and a complete future schedule. The database writes the offer and dedicated course schedule together, keeps IDs for retained intervals and invalidates stale claim consent. Courses with shared plans, existing enrolments or attendance remain under their existing change workflows. The offer detail provides contact/reference editing and a direct route to scanned uploads and confirmed attachment removal with the existing pre-claim and post-claim visibility.
+
+Local PostgreSQL checks covered both schedule and topic changes, rollback, claim consent, company ownership and blocks, attachment archival and the API surface. Unit and component tests, TypeScript, lint and the production bundle budget passed. The authenticated Chromium check is pending because the isolated runner's port 55322 was in use.
+
 # 23 November 2026 — Academy support and delivery prerequisites
 
 A confirmed Academy administrator can grant and revoke time-limited diagnostics for a verified, dedicated local support account. Grants identify the allowed installation or course and record the purpose, recipient, expiry and access events. The support route has no access to private learning materials, messages or files. Native PostgreSQL checks covered both dedicated editions, scope, revoked and expired grants, and denial of access from the internal edition.

@@ -5,6 +5,18 @@
 import i18n from "../../lib/i18n";
 
 const en = {
+  rangeFrom: "First day",
+  rangeThrough: "Last day",
+  rangeHelp:
+    "Applying the period keeps existing times within these dates and replaces sessions outside them. Adjust the times for each day below.",
+  applyRange: "Apply date range",
+  invalidRange: "Choose a period with 1 to 60 sessions.",
+  deliveryPeriod: "Delivery period",
+  manageAttachments: "Manage job attachments",
+  scheduleLocked:
+    "These dates belong to a shared course plan or existing course activity. Use the course or assignment change workflow.",
+  invalidSchedule:
+    "Check that all sessions are in the future and their times are valid and do not overlap.",
   board: "Offer board",
   boardRefresh: "Refresh board",
   boardHelp:
@@ -54,6 +66,7 @@ const en = {
   cancelled: "Cancelled",
   edit: "Edit unaccepted offer",
   title: "Offer title",
+  company: "Company assigned to this job",
   description: "Offer description",
   location: "Location or meeting link",
   terms: "Assignment terms",
@@ -80,6 +93,18 @@ const en = {
     "A cancelled assignment can only be reopened explicitly with a reason in its detail view.",
 };
 const de: typeof en = {
+  rangeFrom: "Erster Tag",
+  rangeThrough: "Letzter Tag",
+  rangeHelp:
+    "Beim Übernehmen bleiben die Uhrzeiten innerhalb des Zeitraums erhalten. Termine außerhalb entfallen. Die Uhrzeiten kannst du unten für jeden Tag ändern.",
+  applyRange: "Zeitraum übernehmen",
+  invalidRange: "Wähle einen Zeitraum mit 1 bis 60 Terminen.",
+  deliveryPeriod: "Durchführungszeitraum",
+  manageAttachments: "Auftragsdateien verwalten",
+  scheduleLocked:
+    "Diese Termine gehören zu einem gemeinsamen Kursplan oder zu bestehenden Kursaktivitäten. Nutze die Kursplanung oder die Terminänderung zum Lehrauftrag.",
+  invalidSchedule:
+    "Prüfe, ob alle Termine in der Zukunft liegen, die Uhrzeiten gültig sind und sich die Termine nicht überschneiden.",
   board: "Auftragsboard",
   boardRefresh: "Board aktualisieren",
   boardHelp:
@@ -130,6 +155,7 @@ const de: typeof en = {
   cancelled: "Storniert",
   edit: "Unangenommenen Auftrag bearbeiten",
   title: "Auftragstitel",
+  company: "Unternehmen für diesen Auftrag",
   description: "Auftragsbeschreibung",
   location: "Ort oder Besprechungslink",
   terms: "Auftragsbedingungen",

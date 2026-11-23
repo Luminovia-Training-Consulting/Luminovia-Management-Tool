@@ -10,6 +10,18 @@ const pairs: Record<string, [string, string]> = {
     "Materialien und persönliche Dokumente sicher an einem Ort.",
     "Keep materials and personal documents together securely.",
   ],
+  jobTitle: ["Auftragsdateien", "Job attachments"],
+  jobAdd: ["Auftragsdatei hinzufügen", "Add job attachment"],
+  jobRemove: ["Anhang entfernen", "Remove attachment"],
+  jobRemoveNamed: ["Anhang entfernen: {{name}}", "Remove attachment: {{name}}"],
+  jobRemoveTitle: [
+    "Anhang vom Auftrag entfernen?",
+    "Remove attachment from this job?",
+  ],
+  jobRemoveDescription: [
+    "{{name}} wird vom Auftrag entfernt. Die geprüften Versionen bleiben im Archiv erhalten.",
+    "{{name}} will be removed from the job. Existing scanned versions are retained in the archive.",
+  ],
   upload: ["Datei hochladen", "Upload file"],
   contractsReference: ["Verträge öffnen", "Open contracts"],
   choose: ["Datei auswählen", "Choose file"],

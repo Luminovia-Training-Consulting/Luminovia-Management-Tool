@@ -176,6 +176,20 @@ export function JobDetail() {
     ].includes(result)
       ? `claim_${result}`
       : "error";
+  const sessions = [...job.job_sessions].sort(
+    (a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at),
+  );
+  const period =
+    sessions.length > 0
+      ? new Intl.DateTimeFormat(i18n.language, {
+          dateStyle: "medium",
+          timeStyle: "short",
+          timeZone: job.time_zone,
+        }).formatRange(
+          new Date(sessions[0].starts_at),
+          new Date(sessions.at(-1)!.ends_at),
+        )
+      : null;
   return (
     <>
       <BackLink />
@@ -194,7 +208,6 @@ export function JobDetail() {
         <JobPricingPanel job={job} />
       )}
       <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
-      <JobLifecyclePanel job={job} />
       {teaching && ownClaim?.status === "confirmed" && (
         <div className="form-actions">
           <JobSickDay key={ownClaim.id} claim={ownClaim} zone={job.time_zone} />
@@ -211,42 +224,52 @@ export function JobDetail() {
         <div>
           <section className="panel">
             <div className="inline-meta">
-              <span>
-                <MapPin size={17} />
-                {job.location || t(job.delivery_type)}
-              </span>
+              {job.location && (
+                <span>
+                  <MapPin size={17} />
+                  {job.location}
+                </span>
+              )}
               <span>{t(job.delivery_type)}</span>
             </div>
             <h2>{t("description")}</h2>
             <p className="preserve-text">{job.description}</p>
             <JobBuildingBlockReference jobId={job.id} />
+            {period && (
+              <>
+                <h2>{lifeText("deliveryPeriod")}</h2>
+                <p>
+                  {period} · {job.time_zone}
+                </p>
+              </>
+            )}
             <h2>{t("sessions")}</h2>
             <p className="muted">
               {t("timezone")}: {zone}
               {zone !== job.time_zone && ` · ${job.time_zone}`}
             </p>
             <ol className="session-list">
-              {[...job.job_sessions]
-                .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-                .map((s) => (
-                  <li key={s.id}>
-                    <CalendarDays size={18} />
-                    <div>
-                      <strong>
-                        {dateTime(s.starts_at, i18n.language, zone)}
-                      </strong>
-                      <span>
-                        {t("end")}: {dateTime(s.ends_at, i18n.language, zone)}
-                      </span>
-                      {zone !== job.time_zone && (
-                        <small>
-                          {dateTime(s.starts_at, i18n.language, job.time_zone)}{" "}
-                          · {job.time_zone}
-                        </small>
-                      )}
-                    </div>
-                  </li>
-                ))}
+              {sessions.map((s) => (
+                <li key={s.id}>
+                  <CalendarDays size={18} />
+                  <div>
+                    <strong>
+                      {dateTime(s.starts_at, i18n.language, zone)}
+                    </strong>
+                    <span>
+                      {t("end")}: {dateTime(s.ends_at, i18n.language, zone)}
+                    </span>
+                    {zone !== job.time_zone && (
+                      <small>
+                        {dateTime(s.starts_at, i18n.language, job.time_zone)} –{" "}
+                        {dateTime(s.ends_at, i18n.language, job.time_zone)}
+                        {" · "}
+                        {job.time_zone}
+                      </small>
+                    )}
+                  </div>
+                </li>
+              ))}
             </ol>
             <h2>{t("requirements")}</h2>
             {job.job_requirements.length ? (
@@ -264,6 +287,7 @@ export function JobDetail() {
             )}
             {job.requires_contract && <p>{t("contractRequired")}</p>}
           </section>
+          <JobLifecyclePanel job={job} />
           <JobBriefing
             jobId={job.id}
             archived={job.status === "archived"}

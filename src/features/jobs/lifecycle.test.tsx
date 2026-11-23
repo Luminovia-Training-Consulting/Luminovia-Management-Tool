@@ -5,6 +5,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -260,6 +261,50 @@ it("captures the reviewed edit version across background refresh and language ch
     }),
   );
 });
+it("uses the selected active company only when the server allows reassignment", async () => {
+  const client = setup({
+    ...empty,
+    organisation_id: "original-company",
+    can_reassign_company: true,
+  });
+  client.setQueryData(
+    ["operations", "organisations", "actor"],
+    [
+      { id: "original-company", name: "Fictional original operator" },
+      { id: "new-company", name: "Fictional new operator" },
+      {
+        id: "archived-company",
+        name: "Fictional archived operator",
+        archived_at: "2026-01-01",
+      },
+    ],
+  );
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Unangenommenen Auftrag bearbeiten",
+    }),
+  );
+  const company = await screen.findByRole("combobox", {
+    name: "Unternehmen für diesen Auftrag",
+  });
+  expect(company).toHaveValue("original-company");
+  expect(
+    within(company).queryByText("Fictional archived operator"),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(company, "new-company");
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_job_offer",
+      expect.objectContaining({
+        p_expected_version: 1,
+        p_action: "edit",
+        p_payload: expect.objectContaining({ organisation_id: "new-company" }),
+      }),
+    ),
+  );
+});
 it("keeps an unchanged ambiguous Berlin deadline exact when editing other offer fields", async () => {
   const deadline = "2026-10-25T00:30:00Z";
   setup(empty, undefined, { ...job, claim_deadline: deadline });
@@ -413,4 +458,51 @@ it("routes own withdrawals through the dedicated workflow instead of advertising
   expect(
     screen.queryByRole("button", { name: "Zuweisung stornieren" }),
   ).not.toBeInTheDocument();
+});
+
+it("submits exact per-day times and the edited required labels through the versioned offer mutation", async () => {
+  const client = setup({ ...empty, can_edit_schedule: true });
+  client.setQueryData(
+    ["topics"],
+    [{ id: "topic", label_de: "Netzwerke", label_en: "Networking" }],
+  );
+  await i18n.changeLanguage("en");
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: /Edit unaccepted offer/i }),
+  );
+  fireEvent.change(screen.getByLabelText("Last day"), {
+    target: { value: "2039-01-03" },
+  });
+  await user.click(screen.getByRole("button", { name: "Apply date range" }));
+  fireEvent.change(screen.getByLabelText("Start 2"), {
+    target: { value: "2039-01-02T10:30" },
+  });
+  await user.click(screen.getByLabelText("Networking"));
+  await user.click(screen.getByRole("button", { name: "Save offer" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_job_offer",
+      expect.objectContaining({
+        p_expected_version: 1,
+        p_payload: expect.objectContaining({
+          sessions: [
+            {
+              starts_at: "2039-01-01T08:00:00Z",
+              ends_at: "2039-01-01T09:00:00Z",
+            },
+            {
+              starts_at: "2039-01-02T09:30:00.000Z",
+              ends_at: "2039-01-02T14:00:00.000Z",
+            },
+            {
+              starts_at: "2039-01-03T08:00:00.000Z",
+              ends_at: "2039-01-03T14:00:00.000Z",
+            },
+          ],
+          topic_ids: ["topic"],
+        }),
+      }),
+    ),
+  );
 });

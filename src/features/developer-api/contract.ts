@@ -2421,7 +2421,7 @@ const nativePaths = {
     "native_create_capacity_job",
     "Jobs",
     "Create a job with one to twenty priced teaching positions",
-    "Requires current job management authority. Use net fields for a direct offer, or gross fields with either finance authority or Management authority and an explicit platform share. An existing organisation is allowed only on the gross path. Supply one to sixty future session intervals and a request ID for exact retries.",
+    "Requires current job management authority. Use net fields for a direct offer, or gross fields with either finance authority or Management authority and an explicit platform share. An existing active organisation can be assigned on either pricing path. The assigned company supplies the customer name. Supply one to sixty future session intervals and a request ID for exact retries.",
     {
       p_payload: { oneOf: [capacityNetOffer, capacityGrossOffer] },
       p_capacity: { type: "integer", minimum: 1, maximum: 20 },
@@ -2457,7 +2457,10 @@ const nativePaths = {
       max_net_budget: { type: ["number", "null"] },
       can_manage: boolean,
       can_edit: boolean,
+      can_edit_schedule: boolean,
       can_duplicate: boolean,
+      organisation_id: nullableUuid,
+      can_reassign_company: boolean,
       claims: {
         type: "array",
         items: object({
@@ -2507,7 +2510,30 @@ const nativePaths = {
             offerAction(["edit"], {
               reason: lifecycleReason,
               title: { ...text, minLength: 1, maxLength: 200 },
+              organisation_id: {
+                ...uuid,
+                description:
+                  "Assign an active company to an unaccepted, standalone net offer only when its course has no dependent activity.",
+              },
               description: { ...text, maxLength: 12000 },
+              sessions: {
+                type: "array",
+                minItems: 1,
+                maxItems: 60,
+                items: object({
+                  starts_at: sessionInstant,
+                  ends_at: sessionInstant,
+                }),
+                description:
+                  "Replacement of a complete, future, editable offer schedule. Shared course plans and existing assignments use their change workflows.",
+              },
+              topic_ids: {
+                type: "array",
+                maxItems: 500,
+                items: uuid,
+                description:
+                  "Replacement required-topic list. An empty array clears the requirements.",
+              },
               location: { ...text, maxLength: 500 },
               terms: { ...text, minLength: 1, maxLength: 12000 },
               claim_deadline: lifecycleDeadline,
@@ -4732,7 +4758,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.12.0",
+      version: "1.13.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
+import { Trash2 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { dateTime, money, zonedInstantForEdit } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
@@ -26,6 +27,11 @@ import {
 import "./lifecycle-i18n";
 import "./lifecycle.css";
 import { ManualAssignment } from "./manual-assignment";
+import { topicsQuery } from "../../lib/queries";
+import { selectableTopics } from "../taxonomy/selection";
+import { JobDateRange } from "./session-range";
+import { localSessionTime, resolveJobSessions } from "./session-schedule";
+import { orgQuery } from "../operations/data";
 
 /** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
@@ -305,11 +311,14 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
           )}
         </div>
       )}
-      {editing && (
+      {editing && info.can_edit && (
         <EditOffer
           key={job.id}
           job={job}
+          canEditSchedule={info.can_edit_schedule === true}
           version={info.version}
+          organisationId={info.organisation_id}
+          canReassignCompany={info.can_reassign_company === true}
           pending={change.isPending}
           save={(input) => change.mutate(input)}
         />
@@ -465,17 +474,57 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
 /** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
 function EditOffer({
   job,
+  canEditSchedule,
   version,
+  organisationId,
+  canReassignCompany,
   pending,
   save,
 }: {
   job: Job;
+  canEditSchedule: boolean;
   version: number;
+  organisationId: string | null | undefined;
+  canReassignCompany: boolean;
   pending: boolean;
   save: (input: Omit<OfferInput, "request">) => void;
 }) {
-  const { t } = useTranslation("jobLifecycle");
+  const { t, i18n } = useTranslation("jobLifecycle");
+  const common = useTranslation().t;
+  const topics = useQuery(topicsQuery);
+  const [initialTopics] = useState(() =>
+    job.job_requirements.map(({ topic_id }) => topic_id),
+  );
+  const [chosenTopics, setChosenTopics] = useState(initialTopics);
+  const [originalSessions] = useState(() =>
+    [...job.job_sessions].sort(
+      (a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at),
+    ),
+  );
+  const [initialSessions] = useState(() =>
+    originalSessions.map((slot) => ({
+      starts_at: localSessionTime(slot.starts_at, job.time_zone),
+      ends_at: localSessionTime(slot.ends_at, job.time_zone),
+    })),
+  );
+  const [sessions, setSessions] = useState(initialSessions);
+  const sessionsChanged =
+    JSON.stringify(sessions) !== JSON.stringify(initialSessions);
+  const topicsChanged =
+    chosenTopics.length !== initialTopics.length ||
+    chosenTopics.some((topic) => !initialTopics.includes(topic));
+  const proposedSchedule =
+    canEditSchedule && sessionsChanged
+      ? resolveJobSessions(sessions, job.time_zone, originalSessions)
+      : null;
   const online = useOnline();
+  const { session } = useAuth();
+  const organisations = useQuery({
+    ...orgQuery(session!.user.id),
+    enabled: canReassignCompany,
+  });
+  const [originalCompany] = useState(organisationId ?? "");
+  const [company, setCompany] = useState(originalCompany);
   // Capture the reviewed version once; a background refresh must not approve a stale draft.
   const [expectedVersion] = useState(version);
   const [title, setTitle] = useState(job.title),
@@ -503,6 +552,7 @@ function EditOffer({
       className="job-life-form"
       onSubmit={(event) => {
         event.preventDefault();
+        if (sessionsChanged && !proposedSchedule) return;
         save({
           job: job.id,
           action: "edit",
@@ -512,7 +562,12 @@ function EditOffer({
             description,
             location,
             terms,
+            ...(canReassignCompany && company && company !== originalCompany
+              ? { organisation_id: company }
+              : {}),
             claim_deadline: instant,
+            ...(proposedSchedule ? { sessions: proposedSchedule } : {}),
+            ...(topicsChanged ? { topic_ids: chosenTopics } : {}),
           },
         });
       }}
@@ -526,6 +581,35 @@ function EditOffer({
           onChange={(event) => setTitle(event.target.value)}
         />
       </Field>
+      {canReassignCompany && (
+        <Field id="offer-organisation" label={t("company")}>
+          {organisations.isPending ? (
+            <Loading />
+          ) : organisations.isError ? (
+            <ErrorState retry={() => void organisations.refetch()} />
+          ) : (
+            <select
+              id="offer-organisation"
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              disabled={pending}
+            >
+              {!organisations.data.some(
+                (organisation) =>
+                  organisation.id === originalCompany &&
+                  !organisation.archived_at,
+              ) && <option value={originalCompany}>{job.customer_name}</option>}
+              {organisations.data
+                .filter((organisation) => !organisation.archived_at)
+                .map((organisation) => (
+                  <option key={organisation.id} value={organisation.id}>
+                    {organisation.name}
+                  </option>
+                ))}
+            </select>
+          )}
+        </Field>
+      )}
       <Field id="offer-description" label={t("description")}>
         <textarea
           id="offer-description"
@@ -542,6 +626,110 @@ function EditOffer({
           onChange={(event) => setLocation(event.target.value)}
         />
       </Field>
+      <fieldset className="offer-schedule-editor">
+        <legend>
+          {common("sessions")} · {job.time_zone}
+        </legend>
+        {canEditSchedule ? (
+          <>
+            <JobDateRange
+              prefix="offer"
+              sessions={sessions}
+              onApply={setSessions}
+              disabled={pending}
+            />
+            {sessions.map((slot, index) => (
+              <div className="session-form-row" key={index}>
+                {(["starts_at", "ends_at"] as const).map((field) => (
+                  <Field
+                    key={field}
+                    id={`offer-${field}-${index}`}
+                    label={`${common(field === "starts_at" ? "start" : "end")} ${index + 1}`}
+                  >
+                    <input
+                      id={`offer-${field}-${index}`}
+                      type="datetime-local"
+                      value={slot[field]}
+                      required
+                      disabled={pending}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setSessions((previous) =>
+                          previous.map((row, at) =>
+                            at === index ? { ...row, [field]: value } : row,
+                          ),
+                        );
+                      }}
+                    />
+                  </Field>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={pending || sessions.length === 1}
+                  aria-label={`${common("remove")} ${index + 1}`}
+                  onClick={() =>
+                    setSessions((previous) =>
+                      previous.filter((_, at) => at !== index),
+                    )
+                  }
+                >
+                  <Trash2 size={18} aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={pending || sessions.length >= 60}
+              onClick={() =>
+                setSessions((previous) => [
+                  ...previous,
+                  { starts_at: "", ends_at: "" },
+                ])
+              }
+            >
+              {common("newSession")}
+            </Button>
+            {sessionsChanged && !proposedSchedule && (
+              <p className="muted">{t("invalidSchedule")}</p>
+            )}
+          </>
+        ) : (
+          <p className="muted">{t("scheduleLocked")}</p>
+        )}
+      </fieldset>
+      <fieldset disabled={pending}>
+        <legend>{common("requirements")}</legend>
+        {topics.isPending ? (
+          <Loading />
+        ) : topics.isError ? (
+          <ErrorState retry={() => void topics.refetch()} />
+        ) : (
+          <div className="tags">
+            {selectableTopics(topics.data, initialTopics).map((topic) => (
+              <label className="checkbox-label" key={topic.id}>
+                <input
+                  type="checkbox"
+                  checked={chosenTopics.includes(topic.id)}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setChosenTopics((current) =>
+                      checked
+                        ? [...current, topic.id]
+                        : current.filter((id) => id !== topic.id),
+                    );
+                  }}
+                />
+                {i18n.language.startsWith("de")
+                  ? topic.label_de
+                  : topic.label_en}
+              </label>
+            ))}
+          </div>
+        )}
+      </fieldset>
       <Field id="offer-terms" label={t("terms")}>
         <textarea
           id="offer-terms"
@@ -569,6 +757,7 @@ function EditOffer({
           pending ||
           !title.trim() ||
           !terms.trim() ||
+          (sessionsChanged && !proposedSchedule) ||
           Boolean(deadline && !instant)
         }
       >

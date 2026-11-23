@@ -34,7 +34,10 @@ export interface JobLifecycle {
   max_net_budget?: number | null;
   can_manage: boolean;
   can_edit: boolean;
+  can_edit_schedule?: boolean;
   can_duplicate: boolean;
+  organisation_id?: string | null;
+  can_reassign_company?: boolean;
   claims: LifecycleClaim[];
 }
 
