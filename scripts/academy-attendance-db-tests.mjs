@@ -132,6 +132,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       )
         .then(JSON.parse)
         .then((value) => response(read, value));
+    const summary = (who, course = run) =>
+      actor(who, gate("course_attendance_summary") +
+        `select public.course_attendance_summary(${q(course)})`)
+        .then(JSON.parse).then((value) => response("course_attendance_summary", value));
     const saveSql = (
       status,
       expected,
@@ -383,6 +387,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       arrival: "now()-interval '90 minutes'",
     });
     assert.deepEqual(initial, { status: "present", version: 1, minutes: 30 });
+    const courseTotals = await summary(client);
+    assert.equal(courseTotals.course_count, 1);
+    assert.equal(courseTotals.rows.find(({user_id}) => user_id === learner)?.present, 1);
+    assert.deepEqual(await summary(teacher), courseTotals);
+    assert.deepEqual(await summary(manager), courseTotals);
+    await assert.rejects(summary(learner), /42501/);
+    await assert.rejects(summary(foreignClient), /42501/);
     const initialReport = await report(client);
     const registered = await register(teacher);
     assert.deepEqual(await report(teacher), initialReport);

@@ -108,6 +108,44 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     }
     await assert.rejects(register(participant,historicSession),/42501/);
     await assert.rejects(actor(participant, "set local request.path='/rpc/course_session_register'; select public.require_portal_access()"), /42501/);
+    const [peer, peerSession] = Array.from({length:2},randomUUID);
+    await sql(`insert into public.course_runs(id,template_id,organisation_id) values(${q(peer)},${q(template)},${q(org)});
+      insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+        values (${q(peerSession)},${q(peer)},now()-interval '6 hours',now()-interval '5 hours');
+      insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+        values(${q(peer)},${q(participant)},'enrolled',${q(admin)});`);
+    const classify = await rpc(company,"set_course_class",[q(run),"null",q("Fictional shared class"),"0"]);
+    await rpc(company,"set_course_class",[q(peer),q(classify.current.id),"null","0"]);
+    await rpc(company,"save_course_session_attendance",[
+      q(peer),q(peerSession),q(participant),q("absent"),"null","null",q("private note"),q(""),"0",
+    ]);
+    const summary = async (who, target=run, after=null) => {
+      const output = await rpc(who,"course_attendance_summary",[q(target),after ? q(after) : "null"]);
+      assertLmsResponse("course_attendance_summary",output);
+      return output;
+    };
+    const classTotals = await summary(company);
+    assert.deepEqual(classTotals, {
+      class_name:"Fictional shared class", course_count:2, next_after:null,
+      rows:[{user_id:participant,name:"Fictional Learner",present:1,absent:1,excused:0,minutes:30}],
+    });
+    assert.deepEqual(await summary(admin),classTotals);
+    assert.deepEqual((await summary(teacher)).rows,[{...classTotals.rows[0],absent:0}]);
+    assert.deepEqual((await summary(company,run,participant)).rows,[]);
+    await assert.rejects(summary(participant),/42501/);
+    await assert.rejects(summary(outsider),/42501/);
+    await assert.rejects(summary(teacher,peer),/42501/);
+    const live = randomUUID();
+    await sql(`insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+      values(${q(live)},${q(peer)},now()-interval '10 minutes',now()+interval '50 minutes');`);
+    const projected = await rpc(company,"save_course_session_attendance",[
+      q(peer),q(live),q(participant),q("present"),"now()-interval '5 minutes'","null",q(""),q(""),"0",
+    ]);
+    assert.ok(projected.minutes > 50);
+    const current = (await summary(company)).rows[0];
+    assert.ok(current.minutes >= 35 && current.minutes <= 37, "The ongoing session only adds elapsed minutes");
+
+    console.log("PASS linked class totals exclude unassigned courses for instructors, exclude private notes and agree with OpenAPI");
     console.log("PASS Published OpenAPI accepts current and retained attendance receipts; learner responses disclose no correction history");
     const [document,version,foreignDocument,foreignVersion] = Array.from({length:4},randomUUID);
     await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)

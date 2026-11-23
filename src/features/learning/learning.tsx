@@ -41,6 +41,7 @@ import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseWelcomeContent } from "./welcome-content";
 import { CourseMeetingLinkEditor } from "./meeting-link";
+import { CourseTeachingChecklist } from "./course-teaching-checklist";
 import { courseClassroom } from "./meeting-url";
 import { CourseExams } from "./exams";
 import { AttendancePanel } from "./attendance";
@@ -106,7 +107,11 @@ function Preparation({ course, actor, academy }: ActivityProps) {
   const [visible, setVisible] = useState(true);
   const request = useRequestKey();
   return (
-    <section className="panel learning-panel" aria-label={t("preparation")}>
+    <section
+      id="teaching-preparation"
+      className="panel learning-panel"
+      aria-label={t("preparation")}
+    >
       <h2>{t("preparation")}</h2>
       <p>{t("preparationHelp")}</p>
       <p className="learning-progress">
@@ -1161,6 +1166,9 @@ function CourseWorkspaceLayout({
         </nav>
         <div className="course-room-content">
           <div className={sectionClass("course-overview")} id="course-overview">
+            {course.access.teacher && (
+              <CourseTeachingChecklist course={course} classroom={classroom} />
+            )}
             <CourseBasics course={course} />
             <CourseClasses
               key={`classes:${actor}:${course.id}`}

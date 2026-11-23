@@ -27,6 +27,9 @@ export const attendanceRegisterKey = (
   session: string,
 ) => [...attendanceRegistersKey(actor, run), session] as const;
 
+export const attendanceSummariesKey = (actor: string) =>
+  ["course-attendance-summary", actor] as const;
+
 export const attendanceRegisterQuery = (
   actor: string,
   run: string,

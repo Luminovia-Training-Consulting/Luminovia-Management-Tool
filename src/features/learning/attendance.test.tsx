@@ -16,6 +16,7 @@ import type { CourseWorkspace } from "./api";
 
 const fake = vi.hoisted(() => ({
   save: vi.fn(),
+  summary: vi.fn(),
   saveBatch: vi.fn(),
   attach: vi.fn(),
   upload: vi.fn(),
@@ -32,8 +33,8 @@ const fake = vi.hoisted(() => ({
         user_id: "learner",
         name: "Fictional Learner",
         status: null as AttendanceStatus | null,
-        arrival_at: null,
-        departure_at: null,
+        arrival_at: null as string | null,
+        departure_at: null as string | null,
         note: "",
         version: 0,
       },
@@ -48,7 +49,16 @@ const fake = vi.hoisted(() => ({
     history: [],
   },
 }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: (...args: unknown[]) => ({ abortSignal: () => fake.summary(...args) }),
+  }),
+}));
 vi.mock("./attendance-api", () => ({
+  attendanceSummariesKey: (actor: string) => [
+    "course-attendance-summary",
+    actor,
+  ],
   attendanceRegisterKey: (...parts: string[]) => [
     "attendance-register",
     ...parts,
@@ -109,7 +119,11 @@ const view = (value = course, academy?: "active" | "grace") =>
   );
 
 beforeEach(() => {
+  fake.summary.mockReset();
   fake.register.starts_at = new Date(Date.now() - 3_600_000).toISOString();
+  fake.register.ends_at = "2026-11-20T10:00:00Z";
+  fake.register.rows[0].arrival_at = null;
+  fake.register.rows[0].departure_at = null;
   fake.register.rows.splice(1);
   fake.register.rows[0].name = "Fictional Learner";
   fake.register.rows[0].status = null;
@@ -578,4 +592,104 @@ it("reads exact academy evidence in grace without offering file writes", async (
     "Scanned roll call.pdf",
   );
   expect(fake.download).not.toHaveBeenCalled();
+});
+
+it("records arrival and departure at each click, preserving the exact first instant and existing note", async () => {
+  const arrival = new Date(Date.now() - 5418).toISOString();
+  const departure = new Date().toISOString();
+  fake.register.ends_at = new Date(Date.now() + 3_600_000).toISOString();
+  fake.register.rows[0].note = "Fictional note";
+  fake.save.mockImplementation(
+    async (_run, _session, row, status, arrived, left) => {
+      fake.register = {
+        ...fake.register,
+        rows: [
+          {
+            ...row,
+            status,
+            arrival_at: arrived,
+            departure_at: left,
+            version: row.version + 1,
+          },
+        ],
+      };
+      return { version: row.version + 1, minutes: 60, status };
+    },
+  );
+  view();
+  const arrive = await screen.findByRole("button", {
+    name: "attendanceArrivedNow",
+  });
+  const clock = vi
+    .spyOn(Date.prototype, "toISOString")
+    .mockReturnValueOnce(arrival);
+  fireEvent.click(arrive);
+  await waitFor(() => expect(fake.save).toHaveBeenCalledTimes(1));
+  expect(fake.save.mock.calls[0].slice(3)).toEqual([
+    "present",
+    arrival,
+    null,
+    "Fictional note",
+    "attendanceArrivalReason",
+  ]);
+  const leave = screen.getByRole("button", { name: "attendanceDepartedNow" });
+  await waitFor(() => expect(leave).toBeEnabled());
+  clock.mockReturnValueOnce(departure);
+  fireEvent.click(leave);
+  await waitFor(() => expect(fake.save).toHaveBeenCalledTimes(2));
+  expect(fake.save.mock.calls[1].slice(3)).toEqual([
+    "present",
+    arrival,
+    departure,
+    "Fictional note",
+    "attendanceDepartureReason",
+  ]);
+  clock.mockRestore();
+});
+
+it("loads the scoped class totals on demand and hides unauthorised continuation data", async () => {
+  const userId = "e27cc742-a673-4ca7-97c5-2e55a719aa1d";
+  fake.summary
+    .mockResolvedValueOnce({
+      data: {
+        class_name: "Fictional virtual class",
+        course_count: 2,
+        next_after: userId,
+        rows: [
+          {
+            user_id: userId,
+            name: "Fictional Class Learner",
+            present: 3,
+            absent: 1,
+            excused: 1,
+            minutes: 219,
+          },
+        ],
+      },
+      error: null,
+    })
+    .mockResolvedValueOnce({ data: null, error: { code: "42501" } });
+  view();
+  expect(fake.summary).not.toHaveBeenCalled();
+  const summary = screen.getByText("attendanceSummary");
+  const details = summary.closest("details")!;
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+  const row = await screen.findByRole("row", {
+    name: /Fictional Class Learner/,
+  });
+  expect(within(row).getByRole("cell", { name: "219" })).toBeVisible();
+  expect(fake.summary).toHaveBeenCalledWith("course_attendance_summary", {
+    p_run_id: "run",
+    p_after_user_id: null,
+  });
+  await userEvent.click(
+    screen.getByRole("button", { name: "attendanceSummaryNext" }),
+  );
+  await screen.findByRole("alert");
+  expect(fake.summary).toHaveBeenLastCalledWith("course_attendance_summary", {
+    p_run_id: "run",
+    p_after_user_id: userId,
+  });
+  expect(row).not.toBeInTheDocument();
 });

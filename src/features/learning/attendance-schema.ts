@@ -134,3 +134,26 @@ export type AttendanceRegister =
 export type WorkspaceAttendanceHistory = z.infer<
   typeof workspaceAttendanceHistorySchema
 >;
+
+export const attendanceSummarySchema = z
+  .strictObject({
+    class_name: z.string().nullable(),
+    course_count: z.number().int().positive(),
+    rows: z
+      .array(
+        z.strictObject({
+          user_id: uuid,
+          name: z.string(),
+          present: minutes,
+          absent: minutes,
+          excused: minutes,
+          minutes,
+        }),
+      )
+      .max(50),
+    next_after: uuid.nullable(),
+  })
+  .refine(
+    ({ rows, next_after }) =>
+      !next_after || rows.at(-1)?.user_id === next_after,
+  );

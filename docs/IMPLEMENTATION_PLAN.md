@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Teaching preparation and class attendance
+
+- Give the assigned instructor a readiness checklist from the course schedule, meeting/venue, material and shared preparation records. Link to the relevant course controls.
+- Allow current contacts of the exact company to publish or correct its online meeting link with the existing version and audit rules.
+- Record arrival and departure in a running session via the versioned attendance writer. Keep exact existing instants on unchanged fields and require a reason for manual corrections.
+- Aggregate verified present minutes and attendance counts across scoped class courses. Keep notes and exact other-course times out of the overview and deny access to learners. Add the scoped read to both OpenAPI catalogues and to the canonical PostgreSQL, HTTP and browser checks.
+
 ## Company Premium, dedicated Academy setup and offer pricing
 
 - [x] Allow an actual administrator to enable Premium during company creation. Commit company, entitlement and audit together. Keep confirmed toggles and retained course records for existing companies.
@@ -210,6 +217,8 @@ The historical requested-changes checklist uses its own WL test numbers. The cur
 Reviewed from starting revision `3e3ff46f` with the new acceptance regressions below. The inventory records executable assertions and the evidence required from the tested commit, edition and target.
 
 The application workflow invokes `scripts/runtime-test.mjs`. Full verification includes source, runtime Node and Edge tests, followed by migration replay, all `scripts/*-db-tests.mjs`, all `scripts/*-api-check.mjs` and the local Mailpit invitation check. Its full browser jobs run the application on desktop and mobile Chromium. The separate built-PWA stage exercises selected WebKit behaviour. The native selfhost job owns isolated image and retained-data rehearsals. See the [application workflow](../.github/workflows/ci.yml), [security workflow](../.github/workflows/security.yml) and [browser configuration](../playwright.config.ts).
+
+The original [Premium LMS acceptance scenarios](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/e678379d/ROADMAP.md#812-mandatory-acceptance-tests--definition-of-done) and [API test assertions](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/e678379d/ROADMAP.md#109-api-08--ci-integration-and-definition-of-done) remain available at the revision before the roadmap cleanup.
 
 ### API-01–API-08
 

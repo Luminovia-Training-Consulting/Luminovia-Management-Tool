@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -438,6 +439,25 @@ describe("connected course workspace", () => {
       screen.queryByRole("button", { name: "Edit meeting link" }),
     ).not.toBeInTheDocument();
   });
+  it("shows teaching readiness for the assigned instructor with course shortcuts", async () => {
+    fake.workspace.access = {
+      manager: false,
+      teacher: true,
+      learner: false,
+      client: false,
+      staff: true,
+      lms_enabled: true,
+    };
+    setup();
+    const board = await screen.findByRole("region", {
+      name: "Checkliste für die Kursdurchführung",
+    });
+    expect(within(board).getByText("Meetinglink vorhanden")).toBeVisible();
+    expect(
+      within(board).getByRole("link", { name: "Kursmaterial freigegeben" }),
+    ).toHaveAttribute("href", "/courses/course-a/workspace#course-materials");
+  });
+
   it("preserves deep links and limits learner navigation to current sections", async () => {
     fake.workspace.access = {
       manager: false,

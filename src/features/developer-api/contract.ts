@@ -128,7 +128,10 @@ import {
   globalEventsPageSchema,
 } from "../calendar/publications-schema.ts";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
-import { attendanceRegisterSchema } from "../learning/attendance-schema.ts";
+import {
+  attendanceRegisterSchema,
+  attendanceSummarySchema,
+} from "../learning/attendance-schema.ts";
 import {
   courseClassAssignment,
   courseClassOptions,
@@ -3905,7 +3908,7 @@ const nativePaths = {
     "setCourseMeetingLink",
     "Premium LMS",
     "Publish or clear an online course meeting link",
-    "Requires a currently confirmed instructor or course manager of an online course. The internal edition requires active company Premium. Customer editions require an enabled course profile for the active release licence. Licence grace permits reading the saved link. Submit the last read version. A stale version returns HTTP 409. Use a credential-free HTTPS URL with a domain name. Send null to return to the existing course venue.",
+    "Requires a currently confirmed instructor, course manager or authorised contact of the exact company for an online course. The internal edition requires active company Premium. Customer editions require an enabled course profile for the active release licence. Licence grace permits reading the saved link. Submit the last read version. A stale version returns HTTP 409. Use a credential-free HTTPS URL with a domain name. Send null to return to the existing course venue.",
     { ...course, p_url: meetingUrl, p_expected_version: version },
     meetingLinkResult,
   ),
@@ -3986,6 +3989,15 @@ const nativePaths = {
       },
     },
     object({ saved: { type: "integer", minimum: 1, maximum: 200 } }),
+  ),
+  "/rest/v1/rpc/course_attendance_summary": rpc(
+    "courseAttendanceSummary",
+    "Premium LMS",
+    "Read verified attendance totals for a course or class",
+    "Current managers, assigned instructors and authorised company contacts only. Linked classes include only unarchived courses in the caller’s scope. Returns verified present, absent and excused counts and recorded minutes for enrolled or completed participants without staff notes. Pass next_after as p_after_user_id for the next 50 participants.",
+    { ...course, p_after_user_id: nullableUuid },
+    z.toJSONSchema(attendanceSummarySchema),
+    ["p_after_user_id"],
   ),
   "/rest/v1/rpc/course_session_register": rpc(
     "courseSessionRegister",

@@ -447,3 +447,73 @@
 .course-hub-filter .field {
   max-inline-size: 24rem;
 }
+
+.teaching-checklist {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.teaching-checklist li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.attendance-status {
+  display: inline-block;
+  padding-inline: 0.5rem;
+  border-radius: 0.45rem;
+}
+
+.course-room [data-attendance-status="present"] {
+  background: #dcefe2;
+  color: #173f28;
+}
+
+.course-room [data-attendance-status="absent"] {
+  background: #f8dfdd;
+  color: #622521;
+}
+
+:root[data-theme="dark"] .course-room [data-attendance-status="present"] {
+  background: #233f35;
+  color: #baf2d3;
+}
+
+:root[data-theme="dark"] .course-room [data-attendance-status="absent"] {
+  background: #4b292e;
+  color: #ffd2ce;
+}
+
+.course-room .attendance-actions [aria-pressed="true"] {
+  border-color: currentColor;
+}
+
+.attendance-summary {
+  margin-block: 0.75rem 1rem;
+}
+
+.attendance-summary summary {
+  cursor: pointer;
+  padding-block: 0.6rem;
+}
+
+.attendance-summary-scroll {
+  max-inline-size: 100%;
+  overflow: auto;
+}
+
+.attendance-summary-table {
+  text-align: start;
+  width: 100%;
+  min-inline-size: max-content;
+}
+
+.attendance-summary-table :is(th, td) {
+  padding: 0.45rem 0.65rem;
+  text-align: start;
+}

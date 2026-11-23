@@ -355,6 +355,52 @@ const pairs: Record<string, [string, string]> = {
     "The document is unavailable or your permission changed.",
   ],
   preparation: ["Gemeinsame Kursvorbereitung", "Shared course preparation"],
+  teachingChecklist: [
+    "Checkliste für die Kursdurchführung",
+    "Teaching readiness checklist",
+  ],
+  teachingChecklistSchedule: ["Termine vereinbart", "Sessions scheduled"],
+  teachingChecklistLink: ["Meetinglink vorhanden", "Meeting link available"],
+  teachingChecklistVenue: ["Unterrichtsort angegeben", "Venue provided"],
+  teachingChecklistMaterials: [
+    "Kursmaterial freigegeben",
+    "Course materials shared",
+  ],
+  teachingChecklistAgreements: [
+    "Gemeinsame Vorbereitung abgeschlossen",
+    "Shared preparation completed",
+  ],
+  teachingChecklistReady: ["Bereit", "Ready"],
+  teachingChecklistReview: ["Prüfen", "Review"],
+  attendanceSummary: ["Anwesenheitsverlauf", "Attendance history"],
+  attendanceSummaryClass_one: [
+    "Klasse {{name}} · 1 Kurs im eigenen Zugriff",
+    "Class {{name}} · 1 course in your scope",
+  ],
+  attendanceSummaryClass_other: [
+    "Klasse {{name}} · {{count}} Kurse im eigenen Zugriff",
+    "Class {{name}} · {{count}} courses in your scope",
+  ],
+  attendanceSummaryCourse: [
+    "Alle Termine dieses Kurses",
+    "All sessions in this course",
+  ],
+  attendanceSummaryMinutes: ["Anwesend (Minuten)", "Present (minutes)"],
+  attendanceSummaryPrevious: [
+    "Vorherige Teilnehmende",
+    "Previous participants",
+  ],
+  attendanceSummaryNext: ["Weitere Teilnehmende", "More participants"],
+  attendanceArrivedNow: ["Jetzt gekommen", "Arrived now"],
+  attendanceDepartedNow: ["Jetzt gegangen", "Left now"],
+  attendanceArrivalReason: [
+    "Ankunft zur aktuellen Uhrzeit erfasst",
+    "Arrival recorded at the current time",
+  ],
+  attendanceDepartureReason: [
+    "Abgang zur aktuellen Uhrzeit erfasst",
+    "Departure recorded at the current time",
+  ],
   preparationHelp: [
     "Verbindliche Vorbereitungspunkte für das Lehrteam. Unternehmen sehen nur ausdrücklich für sie sichtbare Punkte.",
     "Preparation items for the teaching team. Companies see only items explicitly shared with them.",

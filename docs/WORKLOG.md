@@ -1,3 +1,9 @@
+# 23 November 2026 — Teaching checklist, company meeting links and class attendance
+
+Assigned instructors see a readiness checklist for the course schedule, meeting or venue, materials and shared preparation. Authorised contacts of the exact company can maintain the online link through the existing versioned and audited writer. Course staff and company contacts can record arrival and departure using the current instant, or correct the saved times with a reason. The class overview aggregates verified minutes and status counts across courses in the viewer's scope. Ongoing sessions count only elapsed time. The same OpenAPI operation is documented for the internal portal and both Academy editions.
+
+Local PostgreSQL checks covered cross-course scope, live elapsed minutes, exact meeting-link grants, Academy licence and attendance boundaries, and all 11 API surface checks. The canonical source now exercises the new attendance read through Auth/HTTP and includes a desktop/mobile browser journey. The local authenticated browser runner could not start because port 55322 was in use. The roadmap contains the remaining acceptance and operational work, with the detailed matrices linked in the implementation plan.
+
 # 23 November 2026 — Company Premium, White Label setup and offer pricing
 
 An actual administrator can enable Premium when creating a company. The company record, entitlement and audit entry commit together. Repeating the same request returns the original company ID. The existing company switch keeps its confirmation flow.

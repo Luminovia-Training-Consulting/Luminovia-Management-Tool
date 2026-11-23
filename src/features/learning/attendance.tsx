@@ -1,5 +1,6 @@
 /** Staff/company session register and protected PDF evidence on the existing file path. */
 import { AttendanceImportPanel } from "./attendance-import-panel";
+import { AttendanceSummary } from "./attendance-summary";
 import { AttendanceBulkMark } from "./attendance-bulk-mark";
 import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +8,7 @@ import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
-import { dateTime } from "../../lib/dates";
+import { dateTime, zonedInstantForEdit } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { uploadAcademyAttendancePdf, uploadDocument } from "../files/api";
 import {
@@ -18,6 +19,7 @@ import {
 import {
   attachAttendancePdf,
   attendanceRegisterKey,
+  attendanceSummariesKey,
   attendanceRegisterQuery,
   saveAttendance,
   type AttendanceRegister,
@@ -31,23 +33,28 @@ function localTime(value: string | null, zone: string) {
     ? DateTime.fromISO(value, { zone }).toFormat("yyyy-MM-dd'T'HH:mm")
     : "";
 }
-function instant(value: string, zone: string) {
-  if (!value) return null;
-  const time = DateTime.fromISO(value, { zone });
-  if (
-    !time.isValid ||
-    time.toFormat("yyyy-MM-dd'T'HH:mm") !== value ||
-    time.getPossibleOffsets().length !== 1
-  )
-    throw new Error("attendanceInvalidTime");
-  return time.toUTC().toISO();
+function editedInstant(value: string, original: string | null, zone: string) {
+  const converted = zonedInstantForEdit(
+    value,
+    zone,
+    localTime(original, zone),
+    original,
+  );
+  if (value && !converted) throw new Error("attendanceInvalidTime");
+  return converted;
 }
+
+type AttendanceAction =
+  | { kind: "manual"; status: AttendanceStatus }
+  | { kind: "arrive" | "leave"; at: string };
 
 type RowEditorProps = {
   course: CourseWorkspace;
   actor: string;
   session: string;
   row: AttendanceRow;
+  endsAt: string;
+  lastReadAt: number;
 };
 
 function AttendanceExport({
@@ -112,7 +119,11 @@ function RowEditor({ hidden, ...props }: RowEditorProps & { hidden: boolean }) {
       <h4 id={headingId} ref={heading} tabIndex={-1}>
         {row.name.trim() || t("attendanceUnnamedParticipant")}
       </h4>
-      <p role="status">
+      <p
+        role="status"
+        className="attendance-status"
+        data-attendance-status={row.status ?? "unmarked"}
+      >
         {t("attendanceCurrent")}:{" "}
         {row.status ? t(`attendance${row.status}`) : t("unreported")}
       </p>
@@ -131,6 +142,8 @@ function AttendanceFields({
   actor,
   session,
   row,
+  endsAt,
+  lastReadAt,
   headingId,
   restoreFocus,
 }: RowEditorProps & {
@@ -150,22 +163,52 @@ function AttendanceFields({
   const [reason, setReason] = useState("");
   const focusedSaveButton = useRef<HTMLButtonElement>(null);
   const save = useMutation({
-    mutationFn: (status: AttendanceStatus) =>
-      saveAttendance(
+    mutationFn: (action: AttendanceAction) => {
+      const zone = course.time_zone;
+      if (action.kind === "manual") {
+        const { status } = action;
+        return saveAttendance(
+          course.id,
+          session,
+          row,
+          status,
+          status === "present"
+            ? editedInstant(arrival, row.arrival_at, zone)
+            : null,
+          status === "present"
+            ? editedInstant(departure, row.departure_at, zone)
+            : null,
+          note,
+          reason,
+        );
+      }
+      const timestamp = Date.parse(action.at);
+      const end = Date.parse(endsAt);
+      if (timestamp > end + (action.kind === "leave" ? 3_600_000 : 0))
+        throw new Error("attendanceInvalidTime");
+      return saveAttendance(
         course.id,
         session,
         row,
-        status,
-        status === "present" ? instant(arrival, course.time_zone) : null,
-        status === "present" ? instant(departure, course.time_zone) : null,
-        note,
-        reason,
-      ),
+        "present",
+        action.kind === "arrive" ? action.at : row.arrival_at,
+        action.kind === "leave" ? action.at : row.departure_at,
+        row.note,
+        t(
+          action.kind === "arrive"
+            ? "attendanceArrivalReason"
+            : "attendanceDepartureReason",
+        ),
+      );
+    },
     onSuccess: async () => {
       setReason("");
-      await client.invalidateQueries({
-        queryKey: attendanceRegisterKey(actor, course.id, session),
-      });
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: attendanceRegisterKey(actor, course.id, session),
+        }),
+        client.invalidateQueries({ queryKey: attendanceSummariesKey(actor) }),
+      ]);
       // The confirmed version replaces the editor fields. Keep keyboard focus on this row.
       if (
         focusedSaveButton.current &&
@@ -176,9 +219,67 @@ function AttendanceFields({
     },
   });
   const stale =
-    save.isError && "code" in save.error && save.error.code === "PT409";
+    save.isError &&
+    save.error &&
+    typeof save.error === "object" &&
+    "code" in save.error &&
+    ["PT409", "40001"].includes(String(save.error.code));
+  const hasDraft =
+    arrival !== localTime(row.arrival_at, course.time_zone) ||
+    departure !== localTime(row.departure_at, course.time_zone) ||
+    note !== row.note ||
+    Boolean(reason.trim());
+  const quickDisabled = !online || save.isPending || stale || hasDraft;
+  const end = Date.parse(endsAt);
+  function submit(button: HTMLButtonElement, action: AttendanceAction) {
+    focusedSaveButton.current =
+      document.activeElement === button ? button : null;
+    save.mutate(action);
+  }
   return (
     <>
+      {lastReadAt <= end + 3_600_000 && (
+        <div
+          className="form-actions attendance-actions"
+          role="group"
+          aria-labelledby={headingId}
+        >
+          {lastReadAt <= end && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                quickDisabled || Boolean(row.arrival_at || row.departure_at)
+              }
+              onClick={(event) =>
+                submit(event.currentTarget, {
+                  kind: "arrive",
+                  at: new Date().toISOString(),
+                })
+              }
+            >
+              {t("attendanceArrivedNow")}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={
+              quickDisabled ||
+              row.status !== "present" ||
+              Boolean(row.departure_at)
+            }
+            onClick={(event) =>
+              submit(event.currentTarget, {
+                kind: "leave",
+                at: new Date().toISOString(),
+              })
+            }
+          >
+            {t("attendanceDepartedNow")}
+          </Button>
+        </div>
+      )}
       <div className="attendance-fields">
         <Field id={`arrival-${row.user_id}`} label={t("arrivalTime")}>
           <input
@@ -230,20 +331,27 @@ function AttendanceFields({
           <Button
             key={status}
             type="button"
-            variant={row.status === status ? "default" : "secondary"}
+            variant="secondary"
+            aria-pressed={row.status === status}
+            data-attendance-status={status}
             disabled={
               !online ||
               save.isPending ||
               stale ||
               (row.version > 0 && reason.trim().length < 3)
             }
-            onClick={(event) => {
-              focusedSaveButton.current =
-                document.activeElement === event.currentTarget
-                  ? event.currentTarget
-                  : null;
-              save.mutate(status);
-            }}
+            onClick={(event) =>
+              submit(
+                event.currentTarget,
+                status === "present" &&
+                  !hasDraft &&
+                  !row.arrival_at &&
+                  !row.departure_at &&
+                  lastReadAt <= end
+                  ? { kind: "arrive", at: new Date().toISOString() }
+                  : { kind: "manual", status },
+              )
+            }
           >
             {t(`attendance${status}`)}
           </Button>
@@ -420,7 +528,17 @@ export function AttendancePanel({
   const { t, i18n } = useTranslation("learning");
   const online = useOnline();
   const client = useQueryClient();
-  const [session, setSession] = useState(course.sessions[0]?.id ?? "");
+  const [selection, setSession] = useState(() => {
+    const now = Date.now();
+    const live = course.sessions.find(
+      ({ starts_at, ends_at }) =>
+        Date.parse(starts_at) <= now && now <= Date.parse(ends_at),
+    );
+    return live?.id ?? course.sessions[0]?.id ?? "";
+  });
+  const session = course.sessions.some(({ id }) => id === selection)
+    ? selection
+    : (course.sessions[0]?.id ?? "");
   const filterId = useId();
   const [statusControl, setStatusControl] = useState<HTMLSelectElement | null>(
     null,
@@ -441,11 +559,14 @@ export function AttendancePanel({
       if (academy) return 10_000;
       if (state.status !== "success") return false;
       const start = Date.parse(state.data?.starts_at ?? "");
-      // Allow an already open register to become editable at the start after
-      // a fresh server read. Bound long timers to the browser timer range.
-      if (start > state.dataUpdatedAt)
-        return Math.max(1, Math.min(start - Date.now(), 2_147_483_647));
-      return false;
+      const end = Date.parse(state.data?.ends_at ?? "");
+      const transition = [start, end + 1, end + 3_600_001].find(
+        (time) => time > state.dataUpdatedAt,
+      );
+      // Recheck at the start and at the arrival and departure cutoffs.
+      return transition === undefined
+        ? false
+        : Math.max(1, Math.min(transition - Date.now(), 2_147_483_647));
     },
   });
   if (!allowed || !course.sessions.length) return null;
@@ -464,15 +585,19 @@ export function AttendancePanel({
   );
   const visibleIds = new Set(visibleRows.map((row) => row.user_id));
   const refreshRegister = () =>
-    client.invalidateQueries({
-      queryKey: attendanceRegisterKey(actor, course.id, session),
-    });
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: attendanceRegisterKey(actor, course.id, session),
+      }),
+      client.invalidateQueries({ queryKey: attendanceSummariesKey(actor) }),
+    ]);
   return (
     <section
       className={`panel learning-panel${academy ? " academy-attendance-register" : ""}`}
       aria-label={t("sessionRegister")}
     >
       <h2>{t("sessionRegister")}</h2>
+      <AttendanceSummary actor={actor} run={course.id} />
       <p>{t("sessionRegisterHelp")}</p>
       <Field id="attendance-session" label={t("attendanceSession")}>
         <select
@@ -571,6 +696,8 @@ export function AttendancePanel({
                   actor={actor}
                   session={session}
                   row={row}
+                  endsAt={query.data.ends_at}
+                  lastReadAt={query.dataUpdatedAt}
                   hidden={!visibleIds.has(row.user_id)}
                 />
               ) : (
@@ -582,7 +709,10 @@ export function AttendancePanel({
                   <h4>
                     {row.name.trim() || t("attendanceUnnamedParticipant")}
                   </h4>
-                  <p>
+                  <p
+                    className="attendance-status"
+                    data-attendance-status={row.status ?? "unmarked"}
+                  >
                     {t("attendanceCurrent")}:{" "}
                     {row.status
                       ? t(`attendance${row.status}`)

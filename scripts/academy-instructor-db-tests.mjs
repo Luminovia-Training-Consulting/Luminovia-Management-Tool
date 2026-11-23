@@ -27,7 +27,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     guest,
     foreign,
     membership,
-  ] = Array.from({ length: 11 }, randomUUID);
+    companyContact,
+  ] = Array.from({ length: 12 }, randomUUID);
   const { paths } = academyOpenApi("https://academy.example.invalid", {
     name: "Practice Academy",
     installationId: installation,
@@ -193,12 +194,15 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       (${q(teacher)},'academy-teacher@example.invalid',now()),
       (${q(participant)},'academy-learner@example.invalid',now()),
       (${q(guest)},'academy-guest@example.invalid',now()),
-      (${q(foreign)},'academy-other-learner@example.invalid',now());
+      (${q(foreign)},'academy-other-learner@example.invalid',now()),
+      (${q(companyContact)},'academy-company-contact@example.invalid',now());
     update public.profiles set display_name='Fictional instructor' where id=${q(teacher)};
     insert into public.user_roles(user_id,role) values
       (${q(admin)},'admin'),(${q(teacher)},'lecturer'),(${q(participant)},'participant'),
-      (${q(guest)},'guest'),(${q(foreign)},'participant');
+      (${q(guest)},'guest'),(${q(foreign)},'participant'),(${q(companyContact)},'client');
     insert into public.organisations(id,name) values(${q(org)},'Fictional academy');
+    insert into public.client_organisation_memberships(user_id,organisation_id)
+      values(${q(companyContact)},${q(org)});
     insert into public.course_templates(id,title) values(${q(template)},'Practical training');
     insert into public.course_runs(id,template_id,organisation_id)
       values(${q(run)},${q(template)},${q(org)}),(${q(conflictingRun)},${q(template)},${q(org)});
@@ -807,7 +811,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.match(String(staleRevision?.reason), /PT409/);
   const currentWelcome = await welcome(participant);
   assert.equal(currentWelcome.version, 2);
-  assert.deepEqual(await meeting(teacher, initialLink, 0), {
+  const rosterSummary = JSON.parse(await call(teacher, "course_attendance_summary", [run]));
+  assert.ok(rosterSummary.rows.some(({user_id}) => user_id === participant));
+  assert.equal((await workspace(companyContact, run)).meeting_link.can_edit, true);
+  assert.deepEqual(await meeting(companyContact, initialLink, 0), {
     url: initialLink,
     version: 1,
     can_edit: true,

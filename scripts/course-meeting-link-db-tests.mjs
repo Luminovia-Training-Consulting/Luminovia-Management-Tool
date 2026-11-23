@@ -90,7 +90,8 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
   await assert.rejects(save(unrelated, firstUrl, 0), /unavailable/i);
   await assert.rejects(save(teacher, firstUrl, 0, foreign), /unavailable/i);
   await assert.rejects(save(learner, firstUrl, 0), /editor required/i);
-  await assert.rejects(save(client, firstUrl, 0), /editor required/i);
+  assert.equal((await workspace(client)).meeting_link.can_edit, true);
+  await assert.rejects(save(client, firstUrl, 0, foreign), /unavailable/i);
   assert.equal((await workspace(manager, onsite)).meeting_link, null);
   await assert.rejects(save(manager, firstUrl, 0, onsite), /unavailable/i);
   await assert.rejects(workspace(learner, foreign), /unavailable/i);
@@ -118,7 +119,7 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
       /Invalid HTTPS course meeting link/i,
     );
   }
-  assert.deepEqual(await save(teacher, firstUrl, 0), {
+  assert.deepEqual(await save(client, firstUrl, 0), {
     url: firstUrl,
     version: 1,
     can_edit: true,
@@ -151,6 +152,7 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
   await assert.rejects(workspace(learner), /unavailable/i);
   await assert.rejects(workspace(manager), /premium/i);
   await assert.rejects(save(teacher, firstUrl, 2), /premium/i);
+  await assert.rejects(save(client, firstUrl, 2), /premium/i);
   await toggle(true, 2);
   assert.equal((await workspace(learner)).meeting_link.url, secondUrl);
 

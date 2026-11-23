@@ -381,6 +381,13 @@ await withApiFixture(
             minutes: 60,
             reason: "Verified against the fictional session register",
         });
+        const attendanceScope = {p_run_id: run};
+        for (const who of [teacher, client, admin]) {
+            const totals = await documentedRpc(who.client, "course_attendance_summary", attendanceScope);
+            assert.equal(totals.course_count, 1);
+            assert.equal(totals.rows.find(({user_id}) => user_id === learner.id)?.minutes, 60);
+        }
+        await documentedRpc(learner.client, "course_attendance_summary", attendanceScope, 403, "42501");
         await action(teacher, "quiz_config", {
             questions: [
                 {prompt: "Read a directory?", options: ["ls", "rm"], correct: 0},

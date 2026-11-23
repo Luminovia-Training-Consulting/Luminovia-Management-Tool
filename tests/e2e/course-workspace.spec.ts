@@ -886,6 +886,59 @@ test("company reviews are current-membership scoped and an unassociated particip
     }
 });
 
+test("company meeting link, instructor checklist and clocked class attendance", async ({page, browser}) => {
+    const f = await fixture({upcoming: true});
+    const now = Date.now();
+    await checked(f.service.from("course_sessions").update({
+        starts_at: new Date(now - 10 * 60000).toISOString(),
+        ends_at: new Date(now + 50 * 60000).toISOString(),
+    }).eq("id", f.session));
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    await checked(f.adminClient.rpc("set_course_class", {
+        p_course_id: f.run, p_new_name: "Fictional live class", p_class_id: null, p_expected_version: 0,
+    }));
+    const workspace = `/courses/${f.run}/workspace`;
+    const meeting = "https://learning.example.invalid/fictional-live-room";
+    await login(page, f.client.email);
+    await page.goto(workspace);
+    await page.getByRole("button", {name: "Meetinglink bearbeiten"}).click();
+    await page.getByRole("textbox", {name: "Meetinglink (HTTPS)"}).fill(meeting);
+    await page.getByRole("button", {name: "Meetinglink veröffentlichen"}).click();
+    await expect(page.getByRole("link", {name: "Unterrichtslink öffnen"})).toHaveAttribute("href", meeting);
+
+    const context = await browser.newContext({viewport: page.viewportSize() ?? undefined});
+    try {
+        const instructor = await context.newPage();
+        await login(instructor, f.teacher.email);
+        await instructor.goto(workspace);
+        const checklist = instructor.getByRole("region", {name: "Checkliste für die Kursdurchführung"});
+        await expect(checklist.getByText("Meetinglink vorhanden")).toBeVisible();
+        await instructor.goto(workspace + "#course-register");
+        await instructor.getByRole("button", {name: "Jetzt gekommen"}).click();
+        const register = () => checked(f.adminClient.rpc("course_session_register", {
+            p_run_id: f.run, p_session_id: f.session,
+        }));
+        await expect.poll(async () => (await register()).rows[0].version).toBe(1);
+        await instructor.getByRole("button", {name: "Jetzt gegangen"}).click();
+        await expect.poll(async () => (await register()).rows[0].version).toBe(2);
+        const row = (await register()).rows[0];
+        expect(row.status).toBe("present");
+        expect(Date.parse(row.arrival_at)).toBeGreaterThanOrEqual(now);
+        expect(Date.parse(row.departure_at)).toBeGreaterThanOrEqual(Date.parse(row.arrival_at));
+
+        await page.goto(workspace + "#course-register");
+        await page.getByText("Anwesenheitsverlauf", {exact: true}).click();
+        await expect(page.getByText(/Klasse Fictional live class · 1/)).toBeVisible();
+        await expect(page.getByRole("region", {name: "Anwesenheitsverlauf"}).getByRole("row").filter({hasText: f.learner.name})).toBeVisible();
+        await expect(page.getByLabel("Ankunft (optional)", {exact: true})).not.toHaveValue("");
+    } finally {
+        await context.close();
+    }
+});
+
 test("current instructor publishes a meeting link for a consented participant", async ({page, browser}) => {
     const f = await fixture({upcoming: true});
     const learner = api(process.env.SUPABASE_ANON_KEY!);

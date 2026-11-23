@@ -14,6 +14,7 @@ import {
 } from "../learning/academy-publication-schema.ts";
 import {
   attendanceImportReceiptSchema,
+  attendanceSummarySchema,
   attendanceImportRowSchema,
   academyAttendanceRegisterSchema,
   maxAttendanceImportRows,
@@ -1020,7 +1021,7 @@ const coursePaths = {
   "/rest/v1/rpc/set_course_meeting_link": courseOperation(
     "setAcademyCourseMeetingLink",
     "Set or clear an online course meeting link",
-    "The course manager or assigned instructor can change the link before the online course ends. Use a credential-free HTTPS URL with a DNS hostname. Send null to clear the link and the last-read version to detect concurrent changes.",
+    "The course manager, assigned instructor or authorised contact of the exact company can change the link before the online course ends. Use a credential-free HTTPS URL with a DNS hostname. Send null to clear the link and the last-read version to detect concurrent changes.",
     "active",
     record({ ...run, p_url: meetingUrl, p_expected_version: expectedVersion }),
     record({ ...meetingLinkResult.properties, can_edit: { const: true } }),
@@ -1059,6 +1060,14 @@ const coursePaths = {
     "active-or-grace",
     z.toJSONSchema(courseParticipationReportRequest),
     z.toJSONSchema(courseParticipationReportSchema),
+  ),
+  "/rest/v1/rpc/course_attendance_summary": courseOperation(
+    "readAcademyCourseAttendanceSummary",
+    "Read verified attendance totals for a course or class",
+    "Current course managers, assigned instructors and authorised company contacts see verified counts and minutes for enrolled or completed participants across scoped, unarchived class courses. Supply next_after as p_after_user_id for the next 50 participants. Learners cannot read this report.",
+    "active-or-grace",
+    record({ ...run, p_after_user_id: { anyOf: [uuid, nil] } }, ["p_run_id"]),
+    z.toJSONSchema(attendanceSummarySchema),
   ),
   "/rest/v1/rpc/course_session_register": courseOperation(
     "readAcademyCourseAttendanceRegister",

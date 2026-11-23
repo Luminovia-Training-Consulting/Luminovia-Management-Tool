@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { courseClassName, courseClassOptions } from "./course-classes-schema";
+import { attendanceSummariesKey } from "./attendance-api";
 import "./i18n";
 
 function CompanyClassEditor({
@@ -124,7 +125,10 @@ export function CourseClasses({
     },
     onSuccess: async (receipt) => {
       cache.setQueryData(queryKey, receipt);
-      await cache.invalidateQueries({ queryKey: ["course-class", actor] });
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: ["course-class", actor] }),
+        cache.invalidateQueries({ queryKey: attendanceSummariesKey(actor) }),
+      ]);
     },
   });
   if (!online || (!editor && !options.data?.current)) return null;
