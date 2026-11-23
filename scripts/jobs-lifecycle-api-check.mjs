@@ -48,7 +48,7 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
         await sql(`delete from public.lecturer_topics where topic_id='${topic}';
           delete from public.topics where id='${topic}';`);
     });
-    // The exact reopened-job audience comes from a requirement unique to this fixture.
+    // Both fixture lecturers satisfy the reopened job's topic requirement.
     await checked(service.from("topics").insert({
         id: topic,
         kind: "topic",
@@ -236,8 +236,10 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
             .from("notifications")
             .select("user_id")
             .eq("kind", "job_reopened")
-            .eq("resource_id", job),
-        "Only matching eligible lecturers receive the release notice",
+            .eq("resource_id", job)
+            // Retained accounts may also qualify through the same subject area.
+            .in("user_id", users),
+        "Only eligible fixture actors receive the release notice",
     );
     assert.deepEqual(
         reopenedNotices.map((notice) => notice.user_id).sort(),

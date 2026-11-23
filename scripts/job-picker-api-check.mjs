@@ -324,9 +324,9 @@ await withApiFixture(
         assert.equal(doc.job_id, ids[0]);
         assert.equal(doc.scope, "job_after");
         assert.equal(doc.status, "quarantined");
-        // Current authority rejects self role writes even when the submitted set
-        // matches. Prove denial leaves roles and audit history unchanged before
-        // the separate existing-token suspension check below.
+        // Internal administrators may toggle their own regular lecturer role.
+        // Prove a denied senior lecturer self-assignment leaves roles and audit
+        // history unchanged before checking existing-token suspension.
         const actualRoles = () =>
             checked(
                 admin.client
@@ -347,7 +347,7 @@ await withApiFixture(
             (
                 await admin.client.rpc("set_account_roles", {
                     p_user_id: admin.id,
-                    p_roles: ["admin"],
+                    p_roles: ["admin", "senior_lecturer"],
                 })
             ).error?.code,
             "42501",
@@ -401,7 +401,7 @@ await withApiFixture(
             "42501",
         );
         console.log(
-            "PASS: actual Auth/password-only authentication/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; self-role refusal without role/audit mutation; existing-token suspension.",
+            "PASS: actual Auth/password-only authentication/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; senior lecturer self-assignment refused without role/audit mutation; existing-token suspension.",
         );
     },
 );

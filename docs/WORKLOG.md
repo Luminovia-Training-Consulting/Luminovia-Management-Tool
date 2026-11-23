@@ -1,3 +1,7 @@
+# 23 November 2026 — Native release acceptance fixtures
+
+The real job picker now checks that an administrator cannot give themselves the senior lecturer role, with no role or audit mutation. The reopened-offer test checks the complete fixture audience while allowing matching accounts from a retained baseline. The operations API confirms that legacy course visibility does not grant unassigned previews, a confirmed assignment exposes the course and sessions, and changing the venue preserves the booked schedule. These three checks passed in the isolated Auth and PostgreSQL stack. The live update still requires an eligible immutable package for the exact main revision.
+
 # 23 November 2026 — Publish a course-backed marketplace listing
 
 The course's marketplace section now opens the offer form directly or guides staff through attaching an active company first. The offer form starts from the course title and description and saves edits to the listing while retaining the course text, company and exact session references. Assigning a company to an unlinked run with unchanged dates preserves its session IDs. Publication remains an explicit action under the current lecturer eligibility rules.

@@ -201,7 +201,11 @@ await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql})
         for (const request of directCourseRows(participant))
             await requireParticipantDenial(request);
     });
-    await test("Publication reveals course data without exposing customer contacts or notes", async () => {
+    const directCompanyRows = (who) => [
+        who.client.from("organisation_contacts").select("id").eq("organisation_id", org),
+        who.client.from("organisation_private_details").select("organisation_id").eq("organisation_id", org),
+    ];
+    await test("Legacy course visibility remains private before assignment", async () => {
         await checked(
             admin.client.rpc("set_course_visibility", {
                 p_id: run,
@@ -213,33 +217,23 @@ await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql})
         assert.equal(
             (
                 await checked(
-                    lecturer.client
+                    admin.client
                         .from("course_runs")
                         .select("*,course_sessions(*)")
                         .eq("id", run)
                         .single(),
-                    "Lecturer published catalogue",
+                    "Admin reads the course schedule",
                 )
             ).course_sessions.length,
             2,
         );
-        assert.equal(
-            (
-                await checked(
-                    lecturer.client
-                        .from("organisations")
-                        .select("name")
-                        .eq("id", org)
-                        .single(),
-                    "Allowed customer identity",
-                )
-            ).name,
-            base.name,
+        assert.deepEqual(
+            await checked(
+                lecturer.client.from("course_runs").select("id").eq("id", run),
+                "Legacy visibility grants no lecturer preview",
+            ),
+            [],
         );
-        const directCompanyRows = (who) => [
-            who.client.from("organisation_contacts").select("id").eq("organisation_id", org),
-            who.client.from("organisation_private_details").select("organisation_id").eq("organisation_id", org),
-        ];
         for (const request of directCompanyRows(lecturer))
             assert.deepEqual(await checked(request, "Private company data"), []);
         for (const request of directCompanyRows(participant))
@@ -378,14 +372,48 @@ await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql})
             "Claim full block",
         );
         assert.equal(claim.status, "confirmed");
+        const assignedCourse = () =>
+            lecturer.client
+                .from("course_runs")
+                .select("venue,course_sessions(id,starts_at,ends_at)")
+                .eq("id", run)
+                .order("starts_at", {referencedTable: "course_sessions"})
+                .single();
+        const assigned = await checked(
+            assignedCourse(),
+            "Assigned lecturer reads the course and its sessions",
+        );
+        assert.equal(assigned.course_sessions.length, 2);
+        const customer = await checked(
+            lecturer.client.from("organisations").select("name").eq("id", org).single(),
+            "Assigned lecturer sees the customer identity",
+        );
+        assert.equal(customer.name, base.name);
+        for (const request of directCompanyRows(lecturer))
+            assert.deepEqual(await checked(request, "Private company data after assignment"), []);
         assert.equal(
             (
                 await admin.client.rpc("save_course_run", {
                     p_id: run,
-                    p_payload: {...runPayload, venue: "Silent retiming"},
+                    p_payload: {...runPayload, sessions: sessions.slice(0, 1)},
                 })
             ).error?.message,
             "course_locked",
+        );
+        const venue = "Updated fictional course access details";
+        assert.equal(
+            await checked(
+                admin.client.rpc("save_course_run", {
+                    p_id: run,
+                    p_payload: {...runPayload, published: true, venue},
+                }),
+                "Update the assigned course venue",
+            ),
+            run,
+        );
+        assert.deepEqual(
+            await checked(assignedCourse(), "Course venue update preserves the booked sessions"),
+            {...assigned, venue},
         );
         assert.equal(
             (
