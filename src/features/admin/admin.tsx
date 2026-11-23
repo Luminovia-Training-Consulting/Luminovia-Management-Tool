@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 /**
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
  * source while editing; the server checks actual sessions and prices on save.
@@ -361,33 +362,32 @@ function JobForm({
               .filter(Boolean)
               .join(" · ")}
           </p>
-          <section
-            className="course-offer-schedule"
-            aria-labelledby="course-offer-schedule-title"
-          >
-            <h3 id="course-offer-schedule-title">{courseText("schedule")}</h3>
-            <ol className="session-list">
-              {courseRun.sessions.map((row) => (
-                <li key={row.source_course_session_id}>
-                  <div>
-                    <strong>
-                      {dateTime(
-                        row.starts_at,
-                        i18n.language,
-                        courseRun.time_zone,
-                      )}
-                    </strong>
-                    <span>
-                      {dateTime(
-                        row.ends_at,
-                        i18n.language,
-                        courseRun.time_zone,
-                      )}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ol>
+          <section className="course-offer-schedule">
+            <h3>{courseText("schedule")}</h3>
+            <SessionScroll label={courseText("schedule")}>
+              <ol className="session-list">
+                {courseRun.sessions.map((row) => (
+                  <li key={row.source_course_session_id}>
+                    <div>
+                      <strong>
+                        {dateTime(
+                          row.starts_at,
+                          i18n.language,
+                          courseRun.time_zone,
+                        )}
+                      </strong>
+                      <span>
+                        {dateTime(
+                          row.ends_at,
+                          i18n.language,
+                          courseRun.time_zone,
+                        )}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </SessionScroll>
             <div className="form-actions">
               <Button asChild variant="secondary">
                 <Link to={`/courses?run=${courseRun.course_run_id}`}>
@@ -513,42 +513,44 @@ function JobForm({
                 onApply={replace}
                 disabled={create.isPending}
               />
-              {fields.map((field, index) => (
-                <div className="session-form-row" key={field.id}>
-                  <Field
-                    id={`session-start-${index}`}
-                    label={`${t("start")} ${index + 1}`}
-                    error={Boolean(errors.sessions?.[index]?.starts_at)}
-                  >
-                    <input
+              <SessionScroll label={t("sessions")}>
+                {fields.map((field, index) => (
+                  <div className="session-form-row" key={field.id}>
+                    <Field
                       id={`session-start-${index}`}
-                      type="datetime-local"
-                      {...register(`sessions.${index}.starts_at`)}
-                    />
-                  </Field>
-                  <Field
-                    id={`session-end-${index}`}
-                    label={`${t("end")} ${index + 1}`}
-                    error={Boolean(errors.sessions?.[index]?.ends_at)}
-                  >
-                    <input
+                      label={`${t("start")} ${index + 1}`}
+                      error={Boolean(errors.sessions?.[index]?.starts_at)}
+                    >
+                      <input
+                        id={`session-start-${index}`}
+                        type="datetime-local"
+                        {...register(`sessions.${index}.starts_at`)}
+                      />
+                    </Field>
+                    <Field
                       id={`session-end-${index}`}
-                      type="datetime-local"
-                      {...register(`sessions.${index}.ends_at`)}
-                    />
-                  </Field>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={fields.length < 2}
-                    aria-label={`${t("remove")} ${index + 1}`}
-                    onClick={() => remove(index)}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                </div>
-              ))}
+                      label={`${t("end")} ${index + 1}`}
+                      error={Boolean(errors.sessions?.[index]?.ends_at)}
+                    >
+                      <input
+                        id={`session-end-${index}`}
+                        type="datetime-local"
+                        {...register(`sessions.${index}.ends_at`)}
+                      />
+                    </Field>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={fields.length < 2}
+                      aria-label={`${t("remove")} ${index + 1}`}
+                      onClick={() => remove(index)}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
+                ))}
+              </SessionScroll>
               <Button
                 type="button"
                 variant="secondary"

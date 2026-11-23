@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
@@ -274,46 +275,50 @@ function RequestForm({
           onApply={replace}
           disabled={save.isPending}
         />
-        {fields.map((field, index) => (
-          <div className="session-form-row" key={field.id}>
-            <Field
-              id={`request-start-${index}`}
-              label={`${common("start")} ${index + 1}`}
-              error={Boolean(
-                form.formState.errors.sessions?.[index]?.starts_at,
-              )}
-            >
-              <input
+        <SessionScroll label={common("sessions")}>
+          {fields.map((field, index) => (
+            <div className="session-form-row" key={field.id}>
+              <Field
                 id={`request-start-${index}`}
-                type="datetime-local"
-                {...form.register(`sessions.${index}.starts_at`)}
-                disabled={save.isPending}
-              />
-            </Field>
-            <Field
-              id={`request-end-${index}`}
-              label={`${common("end")} ${index + 1}`}
-              error={Boolean(form.formState.errors.sessions?.[index]?.ends_at)}
-            >
-              <input
+                label={`${common("start")} ${index + 1}`}
+                error={Boolean(
+                  form.formState.errors.sessions?.[index]?.starts_at,
+                )}
+              >
+                <input
+                  id={`request-start-${index}`}
+                  type="datetime-local"
+                  {...form.register(`sessions.${index}.starts_at`)}
+                  disabled={save.isPending}
+                />
+              </Field>
+              <Field
                 id={`request-end-${index}`}
-                type="datetime-local"
-                {...form.register(`sessions.${index}.ends_at`)}
-                disabled={save.isPending}
-              />
-            </Field>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`${common("remove")} ${index + 1}`}
-              disabled={fields.length === 1 || save.isPending}
-              onClick={() => remove(index)}
-            >
-              <Trash2 size={17} />
-            </Button>
-          </div>
-        ))}
+                label={`${common("end")} ${index + 1}`}
+                error={Boolean(
+                  form.formState.errors.sessions?.[index]?.ends_at,
+                )}
+              >
+                <input
+                  id={`request-end-${index}`}
+                  type="datetime-local"
+                  {...form.register(`sessions.${index}.ends_at`)}
+                  disabled={save.isPending}
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`${common("remove")} ${index + 1}`}
+                disabled={fields.length === 1 || save.isPending}
+                onClick={() => remove(index)}
+              >
+                <Trash2 size={17} />
+              </Button>
+            </div>
+          ))}
+        </SessionScroll>
         <Button
           type="button"
           variant="secondary"
@@ -522,18 +527,20 @@ function RequestCard({
           {common(request.delivery_type)} · {request.location}
         </dd>
       </dl>
-      <ol className="platform-session-list">
-        {request.sessions.map((session, index) => (
-          <li key={`${session.starts_at}-${index}`}>
-            <CalendarDays size={16} />
-            <span>
-              {dateTime(session.starts_at, i18n.language, request.time_zone)} –{" "}
-              {dateTime(session.ends_at, i18n.language, request.time_zone)}
-              <small>{request.time_zone}</small>
-            </span>
-          </li>
-        ))}
-      </ol>
+      <SessionScroll label={common("sessions")}>
+        <ol className="platform-session-list">
+          {request.sessions.map((session, index) => (
+            <li key={`${session.starts_at}-${index}`}>
+              <CalendarDays size={16} />
+              <span>
+                {dateTime(session.starts_at, i18n.language, request.time_zone)}{" "}
+                – {dateTime(session.ends_at, i18n.language, request.time_zone)}
+                <small>{request.time_zone}</small>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </SessionScroll>
       <div className="platform-teacher">
         <UserRound size={18} />
         <span>

@@ -1324,33 +1324,40 @@ legend {
   margin-top: 4px;
 }
 
-.job-session-scroll {
+.session-scroll {
   max-block-size: min(19rem, 45dvh);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   padding-inline: 0.875rem;
 }
 
-.job-session-scroll:focus-visible {
+.session-scroll:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
-.job-session-scroll .session-list {
+.session-scroll .session-list {
   margin: 0;
   padding: 0;
 }
 
-.job-session-scroll li {
+.session-scroll > .platform-session-list,
+.session-scroll > .course-workspace-sessions {
+  margin-block: 0.625rem;
+}
+
+.session-scroll .session-list > li {
   padding-block: 0.625rem;
 }
 
-.job-session-scroll li:last-child {
+.session-scroll .session-list > li:last-child {
   border-bottom: 0;
 }
 
-.job-session-scroll li > svg {
+.session-scroll .session-list > li > svg {
   flex-shrink: 0;
 }
 

@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 /**
  * Marketplace entry and exact actor-scoped job detail with immediate allocation.
  * Discovery owns bounded server paging and URL filters; only the atomic online
@@ -255,18 +256,13 @@ export function JobDetail() {
                 </p>
               </>
             )}
-            <h2 id="job-sessions-heading">{t("sessions")}</h2>
+            <h2>{t("sessions")}</h2>
             <p className="muted">
               {t("timezone")}: {zone}
               {zone !== job.time_zone && ` · ${job.time_zone}`}
             </p>
             {sessions.length > 0 && (
-              <div
-                className="job-session-scroll"
-                role="region"
-                aria-labelledby="job-sessions-heading"
-                tabIndex={0}
-              >
+              <SessionScroll label={t("sessions")}>
                 <ol className="session-list">
                   {sessions.map((s) => (
                     <li key={s.id}>
@@ -295,7 +291,7 @@ export function JobDetail() {
                     </li>
                   ))}
                 </ol>
-              </div>
+              </SessionScroll>
             )}
             {!companyDispatchOnly && (
               <>

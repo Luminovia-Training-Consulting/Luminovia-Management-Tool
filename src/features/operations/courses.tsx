@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Reusable templates and actual course runs with concrete sessions. Content, participant
@@ -972,42 +973,44 @@ function RunForm({
         <legend>{t("sessions")}</legend>
         {canEditSchedule ? (
           <>
-            {fields.map((field, index) => (
-              <div className="session-form-row" key={field.id}>
-                <Field
-                  id={`run-start-${index}`}
-                  label={`${t("start")} ${index + 1}`}
-                  error={Boolean(errors.sessions?.[index]?.starts_at)}
-                >
-                  <input
+            <SessionScroll label={t("sessions")}>
+              {fields.map((field, index) => (
+                <div className="session-form-row" key={field.id}>
+                  <Field
                     id={`run-start-${index}`}
-                    type="datetime-local"
-                    {...register(`sessions.${index}.starts_at`)}
-                  />
-                </Field>
-                <Field
-                  id={`run-end-${index}`}
-                  label={`${t("end")} ${index + 1}`}
-                  error={Boolean(errors.sessions?.[index]?.ends_at)}
-                >
-                  <input
+                    label={`${t("start")} ${index + 1}`}
+                    error={Boolean(errors.sessions?.[index]?.starts_at)}
+                  >
+                    <input
+                      id={`run-start-${index}`}
+                      type="datetime-local"
+                      {...register(`sessions.${index}.starts_at`)}
+                    />
+                  </Field>
+                  <Field
                     id={`run-end-${index}`}
-                    type="datetime-local"
-                    {...register(`sessions.${index}.ends_at`)}
-                  />
-                </Field>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={`${t("remove")} ${index + 1}`}
-                  disabled={fields.length < 2}
-                  onClick={() => remove(index)}
-                >
-                  <Trash2 size={18} />
-                </Button>
-              </div>
-            ))}
+                    label={`${t("end")} ${index + 1}`}
+                    error={Boolean(errors.sessions?.[index]?.ends_at)}
+                  >
+                    <input
+                      id={`run-end-${index}`}
+                      type="datetime-local"
+                      {...register(`sessions.${index}.ends_at`)}
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`${t("remove")} ${index + 1}`}
+                    disabled={fields.length < 2}
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
+              ))}
+            </SessionScroll>
             {original && fields.length === 1 && (
               <p className="muted">{t("deleteLastRunSession")}</p>
             )}
@@ -2128,23 +2131,29 @@ export function CoursesPage() {
               {findTemplate(detail)?.prerequisites || "—"}
             </p>
             <h3>{t("sessions")}</h3>
-            <ol className="session-list">
-              {[...detail.course_sessions]
-                .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-                .map((s) => (
-                  <li key={s.id}>
-                    <CalendarDays size={18} />
-                    <div>
-                      <strong>
-                        {dateTime(s.starts_at, i18n.language, detail.time_zone)}
-                      </strong>
-                      <span>
-                        {dateTime(s.ends_at, i18n.language, detail.time_zone)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-            </ol>
+            <SessionScroll label={t("sessions")}>
+              <ol className="session-list">
+                {[...detail.course_sessions]
+                  .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+                  .map((s) => (
+                    <li key={s.id}>
+                      <CalendarDays size={18} />
+                      <div>
+                        <strong>
+                          {dateTime(
+                            s.starts_at,
+                            i18n.language,
+                            detail.time_zone,
+                          )}
+                        </strong>
+                        <span>
+                          {dateTime(s.ends_at, i18n.language, detail.time_zone)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+              </ol>
+            </SessionScroll>
             <p>
               {detail.time_zone} · {detail.venue}
             </p>

@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 import { useRequestKey } from "../../lib/request-key";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
@@ -408,17 +409,32 @@ export function JobLifecyclePanel({
               <small>
                 {dateTime(claim.created_at, i18n.language, job.time_zone)}
               </small>
-              <ul>
-                {claim.sessions.map((session) => (
-                  <li key={session.starts_at}>
-                    {dateTime(session.starts_at, i18n.language, job.time_zone)}{" "}
-                    – {dateTime(session.ends_at, i18n.language, job.time_zone)}
-                    {session.released_at && (
-                      <span className="badge">{t("released")}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {claim.sessions.length > 0 && (
+                <SessionScroll
+                  label={`${i18n.t("translation:sessions")} · ${claim.lecturer_name}`}
+                >
+                  <ul>
+                    {claim.sessions.map((session) => (
+                      <li key={session.starts_at}>
+                        {dateTime(
+                          session.starts_at,
+                          i18n.language,
+                          job.time_zone,
+                        )}{" "}
+                        –{" "}
+                        {dateTime(
+                          session.ends_at,
+                          i18n.language,
+                          job.time_zone,
+                        )}
+                        {session.released_at && (
+                          <span className="badge">{t("released")}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </SessionScroll>
+              )}
               {claim.events
                 .filter((event) => event.type === "cancelled")
                 .map((event) => (
@@ -974,47 +990,49 @@ function EditOffer({
               onApply={setSessions}
               disabled={pending}
             />
-            {sessions.map((slot, index) => (
-              <div className="session-form-row" key={index}>
-                {(["starts_at", "ends_at"] as const).map((field) => (
-                  <Field
-                    key={field}
-                    id={`offer-${field}-${index}`}
-                    label={`${common(field === "starts_at" ? "start" : "end")} ${index + 1}`}
-                  >
-                    <input
+            <SessionScroll label={common("sessions")}>
+              {sessions.map((slot, index) => (
+                <div className="session-form-row" key={index}>
+                  {(["starts_at", "ends_at"] as const).map((field) => (
+                    <Field
+                      key={field}
                       id={`offer-${field}-${index}`}
-                      type="datetime-local"
-                      value={slot[field]}
-                      required
-                      disabled={pending}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setSessions((previous) =>
-                          previous.map((row, at) =>
-                            at === index ? { ...row, [field]: value } : row,
-                          ),
-                        );
-                      }}
-                    />
-                  </Field>
-                ))}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={pending || sessions.length === 1}
-                  aria-label={`${common("remove")} ${index + 1}`}
-                  onClick={() =>
-                    setSessions((previous) =>
-                      previous.filter((_, at) => at !== index),
-                    )
-                  }
-                >
-                  <Trash2 size={18} aria-hidden="true" />
-                </Button>
-              </div>
-            ))}
+                      label={`${common(field === "starts_at" ? "start" : "end")} ${index + 1}`}
+                    >
+                      <input
+                        id={`offer-${field}-${index}`}
+                        type="datetime-local"
+                        value={slot[field]}
+                        required
+                        disabled={pending}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setSessions((previous) =>
+                            previous.map((row, at) =>
+                              at === index ? { ...row, [field]: value } : row,
+                            ),
+                          );
+                        }}
+                      />
+                    </Field>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={pending || sessions.length === 1}
+                    aria-label={`${common("remove")} ${index + 1}`}
+                    onClick={() =>
+                      setSessions((previous) =>
+                        previous.filter((_, at) => at !== index),
+                      )
+                    }
+                  >
+                    <Trash2 size={18} aria-hidden="true" />
+                  </Button>
+                </div>
+              ))}
+            </SessionScroll>
             <Button
               type="button"
               variant="secondary"

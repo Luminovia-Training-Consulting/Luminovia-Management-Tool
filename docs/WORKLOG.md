@@ -1,3 +1,9 @@
+# 23 November 2026 — Consistent scrollable schedules
+
+The shared schedule box keeps long dates inside job details, assignment history, course details, course rooms, offer previews and company requests. The editable date rows in course, offer and company request forms use the same scroll limit. The surrounding date range and time-zone information remains visible where shown by each view.
+
+Desktop and mobile Chromium each checked 40 real local sessions in the marketplace detail, the course details dialog and the course-backed offer preview. Each check reached the final session by keyboard without horizontal page overflow. All 121 focused component tests, TypeScript, lint and the production build budgets passed.
+
 # 23 November 2026 — Clarify short-notice withdrawal
 
 The withdrawal panel labels the first assigned session and explains that an existing short-notice request awaits review by a different administrator or manager. The seven-day rule and existing authorization remain in effect. All nine withdrawal component tests, targeted lint and TypeScript passed.

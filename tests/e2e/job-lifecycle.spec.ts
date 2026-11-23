@@ -297,37 +297,57 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
     }
 });
 
-test("a long job schedule scrolls inside its own keyboard-accessible box", async ({page}) => {
+test("long schedules scroll in the marketplace, course details and offer preview", async ({page}) => {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    const job = randomUUID();
+    const job = randomUUID(), run = randomUUID(), template = randomUUID(), company = randomUUID();
     const title = `Fictional long schedule ${job.slice(0, 8)}`;
     const start = Date.parse("2049-02-01T08:00:00Z");
     const sessions = Array.from({length: 40}, (_, day) => ({
-        job_id: job,
+        id: randomUUID(),
+        course_run_id: run,
         starts_at: new Date(start + day * 86400000).toISOString(),
         ends_at: new Date(start + day * 86400000 + 3600000).toISOString(),
     }));
     try {
+        await checked(service.from("organisations").insert({id: company, name: title}));
+        await checked(service.from("course_templates").insert({id: template, title}));
+        await checked(service.from("course_runs").insert({
+            id: run, template_id: template, organisation_id: company, time_zone: "Europe/Berlin",
+        }));
+        await checked(service.from("course_sessions").insert(sessions));
         await checked(service.from("jobs").insert({
-            id: job, title, customer_name: "Fictional academy", delivery_type: "online",
+            id: job, course_run_id: run, title, customer_name: "Fictional academy", delivery_type: "online",
             time_zone: "Europe/Berlin", status: "published", amount: 100, total_amount: 4000,
             currency: "EUR", rate_unit: "per_day", terms: "",
         }));
-        await checked(service.from("job_sessions").insert(sessions));
+        await checked(service.from("job_sessions").insert(sessions.map(({id, starts_at, ends_at}) => ({
+            job_id: job, course_session_id: id, starts_at, ends_at,
+        }))));
         await login(page, process.env.E2E_ADMIN_EMAIL!);
         await page.goto(`/jobs/${job}`);
         await expect(page.getByRole("heading", {name: "Durchführungszeitraum"})).toBeVisible();
-        const schedule = page.getByRole("region", {name: "Termine", exact: true});
-        await expect(schedule.getByRole("listitem")).toHaveCount(sessions.length);
-        expect(await schedule.evaluate(box => box.scrollHeight > box.clientHeight)).toBe(true);
-        await expect(schedule.getByRole("listitem").last()).not.toBeInViewport();
-        await schedule.focus();
-        await schedule.press("End");
-        await expect.poll(() => schedule.evaluate(box => box.scrollTop)).toBeGreaterThan(0);
-        await expect(schedule.getByRole("listitem").last()).toBeInViewport();
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        const checkSchedule = async (name: string) => {
+            const schedule = page.getByRole("region", {name, exact: true});
+            await expect(schedule.getByRole("listitem")).toHaveCount(sessions.length);
+            expect(await schedule.evaluate(box => box.scrollHeight > box.clientHeight)).toBe(true);
+            await schedule.focus();
+            await schedule.press("End");
+            await expect.poll(() => schedule.evaluate(box => box.scrollTop)).toBeGreaterThan(0);
+            await expect(schedule.getByRole("listitem").last()).toBeInViewport();
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        };
+        await checkSchedule("Termine");
+        await page.goto(`/courses?run=${run}`);
+        await expect(page.getByRole("dialog")).toBeVisible();
+        await checkSchedule("Termine");
+        await page.goto(`/admin?courseRun=${run}`);
+        await checkSchedule("Geplante Kurstermine");
     } finally {
         await checked(service.from("job_sessions").delete().eq("job_id", job));
         await checked(service.from("jobs").delete().eq("id", job));
+        await checked(service.from("course_sessions").delete().eq("course_run_id", run));
+        await checked(service.from("course_runs").delete().eq("id", run));
+        await checked(service.from("course_templates").delete().eq("id", template));
+        await checked(service.from("organisations").delete().eq("id", company));
     }
 });

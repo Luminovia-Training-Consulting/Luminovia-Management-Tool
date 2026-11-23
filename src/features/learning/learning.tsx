@@ -1,3 +1,4 @@
+import { SessionScroll } from "../../components/session-scroll";
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -921,18 +922,20 @@ function CourseBasics({ course }: { course: CourseWorkspace }) {
       {course.delivery_type !== "online" && course.venue && (
         <p>{course.venue}</p>
       )}
-      <ol className="course-workspace-sessions">
-        {course.sessions.map((session) => (
-          <li key={session.id}>
-            <strong>
-              {dateTime(session.starts_at, i18n.language, course.time_zone)}
-            </strong>
-            <span>
-              {dateTime(session.ends_at, i18n.language, course.time_zone)}
-            </span>
-          </li>
-        ))}
-      </ol>
+      <SessionScroll label={i18n.t("translation:sessions")}>
+        <ol className="course-workspace-sessions">
+          {course.sessions.map((session) => (
+            <li key={session.id}>
+              <strong>
+                {dateTime(session.starts_at, i18n.language, course.time_zone)}
+              </strong>
+              <span>
+                {dateTime(session.ends_at, i18n.language, course.time_zone)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </SessionScroll>
     </section>
   );
 }
