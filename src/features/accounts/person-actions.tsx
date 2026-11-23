@@ -112,7 +112,9 @@ export function PersonManagementActions({
           {common(status.data.active ? "peopleDeactivate" : "peopleActivate")}
         </Button>
       )}
-      <PermanentDeleteAction kind="account" id={id} label={name} />
+      {id !== actor && (
+        <PermanentDeleteAction kind="account" id={id} label={name} />
+      )}
       <Dialog
         open={confirm}
         onOpenChange={(open) => {

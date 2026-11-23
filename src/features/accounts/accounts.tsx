@@ -12,6 +12,7 @@ import { CreateAccountForm } from "./create-account";
 import { LecturerCompensation } from "../commercial/lecturer-compensation";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
+import { db } from "../../lib/supabase";
 import { permissionsQuery } from "../../lib/queries";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -78,19 +79,28 @@ function AccountsDirectory({
     catalog.data?.filter(
       (entry) => entry.assignable && entry.role !== "owner",
     ) ?? [];
+  const ownRoles = selected?.id === actorId;
   const organisations = useQuery({
     ...accountOrganisationsQuery(actorId),
-    enabled: canLinkOrganisations && selected !== null,
+    enabled: canLinkOrganisations && selected !== null && !ownRoles,
   });
   const membership = useQuery({
     queryKey: ["account-memberships", actorId, selected?.id],
-    enabled: canLinkOrganisations && selected !== null,
+    enabled: canLinkOrganisations && selected !== null && !ownRoles,
     queryFn: () => accountMemberships(selected!.id),
   });
   const change = useMutation({
     mutationFn: async () => {
       requireOnline();
       if (!selected) throw new Error("account_required");
+      if (ownRoles) {
+        const { data, error } = await db().rpc("set_account_roles", {
+          p_user_id: actorId,
+          p_roles: roles,
+        });
+        if (error) throw error;
+        return data;
+      }
       return await accountRequest(`users/${selected.id}/roles`, "PUT", {
         roles,
         ...(roles.includes("client") && organisation
@@ -167,7 +177,25 @@ function AccountsDirectory({
                 <p>{person.roles.map((role) => t(role)).join(" · ")}</p>
               </div>
               <div className="account-list-actions">
-                {person.can_change_active && (
+                {person.id === actorId && (
+                  <>
+                    <Button asChild variant="secondary">
+                      <Link to="/profile">{t("ownProfileExpertise")}</Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={
+                          canManageContracts
+                            ? `/contracts?user=${actorId}`
+                            : "/contracts"
+                        }
+                      >
+                        {t("ownContracts")}
+                      </Link>
+                    </Button>
+                  </>
+                )}
+                {person.id !== actorId && person.can_change_active && (
                   <Button
                     variant="secondary"
                     onClick={() => setEditProfile(person)}
@@ -200,26 +228,33 @@ function AccountsDirectory({
                     <Link to="/clients">{t("manageCompany")}</Link>
                   </Button>
                 )}
-                <PermanentDeleteAction
-                  kind="account"
-                  id={person.id}
-                  label={person.display_name || person.email}
-                />
-                {canAssign && person.can_assign_roles && (
-                  <Button
-                    variant="secondary"
-                    disabled={catalog.isPending || catalog.isError || !online}
-                    onClick={() => {
-                      setSelected(person);
-                      setRoles(person.roles);
-                      setOrganisation("");
-                      change.reset();
-                      link.reset();
-                    }}
-                  >
-                    {t("roles")}
-                  </Button>
+                {person.id !== actorId && (
+                  <PermanentDeleteAction
+                    kind="account"
+                    id={person.id}
+                    label={person.display_name || person.email}
+                  />
                 )}
+                {canAssign &&
+                  (person.id === actorId
+                    ? person.roles.some(
+                        (role) => role === "admin" || role === "owner",
+                      )
+                    : person.can_assign_roles) && (
+                    <Button
+                      variant="secondary"
+                      disabled={catalog.isPending || catalog.isError || !online}
+                      onClick={() => {
+                        setSelected(person);
+                        setRoles(person.roles);
+                        setOrganisation("");
+                        change.reset();
+                        link.reset();
+                      }}
+                    >
+                      {t(person.id === actorId ? "ownRoles" : "roles")}
+                    </Button>
+                  )}
               </div>
             </li>
           ))}
@@ -281,16 +316,20 @@ function AccountsDirectory({
         onOpenChange={(value) => {
           if (!value && !change.isPending && !link.isPending) setSelected(null);
         }}
-        title={t("roles")}
+        title={t(ownRoles ? "ownRoles" : "roles")}
         description={selected?.display_name || selected?.email || ""}
       >
-        <p>{t("roleHint")}</p>
-        {selected?.roles.some((role) =>
-          ["lecturer", "senior_lecturer"].includes(role),
-        ) && <LecturerCompensation userId={selected.id} />}
+        <p>{t(ownRoles ? "ownRoleHint" : "roleHint")}</p>
+        {!ownRoles &&
+          selected?.roles.some((role) =>
+            ["lecturer", "senior_lecturer"].includes(role),
+          ) && <LecturerCompensation userId={selected.id} />}
         <fieldset className="account-roles">
           <legend>{t("role")}</legend>
-          {assignableRoles.map(({ role }) => (
+          {(ownRoles
+            ? assignableRoles.filter(({ role }) => role === "lecturer")
+            : assignableRoles
+          ).map(({ role }) => (
             <label key={role}>
               <input
                 type="checkbox"
@@ -324,7 +363,8 @@ function AccountsDirectory({
             !roles.length ||
             change.isPending ||
             link.isPending ||
-            (roles.includes("client") &&
+            (!ownRoles &&
+              roles.includes("client") &&
               !selected?.roles.includes("client") &&
               (!canLinkOrganisations || !organisation))
           }
@@ -335,10 +375,10 @@ function AccountsDirectory({
         {change.isError && !confirm && (
           <Notice kind="error">{t("error")}</Notice>
         )}
-        {roles.includes("client") && !canLinkOrganisations && (
+        {!ownRoles && roles.includes("client") && !canLinkOrganisations && (
           <Notice>{t("organisationAdmin")}</Notice>
         )}
-        {roles.includes("client") && canLinkOrganisations && (
+        {!ownRoles && roles.includes("client") && canLinkOrganisations && (
           <section>
             <h3>{t("organisation")}</h3>
             <p>{t("organisationHint")}</p>

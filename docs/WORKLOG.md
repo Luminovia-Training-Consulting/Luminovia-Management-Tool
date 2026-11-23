@@ -4,6 +4,12 @@ Swagger and the interactive explorer now show method filters with counts across 
 
 The local system run passed 1,610 unit and component tests and 475 runtime checks before stopping on the migration envelope and candidate-port fixture. The corrected candidate suite passed all 33 checks, and the exact migration replay, generated API reference, and 46 Academy package and client checks passed. Local Auth, Edge Functions and PostgREST verified all five methods, including denied peer access and a persisted PATCH. All 16 API explorer tests passed on desktop and mobile Chromium in German and English and with both themes. The internal Envoy probe covered PATCH, and the two Academy gateway probes verified the same route over local TLS. Build size checks passed for the internal portal and both Academy editions. The full system gate requires a fresh run on the integrated revision.
 
+# 23 November 2026 — Own account shortcuts and teaching role
+
+The account directory shows the signed-in administrator shortcuts to their profile and expertise and their contracts. It removes the misleading self-delete button. Internal administrators and owners can toggle their own regular lecturer role using the audited role operation. All other roles must match the current database state. Existing future teaching assignments prevent removing the last teaching role.
+
+The local PostgreSQL account suite passed 14 groups, including the own-role toggle and rejection of self-administration changes. All 35 focused account and profile tests passed.
+
 # 23 November 2026 — Offer actions and company-dependent selection
 
 Grouped the post-save offer actions in the standard wrapping row. The creation and edit forms show required topics in a collapsed checkbox picker with a selected count and its own scroll area. Eligible offers expose a direct company-change action. Switching companies clears the previous class and previews the selected company's contact and class room state. The versioned write still saves company and dispatch together under the existing authority rules.

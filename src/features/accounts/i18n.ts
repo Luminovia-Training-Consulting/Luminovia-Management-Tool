@@ -41,6 +41,11 @@ const de = {
   hint: "Eigene Konten, nachvollziehbare Rollen und klar zugeordnete Unternehmen.",
   search: "Konten suchen",
   roles: "Rollen bearbeiten",
+  ownRoles: "Meine Rollen",
+  ownRoleHint:
+    "Hier kannst du die Dozierendenrolle für dein Konto ein- oder ausschalten. Alle anderen Rollen sind hier schreibgeschützt.",
+  ownProfileExpertise: "Mein Profil und meine Expertise",
+  ownContracts: "Meine Verträge",
   save: "Rollen speichern",
   confirm: "Rollen für {{name}} ändern?",
   confirmHint:
@@ -138,6 +143,11 @@ const en: typeof de = {
   hint: "Individual accounts, audited roles and clearly assigned companies.",
   search: "Search accounts",
   roles: "Edit roles",
+  ownRoles: "My roles",
+  ownRoleHint:
+    "Turn the lecturer role on or off for your account. All other roles are read-only here.",
+  ownProfileExpertise: "My profile and expertise",
+  ownContracts: "My contracts",
   save: "Save roles",
   confirm: "Change roles for {{name}}?",
   confirmHint:

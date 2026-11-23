@@ -342,6 +342,52 @@ describe("Account administration", () => {
       screen.queryByTestId("lecturer-compensation"),
     ).not.toBeInTheDocument();
   });
+  it("shows own profile and contracts and only lets the administrator toggle teaching", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    const previous = fake.invoke.getMockImplementation()!;
+    fake.invoke.mockImplementation(async (path: string) => {
+      const result = await previous(path);
+      if (path.includes("/users?")) {
+        Object.assign(result.data.items[0], {
+          id: "own-actor",
+          roles: ["admin"],
+          can_assign_roles: false,
+          can_change_active: false,
+        });
+      }
+      return result;
+    });
+    page();
+    expect(
+      await screen.findByRole("link", {
+        name: "Mein Profil und meine Expertise",
+      }),
+    ).toHaveAttribute("href", "/profile");
+    expect(
+      screen.getByRole("link", { name: "Meine Verträge" }),
+    ).toHaveAttribute("href", "/contracts");
+    const roles = await screen.findByRole("button", { name: "Meine Rollen" });
+    await waitFor(() => expect(roles).toBeEnabled());
+    await userEvent.click(roles);
+    const dialog = within(screen.getByRole("dialog", { name: "Meine Rollen" }));
+    expect(dialog.getAllByRole("checkbox")).toHaveLength(1);
+    await userEvent.click(dialog.getByRole("checkbox", { name: "Dozent:in" }));
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Rollen speichern" }),
+    );
+    const confirm = within(
+      await screen.findByRole("dialog", { name: "Rollen für Anna ändern?" }),
+    );
+    await userEvent.click(
+      confirm.getByRole("button", { name: "Rollen speichern" }),
+    );
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith("set_account_roles", {
+        p_user_id: "own-actor",
+        p_roles: ["admin", "lecturer"],
+      }),
+    );
+  });
   it("does not offer editing for a server-protected target", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
     const previous = fake.invoke.getMockImplementation()!;

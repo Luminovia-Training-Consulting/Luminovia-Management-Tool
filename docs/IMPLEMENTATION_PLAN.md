@@ -1,5 +1,7 @@
 # Persistent implementation plan
 
+- [x] Expose own profile, expertise, contracts and a scoped regular lecturer toggle from the internal account directory.
+
 ## Marketplace date search time zone
 
 - [x] Use the shared time-zone selector in the marketplace date filter while preserving saved filters, valid historical aliases and local date boundaries.

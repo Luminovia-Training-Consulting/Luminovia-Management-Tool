@@ -281,6 +281,23 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             );
         },
     );
+    await check("An internal administrator can toggle only their own lecturer role", async () => {
+        const before = await sql(`select array_agg(role order by role)::text from public.user_roles where user_id='${admin}'`);
+        assert.equal(before, "{admin}");
+        assert.deepEqual(
+            (await rpc(admin, "set_account_roles", [admin, "{admin,lecturer}"], "aal1")).roles,
+            ["admin", "lecturer"],
+        );
+        await assert.rejects(
+            rpc(admin, "set_account_roles", [admin, "{admin,owner,lecturer}"], "aal1"),
+            /Self administrative/,
+        );
+        assert.deepEqual(
+            (await rpc(admin, "set_account_roles", [admin, "{admin}"], "aal1")).roles,
+            ["admin"],
+        );
+        assert.equal(await sql(`select count(*) from public.audit_events where action='account.roles_changed' and resource_id='${admin}'`), "2");
+    });
     await check(
         "Concurrent mutual administrator removal cannot eliminate every administrator",
         async () => {
