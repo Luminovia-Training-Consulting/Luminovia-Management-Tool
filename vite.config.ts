@@ -13,8 +13,8 @@ import { portalOpenApi } from "./src/features/developer-api/contract.ts";
 import {
   academyExplorerOpenApi,
   academyOpenApi,
-  academyWorkflowIndex,
 } from "./src/features/developer-api/academy-contract.ts";
+import { academyWorkflowIndex } from "./scripts/academy-workflows.ts";
 import { academyClientAssets } from "./scripts/academy-client-assets.mjs";
 import { recordAcademyBrowserModules } from "./scripts/academy-browser-inventory.ts";
 import { loadAcademyBrand } from "./scripts/academy-brand-config.ts";

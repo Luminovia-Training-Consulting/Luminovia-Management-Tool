@@ -1,4 +1,3 @@
-import { academyWorkflows } from "./academy-workflows.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
@@ -1703,18 +1702,5 @@ export function academyExplorerOpenApi(
         ),
       ),
     ),
-  };
-}
-
-/** Link the complete signed contract with the interactive operations on this installation. */
-export function academyWorkflowIndex(
-  document: ReturnType<typeof academyOpenApi>,
-  explorer: ReturnType<typeof academyExplorerOpenApi>,
-) {
-  return {
-    openapi: "/api/openapi.json",
-    apiVersion: document.info.version,
-    installation: document["x-portal-installation"],
-    ...academyWorkflows(document.paths, explorer.paths),
   };
 }

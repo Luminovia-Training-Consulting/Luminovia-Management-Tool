@@ -37,8 +37,8 @@ import {
 import {
   academyExplorerOpenApi,
   academyOpenApi,
-  academyWorkflowIndex,
 } from "../src/features/developer-api/academy-contract.ts";
+import { academyWorkflowIndex } from "./academy-workflows.ts";
 import {
   academyClientAssets,
   academyClientPaths,

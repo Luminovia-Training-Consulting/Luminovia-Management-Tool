@@ -1,11 +1,8 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { internalInstallationBrand } from "../../lib/installation-brand";
-import {
-  academyExplorerOpenApi,
-  academyOpenApi,
-  academyWorkflowIndex,
-} from "./academy-contract";
+import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract";
+import { academyWorkflowIndex } from "../../../scripts/academy-workflows";
 import { isDocumentedRequest, portalOpenApi } from "./contract";
 import { humanAuthPaths } from "./human-auth-contract";
 

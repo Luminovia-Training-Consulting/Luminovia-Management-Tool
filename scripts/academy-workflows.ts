@@ -1,3 +1,8 @@
+import type {
+  academyExplorerOpenApi,
+  academyOpenApi,
+} from "../src/features/developer-api/academy-contract.ts";
+
 /** Stable business groups link the published contract to user-facing Academy tasks. */
 const groups = {
   installation: [
@@ -191,7 +196,7 @@ const aliasPrefix = "/functions/v1/portal-api/v1/";
 const rpcPrefix = "/rest/v1/rpc/";
 
 /** Assemble the downloadable workflow index and fail the build on orphaned operations. */
-export function academyWorkflows(paths: Paths, explorerPaths: Paths) {
+function academyWorkflows(paths: Paths, explorerPaths: Paths) {
   const workflows = Object.entries(groups).map(([id, [[de, en], ids]]) => ({
     id,
     title: { de, en },
@@ -256,4 +261,17 @@ export function academyWorkflows(paths: Paths, explorerPaths: Paths) {
           "Missing Academy operation for exception: " + operationId,
         );
   return { workflows, exceptions };
+}
+
+/** Link the complete signed contract with the interactive operations on this installation. */
+export function academyWorkflowIndex(
+  document: ReturnType<typeof academyOpenApi>,
+  explorer: ReturnType<typeof academyExplorerOpenApi>,
+) {
+  return {
+    openapi: "/api/openapi.json",
+    apiVersion: document.info.version,
+    installation: document["x-portal-installation"],
+    ...academyWorkflows(document.paths, explorer.paths),
+  };
 }

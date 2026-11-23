@@ -41,8 +41,8 @@ import { z } from "zod";
 import {
   academyExplorerOpenApi,
   academyOpenApi,
-  academyWorkflowIndex,
 } from "../src/features/developer-api/academy-contract.ts";
+import { academyWorkflowIndex } from "./academy-workflows.ts";
 import {
   academySbomPath,
   academyNoticesPath,
