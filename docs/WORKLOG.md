@@ -1,3 +1,7 @@
+# 23 November 2026 — Explicit marketplace publication
+
+Course-backed offers now have separate actions to publish in the marketplace and save a draft. Each outcome gives a specific receipt and link. Course cards link their draft offers so staff can publish them later through the existing lifecycle action. Course catalogue visibility remains a separate setting.
+
 # 23 November 2026 — Company course template authoring and drafts
 
 Courses and the company portal now link directly to the template library. Internal company members can create and edit templates owned by their organisations. The same template action opens the planning form for management and company members and saves a private run. Catalogue visibility and offers remain explicit management actions. Staff can still search by source code and review source metadata in the template details. Lecturers can read the linked reference through an authorised offer when its course run remains private.

@@ -145,10 +145,14 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
     .spyOn(cache, "invalidateQueries")
     .mockReturnValue(refresh);
   try {
-    await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
-    expect(await screen.findByText("Auftrag gespeichert.")).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Als Entwurf speichern" }),
+    );
+    expect(
+      await screen.findByText(/Als Entwurf gespeichert\. Öffne den Entwurf/),
+    ).toBeVisible();
     const link = screen.getByRole("link", {
-      name: "Erstellten Auftrag öffnen",
+      name: "Entwurf öffnen",
     });
     expect(link).toHaveAttribute(
       "href",
@@ -167,6 +171,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
     p_course_run_id: source.course_run_id,
     p_payload: {
       source_revision: source.source_revision,
+      status: "draft",
       gross_amount: 1000,
       gross_total_amount: 1000,
       capacity: 2,
@@ -176,7 +181,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
   expect(calls[0][1]).not.toHaveProperty("p_platform_percent");
   expect(calls[0][1].p_payload).not.toHaveProperty("customer_name");
   expect(
-    screen.getByRole("button", { name: "Auftrag speichern" }),
+    screen.getByRole("button", { name: "Als Entwurf speichern" }),
   ).toBeDisabled();
 });
 
@@ -202,13 +207,15 @@ it("retains the reviewed source during background changes and shows a stale-prev
     });
   });
   expect(screen.getByRole("heading", { name: source.title })).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await user.click(
+    screen.getByRole("button", { name: "Als Entwurf speichern" }),
+  );
   await screen.findByText(
     "Der Kurs wurde seit dieser Vorschau geändert. Prüfe den aktuellen Kurs und öffne sein Auftragsformular erneut.",
   );
   expect(total).toHaveValue(1400);
   expect(
-    screen.queryByRole("link", { name: "Erstellten Auftrag öffnen" }),
+    screen.queryByRole("link", { name: "Entwurf öffnen" }),
   ).not.toBeInTheDocument();
   expect(
     mock.rpc.mock.calls.find(([name]) => name === "create_course_run_job")?.[1]
@@ -233,7 +240,9 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   expect(
     screen.queryByLabelText(/Plattformanteil für diesen Auftrag/),
   ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await user.click(
+    screen.getByRole("button", { name: "Als Entwurf speichern" }),
+  );
   await waitFor(() =>
     expect(
       mock.rpc.mock.calls.some(([name]) => name === "create_course_run_job"),
@@ -269,8 +278,10 @@ it("saves a scoped management override and previews the lecturer fee and platfor
     screen.getByLabelText("Konditionen (optional)"),
     "Explicit course terms",
   );
-  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
-  await screen.findByText("Auftrag gespeichert.");
+  await user.click(
+    screen.getByRole("button", { name: "Als Entwurf speichern" }),
+  );
+  await screen.findByText(/Als Entwurf gespeichert\. Öffne den Entwurf/);
   expect(mock.rpc).toHaveBeenCalledWith(
     "create_course_run_job",
     expect.objectContaining({
@@ -289,21 +300,17 @@ it("allows publishing without additional terms and uses a fresh key for an inten
   expect(
     await screen.findByRole("heading", { name: "Geplante Kurstermine" }),
   ).toBeVisible();
-  const save = screen.getByRole("button", { name: "Auftrag speichern" });
-  const publish = screen.getByRole("checkbox", {
-    name: "Sofort veröffentlichen",
+  const publish = screen.getByRole("button", {
+    name: "In der Stellenbörse veröffentlichen",
   });
   await user.click(publish);
-  await user.click(save);
   await user.click(
     await screen.findByRole("button", {
       name: "Weiteren Auftrag für diesen Kurs erstellen",
     }),
   );
-  expect(publish).not.toBeChecked();
   await user.click(publish);
-  await user.click(save);
-  await screen.findByText("Auftrag gespeichert.");
+  await screen.findByText("Auftrag in der Stellenbörse veröffentlicht.");
   const calls = mock.rpc.mock.calls.filter(
     ([name]) => name === "create_course_run_job",
   );

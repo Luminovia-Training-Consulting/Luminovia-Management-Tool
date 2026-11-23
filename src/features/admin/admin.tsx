@@ -319,7 +319,9 @@ function JobForm({
     <form
       className="panel admin-form"
       noValidate
-      onSubmit={handleSubmit((values) => create.mutate(values))}
+      onSubmit={handleSubmit((values) =>
+        create.mutate(courseRun ? { ...values, publish: false } : values),
+      )}
     >
       <h2>{courseRun ? courseText("fromCourse") : t("createJob")}</h2>
       {courseRun && (
@@ -679,20 +681,47 @@ function JobForm({
         <input type="checkbox" {...register("requires_contract")} />
         {t("contractRequired")}
       </label>
-      <label className="checkbox-label">
-        <input type="checkbox" {...register("publish")} />
-        {t("publish")}
-      </label>
-      <Button
-        disabled={
-          !online ||
-          Number.isNaN(percent) ||
-          create.isPending ||
-          (done && (!isDirty || Boolean(courseRun)))
-        }
-      >
-        {t(create.isPending ? "saving" : "saveJob")}
-      </Button>
+      {courseRun ? (
+        <div className="form-actions">
+          <Button
+            type="button"
+            disabled={
+              !online || Number.isNaN(percent) || create.isPending || done
+            }
+            onClick={handleSubmit((values) =>
+              create.mutate({ ...values, publish: true }),
+            )}
+          >
+            {courseText("publishOffer")}
+          </Button>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={
+              !online || Number.isNaN(percent) || create.isPending || done
+            }
+          >
+            {courseText("saveOfferDraft")}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <label className="checkbox-label">
+            <input type="checkbox" {...register("publish")} />
+            {t("publish")}
+          </label>
+          <Button
+            disabled={
+              !online ||
+              Number.isNaN(percent) ||
+              create.isPending ||
+              (done && (!isDirty || Boolean(courseRun)))
+            }
+          >
+            {t(create.isPending ? "saving" : "saveJob")}
+          </Button>
+        </>
+      )}
       {Object.keys(errors).length > 0 && (
         <Notice kind="error">{t("invalidForm")}</Notice>
       )}
@@ -706,7 +735,17 @@ function JobForm({
               : t(invalidTime ? "invalidTime" : "error")}
         </Notice>
       )}
-      {done && <Notice>{t("jobSaved")}</Notice>}
+      {done && (
+        <Notice>
+          {courseRun
+            ? courseText(
+                create.variables?.publish
+                  ? "publishedOffer"
+                  : "savedOfferDraft",
+              )
+            : t("jobSaved")}
+        </Notice>
+      )}
       {createdId && (
         <div className="form-actions">
           {done && courseRun && (
@@ -724,7 +763,13 @@ function JobForm({
             </Button>
           )}
           <Button asChild variant="secondary">
-            <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
+            <Link to={`/jobs/${createdId}`}>
+              {courseText(
+                courseRun && !create.variables?.publish
+                  ? "openOfferDraft"
+                  : "openJob",
+              )}
+            </Link>
           </Button>
           <Button asChild variant="secondary">
             <Link to={`/jobs/${createdId}#job-briefing`}>

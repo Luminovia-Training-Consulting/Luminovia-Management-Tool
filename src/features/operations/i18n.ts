@@ -358,7 +358,10 @@ const pairs: Record<string, [string, string]> = {
     "Hier findest du die Vorlagen deiner Organisation. Du kannst ihre Inhalte bearbeiten oder damit eine Durchführung mit eigenen Terminen als Entwurf speichern.",
     "Find your organisation’s templates here. Edit their content or use one to schedule a course run and save it as a draft.",
   ],
-  createRunOffer: ["Ausschreibung vorbereiten", "Prepare teaching offer"],
+  createRunOffer: [
+    "Auftrag für die Stellenbörse erstellen",
+    "Create marketplace offer",
+  ],
   reusableBlock: [
     "Inhalte und Quellenbezug wiederverwenden; Unternehmenszuordnung, Termine und Honorar für jede Durchführung festlegen.",
     "Reuse content and source references; set the company, sessions and fee for each run.",
@@ -566,8 +569,8 @@ const pairs: Record<string, [string, string]> = {
     "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm.",
   ],
   courseCatalogueVisibility: [
-    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, wähle „Speichern und Ausschreibung vorbereiten“ und veröffentliche anschließend den Auftrag.",
-    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, select “Save and prepare offer”, then publish the offer.",
+    "Speichere die Durchführung zunächst als Entwurf oder zeige sie im Kurskatalog an. Die Sichtbarkeit und ein Lehrauftrag sind getrennt. Wenn du eine Lehrkraft suchst, wähle „Speichern und zum Auftrag“ und veröffentliche anschließend den Auftrag.",
+    "Save the run as a draft or show it in the course catalogue. Catalogue visibility and a teaching assignment are separate. If you need a lecturer, select “Save and open offer form”, then publish the offer.",
   ],
   "courseCatalogueTab.runs": [
     "Hier stehen konkrete Kurse mit Terminen, Ort und Sichtbarkeit. Dazu gehören Entwürfe, im Katalog sichtbare Kurse und das Archiv.",
@@ -730,8 +733,8 @@ const pairs: Record<string, [string, string]> = {
   internalTemplate: ["Interne Vorlage", "Internal template"],
   noCourseTemplates: ["Keine Vorlagen verfügbar.", "No templates available."],
   saveAndPrepareOffer: [
-    "Speichern und Ausschreibung vorbereiten",
-    "Save and prepare offer",
+    "Speichern und zum Auftrag",
+    "Save and open offer form",
   ],
   inCourseCatalogue: ["Im Kurskatalog", "In course catalogue"],
   privateCourseRun: ["Nicht im Kurskatalog", "Outside the course catalogue"],
@@ -751,10 +754,11 @@ const pairs: Record<string, [string, string]> = {
   ],
   marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
   marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
+  openMarketplaceDraft: ["Entwurf öffnen: {{title}}", "Open draft: {{title}}"],
   openListedOffer: ["Ausschreibung öffnen: {{title}}", "Open offer: {{title}}"],
   publishedHint: [
-    "Die Sichtbarkeit im Kurskatalog ist unabhängig von der Stellenbörse. Für die Stellenbörse veröffentlichst du einen Auftrag. Dozierende sehen passende offene Aufträge.",
-    "Course catalogue visibility is separate from the marketplace. Publish a teaching offer to list it in the marketplace. Lecturers see open offers matching their scope.",
+    "Der Kurskatalog zeigt geplante Kurse. Wenn du eine Lehrkraft suchst, wähle beim Auftrag „In der Stellenbörse veröffentlichen“. Passende Dozierende sehen den offenen Auftrag.",
+    "The course catalogue shows scheduled courses. To find a lecturer, select “Publish in the marketplace” on the offer. Eligible lecturers can see the open offer.",
   ],
   required: ["Bitte prüfe dieses Feld.", "Please check this field."],
   view: ["Ansehen", "View"],

@@ -394,7 +394,7 @@ it.each([
   ).not.toBeInTheDocument();
   expect(
     within(dialog).queryByRole("button", {
-      name: "Speichern und Ausschreibung vorbereiten",
+      name: "Speichern und zum Auftrag",
     }),
   ).not.toBeInTheDocument();
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
@@ -478,6 +478,19 @@ it("opens the company library directly and saves new and existing company templa
   });
 });
 
+it("links a saved offer draft from the course card without marking it as listed", async () => {
+  renderCourses({ runs: [{ ...run, jobs: [{ ...job, status: "draft" }] }] });
+  expect(
+    await screen.findByText("Auftrag als Entwurf gespeichert"),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: `Entwurf öffnen: ${job.title}` }),
+  ).toHaveAttribute("href", `/jobs/${job.id}`);
+  expect(
+    screen.queryByRole("link", { name: /Ausschreibung öffnen/ }),
+  ).not.toBeInTheDocument();
+});
+
 it("does not present an expired published offer as open in the marketplace", async () => {
   renderCourses({
     runs: [
@@ -505,7 +518,7 @@ it("saves the run before opening the separate marketplace offer form", async () 
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
   await userEvent.click(
     within(dialog).getByRole("button", {
-      name: "Speichern und Ausschreibung vorbereiten",
+      name: "Speichern und zum Auftrag",
     }),
   );
   await waitFor(() =>
@@ -900,7 +913,9 @@ describe("course form failure and confirmation boundaries", () => {
     ])
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Ausschreibung vorbereiten" }),
+      screen.queryByRole("link", {
+        name: "Auftrag für die Stellenbörse erstellen",
+      }),
     ).not.toBeInTheDocument();
     expect(state.rpc).not.toHaveBeenCalled();
   });

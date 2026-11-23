@@ -176,7 +176,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await page.goto(`/courses?run=${run.id}`);
     const courseDialog = page.getByRole("dialog", {name: /LPC3/});
     await courseDialog
-        .getByRole("link", {name: "Ausschreibung vorbereiten", exact: true})
+        .getByRole("link", {name: "Auftrag für die Stellenbörse erstellen", exact: true})
         .click();
     await expect(page).toHaveURL(new RegExp(`/admin\\?courseRun=${run.id}`));
     await expect(
@@ -193,12 +193,11 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await page
         .getByLabel("Konditionen (optional)", {exact: true})
         .fill(`Fictional Course complete-block terms ${tag}`);
-    await page.getByLabel("Sofort veröffentlichen", {exact: true}).check();
     await page
         .getByLabel("Gültiger Rahmenvertrag erforderlich", {exact: true})
         .uncheck();
     await page
-        .getByRole("button", {name: "Auftrag speichern", exact: true})
+        .getByRole("button", {name: "In der Stellenbörse veröffentlichen", exact: true})
         .click();
     await expect(
         page.getByRole("link", {name: "Erstellten Auftrag öffnen", exact: true}),
@@ -318,7 +317,7 @@ test("Company portal authors a template and saves an unpublished run", async ({p
     }).getByRole("button", {name: "Aus Vorlage erstellen", exact: true}).click();
     const run = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
     await expect(run.getByLabel("Organisation", {exact: true})).toHaveValue(organisationId);
-    await expect(run.getByRole("button", {name: /Kurskatalog anzeigen|Ausschreibung vorbereiten/})).toHaveCount(0);
+    await expect(run.getByRole("button", {name: /Kurskatalog anzeigen|Auftrag für die Stellenbörse erstellen/})).toHaveCount(0);
     await run.getByLabel("Beginn 1", {exact: true}).fill("2037-07-06T09:00");
     await run.getByLabel("Ende 1", {exact: true}).fill("2037-07-06T16:00");
     await run.getByRole("button", {name: "Entwurf speichern", exact: true}).click();

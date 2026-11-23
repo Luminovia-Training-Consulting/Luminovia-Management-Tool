@@ -1577,6 +1577,13 @@ export function CoursesPage() {
                           </Link>
                         ))
                       : t(closedReason)}
+                    {jobs
+                      .filter(({ status }) => status === "draft")
+                      .map((job) => (
+                        <Link key={job.id} to={`/jobs/${job.id}`}>
+                          {t("openMarketplaceDraft", { title: job.title })}
+                        </Link>
+                      ))}
                   </div>
                 )}
                 <p className="muted">
