@@ -37,6 +37,8 @@ Open [the separate preview](http://127.0.0.1:5373); its API uses `56321`. It pre
 
 ## What the application covers
 
+See the [feature catalogue](FEATURES.md) for the full inventory across editions and the [White-Label roadmap](WHITELABEL_ROADMAP.md) for remaining customer-release work.
+
 | Workflow                                                                           | Guide                                                                                                                                                                                                                                         |
 |------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Teaching offers, filters, saved views, confirmed claims, cancellation and handover | [Jobs](GUIDE.md#section-job-discovery), [lifecycle](GUIDE.md#section-job-lifecycle), [handover](GUIDE.md#section-assignment-handover)                                                                                                         |

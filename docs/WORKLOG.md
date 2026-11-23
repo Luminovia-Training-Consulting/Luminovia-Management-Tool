@@ -1,3 +1,7 @@
+# 23 November 2026 — Feature catalogue and White-Label checklist
+
+The [feature catalogue](../FEATURES.md) describes the available internal and dedicated Academy workflows. The [White-Label roadmap](../WHITELABEL_ROADMAP.md) now keeps open product work, customer-target acceptance and handover in one checklist. Existing WL-T01–WL-T40 acceptance references remain traceable. Verified the two documents and their inbound links with all seven documentation checks. This review records no additional installation acceptance.
+
 # 23 November 2026 — Public portal entry points and Academy package boundary
 
 Public help remains available from sign-in in the internal portal and both Academy editions. Removed retired public entry points from the source, release configuration, packaging, tests and product documentation. The internal course-offer form is excluded from customer builds at compile time. This fixes an existing Academy build failure caused by an internal job module being included.
@@ -444,7 +448,7 @@ Production build verification now measures emitted gzip bytes for the startup gr
 
 Dedicated Caddy excludes the CMS aliases. Pinned Caddy and Envoy exercised both signed editions over local TLS, including the signed allowance and actual `429` and `503` responses documented by Academy OpenAPI 1.30. The vendor registry now records reviewed handovers against the exact issued licence and operator handoff, with concurrent confirmation and exact retry checks. Both branded editions use neutral account identifier labels and include a private health report for the local Compose stack, database, scanner and backup receipt.
 
-Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#13-implementation-and-customer-release-sequence) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
+Independent customer and commercial acceptance remain open. See the [White-Label roadmap](../WHITELABEL_ROADMAP.md#abnahme-je-kundeninstallation) for target DNS, provider delivery, receiver onboarding and incident rehearsal.
 
 The first exact-main run exposed two obsolete fixtures. The Academy access guard test now supplies the compiled edition with the other branding exports. The scanner startup fixture now requires the new local ownership label for the signature volume. The full workflow needs the corrected exact SHA. The earlier CodeQL run completed successfully.
 

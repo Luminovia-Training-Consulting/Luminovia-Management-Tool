@@ -1,0 +1,107 @@
+# Luminovia Portal – Funktionskatalog
+
+Dieser Katalog beschreibt die Funktionen im aktuellen Quellstand. Sichtbarkeit und Aktionen hängen von Edition, Rolle, Organisation, Kurszuordnung, Freigaben und Lizenz ab. Für Installationsfreigaben gelten die [Produkt-Roadmap](ROADMAP.md) und die [White-Label-Roadmap](WHITELABEL_ROADMAP.md).
+
+[Editionen](#editionen) · [Oberfläche](#oberfläche-einstieg-und-persönliche-einstellungen) · [Konten](#konten-unternehmen-und-berechtigungen) · [LMS](#kurse-klassen-und-premium-lms) · [Aufträge](#interne-aufträge-unternehmen-und-kursbetrieb) · [Kalender](#kalender-verfügbarkeit-und-importe) · [Zusammenarbeit](#kommunikation-wissensbasis-und-dateien) · [Finanzen](#interne-vergütung-verträge-rechnungen-und-analysen) · [API](#schnittstellen-und-integrationen) · [Betrieb](#white-label-installation-lizenz-und-betrieb)
+
+## Editionen
+
+| Edition | Einsatz und Funktionsumfang |
+| --- | --- |
+| **Luminovia Internal** | Betrieb des Luminovia-Portals mit Auftragsbörse, Kurs- und Unternehmensverwaltung, Zusammenarbeit, Vertrags- und Finanzabläufen. Premium LMS lässt sich administrativ pro Unternehmen aktivieren oder deaktivieren. Eine Deaktivierung erhält bestehende Kursdaten. |
+| **Academy Self-Hosted** | Eigenständig betriebene Lernplattform mit Kursen, Stundenplan, lokalen Organisationen, Lehrteam, Teilnehmenden, Materialien, Chat, Prüfungen, Anwesenheit und Lernanalysen. Eigener Datenbestand, eigene Domain, eigene Schlüssel und eigenes Branding. |
+| **Academy Managed** | Dieselben LMS-Funktionen in einer dedizierten Installation mit eigenem Datenbestand und Branding. Die Betreiberwerkzeuge unterstützen getrenntes Provisioning, Überwachung, Updates, Backups und Wiederherstellung. |
+
+In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovias Auftragsbörse, Vermittlungsverwaltung, Vergütungssätze, Firmenpreise, Plattformanteile, Vermittlungsverträge und Abrechnung sind dort ausgegrenzt.
+
+## Oberfläche, Einstieg und persönliche Einstellungen
+
+- Deutsch und Englisch für Oberfläche, Hilfetexte, Statusmeldungen und unterstützte Mailvorlagen. Erstellte Kursinhalte und Nachrichten bleiben in ihrer Originalsprache. Datum, Zeit, Zahlen und Währungen werden lokalisiert.
+- Helles und dunkles Design sowie Systemeinstellung, responsive Navigation und Dialoge, Tastaturbedienung, Deep Links und verständliche Lade-, Leer-, Offline- und Fehlerzustände.
+- Installierbare PWA mit App-Manifest, Symbolen, Offline-App-Shell und Updatehinweis. Bestätigte Schreibvorgänge benötigen eine Verbindung. Im internen Portal lässt sich eine private Offline-Vorschau ausgewählter Lehrtermine ausdrücklich speichern und wieder entfernen.
+- Öffentliche durchsuchbare Hilfe mit Themenfiltern, Direktlinks und Fehlerbehebung. Im internen Portal gibt es zusätzlich einen rollenabhängigen Rundgang und eine persönliche Willkommens-Checkliste mit gespeichertem Fortschritt.
+- Persönliche Profile mit Name, Sprache, Zeitzone, Erfahrung, Expertise und zweisprachig pflegbarer Biografie. Im internen Portal gehören geprüftes Profilbild, private Kontakteinstellungen, eigene Anzeige-Bezeichnungen und freiwillig freigegebene Kontaktdaten dazu.
+- Dashboard im internen Portal mit persönlichen Terminen, Lehrtag, nächsten Schritten, Aufgabenhinweisen, relevanten Aufträgen, Kursen, Benachrichtigungen und rollenabhängigen Kennzahlen. Direkte Links führen zum zuständigen Arbeitsbereich.
+- Berechtigungsgefilterte Suche im internen Portal über relevante Kurse, Aufträge, Personen, Unternehmen, Dateien, Wissensinhalte und Chatnachrichten. Suchergebnisse öffnen den passenden Kontext, bei Nachrichten auch den Treffer im Verlauf.
+
+## Konten, Unternehmen und Berechtigungen
+
+- Anmeldung mit Benutzername oder bestätigter E-Mail und Passwort, Einladungen mit persönlicher Passwortvergabe, Passwortwiederherstellung, Passwortänderung und Sitzungsschutz. Eine installierte Academy kann für privilegierte Konten TOTP verlangen.
+- Konten einzeln anlegen oder einladen, Benutzername und Rollen verwalten, Konten sperren und reaktivieren. Zuständigkeiten können kombiniert werden. Unternehmensrollen sind an Mitgliedschaften gebunden. Schutzregeln erhalten die letzte erforderliche Administratorzuständigkeit.
+- Rollen für Administration, Verwaltung, Dozierende, Unternehmen und Teilnehmende. Das interne Portal ergänzt Plattform-Eigentümerschaft, Senior-Dozierende, Gastzugang und delegierte Finanz- und Verwaltungsbefugnisse. Academy-Rollen gelten innerhalb der jeweiligen Installation.
+- Unternehmensverzeichnis, Organisationsdetails, Kontaktverzeichnis, Mehrfachmitgliedschaften und Unternehmensverlauf. Zuständige Kontakte verwalten die eigenen Teilnehmenden und sehen die zugeordneten Kurse und Dokumente. Mit Premium lassen sich geeignete Personen in einem Vorgang für mehrere veröffentlichte Kurse anmelden.
+- Lehrkräfte nach Unternehmen und Kurszuordnung anzeigen. Berechtigte Stellen können unternehmensbezogene Lehrkraftsperren setzen und aufheben. Die Sperre begrenzt aktuelle Zugriffe und neue Zuweisungen im betroffenen Bereich, während historische Nachweise und unabhängige Rollen erhalten bleiben.
+- Personenverzeichnis mit Profil, Fachthemen, Kursverlauf und zulässigen Bewertungen. Qualifikationen und Belege erfassen, versioniert prüfen, Gültigkeit pflegen und eigene Nachweise als Qualifikationspass exportieren. Im internen Auftragsfilter gilt die aktuell erklärte Themenexpertise für die fachliche Zuordnung.
+- Kontrollierte permanente Löschung im internen Portal mit Vorschau des konkreten Umfangs, expliziter Bestätigung, Ablehnung veralteter Vorschauen und separater Bereinigung zugehöriger Dateiversionen. Bei gelöschten Dozierenden können erhaltene gemeinsame Aufträge wieder freie Plätze bekommen.
+
+## Kurse, Klassen und Premium LMS
+
+- Kursvorlagen, wiederverwendbare Bausteine und konkrete Kursdurchläufe mit Titel, Lerninhalten, Themen, Unternehmen, Ort bzw. Durchführungstyp, Zeitzone und mehreren Terminen. Kursinformationen und Termine als Entwurf erfassen, prüfen und veröffentlichen. Das interne Portal kann Durchläufe mit Lehraufträgen und Unternehmensanfragen verbinden.
+- Eigene Kurse nach Status und Zeitraum anzeigen, insbesondere anstehend, laufend, abgeschlossen oder ohne Termin. Klassen bündeln mehrere Kursdurchläufe derselben Organisation. Die Klassenzuordnung allein erzeugt keine Anmeldungen.
+- Lokale Lehrkräfte direkt zuordnen und mehrere Dozierende in einem Kurs einsetzen. Einschreiben, Einladungen, Sammelzuweisungen, Abmeldungen und Abschlussstatus nach Zuständigkeit pflegen. Teilnehmende sehen die eigenen zugewiesenen Kurse und die jeweils freigegebenen Inhalte.
+- Kursraum mit Übersicht, Willkommensinhalt, Sitzungen, Kurskontakt, Online-Meetinglink und Rollenansicht. Zugeordnete Unternehmenskontakte können den Meetinglink pflegen. Dozierende haben eine Vorbereitungsliste für Termine, Link oder Veranstaltungsort, Material und vereinbarte Vorbereitungspunkte.
+- Kursmaterialien, Vorbereitung, Aufgaben, Hinweise, Empfangsbestätigungen und freigegebene Dateien mit exakter Dateiversion. Die Materialbibliothek bietet Suche und Filter nach Kurs und Kategorie. Lehrteam, Kursverwaltung und berechtigte Unternehmenskontakte können Material in ihrem Bereich bereitstellen. Lernende können freigegebene Dateien wiederfinden, öffnen und herunterladen.
+- Private Teilnehmerabgaben mit Einschaltmöglichkeit je Kurs, gescannten Dateien, Abruf für zuständiges Lehrpersonal und Rücknahme. Kurschat für berechtigte Mitglieder mit gescannten Anhängen. Private Kursnotizen bleiben beim Konto, das sie verfasst hat.
+- Prüfungsvorbereitung, getrennte Prüfungs- und Lösungsdateien für Lernende und Personal, veröffentlichbare Quizrevisionen, Bestehensgrenze, Versuchslimit und gespeicherte Ergebnisse. Lösungen und unveröffentlichte Fassungen richten sich nach Kursrolle und Freigabe.
+- Anwesenheitsregister pro Termin mit anwesend, abwesend und entschuldigt. Ankunft und Abgang direkt zur aktuellen Uhrzeit erfassen, Zeiten mit Begründung korrigieren und Einträge gesammelt pflegen. Lernende können eine Selbstmeldung abgeben. Verifizierte Anwesenheit und Selbstmeldung bleiben getrennte Zustände.
+- Anwesenheitsverlauf pro Kurs und über zugängliche Durchläufe einer Klasse, mit Statussummen und verifizierten Minuten. CSV/XLSX-Vorlagen und geprüfter Import pro Sitzungsroster, geschützte Anwesenheits- und Teilnahmeberichte sowie Nachweisdateien.
+- Kursfeedback und Bewertungen nach Abschluss zu Lehrkraft, Unternehmen, Schwierigkeit und Klasse, mit Empfängerumfang und geschützter Auswertung. Qualifizierte Lernende können einen Teilnahme- oder Abschlussnachweis als PDF abrufen. Ausgabe, Widerruf und Neuausstellung folgen den gespeicherten Anwesenheits-, Kurs- und gegebenenfalls Quizdaten.
+- Lernanalysen für freigegebene Kurse mit Anmeldungen, Anwesenheit, Abschlüssen, gültigen Nachweisen und geplanter Unterrichtszeit. Im internen Portal ergänzen Kursbereitschaft, Vorbereitung, Leistungsnachweis und Zuständigkeiten die Betriebsansicht.
+
+## Interne Aufträge, Unternehmen und Kursbetrieb
+
+- Gemeinsamer Katalog für Themen, Werkzeuge und Programmiersprachen. Zweisprachige Einträge, Aliasse, Hierarchie, Versionsprüfung und Archivierung verbinden Expertise, Vorlagen und Auftragsanforderungen.
+- Kursgestützte oder eigenständige Lehraufträge als Entwurf anlegen, mit mehreren Terminen, Fachthemen, Lieferform, Anforderungen, Auftragspositionen, Kapazität, Briefing, Kontakt und gegebenenfalls Preis und Währung. Veröffentlichen, bearbeiten, wiedereröffnen, zuweisen, abschließen oder archivieren nach Rolle und Zustand.
+- Auftragsbörse mit Suche und Filtern nach Unternehmen, Zeitraum, Fachthemen, Durchführungsart, Verfügbarkeit, Honorar und Status. Eigene Filteransichten speichern. Offene und historische Angebote getrennt einblenden und passende Angebote anhand eigener Fachthemen finden.
+- Ein Ganzblock wird erst nach Datenbankbestätigung übernommen. Die Prüfung berücksichtigt Rolle, fachliche Zuordnung, Vertragsvoraussetzungen, Sperren, Platz und Überschneidungen. Nach Übernahme verschwindet der belegte Platz aus der relevanten Angebotssicht anderer. Bestätigte Termine stehen im eigenen Kalender.
+- Verwaltungsboard, zugewiesene Dozierende und Kapazität überwachen, geeignete Lehrkräfte direkt zuteilen, Wartelisten und Ersatzverfahren nutzen. Rückgabeanfragen, bestätigte Stornierung oder Wiedereröffnung, Vertretung bei kurzfristigem Ausfall, Übergabe, Benachrichtigungen und konsistente Statushistorie.
+- Formelle Änderungsanfragen mit versioniertem Entwurf, Prüfung, Entscheidung und unterstützten koordinierten Terminänderungen, einschließlich der dazugehörigen Vertrags- und Nachweisbezüge. Annahme und Änderung erfolgen innerhalb der jeweiligen Berechtigung und des aktuellen Stands.
+- Unternehmensportal für eigene Kurs- und Auftragsanfragen, Lehrbriefing, Kurskontakt, freigegebene Budgets, Entscheidungen, Verlauf und Berichte. Frühere geeignete Kursanfragen mit neuen Terminen als neue Anfrage wiederholen. Andere Unternehmen bleiben durch den Organisationsbereich getrennt.
+- Eigene Ansprechpartner, bestätigte auftragsbezogene Dokumente, Kurshistorie und Schriftverkehr im Berechtigungsbereich. Für externe Website-Anfragen stellt das Portal eine abgesicherte Eingangsschnittstelle und eine Verwaltungswarteschlange mit Zuständigkeit und Verlauf bereit.
+- Interner Control Center für offene Besetzungen, Ausfälle, Unterlagen, Anfragen, Fälligkeiten und berechtigte Ausnahmen. Persönliche Aufgabenbezüge aus Chat und Arbeitsbereichen, wiederverwendbare Bausteine und serverseitige Aufgaben-/Zeitdatensätze mit freigegebenen Vorgängen.
+
+## Kalender, Verfügbarkeit und Importe
+
+- Interner persönlicher und globaler Kalender mit Kursen, bestätigten Auftragsblöcken, privaten Terminen, veröffentlichten Veranstaltungen sowie Wochen-, Monats- und Listenansichten. Academy-Stundenplan auf Basis eigener Kurszuordnungen und Rolle.
+- Zeitzonenwahl mit IANA-Zonen, korrekter Darstellung derselben Zeitpunkte, Sommerzeit und UTC-Offset für doppelte Ortszeiten. Filter nach Unternehmen, Titel, Ereignistyp und Themen. Private Farbauswahl für Kalenderarten.
+- Verfügbarkeit und blockierte Zeiten verwalten. Berechtigte Verwaltung veröffentlicht globale Termine und verschickt zielgruppengerechte Einladungen. Unternehmen sehen die eigenen Kursdaten. Private Termine bleiben beim berechtigten Konto.
+- ICS-Dateien exportieren, eigene Termine aus ICS mit Vorschau und Wiederholungsfenster importieren und Duplikate erkennen. Ein widerrufbarer Nur-Lese-Kalenderlink erlaubt externe Abonnements für freigegebene Termine. ICS-Importe bleiben eigenständige Termine.
+- Unterstützte CSV- und XLSX-Importe mit Vorlagen, Vorschau, Zeilenfehlern und erneuter Verarbeitung offener Zeilen. Dazu gehören im internen Portal Unternehmen, Kontakte, Kurse und Vorlagen, Themen, persönliche Kalendertermine und geeignete Teilnehmende. Der Kursregister-Import verwendet den aktuellen Sitzungsroster.
+
+## Kommunikation, Wissensbasis und Dateien
+
+- Interner Chat für Direktnachrichten, Lehrteam- und Gruppenchats sowie kursbezogene Unterhaltungen. Räume nach Kurs, Unternehmen, Person und Kategorie filtern, ungelesene oder archivierte Gespräche auswählen, berechtigte Mitglieder und Moderation verwalten.
+- Themengruppen mit Einladungen, Gruppenbild, Beschreibung, Eigentumsübergabe, Moderation, anheftbaren Nachrichten und Auswahl der berechtigten Mitglieder. Direkte Nachrichten an zulässige Kontakte lassen sich aus dem Personenprofil öffnen.
+- Nachrichten mit Antworten, Reaktionen und strukturierten Erwähnungen, eigener Bearbeitung, zulässiger Moderation, Anhängen und Lesestatus. Älteren Verlauf nachladen, Suchtreffer anspringen und private Entwürfe raumbezogen fortsetzen. Persönliches Entfernen oder Archivieren eines Gesprächs wirkt auf die eigene Ansicht. Gemeinsame Daten unterliegen ihrer eigenen Berechtigung.
+- Separate Kurskommunikation für berechtigte Lernende und das zugewiesene Lehrteam, optionaler Schutz vor wiederholten Teilnehmendennachrichten, aktueller Mitgliedschaftscheck und gescannte Anhänge. Personeller Zugriff kann bei geänderter Kurszuordnung enden.
+- Zentrale Dateiansicht mit Suche, Kategorien, privaten Tags, virtuellen Ordnern, Organisationsfilter und Vorschau. Downloads und Freigaben sind an Ressource, Dateiversion und aktuelle Rechte gebunden. Uploads bleiben bis zur erfolgreichen Prüfung in Quarantäne.
+- Interne Wiki-Artikel, Forum mit Themen und Antworten, Suchfilter, revisionsbezogene Bearbeitung und Moderation. Formatierung und Codeblöcke für dokumentierte technische Inhalte. Kommentare an freigegebenen Kursvorlagen und Aufträgen.
+- Internes Support-Postfach mit eigenen Tickets, Status, Priorität, Zuständigkeit, Verlauf, internen Notizen und autorisierten Anhängen. Berechtigte Stellen können Tickets zurückfragen, lösen, schließen oder erneut öffnen. Ankündigungen für ausgewählte Zielgruppen mit Veröffentlichung, Änderungen, Empfangsbestätigung und Verlauf.
+- In-App-Benachrichtigungen mit Kategorien, Ungelesen-Filter, Verlauf, als gelesen markieren und bestätigten Sammelaktionen. Einstellungen für Erinnerungen, Zustellpräferenzen und Ruhezeiten. Je nach Installation optionaler Benachrichtigungsversand per SMTP. In der Academy lassen sich Kursmeldungen zu Einschreibung, Kurschat, Material und eigener Anwesenheit zustellen. Im internen Portal zusätzlich gerätebezogener Web Push auf unterstützten Geräten nach Zustimmung.
+
+## Interne Vergütung, Verträge, Rechnungen und Analysen
+
+- Vertragliche Rahmen- und Auftragsdokumente mit Versionsverwaltung, Empfangsbestätigung, Gültigkeitsdaten und Nachweisen im jeweiligen Berechtigungsbereich. Zugehörige PDFs werden geprüft und geschützt bereitgestellt.
+- Rollenabhängige Standardvergütung für reguläre und Senior-Dozierende, individueller Prozentsatz oder Tagessatz, expliziter Plattformanteil pro Angebot und Anzeige der jeweils freigegebenen Werte. Bestätigte Vereinbarungen behalten ihre ursprünglichen Beträge und Währungen.
+- Eigene Einnahmen, vergütete Aufträge, Zahlungstermine und druckbare Nachweise. Kursendprüfung für reguläre Rechnungsstellung, Sonder-/Teilabrechnung und Korrekturabläufe mit Begründung und Belegen. Rechnungsprüfung, Rechnungsserien und Korrekturen, dokumentierte Teilzahlungen, Fälligkeiten und Stornos.
+- Externe Unternehmensrechnungen samt gescanntem Beleg erfassen. Zahlungseingänge, Zahlungsumkehr, ausgegebene und angewandte Gutschriften, Kundenerstattungen und Rückzahlungen von Dozierenden im dafür vorgesehenen Journal erfassen.
+- Buchhaltungsansichten und Exporte als bestätigte CSV- oder JSON-Datensätze, Rechnungs-Snapshots mit unveränderlicher Exporthistorie sowie separates Abrechnungsjournal mit Detail- und Summenexport. Beträge bleiben in ihrer Originalwährung. Berechtigte Unternehmenskontakte sehen die eigenen Firmenbeträge und Exporte.
+- Rollenbezogene Analysen für Dozierende, Unternehmen, Verwaltung und Administration. Aufträge, Auslastung, Zeit, Vergütung, Zahlungen und berechtigte Umsatz-/Margendaten über Zeiträume und Währungen filtern. Balken-, Linien- und Anteilsdiagramme mit tabellarischen Daten. Historische Ist-Werte, offene Positionen und wahrscheinlichkeitsbasierte Prognoseszenarien lassen sich getrennt ausweisen. Fehlende Werte bleiben erkennbar.
+
+## Schnittstellen und Integrationen
+
+- Editionsbezogene OpenAPI-3.1-Dokumente, integrierter API-Explorer, interaktives Swagger UI und abrufbare JSON-Verträge. Registrierte Auth-, REST/RPC-, Edge- und Dateischnittstellen sind im [API-Referenzhandbuch](API_REFERENCE.md) dokumentiert.
+- Versionierte Konto- und Einladungsoperationen, Login und Recovery, kurs- und rollenbezogene Operationen, geschützte Dateiübertragung, Kursdokumente, Kalenderfeed, Benachrichtigungen, zeitnahe Kurskommunikation und die Website-Anfragen-Schnittstelle.
+- Organisationsgebundene Integrationsschlüssel für veröffentlichte Kursverzeichnisse und passende Berechtigungen für Einschreibungen oder aggregierte Berichte. Getrennt ausstellen, rotieren und widerrufen. Berechtigungen orientieren sich an Edition, Schlüsselzweck und aktuellen Organisationsrechten.
+- Signierte Webhooks für Kursveröffentlichung, Kursänderungen, Terminwechsel, Zuweisungen, Anmeldungen, Prüfungsveröffentlichung, Anwesenheit, Abschlüsse und Materialveröffentlichung. Abonnements, separate Signaturgeheimnisse, Empfängerprüfung, Zustellverlauf und Wiederholungen mit stabiler Ereignis-ID. Interne Buchungsvorgänge verwenden die vorgesehenen kaufmännischen Ereignisse.
+- Dokumentierte Beispiele für Einladungen, Kursentwürfe, Kurssuche, Einschreibung, Berichte und signierten Webhook-Empfang. Schreiboperationen mit unterstützter Wiederholungskennung können nach einer unterbrochenen Antwort ohne ungewollten Doppelvorgang fortgesetzt werden. [Integrationsbeispiele](scripts/examples/README.md)
+
+## White-Label-Installation, Lizenz und Betrieb
+
+- Interner White-Label-Einrichtungsdialog für privaten Kundendraft mit überprüftem Unternehmensadministrator, Branding, Domain, Edition und Lizenzparametern. Privates Betreiberregister mit geprüfter Übergabe, Prüfung auf Doppelbelegung und signierter Laufzeitübergabe an die unabhängige Academy.
+- Getrennte Kundeninstallation mit eigenem Auth, Datenbank, Storage, TLS-Ingress, Scanner, SMTP-Konfiguration, Backups und Schlüsseln. Eigene Academy-Organisationen und lokale Konten, erster bestätigter Administrator und rollenbasierte Verwaltung.
+- Eigener Academy-Name, Kurzname, Akzent, Logo, Favicon, PWA-Installationssymbole, öffentliche Datenschutz-/Rechts-/Supportlinks und gebrandete PDFs. Geprüfte Assets können veröffentlicht und Installationssymbole auf den Paketstand zurückgesetzt werden.
+- Signierte Releases und installationsgebundene, signierte Lizenzen mit Test-/Vertragslaufzeit, Verlängerung, exaktem Release-Bezug und konfigurierten Limits für Plätze, Speicher und API. Aktiver Betrieb, lesende Kulanz und Ablauf werden serverseitig durchgesetzt. Betreiber können die gültige Lizenz anzeigen und erneuern.
+- Editionsspezifische Browserpakete, geprüfte Installation und Austausch, Migrationsprotokoll, Health-Bericht mit Scannerstatus, Backup-Prüfung, verschlüsselte Backups und Wiederherstellung in separatem Ziel. Autorisierter verschlüsselter Offboarding-Export für Kurs-, Teilnehmenden- und freigegebene Dateidaten.
+- Lokale Start-, Stop-, Status-, Neustart- und geschützte Reset-Funktionen im internen Tooling. Separater persistenter Vorschau-Stack für GitHub `main` und isolierte Testumgebungen. Installation, Update, Wiederherstellung und Betrieb sind in den [Betriebsanleitungen](OPERATIONS.md) und im [Academy-Handbuch](deploy/academy/README.md) beschrieben.
+- Reduzierte, such- und filterbare Auditansichten für berechtigte Administration. Datenbankberechtigungen prüfen aktuelle Ressourcenmitgliedschaft, Schreibversion und Dateifreigabe. Für private Direktnachrichten, Kalender und persönliche Nachweise gelten eigene Zugriffsregeln.
