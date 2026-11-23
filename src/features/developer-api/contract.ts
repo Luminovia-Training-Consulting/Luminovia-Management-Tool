@@ -120,7 +120,7 @@ import {
   participantInvitesResult,
   workspaceActionRequest,
   workspaceActionResult,
-  workspaceResult,
+  internalWorkspaceResult,
 } from "./learning-contract.ts";
 import { z } from "zod";
 import {
@@ -3911,10 +3911,10 @@ const nativePaths = {
   "/rest/v1/rpc/course_workspace": rpc(
     "readCourseWorkspace",
     "Premium LMS",
-    "Read an authorised Premium course workspace",
-    "Requires current Premium and course access. Each response contains actor-scoped sessions, the current online meeting link, course resources, optional exam material and personal learning records. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
+    "Read an authorised course workspace",
+    "Returns the actor-scoped course. With Premium disabled, course managers, assigned lecturers and authorised company contacts receive course details and scheduled sessions. Active Premium enables scoped learning materials, participant workflows and meeting links. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
-    workspaceResult,
+    internalWorkspaceResult,
   ),
   "/rest/v1/rpc/course_submissions": rpc(
     "courseSubmissions",
@@ -4773,7 +4773,7 @@ function internalOpenApi(
     ...accountOpenApi,
     info: {
       title: `${brand.name} API`,
-      version: "1.13.0",
+      version: "1.14.0",
       description:
         "Account and business contracts with documented operation rules and native RPC signatures verified against the migrated database. Current permissions, company scope and entitlements apply. The repository API reference includes integration flows.",
     },

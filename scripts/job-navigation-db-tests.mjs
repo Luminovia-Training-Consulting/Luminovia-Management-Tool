@@ -36,7 +36,12 @@ await withTestDatabase("job_navigation", async ({sql, actor}) => {
         course_id: run,
         rooms: [{id: room, kind: "lecturer_course"}],
     });
+    const standard = JSON.parse(await actor(teacher, `select public.course_workspace(${q(run)})`));
+    assert.equal(standard.id, run);
+    assert.equal(standard.lms_enabled, false);
+    assert.deepEqual(standard.resources, []);
     assert.deepEqual(await get(peer), {course_id: null, rooms: []});
+    await assert.rejects(actor(peer, `select public.course_workspace(${q(run)})`), /42501/);
     assert.deepEqual(await get(admin, "aal2"), {course_id: run, rooms: []});
     await assert.rejects(get(participant), /42501/);
     await sql(

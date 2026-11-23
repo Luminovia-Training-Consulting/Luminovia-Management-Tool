@@ -150,7 +150,13 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
 
   await toggle(false, 1);
   await assert.rejects(workspace(learner), /unavailable/i);
-  await assert.rejects(workspace(manager), /premium/i);
+  for (const who of [manager, teacher, client]) {
+    const standard = await workspace(who);
+    assert.equal(standard.lms_enabled, false);
+    assert.equal(standard.meeting_link, null);
+    assert.equal(standard.venue, "");
+    assert.deepEqual(standard.sessions.map(({ id }) => id), [session]);
+  }
   await assert.rejects(save(teacher, firstUrl, 2), /premium/i);
   await assert.rejects(save(client, firstUrl, 2), /premium/i);
   await toggle(true, 2);

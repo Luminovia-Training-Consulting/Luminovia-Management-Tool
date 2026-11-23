@@ -259,6 +259,32 @@ const workspaceFields = {
 };
 
 export const workspaceResult = record(workspaceFields);
+export const internalWorkspaceResult = {
+  oneOf: [
+    workspaceResult,
+    record({
+      ...workspaceFields,
+      lms_enabled: { const: false },
+      access: record({
+        ...workspaceFields.access.properties,
+        lms_enabled: { const: false },
+        learner: { const: false },
+      }),
+      meeting_link: { type: "null" },
+      resources: { ...workspaceFields.resources, maxItems: 0 },
+      roster: { ...workspaceFields.roster, maxItems: 0 },
+      exams: record({
+        required: { const: false },
+        version: { type: "null" },
+        can_edit: { const: false },
+        documents: {
+          ...workspaceFields.exams.properties.documents,
+          maxItems: 0,
+        },
+      }),
+    }),
+  ],
+};
 
 export const participantInvitesResult = itemList(
   record({

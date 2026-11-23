@@ -532,8 +532,8 @@ const pairs: Record<string, [string, string]> = {
     "Reusable content and actual course runs with clear sessions.",
   ],
   workspaceUnavailable: [
-    "Für diesen Kursraum ist der Lernzugriff nicht freigegeben.",
-    "Learning workspace access is not available for this course.",
+    "Dieser Kursarbeitsraum ist für dein Konto nicht verfügbar.",
+    "This course workspace is unavailable to your account.",
   ],
   search: ["Suchen", "Search"],
   newClient: ["Organisation anlegen", "Add organisation"],

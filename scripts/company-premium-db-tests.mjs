@@ -577,10 +577,20 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(bWorkspace.access.learner, true);
             const visible = await rpc(participant, "my_course_workspaces");
             assert.deepEqual(visible.map((course) => course.id), [runB]);
-            await assert.rejects(
-                rpc(manager, "course_workspace", [runA]),
-                /company_premium_lms_off/,
-            );
+            for (const who of [manager, lecturer, client]) {
+                const workspace = await rpc(who, "course_workspace", [runA]);
+                assertLmsResponse("course_workspace", workspace);
+                assert.equal(workspace.lms_enabled, false);
+                assert.equal(workspace.title, "Fictional retained LMS course");
+                assert.deepEqual(workspace.sessions.map(({id}) => id), [sessionA]);
+                assert.equal(workspace.sessions[0].can_verify, false);
+                assert.deepEqual(workspace.resources, []);
+                assert.deepEqual(workspace.exams.documents, []);
+                assert.deepEqual(workspace.roster, []);
+                assert.deepEqual(workspace.preparation, []);
+                assert.equal(workspace.meeting_link, null);
+            }
+            await assert.rejects(rpc(client, "course_workspace", [runB]), /42501/);
             await assert.rejects(
                 rpc(manager, "course_workspace_action", [runA, "contact_select", {}, 0]),
                 /42501/,

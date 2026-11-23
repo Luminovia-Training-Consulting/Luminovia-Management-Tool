@@ -1,3 +1,9 @@
+# 23 November 2026 — Standard course workspace
+
+A course manager, assigned lecturer or authorised course-company contact can open the course workspace from the assignment, the catalogue or the learning hub while company Premium is off. The workspace shows the title, description, syllabus, on-site venue and scheduled sessions. PostgreSQL returns the scoped standard projection without reading retained learning records. Course-participant access, materials, chat, exams, attendance and meeting links use their existing Premium controls. Dedicated Academy still uses its licence and course profile.
+
+Isolated PostgreSQL tests exercised the job link, company boundaries, Premium toggle and the protected meeting link. Component tests verified the standard course view and links. The authenticated Playwright journey was added for desktop and mobile. The isolated runner remains blocked by the occupied port 55322.
+
 # 23 November 2026 — Combined Portal and Academy changes
 
 Integrated the Academy support and browser delivery work, the published offer editor and the calendar, spacing and company key changes with the current Portal HTTP aliases. Regenerated the API reference from the combined migrations. The Academy browser verifier recognises the previously signed 1.36 contracts with both successive HTTP alias sets.

@@ -747,7 +747,7 @@ describe("connected course workspace", () => {
       ),
     ).toBe(false);
   });
-  it("renders no course workspace content when the Premium projection is OFF", async () => {
+  it("renders course facts and sessions while hiding retained Premium data", async () => {
     fake.workspace.lms_enabled = false;
     fake.workspace.access.lms_enabled = false;
     fake.workspace.resources = [
@@ -786,11 +786,11 @@ describe("connected course workspace", () => {
         /Lernmodul dieses Unternehmens ist derzeit deaktiviert/,
       ),
     ).toBeVisible();
-    expect(screen.queryByText("Fictional course")).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Shared safe description"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Linux practice")).not.toBeInTheDocument();
+      screen.getByRole("heading", { name: "Fictional course" }),
+    ).toBeVisible();
+    expect(screen.getByText("Shared safe description")).toBeVisible();
+    expect(screen.getByText("Linux practice")).toBeVisible();
     expect(
       screen.queryByText("Fictional retained resource"),
     ).not.toBeInTheDocument();

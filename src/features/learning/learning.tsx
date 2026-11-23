@@ -1432,6 +1432,36 @@ function CourseWorkspaceLayout({
   );
 }
 
+/** Standard access renders operational course facts only, even on an old Premium deep link. */
+function StandardCourseWorkspace({ course }: { course: CourseWorkspace }) {
+  const { t } = useTranslation("learning");
+  return (
+    <div className="section-stack">
+      <PageHeading
+        title={course.title}
+        description={course.time_zone}
+        action={
+          <Button asChild variant="secondary">
+            <Link
+              to={
+                course.access.manager
+                  ? `/courses?run=${course.id}`
+                  : "/learning"
+              }
+            >
+              {t(course.access.manager ? "manageCourse" : "back")}
+            </Link>
+          </Button>
+        }
+      />
+      <Notice>{t("premiumOff")}</Notice>
+      <div id="course-overview">
+        <CourseBasics course={course} />
+      </div>
+    </div>
+  );
+}
+
 /** Remount the protected course query on reconnect so cached panels wait for a current entitlement check. */
 export function CourseWorkspacePage({
   academy,
@@ -1465,7 +1495,7 @@ function ConnectedCourseWorkspace({
   if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
   if (
     query.error?.message?.includes("company_premium_lms_off") ||
-    (query.isSuccess && !query.data.lms_enabled)
+    (academy && query.isSuccess && !query.data.lms_enabled)
   ) {
     return (
       <section className="panel">
@@ -1486,6 +1516,8 @@ function ConnectedCourseWorkspace({
     );
   }
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+  if (!query.data.lms_enabled)
+    return <StandardCourseWorkspace course={query.data} />;
   return (
     <CourseWorkspaceLayout
       key={id}

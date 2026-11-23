@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Standard course workspace
+
+- [x] Open the scoped course workspace when company Premium is off. Return standard course details and scheduled sessions for authorised staff, assigned lecturers and contacts of the course company. Keep retained learning data and participant workflows guarded.
+- [ ] Run the authenticated assignment-to-standard-workspace browser journey when the isolated QA port is available.
+
 ## Portal spacing, calendar selection and company API key validity
 
 - [x] Space course catalogue controls, administration cards, company controls and course-readiness actions using shared wrapping and stack styles. Check desktop and mobile administration layouts in the local browser.

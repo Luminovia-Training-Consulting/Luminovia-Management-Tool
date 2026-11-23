@@ -36,10 +36,17 @@ import { AcademyCourseDraft } from "./academy-draft";
 import "./i18n";
 import "./learning.css";
 
-function CourseCard({ course }: { course: CourseOverview }) {
+function CourseCard({
+  course,
+  academy,
+}: {
+  course: CourseOverview;
+  academy: boolean;
+}) {
   const { t, i18n } = useTranslation("learning");
   const start = course.next_start_at ?? course.starts_at;
   const workspace = `/courses/${course.id}/workspace`;
+  const canOpen = course.lms_enabled || !academy;
   return (
     <article className="panel learning-card">
       <div className="course-card-label">
@@ -47,11 +54,7 @@ function CourseCard({ course }: { course: CourseOverview }) {
         {course.organisation_name && <span>{course.organisation_name}</span>}
       </div>
       <h3>
-        {course.lms_enabled ? (
-          <Link to={workspace}>{course.title}</Link>
-        ) : (
-          course.title
-        )}
+        {canOpen ? <Link to={workspace}>{course.title}</Link> : course.title}
       </h3>
       <div className="course-card-facts">
         <span>
@@ -66,19 +69,19 @@ function CourseCard({ course }: { course: CourseOverview }) {
         </span>
       </div>
       <div className="course-card-actions">
+        {canOpen && (
+          <Button asChild>
+            <Link to={workspace}>
+              {t("openWorkspace")} <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </Button>
+        )}
         {course.lms_enabled ? (
-          <>
-            <Button asChild>
-              <Link to={workspace}>
-                {t("openWorkspace")} <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to={workspace + "#course-chat"}>
-                <MessageCircle size={16} aria-hidden="true" /> {t("courseChat")}
-              </Link>
-            </Button>
-          </>
+          <Button asChild variant="secondary">
+            <Link to={workspace + "#course-chat"}>
+              <MessageCircle size={16} aria-hidden="true" /> {t("courseChat")}
+            </Link>
+          </Button>
         ) : (
           <span className="badge">{t("premiumOffCourseBadge")}</span>
         )}
@@ -223,7 +226,11 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
                   <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
                   <div className="learning-grid">
                     {courses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        academy={Boolean(academy)}
+                      />
                     ))}
                   </div>
                 </section>

@@ -715,7 +715,7 @@ export function CoursesPage() {
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const workspaceEntitlement = useQuery({
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
-    enabled: Boolean(detail),
+    enabled: Boolean(detail && !detail.archived_at),
   });
   const templateDetail = templates.data?.find(
     (template) => template.id === params.get("template"),
@@ -1394,20 +1394,27 @@ export function CoursesPage() {
             {manage && !detail.archived_at && (
               <CourseRunOfferLink runId={detail.id} />
             )}
-            {workspaceEntitlement.isPending ? (
-              <Loading />
-            ) : workspaceEntitlement.data?.lms_enabled ? (
-              <Button asChild variant="secondary">
-                <Link to={`/courses/${detail.id}/workspace`}>
-                  {t("learning:openWorkspace")}
-                </Link>
-              </Button>
-            ) : workspaceEntitlement.isError ? (
-              <Notice>{t("workspaceUnavailable")}</Notice>
-            ) : (
-              <span className="badge">
-                {t("learning:premiumOffCourseBadge")}
-              </span>
+            {!detail.archived_at && (
+              <div className="page-actions">
+                {workspaceEntitlement.isPending ? (
+                  <Loading />
+                ) : workspaceEntitlement.isSuccess ? (
+                  <>
+                    <Button asChild variant="secondary">
+                      <Link to={`/courses/${detail.id}/workspace`}>
+                        {t("learning:openWorkspace")}
+                      </Link>
+                    </Button>
+                    {!workspaceEntitlement.data.lms_enabled && (
+                      <span className="badge">
+                        {t("learning:premiumOffCourseBadge")}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <Notice>{t("workspaceUnavailable")}</Notice>
+                )}
+              </div>
             )}
             <h3>{t("syllabus")}</h3>
             <p className="preserve-text">

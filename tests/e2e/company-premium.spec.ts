@@ -170,3 +170,42 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
         await service.auth.admin.deleteUser(manager.id);
     }
 });
+
+test("opens the standard course workspace from an assignment when Premium is off", async ({page}) => {
+    const admin = await actor("Fictional standard course admin", "admin");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const organisation = randomUUID(), template = randomUUID(),
+        run = randomUUID(), session = randomUUID(), job = randomUUID();
+    const title = "Fictional standard course";
+    const description = "Fictional standard course description.";
+    try {
+        await checked(service.from("organisations").insert({id: organisation, name: "Fictional standard company"}));
+        await checked(service.from("course_templates").insert({id: template, title, description}));
+        await checked(service.from("course_runs").insert({id: run, template_id: template, organisation_id: organisation}));
+        await checked(service.from("course_sessions").insert({
+            id: session, course_run_id: run, starts_at: "2040-07-16T09:00:00Z", ends_at: "2040-07-16T11:00:00Z",
+        }));
+        await checked(service.from("jobs").insert({
+            id: job, course_run_id: run, title: "Fictional teaching assignment", customer_name: "Fictional standard company",
+            delivery_type: "online", status: "draft", amount: 100, total_amount: 100, currency: "EUR",
+            rate_unit: "fixed_total", terms: "Fictional agreement",
+        }));
+
+        await login(page, admin.email);
+        await page.goto(`/jobs/${job}`);
+        await page.getByRole("link", {name: "Kursarbeitsraum öffnen", exact: true}).click();
+        await expect(page).toHaveURL(new RegExp(`/courses/${run}/workspace$`));
+        await expect(page.getByRole("heading", {name: title, exact: true})).toBeVisible();
+        await expect(page.getByText(description, {exact: true})).toBeVisible();
+        await expect(page.getByText(/Lernmodul dieses Unternehmens ist derzeit deaktiviert/)).toBeVisible();
+        await expect(page.locator(".course-workspace-sessions li")).toHaveCount(1);
+        await expect(page.locator("#course-materials, #course-enrolments, #course-exam")).toHaveCount(0);
+    } finally {
+        await service.from("jobs").delete().eq("id", job);
+        await service.from("course_sessions").delete().eq("id", session);
+        await service.from("course_runs").delete().eq("id", run);
+        await service.from("course_templates").delete().eq("id", template);
+        await service.from("organisations").delete().eq("id", organisation);
+        await service.auth.admin.deleteUser(admin.id);
+    }
+});

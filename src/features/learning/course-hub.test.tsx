@@ -175,7 +175,12 @@ it("groups current, next and past courses and preserves a direct scoped chat des
     name: "Vergangene Kurse",
   });
   expect(within(completed).getByText("Lernzugriff deaktiviert")).toBeVisible();
-  expect(within(completed).queryByRole("link")).toBeNull();
+  expect(
+    within(completed).getByRole("link", { name: "Kurs öffnen" }),
+  ).toHaveAttribute("href", "/courses/finished/workspace");
+  expect(
+    within(completed).queryByRole("link", { name: "Kurs-Chat" }),
+  ).toBeNull();
 
   const phases = screen.getByRole("combobox", {
     name: "Kurse nach Zeitraum filtern",
