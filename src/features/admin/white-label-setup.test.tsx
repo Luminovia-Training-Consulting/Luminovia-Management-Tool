@@ -7,8 +7,7 @@ import { WhiteLabelSetupPage } from "./white-label-setup";
 const fake = vi.hoisted(() => ({
   actorRole: "admin",
   listCompanies: vi.fn(),
-  listAccounts: vi.fn(),
-  memberships: vi.fn(),
+  rpc: vi.fn(),
   saveBlob: vi.fn(),
 }));
 
@@ -35,31 +34,27 @@ vi.mock("../../lib/online", () => ({
   requireOnline: () => undefined,
   useOnline: () => true,
 }));
+vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 vi.mock("../../lib/blob-download", () => ({ saveBlob: fake.saveBlob }));
 vi.mock("../accounts/api", () => ({
   accountOrganisationsQuery: () => ({
     queryKey: ["companies"],
     queryFn: fake.listCompanies,
   }),
-  accountRequest: fake.listAccounts,
-  accountMemberships: fake.memberships,
 }));
 
 const email = "coordinator@example.invalid";
 const company = { id: "fictional-company", name: "Fictional Training Company" };
-const account = {
-  id: "coordinator-id",
-  email,
-  active: true,
-  roles: ["client"],
-};
-
 let queryClient: QueryClient;
 beforeEach(() => {
   fake.actorRole = "admin";
   fake.listCompanies.mockResolvedValue([company]);
-  fake.listAccounts.mockResolvedValue({ items: [account], total: 1 });
-  fake.memberships.mockResolvedValue([{ organisation_id: company.id }]);
+  let saved = { revision: 0, settings: null };
+  fake.rpc.mockImplementation(async (_, args) => {
+    if (args.p_settings)
+      saved = { revision: saved.revision + 1, settings: args.p_settings };
+    return { data: saved, error: null };
+  });
   queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -88,7 +83,9 @@ async function openDraft() {
   expect(fake.listCompanies).not.toHaveBeenCalled();
   await user.click(toggle);
   await user.selectOptions(await screen.findByLabelText("Company"), company.id);
-  expect(screen.getByLabelText("Legal company name")).toHaveValue(company.name);
+  expect(await screen.findByLabelText("Legal company name")).toHaveValue(
+    company.name,
+  );
   for (const [label, value] of [
     ["Company account email", email],
     ["Academy username (optional)", "coordinator"],
@@ -110,7 +107,7 @@ async function openDraft() {
   }
   return {
     user,
-    submit: screen.getByRole("button", { name: "Download private draft" }),
+    submit: screen.getByRole("button", { name: "Save settings" }),
   };
 }
 
@@ -124,53 +121,59 @@ it("blocks the setup route for management before reading companies", async () =>
   expect(fake.listCompanies).not.toHaveBeenCalled();
 });
 
-it("exports licence and branding selections with a company member as installation administrator", async () => {
+it("saves company settings and restores them after reopening without a download", async () => {
   const { user, submit } = await openDraft();
   await user.selectOptions(screen.getByLabelText("Default appearance"), "dark");
   await user.click(submit);
-  expect(await screen.findByText(/Draft exported/)).toBeVisible();
-  expect(fake.memberships).toHaveBeenCalledWith(account.id);
-  const [blob, filename] = fake.saveBlob.mock.calls[0];
-  expect(filename).toBe("academy-customer-draft.json");
-  expect(blob.type).toBe("application/json");
-  const json = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsText(blob);
+  expect(await screen.findByText("Settings saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("academy_customer_setup", {
+    p_organisation_id: company.id,
+    p_expected_revision: 0,
+    p_settings: expect.objectContaining({
+      legal_customer_name: company.name,
+      branding: expect.objectContaining({
+        name: "Fictional Academy",
+        theme: "dark",
+      }),
+      initial_administrator: { email, username: "coordinator" },
+      licence: expect.objectContaining({
+        limits: expect.objectContaining({ seat_count: 50 }),
+      }),
+    }),
   });
-  expect(JSON.parse(json)).toMatchObject({
-    version: 1,
-    purpose: "customer",
-    legal_customer_name: company.name,
-    branding: { name: "Fictional Academy", theme: "dark" },
-    initial_administrator: { email, username: "coordinator" },
-    target: {
-      edition: "customer-self-hosted",
-      domain_status: "temporary-pending",
-    },
-    licence: { limits: { seat_count: 50, storage_bytes: 5_000_000_000 } },
-  });
-});
-
-it("rejects an inactive account and refuses an active account from another company", async () => {
-  fake.listAccounts.mockResolvedValueOnce({
-    items: [{ ...account, active: false }],
-    total: 1,
-  });
-  fake.memberships.mockResolvedValue([{ organisation_id: "other-company" }]);
-  const { user, submit } = await openDraft();
-  await user.click(submit);
-  const denied = /active company account at this company/;
-  expect(await screen.findByText(denied)).toBeVisible();
-  expect(fake.memberships).not.toHaveBeenCalled();
-  await user.click(submit);
-  expect(await screen.findByText(denied)).toBeVisible();
-  expect(fake.memberships).toHaveBeenCalledWith(account.id);
+  const toggle = screen.getByRole("switch");
+  await user.click(toggle);
+  await user.click(toggle);
+  expect(await screen.findByLabelText("Academy name")).toHaveValue(
+    "Fictional Academy",
+  );
+  expect(screen.getByLabelText("Data region")).toHaveValue("eu-central");
+  expect(screen.getByLabelText("Default appearance")).toHaveValue("dark");
   expect(fake.saveBlob).not.toHaveBeenCalled();
 });
 
-it("rejects a private or malformed portal domain before account lookup", async () => {
+it("shows server membership and version errors without claiming to save", async () => {
+  const { user, submit } = await openDraft();
+  fake.rpc.mockResolvedValueOnce({
+    data: null,
+    error: { message: "company_administrator" },
+  });
+  await user.click(submit);
+  expect(
+    await screen.findByText(/active company account at this company/),
+  ).toBeVisible();
+  fake.rpc.mockResolvedValueOnce({
+    data: null,
+    error: { message: "white_label_revision_changed" },
+  });
+  await user.click(submit);
+  expect(
+    await screen.findByRole("button", { name: "Load current settings" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Settings saved.")).toBeNull();
+});
+
+it("rejects a private or malformed portal domain before saving", async () => {
   const { user, submit } = await openDraft();
   const target = screen.getByLabelText("Academy HTTPS address");
   fireEvent.change(target, {
@@ -178,6 +181,6 @@ it("rejects a private or malformed portal domain before account lookup", async (
   });
   await user.click(submit);
   expect(target).toHaveAttribute("aria-invalid", "true");
-  expect(fake.listAccounts).not.toHaveBeenCalled();
+  expect(fake.rpc).toHaveBeenCalledTimes(1);
   expect(fake.saveBlob).not.toHaveBeenCalled();
 });

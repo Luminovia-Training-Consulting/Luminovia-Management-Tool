@@ -4,9 +4,21 @@ This is the isolated setup for a customer-operated academy and for a dedicated m
 
 ## Review a private customer academy draft
 
-In the internal portal, an active administrator or owner can open **Administration → White Label** and turn on **Open White Label setup**. Select the company and provide the email of its active company account, the academy brand, target, and licence terms. The screen checks the account and company membership before it exports the private JSON draft. The selected email is the initial administrator identity for the separate customer academy. The installation operator provisions that approved address as a separate Auth identity. The internal portal makes no role changes.
+In the internal portal, an active administrator or owner can open **Administration → White Label** and turn on **Open White Label setup**. Select the company and provide the email of its active company account, the academy brand, target, and licence terms. Choose **Save settings** to store the configuration in the portal. The server checks the account and company membership on every save. The selected email is the initial administrator identity for the separate customer academy. The installation operator provisions that approved address as a separate Auth identity. The internal portal makes no role changes.
 
-For a browser-exported draft, move the JSON to the operator's private directory and restrict its permissions to mode 0600. Continue with the same preview, approval, signing and installation steps below.
+An authorised operator can read the saved revision through the internal `academy_customer_setup` RPC with `p_organisation_id` alone. Pipe that authenticated JSON response directly into the review command to avoid writing an input file. Keep the transport and output private. Repeat the read for approval. A new revision requires reviewing its own approval digest.
+
+```sh
+read_settings() {
+  jq -nc --arg id "$organisation_id" '{p_organisation_id: $id}' |
+    curl --fail --silent --show-error --config "$operator_api_config" \
+      --json @- "$internal_api/rest/v1/rpc/academy_customer_setup"
+}
+read_settings | node scripts/academy-customer-draft.mjs preview "$private_registry" -
+read_settings | node scripts/academy-customer-draft.mjs approve "$private_registry" - "$exact_approval"
+```
+
+Use the trusted internal API origin and an operator-private curl configuration (mode 0600) that supplies the current operator bearer token and public API key. See the [Platform API reference](../../API_REFERENCE.md). The response contains only the selected company's settings. Initial provisioning still uses the reviewed, signed handoff.
 
 Alternatively, use the [fictional draft form](customer-draft.example.json) as a template in a private local directory outside the repository and outside configured runtimes. Use Linux `flock` and a filesystem with exclusive locks and atomic rename. Create the registry directory with mode 0700 and store the edited input with mode 0600. Generate a fresh version-4 UUID for `request_id` on each onboarding request.
 

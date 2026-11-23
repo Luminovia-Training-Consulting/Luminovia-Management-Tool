@@ -256,11 +256,34 @@ function existingReceipt(registry, plan) {
   return existing;
 }
 
+/** Accept the authenticated portal receipt through the operator's private pipe. */
+async function readStoredSettings() {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of process.stdin) {
+    size += chunk.length;
+    if (size > 16384) throw new Error("The settings receipt is too large.");
+    chunks.push(chunk);
+  }
+  try {
+    const input = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
+    );
+    return input?.settings ?? input;
+  } catch {
+    throw new Error("The settings receipt is not valid UTF-8 JSON.");
+  }
+}
+
 async function loadPlan(root, sourcePath) {
   await requireRegistryRoot(root);
   if ([join(root, registryFile), join(root, lockFile)].includes(sourcePath))
     throw new Error("Choose a separate private draft input.");
-  const plan = planCustomerAcademyDraft(await readPrivateJson(sourcePath));
+  const plan = planCustomerAcademyDraft(
+    sourcePath === "-"
+      ? await readStoredSettings()
+      : await readPrivateJson(sourcePath),
+  );
   if (overlaps(root, plan.draft.target.runtime_directory))
     throw new Error(
       "Choose a runtime directory separate from the draft registry.",

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   chmod,
@@ -54,6 +54,30 @@ async function input(root, entry, name = "input.json") {
   await writeFile(path, JSON.stringify(entry), { mode: 0o600 });
   return path;
 }
+
+test("saved portal settings can be reviewed and approved through stdin", async (t) => {
+  const root = await fixture(t);
+  const entry = draft();
+  const receipt = JSON.stringify({ revision: 3, settings: entry });
+  const execute = (...args) => {
+    const result = spawnSync(
+      process.execPath,
+      [cli, args[0], root, "-", ...args.slice(1)],
+      {
+        input: receipt,
+        encoding: "utf8",
+        timeout: 10_000,
+      },
+    );
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  const preview = execute("preview");
+  assert.equal(preview.approval, reviewToken(planCustomerAcademyDraft(entry)));
+  assert.equal(execute("approve", preview.approval).created, true);
+  assert.equal(execute("approve", preview.approval).created, false);
+});
 
 async function vendorFixture(t, edition) {
   const root = await fixture(t);

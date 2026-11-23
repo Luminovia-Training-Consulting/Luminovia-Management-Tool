@@ -1,14 +1,19 @@
-/** Verify the shared portal generates a private Academy draft without changing customer roles. */
+/** Verify the shared portal saves and reloads Academy settings without changing customer roles. */
 import {expect, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
-import {readFile} from "node:fs/promises";
+import {readFileSync} from "node:fs";
+import {execFileSync} from "node:child_process";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 
 test.skip(process.env.PORTAL_TEST_MODE !== "1", "Requires the isolated portal fixtures.");
 
-test("admin exports the Academy draft only for an active company member", async ({page, browser}) => {
+test("admin saves Academy settings only for an active company member", async ({page, browser}) => {
     test.setTimeout(90000);
+    const project = /^project_id\s*=\s*"(luminovia-portal-test-[a-f0-9]{8})"$/m.exec(
+        readFileSync("supabase/config.toml", "utf8"),
+    )?.[1];
+    if (!project || process.env.PORTAL_TEST_MODE !== "1") throw new Error("Disposable White Label fixture required");
     const admin = await actor("Fictional White Label operator", "admin");
     const manager = await actor("Fictional White Label manager", "management");
     const customer = await actor("Fictional Academy coordinator", "client");
@@ -47,24 +52,34 @@ test("admin exports the Academy draft only for an active company member", async 
             await page.getByLabel(label, {exact: true}).fill(value);
         }
         await page.getByLabel("Standarddarstellung", {exact: true}).selectOption("dark");
-        const submit = page.getByRole("button", {name: "Privaten Entwurf herunterladen"});
+        const submit = page.getByRole("button", {name: "Einstellungen speichern"});
         await submit.click();
         await expect(page.getByText("Die Adresse muss zu einem aktiven Firmenkonto dieses Unternehmens gehören.")).toBeVisible();
 
         await checked(service.from("client_organisation_memberships").insert({user_id: customer.id, organisation_id: organisation}));
-        const result = page.waitForEvent("download");
+        const downloads: string[] = [];
+        page.on("download", (file) => downloads.push(file.suggestedFilename()));
         await submit.click();
-        const download = await result;
-        expect(download.suggestedFilename()).toBe("academy-customer-draft.json");
-        const code = JSON.parse(await readFile((await download.path())!, "utf8"));
-        expect(code).toMatchObject({
-            version: 1,
-            legal_customer_name: companyName,
-            branding: {name: "Fictional Training Academy", theme: "dark"},
-            initial_administrator: {email: customer.email, username: "practice-admin"},
-            target: {edition: "customer-self-hosted"},
-            licence: {limits: {seat_count: 40, storage_bytes: 3000000000}},
+        await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
+        await page.reload();
+        await open.press("Space");
+        await page.getByLabel("Unternehmen", {exact: true}).selectOption(organisation);
+        await expect(page.getByLabel("Name der Akademie")).toHaveValue("Fictional Training Academy");
+        await expect(page.getByLabel("Standarddarstellung")).toHaveValue("dark");
+        await expect(page.getByLabel("Datenregion")).toHaveValue("eu-central");
+        await expect(page.getByLabel("Kontoplätze")).toHaveValue("40");
+        const adminApi = api(process.env.SUPABASE_ANON_KEY!);
+        const managerApi = api(process.env.SUPABASE_ANON_KEY!);
+        await checked(adminApi.auth.signInWithPassword({email: admin.email, password: process.env.E2E_PASSWORD!}));
+        await checked(managerApi.auth.signInWithPassword({email: manager.email, password: process.env.E2E_PASSWORD!}));
+        const current = await checked(adminApi.rpc("academy_customer_setup", {p_organisation_id: organisation}), {requireData: true});
+        const conflicting = {...current.settings, legal_customer_name: "Older edit"};
+        const stale = await adminApi.rpc("academy_customer_setup", {
+            p_organisation_id: organisation, p_expected_revision: 0, p_settings: conflicting,
         });
+        expect(stale.status).toBe(409);
+        expect((await managerApi.rpc("academy_customer_setup", {p_organisation_id: organisation})).status).toBe(403);
+        expect(downloads).toEqual([]);
         expect(await checked(service.from("user_roles").select("role").eq("user_id", customer.id)))
             .toEqual([{role: "client"}]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -84,6 +99,9 @@ test("admin exports the Academy draft only for an active company member", async 
             await managerContext.close();
         }
     } finally {
+        execFileSync("docker", ["exec", "-i", `supabase_db_${project}`, "psql", "-U", "postgres", "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], {
+            input: `delete from private.academy_customer_settings where organisation_id = '${organisation}';`,
+        });
         await service.from("client_organisation_memberships").delete().eq("organisation_id", organisation);
         await service.from("organisations").delete().eq("id", organisation);
         for (const person of [admin, manager, customer]) await service.auth.admin.deleteUser(person.id);

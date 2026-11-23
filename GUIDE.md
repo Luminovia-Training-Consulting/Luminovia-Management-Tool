@@ -9,7 +9,7 @@ For a commissioned assignment, enter a course-specific **Plattformanteil / Platf
 
 In **Verwaltung → Unternehmen / Administration → Companies**, an active admin can turn on Premium LMS when creating a company. For an existing company, use the Premium switch in its detail view and confirm the change. Switching Premium off retains the existing learning records.
 
-In **Verwaltung → White Label / Administration → White Label**, open setup to prepare a private installation draft with the company account email, brand, domain and licence parameters. Follow [Dedicated Academy installation](deploy/academy/README.md) to review and sign the handoff and bootstrap the initial administrator on the customer's own system.
+In **Verwaltung → White Label / Administration → White Label**, select the company and save its account email, brand, domain and licence parameters. The settings are restored when you reopen the company. A verified portal address links directly to the customer administration. Follow [Dedicated Academy installation](deploy/academy/README.md) to review and sign the handoff and bootstrap the initial administrator on the customer's own system.
 
 On an already active customer installation, open **Verwaltung → Kundeninstallation → White-Label-Einrichtung öffnen / Administration → Customer installation → Open White Label setup**. Edit the academy name, short name, accent colour and public links, then choose **Einstellungen übernehmen / Apply settings**. The active installation uses the saved settings directly. Logos and app icons remain available in the same dialog. The current address and connection protocol are shown in the form. The operator configures the actual domain, TLS and data location at the hosting layer.
 

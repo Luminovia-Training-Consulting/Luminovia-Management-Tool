@@ -1,3 +1,9 @@
+# 23 November 2026 — Save White Label settings in the portal
+
+The internal administration stores the selected company's settings and restores the confirmed revision when reopened. The browser download is removed. Current internal administrators and owners can save after the server verifies the designated administrator's company membership. Exact retries reuse the saved receipt and a conflicting revision returns 409. A company with a verified address links to its dedicated administration. The operator can pipe the stored settings directly into the existing signed review. Live branding remains editable within the dedicated Academy, where the application applies it without reinstalling. Actual domain, TLS and data location depend on the hosting environment.
+
+Desktop and mobile Chromium confirmed save, reload and access denial with real local Auth and PostgreSQL. Isolated SQL verified concurrent writes, retry, scope, disallowed fields, membership revocation and reviewed deletion. The 53 focused UI and contract tests, documentation tests, signing CLI tests, TypeScript and the production build budgets passed. Customer deployment remains pending.
+
 # 23 November 2026 — Hosted administrator reset
 
 The CMS reset page accepts `RESET CONFIRM`, the signed-in administrator's current password and a confirmed replacement owner password. Caddy forwards the request through a private socket to the existing locked reset workflow, including the encrypted backup gate, rollback and fresh owner verification.

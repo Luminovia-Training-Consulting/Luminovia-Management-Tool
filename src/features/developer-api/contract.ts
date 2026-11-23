@@ -1365,6 +1365,19 @@ const profilePaths = Object.fromEntries(
 );
 
 const nativePaths = {
+  "/rest/v1/rpc/academy_customer_setup": rpc(
+    "academyCustomerSetup",
+    "Organisations",
+    "Read or save customer White Label settings",
+    "Internal administrators and owners only. Read by company ID. To save, send the observed revision and complete operator settings. See the platform API reference. A stale revision returns 409.",
+    {
+      p_organisation_id: uuid,
+      p_expected_revision: version,
+      p_settings: { type: "object" },
+    },
+    object({ revision: version, settings: { type: ["object", "null"] } }),
+    ["p_expected_revision", "p_settings"],
+  ),
   "/rest/v1/rpc/save_organisation": rpc(
     "native_save_organisation",
     "Organisations",
