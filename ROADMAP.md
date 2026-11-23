@@ -1,6 +1,15 @@
 # Luminovia Portal · Roadmap
 
-Open work for the internal portal and shared Premium LMS. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) maps requirements to executable checks. The [work log](docs/WORKLOG.md) records completed changes and test results. Dedicated Academy delivery and commercial handoff have their own [White-Label roadmap](WHITELABEL_ROADMAP.md).
+Implementation progress and remaining acceptance for the internal portal and shared Premium LMS. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) maps requirements to executable checks. The [work log](docs/WORKLOG.md) records completed changes and test results. Dedicated Academy delivery and commercial handoff have their own [White-Label roadmap](WHITELABEL_ROADMAP.md).
+
+## Implemented and locally verified
+
+- [x] **Company dispatch and standard courses.** Companies can manage classes, meeting rooms and default contacts without Premium. Staff can assign the company and class on eligible jobs. The standard course workspace keeps core information available while learning features stay entitlement-gated. Verified in PostgreSQL and exercised the non-Premium company job flow in Chromium. [Job dispatch evidence](docs/WORKLOG.md#23-november-2026--company-classes-and-job-dispatch-defaults)
+- [x] **Teaching preparation and attendance.** Instructor checklist, scoped meeting-link editing, timestamped arrival and departure, audited corrections and class attendance totals are implemented. Verified in isolated PostgreSQL. [Teaching evidence](docs/WORKLOG.md#23-november-2026--teaching-checklist-company-meeting-links-and-class-attendance)
+- [x] **Timed exams and grades.** Scheduled access windows, scanned submission and separate confirmation, staged grades and publication are implemented. Verified with PostgreSQL and component tests. [Exam evidence](docs/WORKLOG.md#23-november-2026--timed-lms-exams-and-published-grades)
+- [x] **Coordinated amendments and exceptional billing.** Versioned coordinated schedule changes, delivery evidence and exceptional final invoices are implemented. The signed-in cross-role journey remains listed below. [Commercial evidence](docs/WORKLOG.md#21-november-2026--coordinated-schedule-amendments-and-exceptional-final-invoices)
+- [x] **Website enquiry intake on the Portal side.** The credential-scoped intake, OpenAPI request and receipt, and internal processing are implemented. The separate Website activation remains listed below. [Intake evidence](docs/WORKLOG.md#22-november-2026--website-intake-academy-acceptance-and-handoff-templates)
+- [x] **Reviewed HTTP methods and Swagger.** Internal and Academy contracts expose reviewed GET, PUT and DELETE operations alongside POST. Local Auth/HTTP and Chromium evidence covers representative operations. The full edition and browser matrix remains listed below. [API evidence](docs/WORKLOG.md#23-november-2026--get-put-and-delete-in-the-portal-api)
 
 ## Release gates
 

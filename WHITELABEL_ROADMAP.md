@@ -2,12 +2,16 @@
 
 Produktstand und offene Abnahmen für Academy Self-Hosted und Academy Managed. Der aktuelle [Funktionskatalog](FEATURES.md#editionen) beschreibt die vorhandenen Funktionen. Für die Abnahme gilt die konkrete, autorisierte Kundeninstallation mit ihrer Edition, signierten Lizenz und exakten Release-Revision. Die Schritte und Nachweise stehen in der [Zielabnahme](deploy/academy/TARGET-ACCEPTANCE.md).
 
-## Produktlücken
+## Produktstand und offene Liefernachweise
 
 - [x] **Befristete Supportfreigabe · WL-T39.** Kundenadmins können einem bestätigten, lokalen Supportkonto ohne Academy-Rolle eine Freigabe für Installationsdiagnosen oder einen bestimmten Kurs erteilen. Zweck, Dauer, Ablauf, Widerruf und Zugriff sind nachvollziehbar. Die Freigabe umfasst ausschließlich Diagnosen. Lerninhalte, Dateien und Nachrichten bleiben geschützt. Auf nativem PostgreSQL für beide Academy-Profile geprüft.
 - [x] **Nicht-interaktiver Host-Preflight · WL-T31, WL-T36.** Der Preflight prüft den signierten Installationsplan gegen Betriebssystem, Architektur, CPU, RAM, freien Speicher, lokale Docker-/Compose-Konfiguration, Werkzeuge und Ports. Fehler beenden die Prüfung vor der Aktivierung. Der Wiederanlauf und eine echte lokale Portkollision wurden geprüft.
 - [x] **Browser-SBOM und Abhängigkeitslizenzen · WL-T40.** Beide Academy-Browserpakete enthalten ein CycloneDX-Inventar der ausgelieferten Komponenten und deren Lizenztexte. Die Paketprüfung bindet beide Dateien an Edition, Git-Revision und Browserarchiv.
 - [x] **API-Entwicklerpaket · WL-T16–WL-T18, WL-T37.** Die Academy-API liefert editions- und installationsgebundene TypeScript- und Python-Clients zum Download. Lokale Tests prüfen echte HTTP-Antworten und die Prüfung früherer signierter Verträge.
+- [x] **Academy-Editionen und Lizenzgrenzen.** Beide dedizierten Editionen trennen den Kursbetrieb vom internen Auftrags- und Abrechnungsportal. Signierte Lizenz, exakte Release-Revision und serverseitige Freigabe für Betrieb, Kulanz und Ablauf sind implementiert und lokal geprüft. [Installationshandbuch](deploy/academy/README.md)
+- [x] **Eigenes Branding und App-Symbole.** Academy-Name, Logo, Tab- und Installationssymbole, öffentliche Links und Academy-Absender im passenden Mailpfad sind integriert. Die durchgängige Ziel- und Geräteprüfung bleibt unten offen. [Branding-Nachweis](docs/WORKLOG.md#22-november-2026--academy-tab-icon-and-scoped-integration-examples)
+- [x] **Signierte Webhooks und lokale Zustellung.** Organisationsgebundene Kurs-Webhooks mit Zustellhistorie, Wiederholung und Widerruf sowie der private SMTP-Pfad sind implementiert und in separaten Testumgebungen geprüft. Die Abnahme des konkreten Kundenempfängers steht unten. [Webhook-Nachweis](docs/WORKLOG.md#21-november-2026--signed-webhooks-for-both-dedicated-academies)
+- [x] **Lizenzübergabe, Wiederherstellung und Datenexport als Werkzeuge.** Signierter Runtime-Handoff, Ausstellung und Verlängerung, verschlüsselte Wiederherstellung und separater Offboarding-Export sind vorhanden. Die Operator-Proben auf dem konkreten Kundenziel bleiben unten offen. [Lizenznachweis](docs/WORKLOG.md#22-november-2026--academy-licence-issuance-and-roadmap-reconciliation)
 - [ ] **Abhängigkeitsnachweis der Runtime-Images · WL-T40.** SBOM und Lizenztexte für die tatsächlich übernommenen Container-Image-Digests dokumentieren.
 
 ## Abnahme je Kundeninstallation
