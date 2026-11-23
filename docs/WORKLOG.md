@@ -1,6 +1,7 @@
 # 23 November 2026 — Repair acceptance regressions
 
 The contrast check resolves dark CSS aliases against the effective theme before applying the existing thresholds. The readiness browser case uses the current accessible company label. The complete application browser budget allows 45 minutes per project and CI reserves 60 minutes for setup, application, PWA and artifacts. The suite retains every existing project and evidence requirement.
+All 461 runtime checks and the real desktop and mobile Chromium readiness journeys passed locally. The full GitHub run was requested with release publication disabled.
 
 # 23 November 2026 — Portal recovery and settings audit
 
