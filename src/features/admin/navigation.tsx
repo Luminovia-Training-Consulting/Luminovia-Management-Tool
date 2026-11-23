@@ -56,9 +56,7 @@ export function AdminNavigation() {
           <NavLink to="/admin/white-label">White Label</NavLink>
         )}
         {isAdministrator && (
-          <NavLink to="/admin/reset">
-            {t("fullPlatformReset")}
-          </NavLink>
+          <NavLink to="/admin/reset">{t("fullPlatformReset")}</NavLink>
         )}
       </nav>
       <Outlet />
