@@ -1,6 +1,7 @@
 /** Real temporary PostgreSQL checks. Native Auth is covered separately. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {readFile} from "node:fs/promises";
 import {z} from "zod";
 import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {applyPasswordOnlyPermissionPolicy, quoteSql as q, withTestDatabase,} from "./testing/database.mjs";
@@ -106,6 +107,27 @@ await withTestDatabase(
                 );
             },
         );
+        const trainingCatalogue = await readFile(new URL(
+            "../supabase/migrations/20261123013000_shared_training_taxonomy.sql",
+            import.meta.url,
+        ), "utf8");
+        await sql(trainingCatalogue);
+        await check("Shared training entries are searchable and replay preserves edits", async () => {
+            for (const [term, kind, label] of [
+                ["200-301", "topic", "Cisco CCNA"],
+                ["MD-102", "topic", "Microsoft 365 Endpoint Administrator Associate"],
+                ["PromQL", "tool", "Prometheus"],
+                ["SQL", "language", "SQL"],
+            ]) {
+                const matches = await rpc(lecturer, "taxonomy_catalogue", [term, kind, false]);
+                assert.ok(matches.some((row) => row.label_de === label && row.label_en));
+            }
+            await sql("update public.topics set description_de='Locally maintained' where label_de='Cisco CCNA'");
+            const before = await sql("select count(*) from public.topics");
+            await sql(trainingCatalogue);
+            assert.equal(await sql("select count(*) from public.topics"), before);
+            assert.equal(await sql("select description_de from public.topics where label_de='Cisco CCNA'"), "Locally maintained");
+        });
         const parent = await save("Fictional parent"),
             child = await save("Fictional child", parent);
         await check(
@@ -435,7 +457,6 @@ await withTestDatabase(
         const before = await sql(
             `select jsonb_agg(to_jsonb(t) order by id) from public.topics t`,
         );
-        const {readFile} = await import("node:fs/promises");
         await assert.rejects(
             sql(
                 await readFile(

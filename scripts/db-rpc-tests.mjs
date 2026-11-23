@@ -637,7 +637,7 @@ try {
             "aal1",
         );
         assert.equal(
-            await as(users[54], "select count(*) from public.topics"),
+            await as(users[54], `select count(*) from public.topics where id='${topic}'`),
             "0",
         );
         await assert.rejects(
@@ -656,7 +656,7 @@ try {
             "aal1",
         );
         assert.equal(
-            await as(users[54], "select count(*) from public.topics"),
+            await as(users[54], `select count(*) from public.topics where id='${topic}'`),
             "1",
         );
     });

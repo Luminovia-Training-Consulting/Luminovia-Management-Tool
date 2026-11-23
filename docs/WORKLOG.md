@@ -1,3 +1,7 @@
+# 23 November 2026 — Shared training taxonomy
+
+Reviewed 24 training-module PDFs and extracted 160 customer-neutral bilingual entries for the shared catalogue. The migration covers 128 topics, including certification and exam labels, 30 tools and two languages. It preserves existing labels, edits and references and reuses the local fixture identities for Linux and Python. Qualification evidence continues to use the shared topic IDs. Eleven taxonomy checks and 25 database RPC checks passed, including lookup by exam code, migration replay and concurrent claims.
+
 # 23 November 2026 — Consolidated forum and local API documentation
 
 The Forum under Communication is the only entry point for discussions and articles. Article drafts, publication, history, attachments and course-template references retain their existing storage and permissions. Historical Wiki links preserve the selected article and fragment. Help and Support have their own entry point.
