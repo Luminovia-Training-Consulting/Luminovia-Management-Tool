@@ -11,6 +11,7 @@ const budgets = {
   explorer: 570 * kib,
   precache: 4352 * kib,
 };
+const swaggerEntry = "src/features/developer-api/swagger-view.tsx";
 const explorerEntries = [
   "src/features/developer-api/portal-explorer.tsx",
   "src/features/developer-api/academy-explorer.tsx",
@@ -111,7 +112,13 @@ export function checkBundleBudget(directory, limits = budgets) {
   let explorerBytes = 0;
   for (const entry of explorers) {
     const { file, css = [] } = manifest[entry];
-    const dependencies = [...staticAssets(manifest, entry)];
+    const dependencies = [
+      ...new Set([
+        ...staticAssets(manifest, entry),
+        // The renderer is lazy inside the route so its links can appear first.
+        ...(manifest[swaggerEntry] ? staticAssets(manifest, swaggerEntry) : []),
+      ]),
+    ];
     const swaggerAssets = dependencies.filter((asset) =>
       asset.startsWith("assets/swagger-view-"),
     );

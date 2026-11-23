@@ -128,6 +128,68 @@ test("the API explorer executes a documented read only after authorization", asy
   expect(await nativeResult.json()).toBe(true);
 });
 
+test("Swagger and OpenAPI links remain usable while browsing and returning to the portal", async ({
+  page,
+}) => {
+  const account = await actor(
+    "Fictional Swagger navigation lecturer",
+    "lecturer",
+  );
+  await login(page, account.email);
+  await openExplorer(page);
+  await page.getByRole("link", { name: "Swagger UI", exact: true }).click();
+  await expect(page).toHaveURL(/\/api\/swagger$/);
+  await expect(
+    page.getByRole("heading", { name: "Swagger UI", exact: true }),
+  ).toBeVisible();
+  const swagger = page.locator(".swagger-ui");
+  await expect(swagger.locator(".opblock-tag").first()).toBeVisible();
+  const operations = await swagger.locator(".opblock").evaluateAll(
+    (rows) =>
+      new Set(
+        rows.map((row) => {
+          const method = row.querySelector(
+            ".opblock-summary-method",
+          )?.textContent;
+          const path = row
+            .querySelector("[data-path]")
+            ?.getAttribute("data-path");
+          return `${method} ${path}`;
+        }),
+      ).size,
+  );
+  expect(operations).toBeGreaterThan(0);
+  expect(operations).toBeLessThanOrEqual(24);
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "OpenAPI JSON" }).click();
+  expect((await download).suggestedFilename()).toBe("openapi.json");
+
+  const search = page.getByRole("searchbox", { name: "Schnittstellen suchen" });
+  await search.fill("post /rest/v1/rpc/portal_access");
+  await search.press("Enter");
+  await swagger
+    .locator(".opblock-summary-control")
+    .filter({
+      has: page.locator('[data-path="/rest/v1/rpc/portal_access"]'),
+    })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Try it out", exact: true }),
+  ).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/api\/docs$/);
+  await page
+    .getByRole("button", { name: "Mit meinem Konto autorisieren" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Anfragen deaktivieren" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Swagger UI", exact: true }).click();
+  await page.getByRole("link", { name: "Zum Portal" }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("an authenticated participant can run an own-account RPC through the API explorer", async ({
   page,
 }) => {

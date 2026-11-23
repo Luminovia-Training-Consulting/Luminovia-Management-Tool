@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Notice, PageHeading } from "../../components/common";
 import { Button } from "../../components/ui/button";
 
@@ -23,9 +23,12 @@ class SwaggerErrorBoundary extends Component<
 export function SwaggerRoute({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
   const german = i18n.language.startsWith("de");
+  const { pathname } = useLocation();
+  const reference = pathname === "/api/swagger";
 
   return (
     <SwaggerErrorBoundary
+      key={pathname}
       fallback={
         <section className="panel">
           <PageHeading
@@ -45,6 +48,15 @@ export function SwaggerRoute({ children }: { children: ReactNode }) {
               <a href="/api/openapi.json" download>
                 OpenAPI JSON
               </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to={reference ? "/api/docs" : "/api/swagger"}>
+                {reference
+                  ? german
+                    ? "Interaktiver API-Explorer"
+                    : "Interactive API explorer"
+                  : "Swagger UI"}
+              </Link>
             </Button>
             <Button asChild variant="secondary">
               <Link to="/">{german ? "Zum Portal" : "Back to portal"}</Link>

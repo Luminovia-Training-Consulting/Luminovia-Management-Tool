@@ -7,6 +7,7 @@ import { gzipSync } from "node:zlib";
 import { checkBundleBudget } from "./runtime-bundle-budget.mjs";
 
 const explorer = "src/features/developer-api/portal-explorer.tsx";
+const swagger = "src/features/developer-api/swagger-view.tsx";
 const files = {
   "index.html": "<!doctype html>",
   "entry.js": "import './shared.js';",
@@ -14,6 +15,7 @@ const files = {
   "entry.css": ":root { color-scheme: light dark; }",
   "explorer.js": "import './shared.js'; import './schema.js';",
   "schema.js": "export const schema = { title: 'API' };",
+  "swagger.js": "export const renderer = true;",
   "icon.png": "fictional icon bytes",
 };
 
@@ -37,7 +39,12 @@ function fixture(
       },
       shared: { file: "shared.js" },
       schema: { file: "schema.js" },
-      [explorer]: { file: "explorer.js", imports: ["shared", "schema"] },
+      [explorer]: {
+        file: "explorer.js",
+        imports: ["shared", "schema"],
+        dynamicImports: [swagger],
+      },
+      [swagger]: { file: "swagger.js", imports: ["shared"] },
     }),
   );
   const entries = precache.map((url) => ({ url, revision: null }));
@@ -63,7 +70,7 @@ test("measure shared startup chunks once and budget the incremental explorer and
     "shared.js",
     "entry.css",
   ]);
-  const explorer = zipBytes(["explorer.js", "schema.js"]);
+  const explorer = zipBytes(["explorer.js", "schema.js", "swagger.js"]);
   const precache = files["index.html"].length + files["icon.png"].length;
   assert.equal(
     checkBundleBudget(directory, { startup, explorer, precache }).length,

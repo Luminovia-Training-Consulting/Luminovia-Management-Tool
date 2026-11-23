@@ -239,6 +239,9 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
                 : "API documentation"}
             </Link>
           </Button>
+          <Button asChild variant="secondary">
+            <Link to="/api/swagger">Swagger UI</Link>
+          </Button>
           <Button asChild variant="ghost">
             <a href="/api/openapi.json" download>
               OpenAPI JSON

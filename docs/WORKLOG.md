@@ -1,3 +1,9 @@
+# 23 November 2026 — Responsive Swagger catalogue and navigation
+
+The standalone Swagger reference and the interactive explorer show a maximum of 24 operations at a time. Search indexes all paths and the available webhook operations while the complete OpenAPI download remains accessible. Swagger uses its pinned renderer, loaded after the page controls become available. Requests still require the current account and explicit opt-in in the interactive explorer.
+
+In a local Chromium run with a fictional session and intercepted backend, the first standalone operation group appeared in about 1.2 seconds instead of 5.6 seconds. The longest observed main-thread task fell from 4.8 seconds to under 0.4 seconds. Chromium at 1280, 390 and 320 px verified the download, wrapping actions, search, an opted-in read against the fixture, and both browser Back and the portal link. The internal and both Academy build budgets passed. The combined revision passed 275 focused frontend tests. The native browser suite could not start because port 55322 was in use.
+
 # 23 November 2026 — Academy client generation and Docker readiness
 
 Declared account credentials on the dedicated Academy audit operation so the generated Python and TypeScript clients and signed package can include it. A local Docker probe that times out gets one bounded retry before either the browser or candidate runner fails. A simulated stalled probe verified the retry and unchanged access-denial handling. The focused Academy and startup suite passed 51 checks, the candidate and phase suite passed 58, and TypeScript passed.

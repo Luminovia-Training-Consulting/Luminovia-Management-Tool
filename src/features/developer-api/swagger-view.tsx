@@ -5,7 +5,6 @@ import type { ExplorerRequest } from "./request-boundary";
 
 type SwaggerViewProps = {
   spec: object;
-  filter?: boolean;
   supportedSubmitMethods: readonly string[];
   requestInterceptor: (request: ExplorerRequest) => Promise<ExplorerRequest>;
 };
@@ -13,7 +12,6 @@ type SwaggerViewProps = {
 /** Mount the standalone Swagger renderer in its own DOM subtree. */
 export function SwaggerView({
   spec,
-  filter = false,
   supportedSubmitMethods,
   requestInterceptor,
 }: SwaggerViewProps) {
@@ -34,7 +32,8 @@ export function SwaggerView({
     host.append(target);
     instance.current = SwaggerUI({
       domNode: target,
-      filter,
+      docExpansion: "list",
+      defaultModelsExpandDepth: 0,
       plugins: [
         () => ({
           wrapComponents: {
@@ -53,17 +52,24 @@ export function SwaggerView({
       showMutatedRequest: false,
       persistAuthorization: false,
       supportedSubmitMethods,
-      requestInterceptor: (request) => intercept(request),
+      requestInterceptor: async (request) => {
+        if (!active()) throw new Error("api_view_closed");
+        const allowed = await intercept(request);
+        if (!active()) throw new Error("api_view_closed");
+        return allowed;
+      },
     });
     return () => {
       instance.current = null;
       lifetime.abort();
       target.remove();
     };
-  }, [filter, supportedSubmitMethods]);
+  }, [supportedSubmitMethods]);
 
   useEffect(() => {
     instance.current?.specActions.updateLoadingStatus("success");
+    // Swagger needs the source text for its layout and reference diagnostics.
+    // The catalogue passes one bounded page so this parser never gets the full document.
     instance.current?.specActions.updateSpec(JSON.stringify(spec));
   }, [spec, supportedSubmitMethods]);
 

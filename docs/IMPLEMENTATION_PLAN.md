@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Swagger catalogue responsiveness
+
+- [x] Keep Swagger, interactive explorer and the full OpenAPI download reachable throughout the API views. Keep the default reference read-only.
+- [x] Bound the preview fed into Swagger to 24 operations while searching the complete edition-specific index. Verify desktop and mobile navigation, downloads and opt-in request controls with a browser fixture. Preserve bundle budgets for all editions.
+- [ ] Run the authenticated browser regression against the isolated native stack when port 55322 is available.
+
 ## Company classes and job dispatch
 
 - [x] Provide company-scoped class, meeting room and default contact settings independently of Premium LMS.

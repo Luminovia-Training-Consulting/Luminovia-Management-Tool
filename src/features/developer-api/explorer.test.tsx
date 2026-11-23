@@ -1,4 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { type ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AcademyApiExplorer } from "./academy-explorer";
@@ -58,6 +60,12 @@ const latest = () =>
     requestInterceptor: (request: ExplorerRequest) => Promise<ExplorerRequest>;
   };
 
+async function show(element: ReactElement) {
+  const view = render(<MemoryRouter>{element}</MemoryRouter>);
+  await screen.findByLabelText("Swagger");
+  return view;
+}
+
 beforeEach(() => {
   fake.actor = "academy-user";
   fake.language = "en";
@@ -73,7 +81,7 @@ afterEach(() => {
 
 it("shows the academy RPCs and full JSON download, with live requests off until approved", async () => {
   const user = userEvent.setup();
-  render(<AcademyApiExplorer />);
+  await show(<AcademyApiExplorer />);
   expect(latest().spec.info.title).toBe("Fictional training academy API");
   expect(
     Object.keys(latest().spec.paths).every(
@@ -132,7 +140,7 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
 
 it("stops a pending authorisation when requests are disabled and clears opt-in on account changes", async () => {
   const user = userEvent.setup();
-  const view = render(<AcademyApiExplorer />);
+  const view = await show(<AcademyApiExplorer />);
   await user.click(
     screen.getByRole("button", { name: "Authorize with my account" }),
   );
@@ -154,16 +162,24 @@ it("stops a pending authorisation when requests are disabled and clears opt-in o
   resolve(session);
   await rejected;
   fake.actor = "another-academy-user";
-  view.rerender(<AcademyApiExplorer />);
+  view.rerender(
+    <MemoryRouter>
+      <AcademyApiExplorer />
+    </MemoryRouter>,
+  );
   expect(latest().supportedSubmitMethods).toEqual([]);
   fake.actor = "academy-user";
-  view.rerender(<AcademyApiExplorer />);
+  view.rerender(
+    <MemoryRouter>
+      <AcademyApiExplorer />
+    </MemoryRouter>,
+  );
   expect(latest().supportedSubmitMethods).toEqual([]);
 });
 
 it("preserves the internal explorer catalogue and interactive methods", async () => {
   const user = userEvent.setup();
-  render(<ApiExplorer />);
+  await show(<ApiExplorer />);
   expect(latest().spec.info.title).toBe("Luminovia Portal API");
   expect(
     screen.queryByRole("link", { name: "TypeScript" }),
@@ -171,6 +187,10 @@ it("preserves the internal explorer catalogue and interactive methods", async ()
   expect(
     screen.queryByRole("link", { name: "Python" }),
   ).not.toBeInTheDocument();
+  await user.type(
+    screen.getByRole("searchbox"),
+    "GET /functions/v1/accounts/v1/me{Enter}",
+  );
   expect(latest().spec.paths).toHaveProperty("/functions/v1/accounts/v1/me");
   await user.click(
     screen.getByRole("button", { name: "Authorize with my account" }),
@@ -186,7 +206,7 @@ it("preserves the internal explorer catalogue and interactive methods", async ()
 
 it("filters operations by method and path without changing the downloaded catalogue", async () => {
   const user = userEvent.setup();
-  render(<ApiExplorer />);
+  await show(<ApiExplorer />);
   const search = screen.getByRole("searchbox", { name: "Search operations" });
   await user.type(search, "GET /functions/v1/accounts/v1/me{Enter}");
   expect(Object.keys(latest().spec.paths)).toEqual([
@@ -210,7 +230,7 @@ it.each([
   "filters the live catalogue to its %s gateway operation",
   async (method, operation) => {
     const user = userEvent.setup();
-    render(<ApiExplorer />);
+    await show(<ApiExplorer />);
     const path = "/functions/v1/portal-api/v1/" + operation;
     const search = screen.getByRole("searchbox", { name: "Search operations" });
     await user.type(search, `${method} ${path}{Enter}`);
@@ -225,7 +245,7 @@ it.each([
 
 it("keeps referenced article schemas when filtering PUT while suppressing credential schemes", async () => {
   const user = userEvent.setup();
-  render(<ApiExplorer />);
+  await show(<ApiExplorer />);
   const path = "/functions/v1/portal-api/v1/save_wiki_page";
   await user.type(
     screen.getByRole("searchbox", { name: "Search operations" }),
@@ -259,7 +279,7 @@ it("keeps referenced article schemas when filtering PUT while suppressing creden
 it("provides a German empty state and restores the search focus when clearing it", async () => {
   fake.language = "de";
   const user = userEvent.setup();
-  render(<AcademyApiExplorer />);
+  await show(<AcademyApiExplorer />);
   const search = screen.getByRole("searchbox", {
     name: "Schnittstellen suchen",
   });
@@ -272,4 +292,29 @@ it("provides a German empty state and restores the search focus when clearing it
   expect(search).toHaveFocus();
   expect(search).toHaveValue("");
   expect(screen.getByLabelText("Swagger")).toBeVisible();
+});
+
+it("keeps large catalogues bounded and searches beyond the visible page", async () => {
+  const user = userEvent.setup();
+  await show(<ApiExplorer />);
+  const first = Object.keys(latest().spec.paths);
+  expect(first.length).toBeLessThanOrEqual(24);
+  expect(screen.getByText(/^Operations 1–24 of /)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Next page" }));
+  expect(screen.getByText(/^Operations 25–48 of /)).toBeVisible();
+  expect(Object.keys(latest().spec.paths)).not.toEqual(first);
+  await user.type(
+    screen.getByRole("searchbox"),
+    "GET /functions/v1/portal-api/v1/course_workspace{Enter}",
+  );
+  expect(latest().spec.paths).toHaveProperty(
+    "/functions/v1/portal-api/v1/course_workspace",
+  );
+  expect(
+    screen.queryByRole("button", { name: "Previous page" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Swagger UI" })).toHaveAttribute(
+    "href",
+    "/api/swagger",
+  );
 });
