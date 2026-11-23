@@ -126,7 +126,13 @@ export const createCourseRunJobRequestSchema = z.union([
   z.strictObject({
     ...runJobFields,
     p_payload: commissionOfferPayload,
-    p_platform_percent: z.null().optional(),
+    p_platform_percent: z
+      .number()
+      .min(0)
+      .max(100)
+      .multipleOf(0.01)
+      .nullable()
+      .optional(),
   }),
   z.strictObject({
     ...runJobFields,

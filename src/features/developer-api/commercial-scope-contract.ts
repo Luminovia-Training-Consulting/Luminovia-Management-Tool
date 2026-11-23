@@ -33,6 +33,7 @@ export const commercialAccessSchema = z.strictObject({
 const commissionCapabilities = {
   can_manage_client_memberships: z.boolean(),
   can_request: z.boolean(),
+  can_manage_own_course_pricing: z.literal(true).optional(),
 };
 const commissionPolicy = {
   regular_lecturer_percent: percent,
@@ -63,7 +64,12 @@ export const commissionAccessSchema = z.union([
 ]);
 
 export const commissionOfferPolicySchema = z
-  .strictObject(commissionPolicy)
+  .strictObject({
+    ...commissionPolicy,
+    platform_percent_override: percent.optional(),
+    gross_amount: z.number().nonnegative().optional(),
+    gross_total_amount: z.number().nonnegative().optional(),
+  })
   .nullable();
 
 const claimLecturer = { claim_id: id, lecturer_name: z.string() };

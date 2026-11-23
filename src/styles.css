@@ -2827,6 +2827,23 @@ legend {
   max-width: 100%;
 }
 
+.white-label-draft fieldset {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: clamp(12px, 3vw, 20px);
+  margin-block: 0 20px;
+}
+
+.white-label-draft legend {
+  padding-inline: 8px;
+}
+
+.white-label-draft input[type="color"] {
+  inline-size: 100%;
+  min-block-size: 44px;
+}
+
 .mail-settings {
   min-width: 0;
 }

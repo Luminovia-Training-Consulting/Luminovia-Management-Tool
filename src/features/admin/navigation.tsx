@@ -20,7 +20,7 @@ export function AdminNavigation() {
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
-  const canReset =
+  const isAdministrator =
     profile.data?.active &&
     roles.data?.some((role) => role === "admin" || role === "owner");
   return (
@@ -52,7 +52,10 @@ export function AdminNavigation() {
         {permissions.data?.includes("announcements.manage") && (
           <NavLink to="/admin/announcements">{t("announcements")}</NavLink>
         )}
-        {canReset && (
+        {isAdministrator && (
+          <NavLink to="/admin/white-label">White Label</NavLink>
+        )}
+        {isAdministrator && (
           <NavLink to="/admin/reset">
             {i18n.language.startsWith("de")
               ? "Systembetrieb"

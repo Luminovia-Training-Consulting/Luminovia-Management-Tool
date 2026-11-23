@@ -1,3 +1,13 @@
+# 23 November 2026 — Company Premium, White Label setup and offer pricing
+
+An actual administrator can enable Premium when creating a company. The company record, entitlement and audit entry commit together. Repeating the same request returns the original company ID. The existing company switch keeps its confirmation flow.
+
+Active administrators and owners can export a private White Label draft with the brand, domain, runtime and licence parameters. The portal verifies the selected administrator's active company account and membership. The customer operator uses that email to create and confirm the initial administrator on the independently licensed installation.
+
+An explicit platform percentage at offer creation or edit fixes the lecturer's displayed fee and the platform share per position. Management can use this for its own offers. Default policy and individual lecturer settings remain restricted to authorised administrators. Existing accepted claims and revenue snapshots retain their original amounts.
+
+Isolated PostgreSQL passed eight operational authority groups and 30 commission, client request and course-offer groups. Desktop and mobile Chromium passed eight scenarios across company Premium, White Label draft export and Management offer pricing. All 1,575 Vitest cases and 17 Academy operator CLI tests passed, along with TypeScript, ESLint, formatting, reachability and the production bundle budgets. Customer-side commissioning remains pending.
+
 # 23 November 2026 — Daily portal workflow audit follow-up
 
 Chat text stays in memory per authenticated account and room and is cleared on confirmed send, personal deletion or room access loss. The room keeps its scroll position when older history is open, waits before advancing the read cursor and retries temporary history continuation failures in place. Search links focus and highlight the matching visible message. A filtered notification bulk action applies only to the displayed unread results.

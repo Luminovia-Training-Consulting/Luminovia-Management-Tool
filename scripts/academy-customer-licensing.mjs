@@ -1,20 +1,13 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import {
+  licenceLimits,
+  reference,
+  releaseCommit,
+} from "../src/features/branding/academy-licence-fields.ts";
 import { validateAcademyLicenceTerms } from "./academy-licence.mjs";
 
 export const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
-export const reference = z
-  .string()
-  .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}$/);
-export const releaseCommit = z
-  .string()
-  .regex(/^[a-f0-9]{40}$/)
-  .refine((value) => /[1-9a-f]/.test(value));
-export const licenceLimits = z.strictObject({
-  seat_count: z.int().positive(),
-  storage_bytes: z.int().positive(),
-  api_requests_per_minute: z.int().positive().max(0xffff_ffff),
-});
 
 const instant = z.iso.datetime({ precision: 3 });
 const requestId = z.uuidv4().toLowerCase();

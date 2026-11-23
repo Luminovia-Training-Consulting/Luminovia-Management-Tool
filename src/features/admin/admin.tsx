@@ -13,14 +13,16 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
-import { RoleFeePreview } from "../commercial/pricing";
+import { CourseCommissionField, RoleFeePreview } from "../commercial/pricing";
 import {
   clientOrganisationsQuery,
   commissionAccessQuery,
   commissionKeys,
+  parseCourseCommission,
 } from "../commercial/commission-api";
 import "../commercial/platform-i18n";
 import { BuildingBlockReference } from "../operations/building-blocks";
+import { orgQuery } from "../operations/data";
 import {
   type CourseRunJobDefaults,
   courseRunJobDefaultsQuery,
@@ -96,11 +98,23 @@ function JobForm({
   const { session } = useAuth();
   const actor = session!.user.id;
   const pricing = useQuery(commissionAccessQuery(actor));
-  const gross = Boolean(pricing.data?.can_manage_gross);
-  const organisations = useQuery({
+  const fullFinance = Boolean(pricing.data?.can_manage_gross);
+  const scopedPricing = Boolean(pricing.data?.can_manage_own_course_pricing);
+  const [commission, setCommission] = useState("");
+  const gross = fullFinance || (scopedPricing && commission !== "");
+  const percent = gross ? parseCourseCommission(commission) : null;
+  const commissionArg = percent === null ? {} : { p_platform_percent: percent };
+  const financeOrganisations = useQuery({
     ...clientOrganisationsQuery(actor),
-    enabled: gross && !courseRun,
+    enabled: fullFinance && !courseRun,
   });
+  const managedOrganisations = useQuery({
+    ...orgQuery(actor),
+    enabled: scopedPricing && gross && !courseRun,
+  });
+  const organisations = fullFinance
+    ? financeOrganisations
+    : managedOrganisations;
   const retry = useRequestKey();
   const online = useOnline();
   const topics = useQuery(topicsQuery);
@@ -160,6 +174,7 @@ function JobForm({
           }),
     },
   });
+  const watchedRate = useWatch({ control, name: "amount" });
   const watchedTotal = useWatch({ control, name: "total_amount" });
   const watchedCurrency = useWatch({ control, name: "currency" });
   const watchedCapacity = useWatch({ control, name: "capacity" });
@@ -173,6 +188,7 @@ function JobForm({
   const create = useMutation({
     mutationFn: async (values: Values) => {
       requireOnline();
+      if (Number.isNaN(percent)) throw new Error("invalid_price");
       setDone(false);
       setCreatedId(null);
       setInvalidTime(false);
@@ -238,12 +254,17 @@ function JobForm({
             ? { gross_amount: amount, gross_total_amount: total_amount }
             : { amount, total_amount }),
         };
-        const signature = JSON.stringify([courseRun.course_run_id, payload]);
+        const signature = JSON.stringify([
+          courseRun.course_run_id,
+          payload,
+          commissionArg,
+        ]);
         const retryId = retry.forInput(signature);
         const { data, error } = await db().rpc("create_course_run_job", {
           p_course_run_id: courseRun.course_run_id,
           p_payload: payload,
           p_client_id: retryId,
+          ...commissionArg,
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
         return courseRecordId.parse(data);
@@ -251,13 +272,19 @@ function JobForm({
       const payload = gross
         ? { ...base, gross_amount: amount, gross_total_amount: total_amount }
         : { ...base, amount, total_amount };
-      const signature = JSON.stringify([organisation, capacity, payload]);
+      const signature = JSON.stringify([
+        organisation,
+        capacity,
+        payload,
+        commissionArg,
+      ]);
       const retryId = retry.forInput(signature);
       const { data, error } = await db().rpc("create_capacity_job", {
         p_payload: payload,
         p_capacity: capacity,
         p_request_id: retryId,
         p_organisation_id: gross ? organisation || null : null,
+        ...commissionArg,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data as string;
@@ -284,7 +311,7 @@ function JobForm({
   if (
     topics.isPending ||
     pricing.isPending ||
-    (gross && !courseRun && organisations.isPending)
+    (fullFinance && !courseRun && organisations.isPending)
   )
     return <Loading />;
   if (
@@ -362,11 +389,13 @@ function JobForm({
                 })}
               >
                 <option value="">{priceText("newCustomer")}</option>
-                {organisations.data?.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
+                {organisations.data
+                  ?.filter((org) => !("archived_at" in org && org.archived_at))
+                  .map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
               </select>
             </Field>
           )}
@@ -386,7 +415,7 @@ function JobForm({
               <input
                 id="job-customer"
                 {...register("customer_name")}
-                readOnly={Boolean(selectedOrganisation)}
+                readOnly={gross && Boolean(selectedOrganisation)}
               />
             </Field>
           </div>
@@ -487,6 +516,18 @@ function JobForm({
           {...register("capacity", { valueAsNumber: true })}
         />
       </Field>
+      {(fullFinance || scopedPricing) && (
+        <CourseCommissionField
+          id="job-course-commission"
+          value={commission}
+          onChange={(value) => {
+            setCommission(value);
+            if (!courseRun) setDone(false);
+          }}
+          netWhenBlank={!fullFinance}
+          disabled={create.isPending}
+        />
+      )}
       <div className="form-row">
         <Field
           id="job-amount"
@@ -572,8 +613,10 @@ function JobForm({
         <>
           <RoleFeePreview
             gross={Number(watchedTotal)}
+            grossRate={watchedRate}
             access={pricing.data}
             currency={watchedCurrency}
+            platformPercent={percent}
           />
           <p className="muted commercial-small">
             {priceText("splitHint")} {priceText("feeBasis")}
@@ -632,6 +675,7 @@ function JobForm({
       <Button
         disabled={
           !online ||
+          Number.isNaN(percent) ||
           create.isPending ||
           (done && (!isDirty || Boolean(courseRun)))
         }

@@ -1266,6 +1266,11 @@ const organisationPayload = {
     tags: { type: "array", maxItems: 20, items: { ...text, maxLength: 60 } },
     private_notes: { type: ["string", "null"], maxLength: 8000 },
     archived: { type: ["boolean", "null"], default: false },
+    premium_request_id: {
+      ...uuid,
+      description:
+        "An active admin may include a fresh request UUID to enable Premium atomically when creating an unarchived organisation. Reuse the same UUID to retry that creation.",
+    },
   },
 };
 
@@ -1545,7 +1550,7 @@ const nativePaths = {
     "native_commission_access",
     "Finance",
     "Read pricing and company request capabilities",
-    "Reports current request and management capabilities. Only finance.gross.read receives policy rates and version. For those callers, an unconfigured policy has null rates and version zero.",
+    "Reports current request and management capabilities, including whether Management can explicitly price its own offers. Only finance.gross.read receives default policy rates and version. For those callers, an unconfigured policy has null rates and version zero.",
     {},
     z.toJSONSchema(commissionAccessSchema),
   ),
@@ -1553,7 +1558,7 @@ const nativePaths = {
     "native_commission_offer_policy",
     "Finance",
     "Read the pricing policy captured for a job",
-    "Requires finance.gross.read. Returns the original percentage tiers and version captured for a role-split offer, or null when no captured policy exists.",
+    "With finance.gross.read, returns the captured tiers, policy version and explicit platform share when configured. Otherwise authorized Management can access only its own explicitly priced offers and their full price. Returns null when no captured policy exists.",
     { p_job_id: uuid },
     z.toJSONSchema(commissionOfferPolicySchema),
   ),
@@ -2402,7 +2407,7 @@ const nativePaths = {
     "native_create_capacity_job",
     "Jobs",
     "Create a job with one to twenty priced teaching positions",
-    "Requires current job management authority. Use net fields for a direct offer or gross fields with current finance authority. An existing organisation is allowed only on the gross path. Supply one to sixty future session intervals and a request ID for exact retries.",
+    "Requires current job management authority. Use net fields for a direct offer, or gross fields with either finance authority or Management authority and an explicit platform share. An existing organisation is allowed only on the gross path. Supply one to sixty future session intervals and a request ID for exact retries.",
     {
       p_payload: { oneOf: [capacityNetOffer, capacityGrossOffer] },
       p_capacity: { type: "integer", minimum: 1, maximum: 20 },
@@ -2411,8 +2416,11 @@ const nativePaths = {
       p_platform_percent: {
         type: ["number", "null"],
         default: null,
+        minimum: 0,
+        maximum: 100,
+        multipleOf: 0.01,
         description:
-          "Leave null for gross offers. The legacy net path does not use this value.",
+          "Optional platform share for a gross offer. Null uses applicable role or lecturer rates. Net offers cannot set a share.",
       },
     },
     uuid,

@@ -4,7 +4,11 @@ This is the isolated setup for a customer-operated academy and for a dedicated m
 
 ## Review a private customer academy draft
 
-Use the [fictional draft form](customer-draft.example.json) as a template in a private local directory outside the repository and outside configured runtimes. Use Linux `flock` and a filesystem with exclusive locks and atomic rename. Create the registry directory with mode 0700 and store the edited input with mode 0600. Generate a fresh version-4 UUID for `request_id` on each onboarding request.
+In the internal portal, an active administrator or owner can open **Administration → White Label** and turn on **Open White Label setup**. Select the company and provide the email of its active company account, the academy brand, target, and licence terms. The screen checks the account and company membership before it exports the private JSON draft. The selected email is the initial administrator identity for the separate customer academy. The installation operator provisions that approved address as a separate Auth identity. The internal portal makes no role changes.
+
+For a browser-exported draft, move the JSON to the operator's private directory and restrict its permissions to mode 0600. Continue with the same preview, approval, signing and installation steps below.
+
+Alternatively, use the [fictional draft form](customer-draft.example.json) as a template in a private local directory outside the repository and outside configured runtimes. Use Linux `flock` and a filesystem with exclusive locks and atomic rename. Create the registry directory with mode 0700 and store the edited input with mode 0600. Generate a fresh version-4 UUID for `request_id` on each onboarding request.
 
 Use `purpose: customer` for an actual customer and `purpose: rehearsal` for fictional testing. Record the agreed academy brand and asset-review reference, initial administrator, domain status, edition, locale and time zone, SMTP mode, backup retention, data region, support agreement and licence selection. Use the same `host_reference` for every draft targeting the same host so an overlapping runtime path is caught. Domain verification is recorded from the operator's review.
 
@@ -135,7 +139,18 @@ node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
   "$installation_id" "$edition" "$release_commit"
 ```
 
-The migration command requires stopped ingress and the dedicated Compose target. It records each exact source with its transaction and verifies the entire applied prefix before running pending SQL. A retry skips the committed prefix. Prepare the empty academy before creating its first confirmed Auth identity. Then bind that identity with `--first-admin` and explicitly enable the verified course profile with `--course-access on`. Use the same UUID, edition, licence and source revision that were used to stage the browser.
+The migration command requires stopped ingress and the dedicated Compose target. It records each exact source with its transaction and verifies the entire applied prefix before running pending SQL. A retry skips the committed prefix. Prepare the empty academy before creating its first confirmed Auth identity.
+
+For a reviewed customer draft, obtain the approved `initial_administrator.email` through the private handover channel. Create and confirm that address in the dedicated installation's Auth service while ingress is closed. Check the email on the new Auth identity against the approved address and use its UUID as `first_admin_auth_id`. The database checks that this UUID is a confirmed identity on the dedicated installation. The operator checks the address against the approved draft because the signed runtime handoff contains only the installation target. If the draft specifies a username, the new administrator can set it in their Academy settings after their first sign-in.
+
+Use the same UUID, edition, licence and source revision that were used to stage the browser. Bind the confirmed identity and enable the verified course profile.
+
+```sh
+node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit" --first-admin "$first_admin_auth_id"
+node scripts/academy-installation.mjs "$signed_licence" "$licence_public_key" \
+  "$installation_id" "$edition" "$release_commit" --course-access on
+```
 
 ## Verify before opening ingress
 

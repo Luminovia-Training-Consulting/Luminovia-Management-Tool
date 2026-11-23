@@ -23,27 +23,60 @@ import {
   type CommissionRecord,
   commissionReportQuery,
   offerPolicyQuery,
+  parseCourseCommission,
   splitFee,
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
 
+const maximumGross = 9_999_999_999.99;
+
 /** An indicative default only; selecting a lecturer resolves their current server quote. */
 export function RoleFeePreview({
   gross,
+  grossRate,
   currency,
   access,
+  platformPercent,
 }: {
   gross: number;
+  grossRate?: number;
   currency: string;
   access: CommissionAccess | undefined;
+  platformPercent?: number | null;
 }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation("platform");
   const de = i18n.language.startsWith("de"),
     regularPercent = access?.regular_lecturer_percent ?? 50,
     seniorPercent = access?.senior_lecturer_percent ?? 50;
-  if (!access?.can_manage_gross || !Number.isFinite(gross) || gross < 0)
+  if (!Number.isFinite(gross) || gross < 0) return null;
+  if (
+    !access?.can_manage_gross &&
+    !(access?.can_manage_own_course_pricing && platformPercent != null)
+  )
     return null;
+  if (platformPercent != null) {
+    if (!Number.isFinite(platformPercent)) return null;
+    const lecturerPercent = 100 - platformPercent;
+    return (
+      <section>
+        <h3>{t("courseCommissionPreview")}</h3>
+        {grossRate !== undefined && grossRate !== gross && (
+          <FeeSplitPreview
+            gross={grossRate}
+            grossLabel={t("grossRate")}
+            percent={lecturerPercent}
+            currency={currency}
+          />
+        )}
+        <FeeSplitPreview
+          gross={gross}
+          percent={lecturerPercent}
+          currency={currency}
+        />
+      </section>
+    );
+  }
   return (
     <section>
       <h3>
@@ -88,17 +121,20 @@ function FeeSplitPreview({
   percent,
   currency,
   lecturerAmount,
+  grossLabel,
 }: {
   gross: number;
   percent: number;
   currency: string;
   lecturerAmount?: number;
+  grossLabel?: string;
 }) {
   const { t, i18n } = useTranslation("platform");
   if (
     !Number.isFinite(gross) ||
     !Number.isFinite(percent) ||
     gross < 0 ||
+    gross > maximumGross ||
     percent < 0 ||
     percent > 100
   )
@@ -114,7 +150,7 @@ function FeeSplitPreview({
   return (
     <div className="platform-split" role="group" aria-label={t("pricePreview")}>
       <div>
-        <span>{t("grossTotal")}</span>
+        <span>{grossLabel ?? t("grossTotal")}</span>
         <strong>{money(split.gross, currency, i18n.language)}</strong>
       </div>
       <div>
@@ -129,18 +165,65 @@ function FeeSplitPreview({
   );
 }
 
+export function CourseCommissionField({
+  id,
+  value,
+  onChange,
+  disabled,
+  required,
+  netWhenBlank,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  required?: boolean;
+  netWhenBlank?: boolean;
+}) {
+  const { t } = useTranslation("platform");
+  return (
+    <Field
+      id={id}
+      label={t("courseCommission")}
+      hint={t(
+        required
+          ? "courseCommissionRequired"
+          : netWhenBlank
+            ? "courseCommissionNetHint"
+            : "courseCommissionHint",
+      )}
+      error={Number.isNaN(parseCourseCommission(value))}
+    >
+      <input
+        id={id}
+        type="number"
+        min="0"
+        max="100"
+        step="0.01"
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+      />
+    </Field>
+  );
+}
+
 /** Edit only price/share fields permitted by current capabilities and offer state. */
 function EditPrice({
   actor,
   job,
   record,
   access,
+  platformPercentOverride,
   onDone,
 }: {
   actor: string;
   job: Job;
-  record: CommissionRecord | undefined;
+  record:
+    Pick<CommissionRecord, "gross_amount" | "gross_total_amount"> | undefined;
   access: CommissionAccess;
+  platformPercentOverride?: number | null;
   onDone: () => void;
 }) {
   const { t } = useTranslation("platform");
@@ -148,15 +231,17 @@ function EditPrice({
   const client = useQueryClient();
   const [amount, setAmount] = useState(String(record?.gross_amount ?? ""));
   const [total, setTotal] = useState(String(record?.gross_total_amount ?? ""));
-  const percent = 50;
+  const [commission, setCommission] = useState(
+    String(platformPercentOverride ?? ""),
+  );
+  const percent = parseCourseCommission(commission);
   const valid =
-    Number.isFinite(Number(amount)) &&
-    Number.isFinite(Number(total)) &&
-    Number.isFinite(Number(percent)) &&
     Number(amount) > 0 &&
+    Number(amount) <= maximumGross &&
     Number(total) > 0 &&
-    Number(percent) >= 0 &&
-    Number(percent) <= 100;
+    Number(total) <= maximumGross &&
+    !Number.isNaN(percent) &&
+    (access.can_manage_gross || percent !== null);
   const save = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -165,12 +250,17 @@ function EditPrice({
         p_job_id: job.id,
         p_gross_amount: Number(amount),
         p_gross_total_amount: Number(total),
+        p_platform_percent: percent,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["jobs"] }),
+        client.invalidateQueries({ queryKey: ["job-board"] }),
+        client.invalidateQueries({
+          queryKey: ["job-lifecycle", actor, job.id],
+        }),
         client.invalidateQueries({
           queryKey: ["commission-offer-policy", actor, job.id],
         }),
@@ -193,7 +283,8 @@ function EditPrice({
             id="edit-gross-rate"
             type="number"
             required
-            min="0"
+            min="0.01"
+            max={maximumGross}
             step="0.01"
             value={amount}
             onChange={(event) => {
@@ -209,6 +300,7 @@ function EditPrice({
             type="number"
             required
             min="0.01"
+            max={maximumGross}
             step="0.01"
             value={total}
             onChange={(event) => {
@@ -220,10 +312,19 @@ function EditPrice({
           />
         </Field>
       </div>
+      <CourseCommissionField
+        id="edit-course-commission"
+        value={commission}
+        onChange={setCommission}
+        required={!access.can_manage_gross}
+        disabled={save.isPending}
+      />
       <RoleFeePreview
         gross={Number(total)}
+        grossRate={Number(amount)}
         access={access}
         currency={job.currency}
+        platformPercent={percent}
       />
       <p className="muted commercial-small">
         {t("splitHint")} {t("feeBasis")}
@@ -242,37 +343,62 @@ export function JobPricingPanel({ job }: { job: Job }) {
   const { session } = useAuth();
   const actor = session!.user.id;
   const access = useQuery(commissionAccessQuery(actor));
+  const fullFinance = Boolean(access.data?.can_manage_gross);
+  const scopedPricing = Boolean(access.data?.can_manage_own_course_pricing);
+  const canPrice = fullFinance || scopedPricing;
   const report = useQuery({
     ...commissionReportQuery(actor),
-    enabled: Boolean(access.data?.can_manage_gross),
+    enabled: fullFinance,
   });
   const policy = useQuery({
     ...offerPolicyQuery(actor, job.id),
-    enabled: Boolean(access.data?.can_manage_gross),
+    enabled: canPrice,
+    retry: (count, error) =>
+      count < 1 && (!("code" in error) || error.code !== "42501"),
   });
   const lifecycle = useQuery({
     ...lifecycleQuery(actor, job.id),
-    enabled: Boolean(access.data?.can_manage_gross),
+    enabled: canPrice,
   });
   const [editing, setEditing] = useState(false);
-  if (!access.data?.can_manage_gross) return null;
-  if (report.isPending || policy.isPending) return <Loading />;
-  if (report.isError || policy.isError)
+  if (!access.data || !canPrice) return null;
+  if ((fullFinance && report.isPending) || policy.isPending) return <Loading />;
+  if (
+    !fullFinance &&
+    policy.error &&
+    "code" in policy.error &&
+    policy.error.code === "42501"
+  )
+    return null;
+  if ((fullFinance && report.isError) || policy.isError)
     return (
       <ErrorState
         retry={() => {
-          void report.refetch();
+          if (fullFinance) void report.refetch();
           void policy.refetch();
         }}
       />
     );
-  const record = report.data.find((row) => row.job_id === job.id);
+  const record = fullFinance
+    ? report.data?.find((row) => row.job_id === job.id)
+    : undefined;
+  const scopePolicy =
+    policy.data?.gross_amount != null && policy.data.gross_total_amount != null
+      ? {
+          gross_amount: policy.data.gross_amount,
+          gross_total_amount: policy.data.gross_total_amount,
+        }
+      : undefined;
   const locked =
     lifecycle.isPending ||
     lifecycle.isError ||
     !lifecycle.data?.can_edit ||
-    job.status === "filled" ||
-    report.data.some((row) => row.job_id === job.id && Boolean(row.claim_id));
+    (job.status !== "draft" && job.status !== "published") ||
+    Boolean(
+      report.data?.some(
+        (row) => row.job_id === job.id && Boolean(row.claim_id),
+      ),
+    );
   return (
     <section className="panel platform-pricing">
       <h2>{t("pricingTitle")}</h2>
@@ -289,9 +415,19 @@ export function JobPricingPanel({ job }: { job: Job }) {
           <RoleFeePreview
             gross={Number(record.gross_total_amount)}
             currency={record.currency}
+            grossRate={Number(record.gross_amount)}
+            platformPercent={policy.data.platform_percent_override}
             access={{ ...access.data, ...policy.data }}
           />
         )
+      ) : scopePolicy ? (
+        <RoleFeePreview
+          gross={scopePolicy.gross_total_amount}
+          grossRate={scopePolicy.gross_amount}
+          currency={job.currency}
+          platformPercent={policy.data?.platform_percent_override}
+          access={access.data}
+        />
       ) : (
         <p className="muted">{t("legacyPricing")}</p>
       )}
@@ -312,8 +448,9 @@ export function JobPricingPanel({ job }: { job: Job }) {
           <EditPrice
             actor={actor}
             job={job}
-            record={record}
+            record={record ?? scopePolicy}
             access={access.data}
+            platformPercentOverride={policy.data?.platform_percent_override}
             onDone={() => setEditing(false)}
           />
         )}
@@ -337,14 +474,17 @@ export function PublishClientRequest({
   const online = useOnline();
   const client = useQueryClient();
   const access = useQuery(commissionAccessQuery(actor));
-  const percent = 50;
+  const [commission, setCommission] = useState("");
+  const percent = parseCourseCommission(commission);
   const [terms, setTerms] = useState("");
   const [contract, setContract] = useState(true);
   const publish = useMutation({
     mutationFn: async () => {
       requireOnline();
+      if (Number.isNaN(percent)) throw new Error("invalid_price");
       const { data, error } = await db().rpc("publish_client_request", {
         p_request_id: request.id,
+        p_platform_percent: percent,
         p_terms: terms.trim(),
         p_requires_contract: contract,
         p_claim_deadline: null,
@@ -368,10 +508,20 @@ export function PublishClientRequest({
         publish.mutate();
       }}
     >
+      {access.data?.can_manage_gross && (
+        <CourseCommissionField
+          id="publish-course-commission"
+          value={commission}
+          onChange={setCommission}
+          disabled={publish.isPending}
+        />
+      )}
       <RoleFeePreview
         gross={Number(request.gross_total_amount)}
+        grossRate={Number(request.gross_amount)}
         access={access.data}
         currency={request.currency}
+        platformPercent={percent}
       />
       <Field id="publish-client-terms" label={common("terms")}>
         <textarea
@@ -399,9 +549,7 @@ export function PublishClientRequest({
             publish.isPending ||
             !terms.trim() ||
             !access.data?.can_manage_gross ||
-            !Number.isFinite(percent) ||
-            Number(percent) < 0 ||
-            Number(percent) > 100
+            Number.isNaN(percent)
           }
         >
           {t("publishRequest")}

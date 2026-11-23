@@ -137,6 +137,8 @@ Each dedicated installation is a Premium LMS for one customer. Local organisatio
 
 Required fields: legal customer display name; academy name; main administrator email/username invitation; hosting mode (self-host / managed dedicated); verified primary domain or safe temporary domain; language/time zone and locale; primary brand logo/icon; theme; installation ID; selected edition; agreed capacity/seats/storage and API plan; SMTP service choice; backup/retention setting; support terms and customer data location. Do not collect server passwords through ordinary public forms.
 
+The internal portal's **Administration → White Label** page prepares a private draft with the selected company's administrator identity, appearance, domain, operating parameters and intended licence. It checks that the selected email belongs to an active account at that company. The signed operator handoff and customer-side administrator bootstrap remain separate steps. See the [installation runbook](deploy/academy/README.md#review-a-private-customer-academy-draft).
+
 Wizard behaviour: validation and duplicate checks; draft → preview → customer/plan review → explicitly authorised provisioning; idempotent retry; observable progress; recoverable failures; no partial active setup; generated installation ID and audit events. Customer receives an invitation to create their own password, **not** a prepublished master admin password. A vendor wizard may create an installation record without acquiring ongoing private content access.
 
 ### 4.2 Customer brand settings panel

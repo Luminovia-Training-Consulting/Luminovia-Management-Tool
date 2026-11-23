@@ -79,6 +79,11 @@ const AdminAnnouncementsPage = lazy(() =>
     default: module.AdminAnnouncementsPage,
   })),
 );
+const WhiteLabelSetupPage = lazy(() =>
+  import("../features/admin/white-label-setup").then((module) => ({
+    default: module.WhiteLabelSetupPage,
+  })),
+);
 const PlatformResetPage = lazy(() =>
   import("../features/admin/platform-reset").then((module) => ({
     default: module.PlatformResetPage,
@@ -378,6 +383,7 @@ export default function PortalRoutes() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="mail" element={<AdminMailPage />} />
+            <Route path="white-label" element={<WhiteLabelSetupPage />} />
             <Route path="reset" element={<PlatformResetPage />} />
             <Route path="deletions" element={<DeletionsPage />} />
             <Route path="audit" element={<AdminAuditPage />} />

@@ -15,6 +15,7 @@ const mock = vi.hoisted(() => ({
   rpc: vi.fn(),
   source: {} as CourseRunJobDefaults,
   gross: true,
+  scopedPricing: false,
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "admin-actor" } } }),
@@ -59,6 +60,7 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   mock.source = structuredClone(source);
   mock.gross = true;
+  mock.scopedPricing = false;
   mock.rpc
     .mockReset()
     .mockImplementation(
@@ -69,6 +71,7 @@ beforeEach(async () => {
           return {
             data: {
               can_manage_gross: mock.gross,
+              can_manage_own_course_pricing: mock.scopedPricing,
               ...(mock.gross
                 ? {
                     regular_lecturer_percent: 31,
@@ -224,6 +227,9 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   await user.clear(total);
   await user.type(total, "750");
   expect(screen.getByLabelText("Honorar")).toHaveValue(750);
+  expect(
+    screen.queryByLabelText(/Plattformanteil für diesen Auftrag/),
+  ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
   await waitFor(() =>
     expect(
@@ -237,4 +243,39 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   expect(args.p_payload).toMatchObject({ amount: 750, total_amount: 750 });
   expect(args.p_payload).not.toHaveProperty("gross_amount");
   expect(args.p_payload).not.toHaveProperty("capacity");
+});
+
+it("saves a scoped management override and previews the lecturer fee and platform share", async () => {
+  mock.gross = false;
+  mock.scopedPricing = true;
+  const user = userEvent.setup();
+  setup();
+  await screen.findByRole("heading", { name: "Auftrag aus diesem Kurs" });
+  const rate = screen.getByRole("spinbutton", {
+    name: "Plattformanteil für diesen Auftrag (%)",
+  });
+  await user.type(rate, "32.25");
+  await user.selectOptions(screen.getByLabelText("Einheit"), "fixed_total");
+  const gross = screen.getByLabelText("Voller Auftragspreis gesamt");
+  await user.clear(gross);
+  await user.type(gross, "1000");
+  expect(screen.getByText(/677,50/)).toBeVisible();
+  expect(screen.getByText(/322,50/)).toBeVisible();
+  expect(screen.queryByText(/Standardanteil/)).not.toBeInTheDocument();
+  await user.type(
+    screen.getByLabelText("Konditionen"),
+    "Explicit course terms",
+  );
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
+  await screen.findByText("Auftrag gespeichert.");
+  expect(mock.rpc).toHaveBeenCalledWith(
+    "create_course_run_job",
+    expect.objectContaining({
+      p_platform_percent: 32.25,
+      p_payload: expect.objectContaining({
+        gross_amount: 1000,
+        gross_total_amount: 1000,
+      }),
+    }),
+  );
 });

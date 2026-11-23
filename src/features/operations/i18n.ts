@@ -381,6 +381,10 @@ const pairs: Record<string, [string, string]> = {
   premiumDisabled: ["Premium LMS AUS", "Premium LMS OFF"],
   premiumVersion: ["Version {{version}}", "Version {{version}}"],
   premiumSwitch: ["Premium LMS", "Premium LMS"],
+  premiumOnCreateHelp: [
+    "Das Unternehmen erhält Premium LMS beim Speichern.",
+    "The company gets Premium LMS when you save.",
+  ],
   premiumContinue: ["Weiter", "Continue"],
   premiumBack: ["Zurück", "Back"],
   premiumAdminOnly: [

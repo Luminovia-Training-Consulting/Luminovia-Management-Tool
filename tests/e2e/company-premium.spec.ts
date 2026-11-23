@@ -27,6 +27,36 @@ async function checkPremiumAccessibility(page: Page) {
     expect(result.violations).toEqual([]);
 }
 
+test("admin provisions Premium while creating a company", async ({page}) => {
+    const admin = await actor("Fictional company setup admin", "admin");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const name = `Fictional Premium setup ${randomUUID().slice(0, 8)}`;
+    try {
+        await login(page, admin.email);
+        await page.goto("/admin/clients");
+        await page.getByRole("button", {name: "Organisation anlegen", exact: true}).click();
+        const dialog = page.getByRole("dialog", {name: "Organisation anlegen"});
+        const enable = dialog.getByRole("switch", {name: "Premium LMS", exact: true});
+        await dialog.getByLabel("Name", {exact: true}).fill(name);
+        await expect(enable).toHaveAttribute("aria-checked", "false");
+        await enable.press("Space");
+        await expect(enable).toHaveAttribute("aria-checked", "true");
+        await dialog.getByRole("button", {name: "Speichern", exact: true}).click();
+        await expect(dialog).toBeHidden();
+        await expect(page.getByRole("heading", {name, exact: true})).toBeVisible();
+        await expect(page.getByRole("switch", {name: "Premium LMS", exact: true}))
+            .toHaveAttribute("aria-checked", "true");
+        await page.reload();
+        await page.getByRole("searchbox", {name: "Suchen", exact: true}).fill(name);
+        await page.getByRole("button", {name, exact: true}).click();
+        await expect(page.getByRole("switch", {name: "Premium LMS", exact: true}))
+            .toHaveAttribute("aria-checked", "true");
+    } finally {
+        await service.from("organisations").delete().eq("name", name);
+        await service.auth.admin.deleteUser(admin.id);
+    }
+});
+
 test("only an actual admin can confirm Premium ON/OFF and inspect retained course data", async ({
                                                                                                     page,
                                                                                                     browser,

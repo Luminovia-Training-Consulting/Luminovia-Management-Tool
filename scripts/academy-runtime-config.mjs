@@ -11,6 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+import { academyDomainLabels } from "../src/features/branding/academy-customer-draft-schema.ts";
 import {
   createConfiguration,
   writeConfiguration,
@@ -21,9 +22,6 @@ import {
 } from "./academy-runtime-handoff.mjs";
 
 const editions = z.enum(["customer-self-hosted", "customer-managed"]);
-const domainLabels =
-  /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-
 /** Derive the exact customer runtime identity without touching the filesystem. */
 export function describeAcademyRuntime({
   root,
@@ -53,7 +51,7 @@ export function describeAcademyRuntime({
     portal.port ||
     portal.search ||
     portal.hash ||
-    !domainLabels.test(portal.hostname) ||
+    !academyDomainLabels.test(portal.hostname) ||
     portal.hostname.length > 253
   )
     throw new Error("academy_runtime_origin");

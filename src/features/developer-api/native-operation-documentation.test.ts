@@ -140,6 +140,10 @@ describe("internal operation documentation", () => {
     expect(publish.safeParse({ p_request_id: id }).success).toBe(true);
     expect(
       publish.safeParse({ p_request_id: id, p_platform_percent: 25 }).success,
+    ).toBe(true);
+    expect(
+      publish.safeParse({ p_request_id: id, p_platform_percent: 25.125 })
+        .success,
     ).toBe(false);
   });
 

@@ -8,6 +8,7 @@ import { db } from "../../lib/supabase";
 /** Server-derived capabilities for gross-price management, client memberships and course requests. */
 export interface CommissionAccess {
   can_manage_gross: boolean;
+  can_manage_own_course_pricing?: boolean;
   can_manage_client_memberships: boolean;
   can_request: boolean;
   regular_lecturer_percent?: number | null;
@@ -122,12 +123,18 @@ export const offerPolicyQuery = (actor: string, job: string) =>
         p_job_id: job,
       });
       if (error) throw error;
-      return data as Pick<
-        CommissionAccess,
-        | "regular_lecturer_percent"
-        | "senior_lecturer_percent"
-        | "policy_version"
-      > | null;
+      return data as
+        | (Pick<
+            CommissionAccess,
+            | "regular_lecturer_percent"
+            | "senior_lecturer_percent"
+            | "policy_version"
+          > & {
+            platform_percent_override?: number | null;
+            gross_amount?: number;
+            gross_total_amount?: number;
+          })
+        | null;
     },
   });
 /** Read the client_organisations server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
@@ -203,27 +210,34 @@ export const companyMonthlySpendingQuery = (
     refetchInterval: 15000,
   });
 
-/** Platform share rounds to cents first; the lecturer receives the exact remainder. */
-export function splitFee(gross: number, percent: number) {
+/** Empty restores the captured role and individual pricing workflow. */
+export function parseCourseCommission(value: string): number | null {
+  if (value === "") return null;
+  const percent = Number(value);
+  return /^\d+(?:\.\d{1,2})?$/.test(value) && percent <= 100 ? percent : NaN;
+}
+
+/** Match the server quote: round the lecturer share first, then subtract from gross. */
+export function splitFee(gross: number, lecturerPercent: number) {
   // Integer cents and percentage basis points prevent divergent remainders
   // between the two shares of a display-only preview.
   const cents = Math.round(gross * 100);
-  const bps = Math.round(percent * 100);
+  const bps = Math.round(lecturerPercent * 100);
   if (
     !Number.isSafeInteger(cents) ||
-    cents < 0 ||
+    gross < 0 ||
     bps < 0 ||
     bps > 10000 ||
     !Number.isFinite(bps) ||
-    percent < 0 ||
-    percent > 100
+    lecturerPercent < 0 ||
+    lecturerPercent > 100
   )
     throw new Error("invalid_price");
-  const platform = Math.round((cents * bps) / 10000);
+  const lecturer = Number((BigInt(cents) * BigInt(bps) + 5000n) / 10_000n);
   return {
     gross: cents / 100,
-    platform: platform / 100,
-    lecturer: (cents - platform) / 100,
+    platform: (cents - lecturer) / 100,
+    lecturer: lecturer / 100,
   };
 }
 

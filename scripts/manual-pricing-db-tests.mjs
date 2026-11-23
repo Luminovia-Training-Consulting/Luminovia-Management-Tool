@@ -216,4 +216,82 @@ await withTestDatabase("manual_pricing", async ({sql, actor}) => {
     console.log(
         "PASS current pricing version invalidates stale consent; stale settings and unauthorized private rates denied",
     );
+
+    const pricing = async (user, id) =>
+        JSON.parse(await actor(user, `select coalesce(public.commission_offer_policy('${id}'), 'null'::jsonb)`));
+    const setPrice = (user, id, percent) =>
+        actor(user, `select public.set_job_commission('${id}',1000,2000,${percent})`);
+    await assert.rejects(setPrice(manager, third, 30), /42501/);
+    await assert.rejects(pricing(manager, third), /42501/);
+    await assert.rejects(setPrice(admin, third, 22.555), /22023.*Invalid commission/s);
+    await setPrice(admin, third, 30);
+    assert.deepEqual(await pricing(admin, third), {
+        regular_lecturer_percent: 70, senior_lecturer_percent: 70,
+        policy_version: 1, platform_percent_override: 30,
+    });
+    for (const who of [teacher, peer, senior]) {
+        const scopedQuote = (await offers(who)).find(({id}) => id === third);
+        assert.equal(scopedQuote.amount, 700);
+        assert.equal(scopedQuote.total_amount, 1400);
+        await assert.rejects(pricing(who, third), /42501/);
+    }
+    await setPrice(admin, third, 0);
+    assert.equal((await offers(senior)).find(({id}) => id === third).total_amount, 2000);
+    await setPrice(admin, third, 100);
+    assert.equal((await offers(senior)).find(({id}) => id === third).total_amount, 0);
+    await setPrice(admin, third, "null");
+    assert.deepEqual(await pricing(admin, third), {
+        regular_lecturer_percent: 31, senior_lecturer_percent: 73, policy_version: 1,
+    });
+    assert.equal((await offers(teacher)).find(({id}) => id === third).total_amount, null);
+    assert.equal((await offers(peer)).find(({id}) => id === third).total_amount, 620);
+
+    const createArgs = [JSON.stringify({
+        customer_name: "Fictional pricing company", title: "Management own offer",
+        delivery_type: "online", status: "published", terms: "Reviewed explicit quote",
+        requires_contract: false,
+        gross_amount: 1000, gross_total_amount: 2000, currency: "EUR",
+        rate_unit: "per_day",
+        sessions: [{starts_at: "2040-06-07T08:00:00Z", ends_at: "2040-06-07T12:00:00Z"}],
+    }), randomUUID()];
+    const createScoped = (user, percent) =>
+        actor(user, `select public.create_capacity_job('${createArgs[0]}',1,'${createArgs[1]}','${org}',${percent})`);
+    await assert.rejects(createScoped(manager, "null"), /42501/);
+    await assert.rejects(createScoped(peer, 25), /42501/);
+    const scoped = await createScoped(manager, 25);
+    assert.equal(await createScoped(manager, 25), scoped);
+    await assert.rejects(createScoped(manager, 30), /22023.*idempotency conflict/s);
+    const managerPricing = await pricing(manager, scoped);
+    assert.equal(managerPricing.platform_percent_override, 25);
+    assert.equal(managerPricing.gross_total_amount, 2000);
+    await assert.rejects(
+        actor(manager, "select * from public.commission_report()"), /42501/,
+    );
+    await assert.rejects(
+        actor(manager, `select public.lecturer_compensation('${teacher}')`), /42501/,
+    );
+    await assert.rejects(setPrice(manager, scoped, "null"), /42501/);
+    const beforeEdit = (await offers(teacher)).find(({id}) => id === scoped);
+    await setPrice(manager, scoped, 32.25);
+    assert.equal(await sql(`select amount||':'||total_amount from public.jobs where id='${scoped}'`), "0.00:0.00");
+    assert.equal(
+        JSON.parse(await actor(
+            teacher,
+            `select public.claim_job('${scoped}','${randomUUID()}',${beforeEdit.terms_version})`,
+        )).status,
+        "terms_changed",
+    );
+    const currentQuote = (await offers(teacher)).find(({id}) => id === scoped);
+    assert.equal(currentQuote.total_amount, 1355);
+    const scopedAcceptance = JSON.parse(await actor(
+        teacher,
+        `select public.claim_job('${scoped}','${randomUUID()}',${currentQuote.terms_version})`,
+    ));
+    assert.equal(scopedAcceptance.status, "confirmed");
+    await assert.rejects(setPrice(manager, scoped, 40), /22023.*Only unaccepted offers/s);
+    await assert.rejects(setPrice(admin, scoped, 40), /22023.*Only unaccepted offers/s);
+    assert.equal(await sql(
+        `select lecturer_net_total_amount||':'||platform_total_amount from private.claim_revenue_ledger where claim_id='${scopedAcceptance.claim_id}'`,
+    ), "1355.00:645.00");
+    console.log("PASS explicit offer pricing and scoped Management access, retries, stale consent and immutable revenue");
 });

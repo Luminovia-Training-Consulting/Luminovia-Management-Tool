@@ -342,7 +342,7 @@ export const commercialOperationDocumentation = {
   set_job_commission: {
     summary: "Set original-currency gross pricing on an unaccepted offer",
     description:
-      "Requires finance.gross.read and a configured lecturer compensation policy. The offer must be draft or published, belong to an organisation and have no assignment history. Gross amounts have two decimal places in the offer's currency. Equal unit and total amounts are required for a fixed total. The server derives the split from the current role policy and advances the terms version on changes. Repeating the same amounts under the same policy succeeds without changing the terms version.",
+      "Requires finance.gross.read or Management authority for an own offer with an explicit platform share. The offer must be draft or published, belong to an organisation and have no assignment history. Gross amounts have two decimal places in the offer's currency. Equal unit and total amounts are required for a fixed total. An explicit platform share fixes the fee for every position. With no override, the server uses the applicable role or individual rates. A changed price advances the offer terms version.",
     parameters: {
       p_job_id: uuid,
       p_gross_amount: {
@@ -354,15 +354,18 @@ export const commercialOperationDocumentation = {
         description: "Gross amount for the entire offer.",
       },
       p_platform_percent: {
-        type: "null",
+        type: ["number", "null"],
+        minimum: 0,
+        maximum: 100,
+        multipleOf: 0.01,
         default: null,
         description:
-          "Leave omitted or null. The compensation policy determines the percentage.",
+          "Platform share from 0 to 100. Finance administrators can omit or use null to apply role or individual rates.",
       },
     },
     errors: {
       "400":
-        "The amounts, applicability to the job, policy or legacy percentage argument are invalid (SQLSTATE 22023).",
+        "The amounts, applicability to the job or platform percentage are invalid (SQLSTATE 22023).",
       "403": "Current gross finance permission is required (SQLSTATE 42501).",
     },
   },

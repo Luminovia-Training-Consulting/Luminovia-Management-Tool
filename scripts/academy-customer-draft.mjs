@@ -18,10 +18,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import {
-  academyBrandColor,
-  academyBrandName,
-  academyBrandShortName,
-} from "../src/features/branding/academy-branding-schema.ts";
+  academyCustomerDraftSchema as draftSchema,
+  academyPathsOverlap as overlaps,
+  academyReservedRoots as reservedRoots,
+} from "../src/features/branding/academy-customer-draft-schema.ts";
 import { describeAcademyRuntime } from "./academy-runtime-config.mjs";
 import {
   readRuntimeHandoffFile,
@@ -36,12 +36,9 @@ import {
 import {
   digestSchema,
   indexLicenceActions,
-  licenceLimits,
   licenceReceiptSchema,
   parseLicenceRequest,
   planLicenceAction,
-  reference,
-  releaseCommit,
   sha256,
 } from "./academy-customer-licensing.mjs";
 import {
@@ -56,118 +53,11 @@ const checkout = fileURLToPath(new URL("../", import.meta.url)).replace(
   /\/$/,
   "",
 );
-const reservedRoots = [
-  "/opt/luminovia-portal",
-  "/var/backups/luminovia-complete",
-];
 const registryFile = "approved-drafts.json";
 const lockFile = ".academy-drafts.lock";
 const maxRegistryBytes = 4 * 1024 * 1024;
 const inside = (candidate, parent) =>
   candidate === parent || candidate.startsWith(parent + "/");
-const overlaps = (a, b) => inside(a, b) || inside(b, a);
-
-const privateLabel = (length) =>
-  z
-    .string()
-    .trim()
-    .min(1)
-    .max(length)
-    .regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}<>]+$/u);
-const email = z.email().max(254).toLowerCase();
-const origin = z
-  .string()
-  .max(261)
-  .toLowerCase()
-  .regex(/^https:\/\/(?:[a-z0-9][a-z0-9-]*\.)+[a-z0-9][a-z0-9-]*\/?$/)
-  .transform((value) => new URL(value).origin);
-const timeZone = z
-  .string()
-  .max(80)
-  .regex(/^[A-Za-z][A-Za-z0-9_+/-]*$/)
-  .refine((zone) => {
-    try {
-      new Intl.DateTimeFormat("en", { timeZone: zone });
-      return true;
-    } catch {
-      return false;
-    }
-  });
-const localHostname =
-  /(?:^|\.)(?:localhost|local|internal|test|invalid|example|onion)$/;
-const fixtureHostname = /(?:^|\.)example\.(?:com|org|net)$/;
-const vendorHostname = /(?:^|\.)luminovia\.org$/;
-
-const draftSchema = z
-  .strictObject({
-    version: z.literal(1),
-    request_id: z.uuidv4().toLowerCase(),
-    purpose: z.enum(["customer", "rehearsal"]),
-    legal_customer_name: privateLabel(120),
-    branding: z.strictObject({
-      name: academyBrandName,
-      short_name: academyBrandShortName,
-      theme: z.enum(["light", "dark", "system"]),
-      theme_color: academyBrandColor.toLowerCase(),
-      approved_assets_reference: reference,
-    }),
-    initial_administrator: z.strictObject({
-      email,
-      username: z
-        .string()
-        .regex(/^[a-z][a-z0-9._-]{1,30}[a-z0-9]$/)
-        .nullish()
-        .transform((name) => name ?? null),
-    }),
-    target: z.strictObject({
-      edition: z.enum(["customer-self-hosted", "customer-managed"]),
-      portal_origin: origin,
-      domain_status: z.enum(["verified-by-operator", "temporary-pending"]),
-      runtime_directory: z
-        .string()
-        .max(240)
-        .regex(/^\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)+$/),
-      host_reference: reference,
-      data_region: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/),
-      tls: z.enum(["acme", "operator-terminated"]),
-    }),
-    preferences: z.strictObject({
-      locale: z.enum(["de", "en"]),
-      time_zone: timeZone,
-    }),
-    smtp_mode: z.enum(["capture", "provider"]),
-    backup_retention_days: z.int().positive(),
-    support: z.strictObject({
-      agreement_reference: reference,
-      contact_email: email,
-    }),
-    licence: z.strictObject({
-      release_commit: releaseCommit,
-      limits: licenceLimits,
-    }),
-  })
-  .superRefine((draft, state) => {
-    const host = new URL(draft.target.portal_origin).hostname;
-    if (
-      vendorHostname.test(host) ||
-      (draft.purpose === "customer" &&
-        (localHostname.test(host) || fixtureHostname.test(host)))
-    ) {
-      state.addIssue({
-        code: "custom",
-        path: ["target", "portal_origin"],
-        message: "Invalid academy domain",
-      });
-    }
-    const directory = draft.target.runtime_directory;
-    if (reservedRoots.some((root) => overlaps(directory, root))) {
-      state.addIssue({
-        code: "custom",
-        path: ["target", "runtime_directory"],
-        message: "Reserved installation path",
-      });
-    }
-  });
 
 const receiptSchema = z.strictObject({
   version: z.literal(1),

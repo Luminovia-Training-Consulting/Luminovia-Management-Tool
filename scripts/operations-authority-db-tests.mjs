@@ -158,6 +158,36 @@ await withTestDatabase("operations_authority", async (fixture) => {
             org,
         );
     });
+    await check("Premium organisation creation is atomic, admin-only and safe to retry", async () => {
+        const request = randomUUID();
+        const title = "Fictional Premium studio";
+        const payload = {
+            name: title,
+            premium_request_id: request,
+        };
+        const save = (row, id = null) => {
+            const input = organisationRequest({p_id: id, p_payload: row});
+            return `to_jsonb(public.save_organisation(${id ? q(id) : "null"},${q(JSON.stringify(input.p_payload))}::jsonb))`;
+        };
+        await assert.rejects(call(manager, save(payload)), /42501/);
+        await assert.rejects(adminCall(save({...payload, archived: true})), /22023/);
+        assert.equal(await sql(`select count(*) from public.organisations where name=${q(title)}`), "0");
+
+        const [first, second] = await Promise.all([
+            adminCall(save(payload)),
+            adminCall(save(payload)),
+        ]);
+        const id = organisationId(first);
+        assert.equal(organisationId(second), id);
+        assert.equal(await sql(`select count(*) from public.organisations where name=${q(title)}`), "1");
+        assert.equal(await sql(`select enabled::text || ':' || version from private.company_premium_settings where organisation_id=${q(id)}`), "true:1");
+        assert.equal(await sql(`select count(*) from private.company_premium_audit where organisation_id=${q(id)} and result='updated'`), "1");
+        await assert.rejects(adminCall(save(payload, id)), /22023/);
+        const standardId = organisationId(await call(manager, save({
+            name: "Fictional standard studio",
+        })));
+        assert.equal(await sql(`select private.company_premium_enabled(${q(standardId)})`), "f");
+    });
     const roles = (who, role) =>
         `public.set_account_roles(${q(who)},array[${q(role)}]::text[])`;
     const status = (who, active) => `public.set_user_active(${q(who)},${active})`;

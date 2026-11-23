@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Company Premium, dedicated Academy setup and offer pricing
+
+- [x] Allow an actual administrator to enable Premium during company creation. Commit company, entitlement and audit together. Keep confirmed toggles and retained course records for existing companies.
+- [x] Prepare a private White Label draft from the internal administration UI, including validation of the customer's initial administrator account and company membership. The independent runtime uses the signed operator handoff and local bootstrap.
+- [x] Allow an explicit platform percentage at offer creation and before acceptance. Preserve individual lecturer compensation when no offer override applies. Limit Management to its own explicitly priced offers and preserve existing general finance and lecturer-compensation permissions.
+- [ ] Commission the signed White Label handoff with the selected account on the intended independent customer installation.
+
 ## Daily workflow audit follow-up
 
 - Keep unsent chat text in the authenticated browser session, scoped to its account and conversation. Hold the scroll position while older history is being read, separate new-message arrival from the read receipt, and retry a temporary history page error in place.

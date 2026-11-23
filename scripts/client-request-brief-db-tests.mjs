@@ -300,24 +300,22 @@ await withTestDatabase("client_request_brief", async ({sql, actor}) => {
     await check(
         "Published requests are atomically read-only and publication is in revision history",
         async () => {
-            // Policy setup is a separate permission-gated operation; publishing cannot
-            // inject a new percentage or bypass the captured role-pricing contract.
             await rpc(admin, "configure_compensation_policy", ["17", "31", "0"]);
+            const publication = [q(request), "50", q("Fictional accepted terms"), "false"];
             await assert.rejects(
-                rpc(admin, "publish_client_request", [
-                    q(request),
-                    "50",
-                    q("Fictional accepted terms"),
-                    "false",
-                ]),
-                /22023.*Compensation policy is configured separately/s,
+                rpc(client, "publish_client_request", publication),
+                /42501/,
             );
-            job = await rpc(admin, "publish_client_request", [
-                q(request),
-                "null",
-                q("Fictional accepted terms"),
-                "false",
-            ]);
+            job = await rpc(admin, "publish_client_request", publication);
+            assert.equal(await rpc(admin, "publish_client_request", publication), job);
+            await assert.rejects(
+                rpc(admin, "publish_client_request", [publication[0], "25", ...publication.slice(2)]),
+                /22023.*Publication idempotency conflict/s,
+            );
+            assert.equal(
+                await sql(`select platform_percent_override from private.job_commission_offers where job_id=${q(job)}`),
+                "50.00",
+            );
             assert.equal((await read()).editable, false);
             await assert.rejects(save(brief), /55000/);
             assert.equal(

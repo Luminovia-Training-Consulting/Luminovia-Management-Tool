@@ -454,7 +454,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Client portal reports only the linked organisation full fee, never unknown net as gross",
+        "Client portal sees the linked course and original company fee until membership is withdrawn",
         async () => {
             const requests = await rpc("client", "client_requests");
             assert.equal(requests.length, 1);
@@ -465,7 +465,7 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                     ids.client,
                     `select count(*) from public.building_blocks where id=${q(block.id)}`,
                 ),
-                "0",
+                "1",
             );
             await sql(
                 `update public.client_organisation_memberships set removed_at=now() where user_id=${q(ids.client)}`,
@@ -521,6 +521,29 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 /permission denied/,
             );
+        },
+    );
+    await check(
+        "Management sets a scoped explicit price on an own offer linked to an existing run",
+        async () => {
+            const ownRun = await createRun(template, 17);
+            const preview = await rpc("management", "course_run_job_defaults", [ownRun]);
+            const key = randomUUID();
+            const ownPayload = financial(preview.source_revision);
+            const made = await rpc("management", "create_course_run_job", [
+                ownRun, ownPayload, 25.5, key,
+            ]);
+            assert.equal(await rpc("management", "create_course_run_job", [
+                ownRun, ownPayload, 25.5, key,
+            ]), made);
+            const pricing = await rpc("management", "commission_offer_policy", [made]);
+            assert.equal(pricing.platform_percent_override, 25.5);
+            assert.equal(pricing.gross_total_amount, ownPayload.gross_total_amount);
+            await assert.rejects(rpc("management", "commission_offer_policy", [job]), /42501/);
+            const lectureOffer = (await rpc("lecturer", "job_offers")).find(({id}) => id === made);
+            assert.equal(lectureOffer.total_amount, 149.01);
+            await rpc("management", "set_job_commission", [made, 100, 200, 20]);
+            assert.equal((await rpc("management", "commission_offer_policy", [made])).platform_percent_override, 20);
         },
     );
     await check(

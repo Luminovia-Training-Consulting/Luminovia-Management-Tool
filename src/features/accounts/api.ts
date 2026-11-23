@@ -64,6 +64,17 @@ export const accountOrganisationsQuery = (actor: string) =>
     },
   });
 
+/** Read current company memberships through the authenticated portal policy. */
+export async function accountMemberships(userId: string) {
+  const { data, error } = await db()
+    .from("client_organisation_memberships")
+    .select("organisation_id")
+    .eq("user_id", userId)
+    .is("removed_at", null);
+  if (error) throw error;
+  return data as { organisation_id: string }[];
+}
+
 /** Account page with total count and the actual applied pagination bounds. */
 export interface AccountList {
   items: AccountPerson[];

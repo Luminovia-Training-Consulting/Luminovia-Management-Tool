@@ -53,26 +53,26 @@ describe("commission previews and truthful original-currency reporting", () => {
     expect(totals.platform).toBe(403.02);
     expect(totals.count).toBe(2);
   });
-  it("rounds the platform share first and gives the lecturer the exact remainder", () => {
+  it("rounds the lecturer share first as PostgreSQL does", () => {
     expect(splitFee(403.01, 50)).toEqual({
       gross: 403.01,
-      platform: 201.51,
-      lecturer: 201.5,
+      lecturer: 201.51,
+      platform: 201.5,
     });
     expect(splitFee(100, 30)).toEqual({
       gross: 100,
-      platform: 30,
-      lecturer: 70,
+      lecturer: 30,
+      platform: 70,
     });
     expect(splitFee(17.13, 0)).toEqual({
       gross: 17.13,
-      platform: 0,
-      lecturer: 17.13,
+      lecturer: 0,
+      platform: 17.13,
     });
     expect(splitFee(17.13, 100)).toEqual({
       gross: 17.13,
-      platform: 17.13,
-      lecturer: 0,
+      lecturer: 17.13,
+      platform: 0,
     });
   });
   it("rejects invalid prices instead of displaying invented financial values", () => {

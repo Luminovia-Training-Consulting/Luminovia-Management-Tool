@@ -156,8 +156,8 @@ const pairs: Record<string, [string, string]> = {
   ],
   platformShare: ["Plattformanteil", "Platform share"],
   splitHint: [
-    "Die Administration sieht die rollenabhängige Aufteilung. Das jeweilige Honorar wird serverseitig berechnet; angenommene Konditionen bleiben unverändert.",
-    "Administration can review the role-based split. Each fee is calculated on the server; accepted terms stay unchanged.",
+    "Das verbindliche Honorar wird bei der Annahme serverseitig gespeichert und bleibt danach unverändert.",
+    "The server records the binding fee at acceptance. Accepted terms stay unchanged.",
   ],
   feeBasis: [
     "Preisaufteilung der Vergütung; keine Umsatzsteuerberechnung.",
@@ -259,6 +259,26 @@ const pairs: Record<string, [string, string]> = {
   ownCompensation: ["Dein vereinbartes Honorar", "Your accepted compensation"],
   searchRequests: ["Anfragen suchen", "Search requests"],
   pricePreview: ["Vorschau der Vergütung", "Compensation preview"],
+  courseCommission: [
+    "Plattformanteil für diesen Auftrag (%)",
+    "Platform share for this offer (%)",
+  ],
+  courseCommissionHint: [
+    "Leer lassen, um Rollen- und individuelle Honorare zu verwenden. Ein eingetragener Anteil gilt für jede Position dieses Angebots und legt das sichtbare Dozierendenhonorar fest.",
+    "Leave blank to use role and individual rates. An entered share applies to each position and sets the fee shown to lecturers.",
+  ],
+  courseCommissionNetHint: [
+    "Leer lassen, um das Honorar ohne Plattformanteil einzugeben. Ein eingetragener Anteil wechselt zum vollen Auftragspreis.",
+    "Leave blank to enter the fee without a platform share. An entered share switches to the full customer price.",
+  ],
+  courseCommissionRequired: [
+    "Gib den Plattformanteil für jede Position dieses Angebots an.",
+    "Enter the platform share for each position of this offer.",
+  ],
+  courseCommissionPreview: [
+    "Dozierendenhonorar und Plattformanteil pro Position",
+    "Lecturer fee and platform share per position",
+  ],
   invalidSessions: [
     "Prüfe die Termine und ihre Zeitzone. Ende und Beginn müssen eindeutig und in der richtigen Reihenfolge liegen.",
     "Check the sessions and their time zone. Start and end must be unambiguous and correctly ordered.",

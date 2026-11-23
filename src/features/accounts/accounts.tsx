@@ -13,7 +13,6 @@ import { LecturerCompensation } from "../commercial/lecturer-compensation";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
 import { permissionsQuery } from "../../lib/queries";
-import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -26,6 +25,7 @@ import {
 } from "../../components/common";
 import {
   accountListQuery,
+  accountMemberships,
   type AccountPerson,
   accountRequest,
   type AccountRole,
@@ -77,15 +77,7 @@ function AccountsDirectory({
   const membership = useQuery({
     queryKey: ["account-memberships", actorId, selected?.id],
     enabled: canLinkOrganisations && selected !== null,
-    queryFn: async () => {
-      const result = await db()
-        .from("client_organisation_memberships")
-        .select("organisation_id")
-        .eq("user_id", selected!.id)
-        .is("removed_at", null);
-      if (result.error) throw result.error;
-      return result.data as { organisation_id: string }[];
-    },
+    queryFn: () => accountMemberships(selected!.id),
   });
   const change = useMutation({
     mutationFn: async () => {

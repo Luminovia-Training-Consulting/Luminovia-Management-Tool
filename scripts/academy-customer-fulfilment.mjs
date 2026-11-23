@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  digestSchema,
-  reference,
-  sha256,
-} from "./academy-customer-licensing.mjs";
+import { reference } from "../src/features/branding/academy-licence-fields.ts";
+import { digestSchema, sha256 } from "./academy-customer-licensing.mjs";
 
 const requestSchema = z.strictObject({
   version: z.literal(1),

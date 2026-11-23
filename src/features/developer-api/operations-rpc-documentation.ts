@@ -104,14 +104,17 @@ export const operationsRpcDocumentation = {
   publish_client_request: {
     summary: "Publish a company request as a role-priced teaching offer",
     description:
-      "Requires finance.gross.read. The request must belong to an active company and contain future sessions. The server creates the course and offer using the configured lecturer-role compensation policy. Repeat the same publication options for the same job ID while the options and offer still match. Changing the publication terms requires the relevant job workflow.",
+      "Requires finance.gross.read. The request must belong to an active company and contain future sessions. The server creates the course and offer using configured compensation rates or an explicit platform share. Repeat the same publication options for the same job ID while the options and offer still match. Changing the publication terms requires the relevant job workflow.",
     parameters: {
       p_request_id: id,
       p_platform_percent: {
-        type: "null",
+        type: ["number", "null"],
+        minimum: 0,
+        maximum: 100,
+        multipleOf: 0.01,
         default: null,
         description:
-          "Compatibility argument. Omit or pass null to use the configured compensation policy.",
+          "Optional platform share. Null uses the applicable role or individual rates.",
       },
       p_terms: {
         type: "string",

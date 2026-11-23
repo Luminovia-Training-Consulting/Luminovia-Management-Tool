@@ -3,8 +3,8 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  * Customer directory with authorized contacts, internal notes and organization settings. Shared
  * metadata and private business fields keep their separate table permissions.
  */
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,11 +75,15 @@ function organisationPayload(values: z.infer<typeof orgSchema>) {
 async function saveOrganisation(
   values: z.infer<typeof orgSchema>,
   id: string | null,
+  premiumRequestId?: string,
 ) {
   requireOnline();
   const { data, error } = await db().rpc("save_organisation", {
     p_id: id,
-    p_payload: organisationPayload(values),
+    p_payload: {
+      ...organisationPayload(values),
+      ...(premiumRequestId ? { premium_request_id: premiumRequestId } : {}),
+    },
   });
   if (error) throw error;
   return data as string;
@@ -103,18 +107,24 @@ async function saveContact(
 function OrganisationForm({
   original,
   notes,
+  canEnablePremium,
   onDone,
 }: {
   original?: Organisation;
   notes: string;
+  canEnablePremium: boolean;
   onDone: (id: string) => void;
 }) {
   const { t } = useTranslation("operations");
   const client = useQueryClient();
   const online = useOnline();
+  const showPremium = canEnablePremium && !original;
+  const [premium, setPremium] = useState(false);
+  const premiumRequest = useRef<string | undefined>(undefined);
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<z.infer<typeof orgSchema>>({
     resolver: zodResolver(orgSchema),
@@ -129,9 +139,15 @@ function OrganisationForm({
       archived: Boolean(original?.archived_at),
     },
   });
+  const archived = useWatch({ control, name: "archived" });
   const save = useMutation({
-    mutationFn: (values: z.infer<typeof orgSchema>) =>
-      saveOrganisation(values, original?.id ?? null),
+    mutationFn: (values: z.infer<typeof orgSchema>) => {
+      if (showPremium && premium && !values.archived) {
+        premiumRequest.current ??= crypto.randomUUID();
+        return saveOrganisation(values, null, premiumRequest.current);
+      }
+      return saveOrganisation(values, original?.id ?? null);
+    },
     onSuccess: async (id) => {
       await client.invalidateQueries({ queryKey: ["operations"] });
       onDone(id);
@@ -163,6 +179,27 @@ function OrganisationForm({
         <input type="checkbox" {...register("archived")} />
         {t("archive")}
       </label>
+      {showPremium && (
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            role="switch"
+            aria-label={t("premiumSwitch")}
+            aria-checked={premium && !archived}
+            aria-describedby="org-premium-help"
+            className={`premium-switch premium-switch-${premium && !archived ? "on" : "off"}`}
+            disabled={archived || save.isPending}
+            onClick={() => setPremium((enabled) => !enabled)}
+          >
+            <span className="premium-switch-indicator" aria-hidden="true" />
+            {t(premium && !archived ? "premiumEnabled" : "premiumDisabled")}
+          </Button>
+          <small className="muted" id="org-premium-help">
+            {t(archived ? "premiumArchived" : "premiumOnCreateHelp")}
+          </small>
+        </div>
+      )}
       <Button disabled={!online || save.isPending}>{t("save")}</Button>
       {save.isError && <Notice kind="error">{t("error")}</Notice>}
     </form>
@@ -532,6 +569,7 @@ function ClientWorkspace({
         <OrganisationForm
           key={orgEdit?.id ?? "new"}
           original={orgEdit ?? undefined}
+          canEnablePremium={isAdmin}
           notes={
             orgEdit
               ? (notes.data.find((note) => note.organisation_id === orgEdit.id)

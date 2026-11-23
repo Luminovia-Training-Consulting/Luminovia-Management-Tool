@@ -109,6 +109,13 @@ describe("course template and run-backed offer contracts", () => {
         p_payload: gross,
         p_platform_percent: 50,
       }),
+    ).toBe(true);
+    expect(
+      input("create_course_run_job", {
+        ...base,
+        p_payload: gross,
+        p_platform_percent: 50.125,
+      }),
     ).toBe(false);
     expect(
       input("create_course_run_job", {
