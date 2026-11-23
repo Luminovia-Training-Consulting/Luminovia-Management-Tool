@@ -69,6 +69,8 @@ await withTestDatabase("emergency_assignment_days", async ({ actor, sql }) => {
         ${dates.map(({ id, start, end }) => `(${q(id)},${q(sourceClaim)},${q(owner)},${q(start)},${q(end)})`).join(",")};
       insert into public.topics(id,label_de,label_en,kind) values(${q(topic)},'Emergency fixture topic','Emergency fixture topic','topic');
       insert into public.job_requirements(job_id,topic_id) values(${q(sourceJob)},${q(topic)}),(${q(normalJob)},${q(topic)});
+      insert into public.lecturer_topics(user_id,topic_id)
+        values(${q(owner)},${q(topic)}),(${q(second)},${q(topic)}),(${q(blocked)},${q(topic)});
       insert into private.company_lecturer_blocks(organisation_id,lecturer_id,blocked,version)
         values(${q(org)},${q(blocked)},true,1);
     `);
@@ -112,12 +114,16 @@ await withTestDatabase("emergency_assignment_days", async ({ actor, sql }) => {
   assert.equal((await claim(owner, urgent)).status, "not_eligible");
   assert.equal((await claim(first, normalJob)).status, "not_eligible");
 
+  const unmatched = await discover(first, "title");
+  assert.deepEqual(unmatched.items.map(({ id }) => id), [urgent]);
+  assert.equal(unmatched.next_cursor, null);
+
   for (const sort of ["title", "soonest", "newest"]) {
-    const firstPage = await discover(first, sort);
+    const firstPage = await discover(second, sort);
     assert.equal(firstPage.items[0].id, urgent);
     assert.ok(firstPage.items[0].urgent_reopened_at);
     assert.equal(firstPage.next_cursor.urgent, true);
-    const secondPage = await discover(first, sort, firstPage.next_cursor);
+    const secondPage = await discover(second, sort, firstPage.next_cursor);
     assert.equal(secondPage.items[0].id, normalJob);
     assert.equal(secondPage.items[0].urgent_reopened_at, null);
   }
