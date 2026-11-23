@@ -1,3 +1,7 @@
+# 23 November 2026 — Permanent deletion of unused courses and their offers
+
+The course run deletion preview now includes its last session and the owned records of its unaccepted offers in one reviewed operation. Course managers and administrators use the existing confirmation and fencing. Accepted claims, coursework, financial history and other protected incoming references still block deletion. The course template and unrelated runs stay independent. Archived runs are hidden from the default course list and can be shown by staff using its filter.
+
 # 23 November 2026 — Code integrity and native account role contract
 
 Removed the unused source-catalogue card export and styles after merging course planning into the template library. The native account role endpoint now publishes its role list request and normalized account response schemas, including the scope of the internal self-service teaching role. Both OpenAPI suites passed all 50 tests, and the code integrity suite passed all 13 checks.

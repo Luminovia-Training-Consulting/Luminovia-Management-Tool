@@ -948,6 +948,9 @@ function RunForm({
                 </Button>
               </div>
             ))}
+            {original && fields.length === 1 && (
+              <p className="muted">{t("deleteLastRunSession")}</p>
+            )}
             <Button
               type="button"
               variant="secondary"
@@ -1111,6 +1114,7 @@ export function CoursesPage() {
   const online = useOnline();
   const [search, setSearch] = useState("");
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
+  const [showArchivedRuns, setShowArchivedRuns] = useState(false);
   const [tab, setTab] = useState<"runs" | "templates">("runs");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
@@ -1224,6 +1228,7 @@ export function CoursesPage() {
     templates.data.find((template) => template.id === run.template_id);
   const filteredRuns = runs.data.filter(
     (run) =>
+      (!run.archived_at || (manage && showArchivedRuns)) &&
       (phase === "all" ||
         scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) ===
           phase) &&
@@ -1405,6 +1410,16 @@ export function CoursesPage() {
             value={phase}
             onChange={setPhase}
           />
+        )}
+        {manage && tab === "runs" && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={showArchivedRuns}
+              onChange={(event) => setShowArchivedRuns(event.target.checked)}
+            />
+            {t("showArchivedRuns")}
+          </label>
         )}
         <div className="segmented" role="group" aria-label={t("catalogue")}>
           <Button

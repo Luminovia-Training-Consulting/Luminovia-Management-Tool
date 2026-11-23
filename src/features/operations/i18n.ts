@@ -578,6 +578,14 @@ const pairs: Record<string, [string, string]> = {
     "Contacts and internal notes are visible only to authorised management.",
   ],
   archive: ["Archiviert", "Archived"],
+  showArchivedRuns: [
+    "Archivierte Durchführungen anzeigen",
+    "Show archived course runs",
+  ],
+  deleteLastRunSession: [
+    "Um den letzten Termin zu entfernen, lösche die Durchführung. Die Löschvorschau zeigt die Termine und zugehörigen Aufträge.",
+    "To remove the last session, delete the course run. The preview shows the sessions and linked offers.",
+  ],
   archiveAction: ["Archivieren", "Archive"],
   timezone: ["Zeitzone", "Time zone"],
   contacts: ["Ansprechpersonen", "Contacts"],

@@ -103,18 +103,21 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(siblingSession)}`), "1");
         assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
     });
-    await check("Published, linked and attended course dates remain protected", async () => {
+    await check("One confirmation deletes unused course dates and linked offers while retaining attended records", async () => {
         const template = randomUUID(), published = randomUUID(), linked = randomUUID(), attended = randomUUID(), session = randomUUID();
+        const linkedSession = randomUUID(), jobs = [randomUUID(), randomUUID()];
         await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional protected template');
           insert into public.course_runs(id,template_id,published) values
             (${q(published)},${q(template)},true),(${q(linked)},${q(template)},false),(${q(attended)},${q(template)},false);
           insert into public.course_sessions(course_run_id,starts_at,ends_at)
-            values (${q(published)},'2044-01-05 09:00+00','2044-01-05 10:00+00'),
-                   (${q(linked)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
+            values (${q(published)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
           insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
-            values (${q(session)},${q(attended)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
-          insert into public.jobs(course_run_id,title,customer_name,delivery_type,amount,total_amount,currency,rate_unit,terms)
-            values(${q(linked)},'Fictional offer','Fictional organisation','online',50,50,'EUR','fixed_total','Fictional terms');
+            values (${q(session)},${q(attended)},'2044-01-05 09:00+00','2044-01-05 10:00+00'),
+                   (${q(linkedSession)},${q(linked)},'2044-01-05 09:00+00','2044-01-05 10:00+00');
+          insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+            values ${jobs.map((job) => `(${q(job)},${q(linked)},'Fictional offer','Fictional organisation','online','published',50,50,'EUR','fixed_total','Fictional terms')`).join(",")};
+          insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at)
+            select id,${q(linkedSession)},'2044-01-05 09:00+00','2044-01-05 10:00+00' from public.jobs where course_run_id=${q(linked)};
           insert into private.course_attendance(session_id,user_id,state) values(${q(session)},${q(owner)},'attended');`);
         const hidden = await plan("course_run", attended, manager);
         assert.equal(hidden.can_confirm, false);
@@ -122,10 +125,21 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         await expectCode(confirm(hidden, manager), "23503");
         for (const run of [published, linked]) {
             const preview = await plan("course_run", run, manager);
-            assert.equal(preview.can_confirm, false);
-            assert.ok(preview.blockers.some((item) => item.kind === "public.course_sessions"));
-            await expectCode(confirm(preview, manager), "23503");
+            assert.equal(preview.can_confirm, true);
+            assert.equal(preview.counts["public.course_sessions"], 1);
+            if (run === linked) {
+                assert.equal(preview.counts["public.jobs"], 2);
+                assert.equal(preview.counts["public.job_sessions"], 2);
+            }
+            const op = await confirm(preview, manager);
+            const execution = await permit(op, manager);
+            await worker("apply", key(op, execution));
+            assert.equal((await worker("complete", `${key(op, execution)},true,true`)).status, "completed");
+            assert.equal(await sql(`select count(*) from public.course_runs where id=${q(run)}`), "0");
         }
+        assert.equal(await sql(`select count(*) from public.jobs where course_run_id=${q(linked)}`), "0");
+        assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(session)}`), "1");
+        assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
     });
     await check(
         "A reviewed job purge includes its briefing and request records",
