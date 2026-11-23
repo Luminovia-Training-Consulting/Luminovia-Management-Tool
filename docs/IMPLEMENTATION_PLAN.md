@@ -12,7 +12,7 @@
 
 - [x] Implement the CMS confirmation form, current-account reauthentication, backup gate and private socket connection to the existing reset operation.
 - [x] Verify the UI, socket request handling, reset state machine, packaging and Caddy ingress using disposable evidence.
-- [ ] Enable the socket on KVM 1 and verify the live endpoint without deleting active data.
+- [x] Enable the socket on KVM 1 and verify the live endpoint and administrator form on `9f10e24a` with active data retained.
 
 ## Local launcher
 

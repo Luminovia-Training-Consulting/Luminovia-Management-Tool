@@ -8,7 +8,9 @@ Desktop and mobile Chromium confirmed save, reload and access denial with real l
 
 The CMS reset page accepts `RESET CONFIRM`, the signed-in administrator's current password and a confirmed replacement owner password. Caddy forwards the request through a private socket to the existing locked reset workflow, including the encrypted backup gate, rollback and fresh owner verification.
 
-Verified the browser form, nine Python reset and socket checks, 31 package tests, TypeScript, targeted lint and the pinned Caddy ingress with a disposable handler fixture. The read-only plan also verified the current KVM target and backup. Live activation is tracked separately from a destructive reset.
+Verified the browser form, nine Python reset and socket checks, 31 package tests, TypeScript, targeted lint and the pinned Caddy ingress with a disposable handler fixture. KVM 1 runs `9f10e24a` with the reset socket enabled. The read-only live plan checked the exact target and backup. A signed-in browser displayed the confirmation form, and an unauthenticated POST returned 403. This live check did not invoke deletion.
+
+The server's unauthenticated updater could no longer read the now-private GitHub repository. Installed the verified immutable reset package through the host updater. The later White Label migration remained behind the operator-review gate.
 
 # 23 November 2026 — Private shared catalogue originals
 
