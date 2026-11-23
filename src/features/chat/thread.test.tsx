@@ -3,12 +3,19 @@
  * fixtures do not replace native chat acceptance.
  */
 import { afterEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { ChatThread } from "./thread";
-import type { ChatRoom } from "./types";
+import type { ChatMessage, ChatRoom } from "./types";
 
 const { rpc } = vi.hoisted(() => ({
   rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -101,7 +108,7 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
 });
 
 /** Create an isolated real thread with fictional history and controlled read receipts. */
-function populatedThread() {
+function populatedThread(messageId?: string) {
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const client = new QueryClient({
     defaultOptions: {
@@ -145,6 +152,7 @@ function populatedThread() {
         <ChatThread
           actor="actor"
           room={room}
+          messageId={messageId}
           canManageCourses={false}
           onBack={() => undefined}
         />
@@ -431,5 +439,68 @@ it("hides the retained reply target when a refreshed history page is rejected as
     screen.getByRole("button", { name: "Nachricht senden" }),
   ).toBeDisabled();
   view.unmount();
+  client.clear();
+});
+
+it("holds the scroll position and read cursor while new messages arrive above the end", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const { client } = populatedThread();
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith(
+      "mark_chat_read",
+      expect.objectContaining({ p_message_id: "latest" }),
+    ),
+  );
+  const pane = document.querySelector<HTMLElement>(".chat-message-scroll")!;
+  Object.defineProperties(pane, {
+    scrollHeight: { value: 900 },
+    clientHeight: { value: 300 },
+  });
+  fireEvent.scroll(pane);
+  const scroll = vi.mocked(HTMLElement.prototype.scrollIntoView);
+  scroll.mockClear();
+  rpc.mockClear();
+  const key = ["chat-messages", "actor", "room", ""];
+  const data = client.getQueryData<{
+    pages: ChatMessage[][];
+    pageParams: unknown[];
+  }>(key)!;
+  await act(async () => {
+    client.setQueryData(key, {
+      pages: [
+        [
+          {
+            ...data.pages[0]![0]!,
+            id: "new",
+            created_at: "2026-01-01T08:01:00Z",
+          },
+          ...data.pages[0]!,
+        ],
+      ],
+      pageParams: [null],
+    });
+  });
+  const jump = await screen.findByRole("button", {
+    name: "Zu neuen Nachrichten",
+  });
+  expect(scroll).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
+  await userEvent.click(jump);
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith(
+      "mark_chat_read",
+      expect.objectContaining({ p_message_id: "new" }),
+    ),
+  );
+  client.clear();
+});
+
+it("focuses and highlights the requested authorised message", async () => {
+  const { client } = populatedThread("latest");
+  await waitFor(() => {
+    const message = document.querySelector('[data-message-id="latest"]');
+    expect(message).toHaveAttribute("data-highlighted", "true");
+    expect(message).toHaveFocus();
+  });
   client.clear();
 });

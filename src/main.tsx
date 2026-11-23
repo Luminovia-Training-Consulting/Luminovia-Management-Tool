@@ -34,6 +34,7 @@ const client = new QueryClient({
     mutations: { retry: 0, networkMode: "always" },
   },
 });
+client.setQueryDefaults(["chat-draft"], { gcTime: Infinity });
 const router = createBrowserRouter([
   {
     path: "*",

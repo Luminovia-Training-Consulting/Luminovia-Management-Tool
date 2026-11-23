@@ -96,6 +96,7 @@ function ChatDirectory({ actor }: { actor: string }) {
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("room");
+  const messageId = params.get("message");
   const rooms = useQuery(chatRoomsQuery(actor));
   const directoryFilters = useQuery(chatDirectoryFiltersQuery(actor));
   // The shell owns the profile request; observe its cached zone without initiating another request.
@@ -126,6 +127,7 @@ function ChatDirectory({ actor }: { actor: string }) {
   );
   const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
   const previousRooms = useRef<string[]>([]);
+  const previousDeleted = useRef(new Set<string>());
   const selected = rooms.data?.find((room) => room.id === selectedId);
   const canManageCourses =
     permissions.data?.includes("courses.manage") ?? false;
@@ -141,6 +143,7 @@ function ChatDirectory({ actor }: { actor: string }) {
     ) ?? false;
   const selectRoom = (room: string | null) => {
     const next = new URLSearchParams(params);
+    next.delete("message");
     if (room) next.set("room", room);
     else next.delete("room");
     setParams(next);
@@ -172,7 +175,15 @@ function ChatDirectory({ actor }: { actor: string }) {
     )) {
       client.removeQueries({ queryKey: chatKeys.messages(actor, id) });
       client.removeQueries({ queryKey: chatKeys.members(actor, id) });
+      client.removeQueries({ queryKey: chatKeys.draft(actor, id) });
     }
+    const deleted = new Set(
+      rooms.data.filter((room) => room.personal_deleted).map((room) => room.id),
+    );
+    for (const id of deleted)
+      if (!previousDeleted.current.has(id))
+        client.removeQueries({ queryKey: chatKeys.draft(actor, id) });
+    previousDeleted.current = deleted;
     previousRooms.current = current;
   }, [rooms.data, actor, client]);
   const general = useMutation({
@@ -227,6 +238,7 @@ function ChatDirectory({ actor }: { actor: string }) {
     },
     onSuccess: async (_, room) => {
       if (selectedId === room) selectRoom(null);
+      client.removeQueries({ queryKey: chatKeys.draft(actor, room) });
       const history = chatKeys.messages(actor, room);
       client.removeQueries({ queryKey: history, type: "inactive" });
       await Promise.all([
@@ -685,10 +697,21 @@ function ChatDirectory({ actor }: { actor: string }) {
             <Loading />
           ) : selected ? (
             <ChatThread
-              key={selected.id}
+              key={`${selected.id}:${messageId ?? ""}`}
               actor={actor}
               room={selected}
               canManageCourses={canManageCourses}
+              messageId={messageId}
+              draft={client.getQueryData(chatKeys.draft(actor, selected.id))}
+              onDraftChange={(text, sentText) =>
+                client.setQueryData<string>(
+                  chatKeys.draft(actor, selected.id),
+                  (current) =>
+                    sentText !== undefined && current !== sentText
+                      ? current
+                      : text,
+                )
+              }
               onBack={() => selectRoom(null)}
             />
           ) : selectedId ? (

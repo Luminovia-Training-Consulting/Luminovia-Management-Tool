@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Daily workflow audit follow-up
+
+- Keep unsent chat text in the authenticated browser session, scoped to its account and conversation. Hold the scroll position while older history is being read, separate new-message arrival from the read receipt, and retry a temporary history page error in place.
+- Open unified chat search results at the matching authorised message. Keep existing room URLs valid and make further history loading explicit when needed.
+- Scope notification read actions to the displayed category items while a filter is active. Label the full-inbox action explicitly.
+- Page course and company directory reads across the REST limit, and load contacts only for the selected organisation. Make pending import rows exportable for review while keeping receipt-based retries in the same preview.
+- Offer a permission-checked course-backed assignment form in the course workspace. Group demo forum and analytics under Chats and Finance where the fictional role can access both sections.
+- Use current password verification for the protected reset paths. Retain installation, role and live-session verification, typed confirmation, and hosted root and backup checks.
+
 ## Acceptance repair
 
 - Resolve effective theme colors in source checks, keep browser labels in sync, and budget 45 minutes per complete application browser project. Verify the exact release without publishing it.
@@ -48,7 +57,7 @@
 
 ## Administration reset
 
-- Let active administrators and owners reset their owned local installation through Administration. Require the literal confirmation, current password and enrolled TOTP. Reuse the full local Docker reset and confirm completion only after restart. Hosted deployments display the reviewed host reset procedure.
+- Let active administrators and owners reset their owned local installation through Administration. Require the literal confirmation and current password. Reuse the full local Docker reset and confirm completion only after restart. Hosted deployments display the reviewed host reset procedure.
 
 ## Finance workspace
 

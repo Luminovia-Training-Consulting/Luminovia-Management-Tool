@@ -85,18 +85,41 @@ export interface BuildingBlock {
   building_block_sources: BuildingBlockSource[];
 }
 
+/** Read past the configured REST response cap using a stable order and abortable pages. */
+async function readDirectoryPages<T>(
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{
+    data: unknown[] | null;
+    error: unknown;
+  }>,
+): Promise<T[]> {
+  const size = 250;
+  const rows: T[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await page(from, from + size - 1);
+    if (error) throw error;
+    const received = data ?? [];
+    rows.push(...(received as T[]));
+    if (received.length < size) return rows;
+  }
+}
+
 /** Read building_blocks through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const buildingBlocksQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "building-blocks", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("building_blocks")
-        .select("*,building_block_sources(*)")
-        .order("code");
-      if (error) throw error;
-      return data as BuildingBlock[];
-    },
+    queryFn: ({ signal }) =>
+      readDirectoryPages<BuildingBlock>((from, to) =>
+        db()
+          .from("building_blocks")
+          .select("*,building_block_sources(*)")
+          .order("code")
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
   });
 
 /** Actual run with customer, zone and concrete sessions, separate from its content template. */
@@ -116,27 +139,36 @@ export interface CourseRun {
 export const orgQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "organisations", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("organisations")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as Organisation[];
-    },
+    queryFn: ({ signal }) =>
+      readDirectoryPages<Organisation>((from, to) =>
+        db()
+          .from("organisations")
+          .select("*")
+          .order("name")
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
   });
 /** Read organisation_contacts through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
-export const contactsQuery = (actor: string) =>
+export const contactsQuery = (
+  actor: string,
+  organisation: string | undefined,
+) =>
   queryOptions({
-    queryKey: ["operations", "contacts", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("organisation_contacts")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as Contact[];
-    },
+    queryKey: ["operations", "contacts", actor, organisation],
+    enabled: Boolean(organisation),
+    queryFn: ({ signal }) =>
+      readDirectoryPages<Contact>((from, to) =>
+        db()
+          .from("organisation_contacts")
+          .select("*")
+          .eq("organisation_id", organisation!)
+          .order("name")
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
   });
 /**
  * Read organisation_private_details through the native client, propagate access/read failures
@@ -145,37 +177,45 @@ export const contactsQuery = (actor: string) =>
 export const notesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "notes", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("organisation_private_details")
-        .select("*");
-      if (error) throw error;
-      return data as { organisation_id: string; private_notes: string }[];
-    },
+    queryFn: ({ signal }) =>
+      readDirectoryPages<{ organisation_id: string; private_notes: string }>(
+        (from, to) =>
+          db()
+            .from("organisation_private_details")
+            .select("*")
+
+            .order("organisation_id")
+            .range(from, to)
+            .abortSignal(signal),
+      ),
   });
 /** Read course_templates through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const templatesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "templates", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("course_templates")
-        .select("*,course_template_topics(topic_id)")
-        .order("title");
-      if (error) throw error;
-      return data as Template[];
-    },
+    queryFn: ({ signal }) =>
+      readDirectoryPages<Template>((from, to) =>
+        db()
+          .from("course_templates")
+          .select("*,course_template_topics(topic_id)")
+          .order("title")
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
   });
 /** Read course_runs through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const runsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "runs", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("course_runs")
-        .select("*,course_sessions(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as CourseRun[];
-    },
+    queryFn: ({ signal }) =>
+      readDirectoryPages<CourseRun>((from, to) =>
+        db()
+          .from("course_runs")
+          .select("*,course_sessions(*)")
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
   });

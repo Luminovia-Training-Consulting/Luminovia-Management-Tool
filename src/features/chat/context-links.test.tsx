@@ -61,7 +61,10 @@ vi.mock("./api", () => ({
     queryKey: ["chat-contacts", actor],
     queryFn: async () => [],
   }),
-  chatKeys: { rooms: (actor: string) => ["chat-rooms", actor] },
+  chatKeys: {
+    rooms: (actor: string) => ["chat-rooms", actor],
+    draft: (actor: string, room: string) => ["chat-draft", actor, room],
+  },
   chatRoomsQuery: (actor: string) => ({
     queryKey: ["chat-rooms", actor],
     queryFn: async () => state.rooms,
@@ -69,7 +72,24 @@ vi.mock("./api", () => ({
 }));
 
 vi.mock("./thread", () => ({
-  ChatThread: ({ room }: { room: ChatRoom }) => <h2>Open: {room.title}</h2>,
+  ChatThread: ({
+    room,
+    draft,
+    onDraftChange,
+  }: {
+    room: ChatRoom;
+    draft?: string;
+    onDraftChange: (value: string) => void;
+  }) => (
+    <>
+      <h2>Open: {room.title}</h2>
+      <textarea
+        aria-label="Fictional draft"
+        defaultValue={draft}
+        onChange={(event) => onDraftChange(event.target.value)}
+      />
+    </>
+  ),
 }));
 
 const clients: QueryClient[] = [];
@@ -313,4 +333,42 @@ it("combines unread filters with room categories and remembers them only for the
     "aria-pressed",
     "false",
   );
+});
+
+it("keeps independent drafts when switching between two rooms", async () => {
+  await i18n.changeLanguage("en");
+  state.rooms = ["First room", "Second room"].map((title, index) => ({
+    id: String(index),
+    title,
+    kind: "dm",
+    job_id: null,
+    owner_id: null,
+    unread_count: 0,
+    muted: false,
+    last_message_at: null,
+  }));
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(await screen.findByRole("button", { name: /^First room/ }));
+  await user.type(
+    screen.getByRole("textbox", { name: "Fictional draft" }),
+    "First draft",
+  );
+  await user.click(screen.getByRole("button", { name: /^Second room/ }));
+  expect(screen.getByRole("textbox", { name: "Fictional draft" })).toHaveValue(
+    "",
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "Fictional draft" }),
+    "Second draft",
+  );
+  await user.click(screen.getByRole("button", { name: /^First room/ }));
+  expect(screen.getByRole("textbox", { name: "Fictional draft" })).toHaveValue(
+    "First draft",
+  );
+  await user.click(screen.getByRole("button", { name: /^Second room/ }));
+  expect(screen.getByRole("textbox", { name: "Fictional draft" })).toHaveValue(
+    "Second draft",
+  );
+  await i18n.changeLanguage("de");
 });

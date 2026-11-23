@@ -90,13 +90,11 @@ def assert_current_admin(updater, user, session):
         join public.profiles p on p.id=r.user_id and p.active
         join auth.users u on u.id=r.user_id and u.email_confirmed_at is not null
         join auth.sessions s on s.user_id=u.id and s.id='{session}'::uuid
-        join auth.mfa_factors f on f.id=s.factor_id and f.user_id=u.id
         where u.id='{user}'::uuid and r.role in ('admin','owner')
-          and s.aal='aal2' and s.created_at > statement_timestamp() - interval '5 minutes'
+          and s.created_at > statement_timestamp() - interval '5 minutes'
           and (s.not_after is null or s.not_after > statement_timestamp())
-          and f.factor_type='totp' and f.status='verified'
       );""")
-    require(allowed == "t", "current_administrator_with_totp_required")
+    require(allowed == "t", "current_administrator_required")
 
 
 def authenticate(updater, env, email, password):
@@ -104,26 +102,11 @@ def authenticate(updater, env, email, password):
     signed_in = auth_request(gateway, key, "/token?grant_type=password",
                              {"email": email, "password": password})
     token = signed_in["access_token"]
-    factors = [factor for factor in signed_in["user"].get("factors", [])
-               if factor["factor_type"] == "totp" and factor["status"] == "verified"]
-    require(factors, "verified_authenticator_required")
-    for number, factor in enumerate(factors, 1):
-        print(f"Authenticator {number}: {factor.get('friendly_name') or 'TOTP'}")
-    option = int(input("Authenticator number: ")) if len(factors) > 1 else 1
-    require(1 <= option <= len(factors), "invalid_authenticator")
-    route = "/factors/" + str(UUID(factors[option - 1]["id"]))
-    challenge = auth_request(gateway, key, route + "/challenge", {}, token)
-    code = getpass.getpass("Authenticator code: ")
-    require(re.fullmatch(r"[0-9]{6}", code), "invalid_authenticator_code")
-    verified = auth_request(gateway, key, route + "/verify",
-                            {"challenge_id": challenge["id"], "code": code}, token)
-    token = verified["access_token"]
     identity = auth_request(gateway, key, "/user", token=token)
     segment = token.split(".")[1]
     claims = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
     user = UUID(identity["id"])
-    require(claims.get("aal") == "aal2" and UUID(claims["sub"]) == user,
-            "authenticator_verification_required")
+    require(UUID(claims["sub"]) == user, "password_session_identity_mismatch")
     session = UUID(claims["session_id"])
     assert_current_admin(updater, user, session)
     return user, session

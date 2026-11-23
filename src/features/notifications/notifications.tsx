@@ -103,6 +103,11 @@ export function NotificationsPage({
         (item) =>
           !item.kind.startsWith("course_") && item.kind !== "chat_message",
       );
+  const filteredUnread = items
+    .filter(
+      (item) => !item.read_at && notificationCategory(item.kind) === category,
+    )
+    .map((item) => item.id);
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
@@ -132,10 +137,14 @@ export function NotificationsPage({
               !online || mark.isPending || !first?.unread_count || inboxFailed
             }
             onClick={() =>
-              mark.mutate({ ids: null, before: first!.as_of, read: true })
+              mark.mutate(
+                category === "all"
+                  ? { ids: null, before: first!.as_of, read: true }
+                  : { ids: filteredUnread, before: null, read: true },
+              )
             }
           >
-            {t("markAll")}
+            {t(category === "all" ? "markAll" : "markCategoryVisible")}
           </Button>
         )}
         {!academy && roles.isSuccess && !participantOnly && (

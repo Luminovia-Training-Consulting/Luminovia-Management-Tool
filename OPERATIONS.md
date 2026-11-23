@@ -86,13 +86,9 @@ The Auth email redirect, exact allowlist and implemented app route must agree. O
 not publish hosted templates. The invitation template uses a token hash and explicit `/auth/callback` acceptance followed by `verifyOtp`/password setup so it works in a new browser with the PKCE-configured client. Recovery retains the standard `ConfirmationURL` to preserve its PKCE challenge/verifier. Do not revert to the default implicit invitation redirect without a new integration review. Use no-referrer behaviour and redact token-hash authentication query strings from hosting/access logs.
 Verify invitation acceptance, password creation, assigned lecturer capability and subsequent sign-in in the same reviewed environment. Local captured messages to `.invalid` test accounts are not production email deliverability.
 
-## Authenticator rollout for administrators and owners
+## Administrator and owner sign-in
 
-Every installation starts with the authenticator policy disabled. To enable it on a reviewed self-hosted portal or dedicated academy, apply the release migrations and set `PORTAL_TOTP_ENABLED=true` in that installation's private backend environment. Set `PORTAL_TOTP_SECURITY_MAIL_ENABLED=true` if the reviewed SMTP sender should deliver bilingual security notices when an authenticator is added or removed. Recreate the `auth` service from the installation's existing Compose model and exact environment. The Auth service uses the same reviewed SMTP transport as invitations and password resets.
-
-The PostgreSQL operator opens pairing with `select private.set_authenticator_policy('enrolment');`. In **Settings → Authenticator app**, each active administrator and owner scans the QR code or enters the key manually, then confirms a fresh six-digit code. A paired account requires its authenticator for new sessions from that point. Verify both a successful sign-in with the app and denial of protected requests before the app code. On the password reset link, a paired account confirms the authenticator before saving the new password.
-
-After all active administrators and owners have paired a verified authenticator, run `select private.set_authenticator_policy('required');`. The database refuses enforcement while any active privileged account is unpaired. The database also rejects unpaired privileged role grants in required mode. Use the enrolment stage for an approved new privileged account or to restore access after independently verifying the identity of an account with a lost authenticator. Revoke the lost Auth session and remove the lost factor with the private Auth administration process. Have the account pair again and confirm that required mode can be restored. These operations are scoped to the installation. Keep provider flags enabled while the database policy expects authenticator proof.
+The portal uses the installation's password sign-in for active administrators and owners. Keep public sign-up disabled, keep Auth redirects scoped to the installation, and verify sign-in, current capabilities and password recovery on the approved target.
 
 <a id="section-deployment-runbook-static-frontend-hosting"></a>
 
@@ -112,7 +108,7 @@ All of the following require evidence before requesting final production approva
 - A specific reviewed commit/build artifact and visible staging demonstration, with implemented/remaining scope stated honestly.
 - Passing relevant tests, migration/RLS and fifty-way concurrency results, dependency/advisory review and resolved material findings.
 - Actual DE/EN, accessibility, supported mobile/browser/PWA and offline-sensitive-cache checks.
-- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator and privacy/legal/retention review. Decide and verify the installation’s administrator and owner authenticator policy before launch.
+- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator and privacy/legal/retention review. Verify the installation’s administrator and owner sign-in and recovery flow before launch.
 - A consistent backup of PostgreSQL **and actual Storage file objects**, successful isolated restore drill and tested rollback.
 
 Request approval for the concrete release and its migration/hosting changes. The initial development request does not authorise production publishing, real invitations, purchases or marketing-site changes.
@@ -711,9 +707,9 @@ The reviewed SQL still requires one explicit `BEGIN;`/`COMMIT;` transaction with
 
 ### Full reset of the existing CMS installation
 
-In an owned local portal started with `./portal start`, open **Administration → System operations → Reset platform** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password and authenticator code if enrolled. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
+In an owned local portal started with `./portal start`, open **Administration → System operations → Reset platform** as an active administrator or owner. Verify the project shown, type `DELETE`, and enter your current password. The browser invokes the same owned Docker reset as `./portal reset`. The web server stops during deletion. Check completion from your terminal with `./portal status`.
 
-On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's verified authenticator and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
+On the named CMS server, use `./portal reset-live --plan` from the verified checkout or `python3 -I /opt/luminovia-portal/source/deploy/hostinger/reset-live.py --plan` from the deployed package. The plan checks the exact installation, the active release, owned data mounts, applied migration source and a fresh complete encrypted backup. Apply with `--apply` in an interactive SSH terminal. The operator must have host-root access, a current active portal administrator or owner account, that account's current password and the fresh site-specific confirmation shown by the command. The operator supplies a new password for the replacement owner.
 
 The reset stops the backend under the shared maintenance lock. It recreates PostgreSQL with the current installed schema and replaces local Storage bytes and private captured mail. The old data stays in a private quarantine until the fresh owner can sign in and the private runtime is healthy. An early failure attempts to restore the original data paths. Inspect `private/reset-state.json` before recovering an interrupted reset. The command keeps the deployed application, server configuration and separately managed encrypted backup sets. It does not access the public Website or third-party storage.
 

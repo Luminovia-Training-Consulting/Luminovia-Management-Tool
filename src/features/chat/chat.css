@@ -1495,3 +1495,8 @@
   background: var(--brand);
   color: var(--on-brand);
 }
+
+.chat-message[data-highlighted] .chat-message-card {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

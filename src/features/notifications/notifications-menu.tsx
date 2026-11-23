@@ -65,6 +65,9 @@ export function NotificationsMenu({
         (!unreadOnly || !item.read_at) &&
         (category === "all" || notificationCategory(item.kind) === category),
     ) ?? [];
+  const filteredUnread = items
+    .filter((item) => !item.read_at)
+    .map((item) => item.id);
   return (
     <details
       className={`notification-menu${academy ? " academy-notification-menu" : ""}`}
@@ -104,12 +107,20 @@ export function NotificationsMenu({
         {page && academy !== "grace" && (
           <Button
             variant="secondary"
-            disabled={!online || mark.isPending || !page.unread_count}
+            disabled={
+              !online ||
+              mark.isPending ||
+              (category === "all" ? !page.unread_count : !filteredUnread.length)
+            }
             onClick={() =>
-              mark.mutate({ ids: null, before: page.as_of, read: true })
+              mark.mutate(
+                category === "all"
+                  ? { ids: null, before: page.as_of, read: true }
+                  : { ids: filteredUnread, before: null, read: true },
+              )
             }
           >
-            {t("markAll")}
+            {t(category === "all" ? "markAll" : "markCategoryVisible")}
           </Button>
         )}
         {academy && !online ? (

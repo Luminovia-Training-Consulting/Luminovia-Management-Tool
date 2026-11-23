@@ -116,7 +116,13 @@ export function PortalSearch() {
             <ul className="portal-search-results">
               {[...rows.values()].map((row) => (
                 <li key={`${row.kind}:${row.id}`}>
-                  <Link to={row.url}>
+                  <Link
+                    to={
+                      row.kind === "chats" && row.url.startsWith("/chats?room=")
+                        ? `${row.url}&message=${encodeURIComponent(row.id)}`
+                        : row.url
+                    }
+                  >
                     <span className="badge">{t(row.kind)}</span>
                     <strong>{row.title}</strong>
                     {row.detail && <small>{row.detail}</small>}

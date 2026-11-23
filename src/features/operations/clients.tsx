@@ -255,7 +255,6 @@ function ClientWorkspace({
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ["operations"] });
   const orgs = useQuery(orgQuery(actor));
-  const contacts = useQuery(contactsQuery(actor));
   const notes = useQuery(notesQuery(actor));
   const premiums = useQuery(companyPremiumSettingsQuery(actor));
   const [search, setSearch] = useState("");
@@ -264,32 +263,26 @@ function ClientWorkspace({
   const [contactEdit, setContactEdit] = useState<Contact | null | undefined>();
   const [saved, setSaved] = useState(false);
   const online = useOnline();
-  if (
-    orgs.isPending ||
-    contacts.isPending ||
-    notes.isPending ||
-    premiums.isPending
-  )
-    return <Loading />;
-  if (orgs.isError || contacts.isError || notes.isError || premiums.isError)
-    return (
-      <ErrorState
-        retry={() => {
-          void orgs.refetch();
-          void contacts.refetch();
-          void notes.refetch();
-          void premiums.refetch();
-        }}
-      />
-    );
-  const visible = orgs.data.filter((org) =>
+  const visible = (orgs.data ?? []).filter((org) =>
     [org.name, org.city, org.industry, ...org.tags]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-  const organisation =
-    orgs.data.find((org) => org.id === selected) ?? visible[0];
+  const organisation = visible.find((org) => org.id === selected) ?? visible[0];
+  const contacts = useQuery(contactsQuery(actor, organisation?.id));
+  if (orgs.isPending || notes.isPending || premiums.isPending)
+    return <Loading />;
+  if (orgs.isError || notes.isError || premiums.isError)
+    return (
+      <ErrorState
+        retry={() => {
+          void orgs.refetch();
+          void notes.refetch();
+          void premiums.refetch();
+        }}
+      />
+    );
   const detail =
     notes.data.find((note) => note.organisation_id === organisation?.id)
       ?.private_notes ?? "";
@@ -379,7 +372,7 @@ function ClientWorkspace({
           {!visible.length && <p>{t("empty")}</p>}
         </section>
         {organisation && (
-          <section className="panel operations-detail">
+          <section key={organisation.id} className="panel operations-detail">
             <div className="section-heading">
               <h2>{organisation.name}</h2>
               <Button
@@ -483,47 +476,47 @@ function ClientWorkspace({
               refresh={refresh}
             />
             <div className="operations-contact-list">
-              {contacts.data
-                .filter(
-                  (contact) => contact.organisation_id === organisation.id,
-                )
-                .map((contact) => (
-                  <article className="operations-contact" key={contact.id}>
-                    <div className="section-heading">
-                      <h3>{contact.name}</h3>
-                      {contact.archived_at && (
-                        <span className="badge">{t("archive")}</span>
-                      )}
-                    </div>
-                    <p>{contact.position}</p>
-                    {contact.email && (
-                      <a
-                        className="text-link"
-                        href={`mailto:${encodeURIComponent(contact.email)}`}
-                      >
-                        <Mail size={16} />
-                        {contact.email}
-                      </a>
+              {contacts.isPending && <Loading />}
+              {contacts.isError && (
+                <ErrorState retry={() => void contacts.refetch()} />
+              )}
+              {contacts.data?.map((contact) => (
+                <article className="operations-contact" key={contact.id}>
+                  <div className="section-heading">
+                    <h3>{contact.name}</h3>
+                    {contact.archived_at && (
+                      <span className="badge">{t("archive")}</span>
                     )}
-                    {contact.phone && (
-                      <a
-                        className="text-link"
-                        href={`tel:${contact.phone.replace(/[^+0-9]/g, "")}`}
-                      >
-                        <Phone size={16} />
-                        {contact.phone}
-                      </a>
-                    )}
-                    <p className="preserve-text">{contact.notes}</p>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setContactEdit(contact)}
-                      disabled={!online}
+                  </div>
+                  <p>{contact.position}</p>
+                  {contact.email && (
+                    <a
+                      className="text-link"
+                      href={`mailto:${encodeURIComponent(contact.email)}`}
                     >
-                      {t("edit")}
-                    </Button>
-                  </article>
-                ))}
+                      <Mail size={16} />
+                      {contact.email}
+                    </a>
+                  )}
+                  {contact.phone && (
+                    <a
+                      className="text-link"
+                      href={`tel:${contact.phone.replace(/[^+0-9]/g, "")}`}
+                    >
+                      <Phone size={16} />
+                      {contact.phone}
+                    </a>
+                  )}
+                  <p className="preserve-text">{contact.notes}</p>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setContactEdit(contact)}
+                    disabled={!online}
+                  >
+                    {t("edit")}
+                  </Button>
+                </article>
+              ))}
             </div>
           </section>
         )}

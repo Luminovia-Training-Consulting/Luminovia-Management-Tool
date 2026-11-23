@@ -249,6 +249,23 @@ export function TableImport<T>({
               ))}
             </ul>
           </details>
+          {failed !== null && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                downloadCsv(`${filename}-pending.csv`, [
+                  [...columns],
+                  ...rows.slice(completed).map(({ cells }) => cells),
+                ])
+              }
+            >
+              {de
+                ? "Offene Zeilen zur Prüfung exportieren"
+                : "Export pending rows for review"}
+            </Button>
+          )}
           {completed < rows.length && (
             <Button
               type="button"

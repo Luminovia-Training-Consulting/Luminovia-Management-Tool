@@ -4,7 +4,6 @@ import { authorizeReset } from "./admin-local-reset.mjs";
 
 const id = "68fb716d-ffb4-4719-a81a-b332f3e35b08";
 const factor = "5f955a4f-a621-4265-a27e-638dd7885810";
-const challenge = "b10c1025-928e-4ab6-a46c-2fb92ecb8578";
 const origin = "http://127.0.0.1:54321";
 const browser = "browser-token";
 
@@ -43,24 +42,14 @@ function authFixture({
         ? Response.json({ user, access_token: "fresh" })
         : Response.json({}, { status: 400 });
     }
-    if (path === `/auth/v1/factors/${factor}/challenge`) {
-      assert.equal(token, "Bearer fresh");
-      return Response.json({ id: challenge });
-    }
-    if (path === `/auth/v1/factors/${factor}/verify`) {
-      assert.equal(body.challenge_id, challenge);
-      return body.code === "123456"
-        ? Response.json({ access_token: "verified" })
-        : Response.json({}, { status: 400 });
-    }
     if (path === "/auth/v1/logout?scope=local")
       return new Response(null, { status: 204 });
     assert.fail("Unexpected Auth request");
   };
   return {
     calls,
-    authorize: (password = "current password", code) =>
-      authorizeReset(origin, "publishable", browser, password, code, request),
+    authorize: (password = "current password") =>
+      authorizeReset(origin, "publishable", browser, password, request),
   };
 }
 
@@ -79,13 +68,8 @@ test("accepts active admins and owners only after re-entering their password", a
   assert.equal(await authFixture({ revoked: true }).authorize(), false);
 });
 
-test("requires a fresh Authenticator verification when the administrator has TOTP", async () => {
-  assert.equal(await authFixture({ totp: true }).authorize(), false);
-  assert.equal(
-    await authFixture({ totp: true }).authorize("current password", "000000"),
-    false,
-  );
+test("legacy account factors do not affect current password-only verification", async () => {
   const fixture = authFixture({ totp: true });
-  assert.equal(await fixture.authorize("current password", "123456"), true);
-  assert.equal(fixture.calls.at(-1)[1], "Bearer verified");
+  assert.equal(await fixture.authorize(), true);
+  assert.equal(fixture.calls.at(-1)[1], "Bearer fresh");
 });

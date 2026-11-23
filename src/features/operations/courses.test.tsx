@@ -18,7 +18,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { CoursesPage } from "./courses";
-import type { BuildingBlock, CourseRun, Template } from "./data";
+import {
+  runsQuery,
+  type BuildingBlock,
+  type CourseRun,
+  type Template,
+} from "./data";
 
 // Each cache belongs to a fictional manager; no service or account is contacted.
 const actor = "fictional-course-manager";
@@ -142,14 +147,21 @@ beforeEach(async () => {
   state.rpc.mockReset();
   state.rpc.mockResolvedValue({ data: runId, error: null });
   state.from.mockReset();
-  state.from.mockImplementation((table: string) => ({
-    select: () => ({
-      order: async () => ({
-        data: structuredClone(state.tables[table] ?? []),
-        error: null,
+  state.from.mockImplementation((table: string) => {
+    const query = {
+      select: () => query,
+      order: () => query,
+      range: (from: number, to: number) => ({
+        abortSignal: async () => ({
+          data: structuredClone(
+            (state.tables[table] ?? []).slice(from, to + 1),
+          ),
+          error: null,
+        }),
       }),
-    }),
-  }));
+    };
+    return query;
+  });
 });
 
 afterEach(() => {
@@ -1015,4 +1027,19 @@ describe("course form failure and confirmation boundaries", () => {
       }),
     });
   });
+});
+
+it("loads a course beyond the first thousand results within the actor scope", async () => {
+  state.tables.course_runs = Array.from({ length: 1001 }, (_, index) => ({
+    ...run,
+    id: String(index),
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  clients.push(client);
+  const result = await client.fetchQuery(runsQuery(actor));
+  expect(result).toHaveLength(1001);
+  expect(result.at(-1)?.id).toBe("1000");
+  expect(state.from).toHaveBeenCalledTimes(5);
 });

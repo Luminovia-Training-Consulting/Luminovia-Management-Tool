@@ -16,9 +16,17 @@ export function useReadState(actor: string) {
       read: boolean;
     }) => {
       requireOnline();
-      return markNotifications(ids, before, read);
+      if (!ids) return markNotifications(null, before, read);
+      let count = 0;
+      for (let index = 0; index < ids.length; index += 100)
+        count += await markNotifications(
+          ids.slice(index, index + 100),
+          null,
+          read,
+        );
+      return count;
     },
-    onSuccess: () =>
+    onSettled: () =>
       client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
   });
 }

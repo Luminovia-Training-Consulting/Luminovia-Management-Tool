@@ -670,22 +670,38 @@ function JobForm({
   );
 }
 
+/** Author a course-backed offer from either the course workspace or administration. */
+export function CourseOfferForm({ runId }: { runId: string }) {
+  const { t } = useTranslation();
+  const courseText = useTranslation("courseOffer").t;
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  const permissions = useQuery(permissionsQuery(actor));
+  const allowed =
+    permissions.data?.includes("jobs.manage") &&
+    permissions.data.includes("courses.manage");
+  const course = useQuery({
+    ...courseRunJobDefaultsQuery(actor, runId),
+    enabled: Boolean(runId && allowed),
+  });
+  if (permissions.isError)
+    return <ErrorState retry={() => void permissions.refetch()} />;
+  if (permissions.isPending) return <Loading />;
+  if (!allowed) return <Notice kind="error">{t("noAccess")}</Notice>;
+  if (course.isPending) return <Loading />;
+  if (course.isError) return <ErrorState retry={() => void course.refetch()} />;
+  if (!course.data.organisation_id)
+    return <Notice kind="error">{courseText("customerRequired")}</Notice>;
+  return <JobForm key={runId} courseRun={course.data} />;
+}
+
 /** Choose a standalone draft or server-loaded course source from the route and current capabilities. */
 export function AdminPage() {
   const { t, i18n } = useTranslation();
-  const courseText = useTranslation("courseOffer").t;
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const [params] = useSearchParams();
   const runId = params.get("courseRun") ?? "";
-  const course = useQuery({
-    ...courseRunJobDefaultsQuery(session!.user.id, runId),
-    enabled: Boolean(
-      runId &&
-      permissions.data?.includes("jobs.manage") &&
-      permissions.data.includes("courses.manage"),
-    ),
-  });
   if (permissions.isPending) return <Loading />;
   if (permissions.isError)
     return <ErrorState retry={() => void permissions.refetch()} />;
@@ -720,17 +736,7 @@ export function AdminPage() {
             </Link>
           </Button>
           {runId ? (
-            !permissions.data.includes("courses.manage") ? (
-              <Notice kind="error">{t("noAccess")}</Notice>
-            ) : course.isPending ? (
-              <Loading />
-            ) : course.isError ? (
-              <ErrorState retry={() => void course.refetch()} />
-            ) : !course.data.organisation_id ? (
-              <Notice kind="error">{courseText("customerRequired")}</Notice>
-            ) : (
-              <JobForm key={runId} courseRun={course.data} />
-            )
+            <CourseOfferForm runId={runId} />
           ) : (
             <JobForm key="standalone" />
           )}

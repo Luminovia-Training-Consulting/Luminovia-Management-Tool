@@ -15,6 +15,11 @@ const pairs: Record<string, [string, string]> = {
     "Der Chat konnte nicht gelöscht werden. Bitte versuche es erneut.",
     "The chat could not be deleted. Please try again.",
   ],
+  linkedMessageUnavailable: [
+    "Die verlinkte Nachricht ist nicht verfügbar. Ältere Nachrichten können weiterhin geladen werden.",
+    "The linked message is unavailable. You can still load older messages.",
+  ],
+  jumpToNewMessages: ["Zu neuen Nachrichten", "Jump to new messages"],
   composerHelp: [
     "Hinweise zum Schreiben & Anhängen",
     "Writing & attachment tips",

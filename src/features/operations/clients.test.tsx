@@ -77,7 +77,10 @@ describe("private client directory capability boundary", () => {
         },
       ],
     );
-    client.setQueryData(["operations", "contacts", "actor"], []);
+    client.setQueryData(
+      ["operations", "contacts", "actor", "organisation-a"],
+      [],
+    );
     client.setQueryData(["operations", "notes", "actor"], []);
     render(
       <QueryClientProvider client={client}>
@@ -126,7 +129,8 @@ describe("private client directory capability boundary", () => {
       ["operations", "organisations", "actor"],
       organisations,
     );
-    client.setQueryData(["operations", "contacts", "actor"], []);
+    for (const id of [first, second])
+      client.setQueryData(["operations", "contacts", "actor", id], []);
     client.setQueryData(["operations", "notes", "actor"], []);
     client.setQueryData(
       ["operations", "company-premium", "actor"],
@@ -160,6 +164,14 @@ describe("private client directory capability boundary", () => {
       screen.getByRole("button", { name: organisations[0].name }),
     );
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    const search = screen.getByRole("searchbox", { name: "Suchen" });
+    await user.type(search, "second");
+    expect(
+      screen.getByRole("heading", { name: organisations[1].name }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: organisations[0].name }),
+    ).not.toBeInTheDocument();
     client.clear();
   });
 });

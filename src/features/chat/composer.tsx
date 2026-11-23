@@ -30,12 +30,16 @@ export function MessageComposer({
   actor,
   room,
   replyId,
+  draft = "",
+  onDraftChange,
   replyTarget,
   onCancelReply,
 }: {
   actor: string;
   room: string;
   replyId?: string | null;
+  draft?: string;
+  onDraftChange?: (text: string, sentText?: string) => void;
   replyTarget?: import("./types").ChatMessage;
   onCancelReply?: () => void;
 }) {
@@ -58,7 +62,7 @@ export function MessageComposer({
   const [empty, setEmpty] = useState(false);
   const form = useForm<z.infer<typeof messageSchema>>({
     resolver: zodResolver(messageSchema),
-    defaultValues: { body: "" },
+    defaultValues: { body: draft },
   });
   const upload = useMutation({
     mutationFn: async (file: File) => {
@@ -120,9 +124,10 @@ export function MessageComposer({
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data;
     },
-    onSuccess: async () => {
+    onSuccess: async (_, values) => {
       retry.clear();
-      form.reset();
+      form.reset({ body: "" });
+      onDraftChange?.("", values.body);
       setAttachment(null);
       setMentions([]);
       onCancelReply?.();
@@ -195,7 +200,9 @@ export function MessageComposer({
           id="chat-message-body"
           rows={2}
           maxLength={8000}
-          {...form.register("body")}
+          {...form.register("body", {
+            onChange: (event) => onDraftChange?.(event.target.value),
+          })}
           disabled={busy}
           placeholder={t("message")}
         />

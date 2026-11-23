@@ -103,6 +103,8 @@ beforeEach(async () => {
   fake.rpc
     .mockReset()
     .mockImplementation((name: string, args?: { p_action?: string }) => {
+      if (name === "get_my_permissions")
+        return Promise.resolve({ data: [], error: null });
       const request = {
         abortSignal: () => request,
         then: (resolve: (v: unknown) => unknown) =>

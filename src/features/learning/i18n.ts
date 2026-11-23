@@ -291,6 +291,11 @@ const pairs: Record<string, [string, string]> = {
     "Die Einladung konnte nicht angefordert werden. Versuche es erneut oder wende dich an die Administration.",
     "Could not request the invitation. Try again or contact your administrator.",
   ],
+  prepareOffer: ["Auftrag vorbereiten", "Prepare assignment"],
+  prepareOfferHint: [
+    "Prüfe die Termine und die Konditionen für diesen Kurs.",
+    "Review the dates and terms for this course.",
+  ],
   workspaceRegister: ["Anwesenheit", "Attendance"],
   workspaceActivities: ["Lernaktivitäten", "Learning activities"],
   workspaceNextSession: ["Nächster Termin", "Next session"],

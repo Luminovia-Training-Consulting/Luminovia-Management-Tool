@@ -227,6 +227,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       const boolean = [
         "portal_access",
         "authenticator_settings_available",
+        "import_table_row",
       ].includes(endpoint);
       if (boolean) assert.match(value, /^[tf]$/);
       if (boolean) {
@@ -463,6 +464,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   );
   const adminView = await workspace(admin, run);
   assert.equal(adminView.lms_enabled, true);
+  assert.deepEqual(
+    JSON.parse(await call(admin, "search_course_materials", [run, "", "material", 0])),
+    [],
+  );
   await call(admin, "learning_analytics_access");
   await call(admin, "learning_analytics_report", [
     "staff",
@@ -511,7 +516,12 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     ).map(({ user_id }) => user_id),
     [participant],
   );
-  await enrol(admin, participant);
+  const participantId = await sql(
+    `select luminovia_user_id from public.profiles where id=${q(participant)}`,
+  );
+  const importArgs = [randomUUID(), "enrolment", run, JSON.stringify({ id: participantId })];
+  assert.equal(await call(admin, "import_table_row", importArgs), "t");
+  assert.equal(await call(admin, "import_table_row", importArgs), "t");
   const participantView = await workspace(participant, run);
   assert.equal(participantView.access.learner, true);
   assert.equal(participantView.access.staff, false);

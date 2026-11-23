@@ -3,8 +3,9 @@
  * hides retained data; report messages read only online and in the visible tab.
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { orderedCursorRows } from "../../lib/cursor-rows";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -25,7 +26,13 @@ import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { profileQuery } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
-import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  NextPageError,
+  Notice,
+} from "../../components/common";
 import { DocumentAttachment } from "../files/document-attachment";
 import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
@@ -46,11 +53,17 @@ export function ChatThread({
   room,
   canManageCourses,
   onBack,
+  messageId,
+  draft,
+  onDraftChange,
 }: {
   actor: string;
   room: ChatRoom;
   canManageCourses: boolean;
   onBack: () => void;
+  messageId?: string | null;
+  draft?: string;
+  onDraftChange?: (text: string, sentText?: string) => void;
 }) {
   const { t, i18n } = useTranslation("chat");
   const online = useOnline();
@@ -77,31 +90,41 @@ export function ChatThread({
   const [jumpFailed, setJumpFailed] = useState(false);
   const [jumpId, setJumpId] = useState<string | null>(null);
   const threadElement = useRef<HTMLElement>(null);
+  const [following, setFollowing] = useState(true);
+  const [linkedTarget, setLinkedTarget] = useState<string | null>(null);
+  const [newMessages, setNewMessages] = useState(false);
   const messages = useInfiniteQuery({
     ...chatMessagesQuery(actor, room.id, search),
     enabled: !revoked,
   });
+  const retryOlder = canRetryNextPage(messages);
+  const historyUnavailable = messages.isError && !retryOlder;
   const ordered = orderedCursorRows(messages.data?.pages, "ascending");
   const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
   const latest = ordered[ordered.length - 1];
   // Jump only to history that has just been fetched through the existing ACL-checked RPC.
   // Bound one action to 20 pages; another click may continue where it stopped.
-  const jumpToPinned = async (id: string) => {
+  const jumpToMessage = async (id: string) => {
+    setFollowing(false);
     setJumping(true);
     setJumpFailed(false);
     try {
-      let found = ordered.some((message) => message.id === id);
+      let found = ordered.some(
+        (message) => message.id === id && !message.deleted_at,
+      );
       let hasNext = messages.hasNextPage;
       for (let count = 0; !found && hasNext && count < 20; count++) {
         const next = await messages.fetchNextPage();
         if (next.isError) throw next.error;
         found = (next.data?.pages ?? []).some((page) =>
-          page.some((message) => message.id === id),
+          page.some((message) => message.id === id && !message.deleted_at),
         );
         hasNext = next.hasNextPage;
       }
-      if (found) setJumpId(id);
-      else setJumpFailed(true);
+      if (found) {
+        setLinkedTarget(id);
+        setJumpId(id);
+      } else setJumpFailed(true);
     } catch {
       setJumpFailed(true);
     } finally {
@@ -121,6 +144,14 @@ export function ChatThread({
       setJumpId(null);
     }
   }, [jumpId, ordered]);
+  const openLinkedMessage = useEffectEvent((id: string) => {
+    void jumpToMessage(id);
+  });
+  useEffect(() => {
+    if (!messageId || !messages.isSuccess || !online || revoked) return;
+    const request = setTimeout(() => openLinkedMessage(messageId), 0);
+    return () => clearTimeout(request);
+  }, [messageId, messages.isSuccess, online, revoked]);
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
@@ -163,6 +194,9 @@ export function ChatThread({
       if (
         !target ||
         search ||
+        !following ||
+        historyUnavailable ||
+        (messageId && !linkedTarget) ||
         revoked ||
         !online ||
         document.visibilityState !== "visible" ||
@@ -179,6 +213,10 @@ export function ChatThread({
     latest,
     messages.isSuccess,
     room.manual_unread,
+    following,
+    historyUnavailable,
+    messageId,
+    linkedTarget,
     search,
     revoked,
     online,
@@ -187,9 +225,12 @@ export function ChatThread({
   const previousLatest = useRef("");
   useEffect(() => {
     if (!latest || latest.id === previousLatest.current || search) return;
+    const initial = !previousLatest.current;
     previousLatest.current = latest.id;
-    end.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
-  }, [latest, search]);
+    if (following && (!initial || !messageId))
+      end.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
+    else if (!initial) setNewMessages(true);
+  }, [latest, search, following, messageId]);
   const mute = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -318,7 +359,7 @@ export function ChatThread({
               loading={topicPins.query.isPending || topicPins.query.isFetching}
               error={topicPins.query.isError}
               onRetry={() => void topicPins.query.refetch()}
-              onJump={(id) => void jumpToPinned(id)}
+              onJump={(id) => void jumpToMessage(id)}
               jumping={
                 jumping || messages.isFetchingNextPage || messages.isError
               }
@@ -368,25 +409,41 @@ export function ChatThread({
       )}
       <div
         className="chat-message-scroll"
+        onScroll={(event) => {
+          const area = event.currentTarget;
+          const isAtEnd =
+            area.scrollHeight - area.scrollTop - area.clientHeight <= 12;
+          setFollowing(isAtEnd);
+          if (isAtEnd) setNewMessages(false);
+        }}
         aria-busy={messages.isFetching && !messages.isFetchingNextPage}
       >
         {messages.isPending ? (
           <Loading />
-        ) : messages.isError ? (
+        ) : historyUnavailable ? (
           <ErrorState retry={() => void messages.refetch()} />
         ) : (
           <>
-            {messages.hasNextPage && (
-              <div className="chat-load-older">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={messages.isFetchingNextPage || !online}
-                  onClick={() => void messages.fetchNextPage()}
-                >
-                  {t("loadOlder")}
-                </Button>
-              </div>
+            {retryOlder ? (
+              <NextPageError
+                retry={() =>
+                  void messages.fetchNextPage({ cancelRefetch: false })
+                }
+                disabled={!online || messages.isFetching}
+              />
+            ) : (
+              messages.hasNextPage && (
+                <div className="chat-load-older">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={messages.isFetchingNextPage || !online}
+                    onClick={() => void messages.fetchNextPage()}
+                  >
+                    {t("loadOlder")}
+                  </Button>
+                </div>
+              )
             )}
             {ordered.length === 0 ? (
               <div className="chat-thread-empty">
@@ -416,6 +473,7 @@ export function ChatThread({
                       )}
                       <MessageBubble
                         message={message}
+                        highlighted={message.id === linkedTarget}
                         onReply={(target) => setReplyId(target.id)}
                         topicPin={
                           room.kind === "topic" &&
@@ -455,6 +513,32 @@ export function ChatThread({
           </>
         )}
       </div>
+      {messageId && jumpFailed && (
+        <div className="chat-reconnect">
+          <Notice kind="error">{t("linkedMessageUnavailable")}</Notice>
+          {messages.hasNextPage && (
+            <Button
+              variant="secondary"
+              onClick={() => void jumpToMessage(messageId)}
+              disabled={jumping || !online}
+            >
+              {t("loadOlder")}
+            </Button>
+          )}
+        </div>
+      )}
+      {!following && newMessages && (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            end.current?.scrollIntoView({ block: "nearest" });
+            setFollowing(true);
+            setNewMessages(false);
+          }}
+        >
+          {t("jumpToNewMessages")}
+        </Button>
+      )}
       {mute.isError && <Notice kind="error">{t("actionError")}</Notice>}
       {read.isError && (
         <ErrorState
@@ -477,9 +561,11 @@ export function ChatThread({
         key={`composer:${room.id}`}
         actor={actor}
         room={room.id}
+        draft={draft}
+        onDraftChange={onDraftChange}
         replyId={replyId}
         replyTarget={
-          messages.isError
+          historyUnavailable
             ? undefined
             : ordered.find((item) => item.id === replyId)
         }

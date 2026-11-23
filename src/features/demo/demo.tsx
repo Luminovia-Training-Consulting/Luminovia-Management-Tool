@@ -3,7 +3,7 @@
  * outcomes live only in this component; the demo imports no backend client or account session.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -139,15 +139,29 @@ function demoNavigationItems(
   locale: string,
   staffJobs: string,
 ): PortalNavigationItem[] {
-  return demoModulesForRole(role).map((module) => ({
-    to: demoPath(module.path),
-    label:
-      module.path === "/jobs" && role !== "lecturer"
-        ? staffJobs
-        : guideText(module.title, locale),
-    icon: demoIcons[module.path] ?? BookOpen,
-    end: module.path === "/" || module.path === "/learning",
-  }));
+  const modules = demoModulesForRole(role);
+  return modules
+    .filter(
+      (module) =>
+        academyDemo ||
+        (!(
+          module.path === "/forum" &&
+          modules.some(({ path }) => path === "/chats")
+        ) &&
+          !(
+            module.path === "/analytics" &&
+            modules.some(({ path }) => path === "/finance")
+          )),
+    )
+    .map((module) => ({
+      to: demoPath(module.path),
+      label:
+        module.path === "/jobs" && role !== "lecturer"
+          ? staffJobs
+          : guideText(module.title, locale),
+      icon: demoIcons[module.path] ?? BookOpen,
+      end: module.path === "/" || module.path === "/learning",
+    }));
 }
 
 /** Return distinct, wholly fictional dashboard counts for the chosen perspective. */
@@ -261,6 +275,16 @@ export function DemoPage() {
   const module = selected ?? visibleModules[0] ?? guideModules[0];
   const index = visibleModules.indexOf(module);
   const path = module.path;
+  const relatedPaths = ["/chats", "/forum"].includes(path)
+    ? ["/chats", "/forum"]
+    : ["/finance", "/analytics"].includes(path)
+      ? ["/finance", "/analytics"]
+      : [];
+  const relatedSections = academyDemo
+    ? []
+    : relatedPaths.flatMap((related) =>
+        visibleModules.filter((item) => item.path === related),
+      );
   const analytics = path === "/analytics" && role !== "participant";
   const [tour, setTour] = useState(false);
   const [complete, setComplete] = useState(false);
@@ -582,6 +606,19 @@ export function DemoPage() {
                 ? t(demoRoleLabel[role])
                 : t(`role${role[0].toUpperCase()}${role.slice(1)}`)}
             </p>
+          )}
+          {relatedSections.length > 1 && (
+            <nav className="demo-shortcuts" aria-label={t("relatedSections")}>
+              {relatedSections.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={demoPath(item.path)}
+                  className="button button-secondary"
+                >
+                  {guideText(item.title, i18n.language)}
+                </NavLink>
+              ))}
+            </nav>
           )}
           {((!courseSection && !customLearnerView) || tour) && tourPanel}
           {path === "/" && (

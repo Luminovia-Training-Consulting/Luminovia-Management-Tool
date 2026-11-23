@@ -94,6 +94,7 @@ export function useChatRealtime(actor: string, room: string | undefined) {
             setRevoked(true);
             client.removeQueries({ queryKey: chatKeys.messages(actor, room) });
             client.removeQueries({ queryKey: chatKeys.members(actor, room) });
+            client.removeQueries({ queryKey: chatKeys.draft(actor, room) });
             void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
             return;
           }

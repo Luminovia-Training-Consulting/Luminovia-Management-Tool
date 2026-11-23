@@ -1,3 +1,13 @@
+# 23 November 2026 — Daily portal workflow audit follow-up
+
+Chat text stays in memory per authenticated account and room and is cleared on confirmed send, personal deletion or room access loss. The room keeps its scroll position when older history is open, waits before advancing the read cursor and retries temporary history continuation failures in place. Search links focus and highlight the matching visible message. A filtered notification bulk action applies only to the displayed unread results.
+
+The company and course directories read permission-scoped pages beyond the default REST row cap. Company contacts and import previews stay tied to the selected organisation, and the details follow the filtered results. Pending import rows can be exported for review. Management can prepare a course-backed assignment in the existing course workspace. The fictional demo groups forum with Chats and analytics with Finance and retains all tour steps. Dark selection styles no longer interpolate through low contrast.
+
+Local and hosted reset authorization use current password reauthentication and keep the existing installation and actor checks. The hosted entry point still requires host root, an eligible fresh session, the exact typed target and a fresh verified backup. No live reset or deployment was performed.
+
+All 1,570 Vitest cases passed. Focused tests verified the final chat deletion cleanup and company selection updates. All 28 public Chromium demo and help journeys passed in desktop and mobile, as did type checking, lint, formatting, reachability, production build budgets, runtime checks and the five hosted reset fixtures. The canonical authenticated local browser stack remained unavailable on its occupied database port.
+
 # 23 November 2026 — Repair acceptance regressions
 
 The contrast check resolves dark CSS aliases against the effective theme before applying the existing thresholds. The readiness browser case uses the current accessible company label. The complete application browser budget allows 45 minutes per project and CI reserves 60 minutes for setup, application, PWA and artifacts. The suite retains every existing project and evidence requirement.

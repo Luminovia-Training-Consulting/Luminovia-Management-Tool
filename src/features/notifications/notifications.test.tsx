@@ -287,7 +287,7 @@ describe("connected notification inbox", () => {
     expect(document.querySelector("script")).toBeNull();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Alle als gelesen markieren",
+        name: "Gesamten Posteingang als gelesen markieren",
       }),
     );
     await waitFor(() =>
@@ -454,7 +454,9 @@ it("filters out read preview rows and marks the whole inbox through its server c
   expect(screen.queryByText("Already read")).toBeNull();
   expect(screen.getByText(notice.title)).toBeVisible();
   await userEvent.click(
-    screen.getByRole("button", { name: "Alle als gelesen markieren" }),
+    screen.getByRole("button", {
+      name: "Gesamten Posteingang als gelesen markieren",
+    }),
   );
   await waitFor(() =>
     expect(state.rpc).toHaveBeenCalledWith("mark_notifications", {
@@ -903,4 +905,42 @@ it("dismisses the bell popover when opening an own correction on the current Fin
   expect(disclosure.open).toBe(true);
   await userEvent.click(await screen.findByRole("link", { name: "Öffnen" }));
   expect(disclosure.open).toBe(false);
+});
+
+it("marks only displayed unread IDs while a category is selected", async () => {
+  const chat = {
+    ...notice,
+    id: "9c05dfad-a359-49be-b391-7837bb03de53",
+    kind: "chat_message",
+    title: "Fictional message",
+  };
+  const original = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name, ...args) => {
+    if (name !== "notification_inbox") return original(name, ...args);
+    const response = Promise.resolve({
+      data: {
+        items: [notice, chat],
+        unread_count: 2,
+        as_of: "2026-11-15T11:00:00Z",
+      },
+      error: null,
+    });
+    return Object.assign(response, { abortSignal: () => response });
+  });
+  view(<NotificationsPage />);
+  await screen.findByText(chat.title);
+  await userEvent.click(screen.getByRole("button", { name: /^Nachrichten$/ }));
+  expect(screen.queryByText(notice.title)).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", {
+      name: "Angezeigte Meldungen dieser Kategorie als gelesen markieren",
+    }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("mark_notifications", {
+      p_ids: [chat.id],
+      p_all_before: null,
+      p_read: true,
+    }),
+  );
 });

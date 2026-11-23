@@ -3439,6 +3439,7 @@ tr + tr td {
 [data-theme="dark"] .mobile-nav a.active {
   background: var(--blue-soft);
   color: var(--status-filled-ink);
+  transition: none;
   box-shadow: inset 0 0 0 1px #536e9b;
 }
 

@@ -86,3 +86,30 @@ describe("URL-driven portal search", () => {
     expect(fake.from).not.toHaveBeenCalled();
   });
 });
+
+it("links an authorised chat search result to its exact message", async () => {
+  const id = "9c05dfad-a359-49be-b391-7837bb03de53";
+  const response = Promise.resolve({
+    data: {
+      items: [
+        {
+          id,
+          title: "Fictional match",
+          detail: "",
+          kind: "chats",
+          url: "/chats?room=room-a",
+        },
+      ],
+      has_more: false,
+      next_cursor: null,
+    },
+    error: null,
+  });
+  fake.rpc.mockReturnValueOnce(
+    Object.assign(response, { abortSignal: () => response }),
+  );
+  page();
+  expect(
+    await screen.findByRole("link", { name: /Fictional match/ }),
+  ).toHaveAttribute("href", `/chats?room=room-a&message=${id}`);
+});

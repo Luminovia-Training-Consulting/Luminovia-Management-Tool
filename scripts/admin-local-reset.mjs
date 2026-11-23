@@ -44,7 +44,6 @@ export async function authorizeReset(
   key,
   browserToken,
   password,
-  code,
   request = fetch,
 ) {
   async function auth(pathname, token, body) {
@@ -84,27 +83,10 @@ export async function authorizeReset(
     password,
   });
   if (signedIn?.user?.id !== actor.id || !signedIn.access_token) return false;
-  let token = signedIn.access_token;
+  const token = signedIn.access_token;
   try {
     const current = await auth("/auth/v1/user", token);
     if (current?.id !== actor.id) return false;
-    const factors = (current.factors ?? []).filter(
-      ({ factor_type, status }) =>
-        factor_type === "totp" && status === "verified",
-    );
-    if (factors.length) {
-      if (!/^\d{6}$/.test(code ?? "") || !uuid.test(factors[0].id))
-        return false;
-      const factor = `/auth/v1/factors/${factors[0].id}`;
-      const challenge = await auth(factor + "/challenge", token, {});
-      if (!uuid.test(challenge?.id ?? "")) return false;
-      const verified = await auth(factor + "/verify", token, {
-        challenge_id: challenge.id,
-        code,
-      });
-      if (!verified?.access_token) return false;
-      token = verified.access_token;
-    }
     return await activeAdmin(token, actor.id);
   } finally {
     // Auth returns an empty response on logout. A failed cleanup cannot authorize deletion.
@@ -166,8 +148,7 @@ export function configureLocalReset(server, publishableKey, supervisor) {
         body?.confirmation !== "DELETE" ||
         typeof body.password !== "string" ||
         !body.password ||
-        body.password.length > 1024 ||
-        (body.code !== undefined && typeof body.code !== "string")
+        body.password.length > 1024
       )
         return reply(res, 400, { error: "invalid_confirmation" });
       if (
@@ -176,7 +157,6 @@ export function configureLocalReset(server, publishableKey, supervisor) {
           publishableKey,
           browserToken,
           body.password,
-          body.code,
         ))
       )
         return reply(res, 403, { error: "denied" });

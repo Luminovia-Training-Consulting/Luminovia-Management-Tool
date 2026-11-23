@@ -21,8 +21,8 @@ const copy = {
     "Reset deletes this installation's database contents, accounts, sessions, LMS courses, messages, uploads and local email. The local portal stays stopped.",
   ],
   hosted: [
-    "Für den veröffentlichten CMS-Server ist der Reset eine Host-Operation. Starte die Zielprüfung im Server-Terminal. Der anschließende interaktive Reset prüft die Sicherung, dein Admin-Konto und den Authenticator und legt einen neuen Owner an.",
-    "Resetting the hosted CMS requires host access. Start by checking the target in the server terminal. The interactive reset then checks the backup, your administrator account and authenticator, and creates a new owner.",
+    "Für den veröffentlichten CMS-Server ist der Reset eine Host-Operation. Starte die Zielprüfung im Server-Terminal. Der anschließende interaktive Reset prüft die Sicherung, dein Admin-Konto und das aktuelle Passwort und legt einen neuen Owner an.",
+    "Resetting the hosted CMS requires host access. Start by checking the target in the server terminal. The interactive reset then checks the backup, your administrator account and current password, and creates a new owner.",
   ],
   localUnavailable: [
     "Der Browser-Reset ist nur im eigenen lokalen Portal verfügbar. Starte die Installation mit ./portal start.",
@@ -30,10 +30,6 @@ const copy = {
   ],
   confirm: ["Zur Bestätigung DELETE eingeben", "Type DELETE to confirm"],
   password: ["Aktuelles Passwort", "Current password"],
-  code: [
-    "Authenticator-Code, falls eingerichtet",
-    "Authenticator code, if configured",
-  ],
   action: [
     "Alle Daten dieser Installation löschen",
     "Delete all data in this installation",
@@ -47,8 +43,8 @@ const copy = {
     "The reset could not be confirmed. Check the local portal status using ./portal status before trying again.",
   ],
   invalid: [
-    "Bestätigung abgelehnt. Prüfe dein Passwort und gegebenenfalls den aktuellen Authenticator-Code.",
-    "Confirmation denied. Check your password and, if enabled, your current authenticator code.",
+    "Bestätigung abgelehnt. Prüfe dein aktuelles Passwort.",
+    "Confirmation denied. Check your current password.",
   ],
   target: ["Zielinstallation", "Target installation"],
   checking: [
@@ -92,7 +88,6 @@ function PlatformResetForm({
   const t = (key: keyof typeof copy) => copy[key][language];
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const navigate = useNavigate();
   const [result, setResult] = useState<"failed" | "invalid">();
@@ -118,9 +113,8 @@ function PlatformResetForm({
       return;
     setPending(true);
     setResult(undefined);
-    const body = JSON.stringify({ confirmation, password, code });
+    const body = JSON.stringify({ confirmation, password });
     setPassword("");
-    setCode("");
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -188,19 +182,6 @@ function PlatformResetForm({
                   maxLength={1024}
                   value={password}
                   onChange={(event) => setPassword(event.currentTarget.value)}
-                />
-              </label>
-              <label className="stack" htmlFor="reset-code">
-                {t("code")}
-                <input
-                  id="reset-code"
-                  className="input"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={code}
-                  onChange={(event) => setCode(event.currentTarget.value)}
                 />
               </label>
               {result && <p role="alert">{t(result)}</p>}

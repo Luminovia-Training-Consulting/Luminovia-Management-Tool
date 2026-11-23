@@ -65,6 +65,12 @@ async function accessibleWithoutOverflow(page: Page) {
 }
 
 async function visitDemoSection(page: Page, path: string) {
+  if (path === "/forum" || path === "/analytics") {
+    await visitDemoSection(page, path === "/forum" ? "/chats" : "/finance");
+    await page.getByRole("navigation", { name: "Zugehörige Bereiche" })
+      .locator(`a[href="/demo${path}"]`).click();
+    return;
+  }
   const desktop = page.locator(`.demo-sidebar nav a[href="/demo${path}"]`);
   if (await desktop.isVisible()) {
     await desktop.click();
@@ -447,7 +453,7 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
     ? page.locator("#demo-mobile-navigation")
     : desktopNavigation;
     await expect(navigation).toBeVisible();
-    await expect(navigation.getByRole("link")).toHaveCount(26);
+    await expect(navigation.getByRole("link")).toHaveCount(24);
     await expect(
       navigation.getByRole("link", { name: "Unternehmen", exact: true }),
     ).toHaveAttribute("href", "/demo/clients");
@@ -471,10 +477,8 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
             "/my-reviews",
             "/contracts",
             "/finance",
-            "/analytics",
             "/clients",
             "/wiki",
-            "/forum",
             "/notifications",
             "/topics",
             "/settings",
@@ -489,6 +493,9 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
             .map((path) => `/demo${path}`)
             .sort(),
     );
+    // Secondary sections stay in the tour and in their workspace tabs.
+    paths.splice(paths.indexOf("/demo/finance"), 0, "/demo/analytics");
+    paths.splice(paths.indexOf("/demo/wiki") + 1, 0, "/demo/forum");
     await page
         .getByRole("button", {name: "Rundgang starten", exact: true})
         .click();

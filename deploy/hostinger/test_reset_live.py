@@ -1,4 +1,5 @@
 """Run the reset state machine against disposable directories only."""
+import base64
 import importlib.util
 import json
 from pathlib import Path
@@ -83,9 +84,28 @@ class ResetTest(unittest.TestCase):
         self.assertTrue(all((self.data / name / "old").is_file() for name in module.MOUNTS))
         self.assertFalse((self.data / "storage" / "partial").exists())
 
+    def test_fresh_password_identity_is_checked_without_factor_requests(self):
+        user, session = self.actor
+        claims = base64.urlsafe_b64encode(json.dumps({
+            "sub": str(user), "session_id": str(session), "aal": "aal1",
+        }).encode()).decode().rstrip("=")
+        token = f"header.{claims}.signature"
+        with patch.object(module, "private_gateway", return_value="http://fictional"), \
+                patch.object(module, "auth_request", side_effect=[
+                    {"access_token": token}, {"id": str(user)},
+                ]) as request:
+            self.assertEqual(
+                module.authenticate(self.updater, {"SUPABASE_PUBLISHABLE_KEY": "fictional"},
+                                    "owner@example.invalid", "synthetic"),
+                self.actor,
+            )
+        self.assertEqual([call.args[2] for call in request.call_args_list],
+                         ["/token?grant_type=password", "/user"])
+        self.assertEqual(self.updater.commands, ["authorize"])
+
     def test_rechecks_live_admin_before_removing_data(self):
         self.updater.authorized = False
-        with self.assertRaisesRegex(module.UpdateError, "current_administrator_with_totp_required"):
+        with self.assertRaisesRegex(module.UpdateError, "current_administrator_required"):
             self.perform(lambda *args: self.fail("revoked actor reached reset"))
         self.assertTrue(all((self.data / name / "old").is_file() for name in module.MOUNTS))
 

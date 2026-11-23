@@ -1,6 +1,6 @@
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,7 @@ import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
 import { isParticipantOnly } from "../auth/guest-navigation";
 import { useOnline } from "../../lib/online";
-import { userRolesQuery } from "../../lib/queries";
+import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -54,6 +54,12 @@ import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
+
+const CourseOfferForm = lazy(() =>
+  import("../admin/admin").then((module) => ({
+    default: module.CourseOfferForm,
+  })),
+);
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -937,6 +943,17 @@ function CourseWorkspaceLayout({
   const learner = course.access.learner;
   const editor = course.access.staff || course.access.client;
   const canEdit = academy !== "grace";
+  const offerPermissions = useQuery({
+    ...permissionsQuery(actor),
+    enabled: __PORTAL_INTERNAL_EDITION__ && !academy && course.access.manager,
+  });
+  const canPrepareOffer =
+    __PORTAL_INTERNAL_EDITION__ &&
+    !academy &&
+    course.access.manager &&
+    offerPermissions.data?.includes("jobs.manage") &&
+    offerPermissions.data.includes("courses.manage");
+  const [offerOpen, setOfferOpen] = useState(false);
   const examVisible = Boolean(
     course.exams &&
     (course.exams.required || course.exams.can_edit || (academy && editor)),
@@ -1050,6 +1067,16 @@ function CourseWorkspaceLayout({
       </header>
       {__PORTAL_INTERNAL_EDITION__ && !academy && !learner && (
         <div className="page-actions">
+          {canPrepareOffer && (
+            <Button onClick={() => setOfferOpen(true)}>
+              {t("prepareOffer")}
+            </Button>
+          )}
+          {hasRegister && (
+            <Button asChild variant="secondary">
+              <Link to="#course-register">{t("workspaceRegister")}</Link>
+            </Button>
+          )}
           {editor && (
             <Button asChild variant="secondary">
               <Link to={`/courses?run=${course.id}`}>{t("manageCourse")}</Link>
@@ -1061,6 +1088,18 @@ function CourseWorkspaceLayout({
             </Button>
           )}
         </div>
+      )}
+      {canPrepareOffer && offerOpen && (
+        <Dialog
+          open={offerOpen}
+          onOpenChange={setOfferOpen}
+          title={t("prepareOffer")}
+          description={t("prepareOfferHint")}
+        >
+          <Suspense fallback={<Loading />}>
+            <CourseOfferForm runId={course.id} />
+          </Suspense>
+        </Dialog>
       )}
       <div className="course-room-layout">
         <nav

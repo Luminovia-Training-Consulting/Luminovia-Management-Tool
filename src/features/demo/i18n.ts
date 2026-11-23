@@ -133,6 +133,7 @@ const pairs = {
   steps: ["So läuft es im echten Portal", "How it works in the real portal"],
   practice: ["Jetzt mit Beispielen üben", "Practise with examples"],
   sample: ["Fiktives Beispiel", "Fictional example"],
+  relatedSections: ["Zugehörige Bereiche", "Related sections"],
   quickAccess: ["Demo-Schnellzugriff", "Demo quick access"],
   sampleCourses: ["Fiktive Kursliste", "Fictional course list"],
   courseFilter: ["Kurse filtern", "Filter courses"],

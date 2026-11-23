@@ -4,6 +4,7 @@
  */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import type {
   ChatContact,
@@ -16,6 +17,7 @@ import type {
 /** Shared cache prefixes for targeted revalidation and immediate removal of a revoked room. */
 export const chatKeys = {
   rooms: (actor: string) => ["chat-rooms", actor] as const,
+  draft: (actor: string, room: string) => ["chat-draft", actor, room] as const,
   contacts: (actor: string) => ["chat-contacts", actor] as const,
   members: (actor: string, room: string) =>
     ["chat-members", actor, room] as const,
@@ -101,14 +103,17 @@ export const chatMessagesQuery = (
     queryKey: [...chatKeys.messages(actor, room), search],
     initialPageParam: null as MessageCursor | null,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await db().rpc("chat_messages_with_mentions", {
-        p_room_id: room,
-        p_before_at: pageParam?.at ?? null,
-        p_before_id: pageParam?.id ?? null,
-        p_search: search,
-        p_limit: 40,
-      });
-      if (error) throw error;
+      const { data, error, status } = await db().rpc(
+        "chat_messages_with_mentions",
+        {
+          p_room_id: room,
+          p_before_at: pageParam?.at ?? null,
+          p_before_id: pageParam?.id ?? null,
+          p_search: search,
+          p_limit: 40,
+        },
+      );
+      if (error) throwPagedReadError(error, status);
       const page = (data ?? []) as ChatMessage[];
       if (!page.length) return page;
       const previews = await db().rpc("chat_reply_previews", {
@@ -116,7 +121,7 @@ export const chatMessagesQuery = (
         p_message_ids: page.map((item) => item.id),
         p_versions: page.map((item) => item.content_version ?? 1),
       });
-      if (previews.error) throw previews.error;
+      if (previews.error) throwPagedReadError(previews.error, previews.status);
       const lookup = (previews.data ?? {}) as Record<
         string,
         ChatMessage["reply"]

@@ -45,10 +45,22 @@ function section(path: string) {
   const nav = within(
     document.querySelector(".demo-sidebar") as HTMLElement,
   ).getByRole("navigation", { name: "Demo-Bereiche" });
-  const link = [...nav.querySelectorAll("a")].find(
+  const navLink = [...nav.querySelectorAll("a")].find(
     (item) => item.getAttribute("href") === `/demo${path}`,
-  )!;
-  fireEvent.click(link);
+  );
+  if (navLink) {
+    fireEvent.click(navLink);
+    return;
+  }
+  if (path === "/forum" || path === "/analytics") {
+    section(path === "/forum" ? "/chats" : "/finance");
+    const grouped = screen.getByRole("navigation", {
+      name: "Zugehörige Bereiche",
+    });
+    fireEvent.click(grouped.querySelector(`a[href="/demo${path}"]`)!);
+    return;
+  }
+  throw new Error(`Missing demo section ${path}`);
 }
 
 beforeEach(async () => {
@@ -653,8 +665,10 @@ describe("tour navigation and invalid deep links", () => {
     const paths = [...document.querySelectorAll(".demo-sidebar nav a")].map(
       (link) => link.getAttribute("href")?.replace(/^\/demo/, "") || "/",
     );
-    const visibleModules = paths.map((path) =>
-      guideModules.find((item) => item.path === path)!,
+    const visibleModules = guideModules.filter(
+      (item) =>
+        paths.includes(item.path) ||
+        ["/forum", "/analytics"].includes(item.path),
     );
     fireEvent.click(screen.getByRole("button", { name: "Rundgang starten" }));
     expect(

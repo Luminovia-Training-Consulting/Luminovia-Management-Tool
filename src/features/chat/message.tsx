@@ -68,6 +68,7 @@ export function MessageText({ body }: { body: string }) {
 /** Display message/reaction/edit controls and await the corresponding RPC before confirming changes. */
 export function MessageBubble({
   message,
+  highlighted,
   actor,
   zone,
   attachment,
@@ -76,6 +77,7 @@ export function MessageBubble({
   topicPin,
 }: {
   message: ChatMessage;
+  highlighted?: boolean;
   actor: string;
   zone: string;
   attachment?: ReactNode;
@@ -198,6 +200,7 @@ export function MessageBubble({
     <li
       className={`chat-message ${own ? "chat-message-own" : ""}`}
       data-message-id={message.id}
+      data-highlighted={highlighted || undefined}
       tabIndex={-1}
     >
       <div className="chat-message-avatar" aria-hidden="true">
