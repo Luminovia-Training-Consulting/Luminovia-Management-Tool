@@ -35,9 +35,8 @@ const copy = {
     open: "Diesen Bereich öffnen",
     section: "Bereich auswählen",
     help: "Hilfe zu diesem Bereich",
-    demo: "Mit Beispieldaten üben",
     done: "Rundgang abgeschlossen. Du kannst ihn jederzeit neu starten.",
-    safe: "Du bist im echten Portal. Der Rundgang erklärt nur und führt keine Aktionen aus. Zum gefahrlosen Ausprobieren öffne die Demo.",
+    safe: "Du bist im echten Portal. Der Rundgang erklärt nur und führt keine Aktionen aus.",
     unavailable: "Der Rundgang wartet auf die aktuellen Zugriffsrechte.",
     loadError:
       "Die Zugriffsrechte konnten nicht geladen werden. Lade sie erneut, bevor du den Rundgang startest.",
@@ -55,9 +54,8 @@ const copy = {
     open: "Open this section",
     section: "Choose a section",
     help: "Help with this section",
-    demo: "Practise with sample data",
     done: "Tour completed. You can restart it at any time.",
-    safe: "You are in the live portal. The tour only explains and never performs actions. Open the demo to practise safely.",
+    safe: "You are in the live portal. The tour only explains and never performs actions.",
     unavailable: "The tour is waiting for current access permissions.",
     loadError:
       "Access permissions could not be loaded. Reload them before starting the tour.",
@@ -167,9 +165,6 @@ export function PortalTour({
             {i18n.language.startsWith("de")
               ? "Hilfe & Anleitungen"
               : "Help & guides"}
-          </Link>
-          <Link to="/demo" className="text-link">
-            {text.demo}
           </Link>
         </div>
         {!ready &&

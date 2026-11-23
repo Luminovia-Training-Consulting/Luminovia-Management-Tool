@@ -1,6 +1,6 @@
 /**
  * Human password sign-in and recovery requests. Validation/online notices support the UI; only
- * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
+ * Supabase Auth can establish a session. Public help provides guidance without sign-in.
  */
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { AcademyBrandImage } from "../branding/academy-logo-image";
@@ -208,11 +208,6 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
           )}
           <p className="fine-print">{t("invitationNote")}</p>
           <div className="login-learning-links">
-            {portalInternalEdition && (
-              <Button asChild variant="secondary">
-                <Link to="/demo">{t("tryDemo")}</Link>
-              </Button>
-            )}
             <Link to="/help">{t("helpGuides")}</Link>
           </div>
           {footer}

@@ -1024,12 +1024,12 @@ export const guideModules: GuideModule[] = [
       de: [
         "Suche vor einer Einladung nach einem vorhandenen Konto.",
         "Prüfe E-Mail-Adresse und die zulässige Rolle sorgfältig.",
-        "Sende die Einladung ausdrücklich und prüfe das tatsächliche Ergebnis. Die Demo versendet nichts.",
+        "Sende die Einladung ausdrücklich und prüfe das tatsächliche Ergebnis.",
       ],
       en: [
         "Search for an existing account before inviting someone.",
         "Check the email address and permitted role carefully.",
-        "Send the invitation explicitly and check the actual result. The demo sends nothing.",
+        "Send the invitation explicitly and check the actual result.",
       ],
     },
     problem: {

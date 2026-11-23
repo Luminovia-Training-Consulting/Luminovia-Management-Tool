@@ -1,5 +1,5 @@
 /**
- * Routes for the internal operations portal. Public Auth, demo and help routes
+ * Routes for the internal operations portal. Public Auth and help routes
  * stay outside the protected user-keyed subtree.
  */
 import { lazy } from "react";
@@ -102,11 +102,6 @@ const AdminMailPage = lazy(() =>
 const ApiExplorer = lazy(() =>
   import("../features/developer-api/portal-explorer").then((module) => ({
     default: module.ApiExplorer,
-  })),
-);
-const DemoPage = lazy(() =>
-  import("../features/demo/demo").then((module) => ({
-    default: module.DemoPage,
   })),
 );
 const HelpCenter = lazy(() =>
@@ -273,7 +268,6 @@ function Protected() {
 export default function PortalRoutes() {
   return (
     <Routes>
-      <Route path="/demo/*" element={<DemoPage />} />
       <Route path="/help" element={<HelpCenter />} />
       <Route
         path="/login"

@@ -6,7 +6,7 @@ sessionId: session-261120-120322-dl6e
 
 ### Ein Umsetzungsauftrag direkt auf `main`
 
-Die OneDrive-Datei `ROADMAP.txt` ist der verbindliche Änderungsauftrag: **FC-01–FC-58**, **A.1 und G1–G8** sowie **LMS-T01–T34, DEMO-T01–T06, API-T01–T16 und WL-T01–T15**. Die Umsetzung ist ausdrücklich gewünscht. Die nummerierten Aufgaben sind interne Arbeitspakete für einen zusammenhängenden Auftrag, keine einzelnen Prompts, Branches, Worktrees oder PRs.
+Die OneDrive-Datei `ROADMAP.txt` ist der verbindliche Änderungsauftrag: **FC-01–FC-58**, **A.1 und G1–G8** sowie **LMS-T01–T34, API-T01–T16 und WL-T01–T15**. Die Umsetzung ist ausdrücklich gewünscht. Die nummerierten Aufgaben sind interne Arbeitspakete für einen zusammenhängenden Auftrag, keine einzelnen Prompts, Branches, Worktrees oder PRs.
 
 - **Arbeitsweise:** Direkt im vorhandenen lokalen `main` arbeiten. Keine neuen Feature-Branches, Worktrees oder PRs anlegen. Vorhandene Passwort- und Kalenderänderungen gezielt prüfen und nur passende Teile übernehmen. Die vorgemerkten `.idea`-Dateien und andere fremde Änderungen unangetastet lassen. Nur geprüfte, aufgabenbezogene Änderungen signiert übertragen, sofern GitHub den direkten Push erlaubt; andernfalls den lokalen Stand erhalten und den konkreten Blocker melden. Keine Schutzregeln
   oder Pflichtprüfungen umgehen.
@@ -22,7 +22,7 @@ Die OneDrive-Datei `ROADMAP.txt` ist der verbindliche Änderungsauftrag: **FC-01
 
 ### Reuse the project’s existing owners
 
-- **Portal and public demo:** `src/app/app.tsx` already separates public `/demo/*` and Help from `Protected` routes. `src/app/shell.tsx` combines responsive navigation, Auth, live capabilities and preferences; extract only Auth-free presentational pieces for `DemoPage` in `src/features/demo/demo.tsx`. Feed them synthetic view models and callbacks, never the real page loaders or live role information. Use `src/components/preferences.tsx`, `src/styles.css` and `public/brand/` as the design
+- Feed them synthetic view models and callbacks, never the real page loaders or live role information. Use `src/components/preferences.tsx`, `src/styles.css` and `public/brand/` as the design
   baseline. Its fictional business state stays in memory; user-chosen appearance preferences are distinct.
 - **Identity and core business:** preserve Supabase Auth and the `accounts` Edge handler, including caller-scoped `reserve_account_creation`. Extend `src/features/accounts/accounts.tsx`, existing `src/features/commercial` views and the existing role, pricing, claims, withdrawal and invoice RPCs with additive migrations. Repeated claims/releases/notifications must resolve transactionally, not through frontend state. The accepted rate, currency, sessions and exact document versions remain
   immutable.
@@ -44,7 +44,7 @@ Die OneDrive-Datei `ROADMAP.txt` ist der verbindliche Änderungsauftrag: **FC-01
 
 ### Planned file boundaries
 
-- Extend existing feature owners and adjacent tests in `src/`; add Auth-free shared portal views only where actually shared by `Shell` and `DemoPage`.
+- Extend existing feature owners and adjacent tests in `src/`; keep shared navigation presentation in the portal shell.
 - Add versioned SQL in `supabase/migrations/`; add a product API Edge package, tentatively `supabase/functions/product-api/`, plus neutral installer/edition configuration in the follow-on. Never rewrite released migration bytes or vendored Supabase sources.
 - Extend `scripts/*-api-check.mjs`, `scripts/*-db-tests.mjs`, `tests/e2e/`, `API_REFERENCE.md`, `GUIDE.md`, `ROADMAP.md` and `WHITELABEL_ROADMAP.md` at their owning milestones. Use `.github/workflows/ci.yml` and `security.yml` as the canonical CI gate owners.
 
@@ -62,7 +62,6 @@ R --> F[Protected file gateways]
 A --> P[Shared database policy]
 F --> P
 N[Live chat search and delivery] --> P
-D[Public demo] --> V[Shared pure views]
 L --> V
 W[Vendor install review] --> I[Dedicated install handoff]
 ```
@@ -118,7 +117,6 @@ transfer.
 
 **16 — Portal dark theme · FC-03.** Extend shared theme tokens for coherent dark surfaces, accents, states and alerts; preserve the seven-colour light baseline except for named accessibility corrections. Capture representative portal screenshots and test contrast, focus, hover, disabled and responsive states in DE/EN.
 
-**17 — Authentic fictional public demo · FC-02, FC-20, A.1, DEMO-T01–T05.** Keep `/demo` reachable from public/Help entry points. Reuse portal presentation and responsive layout for lecturer/company/admin/participant views, fictional dashboard/jobs/calendar/workspace/chat/files/finance, interactive filters and safe simulated dialogs. Preserve Help/tour entry points, distinguish sample actions from unavailable features, and keep demo data separate from idempotent local test seeds. Verify zero
 live business requests, writes, email/push/payments or protected caches, plus visual parity and accessible navigation across the required matrix. Revisit changed presentation in 26 and test the white-label omission in 35.
 
 # Premium & API Tasks 18–32
@@ -142,7 +140,6 @@ data out of service-worker/offline caches. Test an already-connected socket, alr
 
 **25 — Attendance evidence and structured import · FC-51, G5; LMS-T27–T28.** Add clean, protected, versioned PDF evidence per session/day without treating it as verified attendance. Implement the optional CSV/XLSX path as an explicit preview/confirm workflow to cover the requested matrix. Validate participant/session/company matching and reject duplicate, foreign or invalid rows before an atomic commit. Test exact bytes, retained versions and denied download.
 
-**26 — Integrate learning and close LMS journeys · FC-39, FC-52–FC-55, G3–G6.** Wire existing quizzes, feedback, completion PDFs and course workspaces into the gated learner/teacher experience and update affected fictional demo views without live data. Exercise the full cross-company ON/OFF/ON journey for chat, files, welcome, exams and attendance, including rights revoked after removal and isolated access to B. Keep retained records and no unauthorised private notes. This is source/test
 acceptance, not production activation.
 
 ### Full versioned product API
@@ -166,7 +163,6 @@ present unavailable routes as usable.
 
 ### Internal release qualification
 
-**33 — Role journeys, responsive layout and CI · FC-04–FC-05, FC-55, G6/G7.6.** Deliver complete browser journeys for onboarding, assignment, calendar, contract upload, finance, company area, Premium and Swagger. Fix discovered clipped/overlapping tiles, forms and dialog controls. Integrate the requirement-mapped role, theme, layout, keyboard/accessibility and denial suites into canonical runners. Re-run Demo/LMS/API matrices on the candidate, including direct API role/tenant/file boundaries.
 Keep remaining requirements and actual evidence visible in the roadmap.
 
 **34 — Retained-data migration and release decision · FC-56–FC-58; LMS-T32–T34, repo API-T20.** Extend release checking using existing Hostinger package/updater and reviewed-migration harnesses; verify ledger/digests, full PostgreSQL/Auth/Storage backup and independent isolated restore, then rehearse forward upgrades and compare retained accounts, roles, files/hashes, messages, contracts, accepted rates, invoices and audit. Produce a go/no-go record for the exact approved candidate with
@@ -174,7 +170,6 @@ application/security CI, actual authorised Hostinger SHA and health, external SM
 
 ### White-label only after complete core roadmap acceptance
 
-**35 — Edition and licence boundaries · G8.1/G8.3/G8.4; WL-T05–T06/T08/T11, DEMO-T06.** Add trusted per-installation edition/module policy and signed licence validation (validity, renewal, optional quotas, offline/grace/read-only and export rules). Supply internal, customer-owned and managed dedicated editions on one source base. Both customer editions include LMS by default, omit Luminovia `/demo` links/routes/assets and Premium switch, keep course exam settings, and deny vendor/intermediary
 operations at API/RPC/RLS/file/search/Realtime boundaries. Test licence expiry without data deletion or rights expansion.
 
 **36 — Branding everywhere · G8.2; WL-T02/T13.** Add customer-local, versioned and audited branding with safe previews and scanned assets: legal/display names, logos, theme, welcome/footer/legal links, custom domain, favicon, PWA/title/push, sender/templates, help, Swagger and PDFs/certificates. Carry allowed legal notices and per-installation origin/TLS/Auth configuration. Test real branded surfaces in DE/EN, both themes and mobile sizes; preserve internal branding and customer-safe onboarding.
@@ -183,7 +178,6 @@ operations at API/RPC/RLS/file/search/Realtime boundaries. Test licence expiry w
 
 **38 — Optional local lecturer compensation · G8.3; WL-T07.** Add customer-owned rates, agreements, currencies, terms and tracked payments as a separate optional entitlement. Keep it out of UI and API when disabled, never require it to deliver a course, and keep vendor billing/commission/margins absent and denied when enabled.
 
-**39 — Dedicated installer and first admin · G8.1/G8.4; WL-T01/T14.** Provide neutral installer preflight, private secret generation, unique Auth/DB/Storage/domain/TLS/SMTP, migration checks, no production demo seeds, and one-time local-admin invitation. Reuse parameterised Compose/gateway/updater patterns and validate refusal to reset existing installations, independent rotation/audit, and a documented safe re-run.
 
 **40 — Vendor wizard and installer handoff · G8.2/G8.4; WL-T08/T12.** In the separate vendor control plane, capture legal/display names, academy and first-admin details, hosting mode, domain, locale/time zone, brand, licence, capacity, SMTP and backup/retention. Preview and explicitly approve before emitting a reviewed versioned install spec. Support retry and status for customer-run self-hosting and operator-run dedicated hosting, without vendor access to customer data or an automatic
 provisioning worker. Acceptance uses independently scoped domains/credentials, health and an authorised handover.
@@ -203,9 +197,9 @@ Die in den Arbeitspaketen genannten Prüfungen sind zu implementieren und für d
 
 - Prefer existing tests and extend them: `scripts/accounts-api-check.mjs` for Auth; job discovery/capacity/withdrawal scripts for concurrency; `scripts/commercial-api-check.mjs` for invoices; `scripts/company-participant-api-check.mjs`, `scripts/course-workspace-api-check.mjs`, `scripts/documents-api-check.mjs` and `scripts/notification-delivery-api-check.mjs` for LMS policy and deliveries. Wire new scenarios into `scripts/runtime-test.mjs` and the canonical workflows rather than treating
   standalone local passes as a substitute.
-- Use Playwright against fictional isolated fixtures. Apply DE/EN, light/dark, 390/768/1280/1920px, keyboard/focus, usable hover/disabled states, layout geometry and WCAG 2.2 AA checks where relevant. Run the guided demo runner as well as portal checks; instrument demo network calls and browser cache rather than relying on a visual label.
+- Use Playwright against fictional isolated fixtures. Apply DE/EN, light/dark, 390/768/1280/1920px, keyboard/focus, usable hover/disabled states, layout geometry and WCAG 2.2 AA checks where relevant.
 - Exercise concurrent payments/claims/enrolments/role and toggle changes where applicable, strict API/RLS denials, exact file/version/byte access, stale links, currently open streams and already queued delivery. These checks complement browser visibility; a hidden menu is not a security control. Include Europe/Berlin DST and Australia/Brisbane for scheduled flows.
-- Je Test-ID Pfad, Befehle, Ergebnis, Revision, CI-Lauf und noch notwendige Freigabe dokumentieren. Demo-, LMS- und API-Matrizen in der Kernabnahme 33–34 vollständig ausführen. `DEMO-T06`, `WL-T01–T15` und API-Kompatibilität der Kundenversion nach der White-Label-Implementierung in 41 vollständig ausführen.
+- Je Test-ID Pfad, Befehle, Ergebnis, Revision, CI-Lauf und noch notwendige Freigabe dokumentieren. LMS- und API-Matrizen in der Kernabnahme 33–34 vollständig ausführen. `WL-T01–T15` und API-Kompatibilität der Kundenversion in Schritt 41 prüfen.
 - Record blocked separately from failed and not run. If the isolated runner collides with a port or exceeds a run window, diagnose its owned logs and rerun using the canonical features and fixtures; never touch unrelated running stacks, weaken assertions, or manufacture a completed result.
 
 # Delivery Steps
@@ -224,12 +218,9 @@ Assignments, agreements and invoices agree with current permissions and immutabl
 - Execute tasks 07–13 in commercial, jobs and calendar owners; wire role/individual rates, approved agreement handling, release/claim lifecycle, scoped discovery, invoice eligibility/status, reports and event colours.
 - Fälle für Parallelität, verweigerten Zugriff, exakte Dateiversionen, Währungen, Fristen und Zahlungshistorie in die bestehenden DB/API- und Browser-Testläufe für die Abschlussabnahme aufnehmen.
 
-### ✓ Step 3: Align portal navigation, theme and public demo
+### ✓ Step 3: Align portal navigation and theme
 
-The private portal and fictional public demo share accessible presentation without sharing privileged application state.
-
-- Execute tasks 14–17 across `Shell`, `SectionHub`, feature links, theme tokens and `DemoPage`.
-- Prüfungen für Rollenvorschau, unverändertes helles Theme, responsive Darstellung und Schreibfreiheit der öffentlichen Demo für die Abschlussabnahme implementieren.
+- Execute tasks 14–16 across `Shell`, `SectionHub`, feature links and theme tokens.
 - Track task 42 independently as the permission-gated separate-Website footer deliverable; do not make it a portal release dependency.
 
 ###       * Step 4: Deliver the gated Premium LMS
@@ -261,4 +252,4 @@ After core acceptance, customer-owned and managed dedicated academies can be han
 
 - Execute tasks 35–38: trusted edition/licence exclusion policy, independent branding, local administration/course workflows and optional local compensation.
 - Execute tasks 39–41: installer, reviewed vendor handoff, signed updates, recovery/export and exact-build commercial acceptance.
-- Verify the internal demo remains available while customer routes/assets omit it; prove independent tenant, credential, backup and API boundaries.
+- Verify independent tenant, credential, backup and API boundaries.

@@ -170,8 +170,8 @@ export function auditFrontend(root) {
     follow(join(source, "main.tsx"));
     const routePatterns = [...routes].map((route) => {
         // React Router's terminal splat includes its base path and descendants.
-        // Keep the separator inside the optional group: /demo/* must not match
-        // /demography. Other stars remain escaped literals, not global wildcards.
+        // Keep the separator inside the optional group: /preview/* must not match
+        // /previewgraphy. Other stars remain escaped literals, not global wildcards.
         const splat = route.endsWith("/*");
         const base = splat ? route.slice(0, -2) : route;
         const pattern = base

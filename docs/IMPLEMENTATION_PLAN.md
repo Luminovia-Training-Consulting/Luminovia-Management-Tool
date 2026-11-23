@@ -20,7 +20,7 @@
 - Open unified chat search results at the matching authorised message. Keep existing room URLs valid and make further history loading explicit when needed.
 - Scope notification read actions to the displayed category items while a filter is active. Label the full-inbox action explicitly.
 - Page course and company directory reads across the REST limit, and load contacts only for the selected organisation. Make pending import rows exportable for review while keeping receipt-based retries in the same preview.
-- Offer a permission-checked course-backed assignment form in the course workspace. Group demo forum and analytics under Chats and Finance where the fictional role can access both sections.
+- Offer a permission-checked course-backed assignment form in the course workspace.
 - Use current password verification for the protected reset paths. Retain installation, role and live-session verification, typed confirmation, and hosted root and backup checks.
 
 ## Acceptance repair
@@ -42,7 +42,6 @@
 
 ## First-use and setup guidance
 
-- Keep demo material and course actions above optional guidance. Preserve the selected demo perspective when clearing fictional practice state.
 - Report configured invitation and relay switches to current mail administrators and distinguish the TLS handshake from delivery. Test unchanged transports without rewriting their settings.
 - Present local reset under System operations and document the stopped end state. Use the intended customer target for provider and recovery acceptance.
 
@@ -114,7 +113,7 @@
 - Trace callable reachability from executable entry points in both browser editions. The integrity regression preserves real recursion and rejects a cycle whose only callers are within the unused group.
 - Reuse the actor-scoped active-company lookup across account creation, invitations and role editing. Keep the RPC binding, account retry identity and invoice continuation logic centralised while preserving each caller's current authority and payload.
 - Keep shared retry identities tied to the input reviewed by the user and retain separate request IDs for workflows with multiple distinct writes. Refresh the file list and contract-registration picker when the gateway confirms a clean PDF.
-- The local source, API surface, browser demo, packaging and edition-build checks are recorded in the work log. The separate release inventory tracks the external provider and hosted acceptance checks.
+- The separate release inventory tracks the external provider and hosted acceptance checks.
 
 ## Course visibility and time filters
 
@@ -124,13 +123,13 @@
 ## Internal portal analytics
 
 - Analytics gives instructors their own compensation and payment history, companies their own scheduled work and customer figures, and management and administration company filters with permissioned finance. The report uses explicit date windows and original currencies. It allocates confirmed fees to the first unreleased session and splits scheduled time across reporting-zone month boundaries.
-- The company portal links directly to the company reporting scope when the current account is eligible. The public demo shares the report presentation with fictional data for the company, lecturer and staff perspectives. Period, currency, series and eligible company and forecast controls can be exercised without a server request.
+- The company portal links directly to the company reporting scope when the current account is eligible. Period, currency, series and eligible company and forecast controls can be exercised without a server request.
 - The financial history distinguishes confirmed fees from recorded cash. The all-company finance view can model open work using the existing 90-day finance forecast and user-selected probability. Company-filtered lecturer payments remain unavailable because an invoice can cover several organisations.
 - The feature has targeted PostgreSQL, component, contract and responsive Chromium evidence. Full hosted acceptance remains in the existing release inventory.
 
 ## Premium LMS course analytics
 
-- Use Unternehmen in German and Company or Companies in English for the organisation role, company directory, permissions and reports in the portal, Premium LMS and demo. Public URLs and machine-readable role and API identifiers retain their established names.
+- Public URLs and machine-readable role and API identifiers retain their established names.
 - The internal Analytics page links to LMS analytics when the server confirms a reporting scope. Both dedicated Academy editions link directly from Learning. Internal reports select enabled Premium companies. Dedicated reports use the signed LMS licence in active or read-only grace state.
 - The aggregates cover unique active learners, enrolments, completions, valid completion records, scheduled sessions and teaching time, status by month, and verified present, absent and excused counts. Reports show monthly cohorts and a paginated course table. An instructor sees their own assignments, a company sees its own courses, and course management can filter the companies it administers. Archived course runs remain visible to course management for historical reporting.
 - The report uses the first session or the draft creation date in the caller's reporting zone. Learner counts reflect current enrolment and membership. Verified attendance uses finished sessions. Learner identities, notes and grades stay out of the report. The Internal and Academy interactive APIs publish both read operations.
@@ -139,7 +138,7 @@
 
 - Place the accounting source label above the controls, align the source and actions at a common height, and group the actions beneath the source on narrow screens.
 - The live local portal has a repeated layout sweep over 36 routes with administrator, lecturer, company and participant accounts. The 320 px header and People administration regressions are covered in the canonical Chromium run. Calendar coverage includes intermediate workspace widths, long agenda titles and keyboard use of the sideways scroll region.
-- The demo regression covers bottom navigation at 320 px and in landscape, the role selector, Escape and focus return, scroll position and entry points to help and sign-in. Both Academy builds have additional open-menu coverage at intermediate widths with a long customer name and populated notification inbox.
+- Both Academy builds have additional open-menu coverage at intermediate widths with a long customer name and populated notification inbox.
 - Compare customer-facing branding in both Academy packages and keep published settings as the default for the SMTP sender display name. Authenticated workflows, emulated viewport sizes and public production build checks have separate recorded evidence. Physical-device and independent live-customer acceptance remain open.
 - Both Academy editions support a separately managed app icon under the existing PWA identity. PostgreSQL verifies atomic publication, current administrator authority, concurrent version conflicts, licence grace and reset. The pinned local TLS front end verifies public assets and the signed package fallback. Launcher refresh on an existing physical device remains acceptance work.
 
@@ -173,11 +172,11 @@ Global event invitations in the internal portal support a scoped search by displ
 | Finance and reporting | The settlement journal combines authorised credits, refunds and lecturer repayments by date, original currency and reversal status. Type, currency and posting-status filters apply to the preview, detail CSV, totals CSV and versioned JSON. Each download requests a fresh authorised report. PostgreSQL verifies reconciliation, role-specific categories and period and row limits. Real Auth and REST verify role-separated reporting and match the original entries. | The existing fee, invoice and forecast reports remain governed by their own scope. |
 | Formal amendments | Company contacts can submit shared date changes for management coordination. Each affected lecturer and an authorised reviewer approve the corresponding version. For eligible future teaching, finance can include private, lecturer-specific terms and compensation. Started dates, evidence and billed units remain protected. The delivery workflow supports revision after independent reopening, including on released allocations with an existing submission. Real Auth and REST verify the shared customer workflow, stale versions, role denials and original agreement preservation. | Required signatures follow the applicable contract process. |
 | Website enquiries | Trusted intake, bounded validation, versioned triage and explicit conversion. `enquiries-api-check.mjs` and `enquiries.spec.ts` cover the portal side. | The separate Website repository provides the bilingual form and server-side relay. Their combined path was exercised through the actual Portal handler and PostgreSQL. Independent public activation and privacy/provider acceptance remain open. |
-| UI and PWA | The public demo, DE/EN, themes, keyboard and mobile layouts have browser coverage. The calendar has a time zone selector and explicit UTC offsets for repeated wall times. Native desktop and mobile Chromium exercised all eight individual roles and a combined account. An actual Linux desktop installed, launched, opened the offline shell and removed the built internal PWA. | Complete the wider browser and tablet matrix and physical Android and iOS app installation. |
+| UI and PWA | DE/EN, themes, keyboard and mobile layouts have browser coverage. The calendar has a time zone selector and explicit UTC offsets for repeated wall times. Native desktop and mobile Chromium exercised all eight individual roles and a combined account. An actual Linux desktop installed, launched, opened the offline shell and removed the built internal PWA. | Complete the wider browser and tablet matrix and physical Android and iOS app installation. |
 | Notifications | The internal inbox covers finance review requests, exceptional approvals, instalment decisions, fully credited invoices and overpayment corrections through acknowledgement, dispute, withdrawal and repayment. The current role controls access to opaque links. German and English notices exclude private amounts and receipt data. Both native Chromium profiles verified the lecturer and finance links. Existing fixtures cover quiet hours, read state and local push and mail adapters. | Full event and role matrix on the isolated stack. Live provider delivery and hosting are separate work. |
 | API and developer tools | The internal catalogue documents assignment and delivery transitions, reporting and signed subscriptions. Separate revocable keys cover the course index, enrolments and aggregate reports. A local worker and receiver exercised exact signed JSON, retry after failure and revocation. The operator can check a reviewed receiver's pinned TLS hostname before processing its first delivery. The [generated API reference](../API_REFERENCE.md) records the migrated inventory. | Prove signed delivery to the approved external receiver. Continue operation-specific coverage for other transports and clients. |
 
-Signed-in portal and Academy navigation follow the current account and its permissions. The public demo supplies fictional role views and accepts role entry links. Dedicated Academy packages include the demo only when explicitly enabled.
+Signed-in portal and Academy navigation follow the current account and its permissions. Public help is covered separately from authenticated role journeys. The public browser checks passed in both Chromium layouts. Continue with the signed-in UI and LMS acceptance tracked in the roadmap.
 
 The work log records source, local verification and exact-revision CI evidence. Deployment, production mail and hosting acceptance have their own checks.
 
@@ -359,7 +358,6 @@ The original [Premium LMS acceptance scenarios](https://github.com/Luminovia-Tra
 - [x] Group course runs under a company class with stable course links and unchanged enrolments. Verify company/learner scope through native desktop and mobile browsers.
 - [x] Scope optional anti-spam policy to the installation and company. Verify text and attachments with exact retries and current roles.
 - [x] Save and test dedicated outbound SMTP through the local administrator's role. Confirm encrypted storage, implicit TLS and STARTTLS without a test message, read-only grace and revocation.
-- [ ] Rehearse provider SMTP against a customer's authorised mailbox and verify a production-ready sender domain, public demo route and website login entry on the separately owned Website.
 
 ## Lecturer materials and classroom links
 
@@ -376,7 +374,6 @@ The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovi
 | Items                      | Source status and ownership                                                                                                                                                                                                                                                                                                  | Remaining evidence or work                                                                                                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FC-01                      | The Website Jobs route and separate LinkedIn targets exist. Website branch `codex/footer-linkedin-localization` adds and browser-tests both locale labels.                                                                                                                                                                   | Public Website rollout remains separate.                                                                                                                                                                            |
-| FC-02, FC-03, FC-20        | The demo uses the learner navigation, scoped fictional LMS exercises, updated dark palette and mobile navigation. The complete public desktop and mobile suite passed 16/16.                                                                                                                                                 | Complete side-by-side comparison against authenticated portal views.                                                                                                                                                |
 | FC-04, FC-05               | Operational Playwright journeys and viewport fixtures exist.                                                                                                                                                                                                                                                                 | Full authenticated role journeys run in Actions while the local Docker daemon is unavailable.                                                                                                                       |
 | FC-06, FC-07, FC-12        | Calendar tools disclosure, subscription, export and offline schedule are present.                                                                                                                                                                                                                                            | Verify live responsive boundaries and independent actions in the browser.                                                                                                                                           |
 | FC-08, FC-09, FC-10        | Shared forum route, permission-gated Contracts link and account action layout are present.                                                                                                                                                                                                                                   | Verify live navigation, keyboard and confirmation cases.                                                                                                                                                            |
@@ -396,7 +393,7 @@ The original source baseline was `e6a47f1b`. [PR 63](https://github.com/Luminovi
 | FC-48–FC-49                | Optional exam, scanned PDF visibility and separate staff answer keys are present.                                                                                                                                                                                                                                            | Verify native exam upload, scanner and Storage acceptance.                                                                                                                                                          |
 | FC-50–FC-51                | Session register, PDF evidence and atomic, reviewed CSV/XLSX imports are implemented. XLSX parsing stays local and uses the same reviewed write. PostgreSQL tests cover concurrent pause and invalid row rollback.                                                                                                           | Native role/file acceptance remains open.                                                                                                                                                                           |
 | FC-54                      | Existing quizzes, feedback and completion are connected to the gated Premium workspace.                                                                                                                                                                                                                                      | Verify learner browser, issuance, byte delivery and retained data with native services.                                                                                                                             |
-| FC-55–FC-58                | Local verification and release tooling are present. Core suites and the public demo have evidence.                                                                                                                                                                                                                           | The complete local suite, native Auth/Storage/Realtime, retained-data restore and Hostinger readiness remain open.                                                                                                  |
+| FC-55–FC-58                | Local verification and release tooling are present. Core suites have evidence.                                                                                                                                                                                                                           | The complete local suite, native Auth/Storage/Realtime, retained-data restore and Hostinger readiness remain open.                                                                                                  |
 | G7.1–G7.2                  | Same-identity email/username sign-in, own alias management and native PKCE recovery adapter are implemented. Server integrations obtain a separate, expiring, rotated key for `courses.read`.                                                                                                                                | Run native Auth/Mailpit and native integration HTTP journeys.                                                                                                                                                       |
 | G7.3–G7.6                  | Swagger uses migrated browser RPC signatures and the actual REST role gates. Reviewed schemas cover selected domain payloads. The download also documents credential exchange and signed company course webhooks. Admins can inspect delivery status.                                                                        | Remaining domain-specific JSON schemas, integration client acceptance and configured hosted receiver acceptance. Private worker and signed receiver proof passed locally.                                           |
 | G8, WL-T01–WL-T15          | Dedicated identity, signed licence preparation and branded browser/PWA packages are implemented. Both editions have a gated exact-release course profile with licence-backed access, direct instructor allocation/release and scoped enrolment. PostgreSQL tests cover active, read-only grace, expiry and retained records. | First administrator and direct meeting-link access have isolated native evidence. Complete customer browser and API, file/chat transport, domain/SMTP operations, retained-data recovery and commercial acceptance. |
@@ -699,7 +696,6 @@ PR 35 review corrected the administrator-wide private-document deletion bypass; 
 
 - [x] Reproduce the personal contract access boundary and implement owner-only file access with bounded administrative registration metadata in a new migration.
 - [x] Pass isolated SQL privacy and actual Auth/MFA/Storage contract download, registration and replacement checks; retain historical files and accepted records.
-- [x] Fix the pinned Deno installer for clean npm 12 installs and verify the public demo on desktop and mobile emulation.
 - [x] Complete the local isolated SQL/API/browser/build/PWA run on the pre-dashboard audit snapshot: 162 desktop/mobile and 4 PWA cases passed with checked cleanup.
 - [ ] Complete combined exact-head CI and integrate current `main` before any permitted merge.
 - [x] Start a separate fictional-data preview of the PR45 snapshot on alternate loopback ports and check the actual lecturer login/contract screen; existing preview services remain untouched.
@@ -1260,7 +1256,6 @@ entries below are dated development history, not instructions to restore those c
 - [x] Pass fresh local254frontend/88runtime/13documentation-metadata cases, unchanged coverage thresholds, type/lint/format/source-integrity/build/actionlint checks. Application,26SQL migrations and operating code match accepted main.
 - [ ] Publish the signed conflict resolution and pass every current required check on the final head before the authorised merge. PR27 has the next actual main merge; preserve its publication controls and required shared-fixture correction when integrating that base.
 - [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
-- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
 - [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
 
 The current required-check policy has 15 contexts. Older 14-check readbacks below remain historical evidence; use current server rules and exact-head results. Production, hosted installation and other operational approvals remain separate.
@@ -1356,7 +1351,6 @@ Carina requires signed commit → push → prepared PR → direct merge after re
 ## Guided experience re-audit
 
 - [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
-- [x] Reproduce/fix actual tour-access recovery, same-topic Help focus and demo accepted-offer identity errors; remove confirmed inert copy/metadata/branches/markers.
 - [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
 - [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](../GUIDE.md#section-welcome-guide).
 
@@ -1367,7 +1361,7 @@ baseline remains preserved; these focused fixes do not mark unrelated product mo
 
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
 - [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
-- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help.
 - [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
 - [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
 - [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
@@ -1393,7 +1387,7 @@ The latest request supersedes the earlier shared compensation default. Work is i
 
 Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
 
-- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Preserve and annotate the incoming PR16 guided-demo/help main additions:183frontend and109launcher/script/browser-test files in total, including the two private fixture sources. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR
+- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR
       acceptance remains required.
 - [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
 - [x] Explain all 24 released migrations in [MIGRATION_GUIDE](../DEVELOPMENT.md#section-migration-guide); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
@@ -1422,22 +1416,21 @@ No new application migration, production deployment or reduction of the remainin
 - [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
 - [x] Signed PR20 head6e593f5 passed all14 required checks and merged asd4c1f49; all six explicit current-main historical metadata rechecks passed. These validate present labels, not a replacement for historical application runs.
 
-## Current combined acceptance after Demo/Help integration
+## Combined acceptance after Help integration
 
-- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
+- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Help/Tour source from PR16/main `e75f55d`.
 - [x] Record exact `9c42730` CI43794921492 as **failed**:316 SQL cases,26 actual business API suites and real restart persistence passed;92/94 browser journeys passed and both global-calendar DE→EN journeys failed. Earlier29-migration failures remain historical evidence in WORKLOG.
 - [x] Reproduce the dialog-loss regression and correct only semantic calendar range handling in `bf09f19`;12 Calendar cases, TypeScript, lint and formatting pass. Equal-range language signals preserve the same detail; real navigation still clears it and introduces no duplicate range queries.
-- [x] Resolve the App/Shell/Demo integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
+- [x] Resolve the App/Shell integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
 - [x] Preserve incoming PR13 English documentation, roadmap/changelog/decision notes and the 36-label catalogue without replacing M7/M8 APIs, ACLs, the complete remaining ledger or failed-run history.
 - [x] Record current functional preflight: 372 tests across 57 files; coverage S57.65/B52.32/F49.11/L59.46%, all configured floors passed. The corrected source has no complete native acceptance yet; its final combined SHA is not asserted here.
 - [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
-- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
+- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
 - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
 
 ## PR13 documentation-branch acceptance history
 
 - [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
-- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
 - [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
 
 ## English documentation and repository verification continuation
@@ -1462,17 +1455,15 @@ The full product and operational ledger remains below. Those PR13 checks concern
 
 ## Guided exploration and practical help
 
-User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
+The request covered bilingual help, practical troubleshooting and a permission-aware portal tour.
 
-- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
 - [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
 - [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
 - [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
 - Integration and the user-authorised merge are tracked on [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16). Its exact-head full application/native retained-data/security checks and merge state are the acceptance record. No production deployment is implied.
 
-[Guided demo and help](../GUIDE.md#section-guided-demo-and-help) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
+These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
 
-- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
 - [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
 - [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
 - [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
@@ -1509,16 +1500,16 @@ The first whole-main CodeQL baseline reports existing warnings beyond the earlie
 
 The additional PR-/check rules remain disabled until the independently prepared maintenance App has a proven token/promotion path; current effective Maintainer/Admin merge freedom is already present. The older personal PR-only preference below is superseded. Full remaining product scope stays unchanged.
 
-## Current combined acceptance after Demo/Help integration
+## Combined acceptance after Help integration
 
-- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
+- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Help/Tour source from PR16/main `e75f55d`.
 - [x] Record exact `9c42730` CI43794921492 as **failed**:316 SQL cases,26 actual business API suites and real restart persistence passed;92/94 browser journeys passed and both global-calendar DE→EN journeys failed. Earlier29-migration failures remain historical evidence in WORKLOG.
 - [x] Reproduce the dialog-loss regression and correct only semantic calendar range handling in `bf09f19`;12 Calendar cases, TypeScript, lint and formatting pass. Equal-range language signals preserve the same detail; real navigation still clears it and introduces no duplicate range queries.
-- [x] Resolve the App/Shell/Demo integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
+- [x] Resolve the App/Shell integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
 - [x] Preserve incoming PR13 English documentation, roadmap/changelog/decision notes and the 36-label catalogue without replacing M7/M8 APIs, ACLs, the complete remaining ledger or failed-run history.
 - [x] Record current functional preflight: 372 tests across 57 files; coverage S57.65/B52.32/F49.11/L59.46%, all configured floors passed. The corrected source has no complete native acceptance yet; its final combined SHA is not asserted here.
 - [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
-- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
+- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
 - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the current 15 required checks, including PR preview package, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
 
 The incoming PR17 history recorded the following earlier pending instruction when that snapshot named 14 required checks. It is retained as historical evidence; the current 15-check policy and personal Carina-only PR review exception above remain authoritative.
@@ -1550,7 +1541,7 @@ in [GITHUB_WORKFLOW](../DEVELOPMENT.md#section-github-workflow).
 
 ## Current combined source — complete acceptance next
 
-The primary `codex/community-and-resource-completion` branch combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow, reviewed file-dialog fixes, Calendar correction and incoming Demo/Help/Tour source. There are **32 migrations / 155 public RPCs**; PR16 introduces no migration. Historical pre-Demo checks passed lint/types and **342 Vitest cases / 54 files** with all coverage thresholds; the earlier M7/M8 graph inventoried **128 reachable modules / 32
+The primary `codex/community-and-resource-completion` branch combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow, reviewed file-dialog fixes, Calendar correction and incoming Help/Tour source. There are **32 migrations / 155 public RPCs**; PR16 introduces no migration.
 routes** with no detected disconnected runtime source. Those counts do not verify this new integration. A fresh source inventory, full native integration and both exact CI gates remain mandatory.
 
 The next steps are to run the complete isolated command, fix real failures, record actual evidence, merge PR10 only after application and retained-image checks pass, then probe the App workflow on main and recheck the active, precise review/check policies. Keep the separate persistent GitHub preview current through its reviewed migration plan. No production/public-website deployment is authorised.

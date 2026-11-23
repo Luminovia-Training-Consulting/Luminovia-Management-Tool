@@ -54,9 +54,6 @@ describe("public bilingual help", () => {
       screen.getByText(/Only successful database confirmation/),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Practise this section in the demo" }),
-    ).toHaveAttribute("href", "/demo/jobs");
-    expect(
       screen.getByRole("link", { name: "Open section in the portal" }),
     ).toHaveAttribute("href", "/jobs");
   });
@@ -162,9 +159,6 @@ describe("public bilingual help", () => {
         level: 2,
       }),
     ).toHaveFocus();
-    expect(
-      screen.getByRole("link", { name: "Diesen Bereich in der Demo üben" }),
-    ).toHaveAttribute("href", "/demo/learning?role=participant");
     await userEvent.click(
       screen.getByRole("button", { name: "Zur Übersicht" }),
     );
@@ -192,9 +186,6 @@ describe("public bilingual help", () => {
         /Verwaltung → Unternehmen und wähle das aktive Unternehmen/,
       ),
     ).toBeVisible();
-    expect(
-      screen.queryByRole("link", { name: "Diesen Bereich in der Demo üben" }),
-    ).toBeNull();
     await act(async () => router.navigate("/help?topic=security"));
     expect(
       screen.getByText(/E-Mail-Adresse oder deinem Benutzernamen/),

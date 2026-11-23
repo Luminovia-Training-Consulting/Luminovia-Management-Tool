@@ -18,10 +18,6 @@ import type { CourseWorkspace } from "../features/learning/api";
 import { App } from "./app";
 
 vi.mock("@edition-routes", () => import("./academy-routes"));
-vi.mock(
-  "@edition-demo-guides",
-  () => import("../features/demo/academy-demo-guides"),
-);
 vi.mock("@edition-help", () => import("../features/help/academy-catalog"));
 
 const fake = vi.hoisted(() => ({
@@ -45,7 +41,6 @@ const fake = vi.hoisted(() => ({
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
   administration: false as boolean | "management",
-  publicDemo: false,
   brandLinks: null as (AcademyBrandLinks & { version: number }) | null,
   brandName: null as string | null,
   brandLogo: null as string | null,
@@ -59,9 +54,6 @@ vi.mock("../lib/installation-brand", async (load) => {
   const source = await load<typeof import("../lib/installation-brand")>();
   return {
     ...source,
-    get publicDemoEnabled() {
-      return fake.publicDemo;
-    },
     portalInternalEdition: false,
     installationBrand: {
       ...source.internalInstallationBrand,
@@ -214,7 +206,6 @@ beforeEach(async () => {
   fake.publication = null;
   fake.publicationAttempts = 0;
   fake.administration = false;
-  fake.publicDemo = false;
   fake.brandLinks = null;
   fake.brandName = null;
   fake.brandLogo = null;
@@ -824,7 +815,7 @@ it("publishes only academy guides and its own downloadable OpenAPI contract", as
     "/api/openapi.json",
   );
   expect(
-    screen.queryByRole("link", { name: /Demo|Job marketplace/i }),
+    screen.queryByRole("link", { name: /Job marketplace/i }),
   ).not.toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Open section in the portal" }),
@@ -871,50 +862,6 @@ it("updates the signed-out Academy tab icon and restores the signed fallback", a
   } finally {
     favicon.remove();
     touchIcon.remove();
-  }
-});
-
-it("restores the packaged browser branding when a visitor opens the demo from login", async () => {
-  fake.actor = null;
-  fake.publicDemo = true;
-  fake.brandName = "Fictional runtime branding";
-  const root = document.documentElement;
-  const originalTitle = document.title;
-  const originalStyle = root.getAttribute("style");
-  const theme = document.createElement("meta");
-  theme.name = "theme-color";
-  theme.content = "#172b4b";
-  document.head.append(theme);
-  document.title = "Fictional Academy";
-  root.style.setProperty("--portal-mobile-brand", '"Fictional"');
-  root.style.removeProperty("--academy-accent");
-  try {
-    open("/login");
-    await waitFor(() => expect(document.title).toBe(fake.brandName));
-    expect(theme.content).toBe("#284554");
-    expect(root.style.getPropertyValue("--portal-mobile-brand")).toBe(
-      '"Training"',
-    );
-    expect(root.style.getPropertyValue("--academy-accent")).toBe("#284554");
-
-    fake.rpc.mockClear();
-    await userEvent.click(screen.getByRole("link", { name: "Open LMS demo" }));
-    await waitFor(() =>
-      expect(document.querySelector(".demo-safety")).not.toBeNull(),
-    );
-    expect(fake.rpc).not.toHaveBeenCalled();
-    expect(document.title).toBe("Fictional Academy");
-    expect(theme.content).toBe("#172b4b");
-    expect(root.style.getPropertyValue("--portal-mobile-brand")).toBe(
-      '"Fictional"',
-    );
-    expect(root.style.getPropertyValue("--academy-accent")).toBe("");
-  } finally {
-    cleanup();
-    theme.remove();
-    document.title = originalTitle;
-    if (originalStyle === null) root.removeAttribute("style");
-    else root.setAttribute("style", originalStyle);
   }
 });
 
@@ -1093,21 +1040,6 @@ it.each([true, "management"] as const)(
     ).toBeNull();
   },
 );
-
-it("keeps the public academy demo disabled unless its build opted in", async () => {
-  fake.actor = null;
-  const view = open("/demo");
-  expect(await screen.findByRole("heading")).toHaveTextContent(
-    /could not be found/i,
-  );
-  fake.rpc.mockClear();
-  fake.publicDemo = true;
-  view.rerender();
-  await waitFor(() =>
-    expect(document.querySelector(".demo-safety")).not.toBeNull(),
-  );
-  expect(fake.rpc).not.toHaveBeenCalled();
-});
 
 it("edits a draft schedule using its last confirmed revision and stable session ID", async () => {
   fake.publication = { published: false, capacity: null };

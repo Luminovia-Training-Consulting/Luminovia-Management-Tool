@@ -53,7 +53,7 @@ Course preparation is available from the course workspace. Urgent teaching cover
 This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists, urgent teaching cover, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
 feature or that native/device/hosting acceptance has passed.
 
-Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](DEVELOPMENT.md#section-github-local-preview). A mock/demo result or captured local
+Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](DEVELOPMENT.md#section-github-local-preview). A fixture result or captured local
 mail is not a real invitation, external delivery, live timer or production approval. The full master scope remains recorded in [PRODUCT_SPEC](PRODUCT.md#section-product-spec), [SMART_OPERATIONS_SPEC](PRODUCT.md#section-smart-operations-spec) and the persistent plan.
 
 In the internal portal, use **Konten → Rollen bearbeiten / Accounts → Edit roles** to grant several roles to one account. Select the organisation when you add the company role. Use the course workspace to enrol a participant or assign a lecturer. In either dedicated academy, open **Akademie verwalten / Academy administration** to grant the local roles and company scope.
@@ -62,11 +62,11 @@ On desktop, use the navigation control to expand or collapse the workspace rail;
 
 Use `./portal check` for fast local source/coverage/build validation and `./portal test` for complete isolated acceptance. [PR preview packages](DEVELOPMENT.md#section-pr-previews) are downloadable local runtimes after the required checks; they are not continuously hosted public PR instances.
 
-<a id="section-user-guide-guided-demo-and-help"></a>
+<a id="section-user-guide-tour-and-help"></a>
 
-## Guided demo and help
+## Portal tour and help
 
-At sign-in choose **Demo mit Beispieldaten ausprobieren / Try the sample-data demo** for the public fictional sandbox, or **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour** above the workspace. The live tour only explains/navigates; use the demo to practise without real business actions. [Usage, privacy boundaries and verification](GUIDE.md#section-guided-demo-and-help).
+At sign-in choose **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour**. [Usage and verification](GUIDE.md#section-tour-and-help).
 
 <a id="section-user-guide-sign-in-and-account-security"></a>
 
@@ -104,7 +104,7 @@ is not a new verification, public profile link or legal signature. You decide wh
 
 Each person has an individual account, created directly by authorised administration or by invitation, and chooses their own password. The available roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company**, **Kursteilnehmer:in / Course participant** and **Gast / Guest**. An account may hold several roles. Company workflows require an organisation association. Participant workflows require enrolment in the relevant course. An explicit teaching role is required to personally accept an offer or submit a lecturer’s own invoice. The server checks permissions for protected operations, private chat membership and personal calendar ownership.
 
-Use the public demo at `/demo` to explore the fictional Management, Lecturer, Company and Participant views. Signed-in portal workspaces follow the permissions of the current account.
+Signed-in portal workspaces follow the permissions of the current account.
 
 On your first dashboard visit, **Willkommen bei Luminovia / Welcome to Luminovia** introduces permitted areas step by step. Use Next/Back, open an area, pause and resume, or skip. Progress is private to your account and saved only after online server confirmation. Open `/welcome` to restart or continue later. The guide introduces functions; it does not assign roles or upload files. Its server-confirmed progress is separate from the Portal tour's tab-session progress. See
 the [welcome guide](GUIDE.md#section-welcome-guide).
@@ -542,33 +542,23 @@ separate review. [Detailed workflow](GUIDE.md#section-assignment-withdrawals).
 
 Open a job and use **Contact and job reference** to add an optional external brief/link and contact details. The creation confirmation also links directly to this section. Contact details default to confirmed assignees; management can deliberately release the entered details to authorised offer viewers. Private customer-directory entries are not shared automatically. Editing requires current management MFA; an explicit reload resolves a version conflict. [Details](GUIDE.md#section-job-briefing).
 
-<a id="section-guided-demo-and-help"></a>
+<a id="section-tour-and-help"></a>
 
-<a id="section-guided-demo-and-help-guided-exploration-and-help"></a>
+<a id="section-tour-and-help-guided-exploration-and-help"></a>
 
 # Guided exploration and help
 
-The demo and help are public application routes, available from sign-in without an account. They complement the real portal; they do not replace authentication, server permissions or the account-specific welcome checklist.
+Public help is available from sign-in without an account.
 
-<a id="section-guided-demo-and-help-try-the-sample-data-demo"></a>
-
-## Try the sample-data demo
-
-Choose **Try the sample-data demo** (**Demo mit Beispieldaten ausprobieren**) at sign-in to open `/demo`. All 25 module areas are available through demo navigation and a guided sequence. For example, `/demo/jobs` opens the job exercise; `/demo?module=jobs` also selects it. The demo continuously identifies its content as fictional.
-
-Try full multi-day claims, rejection scenarios, calendar, chat, profile, document scanning and invoice steps using fictional data. Every result is simulated. No action books real work, uploads files, sends messages, invitations or emails, or signs an agreement. The demo role changes the educational perspective only and grants no portal permissions.
-
-The **Guided tour** (**Geführter Rundgang**) explains the areas in sequence. Use previous/next, pause and restart at your own pace. Switching between German/English or changing the theme keeps the current exercise. **Reset demo** (**Demo zurücksetzen**), reloading or leaving the demo discards exercise input. Never enter real names, personal/customer data, secrets or document contents. Ordinary language/theme preferences remain separate and are retained.
-
-<a id="section-guided-demo-and-help-use-the-authenticated-portal-tour"></a>
+<a id="section-tour-and-help-use-the-authenticated-portal-tour"></a>
 
 ## Use the authenticated portal tour
 
-The authenticated **Portal tour** (**Portal-Rundgang**) navigates only after your explicit choice and uses current account roles/permissions to select relevant destinations. It explains real workflows and their next steps without executing business actions. Real controls still require their normal checks and online server confirmation. Use the fictional demo to practise without performing real business actions.
+The authenticated **Portal tour** (**Portal-Rundgang**) navigates only after your explicit choice and uses current account roles/permissions to select relevant destinations. It explains real workflows and their next steps without executing business actions. Real controls still require their normal checks and online server confirmation.
 
 Only the tour step/status is kept in this browser's session storage, separately for each account. Pause/resume works across page navigation and reloads within the same browser session. This is not a server-synchronised or cross-account completion record. Storage denial falls back to in-memory operation.
 
-<a id="section-guided-demo-and-help-open-help-and-guides"></a>
+<a id="section-tour-and-help-open-help-and-guides"></a>
 
 ## Open help and guides
 
@@ -576,22 +566,22 @@ Open **Help & guides** (**Hilfe & Anleitungen**) at `/help` for searchable step-
 
 Interface instructions are authored in German and English; real authored customer/course content is never translated by this feature.
 
-<a id="section-guided-demo-and-help-implementation-and-operating-boundary"></a>
+<a id="section-tour-and-help-implementation-and-operating-boundary"></a>
 
 ## Implementation and operating boundary
 
 - `src/features/help/catalog.ts` owns bilingual instructions for actual portal modules. Changes to live workflows should update that catalogue and tests together.
-- Demo components import no Supabase/API client and hold exercise inputs only in React memory. Public help contains authored documentation only. An existing signed-in session may still undergo the application's ordinary global Auth refresh; this is independent of demo actions.
+- Public help contains authored documentation only.
 - The live tour is presentation/navigation only. It never grants permissions, imitates a real session, invokes mutation APIs or confirms a real claim. Administrative and commercial stops follow the current shell's role/permission predicates; both permissions remain necessary for qualification administration.
 - Public routes expose no private records. Existing PostgreSQL, Storage, Auth, MFA and API policies are unchanged. No database migration, new dependency, service registration or hosting configuration is required.
-- Public help and fictional demo application code can be included in the existing PWA shell cache. Exercise input and private records are not added to a cache or browser storage.
+- Public help can be included in the existing PWA shell cache.
 - This PR does not certify every remaining master-specification feature or deploy to production. The usual successful CI release gates still apply to authorised development updates.
 
-<a id="section-guided-demo-and-help-verification"></a>
+<a id="section-tour-and-help-verification"></a>
 
 ## Verification
 
-`npm test`, `npm run test:coverage`, `npm run typecheck`, `npm run lint`, `npm run format:check` and `node scripts/code-integrity.mjs --exports` cover source quality and regression checks. `npx playwright test --config scripts/guided-demo-playwright.config.ts` runs public desktop/mobile browser checks against a separate frontend with synthetic configuration, without a database. It aborts and fails attempted backend calls in fresh public sessions. The same browser specification also runs inside
+`npm test`, `npm run test:coverage`, `npm run typecheck`, `npm run lint`, `npm run format:check` and `node scripts/code-integrity.mjs --exports` cover source quality and regression checks. `npx playwright test --config scripts/public-help-playwright.config.ts` runs public desktop/mobile browser checks against a separate frontend with synthetic configuration, without a database. It aborts and fails attempted backend calls in fresh public sessions. The same browser specification also runs inside
 the ordinary complete `./portal test` CI workflow, which separately verifies real authenticated business behavior and retained data. Actual outcomes are recorded in the relevant pull request checks; this command list is not itself a pass record.
 
 Follow-up functional/dead-code review and concrete regression evidence: GUIDED_EXPERIENCE_AUDIT.
@@ -644,7 +634,7 @@ Client-only and participant-only accounts do not load lecturer job, allocation, 
 Existing finance cards retain their own permission checks: platform revenue, client spend or personal net compensation is returned according to role as before. Role-priced job projections expose only the current lecturer's applicable quote; management without gross-finance permission receives no monetary values for those offers. The preview cards request no additional gross-revenue or other-person contract list. Private policy percentages are not dashboard defaults.
 See [delegated roles and private compensation](GUIDE.md#section-delegated-roles-pricing).
 
-The dashboard can also show the permission-aware [welcome guide](GUIDE.md#section-welcome-guide). Its progress is private to the account and changes only after online server confirmation. It remains distinct from the explicit Portal tour's per-account tab-session progress and the public fictional demo. Opening guidance grants no role, completes no business action and exposes no other account's data.
+The dashboard can also show the permission-aware [welcome guide](GUIDE.md#section-welcome-guide). Its progress is private to the account and changes only after online server confirmation. Opening guidance grants no role, completes no business action and exposes no other account's data.
 
 <a id="section-dashboard-freshness-without-extra-history-queries"></a>
 

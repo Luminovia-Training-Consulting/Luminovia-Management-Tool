@@ -47,7 +47,7 @@ test("built PWA WebKit activates the app worker and serves an offline deep link"
         expect(response?.status()).toBe(200);
         expect(response?.fromServiceWorker()).toBe(true);
         await expect(page.locator("#help-title")).toBeVisible();
-        await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
+        await expect(page.getByRole("heading", {level: 2, name: /Profil/})).toBeVisible();
         const privateReply = await page.evaluate(async () => {
             try {
                 await fetch("/rest/v1/rpc/my_push_devices", {method: "POST"});
@@ -118,7 +118,7 @@ async function openControlledPwa(page: Page) {
     await controlWithBuiltWorker(page);
 }
 
-test("built PWA serves the public demo deep link offline without a session", async ({page, context}) => {
+test("built PWA serves a public help deep link offline without a session", async ({page, context}) => {
     await openControlledPwa(page);
     const manifest = await page.evaluate(async () => {
         const href = document.querySelector<HTMLLinkElement>(
@@ -136,8 +136,8 @@ test("built PWA serves the public demo deep link offline without a session", asy
     ).toBe(true);
     await context.setOffline(true);
     try {
-        await page.goto("/demo/profile");
-        await expect(page.getByRole("heading", {name: "Mein Profil", exact: true})).toBeVisible();
+        await page.goto("/help?topic=profile");
+        await expect(page.getByRole("heading", {name: "Hilfe & Anleitungen", exact: true})).toBeVisible();
         await expect(page.getByRole("status").filter({hasText: "Du bist offline"})).toBeVisible();
     } finally {
         await context.setOffline(false);

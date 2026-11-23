@@ -52,7 +52,6 @@ const academyGuides: GuideModule[] = [
     id: "academy-classes",
     path: "/learning",
     area: "courses",
-    practicePath: "/learning?role=participant",
     title: {
       de: "Kurse, Lernmaterial und Nachrichten",
       en: "Courses, learning materials and messages",
@@ -98,7 +97,6 @@ const academyGuides: GuideModule[] = [
     id: "academy-teaching",
     path: "/learning",
     area: "courses",
-    practicePath: "/courses?role=lecturer",
     title: {
       de: "Als Lehrkraft im Kurs arbeiten",
       en: "Teach in a course workspace",
@@ -224,7 +222,6 @@ const academyGuides: GuideModule[] = [
     id: "academy-manage-courses",
     path: "/learning",
     area: "administration",
-    practicePath: "/courses?role=admin",
     title: {
       de: "Akademie verwalten und Kurse freigeben",
       en: "Manage the academy and publish a course",

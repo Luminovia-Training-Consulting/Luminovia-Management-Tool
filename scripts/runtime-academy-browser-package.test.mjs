@@ -486,7 +486,6 @@ test("rejects hidden, runtime, vendor and private build paths", async (t) => {
     ".env",
     "node_modules/placeholder.txt",
     "brand/luminovia-logo-full.webp",
-    "assets/demo-AbCdef90.js",
     "assets/index-AbCdef90.js.map",
     "password.pem",
   ]) {
@@ -506,55 +505,18 @@ test("rejects hidden, runtime, vendor and private build paths", async (t) => {
   await assert.rejects(write(), /Expected a single bounded regular/);
 });
 
-test("rejects known private credentials or demo markers embedded inside a plausible asset", async (t) => {
+test("rejects known private credentials embedded inside a plausible asset", async (t) => {
   const { file, write } = fixture(t);
   const jwt = `eyJhbGciOiJIUzI1NiJ9.${Buffer.from('{"role":"service_role"}').toString("base64url")}.fictionsignature`;
   for (const marker of [
-    "DEMO · Fictional data only",
     "--" + "---BEGIN PRIVATE KEY-----",
     "sb_secret_" + "fictionalcredentialexample",
     jwt,
   ]) {
     file(runtimePath, `console.log(${JSON.stringify(marker)});`);
-    await assert.rejects(write(), /Unapproved demo or private/);
+    await assert.rejects(write(), /Unapproved private/);
   }
 });
-
-for (const edition of ["customer-managed", "customer-self-hosted"]) {
-  test(`binds the fictional public demo to the signed ${edition} package`, async (t) => {
-    const { dist, file, output, write, signRelease, verifyRelease } =
-      releaseFixture(t, undefined, { ...metadata, edition, publicDemo: true });
-    const index = readFileSync(join(dist, "index.html"), "utf8");
-    const demoEntry = "assets/demo-AbCdef90.js";
-    const demoMarker = '<meta name="portal-public-demo" content="enabled">';
-
-    await assert.rejects(write(), /public demo does not match/);
-    file("index.html", index.replace("</head>", demoMarker + "</head>"));
-    await assert.rejects(write(), /public demo does not match/);
-    for (const blocked of [
-      "/brand/luminovia-logo-mark-160.webp",
-      "sb_secret_" + "fictionalcredentialexample",
-    ]) {
-      file(demoEntry, `console.log(${JSON.stringify(blocked)});`);
-      await assert.rejects(write(), /Unapproved demo or private/);
-    }
-
-    file(demoEntry, 'console.log("DEMO · Fictional data only");');
-    const manifest = await write();
-    assert.equal(manifest.publicDemo, true);
-    assert.equal(manifest.edition, edition);
-    const signature = await signRelease();
-    assert.equal((await verifyRelease(signature)).manifest.publicDemo, true);
-
-    delete manifest.publicDemo;
-    writeFileSync(join(output, "manifest.json"), JSON.stringify(manifest));
-    await assert.rejects(verifyRelease(signature), /release_signature/);
-    await assert.rejects(
-      verifyAcademyBrowserPackage(output),
-      /Unexpected entry/,
-    );
-  });
-}
 
 test("refuses checksum tampering and an untrusted ZIP link even with a reissued checksum", async (t) => {
   const { output, write } = fixture(t);
@@ -800,20 +762,6 @@ async function stagingFixture(
     VITE_SUPABASE_PUBLISHABLE_KEY: key,
   };
   fixture.file(runtimePath, "export const key = `" + key + "`;");
-  if (buildMetadata.publicDemo) {
-    const index = readFileSync(join(fixture.dist, "index.html"), "utf8");
-    fixture.file(
-      "index.html",
-      index.replace(
-        "</head>",
-        '<meta name="portal-public-demo" content="enabled"></head>',
-      ),
-    );
-    fixture.file(
-      "assets/demo-AbCdef90.js",
-      'console.log("DEMO · Fictional data only");',
-    );
-  }
   const manifest = await fixture.write();
   const signature = await fixture.signRelease();
   const inputs = {
@@ -1101,14 +1049,6 @@ test("derives a tenant-specific staging handoff for the exact active browser rel
   ])
     assert.equal(serialized.includes(privateValue), false);
   assert.deepEqual(await planAcademyStaging(inputs), plan);
-});
-
-test("carries the signed public demo choice into the staging receipt", async (t) => {
-  const { inputs } = await stagingFixture(t, undefined, {
-    ...metadata,
-    publicDemo: true,
-  });
-  assert.equal((await planAcademyStaging(inputs)).release.public_demo, true);
 });
 
 test("rejects wrong release or target binding, damaged content and every inactive licence state", async (t) => {

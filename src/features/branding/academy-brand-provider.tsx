@@ -42,7 +42,7 @@ export function AcademyBrandProvider({ children }: { children: ReactNode }) {
     style.setProperty("--portal-mobile-brand", JSON.stringify(brand.shortName));
     style.setProperty("--academy-accent", brand.themeColor);
     theme?.setAttribute("content", brand.themeColor);
-    // Restore the packaged branding before the public demo paints.
+    // Restore packaged branding when leaving the provider.
     return () => {
       document.title = previousTitle;
       if (previousTheme == null) theme?.removeAttribute("content");

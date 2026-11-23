@@ -222,7 +222,7 @@ createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed
     await check("legacy HTTP hostnames preserve deep links and query strings", async () => {
         const aliasBinding = docker(["port", caddy, "80/tcp"]);
         assert.match(aliasBinding, /^127\.0\.0\.1:\d+$/);
-        const path = "/demo/profile?source=fictional%20bookmark";
+        const path = "/help?topic=calendar&source=fictional%20bookmark";
         for (const host of ["lms.luminovia.org", "portal.luminovia.org"]) {
             // The TCP destination is owned loopback. Send the legacy authority
             // on the wire without fetch rewriting it or following redirects.

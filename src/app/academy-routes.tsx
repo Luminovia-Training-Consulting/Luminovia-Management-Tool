@@ -40,7 +40,6 @@ import { AcademyBrandProvider } from "../features/branding/academy-brand-provide
 import { useAcademyBrand } from "../features/branding/academy-branding";
 import { useOnline } from "../lib/online";
 import { isConfigured } from "../lib/supabase";
-import { publicDemoEnabled } from "../lib/installation-brand";
 import {
   hasLearningAnalytics,
   learningAnalyticsAccessQuery,
@@ -74,18 +73,8 @@ const AdminMailPage = lazy(() =>
     default: module.AdminMailPage,
   })),
 );
-declare const __PORTAL_PUBLIC_DEMO__: boolean;
-const AcademyDemoPage = __PORTAL_PUBLIC_DEMO__
-  ? lazy(() =>
-      import("../features/demo/demo").then((module) => ({
-        default: module.DemoPage,
-      })),
-    )
-  : null;
-
 function AcademyLogin() {
   const { session } = useAuth();
-  const { t } = useTranslation();
   const location = useLocation();
   const path = location.state?.returnTo;
   if (session)
@@ -102,18 +91,7 @@ function AcademyLogin() {
       <div className="login-preferences">
         <Preferences />
       </div>
-      <Login
-        footer={
-          <>
-            {publicDemoEnabled && (
-              <Button variant="secondary" asChild>
-                <Link to="/demo">{t("academyOpenDemo")}</Link>
-              </Button>
-            )}
-            <AcademyBrandLinksFooter />
-          </>
-        }
-      />
+      <Login footer={<AcademyBrandLinksFooter />} />
     </>
   );
 }
@@ -282,9 +260,6 @@ function AcademyTimetableRoute() {
 export default function AcademyRoutes() {
   const signingIn = useMatch("/login");
   const swagger = useMatch("/api/swagger");
-  const openingDemo = useMatch("/demo/*");
-  if (openingDemo && publicDemoEnabled && AcademyDemoPage)
-    return <AcademyDemoPage />;
   return (
     <AcademyBrandProvider>
       <Routes>

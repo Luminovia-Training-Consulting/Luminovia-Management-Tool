@@ -1,6 +1,6 @@
 /**
  * Authenticated tour acceptance using a fictional actor on the disposable local stack.
- * Unlike the public demo, this signs in through the UI and reads real fixture records.
+ * This signs in through the UI and reads fixture records from the test database.
  */
 import {expect, test} from "@playwright/test";
 import {actor, api, checked, login} from "./helpers/accounts-support";

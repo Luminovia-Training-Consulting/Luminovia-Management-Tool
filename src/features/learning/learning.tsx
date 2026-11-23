@@ -56,13 +56,15 @@ import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 
-const CourseOfferForm = lazy(() =>
-  import("../admin/admin").then((module) => ({
-    default: module.CourseOfferForm,
-  })),
-);
-
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
+
+const CourseOfferForm = __PORTAL_INTERNAL_EDITION__
+  ? lazy(() =>
+      import("../admin/admin").then((module) => ({
+        default: module.CourseOfferForm,
+      })),
+    )
+  : null;
 
 type WorkProps = { course: CourseWorkspace; actor: string };
 type ActivityProps = WorkProps & { academy?: "active" | "grace" };
@@ -1094,7 +1096,7 @@ function CourseWorkspaceLayout({
           )}
         </div>
       )}
-      {canPrepareOffer && offerOpen && (
+      {CourseOfferForm && canPrepareOffer && offerOpen && (
         <Dialog
           open={offerOpen}
           onOpenChange={setOfferOpen}

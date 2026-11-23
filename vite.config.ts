@@ -23,11 +23,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_SUPABASE_PUBLISHABLE_KEY,
     mode === "production",
   );
-  const {
-    brand,
-    assets: brandAssets,
-    publicDemo,
-  } = loadAcademyBrand(
+  const { brand, assets: brandAssets } = loadAcademyBrand(
     process.env.PORTAL_ACADEMY_BRAND_FILE,
     resolve("public"),
   );
@@ -81,7 +77,6 @@ export default defineConfig(({ mode }) => {
       __PORTAL_ACADEMY_EXPLORER__: JSON.stringify(
         academyExplorerOpenApi(env.VITE_SUPABASE_URL ?? "", brand),
       ),
-      __PORTAL_PUBLIC_DEMO__: JSON.stringify(publicDemo),
     },
     ...(!internal && {
       server: {
@@ -93,7 +88,6 @@ export default defineConfig(({ mode }) => {
             "**/.git/**",
             "**/public/brand/luminovia-logo-*",
             "**/public/icons/**",
-            ...(!publicDemo ? ["**/src/features/demo/**"] : []),
           ],
         },
       },
@@ -135,12 +129,7 @@ export default defineConfig(({ mode }) => {
               "</head>",
               '  <link rel="manifest" href="/manifest.webmanifest">\n  </head>',
             );
-          return publicDemo
-            ? branded.replace(
-                "</head>",
-                '  <meta name="portal-public-demo" content="enabled">\n  </head>',
-              )
-            : branded;
+          return branded;
         },
         configureServer(server) {
           if (internal) return;
@@ -265,7 +254,6 @@ export default defineConfig(({ mode }) => {
                   /^\/(?:manifest\.webmanifest|icons\/apple-touch-icon\.png)(?:\?|$)/,
                 ]
               : []),
-            ...(!publicDemo ? [/^\/demo(?:\/|$)/] : []),
           ],
         },
       }),

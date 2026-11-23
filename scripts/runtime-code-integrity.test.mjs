@@ -342,27 +342,27 @@ test("terminal splats accept their base and descendants without accepting adjace
     try {
         mkdirSync(join(fixture, "src"));
         const valid = [
-            "/demo",
-            "/demo/",
-            "/demo/jobs",
-            "/demo/admin/accounts",
-            "/demo/jobs?module=jobs#practice",
+            "/preview",
+            "/preview/",
+            "/preview/jobs",
+            "/preview/admin/accounts",
+            "/preview/jobs?module=jobs#practice",
             "/docs/v1.0",
             "/docs/v1.0/intro",
-            "/teams/alpha/demo",
-            "/teams/alpha/demo/files/one",
+            "/teams/alpha/preview",
+            "/teams/alpha/preview/files/one",
             "/jobs/offer-a",
             "/jobs/offer-a/",
             "/settings",
         ];
         const invalid = [
-            "/demography",
-            "/demos/jobs",
-            "/demo-other/jobs",
+            "/previewgraphy",
+            "/previews/jobs",
+            "/preview-other/jobs",
             "/docs/v1x0/intro",
-            "/teams/alpha/demography",
+            "/teams/alpha/previewgraphy",
             "/teams/alpha/other/files",
-            "/teams//demo",
+            "/teams//preview",
             "/jobs",
             "/jobs/offer-a/unregistered",
             "/settings/nested",
@@ -372,9 +372,9 @@ test("terminal splats accept their base and descendants without accepting adjace
             join(fixture, "src/main.tsx"),
             `
       const view = <>
-        <Route path="/demo/*" />
+        <Route path="/preview/*" />
         <Route path="/docs/v1.0/*" />
-        <Route path="/teams"><Route path=":teamId/demo/*" /></Route>
+        <Route path="/teams"><Route path=":teamId/preview/*" /></Route>
         <Route path="/jobs/:id" />
         <Route path="/settings" />
         <Route path="*" />
@@ -387,7 +387,7 @@ test("terminal splats accept their base and descendants without accepting adjace
             observed.invalidLinks.map((entry) => entry.path),
             invalid,
         );
-        assert.ok(observed.routes.includes("/teams/:teamId/demo/*"));
+        assert.ok(observed.routes.includes("/teams/:teamId/preview/*"));
         assert.deepEqual(observed.unreachable, []);
     } finally {
         rmSync(fixture, {recursive: true, force: true});

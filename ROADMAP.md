@@ -13,7 +13,7 @@ Open work for the internal portal and shared Premium LMS. The [implementation pl
 
 - [ ] **LMS-10–LMS-11.** Complete the remaining [LMS-T01–LMS-T34 checks](docs/IMPLEMENTATION_PLAN.md#lms-t01lms-t34) on the appropriate target. Verify roles, multi-company isolation, existing sessions and chat subscriptions, files and scan results, enrolment and revocation, attendance and evidence, and current notification delivery.
 - [ ] **Teaching and class attendance · LMS-T24–LMS-T28, LMS-T31.** Run the teaching checklist, company meeting-link editing and class register on desktop and mobile in DE/EN. Verify exact arrival and departure, corrections, verified minutes, course scope, Premium OFF and licence grace.
-- [ ] **Browser and accessibility · FC-04–05, LMS-T31.** Complete the signed-in role journeys and public demo at 390, 768, 1280 and 1920 px, in DE/EN and both themes. Check keyboard and focus, contrast, dialogs and offline transitions in Chromium and the applicable Safari/WebKit and Firefox targets.
+- [ ] **Browser and accessibility · FC-04–05, LMS-T31.** Complete the signed-in role journeys at 390, 768, 1280 and 1920 px, in DE/EN and both themes. Check keyboard and focus, contrast, dialogs and offline transitions in Chromium and the applicable Safari/WebKit and Firefox targets.
 
 ## API and integrations
 

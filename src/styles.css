@@ -2924,7 +2924,7 @@ legend {
   width: auto;
 }
 
-/* Keep public practice/help links reachable alongside the sign-in form on narrow screens. */
+/* Keep public help reachable alongside the sign-in form on narrow screens. */
 .login-learning-links {
   display: flex;
   flex-wrap: wrap;

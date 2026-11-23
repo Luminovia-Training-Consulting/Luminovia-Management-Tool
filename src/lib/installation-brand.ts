@@ -59,7 +59,3 @@ declare const __PORTAL_INTERNAL_EDITION__: boolean;
 export const portalInternalEdition =
   typeof __PORTAL_INTERNAL_EDITION__ === "undefined" ||
   __PORTAL_INTERNAL_EDITION__;
-
-declare const __PORTAL_PUBLIC_DEMO__: boolean;
-export const publicDemoEnabled =
-  typeof __PORTAL_PUBLIC_DEMO__ === "undefined" || __PORTAL_PUBLIC_DEMO__;

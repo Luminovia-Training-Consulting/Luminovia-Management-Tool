@@ -46,7 +46,7 @@ Open [the separate preview](http://127.0.0.1:5373); its API uses `56321`. It pre
 | Accounts, qualifications, private compensation, contracts and finance              | [Accounts API](API_REFERENCE.md#account-http-facade), [qualifications](GUIDE.md#section-qualifications), [pricing](GUIDE.md#section-delegated-roles-pricing), [finance](GUIDE.md#section-user-guide-earnings-invoices-and-recorded-payments)  |
 | Dashboard, inbox, preferences, announcements and operational tools                 | [Dashboard](GUIDE.md#section-personal-dashboard), [notifications](GUIDE.md#section-notifications), [support](GUIDE.md#section-support-desk), [private enquiries](GUIDE.md#section-website-enquiries), [workbench](GUIDE.md#section-workbench) |
 
-Public `/demo` offers fictional in-memory practice; `/help` provides searchable bilingual guidance. Signed-in users have a separate welcome guide and permission-aware tour. Demo actions do not create business records. Start with the [user guide](GUIDE.md#section-user-guide) or complete [project guides](README.md#documentation).
+Public `/help` provides searchable bilingual guidance. Signed-in users have a separate welcome guide and permission-aware tour. Start with the [user guide](GUIDE.md#section-user-guide) or complete [project guides](README.md#documentation).
 
 PostgreSQL permissions and current resource membership are authoritative. Claims require online confirmation of all sessions, and accepted terms and compensation remain immutable. Private DMs, calendars and contracts have no blanket administrator read bypass. Files pass quarantine/scanning before authorized exact-version access. The browser receives only the public Supabase configuration, never service credentials.
 

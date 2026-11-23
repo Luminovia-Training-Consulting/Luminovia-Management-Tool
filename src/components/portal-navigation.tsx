@@ -1,4 +1,4 @@
-/** Auth-free presentational navigation links shared by the protected shell and fictional demo. */
+/** Presentational navigation links for the portal shell. */
 import type { FocusEvent, MouseEvent } from "react";
 import { NavLink } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
@@ -10,12 +10,11 @@ export type PortalNavigationItem = {
   end?: boolean;
 };
 
-/** Render only the caller-supplied entries; authorization and fixture scoping stay with the caller. */
+/** Render only the caller-supplied entries; authorization stays with the caller. */
 export function PortalNavigation({
   items,
   ariaLabel,
   ariaDescribedBy,
-  className,
   id,
   collapsed = false,
   onItemFocus,
@@ -27,7 +26,6 @@ export function PortalNavigation({
   items: PortalNavigationItem[];
   ariaLabel: string;
   ariaDescribedBy?: string;
-  className?: string;
   id?: string;
   collapsed?: boolean;
   onItemFocus?: (label: string, element: HTMLAnchorElement) => void;
@@ -42,7 +40,6 @@ export function PortalNavigation({
   return (
     <nav
       id={id}
-      className={className}
       aria-label={ariaLabel}
       aria-describedby={collapsed ? ariaDescribedBy : undefined}
     >

@@ -6,9 +6,5 @@
   "@edition-help": {
     "internal": "src/features/help/catalog.ts",
     "academy": "src/features/help/academy-catalog.ts"
-  },
-  "@edition-demo-guides": {
-    "internal": "src/features/demo/internal-demo-guides.ts",
-    "academy": "src/features/demo/academy-demo-guides.ts"
   }
 }

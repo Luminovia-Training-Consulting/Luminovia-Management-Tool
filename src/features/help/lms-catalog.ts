@@ -5,7 +5,6 @@ const lmsHelpGuides: GuideModule[] = [
     id: "lms-learning",
     path: "/learning",
     area: "courses",
-    practicePath: "/learning?role=participant",
     title: {
       de: "Meine Kurse und Lernmaterialien",
       en: "My courses and learning materials",
@@ -53,7 +52,6 @@ const lmsHelpGuides: GuideModule[] = [
     id: "lms-teaching",
     path: "/courses",
     area: "courses",
-    practicePath: "/courses?role=lecturer",
     title: {
       de: "Unterricht im Kursraum vorbereiten",
       en: "Prepare a course as an instructor",
@@ -103,7 +101,6 @@ const lmsHelpGuides: GuideModule[] = [
     id: "lms-enrolment",
     path: "/client",
     area: "courses",
-    practicePath: "/client?role=client",
     title: {
       de: "Teilnehmende einladen und einschreiben",
       en: "Invite and enrol participants",
@@ -152,7 +149,6 @@ const lmsHelpGuides: GuideModule[] = [
     id: "premium-lms",
     path: "/admin/clients",
     area: "administration",
-    practicePath: false,
     title: {
       de: "Premium LMS für ein Unternehmen aktivieren",
       en: "Enable Premium LMS for a company",
@@ -201,7 +197,6 @@ const lmsHelpGuides: GuideModule[] = [
     id: "course-integrations",
     path: "/admin/clients",
     area: "integrations",
-    practicePath: false,
     title: {
       de: "API-Schlüssel und Kurs-Webhooks einrichten",
       en: "Set up API keys and course webhooks",

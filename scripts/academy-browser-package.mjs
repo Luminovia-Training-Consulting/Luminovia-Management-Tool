@@ -68,9 +68,6 @@ const fixedFiles = new Set([
 ]);
 const assetPattern =
   /^assets\/[A-Za-z0-9][.A-Za-z0-9_-]{0,118}-[A-Za-z0-9_-]{8}\.(?:js|css)$/;
-const demoAssetPattern = /^assets\/(?:demo|learner-demo)(?:[-.])/i;
-const demoEntryPattern = /^assets\/demo-[A-Za-z0-9_-]{8}\.js$/;
-const demoMeta = '<meta name="portal-public-demo" content="enabled">';
 const workerPattern = /^workbox-[a-f0-9]{8}\.js$/;
 const allowedDirectories = new Set(["assets", "api", "brand", "icons"]);
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -90,8 +87,6 @@ const manifestSchema = z.strictObject({
   shortName: z.string().min(1).max(20),
   defaultLanguage: z.enum(["de", "en"]),
   themeColor: z.string().regex(/^#[a-fA-F0-9]{6}$/),
-  // Absent is the original, demo-free manifest format. Only explicit opt-in is signed.
-  publicDemo: z.literal(true).optional(),
   backend: z.url(),
   archive: z.strictObject({
     name: z.literal(packageName),
@@ -109,11 +104,9 @@ const manifestSchema = z.strictObject({
     .max(maxFiles),
 });
 
-function approvedPath(path, publicDemo) {
+function approvedPath(path) {
   return (
-    fixedFiles.has(path) ||
-    workerPattern.test(path) ||
-    (assetPattern.test(path) && (publicDemo || !demoAssetPattern.test(path)))
+    fixedFiles.has(path) || workerPattern.test(path) || assetPattern.test(path)
   );
 }
 
@@ -153,7 +146,7 @@ function readRegular(path, limit) {
 }
 
 /** Walk only the reviewed static output structure, failing on any extra copied file. */
-function readBrowserOutput(root, publicDemo) {
+function readBrowserOutput(root) {
   const files = new Map();
   let total = 0;
   function collect(directory, prefix) {
@@ -164,7 +157,7 @@ function readBrowserOutput(root, publicDemo) {
       if (info.isDirectory() && !prefix && allowedDirectories.has(name)) {
         collect(file, path + "/");
       } else {
-        if (!info.isFile() || !approvedPath(path, publicDemo))
+        if (!info.isFile() || !approvedPath(path))
           throw new Error("Unexpected path in customer browser output.");
         const bytes = readRegular(file, maxFileBytes);
         total += bytes.length;
@@ -325,14 +318,6 @@ function validateBrowserOutput(
   )
     throw new Error("Required PWA/runtime chunks are missing.");
   const index = text(files.get("index.html"));
-  const publicDemo = brand.publicDemo === true;
-  if (
-    index.includes(demoMeta) !== publicDemo ||
-    [...files.keys()].some((path) => demoEntryPattern.test(path)) !== publicDemo
-  )
-    throw new Error(
-      "The public demo does not match the reviewed browser option.",
-    );
   const pageAssets = Array.from(
     index.matchAll(/(?:src|href)="\/(assets\/[^"]+)"/g),
     (match) => match[1],
@@ -442,22 +427,15 @@ function validateBrowserOutput(
     !worker.includes("brand/academy-logo.png") ||
     !worker.includes("icons/icon-512.png") ||
     !worker.includes("push-sw.js") ||
-    /(?:luminovia-logo|["']\/?demo(?:[/.-]|["']))/.test(worker)
+    /luminovia-logo/.test(worker)
   )
     throw new Error("The PWA cache does not pass edition preflight.");
   for (const [path, bytes] of files) {
     if (!/\.(?:js|css|html|json|webmanifest|txt)$/.test(path)) continue;
     const source = text(bytes);
-    if (
-      (publicDemo && /luminovia-logo-(?:full|mark)/i.test(source)) ||
-      (!publicDemo &&
-        /DEMO · (?:Fictional data only|Nur fiktive Daten)|Fictional course message|Fiktive Kursnachricht/.test(
-          source,
-        )) ||
-      hasPrivateMaterial(source)
-    )
+    if (hasPrivateMaterial(source))
       throw new Error(
-        "Unapproved demo or private material in customer browser output.",
+        "Unapproved private material in customer browser output.",
       );
   }
   for (const [path, bytes] of approvedBrandAssets ?? []) {
@@ -490,7 +468,7 @@ export async function writeAcademyBrowserPackage({
     throw new Error(
       "An owned browser build and a new absolute output directory are required.",
     );
-  const files = readBrowserOutput(dist, metadata.publicDemo === true);
+  const files = readBrowserOutput(dist);
   validateBrowserOutput(files, metadata, approvedBrandAssets);
   const records = inventory(files);
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
@@ -561,7 +539,7 @@ async function verifyAcademyArchive(
       const path = filename.slice("browser/".length);
       if (
         !filename.startsWith("browser/") ||
-        !approvedPath(path, manifest.publicDemo === true) ||
+        !approvedPath(path) ||
         canonicalPaths.has(path.toLowerCase()) ||
         entry.directory ||
         entry.encrypted ||
@@ -751,7 +729,7 @@ async function buildAcademyBrowserPackage(output) {
     mkdirSync(source);
     git("archive", "--format=tar", `--output=${tar}`, sourceRevision);
     execFileSync("tar", ["-xf", tar, "-C", source], { timeout: 30_000 });
-    const { brand, assets, publicDemo } = loadAcademyBrand(
+    const { brand, assets } = loadAcademyBrand(
       brandFile,
       join(source, "public"),
     );
@@ -804,7 +782,6 @@ async function buildAcademyBrowserPackage(output) {
         shortName,
         defaultLanguage,
         themeColor,
-        ...(publicDemo && { publicDemo: true }),
         backend,
       },
     });
@@ -866,7 +843,6 @@ if (
           archiveSha256: manifest.archive.sha256,
           licenceState,
           customerReady: manifest.customerReady,
-          ...(manifest.publicDemo && { publicDemo: true }),
         }),
       );
       if (licenceState !== "active") process.exitCode = 2;

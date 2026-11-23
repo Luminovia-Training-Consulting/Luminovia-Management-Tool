@@ -2,10 +2,7 @@
  * Public, authored help with URL-selected articles and search across both languages. Reading,
  * filtering and recovery guidance require no backend data and send no support messages.
  */
-import {
-  portalInternalEdition,
-  publicDemoEnabled,
-} from "../../lib/installation-brand";
+import { portalInternalEdition } from "../../lib/installation-brand";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -27,15 +24,14 @@ import "./help.css";
 const labels = {
   title: { de: "Hilfe & Anleitungen", en: "Help & guides" },
   subtitle: {
-    de: "Verstehe die Abläufe, probiere sie mit Beispieldaten aus und finde den nächsten sinnvollen Schritt bei Problemen.",
-    en: "Understand workflows, try them with sample data and find the next practical step when something goes wrong.",
+    de: "Finde Anleitungen für deine Arbeit im Portal und Lösungen für häufige Probleme.",
+    en: "Find guides for working in the portal and solutions to common problems.",
   },
   search: { de: "Suche in der Hilfe", en: "Search help" },
   placeholder: {
     de: "Kurs, Passwort, Webhook",
     en: "Course, password, webhook",
   },
-  demo: { de: "Demo ausprobieren", en: "Try the demo" },
   login: { de: "Zum Portal", en: "Open portal" },
   topics: { de: "Anleitungen", en: "Guides" },
   area: { de: "Themenbereich", en: "Topic area" },
@@ -45,15 +41,7 @@ const labels = {
   selected: { de: "Anleitung", en: "Guide" },
   steps: { de: "So gehst du vor", en: "What to do" },
   wrong: { de: "Wenn etwas nicht funktioniert", en: "If something goes wrong" },
-  practice: {
-    de: "Diesen Bereich in der Demo üben",
-    en: "Practise this section in the demo",
-  },
   real: { de: "Bereich im Portal öffnen", en: "Open section in the portal" },
-  access: {
-    de: "Im Portal gelten deine tatsächlichen Berechtigungen. Die Demo verwendet ausschließlich fiktive Daten.",
-    en: "Your actual permissions apply in the portal. The demo uses fictional data only.",
-  },
   empty: {
     de: "Keine passende Anleitung gefunden.",
     en: "No matching guide found.",
@@ -116,9 +104,6 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
   const category = areas.find((area) => area === params.get("area")) ?? "";
   const selected = visibleHelpModules.find((module) => module.id === topic);
   const troubleshooting = topic === "troubleshooting";
-  const practicePath =
-    selected?.practicePath ??
-    (portalInternalEdition ? selected?.path : undefined);
   useEffect(() => {
     // URL navigation should reveal the chosen instructions to keyboard users too.
     // Reopening the same topic after a search creates a new history key as well.
@@ -259,14 +244,6 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               OpenAPI JSON
             </a>
           </Button>
-          {publicDemoEnabled && (
-            <Button asChild variant="ghost">
-              <Link to="/demo">
-                {text(labels.demo)}
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-            </Button>
-          )}
         </div>
         {topic && !selected && !troubleshooting && (
           <p role="status" className="help-info">
@@ -304,20 +281,10 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
               </ol>
             </section>
             <div className="help-actions">
-              {publicDemoEnabled && practicePath && (
-                <Button asChild>
-                  <Link to={`/demo${practicePath === "/" ? "" : practicePath}`}>
-                    {text(labels.practice)}
-                  </Link>
-                </Button>
-              )}
               <Button asChild variant="secondary">
                 <Link to={selected.path}>{text(labels.real)}</Link>
               </Button>
             </div>
-            {publicDemoEnabled && practicePath && (
-              <p className="help-fine-print">{text(labels.access)}</p>
-            )}
           </article>
         )}
         {troubleshooting && !needle && (

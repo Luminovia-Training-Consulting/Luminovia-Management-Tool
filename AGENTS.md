@@ -53,9 +53,7 @@ Agent assistance does not transfer that responsibility.
 | `public/brand/`, `data/`                                                        | Official brand assets/provenance and versioned catalogue data.                                                  |
 | `.local/`                                                                       | Ignored private runtime/QA state and credentials. Never publish it.                                             |
 
-The public fictional demo and practical help live in `src/features/demo/` and
-`src/features/help/`; shared preference controls live in `src/components/preferences.tsx`.
-Demo actions remain in memory and must not import Supabase or change actual accounts.
+Public help lives in `src/features/help/`. Shared preferences live in `src/components/preferences.tsx`.
 The authenticated tour may navigate only after explicit user choice; it grants no rights.
 
 Authenticated welcome and actor-owned server-persisted setup progress live in
@@ -175,8 +173,8 @@ node --test scripts/runtime-*.test.mjs
 `VITE_SUPABASE_PUBLISHABLE_KEY` values. Synthetic build values as used by
 [ci.yml](.github/workflows/ci.yml) verify compilation, not backend access.
 For targeted Vitest checks use `npx --no-install vitest run PATH`.
-Public demo/help browser checks can run independently with
-`npx --no-install playwright test --config scripts/guided-demo-playwright.config.ts`
+Public help browser checks can run independently with
+`npx --no-install playwright test --config scripts/public-help-playwright.config.ts`
 on their own port `6273`; they do not prove authenticated backend behavior.
 Do not point mutating SQL/API/Playwright checks at ordinary development data;
 the complete runner owns a separate stack on `5273`/`553xx`.

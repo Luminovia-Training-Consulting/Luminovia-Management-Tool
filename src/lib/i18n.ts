@@ -21,7 +21,6 @@ const pairs: Record<string, [string, string]> = {
   supportDesk: ["Support", "Support desk"],
   websiteEnquiries: ["Website-Anfragen", "Website enquiries"],
   announcements: ["Ankündigungen", "Announcements"],
-  tryDemo: ["Demo mit Beispieldaten ausprobieren", "Try the sample-data demo"],
   helpGuides: ["Hilfe & Anleitungen", "Help & guides"],
   errorHelp: [
     "Problem verstehen und nächste Schritte finden",
@@ -249,7 +248,6 @@ const pairs: Record<string, [string, string]> = {
   ],
   academyAdministration: ["Akademie verwalten", "Academy administration"],
   academySettings: ["Kontoeinstellungen", "Account settings"],
-  academyOpenDemo: ["LMS-Demo öffnen", "Open LMS demo"],
   email: ["E-Mail", "Email"],
   usernameOrEmail: ["Benutzername oder E-Mail", "Username or email"],
   username: ["Benutzername", "Username"],

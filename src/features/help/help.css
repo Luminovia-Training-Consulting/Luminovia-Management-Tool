@@ -186,7 +186,6 @@
   background: var(--paper);
 }
 
-.help-fine-print,
 .help-result-count {
   color: var(--muted);
   font-size: 0.9rem;
