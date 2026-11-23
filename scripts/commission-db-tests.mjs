@@ -247,7 +247,7 @@ try {
                     [admin, org, false],
                     "aal1",
                 ),
-                /membership management/,
+                /Only subordinate client memberships/,
             );
             await value(
                 admin,
