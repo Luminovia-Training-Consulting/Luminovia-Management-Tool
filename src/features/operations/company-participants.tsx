@@ -7,9 +7,11 @@ import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
+import { useRequestKey } from "../../lib/request-key";
 import { db } from "../../lib/supabase";
 import { CompanyParticipantDetails } from "./company-participant-detail";
 import { CompanyParticipantHistory } from "./company-participant-history";
+import { ParticipantClassPicker } from "./participant-placement-fields";
 import {
   type CompanyParticipant,
   companyParticipantsSchema,
@@ -32,6 +34,8 @@ export function CompanyParticipantsPanel({
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [classId, setClassId] = useState("");
+  const invitationKey = useRequestKey();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [detailsTarget, setDetailsTarget] = useState<{
     userId: string;
@@ -90,20 +94,26 @@ export function CompanyParticipantsPanel({
   const invite = useMutation({
     mutationFn: async () => {
       if (!online) throw new Error("offline");
+      const invitation = {
+        email: email.trim(),
+        display_name: displayName.trim(),
+        organisation_id: organisationId,
+        ...(classId ? { class_id: classId } : {}),
+      };
       return await accountRequest<{ status: "requested" }>(
         "company-participant-invitations",
         "POST",
         {
-          email: email.trim(),
-          display_name: displayName.trim(),
-          organisation_id: organisationId,
-          idempotency_key: crypto.randomUUID(),
+          ...invitation,
+          idempotency_key: invitationKey.forInput(JSON.stringify(invitation)),
         },
       );
     },
     onSuccess: () => {
       setEmail("");
       setDisplayName("");
+      setClassId("");
+      invitationKey.clear();
       setNotice("invited");
       void refreshHistory();
     },
@@ -187,6 +197,11 @@ export function CompanyParticipantsPanel({
                   <p className="muted">
                     {t("participantCompanyReference")} ·{" "}
                     {participant.company_reference}
+                  </p>
+                )}
+                {participant.class_name && (
+                  <p className="muted">
+                    {t("participantClass")} · {participant.class_name}
                   </p>
                 )}
               </div>
@@ -286,6 +301,13 @@ export function CompanyParticipantsPanel({
               required
             />
           </Field>
+          <ParticipantClassPicker
+            actor={actor}
+            organisationId={organisationId}
+            value={classId}
+            disabled={!online || invite.isPending}
+            change={setClassId}
+          />
           <Button type="submit" disabled={!online || invite.isPending}>
             {t("inviteParticipant")}
           </Button>

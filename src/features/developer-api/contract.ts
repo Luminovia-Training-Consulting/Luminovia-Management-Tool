@@ -4267,6 +4267,18 @@ const nativePaths = {
     },
     z.toJSONSchema(companyParticipantReferenceSchema),
   ),
+  "/rest/v1/rpc/set_company_participant_class": voidRpc(
+    "setCompanyParticipantClass",
+    "Premium LMS",
+    "Set or clear one company participant's class",
+    "Requires current company participant management, Premium and an active membership. The class must belong to the specified company. Send the current membership version and null to clear the class. A stale version returns HTTP 409. Existing course enrolments keep their own lifecycle.",
+    {
+      ...organisation,
+      p_user_id: uuid,
+      p_class_id: nullableUuid,
+      p_expected_version: { ...version, minimum: 1 },
+    },
+  ),
   "/rest/v1/rpc/my_company_participant_invitations": rpc(
     "myCompanyParticipantInvitations",
     "Premium LMS",

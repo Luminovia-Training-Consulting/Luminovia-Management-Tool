@@ -111,6 +111,21 @@ Deno.test("standalone participant creation reserves exactly the selected learner
     assert.equal(result.status, 201);
     assert.deepEqual(f.calls, ["create", "complete"]);
 });
+Deno.test("participant company and class are reserved together before Auth creation", async () => {
+    const f = fixture({
+        rpc: async (_token, name, args) => {
+            assert.equal(name, "reserve_participant_account_creation");
+            assert.deepEqual(args, {
+                p_email: payload.email, p_display_name: payload.display_name,
+                p_organisation_id: id, p_class_id: userId, p_request_id: requestId,
+            });
+            return {data: null, error: {code: "42501"}};
+        },
+    });
+    assert.equal((await f.request({...payload, role: "participant", organisation_id: id, class_id: userId})).status, 403);
+    assert.equal((await f.request({...payload, role: "participant", class_id: userId})).status, 400);
+    assert.deepEqual(f.calls, []);
+});
 Deno.test(
     "permission denial and settled idempotent retries never create another Auth identity",
     async () => {

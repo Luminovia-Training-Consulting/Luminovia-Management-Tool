@@ -334,7 +334,7 @@ export const accountOpenApi = {
             post: {
                 summary: "Create an individual account without sending email",
                 description:
-                    "Requires current account and role administration. A company contact requires an organisation. Initial learner access grants the participant role without enrolment. The operator's owner role is protected. Passwords must contain 8–128 characters, including uppercase and lowercase letters, a digit and one of the symbols configured by Supabase Auth. The password is transient and is never returned or stored in the creation request.",
+                    "Requires current account and role administration. A company contact requires an organisation. A participant can optionally receive a pending company link and a class in that company while Premium is active. The participant must accept the company link. No course enrolment is created. The operator's owner role is protected. Passwords must contain 8–128 characters, including uppercase and lowercase letters, a digit and one of the symbols configured by Supabase Auth. The password is transient and is never returned or stored in the creation request.",
                 requestBody: jsonBody({
                     type: "object",
                     additionalProperties: false,
@@ -358,6 +358,7 @@ export const accountOpenApi = {
                         },
                         role,
                         organisation_id: {type: ["string", "null"], format: "uuid"},
+                        class_id: {type: ["string", "null"], format: "uuid", description: "Optional for a participant with an organisation. The class must belong to that organisation."},
                         idempotency_key: {type: "string", format: "uuid"},
                     },
                 }),
@@ -467,7 +468,7 @@ export const accountOpenApi = {
             put: {
                 operationId: "setAccountRoles",
                 summary: "Audited role assignment; self/last-admin protection",
-                description: "Save the explicit roles for this account. Internal administrators can change their own administration, management, lecturer, participant and company roles, subject to the last-admin and active-teaching checks. Management can assign eligible roles to subordinate accounts. Company membership and participant enrolment remain separate grants.",
+                description: "Save the explicit roles for this account. Internal administrators can change their own administration, management, lecturer, participant and company roles, subject to the last-admin and active-teaching checks. Management can assign eligible roles to subordinate accounts. An optional subordinate participant placement is saved with the role change. New company links require the participant's acceptance and do not create a course enrolment.",
                 parameters: userId,
                 requestBody: jsonBody({
                     type: "object",
@@ -481,6 +482,10 @@ export const accountOpenApi = {
                             description:
                                 "For company conversion, atomically assign the client role and this authorised organisation.",
                         },
+                        participant_placement: record(
+                            {organisation_id: uuid, class_id: {type: ["string", "null"], format: "uuid"}},
+                            ["organisation_id"],
+                        ),
                     },
                 }),
                 responses: {"200": jsonResponse({anyOf: [savedRoles, nil]}), ...errors},
@@ -560,12 +565,13 @@ export const accountOpenApi = {
                 operationId: "inviteCompanyParticipant",
                 summary: "Request a company-scoped participant-only invitation; no role or account lookup is exposed",
                 description:
-                    "Requires current invitation authority for the specified company while Premium is active. The participant role is determined by the server. Requested acknowledges the submission; it does not confirm account existence, delivery or enrolment. Repeat the original fields with the same key.",
+                    "Requires current invitation authority for the specified company while Premium is active. The optional class must belong to that company and is retained with the company link. Requested acknowledges the submission without confirming account existence or delivery. Repeat the original fields with the same key.",
                 requestBody: jsonBody(record({
                     ...invitationIdentity,
                     display_name: {type: "string", minLength: 1, maxLength: 120, pattern: "\\S"},
                     organisation_id: uuid,
-                })),
+                    class_id: uuid,
+                }, ["email", "idempotency_key", "display_name", "organisation_id"])),
                 responses: {
                     ...invitationHttpErrors,
                     "202": jsonResponse(record({status: {const: "requested"}})),

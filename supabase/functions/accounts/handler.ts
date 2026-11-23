@@ -145,16 +145,16 @@ export function parseInvitation(value: unknown): Invitation | null {
 /** Accept only the company-scoped participant invitation contract; role is fixed server-side. */
 export function parseCompanyParticipantInvitation(
     value: unknown,
-): Invitation<"participant"> | null {
+): (Invitation<"participant"> & {class_id?: string}) | null {
     if (
         !object(value) ||
         Object.keys(value).some(
             (key) =>
-                !["email", "display_name", "organisation_id", "idempotency_key"].includes(key),
+                !["email", "display_name", "organisation_id", "class_id", "idempotency_key"].includes(key),
         )
     )
         return null;
-    const {email, display_name, organisation_id, idempotency_key} = value;
+    const {email, display_name, organisation_id, class_id, idempotency_key} = value;
     if (
         typeof email !== "string" ||
         email.trim().length > 254 ||
@@ -163,6 +163,7 @@ export function parseCompanyParticipantInvitation(
         display_name.trim().length < 1 ||
         display_name.trim().length > 120 ||
         !uuid(organisation_id) ||
+        (class_id !== undefined && !uuid(class_id)) ||
         !uuid(idempotency_key)
     )
         return null;
@@ -171,6 +172,7 @@ export function parseCompanyParticipantInvitation(
         display_name: display_name.trim(),
         role: "participant",
         organisation_id,
+        ...(class_id === undefined ? {} : {class_id}),
         idempotency_key,
     };
 }
@@ -539,8 +541,16 @@ export function createAccountHandler(deps: AccountDependencies) {
                 const payload = await body(request);
                 if (!object(payload) || typeof payload.role !== "string" || !validAccountPassword(payload.password))
                     return response(400, {error: "invalid_request"});
-                const {password, ...metadata} = payload;
-                const creation = parseInvitation(metadata);
+                const {password, organisation_id, class_id, ...metadata} = payload;
+                const participantCompany = payload.role === "participant" ? organisation_id : null;
+                if (
+                    (participantCompany != null && !uuid(participantCompany)) ||
+                    (class_id != null && (!uuid(class_id) || !uuid(participantCompany)))
+                ) return response(400, {error: "invalid_request"});
+                const creation = parseInvitation({
+                    ...metadata,
+                    organisation_id: payload.role === "participant" ? null : organisation_id,
+                });
                 if (
                     !creation ||
                     !creation.display_name ||
@@ -548,13 +558,18 @@ export function createAccountHandler(deps: AccountDependencies) {
                     (creation.role === "client" && !creation.organisation_id)
                 )
                     return response(400, {error: "invalid_request"});
-                const reserved = await deps.rpc(token, "reserve_account_creation", {
+                const reservation = {
                     p_email: creation.email,
                     p_display_name: creation.display_name,
-                    p_role: creation.role,
-                    p_organisation_id: creation.organisation_id,
                     p_request_id: creation.idempotency_key,
-                });
+                };
+                const reserved = participantCompany
+                    ? await deps.rpc(token, "reserve_participant_account_creation", {
+                        ...reservation, p_organisation_id: participantCompany, p_class_id: class_id ?? null,
+                    })
+                    : await deps.rpc(token, "reserve_account_creation", {
+                        ...reservation, p_role: creation.role, p_organisation_id: creation.organisation_id,
+                    });
                 if (reserved.error)
                     return response(
                         reserved.error.code === "42501"
@@ -649,7 +664,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 if (target[2] === "roles") {
                     if (
                         Object.keys(payload).some(
-                            (key) => !["roles", "organisation_id"].includes(key),
+                            (key) => !["roles", "organisation_id", "participant_placement"].includes(key),
                         ) ||
                         (payload.organisation_id !== undefined &&
                             !uuid(payload.organisation_id)) ||
@@ -659,6 +674,23 @@ export function createAccountHandler(deps: AccountDependencies) {
                         payload.roles.some((role) => !roles.includes(role as AccountRole))
                     ) {
                         return response(400, {error: "invalid_request"});
+                    }
+                    const placement = payload.participant_placement;
+                    if (placement !== undefined) {
+                        if (
+                            !payload.roles.includes("participant") ||
+                            !object(placement) ||
+                            Object.keys(placement).some((key) => !["organisation_id", "class_id"].includes(key)) ||
+                            !uuid(placement.organisation_id) ||
+                            (placement.class_id != null && !uuid(placement.class_id))
+                        ) return response(400, {error: "invalid_request"});
+                        return await call("set_roles_with_participant_company", {
+                            p_user_id: target[1],
+                            p_roles: payload.roles,
+                            p_organisation_id: placement.organisation_id,
+                            p_class_id: placement.class_id ?? null,
+                            p_client_organisation_id: payload.organisation_id ?? null,
+                        });
                     }
                     return await call(
                         payload.organisation_id === undefined
@@ -698,12 +730,15 @@ export function createAccountHandler(deps: AccountDependencies) {
                 if (!invitation) return response(400, {error: "invalid_request"});
                 const reservation = await deps.rpc(
                     token,
-                    "reserve_company_participant_invitation",
+                    invitation.class_id
+                        ? "reserve_class_participant_invitation"
+                        : "reserve_company_participant_invitation",
                     {
                         p_organisation_id: invitation.organisation_id,
                         p_email: invitation.email,
                         p_display_name: invitation.display_name,
                         p_request_id: invitation.idempotency_key,
+                        ...(invitation.class_id ? {p_class_id: invitation.class_id} : {}),
                     },
                 );
                 if (reservation.error)

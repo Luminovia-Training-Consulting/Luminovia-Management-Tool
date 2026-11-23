@@ -7,6 +7,8 @@ import { Link } from "react-router-dom";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
+import { ParticipantPlacementFields } from "../operations/participant-placement-fields";
+import { emptyParticipantPlacement } from "../operations/company-participant-schema";
 import {
   accountOrganisationsQuery,
   accountRequest,
@@ -46,6 +48,7 @@ export function CreateAccountForm({
     /[!@#$%^&*()_+\-=[\]{}|;:,.<>?/]/.test(password);
   const [role, setRole] = useState("");
   const [organisation, setOrganisation] = useState("");
+  const [placement, setPlacement] = useState(emptyParticipantPlacement);
   const request = useRequestKey();
   const organisations = useQuery({
     ...accountOrganisationsQuery(actor),
@@ -59,7 +62,15 @@ export function CreateAccountForm({
         display_name: name.trim(),
         password,
         role,
-        organisation_id: role === "client" ? organisation : null,
+        organisation_id:
+          role === "client"
+            ? organisation
+            : role === "participant"
+              ? placement.organisation || null
+              : null,
+        ...(role === "participant" && placement.classId
+          ? { class_id: placement.classId }
+          : {}),
       };
       return accountRequest<{ status: string; user_id?: string }>(
         "users",
@@ -79,6 +90,10 @@ export function CreateAccountForm({
         setPassword("");
         request.clear();
         await cache.invalidateQueries({ queryKey: ["accounts", actor] });
+        if (placement.organisation)
+          void cache.invalidateQueries({
+            queryKey: ["company-participants", actor, placement.organisation],
+          });
       }
     },
   });
@@ -104,6 +119,7 @@ export function CreateAccountForm({
         <input
           id="create-account-name"
           required
+          disabled={create.isPending}
           maxLength={120}
           value={name}
           onChange={(event) => {
@@ -117,6 +133,7 @@ export function CreateAccountForm({
           id="create-account-email"
           type="email"
           required
+          disabled={create.isPending}
           maxLength={254}
           autoComplete="off"
           value={email}
@@ -130,10 +147,12 @@ export function CreateAccountForm({
         <select
           id="create-account-role"
           required
+          disabled={create.isPending}
           value={role}
           onChange={(event) => {
             setRole(event.target.value);
             setOrganisation("");
+            setPlacement(emptyParticipantPlacement);
             create.reset();
           }}
         >
@@ -165,11 +184,23 @@ export function CreateAccountForm({
           </select>
         </Field>
       )}
+      {role === "participant" && (
+        <ParticipantPlacementFields
+          actor={actor}
+          value={placement}
+          disabled={!online || create.isPending}
+          change={(value) => {
+            setPlacement(value);
+            create.reset();
+          }}
+        />
+      )}
       <Field id="create-account-password" label={t("initialPassword")}>
         <input
           id="create-account-password"
           type="password"
           required
+          disabled={create.isPending}
           minLength={8}
           maxLength={128}
           autoComplete="new-password"

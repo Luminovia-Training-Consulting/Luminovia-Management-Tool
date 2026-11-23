@@ -8,6 +8,11 @@ import i18n from "../../lib/i18n";
 import { CreateAccountForm } from "./create-account";
 
 const fake = vi.hoisted(() => ({ request: vi.fn() }));
+const classes = {
+  first: "11111111-1111-4111-8111-111111111111",
+  second: "22222222-2222-4222-8222-222222222222",
+  third: "33333333-3333-4333-8333-333333333333",
+};
 vi.mock("./api", async (original) => ({
   ...(await original<typeof import("./api")>()),
   accountRequest: fake.request,
@@ -18,10 +23,32 @@ vi.mock("../../lib/supabase", () => ({
       select: () => ({
         is: () => ({
           order: async () => ({
-            data: [{ id: "org-a", name: "Fictional company" }],
+            data: [
+              { id: "org-a", name: "Fictional company" },
+              { id: "org-b", name: "Training campus" },
+            ],
             error: null,
           }),
         }),
+      }),
+    }),
+    rpc: (
+      _operation: string,
+      { p_organisation_id }: { p_organisation_id: string },
+    ) => ({
+      abortSignal: async () => ({
+        data: {
+          classes: (p_organisation_id === "org-a"
+            ? [
+                { id: classes.first, name: "Linux basics" },
+                { id: classes.second, name: "Cloud practice" },
+              ]
+            : [{ id: classes.third, name: "Network practice" }]
+          ).map((entry) => ({ ...entry, meeting_url: null })),
+          contact_id: null,
+          contacts: [],
+        },
+        error: null,
       }),
     }),
   }),
@@ -153,5 +180,70 @@ it("allows guest creation without a company but never displays success for rejec
     "users",
     "POST",
     expect.objectContaining({ role: "guest", organisation_id: null }),
+  );
+});
+
+it("searches participant companies and classes, clears the old class on company change and submits the new placement", async () => {
+  await i18n.changeLanguage("de");
+  fake.request.mockResolvedValue({ status: "created", user_id: "new-learner" });
+  mount();
+  await userEvent.type(
+    screen.getByLabelText("Anzeigename"),
+    "Fictional learner",
+  );
+  await userEvent.type(
+    screen.getByLabelText("E-Mail"),
+    "learner@example.invalid",
+  );
+  await userEvent.type(screen.getByLabelText(/Startpasswort/), "Aa1!aaaa");
+  await userEvent.selectOptions(
+    screen.getByLabelText("Kontorolle"),
+    "participant",
+  );
+
+  await screen.findByRole("option", { name: "Fictional company" });
+  const companySearch = screen.getByRole("searchbox", {
+    name: "Unternehmen suchen",
+  });
+  await userEvent.type(companySearch, "fictional");
+  expect(
+    screen.queryByRole("option", { name: "Training campus" }),
+  ).not.toBeInTheDocument();
+  const company = screen.getByLabelText("Unternehmen für die Teilnahme");
+  await userEvent.selectOptions(company, "org-a");
+
+  await screen.findByRole("option", { name: "Linux basics" });
+  await userEvent.type(
+    screen.getByRole("searchbox", { name: "Klassen suchen" }),
+    "cloud",
+  );
+  expect(
+    screen.queryByRole("option", { name: "Linux basics" }),
+  ).not.toBeInTheDocument();
+  await userEvent.selectOptions(
+    screen.getByLabelText("Klasse"),
+    classes.second,
+  );
+  await userEvent.clear(companySearch);
+  await userEvent.selectOptions(company, "org-b");
+  await screen.findByRole("option", { name: "Network practice" });
+  expect(screen.getByLabelText("Klasse")).toHaveValue("");
+  expect(
+    screen.queryByRole("option", { name: "Cloud practice" }),
+  ).not.toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("Klasse"), classes.third);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Benutzerkonto erstellen" }),
+  );
+  await waitFor(() =>
+    expect(fake.request).toHaveBeenCalledWith(
+      "users",
+      "POST",
+      expect.objectContaining({
+        role: "participant",
+        organisation_id: "org-b",
+        class_id: classes.third,
+      }),
+    ),
   );
 });

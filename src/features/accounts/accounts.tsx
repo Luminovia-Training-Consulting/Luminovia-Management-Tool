@@ -9,6 +9,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { PermanentDeleteAction } from "../deletions/deletions";
 import { CreateAccountForm } from "./create-account";
+import { ParticipantPlacementFields } from "../operations/participant-placement-fields";
+import { emptyParticipantPlacement } from "../operations/company-participant-schema";
 import { LecturerCompensation } from "../commercial/lecturer-compensation";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
@@ -70,6 +72,7 @@ function AccountsDirectory({
   const [selected, setSelected] = useState<AccountPerson | null>(null);
   const [roles, setRoles] = useState<AccountRole[]>([]);
   const [organisation, setOrganisation] = useState("");
+  const [placement, setPlacement] = useState(emptyParticipantPlacement);
   const [confirm, setConfirm] = useState(false);
   const accounts = useQuery(accountListQuery(actorId, search, offset));
   const clientAccess = useQuery({
@@ -125,6 +128,14 @@ function AccountsDirectory({
       return await accountRequest(`users/${selected.id}/roles`, "PUT", {
         roles,
         ...companyChange,
+        ...(roles.includes("participant") && placement.organisation
+          ? {
+              participant_placement: {
+                organisation_id: placement.organisation,
+                class_id: placement.classId || null,
+              },
+            }
+          : {}),
       });
     },
     onSuccess: async () => {
@@ -282,6 +293,7 @@ function AccountsDirectory({
                         setSelected(person);
                         setRoles(person.roles);
                         setOrganisation("");
+                        setPlacement(emptyParticipantPlacement);
                         change.reset();
                         link.reset();
                       }}
@@ -371,13 +383,15 @@ function AccountsDirectory({
                 type="checkbox"
                 checked={roles.includes(role)}
                 disabled={change.isPending || link.isPending}
-                onChange={(event) =>
+                onChange={(event) => {
+                  if (role === "participant" && !event.target.checked)
+                    setPlacement(emptyParticipantPlacement);
                   setRoles((current) =>
                     event.target.checked
                       ? [...current, role]
                       : current.filter((item) => item !== role),
-                  )
-                }
+                  );
+                }}
               />
               {t(role)}
             </label>
@@ -392,6 +406,18 @@ function AccountsDirectory({
               </div>
             ))}
           </dl>
+        )}
+        {!ownRoles && roles.includes("participant") && (
+          <div className="profile-form">
+            <ParticipantPlacementFields
+              actor={actorId}
+              value={placement}
+              disabled={
+                !online || confirm || change.isPending || link.isPending
+              }
+              change={setPlacement}
+            />
+          </div>
         )}
         <Button
           disabled={

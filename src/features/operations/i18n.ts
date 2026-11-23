@@ -517,6 +517,23 @@ const pairs: Record<string, [string, string]> = {
     "{{sessions}} sessions · {{enrolments}} enrolments · {{resources}} resources · {{attendance}} attendance entries · {{messages}} course messages · {{questions}} questions · {{quizAttempts}} quiz attempts · {{completions}} completions",
   ],
   participants: ["Teilnehmende", "Participants"],
+  participantCompany: ["Unternehmen für die Teilnahme", "Participant company"],
+  participantCompanySearch: ["Unternehmen suchen", "Search companies"],
+  participantCompanyNone: ["Ohne Unternehmenszuordnung", "Without a company"],
+  participantClass: ["Klasse", "Class"],
+  participantClassSearch: ["Klassen suchen", "Search classes"],
+  participantClassNone: ["Ohne Klasse", "Without a class"],
+  participantClassEdit: ["Klasse speichern", "Save class"],
+  participantClassSaved: ["Klasse gespeichert.", "Class saved."],
+  participantClassError: [
+    "Die Klasse konnte nicht gespeichert werden. Wähle sie erneut aus.",
+    "The class could not be saved. Select it again.",
+  ],
+  placementNoResults: ["Keine passenden Einträge.", "No matching results."],
+  participantPlacementHelp: [
+    "Wähle ein Unternehmen mit Premium LMS und optional eine Klasse. Neue Unternehmensverknüpfungen müssen von der teilnehmenden Person angenommen werden.",
+    "Choose a company with Premium LMS and optionally a class. Participants must accept new company links.",
+  ],
   participantsHelp: [
     "Nur Premium-Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
     "Only Premium participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",

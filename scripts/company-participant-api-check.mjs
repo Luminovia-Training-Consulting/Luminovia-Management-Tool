@@ -14,8 +14,8 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
         teacher = await actor("decision-teacher", "lecturer"),
         learner = await actor("decision-learner", "participant"),
         peer = await actor("decision-peer", "participant");
-    const [org, foreignOrg, template, early, late, job, claim] = Array.from(
-        {length: 7},
+    const [org, foreignOrg, template, early, late, job, claim, classId, foreignClass] = Array.from(
+        {length: 9},
         randomUUID,
     );
     const users = [
@@ -42,6 +42,7 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
       delete from public.course_sessions where course_run_id in(${q(early)},${q(late)});
       delete from public.course_runs where id in(${q(early)},${q(late)});
       delete from public.course_templates where id=${q(template)};
+      delete from private.course_classes where id in(${q(classId)},${q(foreignClass)});
       delete from public.client_organisation_memberships where user_id in(${q(company.id)},${q(outsider.id)});
       delete from public.organisations where id in(${q(org)},${q(foreignOrg)});`);
     });
@@ -51,6 +52,9 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
     insert into public.client_organisation_memberships(user_id, organisation_id)
     values (${q(company.id)}, ${q(org)}),
            (${q(outsider.id)}, ${q(foreignOrg)});
+    insert into private.course_classes(id,organisation_id,name)
+    values (${q(classId)},${q(org)},'Fictional participant class'),
+           (${q(foreignClass)},${q(foreignOrg)},'Foreign participant class');
     insert into public.course_templates(id, title)
     values (${q(template)}, 'Fictional integration course');
     insert into public.course_runs(id, template_id, organisation_id)
@@ -130,6 +134,22 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
     }));
     assertRpcResponse("company_participant_history", confirmed);
     assert.equal(confirmed.items.filter(({kind}) => kind === "association_confirmed").length, 1);
+    const readRoster = () => checked(company.client.rpc("company_participants", {p_organisation_id: org}));
+    const currentParticipant = (await readRoster()).find(({user_id}) => user_id === learner.id);
+    const placement = {
+        p_organisation_id: org, p_user_id: learner.id,
+        p_class_id: classId, p_expected_version: currentParticipant.version,
+    };
+    assert.equal((await outsider.client.rpc("set_company_participant_class", placement)).status, 403);
+    assert.equal((await company.client.rpc("set_company_participant_class", {
+        ...placement, p_class_id: foreignClass,
+    })).status, 403);
+    const assigned = await company.client.rpc("set_company_participant_class", placement);
+    assert.equal(assigned.status, 204);
+    assert.equal(assigned.error, null);
+    assert.equal((await readRoster()).find(({user_id}) => user_id === learner.id).class_name,
+        "Fictional participant class");
+    assert.equal((await company.client.rpc("set_company_participant_class", placement)).status, 409);
 
     // Exercise the live course enrolment form and participant withdrawal gate
     // over REST. Never seed these enrolments directly into PostgreSQL.

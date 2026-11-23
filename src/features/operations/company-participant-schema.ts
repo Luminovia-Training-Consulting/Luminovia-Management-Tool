@@ -1,6 +1,12 @@
 /** Shared wire projections for the internal Premium company participant centre. */
 import { z } from "zod";
 
+export type ParticipantPlacement = { organisation: string; classId: string };
+export const emptyParticipantPlacement: ParticipantPlacement = {
+  organisation: "",
+  classId: "",
+};
+
 const count = z.int().nonnegative();
 const instant = z.iso.datetime({ offset: true });
 export const companyReferenceLimit = 64;
@@ -18,6 +24,8 @@ const companyParticipantSchema = z.object({
   display_name: z.string(),
   joined_at: instant,
   company_reference: companyReference.default(null),
+  class_id: z.uuid().nullable().optional(),
+  class_name: z.string().nullable().optional(),
   version: z.int().positive(),
 });
 export type CompanyParticipant = z.infer<typeof companyParticipantSchema>;

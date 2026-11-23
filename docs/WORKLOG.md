@@ -1,3 +1,9 @@
+# 23 November 2026 — Participant class placement
+
+Management can select a searchable company and class during participant creation or a subordinate role change. Company contacts can choose a class on an invitation and update a class on their active roster. Matching company keys are enforced in PostgreSQL. A new company association remains pending for the participant's acceptance. Class metadata grants no course access by itself.
+
+Isolated PostgreSQL covered manager placement, invitation completion and acceptance, cross-company class denial, optimistic version conflicts and membership removal. All 11 API-surface groups passed. The real self-host Auth/HTTP checks verified the account and participant flows, including the class mutation's 204, foreign-company 403 and stale-version 409 responses. The account form regression verified both searches, clearing the old class on company change and submitting the selected replacement.
+
 # 23 November 2026 — Own account roles and compact expertise
 
 Internal administrators can change their own administration, management, regular lecturer, participant and company roles. The company grant and role change commit together. Active teaching commitments and the last active administrator remain protected. Management can link companies for eligible subordinate company accounts without gross-finance access. Own-profile expertise is a bounded, keyboard-scrollable tile grid.

@@ -18,6 +18,7 @@ import { courseWorkspaceKey } from "../learning/api";
 import { PublishedExamResults } from "../learning/timed-exam";
 import { attendanceRegistersKey } from "../learning/attendance-api";
 import { CompanyParticipantCourseAssignment } from "./company-participant-course-assignment";
+import { ParticipantClassPicker } from "./participant-placement-fields";
 import {
   type CompanyParticipant,
   companyCourseAssignmentReceiptSchema,
@@ -59,6 +60,10 @@ export function CompanyParticipantDetails({
   const [draft, setDraft] = useState<{ value: string; version: number } | null>(
     null,
   );
+  const [classDraft, setClassDraft] = useState<{
+    value: string;
+    version: number;
+  } | null>(null);
   const overviewKey = [
     "company-participant-overview",
     actor,
@@ -119,6 +124,23 @@ export function CompanyParticipantDetails({
       void cache.invalidateQueries({
         queryKey: ["company-participant-history", actor, organisationId],
       });
+    },
+    onError: () => void cache.invalidateQueries({ queryKey: membershipKey }),
+  });
+  const changeClass = useMutation({
+    mutationFn: async (edit: { value: string; version: number }) => {
+      requireOnline();
+      const { error } = await db().rpc("set_company_participant_class", {
+        p_organisation_id: organisationId,
+        p_user_id: participant.user_id,
+        p_class_id: edit.value || null,
+        p_expected_version: edit.version,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await cache.invalidateQueries({ queryKey: membershipKey });
+      setClassDraft(null);
     },
     onError: () => void cache.invalidateQueries({ queryKey: membershipKey }),
   });
@@ -189,7 +211,13 @@ export function CompanyParticipantDetails({
       open
       returnFocusTo={returnFocusTo}
       onOpenChange={(open) => {
-        if (!open && !reference.isPending && !assignment.isPending) onClose();
+        if (
+          !open &&
+          !reference.isPending &&
+          !assignment.isPending &&
+          !changeClass.isPending
+        )
+          onClose();
       }}
       title={
         assigning
@@ -331,6 +359,50 @@ export function CompanyParticipantDetails({
               <dd>{participant.luminovia_user_id}</dd>
             </div>
           </dl>
+          <form
+            className="company-participant-reference"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (
+                classDraft &&
+                classDraft.version === participant.version &&
+                online &&
+                !changeClass.isPending
+              )
+                changeClass.mutate(classDraft);
+            }}
+          >
+            <ParticipantClassPicker
+              actor={actor}
+              organisationId={organisationId}
+              value={classDraft?.value ?? participant.class_id ?? ""}
+              disabled={!online || reference.isPending || changeClass.isPending}
+              change={(value) => {
+                changeClass.reset();
+                setClassDraft({ value, version: participant.version });
+              }}
+            />
+            <Button
+              variant="secondary"
+              disabled={
+                !online ||
+                reference.isPending ||
+                changeClass.isPending ||
+                !classDraft ||
+                classDraft.version !== participant.version ||
+                classDraft.value === (participant.class_id ?? "")
+              }
+            >
+              {t("participantClassEdit")}
+            </Button>
+            {(changeClass.isError ||
+              (classDraft && classDraft.version !== participant.version)) && (
+              <Notice kind="error">{t("participantClassError")}</Notice>
+            )}
+            {changeClass.isSuccess && (
+              <Notice kind="success">{t("participantClassSaved")}</Notice>
+            )}
+          </form>
           <form
             className="company-participant-reference"
             onSubmit={(event) => {

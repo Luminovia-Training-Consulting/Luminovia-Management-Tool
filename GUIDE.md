@@ -237,6 +237,7 @@ The offer editor always shows the job's company. Management and administrators c
 
 Open **Klassenfeedback / Class feedback** beside a company class to see stars and comments and add a class comment. Assigned lecturers can open the same section on their job and submit or revise a rating after their last confirmed session. If the same class is linked to the Premium course workspace, both entry points use the same rating.
 
+For a learner account, management can choose **Kursteilnehmer:in / Participant** in **Konten & Zugänge / Accounts & access**. Search for a company with Premium LMS. Then search and choose one of that company's classes. This also works when assigning the participant role to an existing subordinate account. In the company portal, open the matching company's **Teilnehmende / Participants** to select a class when inviting someone or to change an active participant's class in their details. The participant accepts a new company link before it becomes active. Course enrolment is a separate action.
 
 `/client` is the **Kundenportal / Client portal** for an associated client account and authorised platform management. It differs from `/clients`, the internal customer/contact directory. A client sees only its active associated organisations, their course requests and full client fees, confirmed assignment sums and assigned teachers. EUR, AUD and USD remain separate. The request volume and confirmed assignment sum are agreement values, not proof of a bank payment.
 
