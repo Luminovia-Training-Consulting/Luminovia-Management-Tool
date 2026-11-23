@@ -35,7 +35,7 @@ const de = {
   requirements: {
     lecturer: "Dozent:innen vollständig und bestätigt zugeteilt",
     agreement: "Gültige, dokumentierte Vereinbarungen",
-    qualification: "Erforderliche Qualifikationen gültig bestätigt",
+    qualification: "Passender Themenbereich im Profil",
     materials: "Saubere Lehrmaterialien für zugeteilte Dozent:innen verfügbar",
     delivery: "Meeting-Link oder Unterrichtsort hinterlegt",
     customer: "Aktives Unternehmen vorhanden",
@@ -145,7 +145,7 @@ const en = {
   requirements: {
     lecturer: "All lecturer positions assigned and confirmed",
     agreement: "Valid documented lecturer agreements",
-    qualification: "Required qualifications verified and valid",
+    qualification: "Matching subject area in the profile",
     materials: "Clean teaching materials available to assigned lecturers",
     delivery: "Meeting link or teaching venue configured",
     customer: "Active company recorded",

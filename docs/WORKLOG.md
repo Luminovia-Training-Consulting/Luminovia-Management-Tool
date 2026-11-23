@@ -1,3 +1,9 @@
+# 23 November 2026 — Teaching subject areas
+
+Added IT and Computing, Business and Economics, and Other Subjects to the existing catalogue hierarchy and placed them first in the profile. Published offers and course previews use the shared subject area. A single self-declared match suffices, including for mixed-topic offers. Contracts, company restrictions, schedule and pricing rules still apply. Untagged offers stay general and emergency reopenings retain their existing exception. Detailed qualifications and supporting records remain optional. The preparation checklist presents subject alignment as an advisory item, and existing assignments can be amended independently of the lecturer's current topic selection.
+
+The disposable PostgreSQL suite passed all 26 checks, including published offer and course visibility for Business versus IT, an unverified Business claim across two detailed topics, and 50 concurrent claimants. TypeScript, 66 focused frontend tests, 7 documentation checks and 33 self-host candidate tests passed.
+
 # 23 November 2026 — White-Label roadmap and Swagger acceptance
 
 Translated the White-Label roadmap and updated inbound section links. The internal Swagger keyboard test now covers the German and English light and dark variants, comparing the documented finance denial with the HTTP response and checking the generated command for credentials. Playwright discovered the cases for desktop and mobile Chromium. All 218 focused developer API and enquiries tests and all 7 documentation tests passed. The canonical browser runner stopped before startup because port 55322 was occupied by another isolated stack. Run the expanded browser cases once that port is free. The full edition and transport matrix, the end-to-end coordinated amendment through settlement and the separate Website activation remain open.

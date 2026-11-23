@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Teaching subject areas
+
+- [x] Use IT and Computing, Business and Economics and Other Subjects as catalogue roots. A self-declared root or a descendant in a shared area matches an offer. A single matching area is enough for a mixed offer. The existing company, contract, calendar and availability checks still apply.
+- [x] Apply the same subject rule to lecturer discovery, published course previews, claims, replacements and matching notices. Evidence and attestations remain available for record keeping. They do not gate claims or amendments.
+
 ## Swagger catalogue responsiveness
 
 - [x] Keep Swagger, interactive explorer and the full OpenAPI download reachable throughout the API views. Keep the default reference read-only.

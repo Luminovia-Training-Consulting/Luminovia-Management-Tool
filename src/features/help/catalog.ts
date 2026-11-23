@@ -59,27 +59,27 @@ export const guideModules: GuideModule[] = [
     steps: {
       de: [
         "Prüfe Anzeigenamen und Zeitzone, bevor du Termine planst.",
-        "Ergänze deine Expertise und lade zulässige Nachweise im dafür vorgesehenen Bereich hoch.",
-        "Speichere die Änderungen und prüfe die Bestätigung; erforderliche Verifizierungen erfolgen durch berechtigte Mitarbeitende.",
+        "Wähle im Profil die Themenbereiche, die du unterrichten kannst.",
+        "Deine Auswahl gilt sofort für passende Aufträge. Nachweise kannst du bei Bedarf separat hinterlegen.",
       ],
       en: [
         "Check your display name and time zone before planning sessions.",
-        "Add expertise and upload permitted evidence in its designated area.",
-        "Save and check the confirmation; required verification is performed by authorised staff.",
+        "Choose the subject areas you can teach in your profile.",
+        "Your choices apply immediately to matching jobs. You can add evidence separately if needed.",
       ],
     },
     problem: {
-      de: "Eine angegebene Expertise berechtigt noch nicht zur Übernahme.",
-      en: "Declared expertise does not yet make a job claim eligible.",
+      de: "Ein Auftrag erscheint nicht in deiner Übersicht.",
+      en: "A job is missing from your board.",
     },
     resolution: {
       de: [
-        "Prüfe, ob für den Auftrag eine verifizierte und noch gültige Qualifikation erforderlich ist.",
-        "Bitte die zuständige Verwaltung um Prüfung des Nachweises; ändere keine Rollen zur Umgehung.",
+        "Prüfe, ob IT und Informatik, Business und Wirtschaft oder Sonstige Themen zum Auftrag passt.",
+        "Wähle den passenden Themenbereich im Profil.",
       ],
       en: [
-        "Check whether the job requires verified, unexpired qualifications.",
-        "Ask the responsible administrator to review the evidence; do not change roles to bypass eligibility.",
+        "Check whether the job belongs to IT and Computing, Business and Economics or Other Subjects.",
+        "Select the matching subject area in your profile.",
       ],
     },
     keywords: [
@@ -167,11 +167,11 @@ export const guideModules: GuideModule[] = [
     resolution: {
       de: [
         "Lade Auftrag und Kalender neu. Prüfe, ob bereits eine bestätigte Zuteilung vorliegt, bevor du erneut übernimmst.",
-        "Belegt: wähle einen anderen Auftrag. Konflikt: prüfe alle Termine. Fehlende Voraussetzung: kläre Qualifikation oder Vertrag. Offline ist keine Übernahme möglich.",
+        "Belegt: wähle einen anderen Auftrag. Konflikt: prüfe alle Termine. Fehlende Voraussetzung: prüfe Themenbereich und Vertrag. Offline ist keine Übernahme möglich.",
       ],
       en: [
         "Reload the job and calendar. Check for an existing confirmed assignment before claiming again.",
-        "Filled: choose another job. Conflict: review every session. Missing prerequisite: resolve qualifications or contract. Claims require an online connection.",
+        "Filled: choose another job. Conflict: review every session. Missing prerequisite: check the subject area and agreement. Claims require an online connection.",
       ],
     },
     keywords: [

@@ -147,6 +147,14 @@ function ProfileForm({ profile }: { profile: Profile }) {
   );
 }
 
+// Stable IDs seeded by the teaching subject areas migration.
+const teachingSubjects = new Set([
+  "fbb0c720-bcdf-4c96-aac4-16931325ba01",
+  "fbb0c720-bcdf-4c96-aac4-16931325ba02",
+  "fbb0c720-bcdf-4c96-aac4-16931325ba03",
+]);
+const isTeachingSubject = (id: string) => teachingSubjects.has(id);
+
 /** Combine own profile, expertise, evidence and avatar under the current session. */
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
@@ -181,8 +189,12 @@ export function ProfilePage() {
             .eq("topic_id", topic);
       if (result.error) throw result.error;
     },
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["expertise", session!.user.id] }),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["expertise", session!.user.id] }),
+        client.invalidateQueries({ queryKey: ["jobs"] }),
+      ]);
+    },
   });
   if (
     profile.isPending ||
@@ -256,30 +268,34 @@ export function ProfilePage() {
             {selectableTopics(
               topics.data ?? [],
               (expertise.data ?? []).map((entry) => entry.topic_id),
-            ).map((topic) => {
-              const selected = (expertise.data ?? []).find(
-                (e) => e.topic_id === topic.id,
-              );
-              return (
-                <label className="expertise-option" key={topic.id}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(selected)}
-                    disabled={!online || edit.isPending}
-                    onChange={(e) =>
-                      edit.mutate({ topic: topic.id, add: e.target.checked })
-                    }
-                  />
-                  <span>
-                    <strong>
-                      {i18n.language === "de" ? topic.label_de : topic.label_en}
-                      {topic.archived_at && <> ({t("taxonomy:archived")})</>}
-                    </strong>
-                    {selected && <small>{t("selfDeclaredExpertise")}</small>}
-                  </span>
-                </label>
-              );
-            })}
+            )
+              .sort(
+                (a, b) => Number(isTeachingSubject(b.id)) - Number(isTeachingSubject(a.id)),
+              )
+              .map((topic) => {
+                const selected = (expertise.data ?? []).find(
+                  (e) => e.topic_id === topic.id,
+                );
+                return (
+                  <label className="expertise-option" key={topic.id}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selected)}
+                      disabled={!online || edit.isPending}
+                      onChange={(e) =>
+                        edit.mutate({ topic: topic.id, add: e.target.checked })
+                      }
+                    />
+                    <span>
+                      <strong>
+                        {i18n.language === "de" ? topic.label_de : topic.label_en}
+                        {topic.archived_at && <> ({t("taxonomy:archived")})</>}
+                      </strong>
+                      {selected && <small>{t("selfDeclaredExpertise")}</small>}
+                    </span>
+                  </label>
+                );
+              })}
           </div>
           {edit.isError && <Notice kind="error">{t("error")}</Notice>}
         </section>

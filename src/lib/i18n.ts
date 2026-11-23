@@ -417,8 +417,8 @@ const pairs: Record<string, [string, string]> = {
     "At least one session overlaps with your calendar.",
   ],
   claim_not_eligible: [
-    "Trage die benötigten Themen in deiner Expertise ein. Eine zusätzliche Verifizierung ist nicht erforderlich.",
-    "Add the required topics to your expertise. No additional verification is required.",
+    "Wähle im Profil einen passenden Themenbereich für diesen Auftrag.",
+    "Choose a matching subject area for this job in your profile.",
   ],
   claim_prerequisite_missing: [
     "Ein gültiger Rahmenvertrag wird benötigt.",
@@ -503,8 +503,8 @@ const pairs: Record<string, [string, string]> = {
   phone: ["Telefon", "Phone"],
   saveProfile: ["Profil speichern", "Save profile"],
   expertiseHelp: [
-    "Wähle die Themen, die du unterrichten kannst. Deine Angaben gelten direkt für passende Aufträge; eine Bestätigung durch die Verwaltung ist nicht erforderlich.",
-    "Select the topics you can teach. Your declarations count immediately for matching jobs; no confirmation from management is required.",
+    "Wähle IT und Informatik, Business und Wirtschaft oder Sonstige Themen. Ein passender Themenbereich genügt für die Übernahme. Einzelne Fachthemen kannst du zusätzlich angeben.",
+    "Choose IT and Computing, Business and Economics or Other Subjects. One matching subject area is enough to claim a job. You can also list individual topics.",
   ],
   selfDeclaredExpertise: ["Als Expertise angegeben", "Declared expertise"],
   verified: ["Verifiziert", "Verified"],

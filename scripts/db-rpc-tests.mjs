@@ -207,6 +207,29 @@ try {
             (await rpc(users[51], await job({topic_ids: [topic]}))).status,
             "not_eligible",
         ));
+    await test("One self-declared subject area controls visibility and claims across detailed topics", async () => {
+        const business = "fbb0c720-bcdf-4c96-aac4-16931325ba02";
+        const it = "fbb0c720-bcdf-4c96-aac4-16931325ba01";
+        const [payroll, reporting] = [randomUUID(), randomUUID()];
+        await sql(`insert into public.topics(id,label_de,label_en,kind,parent_id) values
+          ('${payroll}','Testabrechnung','Test payroll','topic','${business}'),
+          ('${reporting}','Testberichte','Test reporting','topic','${payroll}');
+          insert into public.lecturer_topics(user_id,topic_id,verified) values
+          ('${users[51]}','${business}',false), ('${users[52]}','${it}',false);`);
+        const offer = await job({ topic_ids: [payroll, reporting], sessions: laterSessions(10) });
+        const visibility = (user) => as(user, `select count(*) from public.jobs where id='${offer}'`);
+        assert.equal(await visibility(users[51]), "1");
+        assert.equal(await visibility(users[52]), "0");
+        const run = await sql(`select course_run_id from public.jobs where id='${offer}'`);
+        await sql(`update public.course_runs set published=true where id='${run}'`);
+        const courseVisibility = (user) =>
+            as(user, `select count(*) from public.course_runs where id='${run}'`);
+        assert.equal(await courseVisibility(users[51]), "1");
+        assert.equal(await courseVisibility(users[52]), "0");
+        assert.equal((await rpc(users[52], offer)).status, "not_eligible");
+        assert.equal((await rpc(users[51], offer)).status, "confirmed");
+        assert.equal(await visibility(users[51]), "1");
+    });
     await test("Missing or expired executed contract rejected", async () => {
         const j = await job({requires_contract: true});
         assert.equal((await rpc(users[52], j)).status, "prerequisite_missing");
