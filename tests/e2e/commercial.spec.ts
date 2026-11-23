@@ -1162,3 +1162,527 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
         await financeContext.close();
     }
 }
+
+test("coordinated commercial amendment preserves the agreement through corrected delivery and settlement", async ({
+    page,
+    browser,
+}, testInfo) => {
+    test.setTimeout(180_000);
+    const lecturer = await account("lecturer", "amendment-teacher");
+    const colleague = await account("lecturer", "amendment-colleague");
+    const manager = await account("admin", "amendment-reviewer");
+    const managerContext = await browser.newContext(testInfo.project.use);
+    const colleagueContext = await browser.newContext(testInfo.project.use);
+    const review = await managerContext.newPage();
+    const other = await colleagueContext.newPage();
+    const backend = service();
+    const pdf = fictionalPdf();
+    const zone = "Europe/Berlin";
+    const originalTerms = "Fictional original commissioned terms.";
+    const newTerms = "Fictional approved scope for the rescheduled course.";
+    const correctReason = "Verified the actual shorter teaching duration.";
+
+    try {
+        await login(review, manager);
+        // Both independent lecturers need a genuinely scanned executed contract
+        // before claiming the same contract-restricted course.
+        for (const user of [lecturer, colleague]) {
+            await review.goto(`/contracts?user=${user.id}`);
+            await review
+                .getByRole("button", {
+                    name: "Ausgeführten Vertrag hinterlegen",
+                    exact: true,
+                })
+                .click();
+            const form = review.getByRole("dialog");
+            await expect(
+                form.getByLabel("Dozent:in", {exact: true}),
+            ).toHaveValue(user.id);
+            const fileName = `fictional-agreement-${user.id.slice(0, 8)}.pdf`;
+            await form
+                .getByLabel("Titel", {exact: true})
+                .fill(`Fictional agreement ${user.name}`);
+            await form
+                .getByLabel(/Gültig ab/)
+                .fill(
+                    DateTime.now()
+                        .minus({days: 7})
+                        .toFormat("yyyy-MM-dd'T'HH:mm"),
+                );
+            await form
+                .getByLabel("Ausgeführter Vertrag als PDF", {exact: true})
+                .setInputFiles({
+                    name: fileName,
+                    mimeType: "application/pdf",
+                    buffer: pdf,
+                });
+            await expect(form.getByText(/PDF geprüft und bereit/)).toBeVisible({
+                timeout: 45_000,
+            });
+            await form
+                .getByLabel("Hochgeladene Vertragsdatei")
+                .selectOption({label: fileName});
+            await form
+                .getByRole("button", {name: "Vertrag speichern", exact: true})
+                .click();
+            await expect(form).not.toBeVisible();
+        }
+        const contract = await backend
+            .from("contracts")
+            .select("id,document_sha256,document_version_id")
+            .eq("user_id", lecturer.id)
+            .single();
+        expect(contract.error).toBeNull();
+        expect(contract.data?.document_sha256).toBe(
+            createHash("sha256").update(pdf).digest("hex"),
+        );
+        await login(page, lecturer);
+        await page.goto("/contracts");
+        const agreement = page.locator("article").filter({
+            has: page.getByRole("heading", {
+                name: `Fictional agreement ${lecturer.name}`,
+                exact: true,
+            }),
+        });
+        const contractDownload = page.waitForEvent("download");
+        await agreement
+            .getByRole("button", {name: "Dokument herunterladen", exact: true})
+            .click();
+        expect(
+            await readFile((await (await contractDownload).path())!),
+        ).toEqual(pdf);
+
+        const company = randomUUID();
+        const course = randomUUID();
+        const template = randomUUID();
+        const courseSession = randomUUID();
+        const title = `Fictional coordinated amendment ${course.slice(0, 8)}`;
+        const starts = DateTime.now()
+            .setZone(zone)
+            .plus({days: 80})
+            .startOf("day")
+            .set({hour: 10});
+        const rescheduled = starts.plus({days: 2});
+        expect(
+            (
+                await backend.from("organisations").insert({
+                    id: company,
+                    name: `Fictional customer ${company.slice(0, 8)}`,
+                })
+            ).error,
+        ).toBeNull();
+        expect(
+            (
+                await backend
+                    .from("course_templates")
+                    .insert({id: template, title})
+            ).error,
+        ).toBeNull();
+        expect(
+            (
+                await backend.from("course_runs").insert({
+                    id: course,
+                    template_id: template,
+                    organisation_id: company,
+                    published: true,
+                    time_zone: zone,
+                })
+            ).error,
+        ).toBeNull();
+        expect(
+            (
+                await backend.from("course_sessions").insert({
+                    id: courseSession,
+                    course_run_id: course,
+                    starts_at: starts.toISO(),
+                    ends_at: starts.plus({hours: 1}).toISO(),
+                })
+            ).error,
+        ).toBeNull();
+        const managerApi = await actor(manager);
+        const teacherApi = await actor(lecturer);
+        const otherApi = await actor(colleague);
+        const defaults = await managerApi.rpc("course_run_job_defaults", {
+            p_course_run_id: course,
+        });
+        expect(defaults.error).toBeNull();
+        const offer = await managerApi.rpc("create_course_run_job", {
+            p_course_run_id: course,
+            p_platform_percent: null,
+            p_payload: {
+                source_revision: defaults.data.source_revision,
+                capacity: 2,
+                gross_amount: 400,
+                gross_total_amount: 400,
+                currency: "EUR",
+                rate_unit: "fixed_total",
+                status: "published",
+                terms: originalTerms,
+                requires_contract: true,
+            },
+            p_client_id: randomUUID(),
+        });
+        expect(offer.error).toBeNull();
+        async function claim(own: typeof teacherApi) {
+            const quote = await own.rpc("job_detail", {p_job_id: offer.data});
+            expect(quote.error).toBeNull();
+            const receipt = await own.rpc("claim_job", {
+                p_job_id: offer.data,
+                p_idempotency_key: randomUUID(),
+                p_terms_version: quote.data.terms_version,
+            });
+            expect(receipt.error).toBeNull();
+            expect(receipt.data.status).toBe("confirmed");
+            return receipt.data.claim_id as string;
+        }
+        const primary = await claim(teacherApi);
+        const companion = await claim(otherApi);
+        const originals = () =>
+            backend
+                .from("job_claims")
+                .select(
+                    "id,amount,total_amount,currency,terms,terms_version,contract_id",
+                )
+                .in("id", [primary, companion])
+                .order("id");
+        const original = await originals();
+        expect(original.error).toBeNull();
+        const ownAccepted = original.data?.find(({id}) => id === primary);
+        expect(ownAccepted?.contract_id).toBe(contract.data?.id);
+        expect(ownAccepted?.terms).toBe(originalTerms);
+        // Lower the net by a known amount while preserving the original charge and unit.
+        const amendedAmount = Number(ownAccepted?.total_amount) - 12.5;
+        expect(amendedAmount).toBeGreaterThan(0);
+
+        await review.goto("/changes");
+        await review
+            .getByRole("button", {
+                name: "Änderungsantrag erstellen",
+                exact: true,
+            })
+            .click();
+        const proposal = review.getByRole("dialog");
+        await proposal
+            .getByLabel("Bestätigter Auftrag", {exact: true})
+            .selectOption(primary);
+        await expect(
+            proposal.getByText(/Bedingungen und Vergütung gelten nur/),
+        ).toBeVisible();
+        await proposal
+            .getByLabel("Begründung", {exact: true})
+            .fill(
+                "Fictional staffing and compensation review for both allocations.",
+            );
+        await proposal
+            .getByLabel("Auftragsbedingungen", {exact: true})
+            .fill(newTerms);
+        await proposal
+            .getByLabel("Vergütung pro Einheit", {exact: true})
+            .fill(amendedAmount.toFixed(2));
+        await proposal
+            .getByLabel("Gesamte Vergütung", {exact: true})
+            .fill(amendedAmount.toFixed(2));
+        await proposal
+            .getByLabel("Beginn 1", {exact: true})
+            .fill(rescheduled.toFormat("yyyy-MM-dd'T'HH:mm"));
+        await proposal
+            .getByLabel("Ende 1", {exact: true})
+            .fill(rescheduled.plus({hours: 1}).toFormat("yyyy-MM-dd'T'HH:mm"));
+        await proposal
+            .getByRole("button", {
+                name: "Entwurf online speichern",
+                exact: true,
+            })
+            .click();
+        await expect(review).toHaveURL(/\/changes\/[0-9a-f-]+$/);
+        const target = review.url();
+        await review
+            .getByRole("button", {
+                name: "Zur Zustimmung einreichen",
+                exact: true,
+            })
+            .click();
+        await expect(
+            review.getByRole("status").filter({hasText: "0 von 2"}),
+        ).toBeVisible();
+        const requests = await managerApi.rpc("assignment_changes", {
+            p_id: null,
+        });
+        expect(requests.error).toBeNull();
+        const sibling = requests.data.find(
+            ({claim_id}: {claim_id: string}) => claim_id === companion,
+        );
+        expect(sibling).toBeDefined();
+        const companionUrl = "/changes/" + sibling.id;
+        const consent = async (at: Page, granted: number) => {
+            await at
+                .getByRole("checkbox", {name: /^Ich habe Original/})
+                .check();
+            await at
+                .getByRole("button", {
+                    name: "Dieser Änderung zustimmen",
+                    exact: true,
+                })
+                .click();
+            await expect(
+                at
+                    .locator(".changes-decisions")
+                    .getByText("Erteilt", {exact: true}),
+            ).toHaveCount(granted);
+        };
+        await consent(review, 1);
+        await review.goto(companionUrl);
+        await consent(review, 1);
+        await page.goto(target);
+        await expect(
+            page.getByText(originalTerms, {exact: true}),
+        ).toBeVisible();
+        await expect(page.getByText(newTerms, {exact: true})).toBeVisible();
+        await consent(page, 2);
+        await review.goto(target);
+        await expect(
+            review.getByRole("status").filter({hasText: "1 von 2"}),
+        ).toBeVisible();
+        const apply = review.getByRole("button", {
+            name: "Angenommene Änderung anwenden",
+            exact: true,
+        });
+        await expect(apply).toHaveCount(0);
+        await login(other, colleague);
+        await other.goto(companionUrl);
+        await expect(other.getByText(newTerms, {exact: true})).toHaveCount(0);
+        await consent(other, 2);
+        await review.reload();
+        await expect(
+            review.getByRole("status").filter({hasText: "2 von 2"}),
+        ).toBeVisible();
+        await apply.click();
+        await expect(
+            review
+                .getByRole("status")
+                .filter({hasText: "wurden gemeinsam angewendet"}),
+        ).toBeVisible();
+        expect((await originals()).data).toEqual(original.data);
+        const moved = await backend
+            .from("course_sessions")
+            .select("starts_at,ends_at")
+            .eq("course_run_id", course)
+            .single();
+        expect(moved.error).toBeNull();
+        expect(Date.parse(moved.data!.starts_at)).toBe(rescheduled.toMillis());
+
+        // Advance only the disposable schedule fixtures past the completed
+        // appointment before submitting evidence or a payable invoice.
+        const deliveredAt = DateTime.now()
+            .setZone(zone)
+            .minus({days: 2})
+            .startOf("day")
+            .set({hour: 10});
+        const delivered = {
+            starts_at: deliveredAt.toISO(),
+            ends_at: deliveredAt.plus({hours: 1}).toISO(),
+        };
+        expect(
+            (
+                await backend
+                    .from("course_sessions")
+                    .update(delivered)
+                    .eq("course_run_id", course)
+            ).error,
+        ).toBeNull();
+        expect(
+            (
+                await backend
+                    .from("job_sessions")
+                    .update(delivered)
+                    .eq("job_id", offer.data)
+            ).error,
+        ).toBeNull();
+        const active = await backend
+            .from("assignment_sessions")
+            .update(delivered)
+            .eq("claim_id", primary)
+            .is("released_at", null)
+            .select("id")
+            .single();
+        expect(active.error).toBeNull();
+        const session = active.data!.id;
+        const deliveryUrl = "/delivery?session=" + session;
+        await page.goto(deliveryUrl);
+        await page
+            .getByLabel("Erbrachte Leistung", {exact: true})
+            .selectOption("completed");
+        await page
+            .getByLabel("Tatsächlicher Beginn", {exact: true})
+            .fill(deliveredAt.toFormat("yyyy-MM-dd'T'HH:mm"));
+        await page
+            .getByLabel("Tatsächliches Ende", {exact: true})
+            .fill(deliveredAt.plus({hours: 1}).toFormat("yyyy-MM-dd'T'HH:mm"));
+        await page
+            .getByLabel("Notizen zum Unterricht", {exact: true})
+            .fill("Fictional original evidence for the amended assignment.");
+        await page
+            .getByRole("button", {name: "Entwurf speichern", exact: true})
+            .click();
+        const submitEvidence = page.getByRole("button", {
+            name: "Gespeicherten Nachweis einreichen",
+            exact: true,
+        });
+        await submitEvidence.click();
+        await expect(page.getByText(/^Version 1/)).toBeVisible();
+        await review.goto(deliveryUrl);
+        await review
+            .getByLabel("Begründung für die Prüfung", {exact: true})
+            .fill("Check the actual teaching duration.");
+        await review
+            .getByRole("button", {name: "Korrektur anfragen", exact: true})
+            .click();
+        await expect(
+            review.getByText(
+                "Der Server hat den Leistungsnachweis aktualisiert.",
+                {exact: true},
+            ),
+        ).toBeVisible();
+        await page.reload();
+        await page
+            .getByLabel("Tatsächliches Ende", {exact: true})
+            .fill(
+                deliveredAt.plus({minutes: 45}).toFormat("yyyy-MM-dd'T'HH:mm"),
+            );
+        await page
+            .getByLabel("Begründung der Korrektur", {exact: true})
+            .fill(correctReason);
+        await page
+            .getByRole("button", {name: "Entwurf speichern", exact: true})
+            .click();
+        await submitEvidence.click();
+        await expect(page.getByText(/^Version 2/)).toBeVisible();
+        await review.reload();
+        await review
+            .getByRole("button", {name: "Nachweis bestätigen", exact: true})
+            .click();
+        await expect(
+            review.getByText(
+                "Der Server hat den Leistungsnachweis aktualisiert.",
+                {exact: true},
+            ),
+        ).toBeVisible();
+        const evidence = await teacherApi.rpc("delivery_history", {
+            p_session_id: session,
+        });
+        expect(evidence.error).toBeNull();
+        const submissions = evidence.data.submissions;
+        expect(
+            submissions.map(({revision}: {revision: number}) => revision),
+        ).toEqual([2, 1]);
+        expect(Date.parse(submissions[0].actual_end)).toBe(
+            deliveredAt.plus({minutes: 45}).toMillis(),
+        );
+        expect(Date.parse(submissions[1].actual_end)).toBe(
+            deliveredAt.plus({hours: 1}).toMillis(),
+        );
+        expect(submissions[0].correction_reason).toBe(correctReason);
+        expect(
+            evidence.data.events.find(
+                ({action}: {action: string}) => action === "confirmed",
+            )?.submission_id,
+        ).toBe(evidence.data.submissions[0].id);
+
+        await page.goto("/finance");
+        await page
+            .getByRole("button", {name: "Rechnung einreichen", exact: true})
+            .click();
+        const form = page.getByRole("dialog");
+        const invoiceNumber = `QA-AMENDMENT-${course.slice(0, 8)}`;
+        await form
+            .getByLabel("Rechnungsnummer", {exact: true})
+            .fill(invoiceNumber);
+        await form.getByRole("checkbox", {name: new RegExp(title)}).check();
+        await form.getByLabel("Rechnung als PDF", {exact: true}).setInputFiles({
+            name: "fictional-amended-invoice.pdf",
+            mimeType: "application/pdf",
+            buffer: pdf,
+        });
+        await expect(form.getByText(/PDF geprüft und bereit/)).toBeVisible({
+            timeout: 45_000,
+        });
+        await form
+            .getByRole("button", {name: "Rechnung einreichen", exact: true})
+            .click();
+        await expect(form).not.toBeVisible();
+        await review.goto("/finance");
+        await review
+            .getByLabel("Alle Dozierenden anzeigen", {exact: true})
+            .check();
+        const bill = review.locator("article").filter({
+            has: review.getByRole("heading", {
+                name: invoiceNumber,
+                exact: true,
+            }),
+        });
+        await bill
+            .getByRole("button", {name: "Rechnung prüfen", exact: true})
+            .click();
+        const decision = review.getByRole("dialog");
+        await decision
+            .getByLabel("Notiz zur Prüfung", {exact: true})
+            .fill(
+                "Fictional approval of the accepted amendment and corrected evidence.",
+            );
+        await decision
+            .getByRole("button", {name: "Rechnung freigeben", exact: true})
+            .click();
+        await expect(decision).not.toBeVisible();
+        await bill
+            .getByRole("button", {name: "Zahlung eintragen", exact: true})
+            .click();
+        await expect(
+            decision.getByLabel("Zahlungsbetrag (EUR)", {exact: true}),
+        ).toHaveValue(amendedAmount.toFixed(2));
+        await decision
+            .getByRole("button", {name: "Zahlung speichern", exact: true})
+            .click();
+        await expect(
+            bill.locator(".commercial-status-paid", {hasText: /^Bezahlt$/}),
+        ).toBeVisible();
+        const records = await teacherApi.rpc("invoice_records", {p_all: false});
+        expect(records.error).toBeNull();
+        const settled = records.data.find(
+            ({number}: {number: string}) => number === invoiceNumber,
+        );
+        expect(settled).toMatchObject({
+            status: "paid",
+            claim_ids: [primary],
+            currency: "EUR",
+        });
+        expect(Number(settled.total_amount)).toBe(amendedAmount);
+        expect(Number(settled.paid_amount)).toBe(amendedAmount);
+        const invoiceItem = await teacherApi
+            .from("invoice_items")
+            .select("claim_id,amendment_id")
+            .eq("invoice_id", settled.id)
+            .single();
+        expect(invoiceItem.error).toBeNull();
+        expect(invoiceItem.data).toEqual({
+            claim_id: primary,
+            amendment_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        });
+        const unrelatedInvoice = await otherApi.rpc("invoice_records", {
+            p_all: false,
+        });
+        expect(unrelatedInvoice.error).toBeNull();
+        expect(unrelatedInvoice.data).not.toContainEqual(
+            expect.objectContaining({id: settled.id}),
+        );
+        expect((await originals()).data).toEqual(original.data);
+        const retained = await backend
+            .from("contracts")
+            .select("id,document_sha256,document_version_id")
+            .eq("id", contract.data!.id)
+            .single();
+        expect(retained.error).toBeNull();
+        expect(retained.data).toEqual(contract.data);
+    } finally {
+        await Promise.all([managerContext.close(), colleagueContext.close()]);
+    }
+});

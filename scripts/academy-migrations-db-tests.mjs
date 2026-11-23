@@ -3,9 +3,11 @@ import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   configureAcademyCourseAccess,
   prepareAcademyInstallation,
+  readAcademyInstallationStatus,
 } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import {
+  academyMigrationInventory,
   academyMigrationsScript,
   loadAcademyMigrations,
 } from "./academy-migrations.mjs";
@@ -30,7 +32,7 @@ await withTestDatabase(
       version: "20700101000002",
       name: "fictional_upgrade",
       source:
-        "begin; alter table public.fictional_academy add column active boolean not null default true; commit;\n",
+        "begin; alter table public.fictional_academy add column active boolean not null default true; select false; commit;\n",
     };
     const apply = (...migrations) =>
       sql(academyMigrationsScript({ installationId, edition, migrations }));
@@ -109,6 +111,8 @@ await withTestDatabase(
 
 const installedRelease = "ef8a724fb0b8c71897cc7e22470bfad6bd2cf75f";
 const ledger = await loadAcademyMigrations();
+const legacy = ledger.find(({ version }) => version === "20261123021230");
+assert.ok(legacy);
 const baseline = ledger.filter(({ version }) => version <= "20261122030050");
 const sha256 = (source) => createHash("sha256").update(source).digest("hex");
 assert.equal(baseline.length, 259);
@@ -161,6 +165,15 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
             last_version: migrations.at(-1).version,
           });
         });
+      assert.throws(
+        () =>
+          academyMigrationsScript({
+            installationId,
+            edition,
+            migrations: [{ ...legacy, source: legacy.source + "\n-- changed" }],
+          }),
+        /academy_migration_source/,
+      );
       await apply(baseline);
 
       const now = Date.now();
@@ -293,8 +306,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       await assert.rejects(history(learner), /42501/);
       await assert.rejects(file(learner), /42501/);
       await apply(ledger);
+      assert.equal(
+        await sql(
+          `select encode(sha256(convert_to(statements[1], 'UTF8')), 'hex')
+           from supabase_migrations.schema_migrations where version = ${q(legacy.version)}`,
+        ),
+        sha256(legacy.source),
+      );
       await prepareAcademyInstallation(candidate, sql);
       await setAccess(candidate, true);
+      const status = await readAcademyInstallationStatus(
+        { ...candidate, operationalInventory: true },
+        sql,
+      );
+      assert.deepEqual(
+        status.migration_ledger,
+        academyMigrationInventory(ledger),
+      );
+      assert.deepEqual(status.quota_usage, {
+        occupied_seats: 3,
+        used_storage_bytes: 27,
+      });
       assert.deepEqual(await readRetained(), before);
       assert.equal(await submit(), message);
       await apply(ledger);

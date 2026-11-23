@@ -11,7 +11,26 @@ import {join} from "node:path";
 import {createServer} from "node:net";
 import {setTimeout as delay} from "node:timers/promises";
 import test from "node:test";
-import {acquireTestLock, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
+import {acquireTestLock, allocateTestServicePorts, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
+
+test("assigns distinct loopback service ports without editing fixed app settings or comments", async () => {
+    const source = [
+        "port = 54321",
+        "port = 54322   # database",
+        "shadow_port = 54320",
+        "inspector_port = 54327",
+        "# port = 54324",
+        'site_url = "http://127.0.0.1:5273"',
+    ].join("\n");
+    const config = await allocateTestServicePorts(source);
+    const matches = [...config.matchAll(/^(?:port|shadow_port|inspector_port) = (\d+)/gm)];
+    const ports = matches.map((match) => Number(match[1]));
+    assert.equal(new Set(ports).size, 4);
+    await assertTestPortsAvailable(ports);
+    assert.match(config, /# database/);
+    assert.match(config, /# port = 54324/);
+    assert.match(config, /127\.0\.0\.1:5273/);
+});
 
 test("a legacy occupied port fails before startup and its existing listener survives", async () => {
     const listener = createServer();

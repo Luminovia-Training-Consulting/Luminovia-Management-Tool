@@ -13,6 +13,11 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { monitorAcademy } from "./academy-health.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
+import {
+  academyMigrationInventory,
+  loadAcademyMigrations,
+} from "./academy-migrations.mjs";
+const currentLedger = academyMigrationInventory(await loadAcademyMigrations());
 import { initializeAcademyRuntime } from "./academy-runtime-config.mjs";
 
 const now = Date.parse("2026-11-22T05:00:00.000Z");
@@ -132,7 +137,8 @@ function setup(t, changes = {}) {
     release_commit: target.release_commit,
     licence_status: "active",
     course_access_status: "active",
-    migration_ledger: { count: 12, last_version: "20261122017300" },
+    migration_ledger: { ...currentLedger },
+    quota_usage: { occupied_seats: 4, used_storage_bytes: 27182 },
     forbidden_payload: "fictional proprietary database content",
   };
   let scanner = `ClamAV 1.4.3/12345/${new Date(now - hour).toUTCString()}`;
@@ -226,6 +232,11 @@ test("licensed dedicated self-hosted and managed reports are exact, read-only an
     assert.equal(report.services.storage, "healthy");
     assert.equal(report.services.web, "running");
     assert.equal(report.database.course_access, "active");
+    assert.deepEqual(report.quotas, {
+      seats: { state: "available", used: 4, limit: 9 },
+      storage: { state: "available", used: 27182, limit: 100_000 },
+      api_requests_per_minute: 80,
+    });
     assert.equal(report.scanner, "fresh");
     assert.deepEqual(report.backup, {
       state: "fresh",
@@ -237,6 +248,28 @@ test("licensed dedicated self-hosted and managed reports are exact, read-only an
       /never output me|proprietary|example\.invalid|private runtime|\/tmp|opaque-fixture/,
     );
   }
+});
+
+test("capacity thresholds and altered migration bytes produce observable degradation", async (t) => {
+  const fixture = setup(t);
+  fixture.db.quota_usage = { occupied_seats: 9, used_storage_bytes: 100_001 };
+  let report = await fixture.monitor();
+  assert.deepEqual(report.quotas, {
+    seats: { state: "at_capacity", used: 9, limit: 9 },
+    storage: { state: "over_capacity", used: 100_001, limit: 100_000 },
+    api_requests_per_minute: 80,
+  });
+  assert.equal(report.status, "degraded");
+
+  fixture.db.quota_usage = { occupied_seats: 4, used_storage_bytes: 27182 };
+  fixture.db.migration_ledger.sha256 = "0".repeat(64);
+  report = await fixture.monitor();
+  assert.equal(report.database.state, "ledger_mismatch");
+  assert.deepEqual(report.database.migration_ledger, {
+    count: currentLedger.count,
+    last_version: currentLedger.last_version,
+  });
+  assert.equal(report.status, "degraded");
 });
 
 test("mismatched mounts or published backend ports degrade health without probing a foreign database", async (t) => {

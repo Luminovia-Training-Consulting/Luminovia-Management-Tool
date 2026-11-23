@@ -31,6 +31,31 @@ export async function assertTestPortsAvailable(
     }
 }
 
+/** Reassign only active Supabase port declarations in a disposable snapshot. */
+export async function allocateTestServicePorts(config) {
+    const declarations = /^(port|shadow_port|inspector_port)\s*=\s*(\d+)([ \t]*(?:#.*)?)$/gm;
+    const numbers = [...new Set([...config.matchAll(declarations)].map((match) => match[2]))];
+    if (!numbers.length) throw new Error("No Supabase test ports were declared.");
+    const held = [];
+    try {
+        const replacements = new Map();
+        for (const port of numbers) {
+            const server = createServer();
+            held.push(server);
+            const allocated = await new Promise((resolve, reject) => {
+                server.once("error", reject);
+                server.listen(0, "127.0.0.1", () => resolve(server.address().port));
+            });
+            replacements.set(port, allocated);
+        }
+        return config.replace(declarations, (_, key, port, suffix) =>
+            `${key} = ${replacements.get(port)}${suffix}`,
+        );
+    } finally {
+        await Promise.all(held.map((server) => new Promise((resolve) => server.close(resolve))));
+    }
+}
+
 /** All checkouts share fixed loopback QA ports, so the owning lock must span
  * worktrees. The kernel owns its lifetime: stale PID metadata cannot retain or
  * steal it, and SIGKILL releases it without a racy lock-directory deletion. */

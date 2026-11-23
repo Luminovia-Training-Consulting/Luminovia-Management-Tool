@@ -49,16 +49,34 @@ export async function withApiFixture(run) {
         url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
         "Loopback API required.",
     );
-    assert.equal(
-        new URL(url).port,
-        "55321",
-        "Dedicated canonical API port required.",
-    );
     const recoveryEndpoints = {
         appOrigin: "http://127.0.0.1:5273",
         mailpitOrigin: "http://127.0.0.1:55324",
         confirmationUrl: new URL("/auth/v1/verify", url).href,
     };
+    if (process.env.PORTAL_TEST_RANDOM_SERVICE_PORTS === "1") {
+        assert.match(project, /^luminovia-portal-test-[a-f0-9]{8}$/);
+        const {command, projectConfig} = await import("../runtime-lib.mjs");
+        const {api, mail, site} = projectConfig(process.cwd());
+        assert.equal(site, recoveryEndpoints.appOrigin);
+        assert.equal(url, `http://127.0.0.1:${api}`);
+        assert.ok(Number.isInteger(mail) && mail > 0 && mail <= 65535);
+        const gateway = `supabase_kong_${project}`;
+        const bound = await command("docker", ["port", gateway, "8000/tcp"], {quiet: true});
+        assert.equal(bound.trim(), `127.0.0.1:${api}`,
+            "The API port must belong to the disposable project gateway.");
+        const mailpit = `supabase_inbucket_${project}`;
+        const mailPorts = await command("docker", ["port", mailpit], {quiet: true});
+        assert.ok(mailPorts.split("\n").some((line) => line.endsWith(` -> 127.0.0.1:${mail}`)),
+            "The mail port must belong to the disposable project.");
+        recoveryEndpoints.mailpitOrigin = `http://127.0.0.1:${mail}`;
+    } else {
+        assert.equal(
+            new URL(url).port,
+            "55321",
+            "Dedicated canonical API port required.",
+        );
+    }
     /** Creates a separate SDK client without persistent sessions or automatic session refresh. */
     const make = (key) =>
         createClient(url, key, {

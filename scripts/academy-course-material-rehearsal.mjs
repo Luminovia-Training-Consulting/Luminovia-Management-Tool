@@ -29,11 +29,16 @@ import {
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 
 const allEditions = ["customer-self-hosted", "customer-managed"];
-const requested = process.argv.slice(2);
+const args = process.argv.slice(2);
+const checkSwagger = args.includes("--swagger");
+const checkAuthMail = args.includes("--auth-mail");
+const requested = args.filter(
+  (arg) => arg !== "--swagger" && arg !== "--auth-mail",
+);
 assert.ok(
   requested.length <= 1 &&
     requested.every((edition) => allEditions.includes(edition)),
-  "Usage: node scripts/academy-course-material-rehearsal.mjs [customer-self-hosted|customer-managed]",
+  "Usage: node scripts/academy-course-material-rehearsal.mjs [--swagger] [--auth-mail] [customer-self-hosted|customer-managed]",
 );
 const editions = requested.length ? requested : allEditions;
 const release = (
@@ -75,7 +80,11 @@ async function localConfig(project) {
       await once(server, "listening");
       assignments.set(port, server.address().port);
     }
-    const config = source
+    let config = (
+      checkSwagger
+        ? source.replace(/^jwt_expiry\s*=.*$/m, "jwt_expiry = 30")
+        : source
+    )
       .replace(/^project_id\s*=.*$/m, `project_id = "${project}"`)
       .replace(
         /^(port|shadow_port|inspector_port)\s*=\s*(\d+)$/gm,
@@ -85,6 +94,29 @@ async function localConfig(project) {
         /(127\.0\.0\.1:)\d+/g,
         (value, prefix) => prefix + assignments.get(value.slice(prefix.length)),
       );
+    if (checkAuthMail) {
+      const academyCompose = readFileSync(
+        join(root, "deploy/academy/compose.override.yml"),
+        "utf8",
+      );
+      for (const event of ["invite", "recovery"]) {
+        const subject = new RegExp(
+          `^\\s*GOTRUE_MAILER_SUBJECTS_${event.toUpperCase()}: "([^"\\r\\n]+)"$`,
+          "m",
+        ).exec(academyCompose)?.[1];
+        const setting = new RegExp(
+          `(\\[auth\\.email\\.template\\.${event}\\]\\nsubject = )"[^"\\n]+"`,
+        );
+        assert.ok(
+          subject && setting.test(config),
+          "The Academy capture subjects are missing.",
+        );
+        config = config.replace(
+          setting,
+          (_, key) => key + JSON.stringify(subject),
+        );
+      }
+    }
     const api = /^\[api\][\s\S]*?^port\s*=\s*(\d+)$/m.exec(config)?.[1];
     const origin = /^site_url\s*=\s*"(http:\/\/127\.0\.0\.1:\d+)"$/m.exec(
       config,
@@ -176,14 +208,14 @@ for (const edition of editions) {
     const edgeEnv = join(directory, "edge.env");
     privateWrite(
       edgeEnv,
-      `PORTAL_CLAMAV_HOST=portal_scanner_${project}\nPORTAL_CLAMAV_PORT=3310\nPORTAL_ALLOWED_ORIGINS=${origin}\nPORTAL_APP_ORIGIN=${origin}\n`,
+      `PORTAL_CLAMAV_HOST=portal_scanner_${project}\nPORTAL_CLAMAV_PORT=3310\nPORTAL_ALLOWED_ORIGINS=${origin}\nPORTAL_APP_ORIGIN=${origin}\n${checkAuthMail ? "PORTAL_INVITES_ENABLED=true\n" : ""}`,
     );
     edge = run(
       cli,
       ["functions", "serve", "--network-id", network, "--env-file", edgeEnv],
       {
         signal: AbortSignal.any([cancellation.signal, edgeStop.signal]),
-        timeoutMs: 240_000,
+        timeoutMs: checkSwagger ? 360_000 : 240_000,
       },
     ).then(
       () => new Error("The isolated Edge worker exited early."),
@@ -201,9 +233,29 @@ for (const edition of editions) {
       edition,
       release,
     ]);
+    const authMail = checkAuthMail
+      ? JSON.parse(
+          await run(
+            process.execPath,
+            [join(root, "scripts/testing/academy-auth-delivery-check.mjs")],
+            { timeoutMs: 90_000 },
+          ),
+        )
+      : undefined;
+    const swagger = checkSwagger
+      ? JSON.parse(
+          await run(
+            process.execPath,
+            [join(root, "scripts/academy-swagger-http-check.mjs"), edition],
+            { timeoutMs: 180_000 },
+          ),
+        )
+      : undefined;
     console.log(
       JSON.stringify({
         ...JSON.parse(receipt),
+        ...(swagger && { swagger }),
+        ...(authMail && { auth_mail: authMail }),
         evidence: "isolated-local",
         working_tree_modified: workingTreeModified,
       }),

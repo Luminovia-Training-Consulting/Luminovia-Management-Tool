@@ -48,8 +48,10 @@ for (const edition of [
       requestOnlyJob,
       unlinkedJob,
       chatRoom,
+      courseChatRoom,
+      loungeRoom,
       requestId,
-    ] = Array.from({ length: 21 }, randomUUID);
+    ] = Array.from({ length: 23 }, randomUUID);
     const academy = edition !== "internal";
     const docs = academy
       ? academyCompanyLecturerBlockPaths
@@ -109,7 +111,7 @@ for (const edition of [
       JSON.parse(
         await actor(
           who,
-          `${gate(name, method)} select public.${name}(${args});`,
+          `${gate(name, method)} select to_jsonb(public.${name}(${args}));`,
         ),
       );
     const readBlocks = (who, company = org, search = "") =>
@@ -182,6 +184,15 @@ for (const edition of [
         insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
         values(${q(originalClaim)},${q(teacher)},${q(date(6))},${q(date(6.1))});
         insert into public.chat_rooms(id,job_id) values(${q(chatRoom)},${q(job)});
+        insert into public.chat_rooms(id,kind,owner_id,course_run_id)
+        values(${q(courseChatRoom)},'participant_course',${q(staff)},${q(course)});
+        insert into public.chat_members(room_id,user_id) values(${q(courseChatRoom)},${q(teacher)})
+        on conflict do nothing;
+        insert into public.chat_rooms(id,kind) values(${q(loungeRoom)},'general')
+        on conflict do nothing;
+        insert into public.chat_members(room_id,user_id)
+        select id,${q(teacher)} from public.chat_rooms where kind='general'
+        on conflict do nothing;
         update public.chat_members set removed_at=null where room_id=${q(chatRoom)} and user_id=${q(teacher)};
         insert into public.chat_members(room_id,user_id) values(${q(chatRoom)},${q(teacher)}) on conflict do nothing;
       `);
@@ -240,6 +251,27 @@ for (const edition of [
       true,
     );
 
+    const group = academy
+      ? await call(staff, "academy_ensure_course_chat", q(course))
+      : courseChatRoom;
+    const sendCourseMessage = () =>
+      call(
+        teacher,
+        "send_course_chat_message",
+        [group, "Fictional protected course message", randomUUID()]
+          .map(q)
+          .join(","),
+      );
+    const ownHistory = () => call(teacher, "course_chat_messages", q(group));
+    const originalMessage = await sendCourseMessage();
+    assert.ok((await ownHistory()).some(({ id }) => id === originalMessage));
+    const activityCount = () =>
+      actor(
+        teacher,
+        `select count(*) from public.course_chat_activity where room_id=${q(group)};`,
+      );
+    assert.equal(await activityCount(), "1");
+
     const repetitions = await Promise.all(
       Array.from({ length: 5 }, () => setBlock(contact, true, 0)),
     );
@@ -260,6 +292,9 @@ for (const edition of [
       "confirmed",
     );
     await assert.rejects(call(teacher, "course_workspace", q(course)), /42501/);
+    await assert.rejects(ownHistory(), /42501/);
+    await assert.rejects(sendCourseMessage(), /42501/);
+    assert.equal(await activityCount(), "0");
     assert.equal(
       (await call(teacher, "my_course_workspaces")).some(
         (item) => item.id === course,
@@ -282,6 +317,17 @@ for (const edition of [
     const combined = await call(teacher, "course_workspace", q(course));
     assert.equal(combined.access.client, true);
     assert.equal(combined.access.teacher, false);
+    if (!academy) {
+      assert.ok((await ownHistory()).some(({ id }) => id === originalMessage));
+      assert.equal(await activityCount(), "1");
+      assert.equal(
+        await actor(
+          teacher,
+          "select count(*) from public.chat_rooms where kind='general';",
+        ),
+        "1",
+      );
+    }
     await sql(`update public.client_organisation_memberships set removed_at=clock_timestamp()
       where user_id=${q(teacher)} and organisation_id=${q(org)};`);
     await assert.rejects(call(teacher, "course_workspace", q(course)), /42501/);
@@ -410,6 +456,9 @@ for (const edition of [
       (await call(teacher, "course_workspace", q(course))).access.teacher,
       true,
     );
+    assert.ok((await ownHistory()).some(({ id }) => id === originalMessage));
+    assert.equal(await activityCount(), "1");
+    assert.ok(await sendCourseMessage());
     assert.equal(
       await sql(
         "select count(*) from public.audit_events where action='company.lecturer_unblocked'",

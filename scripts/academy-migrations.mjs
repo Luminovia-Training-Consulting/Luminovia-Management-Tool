@@ -1,6 +1,7 @@
 /** Apply the signed release's migrations inside one isolated psql session. */
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
+import { migrationTransaction } from "./migration-transaction.mjs";
 
 const filenamePattern = /^(\d{14})_([a-z0-9_]+)\.sql$/;
 const committed = /commit;\s*$/i;
@@ -22,6 +23,19 @@ export async function loadAcademyMigrations() {
   );
 }
 
+/** Match the monitor's ordered, byte-exact ledger aggregate without exposing SQL. */
+export function academyMigrationInventory(migrations) {
+  const entries = migrations.map(
+    ({ version, source }) =>
+      version + ":" + createHash("sha256").update(source).digest("hex"),
+  );
+  return {
+    count: entries.length,
+    last_version: migrations.at(-1).version,
+    sha256: createHash("sha256").update(entries.join("\n")).digest("hex"),
+  };
+}
+
 export function academyMigrationsScript({
   installationId,
   edition,
@@ -37,24 +51,21 @@ export function academyMigrationsScript({
   const updates = [];
   let previous = "";
   for (const { version, name, source } of migrations) {
+    const filename = version + "_" + name + ".sql";
     const marker = "$academy_" + version + "$";
+    const digest = createHash("sha256").update(source).digest("hex");
+    const command = migrationTransaction(filename, source);
     if (
-      !filenamePattern.test(version + "_" + name + ".sql") ||
+      !filenamePattern.test(filename) ||
       previous >= version ||
-      !/^\s*(?:--[^\n]*\n\s*)*begin;/i.test(source) ||
-      !committed.test(source) ||
+      !/^\s*(?:--[^\n]*\n\s*)*begin;/i.test(command) ||
+      !committed.test(command) ||
       source.includes(marker) ||
       /^\s*\\/m.test(source)
     )
       throw new Error("academy_migration_source");
     previous = version;
-    expected.push(
-      "(" +
-        quote(version) +
-        "," +
-        quote(createHash("sha256").update(source).digest("hex")) +
-        ")",
-    );
+    expected.push("(" + quote(version) + "," + quote(digest) + ")");
     const recorded =
       "insert into supabase_migrations.schema_migrations(version,name,statements) values (" +
       quote(version) +
@@ -70,7 +81,7 @@ export function academyMigrationsScript({
         quote(version) +
         ") as academy_migration_pending \\gset\n" +
         "\\if :academy_migration_pending\n" +
-        source.replace(committed, () => recorded + "commit;\n") +
+        command.replace(committed, () => recorded + "commit;\n") +
         "\\endif\n",
     );
   }
@@ -135,7 +146,11 @@ begin
   end if;
 end
 $academy_migration_ledger$;
+-- A released migration can return its own status row. Keep the operator's
+-- machine receipt as the only query output while preserving PostgreSQL errors.
+\\o /dev/null
 ${updates.join("\n")}
+\\o
 notify pgrst, 'reload schema';
 select json_build_object('migration_count', count(*), 'last_version', max(version))
 from supabase_migrations.schema_migrations;

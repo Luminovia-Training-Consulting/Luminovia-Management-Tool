@@ -12,6 +12,7 @@ import {dirname, isAbsolute, join, relative, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createConfiguration, writeConfiguration,} from "../selfhost/generate-env.mjs";
 import {assertLocalDocker, cleanEnvironment,} from "../../../scripts/runtime-lib.mjs";
+import {migrationTransaction} from "../../../scripts/migration-transaction.mjs";
 
 export const ownershipLabel = "org.luminovia.candidate";
 const root = resolve(import.meta.dirname, "../../..");
@@ -249,10 +250,7 @@ export function migrationWithHistory(filename, source) {
     assert.match(filename, /^\d{14}_[a-z0-9_]+\.sql$/);
     // This released function replacement predates the explicit transaction envelope.
     // Keep the original bytes in the ledger and wrap only the pinned SQL.
-    const command = filename === "20261123021230_job_material_archiving.sql" &&
-        hash(source) === "6f818242ba0b1da6f4e001f1ca1b374940cc329c36be49564a6c0e9fe59fafd2"
-        ? `BEGIN;\n${source}\nCOMMIT;\n`
-        : source;
+    const command = migrationTransaction(filename, source);
     assert(
         /^\s*(?:--[^\n]*\n\s*)*begin;/i.test(command) && /commit;\s*$/i.test(command),
         `Migration requires a transaction envelope: ${filename}`,

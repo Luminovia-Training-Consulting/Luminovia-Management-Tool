@@ -192,16 +192,35 @@ export async function renewAcademyInstallationLicence(input, executeSql) {
 
 /** Return an operator's current release and licence inventory without taking write locks. */
 export async function readAcademyInstallationStatus(
-  { envelope, publicKey, expected, now, requireExactLicence = false },
+  {
+    envelope,
+    publicKey,
+    expected,
+    now,
+    requireExactLicence = false,
+    operationalInventory = false,
+  },
   executeSql,
 ) {
   const { terms } = verifyAcademyLicence(envelope, publicKey, expected, now);
+  const ledgerDigest = operationalInventory
+    ? String.raw`, 'sha256', case when count(*) = count(statements[1]) then
+        encode(sha256(convert_to(coalesce(string_agg(version || ':' ||
+          encode(sha256(convert_to(statements[1], 'UTF8')), 'hex'), E'\n' order by version), ''), 'UTF8')), 'hex')
+        end`
+    : "";
+  const capacity = operationalInventory
+    ? `, 'quota_usage', jsonb_build_object(
+        'occupied_seats', (select occupied from private.academy_seat_usage()),
+        'used_storage_bytes', (select coalesce(sum(size_bytes), 0) from public.document_versions)
+      )`
+    : "";
   const output = await executeSql(String.raw`
     begin read only;
     select to_regclass('supabase_migrations.schema_migrations') is not null
       as academy_has_ledger \gset
     \if :academy_has_ledger
-    select jsonb_build_object('count',count(*),'last_version',max(version))
+    select jsonb_build_object('count',count(*),'last_version',max(version)${ledgerDigest})
       as academy_ledger from supabase_migrations.schema_migrations \gset
     \else
     \set academy_ledger 'null'
@@ -214,7 +233,7 @@ export async function readAcademyInstallationStatus(
       'licence_expires_at', licence.expires_at,
       'licence_grace_until', licence.grace_until,
       'course_access_status', private.academy_course_access_status(),
-      'migration_ledger', :'academy_ledger'::jsonb
+      'migration_ledger', :'academy_ledger'::jsonb${capacity}
     )
     from public.installation_capability_state capability
     join private.installation_verified_licence licence using (installation_id)

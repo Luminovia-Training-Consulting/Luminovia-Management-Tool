@@ -3024,6 +3024,14 @@ The separate public Website uses a static Vite/React build on GitHub Pages. Its 
 
 Use the [Website relay instructions](https://github.com/Luminovia-Training-Consulting/Website/tree/main/integrations/portal-enquiry) to configure the public build, the intended relay route and the Portal intake. The tested source supports this integration with an exact confirmation receipt. Public activation requires a reviewed privacy notice and approved Website, challenge, relay and Portal configuration. The Portal's server token is stored outside the static build.
 
+To rehearse both checkouts locally, install their locked dependencies, have Chromium installed for Portal Playwright and run:
+
+```sh
+node scripts/website-enquiry-rehearsal.mjs /absolute/path/to/Website
+```
+
+The command builds the actual Website and exercises its form in German and English with keyboard submission. It checks the real relay code, Portal Edge intake, authenticated management inbox, notification and lecturer denial on a fresh loopback-only Supabase stack. A fictional challenge provider allows a rejected challenge and a deliberately unconfirmed acknowledgement to be repeated. The receipt records source revisions, dirty working trees and check names. The stack is removed after the rehearsal. The configured public Worker, Turnstile widget and production intake need their own activation and proof.
+
 <a id="section-website-enquiries-intake-contract"></a>
 
 ## Intake contract

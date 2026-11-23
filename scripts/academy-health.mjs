@@ -14,6 +14,10 @@ import {
   readAcademyInstallationStatus,
 } from "./academy-installation.mjs";
 import { verifyAcademyLicence } from "./academy-licence.mjs";
+import {
+  academyMigrationInventory,
+  loadAcademyMigrations,
+} from "./academy-migrations.mjs";
 import { readRuntimeHandoffFile } from "./academy-runtime-handoff.mjs";
 import { readAcademyOperatorInput } from "./academy-staging-plan.mjs";
 
@@ -209,6 +213,18 @@ async function backupState(
   }
 }
 
+function quotaCapacity(used, limit) {
+  if (!Number.isSafeInteger(used) || used < 0)
+    return { state: "unavailable", used: null, limit };
+  const state =
+    used < limit
+      ? "available"
+      : used === limit
+        ? "at_capacity"
+        : "over_capacity";
+  return { state, used, limit };
+}
+
 export async function monitorAcademy(
   {
     root,
@@ -326,6 +342,12 @@ export async function monitorAcademy(
     ) && !Object.values(services).includes("ownership_mismatch")
       ? "recognised"
       : "ownership_mismatch";
+  const limits = licence.terms.limits;
+  let quotas = {
+    seats: quotaCapacity(null, limits.seat_count),
+    storage: quotaCapacity(null, limits.storage_bytes),
+    api_requests_per_minute: limits.api_requests_per_minute,
+  };
   let database = {
     state: "unavailable",
     migration_ledger: null,
@@ -341,6 +363,7 @@ export async function monitorAcademy(
           expected,
           now,
           requireExactLicence: true,
+          operationalInventory: true,
         },
         (sql) =>
           docker(
@@ -380,11 +403,32 @@ export async function monitorAcademy(
         ledger.count > 0 &&
         typeof ledger.last_version === "string" &&
         /^[0-9]{14}$/.test(ledger.last_version);
+      const expectedLedger = academyMigrationInventory(
+        await loadAcademyMigrations(),
+      );
+      const ledgerState = !complete
+        ? "missing_ledger"
+        : ledger.count === expectedLedger.count &&
+            ledger.last_version === expectedLedger.last_version &&
+            ledger.sha256 === expectedLedger.sha256
+          ? "verified"
+          : "ledger_mismatch";
+      quotas = {
+        ...quotas,
+        seats: quotaCapacity(
+          current.quota_usage?.occupied_seats,
+          limits.seat_count,
+        ),
+        storage: quotaCapacity(
+          current.quota_usage?.used_storage_bytes,
+          limits.storage_bytes,
+        ),
+      };
       const access = ["active", "grace"].includes(current.course_access_status)
         ? current.course_access_status
         : null;
       database = {
-        state: complete ? "verified" : "missing_ledger",
+        state: ledgerState,
         migration_ledger: complete
           ? { count: ledger.count, last_version: ledger.last_version }
           : null,
@@ -425,6 +469,8 @@ export async function monitorAcademy(
     licence.state === "active" &&
     database.state === "verified" &&
     database.course_access === "active" &&
+    quotas.seats.state === "available" &&
+    quotas.storage.state === "available" &&
     scanner === "fresh" &&
     backup.state === "fresh" &&
     topology === "recognised" &&
@@ -446,6 +492,7 @@ export async function monitorAcademy(
     topology,
     services,
     database,
+    quotas,
     scanner,
     backup,
   };

@@ -10,13 +10,14 @@ import {browserAcceptance, browserFailure, browserPlan, browserProjectSelection,
 import {assertLocalQaMemory, localQaTempRoot} from "./runtime-qa-memory.mjs";
 import {runtimeSnapshotSource} from "./runtime-snapshot.mjs";
 import {runtimeTestArguments, runtimeTestPhasePlan,} from "./runtime-test-phase.mjs";
-import {acquireTestLock, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
+import {acquireTestLock, allocateTestServicePorts, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
 import {runBounded} from "./testing/run-bounded.mjs";
 import {assertLocalDocker, cleanEnvironment, command, privateDirectory, privateWrite, root, runtimeDir,} from "./runtime-lib.mjs";
 
 // Parse before acquiring a lock, copying source or reaching a Docker engine.
 // Without explicit CLI arguments the canonical command always runs everything.
 const phase = runtimeTestPhasePlan(runtimeTestArguments(process.argv, root));
+const randomServicePorts = process.env.PORTAL_TEST_RANDOM_SERVICE_PORTS === "1";
 const browserProjects = browserProjectSelection(
     process.env.PORTAL_BROWSER_PROJECT,
     phase.phase,
@@ -32,7 +33,7 @@ let localLockHeld = false;
 try {
     // Fail before creating a snapshot or starting even proxy fixtures. The
     // shared lock serialises updated checkouts; the port probe catches old ones.
-    await assertTestPortsAvailable();
+    await assertTestPortsAvailable(randomServicePorts ? [5273, 4273] : undefined);
     privateDirectory();
     try {
         mkdirSync(lock, {mode: 0o700});
@@ -57,6 +58,7 @@ try {
 const scratch = join(runDirectory, "source");
 const env = cleanEnvironment({
     PORTAL_TEST_MODE: "1",
+    ...(randomServicePorts && {PORTAL_TEST_RANDOM_SERVICE_PORTS: "1"}),
     // Private registries and stand-alone fixtures need to stay outside the source snapshot.
     TMPDIR: join(runDirectory, "tmp"),
     PORTAL_DB_CONTAINER: `supabase_db_${project}`,
@@ -151,6 +153,7 @@ try {
         .replace(/^project_id\s*=\s*"[^"]+"/m, `project_id = "${project}"`)
         .replaceAll("543", "553")
         .replaceAll(":5173", ":5273");
+    if (randomServicePorts) config = await allocateTestServicePorts(config);
     writeFileSync(configPath, config);
     /** Run one required child command; cancellation/failure cannot be recorded as success. */
     const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
@@ -459,7 +462,7 @@ try {
     );
     Object.assign(env, localEnv, {
         E2E_BASE_URL: "http://127.0.0.1:5273",
-        E2E_MAILPIT_URL: "http://127.0.0.1:55324",
+        E2E_MAILPIT_URL: localEnv.E2E_MAILPIT_URL ?? "http://127.0.0.1:55324",
         PORTAL_APP_ORIGIN: "http://127.0.0.1:5273",
         PORTAL_DB_CONTAINER: `supabase_db_${project}`,
     });

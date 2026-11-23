@@ -27,9 +27,10 @@ Implementation progress and remaining acceptance for the internal portal and sha
 ## API and integrations
 
 - [ ] **API-T01–API-T20.** Complete the remaining [operation and transport matrix](docs/IMPLEMENTATION_PLAN.md#api-t01api-t20) for each supported edition. Verify sign-in, token expiry, role changes, API/Swagger parity with native success and denial responses, files and exact bytes, concurrency and retries, backwards compatibility and the published quickstarts. Use the canonical unit, component, SQL/RLS, Auth/HTTP, integration and browser suites.
-- [ ] **Swagger acceptance · API-T09, API-T19.** Exercise authorised and denied operations in each edition with DE/EN, both themes, keyboard and supported viewport sizes.
-- [ ] **Public enquiries.** Enable and verify the approved sender and origin in the separate Website project, including a fictional enquiry that reaches the correct portal inbox.
-- [ ] **Coordinated commercial amendments.** Complete signed-in cross-role browser acceptance from the original agreement through review, corrected delivery evidence and later settlement.
+- [x] **Local Swagger acceptance · API-T09, API-T19.** Authorised and denied cases passed in all three editions in DE/EN and light/dark, with keyboard interaction and desktop/mobile Chromium. [Browser evidence](docs/WORKLOG.md#23-november-2026--api-and-customer-roadmap-rehearsals)
+- [x] **Public enquiry rehearsal.** The separate Website form, relay and native Portal management inbox passed the local DE/EN flow, replay deduplication and scope checks. [Rehearsal evidence](docs/WORKLOG.md#23-november-2026--api-and-customer-roadmap-rehearsals)
+- [ ] **Public enquiry activation.** Enable and verify the approved sender and origin in the separate Website project, including a fictional enquiry that reaches the correct portal inbox.
+- [x] **Coordinated commercial amendments.** Signed-in cross-role desktop and mobile Chromium acceptance covered scanned executed agreements, separate consents, reviewed correction, independent evidence confirmation and later invoice settlement. Original agreement and terms snapshots remained unchanged. [Browser evidence](docs/WORKLOG.md#23-november-2026--api-and-customer-roadmap-rehearsals)
 
 ## Independent Academy releases
 
