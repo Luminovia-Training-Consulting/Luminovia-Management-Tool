@@ -1,3 +1,7 @@
+# 23 November 2026 — Verified local credentials output
+
+The local credentials command now checks each fictional account on the owned loopback stack and lists the accepted password or its recovery status. The last verified output remains privately readable when stopped. The downloaded portal returned 15 individual verified entries with an empty saved password field. No passwords were changed.
+
 # 23 November 2026 — Timed exam deletion lint fix
 
 A follow-up migration explicitly types the empty deletion-filter array. A rolled-back PostgreSQL check reproduced warning 42804 before the change, found zero function lint issues after it, and compared identical results across five filter combinations. The complete CI run is separate.

@@ -14,7 +14,7 @@ cd Luminovia-Management-Tool
 ./portal start
 ```
 
-Open [the local portal](http://127.0.0.1:5173). The launcher installs locked dependencies when needed and starts PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Mailpit, the scanner and Vite. It preserves existing data. First initialization seeds fictional accounts; use `./portal credentials` to display their original local password. Local authentication emails go to [Mailpit](http://127.0.0.1:54324).
+Open [the local portal](http://127.0.0.1:5173). The launcher installs locked dependencies when needed and starts PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Mailpit, the scanner and Vite. It preserves existing data. First initialization seeds fictional accounts; use `./portal credentials` to list the fictional email addresses and verify each available local password. Local authentication emails go to [Mailpit](http://127.0.0.1:54324).
 
 ```sh
 ./portal status

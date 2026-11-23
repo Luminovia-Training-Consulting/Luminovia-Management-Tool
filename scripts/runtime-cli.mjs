@@ -67,7 +67,7 @@ async function locked(operation) {
 /** Describes only commands actually offered and their local data storage. */
 function help() {
     console.log(
-        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset        Erase the confirmed local project and leave it stopped\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
+        `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the verified local test account credentials\n  ./portal reset        Erase the confirmed local project and leave it stopped\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
     );
 }
 
@@ -239,19 +239,11 @@ try {
             if (result === "failed") console.log("Local browser reset: deletion could not be confirmed.");
             break;
         }
-        case "credentials":
-            if (!existsSync(join(runtimeDir, "ACCOUNTS.txt")))
-                throw new Error(
-                    "No local credentials file yet. Run ./portal start first.",
-                );
-            process.stdout.write(
-                readFileSync(join(runtimeDir, "ACCOUNTS.txt"), "utf8"),
-            );
-            if (existsSync(join(runtimeDir, "ADMIN-DEMO.txt")))
-                process.stdout.write(
-                    `\n${readFileSync(join(runtimeDir, "ADMIN-DEMO.txt"), "utf8")}`,
-                );
+        case "credentials": {
+            const { localCredentials } = await import("./local-credentials.mjs");
+            process.stdout.write(await localCredentials());
             break;
+        }
         case "reset": {
             const { assertResetDockerHost, confirmLocalReset, localResetTarget, resetLocalPortal } =
                 await import("./local-reset.mjs");
