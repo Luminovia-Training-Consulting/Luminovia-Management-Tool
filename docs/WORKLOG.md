@@ -1,3 +1,7 @@
+# 23 November 2026 — Academy client generation and Docker readiness
+
+Declared account credentials on the dedicated Academy audit operation so the generated Python and TypeScript clients and signed package can include it. A local Docker probe that times out gets one bounded retry before either the browser or candidate runner fails. A simulated stalled probe verified the retry and unchanged access-denial handling. The focused Academy and startup suite passed 51 checks, the candidate and phase suite passed 58, and TypeScript passed.
+
 # 23 November 2026 — Delegated lecturer and participant settings
 
 The account directory now exposes basic profile editing, targeted lecturer contracts and qualification management with the current staff capabilities. Staff can add or remove an expertise topic. Verified topics require revocation before removal, preserving the existing evidence and decision history. The contract registration link preselects the lecturer and uses the existing restricted PDF workflow.

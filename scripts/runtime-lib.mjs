@@ -347,10 +347,18 @@ export async function assertLocalDocker({startService = false} = {}) {
             );
     }
     const defaultSocket = ["unix:///var/run/docker.sock", "unix:///run/docker.sock"].includes(host);
-    const probe = () => command("docker", ["info", "--format", "{{.ServerVersion}}"], {
-        quiet: true,
-        timeoutMs: 10000,
-    });
+    const probe = async () => {
+        const info = (timeoutMs) => command("docker", ["info", "--format", "{{.ServerVersion}}"], {
+            quiet: true,
+            timeoutMs,
+        });
+        try {
+            await info(10_000);
+        } catch (error) {
+            if (!/ timed out \(/.test(error.message)) throw error;
+            await info(25_000);
+        }
+    };
 
     try {
         await probe();

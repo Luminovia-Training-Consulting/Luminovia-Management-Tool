@@ -1629,7 +1629,12 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
         },
       },
       ...coursePaths,
-      ...administrationAuditPaths,
+      "/rest/v1/rpc/admin_audit_events": {
+        post: {
+          ...administrationAuditPaths["/rest/v1/rpc/admin_audit_events"].post,
+          security: credentials,
+        },
+      },
       ...humanAuthPaths,
     }),
     webhooks: { companyCourseEvent: companyCourseWebhook },

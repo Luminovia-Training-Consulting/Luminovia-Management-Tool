@@ -37,7 +37,9 @@ function operationsFrom(document) {
             !(parameter.in === "header" && parameter.name === "Origin"),
         )
       )
-        throw new Error("Unsupported or duplicate Academy client operation.");
+        throw new Error(
+          `Unsupported or duplicate Academy client operation: ${method.toUpperCase()} ${path} (${id}).`,
+        );
       operations.set(id, {
         method: method.toUpperCase(),
         path,

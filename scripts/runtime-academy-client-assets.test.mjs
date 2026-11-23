@@ -84,6 +84,10 @@ test("generated Academy clients bind installation, scope credentials and expose 
       openApiVersion: document.info.version,
     });
     assert.ok(sdk.operations.humanLogin);
+    assert.deepEqual(sdk.operations.native_admin_audit_events.credentials, [
+      "apiKey",
+      "bearerAuth",
+    ]);
     assert.equal(sdk.operations.native_claim_job, undefined);
     assert.deepEqual(
       sdk.operations.integrationCourseIndex.statuses.sort(),

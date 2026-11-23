@@ -25,6 +25,9 @@ fi
 echo "docker info" >> "$FIXTURE_TRACE"
 if [ -f "$FIXTURE_READY" ]; then
     echo 29.0.0
+elif [ "$FIXTURE_INITIAL" = slow ]; then
+    touch "$FIXTURE_READY"
+    exec sleep 30
 elif [ "$FIXTURE_INITIAL" = denied ]; then
     echo "permission denied while trying to connect to the Docker daemon" >&2
     exit 1
@@ -70,6 +73,12 @@ test("a fresh ZIP starts the default Docker service and rechecks it before npm c
 
 test("a running Docker service requires no system action", (t) => {
     assert.deepEqual(launch(t, {initial: "ready"}).calls, ["docker info", "npm ci"]);
+});
+
+test("a timed-out Docker probe retries before changing services or installing dependencies", (t) => {
+    const {calls, output} = launch(t, {initial: "slow"});
+    assert.deepEqual(calls, ["docker info", "docker info", "npm ci"]);
+    assert.match(output, /Fixture reached dependency installation/);
 });
 
 test("a failed service start gives actionable guidance before installing dependencies", (t) => {
