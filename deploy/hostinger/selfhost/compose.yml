@@ -372,6 +372,7 @@ services:
       - ../../../supabase/functions/human-login:/home/deno/functions/human-login:ro
       - ../../../supabase/functions/human-recovery:/home/deno/functions/human-recovery:ro
       - ../../../supabase/functions/company-integration:/home/deno/functions/company-integration:ro
+      - ../../../supabase/functions/portal-api:/home/deno/functions/portal-api:ro
       - deno-cache:/root/.cache/deno
     depends_on:
       api-gw:

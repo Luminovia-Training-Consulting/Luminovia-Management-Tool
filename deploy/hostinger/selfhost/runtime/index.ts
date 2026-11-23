@@ -29,6 +29,7 @@ const PORTAL_FUNCTIONS = new Set([
     "human-login",
     "human-recovery",
     "company-integration",
+    "portal-api",
 ]);
 
 const JWT_SECRET = Deno.env.get("JWT_SECRET");

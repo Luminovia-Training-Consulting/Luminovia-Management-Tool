@@ -435,7 +435,8 @@ export function createAccountHandler(deps: AccountDependencies) {
                     path === "/v1/deletions/preview" ||
                     path === "/v1/deletions/confirm"
                 ) {
-                    if (request.method !== "POST") {
+                    if (request.method !== "POST" &&
+                        !(request.method === "DELETE" && path === "/v1/deletions/confirm")) {
                         return response(405, {error: "method_not_allowed"});
                     }
                     const payload = await body(request);

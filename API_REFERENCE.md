@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **289 migration files** through version **20261123011739**, containing **541 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `213feb9f60885399af6e574e974901e8c701c4986ca5f9c9ee0b347b9230bab4`.
+This reference describes the current repository API. It is generated from a disposable replay of **292 migration files** through version **20261123013000**, containing **541 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `c14e6c31b92cf3190c43a99f5732004e51df9435a8596c277d6523271e7ba742`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and [QA results](DEVELOPMENT.md#section-test-plan) define that evidence.
 
@@ -16,6 +16,21 @@ Paths below are relative to the configured Supabase API URL, not necessarily the
 
 Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. An installation may stage and require native TOTP for administrators and owners. Protected requests by these accounts require an authenticated AAL2 token backed by its current Auth session and verified TOTP factor. A required authenticator step returns HTTP 412. Password recovery does not satisfy authenticator verification. Authenticated API requests carry the public `apikey` and `Authorization: Bearer <user-access-token>`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
 
+## HTTP methods for Portal workflows
+
+The Swagger method filter and OpenAPI JSON list the operations available in the current edition. Keep using existing POST /rest/v1/rpc calls for creation and transactional commands such as publishing, claiming and recording a payment. Existing clients can continue using those contracts.
+
+Reviewed HTTP aliases are relative to the configured Supabase API URL:
+
+| Method | Example path                                    | Input                                                                                                                             |
+| ------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | /functions/v1/portal-api/v1/course_workspace    | One optional URL-encoded JSON object named input. Supply the RPC arguments required by the operation.                             |
+| PUT    | /functions/v1/portal-api/v1/save_ui_preferences | JSON object with the current update parameters. When the same RPC can also create, PUT requires an existing record ID.            |
+| DELETE | /functions/v1/portal-api/v1/delete_forum_post   | JSON object with the exact target and required revision. The operation keeps its domain-specific deletion or withdrawal behavior. |
+| DELETE | /functions/v1/accounts/v1/deletions/confirm     | JSON object with plan_id, request_id and confirmation set to DELETE. Create the actor-bound preview first.                        |
+
+The aliases pass the original RPC arguments through the caller's live session and existing authorization rules. They never grant table-level CRUD or replace permission checks. Scope, conflict handling, audit and reviewed deletion dependencies stay with their existing operations. Authenticated clients must use the current publishable API key and user bearer token. Sensitive inputs and credential issuance keep their original POST contracts. Consult the edition-specific schema and operation descriptions for the full list.
+
 ## Account HTTP facade
 
 Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/accounts/openapi.json`; owning contract: [openapi.ts](supabase/functions/accounts/openapi.ts), enforced by [handler.ts](supabase/functions/accounts/handler.ts).
@@ -26,6 +41,7 @@ Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/acco
 | GET    | /deletions/resources                       | Authorised metadata targets; companies see only current own jobs                                   |
 | POST   | /deletions/preview                         | Review exact target, dependency counts and blockers before irreversible confirmation               |
 | POST   | /deletions/confirm                         | Confirm an unexpired actor-bound plan; no trash, undo or optimistic success                        |
+| DELETE | /deletions/confirm                         | Confirm an unexpired actor-bound plan; no trash, undo or optimistic success                        |
 | GET    | /deletions/operations                      | Recover currently authorised incomplete deletion receipts after reload                             |
 | POST   | /deletions/operations/{id}                 | Resume a confirmed operation under current caller permissions and assurance                        |
 | GET    | /me                                        | Own profile, roles and permissions                                                                 |

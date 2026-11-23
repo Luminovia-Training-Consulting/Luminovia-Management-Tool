@@ -70,8 +70,12 @@ Deno.test(
             },
         });
         const payload = {plan_id: id, request_id: key, confirmation: "DELETE"};
+        assert.equal(
+            (await handler(request("v1/deletions/confirm", "DELETE", {...payload, confirmation: "no"}))).status,
+            400,
+        );
         const pending = await handler(
-            request("v1/deletions/confirm", "POST", payload),
+            request("v1/deletions/confirm", "DELETE", payload),
         );
         assert.equal(pending.status, 202);
         assert.equal((await pending.json()).status, "pending");

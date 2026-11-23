@@ -458,3 +458,7 @@ enabled = true
 
 [functions.company-integration]
 verify_jwt = false
+
+[functions.portal-api]
+# The handler verifies the current caller through Auth before invoking PostgREST.
+verify_jwt = false

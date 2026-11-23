@@ -74,6 +74,10 @@ test("the API explorer executes a documented read only after authorization", asy
     openapi: "3.1.0",
     paths: {
       "/functions/v1/accounts/v1/me": { get: {} },
+      "/functions/v1/accounts/v1/deletions/confirm": { delete: {} },
+      "/functions/v1/portal-api/v1/account_username": { get: {} },
+      "/functions/v1/portal-api/v1/save_job_view": { put: {} },
+      "/functions/v1/portal-api/v1/remove_job_view": { delete: {} },
       "/rest/v1/rpc/portal_access": {
         post: { operationId: "native_portal_access" },
       },
@@ -149,6 +153,19 @@ test("an authenticated participant can run an own-account RPC through the API ex
   const result = await response;
   expect(result.status()).toBe(200);
   expect(await result.json()).toEqual({ username: null, version: 0 });
+
+  const alias = "/functions/v1/portal-api/v1/account_username";
+  await (await operation(page, "get", alias)).click();
+  await page.getByRole("button", { name: "Try it out", exact: true }).click();
+  const throughGateway = page.waitForResponse(
+    (item) =>
+      item.request().method() === "GET" &&
+      new URL(item.url()).pathname.endsWith(alias),
+  );
+  await page.getByRole("button", { name: "Execute", exact: true }).click();
+  const get = await throughGateway;
+  expect(get.status()).toBe(200);
+  expect(await get.json()).toEqual({ username: null, version: 0 });
 });
 
 test("the English dark API explorer preserves finance permissions during keyboard execution", async ({

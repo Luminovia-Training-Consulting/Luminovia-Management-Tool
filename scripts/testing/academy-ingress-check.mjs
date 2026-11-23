@@ -50,9 +50,11 @@ const allowedApi = [
   "/functions/v1/company-integration?limit=2",
   "/functions/v1/company-integration/enrolments",
   "/functions/v1/company-integration/participation",
+  "/functions/v1/portal-api/v1/course_workspace?input=%7B%7D",
   "/functions/v1/course-documents",
   "/functions/v1/files?mode=academy-material",
   "/functions/v1/files?mode=course-submission",
+  "/functions/v1/files?mode=exam-submission",
   "/functions/v1/files?mode=academy-student-exam",
   "/functions/v1/files?mode=academy-course-chat",
   "/functions/v1/files?mode=academy-attendance",
@@ -71,12 +73,22 @@ const blockedApi = [
   "/functions/v1/accounts/v1/me",
   "/functions/v1/accounts/openapi.json",
   "/functions/v1/calendar-feed",
+  "/functions/v1/portal-api",
+  "/functions/v1/portal-api/v1/Course_Workspace",
+  "/functions/v1/portal-api/v1/course_workspace/extra",
   "/functions/v1/invite-lecturer",
   "/functions/v1/website-enquiries",
   "/functions/v1/files",
   "/functions/v1/files?mode=invoice",
   "/functions/v1/files/extra",
   "/storage/v1/object/public/portal-documents/fixture.pdf",
+];
+const apiMethodProbes = [
+  ["/functions/v1/portal-api/v1/save_course_exam_schedule", "PUT", 200],
+  ["/functions/v1/portal-api/v1/remove_course_exam_pdf", "DELETE", 200],
+  ["/functions/v1/portal-api/v1/course_workspace", "OPTIONS", 200],
+  ["/functions/v1/portal-api/v1/course_workspace", "POST", 404],
+  ["/functions/v1/portal-api/v1/course_workspace", "PATCH", 404],
 ];
 const pwaRequests = 10;
 let publishedVersion = null;
@@ -145,7 +157,11 @@ try {
   const policy = await readFile(join(browser, "api-ingress.yml"), "utf8");
   const allowance = Number(/max_tokens: (\d+)/.exec(policy)?.[1]);
   const minimumAllowance =
-    allowedApi.length + blockedApi.length + 1 + pwaRequests;
+    allowedApi.length +
+    blockedApi.length +
+    apiMethodProbes.length +
+    1 +
+    pwaRequests;
   assert.ok(
     allowance >= minimumAllowance && allowance <= 1000,
     `Use a staging licence with ${minimumAllowance}–1,000 requests per minute`,
@@ -208,7 +224,7 @@ try {
 
   const trustRoot = join(root, "caddy/pki/authorities/local/root.crt");
   let ca;
-  const request = async (route, status) => {
+  const request = async (route, status, method = "GET") => {
     ca ??= await readFile(trustRoot);
     // The manifest can choose a file path within the fixture, never its TLS peer.
     const received = await new Promise((resolve, reject) => {
@@ -222,6 +238,7 @@ try {
             Referer: "https://private.example.invalid/",
           },
           path: route,
+          method,
           ca,
           signal: AbortSignal.timeout(3000),
           agent: false,
@@ -306,6 +323,8 @@ try {
     );
     assert.match(headers["cache-control"] ?? "", /no-store, private/);
   }
+  for (const [path, method, status] of apiMethodProbes)
+    await request("/backend" + path, status, method);
   const staticManifest = await readFile(
     join(browser, "current/manifest.webmanifest"),
   );

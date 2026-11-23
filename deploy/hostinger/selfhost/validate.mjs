@@ -264,6 +264,7 @@ try {
         "human-login",
         "human-recovery",
         "company-integration",
+        "portal-api",
         "website-enquiries",
         "mail-admin",
     ];

@@ -127,7 +127,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         edition,
         customer_ready: false,
       });
-      expect(Object.keys(spec.paths).sort()).toEqual(
+      expect(
+        Object.keys(spec.paths)
+          .filter((path) => !path.startsWith("/functions/v1/portal-api/v1/"))
+          .sort(),
+      ).toEqual(
         [
           bootstrap,
           "/rest/v1/rpc/company_course_webhook_list",

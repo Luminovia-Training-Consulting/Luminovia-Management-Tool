@@ -211,7 +211,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
             path.startsWith("/rest/v1/rpc/") && !privateActions.includes(path),
         ),
       );
-      expect(interactive.paths).toEqual(rpcPaths);
+      expect(
+        Object.fromEntries(
+          Object.entries(interactive.paths).filter(([path]) =>
+            path.startsWith("/rest/v1/rpc/"),
+          ),
+        ),
+      ).toEqual(rpcPaths);
       for (const path of privateActions) {
         expect(download.paths).toHaveProperty(path);
         expect(interactive.paths).not.toHaveProperty(path);

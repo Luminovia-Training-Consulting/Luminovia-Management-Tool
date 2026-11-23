@@ -1336,6 +1336,10 @@ test("publishes exactly the verified bytes using the dedicated Caddy layout and 
   assert.match(ingress, /max_tokens: 60\b/);
   assert.match(ingress, /tokens_per_fill: 60\b/);
   assert.doesNotMatch(ingress, /ACADEMY_SIGNED_API_REQUESTS_PER_MINUTE/);
+  assert.ok(
+    ingress.includes("regex: /functions/v1/portal-api/v1/[a-z][a-z0-9_]*"),
+  );
+  assert.match(ingress, /regex: GET\|PUT\|DELETE\|OPTIONS\b/);
   assert.deepEqual(
     JSON.parse(readFileSync(join(browser, "release.json"), "utf8")),
     receipt,

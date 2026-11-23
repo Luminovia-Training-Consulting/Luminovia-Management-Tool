@@ -17,7 +17,10 @@ type ExplorerProperties = {
   createDocument: (
     backend: string,
     brand: InstallationBrand,
-  ) => { paths: Record<string, unknown> };
+  ) => {
+    paths: Record<string, unknown>;
+    components?: Record<string, unknown>;
+  };
   checkRequest: (
     request: ExplorerRequest,
     backend: string,
@@ -26,7 +29,7 @@ type ExplorerProperties = {
 };
 
 const disabledMethods = [] as const;
-const academyMethods = ["get", "post"] as const;
+const academyMethods = ["get", "post", "put", "delete"] as const;
 const portalMethods = ["get", "post", "patch", "put", "delete"] as const;
 
 const methods = new Set([
@@ -134,7 +137,10 @@ function ExplorerSession({
         filter ? filter.toLowerCase().split(/\s+/) : [],
       ),
       security: [],
-      components: {},
+      // Keep schema references resolvable without taking credentials through Swagger.
+      components: document.components?.schemas
+        ? { schemas: document.components.schemas }
+        : {},
     }),
     [document, filter],
   );
@@ -147,8 +153,8 @@ function ExplorerSession({
         description={
           academy
             ? de
-              ? "Führe dokumentierte LMS-Datenbankanfragen mit deinem Konto aus. Der JSON-Download enthält zusätzlich die Datei- und Kontoschnittstellen."
-              : "Run documented LMS database requests with your account. The JSON download also includes file and account operations."
+              ? "Führe dokumentierte LMS-Anfragen mit deinem Konto aus. Der JSON-Download enthält zusätzlich die Datei- und Kontoschnittstellen."
+              : "Run documented LMS requests with your account. The JSON download also includes file and account operations."
             : de
               ? "Durchsuche die dokumentierten Schnittstellen und führe Anfragen mit deinem aktuellen Konto aus."
               : "Search the documented operations and send requests with your current account."

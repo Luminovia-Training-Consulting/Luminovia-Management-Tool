@@ -49,7 +49,11 @@ const session = {
 };
 const latest = () =>
   fake.swagger.mock.lastCall?.[0] as {
-    spec: { info: { title: string }; paths: Record<string, unknown> };
+    spec: {
+      info: { title: string };
+      paths: Record<string, unknown>;
+      components: Record<string, unknown>;
+    };
     supportedSubmitMethods: string[];
     requestInterceptor: (request: ExplorerRequest) => Promise<ExplorerRequest>;
   };
@@ -72,8 +76,10 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
   render(<AcademyApiExplorer />);
   expect(latest().spec.info.title).toBe("Fictional training academy API");
   expect(
-    Object.keys(latest().spec.paths).every((path) =>
-      path.startsWith("/rest/v1/rpc/"),
+    Object.keys(latest().spec.paths).every(
+      (path) =>
+        path.startsWith("/rest/v1/rpc/") ||
+        path.startsWith("/functions/v1/portal-api/v1/"),
     ),
   ).toBe(true);
   expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
@@ -91,7 +97,12 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
   expect(
     screen.getByRole("button", { name: "Disable requests" }),
   ).toHaveAttribute("aria-pressed", "true");
-  expect(latest().supportedSubmitMethods).toEqual(["get", "post"]);
+  expect(latest().supportedSubmitMethods).toEqual([
+    "get",
+    "post",
+    "put",
+    "delete",
+  ]);
   for (const operation of [
     "job_discovery",
     "finance_earnings",
@@ -175,6 +186,60 @@ it("filters operations by method and path without changing the downloaded catalo
     "/api/openapi.json",
   );
   expect(latest().supportedSubmitMethods).toEqual([]);
+});
+
+it.each([
+  ["GET", "course_workspace"],
+  ["PUT", "save_ui_preferences"],
+  ["DELETE", "delete_forum_post"],
+] as const)(
+  "filters the live catalogue to its %s gateway operation",
+  async (method, operation) => {
+    const user = userEvent.setup();
+    render(<ApiExplorer />);
+    const path = "/functions/v1/portal-api/v1/" + operation;
+    const search = screen.getByRole("searchbox", { name: "Search operations" });
+    await user.type(search, `${method} ${path}{Enter}`);
+    const paths = Object.entries(latest().spec.paths);
+    expect(latest().spec.paths).toHaveProperty(path);
+    for (const [candidate, operations] of paths) {
+      expect(candidate.startsWith(path)).toBe(true);
+      expect(Object.keys(operations as object)).toEqual([method.toLowerCase()]);
+    }
+  },
+);
+
+it("keeps referenced article schemas when filtering PUT while suppressing credential schemes", async () => {
+  const user = userEvent.setup();
+  render(<ApiExplorer />);
+  const path = "/functions/v1/portal-api/v1/save_wiki_page";
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search operations" }),
+    `PUT ${path}{Enter}`,
+  );
+  expect(latest().spec.paths[path]).toMatchObject({
+    put: {
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              allOf: expect.arrayContaining([
+                expect.objectContaining({
+                  properties: expect.objectContaining({
+                    p_content: {
+                      $ref: "#/components/schemas/KnowledgeDocument",
+                    },
+                  }),
+                }),
+              ]),
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(Object.keys(latest().spec.components)).toEqual(["schemas"]);
+  expect(latest().spec.components.schemas).toHaveProperty("KnowledgeDocument");
 });
 
 it("provides a German empty state and restores the search focus when clearing it", async () => {

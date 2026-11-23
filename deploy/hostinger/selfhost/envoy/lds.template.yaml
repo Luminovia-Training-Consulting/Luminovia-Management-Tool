@@ -506,6 +506,38 @@ resources:
                                       - any: true
                                     principals:
                                       - any: true
+                      - name: portal-function-portal-api
+                        match:
+                          safe_regex:
+                            regex: /functions/v1/portal-api/v1/[a-z][a-z0-9_]*
+                          headers:
+                            - name: ':method'
+                              string_match:
+                                safe_regex:
+                                  regex: GET|PUT|DELETE|OPTIONS
+                        route:
+                          cluster: functions
+                          timeout: 35s
+                          regex_rewrite:
+                            pattern:
+                              google_re2: { }
+                              regex: ^/functions/v1/
+                            substitution: /
+                        typed_per_filter_config:
+                          envoy.filters.http.cors:
+                            '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                            disabled: true
+                          envoy.filters.http.rbac:
+                            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+                            rbac:
+                              rules:
+                                action: ALLOW
+                                policies:
+                                  allow_all:
+                                    permissions:
+                                      - any: true
+                                    principals:
+                                      - any: true
                       - name: portal-function-mail-admin
                         match:
                           path: /functions/v1/mail-admin

@@ -1,3 +1,9 @@
+# 23 November 2026 — GET, PUT and DELETE in the Portal API
+
+The internal interactive explorer lists 167 GET, 369 POST, 62 PUT and 19 DELETE operations, plus two existing PATCH operations. The dedicated Academy explorer lists 42 GET, 84 POST, 20 PUT and eight DELETE operations. Aliases forward the current user's bearer token to the existing scoped database operation. Permanent DELETE requires the existing actor-bound preview, typed confirmation and completion receipt. A stale update or removal returns 409 through the aliases. Creation and workflow commands retain their existing POST contracts.
+
+Real local Auth, Edge and PostgREST verified the GET, POST, PUT and DELETE lifecycle of a fictional saved view and its cleanup. A second actor could neither see nor delete the view. Real local Chromium filtered all four methods in Swagger and executed an authenticated GET. Isolated Envoy checks verified the internal and dedicated routes.
+
 # 23 November 2026 — Full reset in administration
 
 The full local platform reset is directly labelled in the German and English administration navigation. It uses the existing scoped launcher reset with current-password verification and typed confirmation. Chromium exercised the admin navigation, rejected the wrong password and confirmed that the disposable portal erased its database, Auth and Storage data and stayed stopped. Seven reset tests, TypeScript and focused lint also passed.

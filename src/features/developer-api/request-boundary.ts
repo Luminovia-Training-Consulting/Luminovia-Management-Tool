@@ -1,10 +1,15 @@
+import {
+  isPortalHttpAliasRequest,
+  portalHttpAliasPrefix,
+} from "./portal-http-contract.ts";
+
 /** Swagger request fields used by the exact-backend session boundary. */
 export type ExplorerRequest = {
   url: string;
   method: string;
   headers?: Record<string, string>;
-  credentials?: RequestCredentials;
-  redirect?: RequestRedirect;
+  credentials?: "omit" | "same-origin" | "include";
+  redirect?: "error" | "follow" | "manual";
 };
 
 type CurrentSession = () => Promise<{
@@ -67,14 +72,15 @@ export function isAcademyExplorerRequest(
     target.username ||
     target.password ||
     target.hash ||
-    target.search ||
     !target.pathname.startsWith(base.pathname.replace(/\/$/, "") + "/")
   ) {
     return false;
   }
   const method = request.method.toLowerCase();
-  if (method !== "get" && method !== "post") return false;
   const path = target.pathname.slice(base.pathname.replace(/\/$/, "").length);
+  if (path.startsWith(portalHttpAliasPrefix))
+    return isPortalHttpAliasRequest(target, path, method, operations);
+  if (target.search || (method !== "get" && method !== "post")) return false;
   return (
     Object.hasOwn(operations, path) && Object.hasOwn(operations[path], method)
   );

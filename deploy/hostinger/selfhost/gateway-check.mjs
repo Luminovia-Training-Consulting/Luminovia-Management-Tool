@@ -144,6 +144,16 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/company-integration/enrolments", 503, "portal-function-company-integration"],
             ["/functions/v1/company-integration/participation", 503, "portal-function-company-integration"],
             ["/functions/v1/company-integration/extra", 404],
+            ["/functions/v1/portal-api/v1/course_workspace", 503, "portal-function-portal-api"],
+            ["/functions/v1/portal-api/v1/save_course_exam_schedule", 503, "portal-function-portal-api", "PUT"],
+            ["/functions/v1/portal-api/v1/remove_course_exam_pdf", 503, "portal-function-portal-api", "DELETE"],
+            ["/functions/v1/portal-api/v1/course_workspace", 503, "portal-function-portal-api", "OPTIONS"],
+            ["/functions/v1/portal-api/v1/course_workspace", 404, null, "POST"],
+            ["/functions/v1/portal-api/v1/course_workspace", 404, null, "PATCH"],
+            ["/functions/v1/portal-api/v1/course_workspace/extra", 404],
+            ["/functions/v1/portal-api/v1/Course_Workspace", 404],
+            ["/functions/v1/portal-api", 404],
+            ["/functions/v1/portal-api-extra/v1/course_workspace", 404],
             ["/functions/v1/mail-admin", 503, "portal-function-mail-admin"],
             ["/functions/v1/mail-admin/extra", 404],
             ["/functions/v1/mail-admin-extra", 404],
@@ -159,13 +169,16 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/main", 404],
             ["/functions/v1/unreviewed", 404],
         ];
-        for (const [path, status, route] of cases) {
+        for (const [path, status, route, method = "GET"] of cases) {
             const response = docker([
                 "exec",
                 name,
                 "bash",
                 "-c",
-                `exec 3<>/dev/tcp/127.0.0.1/8000; printf 'GET ${path} HTTP/1.1\\r\\nHost: portal-check\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3`,
+                "exec 3<>/dev/tcp/127.0.0.1/8000; printf '%s %s HTTP/1.1\\r\\nHost: portal-check\\r\\nConnection: close\\r\\n\\r\\n' \"$1\" \"$2\" >&3; cat <&3",
+                "gateway-probe",
+                method,
+                path,
             ]);
             assert.equal(
                 Number(/^HTTP\/1\.1 (\d+)/.exec(response)?.[1]),

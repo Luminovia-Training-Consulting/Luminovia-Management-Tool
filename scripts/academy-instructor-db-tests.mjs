@@ -4,6 +4,7 @@ import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { academyOpenApi } from "../src/features/developer-api/academy-contract.ts";
+import { portalHttpAliasPrefix } from "../src/features/developer-api/portal-http-contract.ts";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -35,8 +36,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     edition,
   });
   const responseSchemas = new Map(
+    // These response fixtures invoke canonical SQL endpoints without HTTP.
     // Authoring, material, submissions, attendance and exams have their own fixtures.
     Object.entries(paths)
+      .filter(([path]) => !path.startsWith(portalHttpAliasPrefix))
       .filter(
         ([path]) =>
           ![

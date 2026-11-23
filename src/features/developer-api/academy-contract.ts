@@ -1,3 +1,4 @@
+import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
 import { z } from "zod";
 import {
@@ -1272,7 +1273,7 @@ type AcademyIdentity = Pick<
 >;
 
 export function academyOpenApi(backend: string, brand: AcademyIdentity) {
-  return {
+  const document = {
     openapi: "3.1.0",
     info: {
       title: `${brand.name} API`,
@@ -1628,6 +1629,7 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
       customer_ready: false,
     },
   };
+  return { ...document, paths: withPortalHttpAliases(document.paths) };
 }
 
 /** Keep secret-issuing, credential-bearing and Edge calls in the downloadable Academy contract. */
@@ -1647,18 +1649,20 @@ export function academyExplorerOpenApi(
         bearerAuth: document.components.securitySchemes.bearerAuth,
       },
     },
-    paths: Object.fromEntries(
-      Object.entries(document.paths).filter(
-        ([path, methods]) =>
-          /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path) &&
-          path !== "/rest/v1/rpc/issue_company_integration_key" &&
-          path !== "/rest/v1/rpc/issue_scoped_company_integration_key" &&
-          path !== "/rest/v1/rpc/academy_subscribe_course_webhook" &&
-          Object.values(methods).every(
-            (operation) =>
-              !("x-portal-document-only" in operation) ||
-              operation["x-portal-document-only"] !== true,
-          ),
+    paths: withPortalHttpAliases(
+      Object.fromEntries(
+        Object.entries(document.paths).filter(
+          ([path, methods]) =>
+            /^\/rest\/v1\/rpc\/[a-z][a-z0-9_]*$/.test(path) &&
+            path !== "/rest/v1/rpc/issue_company_integration_key" &&
+            path !== "/rest/v1/rpc/issue_scoped_company_integration_key" &&
+            path !== "/rest/v1/rpc/academy_subscribe_course_webhook" &&
+            Object.values(methods).every(
+              (operation) =>
+                !("x-portal-document-only" in operation) ||
+                operation["x-portal-document-only"] !== true,
+            ),
+        ),
       ),
     ),
   };

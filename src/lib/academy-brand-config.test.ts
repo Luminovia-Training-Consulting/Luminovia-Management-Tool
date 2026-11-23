@@ -122,7 +122,9 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
       customer_ready: false,
     },
   });
-  const paths = Object.keys(document.paths);
+  const paths = Object.keys(document.paths).filter(
+    (path) => !path.startsWith("/functions/v1/portal-api/v1/"),
+  );
   expect(paths).toHaveLength(106);
   expect(paths).toEqual(
     expect.arrayContaining([

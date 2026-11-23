@@ -173,6 +173,30 @@ const invitationHttpErrors = {
     "503": invitationError("Invitation delivery is disabled or unavailable", "invitations_disabled", "service_unavailable"),
 };
 
+const deletionConfirmation = {
+    operationId: "deletionConfirm",
+    summary:
+        "Confirm an unexpired actor-bound plan; no trash, undo or optimistic success",
+    requestBody: jsonBody({
+        type: "object",
+        additionalProperties: false,
+        required: ["plan_id", "request_id", "confirmation"],
+        properties: {
+            plan_id: {type: "string", format: "uuid"},
+            request_id: {type: "string", format: "uuid"},
+            confirmation: {const: "DELETE"},
+        },
+    }),
+    responses: {
+        "200": deletionCompleted,
+        "202": deletionRemaining,
+        "409": {
+            description: "Plan expired, scope changed or dependencies conflict",
+        },
+        ...errors,
+    },
+};
+
 export const accountOpenApi = {
     openapi: "3.1.0",
     info: {
@@ -256,29 +280,8 @@ export const accountOpenApi = {
             },
         },
         "/v1/deletions/confirm": {
-            post: {
-                operationId: "deletionConfirm",
-                summary:
-                    "Confirm an unexpired actor-bound plan; no trash, undo or optimistic success",
-                requestBody: jsonBody({
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["plan_id", "request_id", "confirmation"],
-                    properties: {
-                        plan_id: {type: "string", format: "uuid"},
-                        request_id: {type: "string", format: "uuid"},
-                        confirmation: {const: "DELETE"},
-                    },
-                }),
-                responses: {
-                    "200": deletionCompleted,
-                    "202": deletionRemaining,
-                    "409": {
-                        description: "Plan expired, scope changed or dependencies conflict",
-                    },
-                    ...errors,
-                },
-            },
+            post: deletionConfirmation,
+            delete: {...deletionConfirmation, operationId: "deleteConfirmedResource"},
         },
         "/v1/deletions/operations": {
             get: {

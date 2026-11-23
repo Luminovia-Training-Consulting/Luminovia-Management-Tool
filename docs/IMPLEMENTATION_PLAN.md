@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## HTTP methods in the API explorer
+
+- [x] Publish reviewed read, update and removal aliases through ordinary user sessions for the internal portal and both Academy editions. Keep POST for creation and workflow transitions.
+- [x] Use the existing confirmation, dependency checks and receipts for permanent deletion. Expose DELETE without bypassing the preview and actor-bound plan.
+- [x] Verify migrated RPC metadata, exact OpenAPI method coverage, gateway routing and owner isolation. Exercise the methods through real local Auth, PostgREST, Edge and Chromium.
+
 ## Consolidated forum
 
 - [x] Keep the forum as the entry point for discussions and revisioned articles. Preserve existing records, attachments, course-template links and role boundaries.

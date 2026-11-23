@@ -1,3 +1,9 @@
+import { isAcademyExplorerRequest } from "./request-boundary.ts";
+import {
+  isPortalHttpAliasRequest,
+  portalHttpAliasPrefix,
+  withPortalHttpAliases,
+} from "./portal-http-contract.ts";
 import { legacyHandoverOperations } from "../jobs/handover-schema.ts";
 import {
   searchKinds,
@@ -4673,6 +4679,12 @@ export function portalOpenApi(
       : academyExplorerOpenApi(backend, brand);
 }
 
+const interactivePaths = withPortalHttpAliases(
+  Object.fromEntries(
+    Object.entries(paths).filter(([path]) => !legacyHandover.has(path)),
+  ),
+);
+
 function internalOpenApi(
   backend: string,
   includeNonInteractive: boolean,
@@ -4715,9 +4727,7 @@ function internalOpenApi(
         "/functions/v1/company-integration": companyCourseIndexPath,
         ...companyCourseOperationPaths,
       }
-    : Object.fromEntries(
-        Object.entries(paths).filter(([path]) => !legacyHandover.has(path)),
-      );
+    : interactivePaths;
   return {
     ...accountOpenApi,
     info: {
@@ -4750,7 +4760,9 @@ function internalOpenApi(
           : {}),
       },
     },
-    paths: documentedPaths,
+    paths: includeNonInteractive
+      ? withPortalHttpAliases(documentedPaths)
+      : documentedPaths,
     ...(includeNonInteractive
       ? {
           webhooks: {
@@ -4784,12 +4796,15 @@ export function isDocumentedRequest(
   if (!target.pathname.startsWith(prefix + "/")) return false;
   const route = target.pathname.slice(prefix.length);
   if (brand && brand.edition !== "internal") {
-    if (target.search || (verb !== "get" && verb !== "post")) return false;
     const operations = academyExplorerOpenApi(backend, brand).paths;
-    return (
-      Object.hasOwn(operations, route) && Object.hasOwn(operations[route], verb)
+    return isAcademyExplorerRequest(
+      { url: target.href, method },
+      backend,
+      operations,
     );
   }
+  if (route.startsWith(portalHttpAliasPrefix))
+    return isPortalHttpAliasRequest(target, route, verb, interactivePaths);
   if (legacyHandover.has(route)) return false;
   if (Object.hasOwn(paths, route)) return Object.hasOwn(paths[route], verb);
   return Object.entries(paths).some(([path, operations]) => {

@@ -81,7 +81,7 @@ async function passwordOnly(user) {
 }
 
 /** Send requests with the current actor's actual native access token. */
-async function request(actor, path, body) {
+async function request(actor, path, body, method = body === undefined ? "GET" : "POST") {
     const {session} = await checked(
         actor.client.auth.getSession(),
         "Read current session",
@@ -89,7 +89,7 @@ async function request(actor, path, body) {
     const response = await fetch(
         `${url}/functions/v1/accounts/v1/deletions/${path}`,
         {
-            method: body === undefined ? "GET" : "POST",
+            method,
             headers: {
                 Origin: origin,
                 apikey: process.env.SUPABASE_ANON_KEY,
@@ -101,7 +101,7 @@ async function request(actor, path, body) {
         },
     );
     const payload = await response.json();
-    verifyAccountHttpResponse("deletions/" + path, body === undefined ? "GET" : "POST", response.status, payload);
+    verifyAccountHttpResponse("deletions/" + path, method, response.status, payload);
     return {status: response.status, body: payload};
 }
 
@@ -118,7 +118,7 @@ async function confirm(actor, kind, id) {
         plan_id: preview.body.plan_id,
         request_id: randomUUID(),
         confirmation: "DELETE",
-    });
+    }, "DELETE");
 }
 
 try {
