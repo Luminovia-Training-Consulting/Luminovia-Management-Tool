@@ -22,7 +22,7 @@
                     <td style="padding:28px">
                         <h1 style="font-size:25px;line-height:1.25;margin:0 0 16px">Deine Einladung zum Portal</h1>
                         <p>Du wurdest zum Lernportal eingeladen. Öffne den folgenden Link, um die Einladung anzunehmen und ein persönliches Passwort festzulegen.</p>
-                        {{ if .Data.portal_invitation_username }}<p>Dein Benutzername ist <strong>{{ .Data.portal_invitation_username }}</strong>. Du kannst dich auch mit deiner E-Mail-Adresse anmelden.</p>{{ end }}
+                        <p>Portal: <a href="{{ .SiteURL }}/login">{{ .SiteURL }}/login</a><br/>Anmeldung: <strong>{{ .Email }}</strong></p>
                         <p>Der Link ist persönlich, zeitlich begrenzt und einmalig verwendbar. Bitte leite ihn nicht weiter. Wenn du diese Einladung nicht erwartest, kannst du diese E-Mail ignorieren.</p>
                         <p style="margin:28px 0">
                             <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;background:#1749b5;color:#ffffff;font-weight:bold;text-decoration:none;padding:13px 20px;border-radius:8px">Einladung annehmen / Accept invitation</a>
@@ -31,7 +31,7 @@
                         <div lang="en">
                             <h2 style="font-size:22px;line-height:1.3;margin:0 0 16px">Your invitation to the portal</h2>
                             <p>You have been invited to join the learning portal. Use the button above to accept the invitation and choose your own password.</p>
-                            {{ if .Data.portal_invitation_username }}<p>Your username is <strong>{{ .Data.portal_invitation_username }}</strong>. You can also sign in with your email address.</p>{{ end }}
+                            <p>Sign in with <strong>{{ .Email }}</strong> once your password is set.</p>
                             <p>This personal link expires and can only be used once. Please do not forward it. If you were not expecting this invitation, you can ignore this email.</p>
                         </div>
                     </td>

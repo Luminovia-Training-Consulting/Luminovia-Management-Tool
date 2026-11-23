@@ -163,6 +163,23 @@ Deno.serve(
             if (result.error || !result.data.user) throw new Error("creation_failed");
             return result.data.user.id;
         },
+        sendAccountAccess: async (email) => {
+            if (!origins.includes(appOrigin)) throw new Error("mail_origin_unavailable");
+            const endpoint = new URL(`${url.replace(/\/$/, "")}/auth/v1/recover`);
+            endpoint.searchParams.set("redirect_to", `${appOrigin}/auth/callback?setup=1`);
+            const result = await fetch(endpoint, {
+                method: "POST",
+                redirect: "error",
+                signal: AbortSignal.timeout(8_000),
+                headers: {
+                    "Content-Type": "application/json",
+                    apikey: publicKey,
+                    Authorization: `Bearer ${publicKey}`,
+                },
+                body: JSON.stringify({email}),
+            });
+            if (!result.ok) throw new Error("access_mail_unavailable");
+        },
         completeAccount: async (id, userId, success) => {
             const result = await service.rpc("complete_account_creation", {
                 p_creation_id: id,

@@ -24,10 +24,11 @@ export function AuthCallback() {
   const [invite] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const hash = params.get("token_hash");
-    return params.get("type") === "invite" &&
+    const type = params.get("type");
+    return (type === "invite" || type === "recovery") &&
       hash &&
       /^[A-Za-z0-9_-]{20,512}$/.test(hash)
-      ? hash
+      ? { hash, type }
       : null;
   });
   const [busy, setBusy] = useState(false);
@@ -43,8 +44,8 @@ export function AuthCallback() {
     setFailed(false);
     try {
       const { error } = await db().auth.verifyOtp({
-        token_hash: invite,
-        type: "invite",
+        token_hash: invite.hash,
+        type: invite.type,
       });
       if (error) setFailed(true);
       else navigate("/auth/password", { replace: true });
@@ -57,6 +58,8 @@ export function AuthCallback() {
 
   if (!invite && loading) return <Loading />;
   if (!invite && session) return <Navigate to="/auth/password" replace />;
+  const setup = invite?.type === "recovery";
+  const action = setup ? "setPassword" : "acceptInvite";
   return (
     <main className="callback-layout">
       <section className="panel">
@@ -69,15 +72,15 @@ export function AuthCallback() {
             alt={brand.name}
           />
         )}
-        <h1>{t("acceptInvite")}</h1>
+        <h1>{t(action)}</h1>
         <p>
-          {t("inviteWelcome", {
+          {t(setup ? "setupWelcome" : "inviteWelcome", {
             name: portalInternalEdition ? "Luminovia" : brand.name,
           })}
         </p>
         {invite ? (
           <Button onClick={() => void accept()} disabled={busy || !online}>
-            {t(busy ? "loading" : "acceptInvite")}
+            {t(busy ? "loading" : action)}
           </Button>
         ) : (
           <Notice kind="error">{t("inviteInvalid")}</Notice>

@@ -72,14 +72,14 @@ export function CreateAccountForm({
           ? { class_id: placement.classId }
           : {}),
       };
-      return accountRequest<{ status: string; user_id?: string }>(
-        "users",
-        "POST",
-        {
-          ...values,
-          idempotency_key: request.forInput(JSON.stringify(values)),
-        },
-      );
+      return accountRequest<{
+        status: string;
+        user_id?: string;
+        access_email?: "requested" | "failed";
+      }>("users", "POST", {
+        ...values,
+        idempotency_key: request.forInput(JSON.stringify(values)),
+      });
     },
     onError: (error) => {
       if (error instanceof Error && error.message === "creation_failed")
@@ -223,6 +223,12 @@ export function CreateAccountForm({
         {t(create.isPending ? "creating" : "createTitle")}
       </Button>
       {create.isError && <Notice kind="error">{t("createError")}</Notice>}
+      {create.data?.access_email === "failed" && (
+        <Notice kind="error">{t("accessEmailFailed")}</Notice>
+      )}
+      {create.data?.access_email === "requested" && (
+        <Notice>{t("accessEmailRequested")}</Notice>
+      )}
       {create.data?.status === "created" && (
         <Notice>
           {t("created")}{" "}

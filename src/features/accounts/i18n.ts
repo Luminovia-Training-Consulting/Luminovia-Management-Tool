@@ -16,6 +16,9 @@ const de = {
   createError:
     "Das Konto wurde nicht bestätigt. Prüfe Berechtigung, Organisation und ob diese E-Mail-Adresse bereits vergeben ist.",
   created: "Benutzerkonto wurde erstellt.",
+  accessEmailRequested: "Die Zugangsmail wurde zum Versand angefordert.",
+  accessEmailFailed:
+    "Die Zugangsmail konnte nicht angefordert werden. Das Konto wurde erstellt. Der Zugang kann über Passwort vergessen eingerichtet werden.",
   openCreated: "Benutzerkonto öffnen",
   publicProfileUnavailable:
     "Das öffentliche Profil ist derzeit nicht verfügbar. Die berechtigte Kontoverwaltung bleibt möglich.",
@@ -127,6 +130,9 @@ const en: typeof de = {
   createError:
     "Account creation was not confirmed. Check your permission, organisation and whether this email address is already registered.",
   created: "User account created.",
+  accessEmailRequested: "The access email was requested.",
+  accessEmailFailed:
+    "The access email could not be requested. The account was created. Use Forgot password to set up access.",
   openCreated: "Open user account",
   publicProfileUnavailable:
     "The public profile is currently unavailable. Authorized account management remains available.",

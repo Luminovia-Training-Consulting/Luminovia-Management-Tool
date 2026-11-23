@@ -112,7 +112,8 @@ const createdAccount = record({
     status: {const: "created"},
     creation_id: uuid,
     user_id: uuid,
-});
+    access_email: {enum: ["requested", "failed"]},
+}, ["status", "creation_id", "user_id"]);
 const accountCreationConflict = {
     anyOf: [
         record({status: {enum: ["in_progress", "failed"]}, creation_id: uuid, user_id: {type: ["string", "null"], format: "uuid"}}),

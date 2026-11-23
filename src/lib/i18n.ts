@@ -169,6 +169,10 @@ const pairs: Record<string, [string, string]> = {
     "Activate access before reviewing expertise.",
   ],
   acceptInvite: ["Einladung annehmen", "Accept invitation"],
+  setupWelcome: [
+    "Dein Zugang zu {{name}} wurde eingerichtet. Lege jetzt dein persönliches Passwort fest.",
+    "Your access to {{name}} is ready. Set your personal password now.",
+  ],
   inviteWelcome: [
     "Willkommen bei {{name}}. Bestätige deine Einladung und lege anschließend dein Passwort fest.",
     "Welcome to {{name}}. Accept your invitation, then set your password.",

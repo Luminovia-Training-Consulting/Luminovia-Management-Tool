@@ -1974,3 +1974,5 @@ Mobile browser failure triage remains open. The component regression covers canc
 Account directory now opens a unified profile and expertise dialog. The focused regression covers actor-scoped reads and preservation of a draft across views. Browser acceptance for the updated journey remains pending.
 
 Personnel and expertise account details now expose individual lecturer compensation using the existing authorized, versioned workflow.
+
+Password-provisioned accounts now request a one-time access email after confirmed creation. Verify the configured sender and actual mailbox receipt on the approved target.

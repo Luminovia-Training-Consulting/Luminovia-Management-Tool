@@ -1,5 +1,5 @@
 /** Exercise the actual account Edge handler and its published request contract with isolated dependencies. */
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   type AccountDependencies,
@@ -12,7 +12,7 @@ const userId = "33333333-3333-4333-8333-333333333333";
 const password = "Aa1!aaaa";
 
 /** Record every external boundary so rejected credentials cannot reserve or create an account. */
-function fixture() {
+function fixture(mail?: (email: string) => Promise<void>) {
   const calls: string[] = [];
   const dependencies: AccountDependencies = {
     origins: ["http://127.0.0.1:6473"],
@@ -31,6 +31,7 @@ function fixture() {
       calls.push("create");
       return userId;
     },
+    sendAccountAccess: mail,
     completeAccount: async (_id, _user, success) => {
       calls.push(success ? "complete" : "failed");
     },
@@ -133,6 +134,28 @@ it("accepts an eight-character password after caller-scoped reservation", async 
   });
   expect(test.calls).toEqual(["reserve", "create", "complete"]);
 });
+
+it.each(["requested", "failed"] as const)(
+  "keeps the created account when access email is %s",
+  async (status) => {
+    const mail = vi.fn(async (email: string) => {
+      expect(email).toBe(payload.email);
+      expect(test.calls).toEqual(["reserve", "create", "complete"]);
+      if (status === "failed") throw new Error("SMTP unavailable");
+    });
+    const test = fixture(mail);
+    const response = await test.request(payload);
+    expect(response.status).toBe(201);
+    expect(
+      successSchema("/v1/users", "post", 201).parse(await response.json()),
+    ).toMatchObject({
+      user_id: userId,
+      access_email: status,
+    });
+    expect(mail).toHaveBeenCalledTimes(1);
+    expect(test.calls).toEqual(["reserve", "create", "complete"]);
+  },
+);
 
 it("rejects a seven-character password before reservation or Auth creation", async () => {
   const test = fixture();

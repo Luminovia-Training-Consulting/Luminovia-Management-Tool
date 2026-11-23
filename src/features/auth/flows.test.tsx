@@ -227,6 +227,24 @@ describe("recoverable Auth request failures", () => {
     expect(screen.getByRole("button", { name: "setPassword" })).toBeEnabled();
   });
 
+  it("redeems the account setup recovery token only after confirmation", async () => {
+    const token = "B".repeat(32);
+    window.history.replaceState(
+      null,
+      "",
+      `/auth/callback?type=recovery&token_hash=${token}`,
+    );
+    fake.verifyOtp.mockResolvedValueOnce({ error: null });
+    view(<AuthCallback />);
+    expect(window.location.search).toBe("");
+    expect(fake.verifyOtp).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "setPassword" }));
+    expect(fake.verifyOtp).toHaveBeenCalledWith({
+      token_hash: token,
+      type: "recovery",
+    });
+  });
+
   it("releases the invitation button after rejected verification without restoring the token URL", async () => {
     const token = "A".repeat(32);
     window.history.replaceState(

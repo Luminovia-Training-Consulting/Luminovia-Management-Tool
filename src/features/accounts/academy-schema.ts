@@ -49,7 +49,11 @@ export type AcademyAdministration = z.infer<typeof academyAdministration>;
 export type AcademyManagedAccount = z.infer<typeof academyManagedAccount>;
 
 export const academyAccountReceipt = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("created"), user_id: z.uuid() }),
+  z.strictObject({
+    status: z.literal("created"),
+    user_id: z.uuid(),
+    access_email: z.enum(["requested", "failed"]).optional(),
+  }),
   z.strictObject({ status: z.literal("in_progress") }),
 ]);
 

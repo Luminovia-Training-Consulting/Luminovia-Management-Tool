@@ -58,6 +58,7 @@ export interface AccountDependencies {
     createAccount?: (
         account: Invitation<ProvisionedRole> & { password: string },
     ) => Promise<string>;
+    sendAccountAccess?: (email: string) => Promise<void>;
     completeAccount?: (
         id: string,
         userId: string | null,
@@ -187,6 +188,17 @@ function body(request: Request): Promise<unknown> {
 
 // Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.
 export function createAccountHandler(deps: AccountDependencies) {
+    async function accessMail(email: string): Promise<{access_email?: "requested" | "failed"}> {
+        if (!deps.sendAccountAccess) return {};
+        try {
+            await deps.sendAccountAccess(email);
+            return {access_email: "requested"};
+        } catch {
+            // Account creation has already committed. A mail failure must not roll it back.
+            return {access_email: "failed"};
+        }
+    }
+
     return async (request: Request): Promise<Response> => {
         const origin = request.headers.get("origin") ?? "";
         // CLI/API clients may omit Origin. Browser origins are an explicit allowlist;
@@ -293,8 +305,8 @@ export function createAccountHandler(deps: AccountDependencies) {
 
                 const record = reservation.data;
                 const creationId = record.creation_id;
-                const receipt = (status: number, userId: string) =>
-                    companyInvitation ? requested() : response(status, {status: "created", user_id: userId});
+                const receipt = (status: number, userId: string, mail = {}) =>
+                    companyInvitation ? requested() : response(status, {status: "created", user_id: userId, ...mail});
                 if (record.status === "created" && uuid(record.user_id)) return receipt(200, record.user_id);
                 if (record.status === "in_progress") return companyInvitation ? requested() : response(202, {status: "in_progress"});
                 if (record.status !== "reserved" && record.status !== "cleanup")
@@ -317,7 +329,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                         completionCode = completed.error?.code;
                         if (!completed.error && object(completed.data) &&
                             completed.data.status === "created" && completed.data.user_id === identity)
-                            return receipt(201, identity);
+                            return receipt(201, identity, mode === "password" ? await accessMail(invitation.email) : {});
                     } catch {
                         // Auth or PostgREST may have committed before the transport failed.
                     }
@@ -610,6 +622,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                     status: "created",
                     creation_id: result.creation_id,
                     user_id: createdId,
+                    ...await accessMail(creation.email),
                 });
             }
             if (path === "/v1/users" && request.method === "GET") {

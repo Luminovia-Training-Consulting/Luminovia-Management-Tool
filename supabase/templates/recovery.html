@@ -20,6 +20,13 @@
                 </tr>
                 <tr>
                     <td style="padding:28px">
+                        {{ if eq .RedirectTo (printf "%s/auth/callback?setup=1" .SiteURL) }}
+                        <h1>Dein Portalzugang wurde erstellt</h1>
+                        <p>Portal: <a href="{{ .SiteURL }}/login">{{ .SiteURL }}/login</a><br/>Anmeldung: <strong>{{ .Email }}</strong></p>
+                        <p>Lege über diesen persönlichen, einmaligen Link dein Passwort fest:</p>
+                        <p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=recovery">Passwort festlegen / Set password</a></p>
+                        <p lang="en">Your portal account is ready. Use the one-time link to set your password, then sign in with the email address above.</p>
+                        {{ else }}
                         <h1 style="font-size:25px;line-height:1.25;margin:0 0 16px">Passwort zurücksetzen</h1>
                         <p>Für dein Konto wurde ein Link zum Zurücksetzen des Passworts angefordert. Öffne den Link in dem Browser, in dem du die Wiederherstellung gestartet hast, und lege ein neues persönliches Passwort fest.</p>
                         <p>Der Link ist persönlich, zeitlich begrenzt und einmalig verwendbar. Bitte leite ihn nicht weiter. Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren; dein Passwort wird dadurch nicht geändert.</p>
@@ -32,6 +39,7 @@
                             <p>A password reset link was requested for your account. Open the link in the same browser where you started recovery, then choose your new personal password.</p>
                             <p>This personal link expires and can only be used once. Please do not forward it. If you did not make this request, you can ignore this email; your password will stay unchanged.</p>
                         </div>
+                        {{ end }}
                     </td>
                 </tr>
             </table>

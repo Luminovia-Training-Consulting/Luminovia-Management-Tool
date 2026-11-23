@@ -215,12 +215,27 @@ function AccountForm({
       form.reset();
       requestId.current = undefined;
       await changed();
+      if (response.access_email === "failed") {
+        setResult({
+          kind: "error",
+          message: word(
+            "Konto angelegt. Die Zugangsmail konnte nicht angefordert werden.",
+            "Account created. The access email could not be requested.",
+          ),
+        });
+        return;
+      }
       setResult({
         kind: "ok",
         message:
           mode === "invite"
             ? word("Einladung veranlasst.", "Invitation requested.")
-            : word("Konto angelegt.", "Account created."),
+            : response.access_email === "requested"
+              ? word(
+                  "Konto angelegt. Zugangsmail angefordert.",
+                  "Account created. Access email requested.",
+                )
+              : word("Konto angelegt.", "Account created."),
       });
     } catch (error) {
       setResult({ kind: "error", message: failure(error, word) });
