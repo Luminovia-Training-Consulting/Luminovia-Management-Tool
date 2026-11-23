@@ -237,6 +237,9 @@ export function ProfilePage() {
         )}
       </>
     );
+  const selectedTopicIds = new Set(
+    expertise.data?.map(({ topic_id }) => topic_id),
+  );
   return (
     <>
       <PageHeading
@@ -256,33 +259,33 @@ export function ProfilePage() {
       <AccountSettings email={session!.user.email ?? ""} />
       <div className="profile-layout">
         <ProfileForm profile={profile.data} />
-        <section className="panel">
-          <h2>{t("expertise")}</h2>
+        <section className="panel profile-expertise">
+          <h2 id="profile-expertise-heading">{t("expertise")}</h2>
           <p>{t("expertiseHelp")}</p>
           {permissions.data?.includes("taxonomy.manage") && (
             <Button asChild variant="secondary">
               <Link to="/topics">{t("manageExpertise")}</Link>
             </Button>
           )}
-          <div className="expertise-list">
-            {selectableTopics(
-              topics.data ?? [],
-              (expertise.data ?? []).map((entry) => entry.topic_id),
-            )
+          <div
+            className="expertise-list"
+            role="region"
+            aria-labelledby="profile-expertise-heading"
+            tabIndex={0}
+          >
+            {selectableTopics(topics.data ?? [], [...selectedTopicIds])
               .sort(
                 (a, b) =>
                   Number(isTeachingSubject(b.id)) -
                   Number(isTeachingSubject(a.id)),
               )
               .map((topic) => {
-                const selected = (expertise.data ?? []).find(
-                  (e) => e.topic_id === topic.id,
-                );
+                const selected = selectedTopicIds.has(topic.id);
                 return (
                   <label className="expertise-option" key={topic.id}>
                     <input
                       type="checkbox"
-                      checked={Boolean(selected)}
+                      checked={selected}
                       disabled={!online || edit.isPending}
                       onChange={(e) =>
                         edit.mutate({ topic: topic.id, add: e.target.checked })
@@ -315,8 +318,8 @@ export function ProfilePage() {
       />
       <ProfileEvidence ownerId={session!.user.id} />
       <OwnQualificationEvidence
-        topics={(topics.data ?? []).filter((topic) =>
-          (expertise.data ?? []).some((value) => value.topic_id === topic.id),
+        topics={(topics.data ?? []).filter(({ id }) =>
+          selectedTopicIds.has(id),
         )}
       />
     </>

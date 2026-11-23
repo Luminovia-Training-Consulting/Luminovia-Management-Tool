@@ -118,8 +118,7 @@ In the internal Premium LMS, open a participant from your company's **Teilnehmen
 Authorised administrators open `/admin/accounts` (**Konten & Zugänge / Accounts & access**) to search accounts, create a password account without email or invite a person, and edit roles through a named confirmation. An invitation is reported as sent only after server confirmation; direct account creation sends no invitation. An administrator with the required gross-finance permission can choose a company account's existing organisation and save **Organisation zuordnen / Assign organisation**.
 **Organisationszugriff entziehen / Revoke organisation access** removes that association. A company role without an active association does not grant organisation-wide access.
 
-Management can assign permitted subordinate roles; Administration can additionally assign Management and can change an administrator peer's rank where the current action permits it. Associating or revoking an organisation requires the separate administrative gross-finance permission. Only server-approved roles and editable target accounts appear in the controls. Self/owner protection and stricter activation/deletion rules still apply; the last active administrator is protected. Role changes
-apply to subsequent authorised API requests and preserve accepted assignments and fees. Existing development volumes retain their records. Use the private local credentials command rather than putting passwords in project files or support messages. See the [API reference](API_REFERENCE.md).
+Open **Meine Rollen / My roles** on your own account card as an internal administrator to combine Administration, Management, Lecturer, Course participant and Company. Select an active company when adding Company. Removing Administration relinquishes its permissions immediately and requires another active administrator or owner. Active teaching assignments protect your last teaching role. Management can assign company, participant and lecturer roles to subordinate accounts and attach the selected company together with the role. A participant role enables learner access; course enrolments remain separate.
 
 <a id="section-user-guide-permanent-deletion"></a>
 
@@ -3206,13 +3205,9 @@ test stack.
 
 ## Delegation boundary
 
-The server reads current database roles and MFA. Owner may assign administration and lower roles; administration may assign management and lower roles; management may assign senior lecturer, lecturer, company, participant and guest. Actors cannot change their own roles or activation state, or change an equal/higher account, including a target with several roles. Guest grants no additional permissions. Existing owner and participant semantics are retained.
+The server reads current database roles. The role catalogue and account directory expose the roles and target actions the caller can manage. The internal self-service editor lets an administrator change their own administration, management, lecturer, participant and company roles while preserving any protected roles. Account activation and permanent deletion use their separate rules. The last active administrative account and active teaching assignments are protected.
 
-`account_role_catalog` returns an `assignable` flag for each role. Account-directory entries return `can_assign_roles` and `can_change_active`. These flags guide the UI; the same rules are enforced independently in role, suspension, invitation and membership routines.
-
-Management can invite a company account without an organisation grant. Linking/removing an organisation, or inviting an account with an organisation attached, requires administrative gross-finance permission and MFA. Completion checks the inviter's current authority again. Removing a company role revokes active organisation memberships; restoring that role cannot restore those grants. The membership and role mutation routines share the account lifecycle lock.
-
-A company role cannot be combined with lecturer, senior lecturer or management roles on a non-administrative account. Defensive organisation checks also reject pre-existing conflicting combinations. This prevents one login from composing the private customer gross projection with a personal lecturer quote. Private messages, calendar entries and unrelated personal contracts retain their existing ownership rules.
+An organisation grant is a separate record. The role edit can atomically add the Company role and an active organisation to a manageable account. Removing the role revokes active memberships and keeps historical references. Learner enrolments and organisation memberships keep their own authorisation when roles are combined.
 
 <a id="section-delegated-roles-pricing-private-policy-and-offer-snapshots"></a>
 

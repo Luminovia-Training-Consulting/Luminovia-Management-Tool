@@ -467,7 +467,7 @@ export const accountOpenApi = {
             put: {
                 operationId: "setAccountRoles",
                 summary: "Audited role assignment; self/last-admin protection",
-                description: "Save the explicit roles for this account. Multiple roles contribute their own permissions. Organisation membership and participant enrolment are independently scoped.",
+                description: "Save the explicit roles for this account. Internal administrators can change their own administration, management, lecturer, participant and company roles, subject to the last-admin and active-teaching checks. Management can assign eligible roles to subordinate accounts. Company membership and participant enrolment remain separate grants.",
                 parameters: userId,
                 requestBody: jsonBody({
                     type: "object",
@@ -504,7 +504,7 @@ export const accountOpenApi = {
             put: {
                 operationId: "assignClientOrganisation",
                 summary:
-                    "Grant an existing client scoped organisation access; admin/owner capability required",
+                    "Grant a manageable client scoped organisation access",
                 parameters: [
                     ...userId,
                     {

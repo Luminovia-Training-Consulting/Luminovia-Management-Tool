@@ -73,6 +73,7 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
         created.push({id, role});
     }
     await assert.rejects(reserve(manager, "admin"), /42501/);
+    await assert.rejects(reserve(manager, "client", org), /42501/);
     await assert.rejects(reserve(admin, "owner"), /42501/);
     await assert.rejects(reserve(admin, "client"), /22023/);
     await assert.rejects(
@@ -96,7 +97,7 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
     await assert.rejects(
         actor(
             admin,
-            `select public.set_account_roles('${admin}',array['lecturer'])`,
+            `select public.set_account_roles('${admin}',array['admin','senior_lecturer'])`,
         ),
         /42501/,
     );
@@ -208,6 +209,6 @@ await withTestDatabase("account_creation", async ({sql, actor}) => {
         /42501/,
     );
     console.log(
-        "PASS seven explicitly assigned account roles, company binding, idempotency and current authority; admin peer role changes with self and owner protected, guest own-only profile and unconfirmed participant denial",
+        "PASS seven explicitly assigned account roles, company binding, idempotency and current authority; admin peer role changes with protected self roles and owner identity, guest own-only profile and unconfirmed participant denial",
     );
 });

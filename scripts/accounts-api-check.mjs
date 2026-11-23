@@ -346,10 +346,17 @@ try {
     assert.equal(
         (
             await request(admin, `users/${admin.id}/roles`, "PUT", {
-                roles: ["lecturer"],
+                roles: ["admin", "management", "lecturer", "participant"],
             })
         ).status,
-        403,
+        200,
+    );
+    assert.deepEqual((await request(admin, "me")).body.roles, [
+        "admin", "lecturer", "management", "participant",
+    ]);
+    assert.equal(
+        (await request(admin, `users/${admin.id}/roles`, "PUT", {roles: ["admin"]})).status,
+        200,
     );
     assert.equal(
         (
@@ -372,15 +379,11 @@ try {
     organisations.push(org);
     assert.equal(
         (
-            await request(admin, `users/${peer.id}/roles`, "PUT", {
+            await request(manager, `users/${peer.id}/roles`, "PUT", {
                 roles: ["client"],
+                organisation_id: org,
             })
         ).status,
-        200,
-    );
-    assert.equal(
-        (await request(admin, `users/${peer.id}/organisations/${org}`, "PUT"))
-            .status,
         200,
     );
     assert.equal(
@@ -393,7 +396,7 @@ try {
         org,
     );
     assert.equal(
-        (await request(admin, `users/${peer.id}/organisations/${org}`, "DELETE"))
+        (await request(manager, `users/${peer.id}/organisations/${org}`, "DELETE"))
             .status,
         200,
     );
@@ -572,14 +575,20 @@ try {
         200,
     );
     assert.deepEqual((await request(teacher, "me")).body.roles, ["lecturer"]);
+    const missingCompany = await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["client", "lecturer"],
+    });
+    assert.equal(missingCompany.status, 400);
+    assert.deepEqual((await request(teacher, "me")).body.roles, ["lecturer"]);
     const combined = await request(manager, `users/${teacher.id}/roles`, "PUT", {
         roles: ["client", "lecturer"],
+        organisation_id: org,
     });
     assert.equal(combined.status, 200);
     assert.deepEqual((await request(teacher, "me")).body.roles, ["client", "lecturer"]);
-    assert.deepEqual(
-        await checked(teacher.client.rpc("client_organisations"), "No unassigned company membership"),
-        [],
+    assert.equal(
+        (await checked(teacher.client.rpc("client_organisations"), "Managed company membership"))[0].id,
+        org,
     );
     const teachingOnly = await request(manager, `users/${teacher.id}/roles`, "PUT", {
         roles: ["lecturer"],

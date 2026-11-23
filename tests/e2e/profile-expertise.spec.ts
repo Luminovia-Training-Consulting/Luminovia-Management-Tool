@@ -30,11 +30,24 @@ test("lecturers can add expertise without attestation and find it after reload",
         );
         await login(page, lecturer.email);
         await page.goto("/profile");
-        const option = page.locator(".expertise-option").filter({hasText: label}),
+        const expertise = page.getByRole("region", {name: "Expertise", exact: true});
+        await expect(expertise).toHaveCSS("display", "grid");
+        const scroll = await expertise.evaluate((element) => ({
+            vertical: element.scrollHeight - element.clientHeight,
+            horizontal: element.scrollWidth - element.clientWidth,
+        }));
+        expect(scroll.vertical).toBeGreaterThan(0);
+        expect(scroll.horizontal).toBe(0);
+        await expertise.focus();
+        await expect(expertise).toBeFocused();
+        await page.keyboard.press("PageDown");
+        await expect.poll(() => expertise.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+        const option = expertise.locator(".expertise-option").filter({hasText: label}),
             checkbox = option.getByRole("checkbox");
         await expect(checkbox).not.toBeChecked();
         // This controlled input changes only after the server confirms the save.
-        await checkbox.click();
+        await checkbox.focus();
+        await page.keyboard.press("Space");
         await expect(checkbox).toBeChecked();
         await expect(option).toContainText(
             /Als Expertise angegeben|Declared expertise/,

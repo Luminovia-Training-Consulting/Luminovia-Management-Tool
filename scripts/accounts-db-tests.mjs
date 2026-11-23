@@ -263,12 +263,17 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
         },
     );
     await check(
-        "Self administrative removal and self suspension are protected and role mutations are audited",
+        "The last active administrator and self-suspension are protected, and role changes are audited",
         async () => {
-            await assert.rejects(
-                rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal1"),
-                /Self administrative/,
-            );
+            await sql(`update public.profiles set active=false where id='${owner}'`);
+            try {
+                await assert.rejects(
+                    rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal1"),
+                    /Last active administrator protected/,
+                );
+            } finally {
+                await sql(`update public.profiles set active=true where id='${owner}'`);
+            }
             await assert.rejects(
                 rpc(owner, "set_user_active", [owner, false], "aal1"),
                 /Self-deactivation/,
@@ -281,7 +286,7 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             );
         },
     );
-    await check("An internal administrator can toggle only their own lecturer role", async () => {
+    await check("An internal administrator can toggle their own lecturer role while owner protection stays in force", async () => {
         const before = await sql(`select array_agg(role order by role)::text from public.user_roles where user_id='${admin}'`);
         assert.equal(before, "{admin}");
         assert.deepEqual(
@@ -297,6 +302,48 @@ await withTestDatabase("accounts_test", async ({sql, actor}) => {
             ["admin"],
         );
         assert.equal(await sql(`select count(*) from public.audit_events where action='account.roles_changed' and resource_id='${admin}'`), "2");
+    });
+    await check("Administrators can compose their own supported roles and atomically demote to a linked client", async () => {
+        await assert.rejects(
+            rpc(admin, "set_account_roles", [admin, "{admin,client}"]),
+            /Client organisation required/,
+        );
+        await rpc(admin, "set_account_roles_with_organisation", [admin, "{admin,management,lecturer,participant,client}", org]);
+        assert.deepEqual((await rpc(admin, "account_me")).roles, [
+            "admin", "client", "lecturer", "management", "participant",
+        ]);
+        await assert.rejects(
+            rpc(admin, "set_account_roles", [admin, "{admin,senior_lecturer}"]),
+            /42501/,
+        );
+        await rpc(admin, "set_account_roles_with_organisation", [admin, "{client}", org]);
+        assert.deepEqual((await rpc(admin, "account_me")).roles, ["client"]);
+        assert.equal(await actor(admin, "select id from public.client_organisations()"), org);
+        await assert.rejects(rpc(admin, "set_account_roles", [admin, "{admin,client}"]), /42501/);
+        await rpc(owner, "set_account_roles", [admin, "{admin}"]);
+        assert.deepEqual((await rpc(admin, "account_me")).roles, ["admin"]);
+
+        assert.deepEqual((await rpc(owner, "set_account_roles", [owner, "{admin,management,owner}"])).roles,
+            ["admin", "management", "owner"]);
+        assert.deepEqual((await rpc(owner, "set_account_roles", [owner, "{owner}"])).roles, ["owner"]);
+    });
+    await check("Management assigns existing company membership and learner/lecturer roles without gross finance", async () => {
+        const authorised = await rpc(manager, "commission_access");
+        assert.equal(authorised.can_manage_client_memberships, true);
+        assert.equal(authorised.can_manage_gross, false);
+        await assert.rejects(
+            rpc(manager, "set_account_roles_with_organisation", [lecturer, "{client,participant}", randomUUID()]),
+            /valid organisation/,
+        );
+        assert.deepEqual((await rpc(lecturer, "account_me")).roles, ["lecturer"]);
+        await rpc(manager, "set_account_roles_with_organisation", [lecturer, "{client,lecturer,participant}", org]);
+        assert.deepEqual((await rpc(lecturer, "account_me")).roles, ["client", "lecturer", "participant"]);
+        assert.equal(await actor(manager, `select count(*) from public.client_organisation_memberships where user_id='${lecturer}' and organisation_id='${org}' and removed_at is null`), "1");
+        await rpc(manager, "manage_client_organisation", [lecturer, org, true]);
+        assert.equal(await actor(lecturer, "select count(*) from public.client_organisations()"), "0");
+        await rpc(manager, "set_account_roles", [lecturer, "{lecturer}"]);
+        assert.deepEqual((await rpc(lecturer, "account_me")).roles, ["lecturer"]);
+        await assert.rejects(rpc(manager, "manage_client_organisation", [admin, org, false]), /42501/);
     });
     await check(
         "Concurrent mutual administrator removal cannot eliminate every administrator",

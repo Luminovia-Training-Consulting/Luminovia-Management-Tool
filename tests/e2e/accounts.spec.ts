@@ -197,3 +197,65 @@ test("individual account roles, scoped invitations and linked status management 
         fullPage: true,
     });
 });
+
+test("administrator combines own roles and delegates company, lecturer and participant access as management", async ({page}) => {
+    test.setTimeout(75000);
+    const suffix = randomUUID().slice(0, 8);
+    const admin = await actor(`Fictional self-admin ${suffix}`, "admin");
+    const participant = await actor(`Fictional learner ${suffix}`, "participant");
+    const company = {id: randomUUID(), name: `Fictional training company ${suffix}`};
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    await checked(service.from("organisations").insert(company));
+    await adminLogin(page, admin);
+    await page.goto("/admin/accounts");
+    const search = page.getByRole("searchbox", {name: "Konten suchen", exact: true});
+    const saveRoles = async (dialogName: string, person: string) => {
+        const editor = page.getByRole("dialog", {name: dialogName, exact: true});
+        await editor.getByRole("button", {name: "Rollen speichern", exact: true}).click();
+        const confirmation = page.getByRole("dialog", {name: `Rollen für ${person} ändern?`, exact: true});
+        await confirmation.getByRole("button", {name: "Rollen speichern", exact: true}).click();
+        await expect(confirmation).not.toBeVisible();
+        await expect(editor).not.toBeVisible();
+    };
+    await search.fill(admin.email);
+    const own = page.getByRole("button", {name: "Meine Rollen", exact: true});
+    await own.click();
+    const ownEditor = page.getByRole("dialog", {name: "Meine Rollen", exact: true});
+    await expect(ownEditor.getByLabel("Administration", {exact: true})).toBeChecked();
+    for (const label of ["Management", "Dozent:in", "Kursteilnehmer:in", "Unternehmen"])
+        await ownEditor.getByLabel(label, {exact: true}).check();
+    await ownEditor.getByLabel("Zugeordnetes Unternehmen", {exact: true}).selectOption(company.id);
+    await saveRoles("Meine Rollen", admin.name);
+
+    const rolesOf = async (userId: string) =>
+        (await checked(service.from("user_roles").select("role").eq("user_id", userId), {requireData: true}))
+            .map(({role}) => role).sort();
+    const membersOf = async (userId: string) =>
+        (await checked(service.from("client_organisation_memberships").select("organisation_id")
+            .eq("user_id", userId).is("removed_at", null), {requireData: true}))
+            .map(({organisation_id}) => organisation_id);
+    expect(await rolesOf(admin.id)).toEqual(["admin", "client", "lecturer", "management", "participant"]);
+    expect(await membersOf(admin.id)).toEqual([company.id]);
+
+    await own.click();
+    await ownEditor.getByLabel("Administration", {exact: true}).uncheck();
+    await saveRoles("Meine Rollen", admin.name);
+    expect(await rolesOf(admin.id)).toEqual(["client", "lecturer", "management", "participant"]);
+    await expect(own).toHaveCount(0);
+
+    await search.fill(participant.email);
+    const participantCard = page.locator(".account-list > li").filter({
+        has: page.getByText(participant.email, {exact: true}),
+    });
+    await participantCard.getByRole("button", {name: "Rollen bearbeiten", exact: true}).click();
+    const otherEditor = page.getByRole("dialog", {name: "Rollen bearbeiten", exact: true});
+    await expect(otherEditor.getByLabel("Administration", {exact: true})).toHaveCount(0);
+    await expect(otherEditor.getByLabel("Management", {exact: true})).toHaveCount(0);
+    await expect(otherEditor.getByLabel("Kursteilnehmer:in", {exact: true})).toBeChecked();
+    await otherEditor.getByLabel("Unternehmen", {exact: true}).check();
+    await otherEditor.getByLabel("Dozent:in", {exact: true}).check();
+    await otherEditor.getByLabel("Zugeordnetes Unternehmen", {exact: true}).selectOption(company.id);
+    await saveRoles("Rollen bearbeiten", participant.name);
+    expect(await rolesOf(participant.id)).toEqual(["client", "lecturer", "participant"]);
+    expect(await membersOf(participant.id)).toEqual([company.id]);
+});

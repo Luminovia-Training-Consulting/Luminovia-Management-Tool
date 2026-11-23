@@ -99,9 +99,7 @@ export function InviteForm({
     ...commissionAccessQuery(actor),
     enabled: allRoles && canAssignRoles && Boolean(actor),
   });
-  const canLinkOrganisations = Boolean(
-    clientAccess.data?.can_manage_client_memberships,
-  );
+  const canLinkOrganisations = Boolean(clientAccess.data?.can_manage_gross);
   const catalog = useQuery({
     ...accountRoleCatalogQuery(actor),
     enabled: allRoles && Boolean(actor),

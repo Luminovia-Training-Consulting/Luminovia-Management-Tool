@@ -43,7 +43,13 @@ const de = {
   roles: "Rollen bearbeiten",
   ownRoles: "Meine Rollen",
   ownRoleHint:
-    "Hier kannst du die Dozierendenrolle für dein Konto ein- oder ausschalten. Alle anderen Rollen sind hier schreibgeschützt.",
+    "Du kannst mehrere Rollen für dein Konto kombinieren. Wähle für die Unternehmensrolle ein Unternehmen aus.",
+  relinquishAdmin:
+    "Wenn du deine Administrationsrolle entfernst, enden ihre Berechtigungen sofort. Ein anderes Admin- oder Inhaberkonto kann sie dir wieder zuweisen.",
+  lastAdminProtected:
+    "Mindestens ein anderes aktives Admin- oder Inhaberkonto muss bestehen, bevor du deine Administrationsrolle entfernen kannst.",
+  activeTeachingProtected:
+    "Schließe deine aktiven Lehraufträge ab oder übergib sie, bevor du deine letzte Dozierendenrolle entfernst.",
   ownProfileExpertise: "Mein Profil und meine Expertise",
   ownContracts: "Meine Verträge",
   save: "Rollen speichern",
@@ -85,7 +91,7 @@ const de = {
   organisationHint:
     "Die Unternehmensrolle gilt für die zugeordneten Organisationen.",
   organisationAdmin:
-    "Die Administration ordnet diesem Konto anschließend eine Organisation zu.",
+    "Für die Zuordnung eines Unternehmens sind aktuelle Verwaltungsrechte erforderlich.",
   choose: "Organisation wählen",
   clientLink: "Organisation zuordnen",
   clientUnlink: "Organisationszugriff entziehen",
@@ -145,7 +151,13 @@ const en: typeof de = {
   roles: "Edit roles",
   ownRoles: "My roles",
   ownRoleHint:
-    "Turn the lecturer role on or off for your account. All other roles are read-only here.",
+    "You can combine multiple roles on your account. Choose a company when adding the company role.",
+  relinquishAdmin:
+    "Removing your administrator role ends its permissions immediately. Another administrator or owner can assign it to you again.",
+  lastAdminProtected:
+    "At least one other active administrator or owner must remain before you can remove your administrator role.",
+  activeTeachingProtected:
+    "Complete or transfer active teaching assignments before removing your last teaching role.",
   ownProfileExpertise: "My profile and expertise",
   ownContracts: "My contracts",
   save: "Save roles",
@@ -183,7 +195,7 @@ const en: typeof de = {
   organisation: "Linked company",
   organisationHint: "The company role applies to linked organisations.",
   organisationAdmin:
-    "Administration will assign an organisation to this account afterwards.",
+    "Linking a company requires current management permission.",
   choose: "Choose organisation",
   clientLink: "Assign organisation",
   clientUnlink: "Revoke organisation access",

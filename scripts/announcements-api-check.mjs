@@ -193,10 +193,16 @@ await withApiFixture(async ({actor, passwordOnly, sql, defer, checked, suffix}) 
     const recovered = await manage(args(v2.id, "recover", archived.version));
     assert.equal(recovered.published.id, v2.published.id);
     assert.deepEqual(await notice(recovered.published.id), secondNotice);
+    const company = randomUUID();
+    await sql(`insert into public.organisations(id,name) values(${q(company)},'Fictional announcement company')`);
+    defer(async () => {
+        await sql(`delete from public.client_organisation_memberships where organisation_id=${q(company)};delete from public.organisations where id=${q(company)}`);
+    });
     await checked(
-        admin.client.rpc("set_account_roles", {
+        admin.client.rpc("set_account_roles_with_organisation", {
             p_user_id: teacher.id,
             p_roles: ["client"],
+            p_organisation_id: company,
         }),
         "Revoke actual lecturer audience role",
     );

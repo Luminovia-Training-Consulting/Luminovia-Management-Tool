@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **322 migration files** through version **20261123065332**, containing **555 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `85eb6001e49e1fc82f3aa241b43ba0728ff986b0df47aa1167ae2dd74f8302e9`.
+This reference describes the current repository API. It is generated from a disposable replay of **324 migration files** through version **20261123070636**, containing **555 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `2b920fcca8ca9fd3dcff15ef6b5e9d12fe46e3d1c34b48a84d07037f83ec0430`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and [QA results](DEVELOPMENT.md#section-test-plan) define that evidence.
 
@@ -54,7 +54,7 @@ Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/acco
 | GET    | /roles                                     | Read available roles and current database capabilities                                             |
 | PUT    | /users/{id}/roles                          | Audited role assignment; self/last-admin protection                                                |
 | PATCH  | /users/{id}/status                         | Reversible activation/suspension; self/last-admin protection                                       |
-| PUT    | /users/{id}/organisations/{organisationId} | Grant an existing client scoped organisation access; admin/owner capability required               |
+| PUT    | /users/{id}/organisations/{organisationId} | Grant a manageable client scoped organisation access                                               |
 | DELETE | /users/{id}/organisations/{organisationId} | Revoke organisation access immediately without deleting historical records                         |
 | POST   | /invitations                               | Idempotent captured/approved email invitation; authoritative role and optional client organisation |
 | POST   | /company-participant-invitations           | Request a company-scoped participant-only invitation; no role or account lookup is exposed         |

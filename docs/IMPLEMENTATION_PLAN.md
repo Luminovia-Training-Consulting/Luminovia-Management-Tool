@@ -1,6 +1,7 @@
 # Persistent implementation plan
 
-- [x] Expose own profile, expertise, contracts and a scoped regular lecturer toggle from the internal account directory.
+- [x] Expose own profile, expertise and contracts from the internal account directory. Let administrators edit their own administration, management, lecturer, participant and company roles, preserving final administrative access and active teaching obligations.
+- [x] Let management assign company, participant and lecturer roles to eligible accounts and bind the selected organisation with company role changes. Make the own-profile expertise picker a bounded, responsive scroll area.
 
 ## Automatic updates on KVM 1
 

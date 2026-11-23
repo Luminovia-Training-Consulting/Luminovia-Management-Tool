@@ -193,7 +193,7 @@ export const operationsRpcDocumentation = {
   set_account_roles: {
     summary: "Replace a managed account's roles",
     description:
-      "Requires users.roles.manage and current authority over the target and requested roles. An internal administrator or owner can toggle their own regular lecturer role by sending the complete role list with all other roles unchanged. Active teaching assignments protect the last teaching role. Company memberships are managed separately. Returns the authoritative normalized role list.",
+      "Requires users.roles.manage and current authority over the target and requested roles. An internal administrator or owner can change their own administrator, management, lecturer, participant and client roles and must retain any protected roles. The last active administrative account and active teaching assignments are protected. Use the atomic organisation variant to add the client role with its company. Returns the authoritative normalized role list.",
     parameters: {
       p_user_id: id,
       p_roles: { type: "array", minItems: 1, maxItems: 8, items: accountRole },
@@ -217,6 +217,23 @@ export const operationsRpcDocumentation = {
         "Invalid role list, an active teaching assignment, or the last active administrator would lose their role.",
       "403":
         "The caller lacks role assignment authority or attempted an unsupported change to their own account.",
+    },
+  },
+  set_account_roles_with_organisation: {
+    summary: "Save account roles with a company",
+    description:
+      "Confirms the requested role set and company membership in one transaction. Include the client role and select an active organisation. Internal company management can link an organisation for a manageable subordinate account. Internal administrators and owners can update their own roles within the self-service boundary.",
+    parameters: {
+      p_user_id: id,
+      p_roles: { type: "array", minItems: 1, maxItems: 8, items: accountRole },
+      p_organisation_id: id,
+    },
+    result: { type: "null" },
+    errors: {
+      "400":
+        "Invalid role list or protected final administrative or teaching role.",
+      "403":
+        "The caller lacks authority for the target, requested roles or organisation.",
     },
   },
   set_user_active: {

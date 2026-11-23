@@ -1,5 +1,41 @@
-.profile-layout .button + .expertise-list:not(:empty) {
-  margin-block-start: 1rem;
+.profile-expertise {
+  min-width: 0;
+}
+
+.profile-expertise .expertise-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr));
+  align-content: start;
+  gap: 0.5rem;
+  max-block-size: min(18rem, 48vh);
+  margin-block-start: 0.75rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scroll-padding-block: 0.5rem;
+}
+
+.profile-expertise .expertise-list:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.profile-expertise .expertise-option {
+  gap: 0.5rem;
+  min-block-size: 2.75rem;
+  padding: 0.45rem 0.6rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  background: var(--surface-raised);
+}
+
+.profile-expertise .expertise-option:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--blue-soft);
+}
+
+.profile-expertise .expertise-option input {
+  flex: none;
 }
 
 /** Own profile preferences share a compact responsive row without changing publication semantics. */

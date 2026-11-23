@@ -1,3 +1,9 @@
+# 23 November 2026 — Own account roles and compact expertise
+
+Internal administrators can change their own administration, management, regular lecturer, participant and company roles. The company grant and role change commit together. Active teaching commitments and the last active administrator remain protected. Management can link companies for eligible subordinate company accounts without gross-finance access. Own-profile expertise is a bounded, keyboard-scrollable tile grid.
+
+Desktop and mobile Chromium verified the administrator's own role changes, subsequent management role assignment, and selecting expertise after scrolling and reloading. All 16 account PostgreSQL groups passed, alongside account creation and company/learner linkage checks. The actual account HTTP suite, 27 account Edge tests, and 1,632 unit and component tests passed.
+
 # 23 November 2026 — Exact-main SQL lint and visibility regression follow-up
 
 Added a forward migration that gives the empty `tstzrange[]` initializer an explicit type in `private.save_course_run`; this removes the strict PL/pgSQL type warning without rewriting a previously released migration. Updated the readiness PostgreSQL regression to assert that an internal lecturer cannot discover a course after cancellation while management retains access. Local verification so far: the full frontend suite passed 1,631 tests, 475 runtime/code-integrity tests passed, 26 core PostgreSQL groups passed (including 50 concurrent claims), `supabase db lint` reported no warnings, and database advisors reported no issues. The complete system phase is still running through isolated SQL/API checks. GitHub run 45127689488 on `b604e037` has its `verify` job failed; detailed logs remain unavailable until that workflow run completes. Exact-head CI and the remaining local system/browser phases are still pending.

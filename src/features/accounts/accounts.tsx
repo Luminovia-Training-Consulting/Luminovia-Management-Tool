@@ -36,6 +36,14 @@ import {
 import { ManagedProfileEditor } from "./managed-profile-editor";
 import "./i18n";
 
+const ownEditableRoles: readonly AccountRole[] = [
+  "admin",
+  "management",
+  "lecturer",
+  "participant",
+  "client",
+];
+
 /** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
@@ -80,13 +88,23 @@ function AccountsDirectory({
       (entry) => entry.assignable && entry.role !== "owner",
     ) ?? [];
   const ownRoles = selected?.id === actorId;
+  const editingCompany = roles.includes("client");
+  const addingCompanyRole =
+    editingCompany && !selected?.roles.includes("client");
+  const relinquishingAdmin =
+    ownRoles &&
+    selected.roles.includes("admin") &&
+    !selected.roles.includes("owner") &&
+    !roles.includes("admin");
+  const companyChange =
+    editingCompany && organisation ? { organisation_id: organisation } : {};
   const organisations = useQuery({
     ...accountOrganisationsQuery(actorId),
-    enabled: canLinkOrganisations && selected !== null && !ownRoles,
+    enabled: canLinkOrganisations && selected !== null && editingCompany,
   });
   const membership = useQuery({
     queryKey: ["account-memberships", actorId, selected?.id],
-    enabled: canLinkOrganisations && selected !== null && !ownRoles,
+    enabled: canLinkOrganisations && selected !== null && editingCompany,
     queryFn: () => accountMemberships(selected!.id),
   });
   const change = useMutation({
@@ -94,18 +112,19 @@ function AccountsDirectory({
       requireOnline();
       if (!selected) throw new Error("account_required");
       if (ownRoles) {
-        const { data, error } = await db().rpc("set_account_roles", {
-          p_user_id: actorId,
-          p_roles: roles,
-        });
+        const payload = { p_user_id: actorId, p_roles: roles };
+        const { data, error } = companyChange.organisation_id
+          ? await db().rpc("set_account_roles_with_organisation", {
+              ...payload,
+              p_organisation_id: companyChange.organisation_id,
+            })
+          : await db().rpc("set_account_roles", payload);
         if (error) throw error;
         return data;
       }
       return await accountRequest(`users/${selected.id}/roles`, "PUT", {
         roles,
-        ...(roles.includes("client") && organisation
-          ? { organisation_id: organisation }
-          : {}),
+        ...companyChange,
       });
     },
     onSuccess: async () => {
@@ -131,6 +150,21 @@ function AccountsDirectory({
     onSuccess: () =>
       cache.invalidateQueries({ queryKey: ["account-memberships", actorId] }),
   });
+  const ownChangeError =
+    ownRoles &&
+    change.error &&
+    typeof change.error === "object" &&
+    "message" in change.error
+      ? change.error.message
+      : undefined;
+  const changeErrorLabel =
+    ownChangeError === "Last active administrator protected"
+      ? "lastAdminProtected"
+      : ownChangeError ===
+          "Complete or transfer active teaching assignments first"
+        ? "activeTeachingProtected"
+        : "error";
+
   if (accounts.isPending) return <Loading />;
   if (accounts.isError)
     return <ErrorState retry={() => void accounts.refetch()} />;
@@ -290,7 +324,7 @@ function AccountsDirectory({
           <CreateAccountForm
             actor={actorId}
             roles={catalog.data}
-            canLinkOrganisations={canLinkOrganisations}
+            canLinkOrganisations={Boolean(clientAccess.data?.can_manage_gross)}
           />
         )}
       </Dialog>
@@ -327,7 +361,9 @@ function AccountsDirectory({
         <fieldset className="account-roles">
           <legend>{t("role")}</legend>
           {(ownRoles
-            ? assignableRoles.filter(({ role }) => role === "lecturer")
+            ? assignableRoles.filter(({ role }) =>
+                ownEditableRoles.includes(role),
+              )
             : assignableRoles
           ).map(({ role }) => (
             <label key={role}>
@@ -363,26 +399,23 @@ function AccountsDirectory({
             !roles.length ||
             change.isPending ||
             link.isPending ||
-            (!ownRoles &&
-              roles.includes("client") &&
-              !selected?.roles.includes("client") &&
-              (!canLinkOrganisations || !organisation))
+            (addingCompanyRole && (!canLinkOrganisations || !organisation))
           }
           onClick={() => setConfirm(true)}
         >
           {t("save")}
         </Button>
         {change.isError && !confirm && (
-          <Notice kind="error">{t("error")}</Notice>
+          <Notice kind="error">{t(changeErrorLabel)}</Notice>
         )}
-        {!ownRoles && roles.includes("client") && !canLinkOrganisations && (
+        {editingCompany && !canLinkOrganisations && (
           <Notice>{t("organisationAdmin")}</Notice>
         )}
-        {!ownRoles && roles.includes("client") && canLinkOrganisations && (
+        {editingCompany && canLinkOrganisations && (
           <section>
             <h3>{t("organisation")}</h3>
             <p>{t("organisationHint")}</p>
-            {!selected?.roles.includes("client") && (
+            {addingCompanyRole && (
               <Notice>{t("conversionOrganisation")}</Notice>
             )}
             {organisations.isPending || membership.isPending ? (
@@ -461,7 +494,16 @@ function AccountsDirectory({
         description={t("confirmHint")}
       >
         <p>{roles.map((role) => t(role)).join(" · ")}</p>
-        {change.isError && <Notice kind="error">{t("error")}</Notice>}
+        {relinquishingAdmin && <Notice>{t("relinquishAdmin")}</Notice>}
+        {companyChange.organisation_id && (
+          <p>
+            {t("organisation")} ·{" "}
+            {organisations.data?.find(
+              (item) => item.id === companyChange.organisation_id,
+            )?.name ?? companyChange.organisation_id}
+          </p>
+        )}
+        {change.isError && <Notice kind="error">{t(changeErrorLabel)}</Notice>}
         <div className="form-actions">
           <Button
             variant="secondary"

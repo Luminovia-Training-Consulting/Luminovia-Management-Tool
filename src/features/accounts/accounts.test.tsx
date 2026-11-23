@@ -279,7 +279,7 @@ describe("Account administration", () => {
     ).toBeDisabled();
     expect(
       screen.getByText(
-        "Die Administration ordnet diesem Konto anschließend eine Organisation zu.",
+        "Für die Zuordnung eines Unternehmens sind aktuelle Verwaltungsrechte erforderlich.",
       ),
     ).toBeVisible();
     expect(
@@ -342,8 +342,10 @@ describe("Account administration", () => {
       screen.queryByTestId("lecturer-compensation"),
     ).not.toBeInTheDocument();
   });
-  it("shows own profile and contracts and only lets the administrator toggle teaching", async () => {
+  it("shows own shortcuts and saves the administrator’s combined roles and company together", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
+    fake.adminCatalog = true;
+    fake.companyAccess = true;
     const previous = fake.invoke.getMockImplementation()!;
     fake.invoke.mockImplementation(async (path: string) => {
       const result = await previous(path);
@@ -370,11 +372,29 @@ describe("Account administration", () => {
     await waitFor(() => expect(roles).toBeEnabled());
     await userEvent.click(roles);
     const dialog = within(screen.getByRole("dialog", { name: "Meine Rollen" }));
-    expect(dialog.getAllByRole("checkbox")).toHaveLength(1);
-    await userEvent.click(dialog.getByRole("checkbox", { name: "Dozent:in" }));
-    await userEvent.click(
-      dialog.getByRole("button", { name: "Rollen speichern" }),
+    expect(dialog.getAllByRole("checkbox")).toHaveLength(5);
+    expect(
+      dialog.getByRole("checkbox", { name: "Administration" }),
+    ).toBeChecked();
+    expect(
+      dialog.queryByRole("checkbox", { name: "Senior-Dozent:in" }),
+    ).not.toBeInTheDocument();
+    for (const name of [
+      "Management",
+      "Dozent:in",
+      "Kursteilnehmer:in",
+      "Unternehmen",
+    ])
+      await userEvent.click(
+        dialog.getByRole("checkbox", { name }),
+      );
+    const save = dialog.getByRole("button", { name: "Rollen speichern" });
+    expect(save).toBeDisabled();
+    await userEvent.selectOptions(
+      await dialog.findByLabelText("Zugeordnetes Unternehmen"),
+      "company-a",
     );
+    await userEvent.click(save);
     const confirm = within(
       await screen.findByRole("dialog", { name: "Rollen für Anna ändern?" }),
     );
@@ -382,11 +402,65 @@ describe("Account administration", () => {
       confirm.getByRole("button", { name: "Rollen speichern" }),
     );
     await waitFor(() =>
-      expect(fake.rpc).toHaveBeenCalledWith("set_account_roles", {
-        p_user_id: "own-actor",
-        p_roles: ["admin", "lecturer"],
-      }),
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "set_account_roles_with_organisation",
+        {
+          p_user_id: "own-actor",
+          p_roles: ["admin", "management", "lecturer", "participant", "client"],
+          p_organisation_id: "company-a",
+        },
+      ),
     );
+  });
+  it("confirms relinquishing administration and surfaces the last-admin denial", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    fake.adminCatalog = true;
+    const previous = fake.invoke.getMockImplementation()!;
+    fake.invoke.mockImplementation(async (path: string) => {
+      const result = await previous(path);
+      if (path.includes("/users?"))
+        Object.assign(result.data.items[0], {
+          id: "own-actor",
+          roles: ["admin", "management"],
+        });
+      return result;
+    });
+    const priorRpc = fake.rpc.getMockImplementation()!;
+    fake.rpc.mockImplementation((name: string, args: unknown) =>
+      name === "set_account_roles"
+        ? Promise.resolve({
+            data: null,
+            error: { message: "Last active administrator protected" },
+          })
+        : priorRpc(name, args),
+    );
+    page();
+    const own = await screen.findByRole("button", { name: "Meine Rollen" });
+    await waitFor(() => expect(own).toBeEnabled());
+    await userEvent.click(own);
+    const dialog = within(screen.getByRole("dialog", { name: "Meine Rollen" }));
+    await userEvent.click(
+      dialog.getByRole("checkbox", { name: "Administration" }),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Rollen speichern" }),
+    );
+    const confirm = within(
+      await screen.findByRole("dialog", { name: "Rollen für Anna ändern?" }),
+    );
+    expect(
+      confirm.getByText(/Ein anderes Admin- oder Inhaberkonto/),
+    ).toBeVisible();
+    await userEvent.click(
+      confirm.getByRole("button", { name: "Rollen speichern" }),
+    );
+    expect(await confirm.findByRole("alert")).toHaveTextContent(
+      "Mindestens ein anderes aktives Admin- oder Inhaberkonto",
+    );
+    expect(fake.rpc).toHaveBeenCalledWith("set_account_roles", {
+      p_user_id: "own-actor",
+      p_roles: ["management"],
+    });
   });
   it("does not offer editing for a server-protected target", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
