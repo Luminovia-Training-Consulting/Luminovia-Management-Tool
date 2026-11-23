@@ -16,11 +16,11 @@ const de = {
   invitationUnknown:
     "Der Status der E-Mail-Einladungen ist derzeit nicht verfügbar.",
   connectionScope:
-    "Der Verbindungstest prüft TLS und Zugangsdaten ohne E-Mail-Versand. Prüfe die tatsächliche Zustellung separat mit einer Einladung oder Passwort-Wiederherstellung an ein freigegebenes Testpostfach.",
+    "Der Verbindungstest prüft TLS und die Anmeldung. Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
   description:
     "SMTP wird für Authentifizierung und Portalbenachrichtigungen gemeinsam verwendet. Zugangsdaten werden nur verschlüsselt gespeichert und nie erneut angezeigt.",
   academyDescription:
-    "Richte den SMTP-Transport für Einladungen und die Passwort-Wiederherstellung dieser Akademie ein. Die Verbindungsprüfung versendet keine E-Mail. Zugangsdaten werden verschlüsselt gespeichert.",
+    "Richte den SMTP-Transport für Einladungen und die Passwort-Wiederherstellung dieser Akademie ein. Du kannst die Verbindung prüfen oder dir eine Testmail schicken. Zugangsdaten werden verschlüsselt gespeichert.",
   academyReadOnly:
     "Der E-Mail-Transport ist während der Kulanzfrist schreibgeschützt.",
   academyOnline:
@@ -47,6 +47,14 @@ const de = {
   saveFailed: "Die E-Mail-Einstellungen konnten nicht bestätigt werden.",
   conflict: "Die Einstellungen wurden parallel geändert. Bitte neu laden.",
   smtpTest: "SMTP-Verbindung testen",
+  sendTestMail: "Testmail an mich senden",
+  testMailAccepted:
+    "Der SMTP-Server hat die Testmail angenommen. Prüfe deinen Posteingang und Spamordner.",
+  testMailUnconfirmed:
+    "Der Versand wurde nicht bestätigt. Prüfe zuerst den Posteingang und ob die E-Mail-Adresse deines Portalkontos bestätigt ist.",
+  credentialSaved: "Gespeichert",
+  incompleteCredentials:
+    "Aktiviere den Transport und gib Benutzername und Passwort gemeinsam ein. Gespeicherte Zugangsdaten kannst du unverändert lassen.",
   imapTest: "IMAP-Verbindung testen",
   testing: "Verbindung wird geprüft …",
   testPassed: "Die Verbindung wurde erfolgreich geprüft.",
@@ -78,11 +86,11 @@ const en: typeof de = {
     "The server blocks email invitations. Check the installation's invitation setting.",
   invitationUnknown: "The email invitation status is currently unavailable.",
   connectionScope:
-    "The connection test checks TLS and credentials without sending mail. Verify real delivery separately with an invitation or password recovery to an approved test mailbox.",
+    "The connection test checks TLS and authentication. A test email goes to the verified email address of your portal account.",
   description:
     "SMTP is shared by Auth and portal notifications. Credentials are stored encrypted and are never displayed again.",
   academyDescription:
-    "Configure SMTP for invitations and password recovery in this academy. The connection check sends no email. Credentials are stored encrypted.",
+    "Configure SMTP for invitations and password recovery in this academy. You can check the connection or send yourself a test email. Credentials are stored encrypted.",
   academyReadOnly:
     "Mail transport is read-only during the licence grace period.",
   academyOnline: "Connect to the internet to open mail transport settings.",
@@ -108,6 +116,14 @@ const en: typeof de = {
   saveFailed: "Mail settings could not be confirmed.",
   conflict: "Settings changed concurrently. Reload and try again.",
   smtpTest: "Test SMTP connection",
+  sendTestMail: "Send me a test email",
+  testMailAccepted:
+    "The SMTP server accepted the test email. Check your inbox and spam folder.",
+  testMailUnconfirmed:
+    "Sending could not be confirmed. Check your inbox and confirm that your portal account email address is verified.",
+  credentialSaved: "Saved",
+  incompleteCredentials:
+    "Enable the transport and enter the username and password together. You can keep your saved credentials.",
   imapTest: "Test IMAP connection",
   testing: "Testing connection …",
   testPassed: "The connection test succeeded.",

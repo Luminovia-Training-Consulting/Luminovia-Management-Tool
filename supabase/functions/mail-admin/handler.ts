@@ -15,7 +15,8 @@ export type MailAdminDependencies = {
         userToken: string,
         protocol: MailProtocol,
     ) => Promise<{ data: unknown; error: { code?: string } | null }>;
-    relayTest: (testId: string) => Promise<unknown>;
+    confirmedEmail: (token: string) => Promise<string | null>;
+    relayTest: (testId: string, recipient?: string) => Promise<unknown>;
 };
 
 const safeErrors = new Set([
@@ -98,20 +99,29 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
         } catch {
             return response(400, {error: "invalid_request"}, origin);
         }
+        if (!body || typeof body !== "object" || Array.isArray(body))
+            return response(400, {error: "invalid_request"}, origin);
+        const {protocol, send_to_self} = body as Record<string, unknown>;
         if (
-            !body ||
-            typeof body !== "object" ||
-            Array.isArray(body) ||
-            !["smtp", "imap"].includes(
-                (body as Record<string, unknown>).protocol as string,
-            ) ||
-            Object.keys(body).length !== 1
+            (protocol !== "smtp" && protocol !== "imap") ||
+            Object.keys(body).some((key) => key !== "protocol" && key !== "send_to_self") ||
+            ("send_to_self" in body && (protocol !== "smtp" || send_to_self !== true))
         )
             return response(400, {error: "invalid_request"}, origin);
         if (!deps.relayAvailable)
             return response(503, {error: "test_unavailable"}, origin);
 
-        const protocol = (body as { protocol: MailProtocol }).protocol;
+        let recipient: string | undefined;
+        if (send_to_self === true) {
+            try {
+                const email = await deps.confirmedEmail(token);
+                if (!email || email.length > 254 || !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,63}$/i.test(email))
+                    return response(400, {error: "confirmed_email_required"}, origin);
+                recipient = email;
+            } catch {
+                return response(503, {error: "test_unavailable"}, origin);
+            }
+        }
         let queued: { data: unknown; error: { code?: string } | null };
         try {
             queued = await deps.queueTest(token, protocol);
@@ -139,6 +149,7 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
         try {
             const result = (await deps.relayTest(
                 queued.data,
+                recipient,
             )) as Partial<RelayResult>;
             if (result.status !== "succeeded" && result.status !== "failed")
                 return response(503, {error: "test_unavailable"}, origin);

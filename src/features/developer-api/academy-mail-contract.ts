@@ -20,6 +20,7 @@ const edgeError = z.strictObject({
     "invalid_request",
     "permission_denied",
     "test_unavailable",
+    "confirmed_email_required",
   ]),
 });
 const safeErrorCode = z.enum([
@@ -209,18 +210,23 @@ export const academyMailPaths = {
     post: {
       operationId: "checkAcademyMailConnection",
       tags,
-      summary: "Check SMTP without sending a message",
+      summary: "Check SMTP or send a test email",
       description:
-        "A current, confirmed local administrator on an active installation can check the saved provider's TLS, SMTP greeting, authentication and NOOP. The result contains a fixed status and optional safe error code.",
+        "A current local administrator on an active installation can check the saved transport or use send_to_self to send a fixed test email to their confirmed account address. The result contains a fixed status and optional safe error code.",
       security: credentials,
       "x-portal-licence": "active",
       "x-portal-document-only": true,
       requestBody: {
         required: true,
-        content: json(z.strictObject({ protocol: z.literal("smtp") })),
+        content: json(
+          z.strictObject({
+            protocol: z.literal("smtp"),
+            send_to_self: z.literal(true).optional(),
+          }),
+        ),
       },
       responses: {
-        "200": response("Sanitized handshake result", result),
+        "200": response("Sanitized mail test result", result),
         "400": response("Invalid request", edgeError),
         "401": response("Authentication required", edgeError),
         "403": response("Origin or current administrator refused", edgeError),
@@ -339,16 +345,24 @@ export const internalMailDownload = {
     post: {
       operationId: "checkMailConnection",
       tags: internalTags,
-      summary: "Check a saved mail transport without delivering mail",
+      summary: "Check a saved mail transport or send a test email",
       description:
-        "Requires current mail administration authority. Checks TLS and authentication for the specified SMTP or IMAP transport. Returns a fixed status and optional safe error code.",
+        "Requires current mail administration authority. Checks TLS and authentication. For SMTP, send_to_self sends a fixed test email to the caller’s confirmed account address.",
       security: internalSecurity,
       requestBody: {
         required: true,
-        content: json(z.strictObject({ protocol: mailProtocol })),
+        content: json(
+          z.union([
+            z.strictObject({ protocol: mailProtocol }),
+            z.strictObject({
+              protocol: z.literal("smtp"),
+              send_to_self: z.literal(true),
+            }),
+          ]),
+        ),
       },
       responses: {
-        "200": response("Sanitized handshake result", result),
+        "200": response("Sanitized mail test result", result),
         "400": response("Invalid request", edgeError),
         "401": response("Authentication required", edgeError),
         "403": response("Origin or current authority refused", edgeError),

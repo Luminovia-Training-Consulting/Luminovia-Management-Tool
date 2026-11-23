@@ -1,3 +1,7 @@
+# 23 November 2026 — Mail settings and SMTP test delivery
+
+Administrators can send a fixed test message to their own confirmed portal account address through the saved SMTP transport. The existing handshake and single-use test claim remain available. The form keeps confirmed non-secret settings, couples TLS and port selections, and marks saved credentials without revealing them. The administration component, Edge handler and relay tests passed with fictional boundaries. External inbox delivery still needs confirmation from the recipient.
+
 # 23 November 2026 — Publish remaining local checks
 
 The retained-data candidate now records bounded, redacted scanner warnings on failure. The Account HTTP fixture checks that an unknown role returns HTTP 400 and preserves the existing teaching and participant roles. All 34 candidate tests, targeted ESLint and Node syntax checks passed. The Account HTTP fixture was not run in this pass.

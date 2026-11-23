@@ -65,6 +65,9 @@ beforeEach(async () => {
           enabled: boolean;
           sender_email: string;
           sender_name: string;
+          host: string;
+          port: number;
+          security: "implicit_tls" | "starttls";
         };
       },
     ) => {
@@ -78,6 +81,9 @@ beforeEach(async () => {
           enabled: args.p_smtp.enabled,
           sender_email: args.p_smtp.sender_email,
           sender_name: args.p_smtp.sender_name,
+          host: args.p_smtp.host,
+          port: args.p_smtp.port,
+          security: args.p_smtp.security,
           credentials_configured: true,
         };
         return { data: structuredClone(fake.configuration), error: null };
@@ -311,4 +317,48 @@ it("shows server switches and never rewrites an unchanged transport before testi
   expect(
     fake.rpc.mock.calls.some(([name]) => name === "save_mail_configuration"),
   ).toBe(false);
+});
+
+it("saves the selected SMTP port and matching TLS mode before sending a test to the account", async () => {
+  render(
+    <QueryClientProvider client={client}>
+      <AdminMailPage />
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Ausgehender SMTP-Transport");
+  const user = userEvent.setup();
+  await user.click(screen.getAllByLabelText("Aktiviert")[0]!);
+  await user.selectOptions(screen.getAllByLabelText("Port")[0]!, "587");
+  expect(screen.getAllByLabelText("TLS-Verfahren")[0]).toHaveValue("starttls");
+  await user.type(
+    screen.getByLabelText("Absender-E-Mail"),
+    "sender@example.invalid",
+  );
+  await user.type(
+    document.getElementById("mail-smtp-user")!,
+    "sender@example.invalid",
+  );
+  await user.type(
+    document.getElementById("mail-smtp-password")!,
+    "fictional-provider-secret",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Testmail an mich senden" }),
+  );
+  expect(
+    await screen.findByText(/SMTP-Server hat die Testmail angenommen/),
+  ).toBeVisible();
+  expect(fake.invoke).toHaveBeenCalledWith("mail-admin", {
+    body: { protocol: "smtp", send_to_self: true },
+  });
+  expect(screen.getAllByLabelText("Port")[0]).toHaveValue("587");
+  expect(screen.getAllByLabelText("TLS-Verfahren")[0]).toHaveValue("starttls");
+  expect(screen.getByLabelText("Absender-E-Mail")).toHaveValue(
+    "sender@example.invalid",
+  );
+  expect(document.getElementById("mail-smtp-password")).toHaveValue("");
+  expect(document.getElementById("mail-smtp-password")).toHaveAttribute(
+    "placeholder",
+    "Gespeichert",
+  );
 });

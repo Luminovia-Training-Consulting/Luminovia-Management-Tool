@@ -24,6 +24,7 @@ import urllib.error
 import urllib.request
 from contextlib import contextmanager
 from dataclasses import dataclass
+from email.message import EmailMessage
 from email.parser import BytesParser
 from typing import Any
 from urllib.parse import urlparse
@@ -256,11 +257,10 @@ class MailRelay:
         """Load the enabled sender credentials from Vault on demand; never cache secret material."""
         return self.check_transport(self.rpc("get_mail_delivery_transport", {}))
 
-    def test_connection(self, test_id: str) -> dict[str, Any]:
-        """Claim a version-bound test, perform only a protocol handshake, and record a safe result."""
+    def test_connection(self, test_id: str, recipient: str | None = None) -> dict[str, Any]:
+        """Claim a version-bound test and record the outcome of the handshake or self-test message."""
         claim = self.rpc("claim_mail_connection_test", {"p_test_id": test_id})
         if not isinstance(claim, dict) or claim.get("status") != "running":
-            status = claim.get("status") if isinstance(claim, dict) else "failed"
             error_code = claim.get("error_code") if isinstance(claim, dict) else None
             return {
                 "status": "failed",
@@ -271,7 +271,18 @@ class MailRelay:
             # The version-bound claim checks enablement before decrypting
             # credentials. Unlike the delivery response, it has no enabled field.
             self.check_transport(claim, require_enabled=False)
-            if claim.get("protocol") == "smtp":
+            if recipient is not None:
+                if claim.get("protocol") != "smtp":
+                    raise RelayFailure("protocol_failed")
+                message = EmailMessage(policy=email.policy.SMTP)
+                message["To"] = recipient
+                message["Subject"] = "Portal SMTP-Test / SMTP test"
+                message.set_content(
+                    "Dein Portal hat diese Testnachricht über den gespeicherten SMTP-Transport gesendet.\n"
+                    "Your portal sent this test message using the saved SMTP transport."
+                )
+                self.deliver(message.as_bytes(), recipient, settings={**claim, "sender_name": ""})
+            elif claim.get("protocol") == "smtp":
                 self.check_smtp(claim)
             elif claim.get("protocol") == "imap":
                 self.check_imap(claim)
@@ -279,7 +290,7 @@ class MailRelay:
                 raise RelayFailure("configuration_unavailable")
         except RelayFailure as error:
             error_code = error.code
-        except (OSError, TimeoutError, socket.timeout):
+        except (DeliveryUncertain, OSError, TimeoutError, socket.timeout):
             error_code = "timeout"
         try:
             persisted = self.rpc(
@@ -657,9 +668,9 @@ class MailRelay:
             except (ConnectionError, OSError):
                 pass
 
-    def connection_test_http(self, test_id: str) -> dict[str, Any]:
+    def connection_test_http(self, test_id: str, recipient: str | None = None) -> dict[str, Any]:
         """Perform a SQL-queued check and return a bounded status with no provider text."""
-        return self.test_connection(test_id)
+        return self.test_connection(test_id, recipient)
 
 
 class ControlHandler(http.server.BaseHTTPRequestHandler):
@@ -704,8 +715,14 @@ class ControlHandler(http.server.BaseHTTPRequestHandler):
                 raise ValueError
             body = json.loads(self.rfile.read(length))
             test_id = body.get("test_id") if isinstance(body, dict) else None
+            recipient = body.get("recipient") if isinstance(body, dict) else None
             if (
-                    set(body) != {"test_id"}
+                    not isinstance(body, dict)
+                    or set(body) not in ({"test_id"}, {"test_id", "recipient"})
+                    or ("recipient" in body and (
+                        not isinstance(recipient, str) or len(recipient) > 254
+                        or not MAILBOX_PATTERN.fullmatch(recipient)
+                    ))
                     or not isinstance(test_id, str)
                     or not re.fullmatch(r"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}", test_id, re.I)
             ):
@@ -714,7 +731,7 @@ class ControlHandler(http.server.BaseHTTPRequestHandler):
             self.send_json(400, {"error": "invalid_request"})
             return
         try:
-            result = self.relay.connection_test_http(test_id)
+            result = self.relay.connection_test_http(test_id, recipient)
             self.send_json(200, result)
         except RelayFailure:
             self.send_json(503, {"status": "failed", "error_code": "configuration_unavailable"})

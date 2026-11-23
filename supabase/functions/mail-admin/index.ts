@@ -46,7 +46,13 @@ const handler = createMailAdminHandler({
             p_protocol: protocol,
         });
     },
-    relayTest: async (testId) => {
+    confirmedEmail: async (token) => {
+        const {data, error} = await caller(token).auth.getUser(token);
+        if (error && error.status !== 401 && error.status !== 403)
+            throw new Error("mail_recipient_unavailable");
+        return data.user?.email_confirmed_at ? data.user.email ?? null : null;
+    },
+    relayTest: async (testId, recipient) => {
         if (!relayUrl || !relayToken) throw new Error("Mail relay unavailable.");
         const result = await fetch(new URL("connection-test", relayUrl), {
             method: "POST",
@@ -54,7 +60,7 @@ const handler = createMailAdminHandler({
                 Authorization: `Bearer ${relayToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({test_id: testId}),
+            body: JSON.stringify({test_id: testId, ...(recipient && {recipient})}),
             signal: AbortSignal.timeout(20_000),
         });
         if (!result.ok) throw new Error("relay_test_failed");

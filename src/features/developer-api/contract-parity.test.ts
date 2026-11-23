@@ -367,8 +367,22 @@ describe("installation and integration credential contracts", () => {
       "requestBody.content.application/json.schema.properties.p_imap.anyOf",
     );
     expect(download[test].post).toHaveProperty(
-      "requestBody.content.application/json.schema.properties.protocol.enum",
-      ["smtp", "imap"],
+      "requestBody.content.application/json.schema.anyOf",
+      [
+        expect.objectContaining({
+          additionalProperties: false,
+          properties: { protocol: { type: "string", enum: ["smtp", "imap"] } },
+          required: ["protocol"],
+        }),
+        expect.objectContaining({
+          additionalProperties: false,
+          properties: {
+            protocol: { type: "string", const: "smtp" },
+            send_to_self: { type: "boolean", const: true },
+          },
+          required: ["protocol", "send_to_self"],
+        }),
+      ],
     );
     expect(paths[save]).toBeUndefined();
     expect(paths[test]).toBeUndefined();

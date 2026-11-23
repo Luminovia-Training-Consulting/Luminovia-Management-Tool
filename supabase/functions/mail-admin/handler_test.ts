@@ -21,8 +21,9 @@ function fixture(
             calls.push(`queue:${userToken}:${protocol}`);
             return Promise.resolve({data: testId, error: null});
         },
-        relayTest: (id) => {
-            calls.push(`relay:${id}`);
+        confirmedEmail: () => Promise.resolve("administrator@example.invalid"),
+        relayTest: (id, recipient) => {
+            calls.push(recipient ? `relay:${id}:${recipient}` : `relay:${id}`);
             return Promise.resolve(relayValue);
         },
         ...overrides,
@@ -179,4 +180,31 @@ Deno.test("mail status is read-only, caller-authorized and returns only runtime 
     assertEquals(fixtureWithStatus.calls, []);
     assertEquals((await fixture({authorizeStatus: () => Promise.resolve(false)}).handler(request())).status, 403);
     assertEquals((await fixture({authorizeStatus: () => Promise.reject(new Error("hidden"))}).handler(request())).status, 503);
+});
+
+Deno.test("SMTP test delivery uses only the confirmed account address", async () => {
+    const f = fixture();
+    const result = await f.handler(f.request({protocol: "smtp", send_to_self: true}));
+    assertEquals(result.status, 200);
+    assertEquals(f.calls, [
+        `queue:${token}:smtp`,
+        `relay:${testId}:administrator@example.invalid`,
+    ]);
+
+    const unconfirmed = fixture({confirmedEmail: () => Promise.resolve(null)});
+    const blocked = await unconfirmed.handler(unconfirmed.request({protocol: "smtp", send_to_self: true}));
+    assertEquals(blocked.status, 400);
+    assertEquals(await blocked.json(), {error: "confirmed_email_required"});
+    assertEquals(unconfirmed.calls, []);
+
+    const foreign = fixture();
+    assertEquals((await foreign.handler(foreign.request({
+        protocol: "smtp", send_to_self: true, recipient: "other@example.invalid",
+    }))).status, 400);
+    assertEquals((await foreign.handler(foreign.request({protocol: "imap", send_to_self: true}))).status, 400);
+    assertEquals(foreign.calls, []);
+
+    const forbidden = fixture({queueTest: () => Promise.resolve({data: null, error: {code: "42501"}})});
+    assertEquals((await forbidden.handler(forbidden.request({protocol: "smtp", send_to_self: true}))).status, 403);
+    assertEquals(forbidden.calls, []);
 });

@@ -22,6 +22,12 @@ import {
 import "./mail-i18n";
 
 type Protocol = "smtp" | "imap";
+type MailTest = { protocol: Protocol; sendToSelf?: true };
+
+const ports = {
+  smtp: { implicit_tls: "465", starttls: "587" },
+  imap: { implicit_tls: "993", starttls: "143" },
+} as const;
 type SecurityMode = "implicit_tls" | "starttls";
 type ConnectionStatus = "pending" | "running" | "succeeded" | "failed";
 type ConnectionResult = {
@@ -193,7 +199,14 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       ? draftFrom(configuration.data, Boolean(academy))
       : null);
   const [notice, setNotice] = useState<
-    "saved" | "saveFailed" | "conflict" | "testFailed" | null
+    | "saved"
+    | "saveFailed"
+    | "conflict"
+    | "testFailed"
+    | "testMailAccepted"
+    | "testMailUnconfirmed"
+    | "incompleteCredentials"
+    | null
   >(null);
 
   const save = useMutation({
@@ -201,6 +214,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       requireOnline();
       if (readOnly || !draft || !configuration.data)
         throw new Error("configuration_unavailable");
+      await cache.cancelQueries({ queryKey, exact: true });
       const { data, error } = await db().rpc("save_mail_configuration", {
         p_expected_version: draft.version,
         p_smtp: {
@@ -240,12 +254,11 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       ),
   });
   const test = useMutation({
-    mutationFn: async (protocol: Protocol) => {
+    mutationFn: async ({ protocol, sendToSelf }: MailTest) => {
       requireOnline();
       if (readOnly) throw new Error("configuration_unavailable");
-      if (edits) await save.mutateAsync();
       const response = await db().functions.invoke("mail-admin", {
-        body: { protocol },
+        body: { protocol, ...(sendToSelf && { send_to_self: true }) },
       });
       if (response.error) throw response.error;
       const result = response.data as {
@@ -255,15 +268,16 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       await cache.invalidateQueries({ queryKey });
       return result;
     },
-    onError: (error) =>
-      setNotice(
-        error &&
-          typeof error === "object" &&
-          "code" in error &&
-          (error.code === "PT409" || error.code === "40001")
-          ? "conflict"
-          : "testFailed",
-      ),
+    onSuccess: (result, { sendToSelf }) => {
+      if (sendToSelf)
+        setNotice(
+          result.status === "succeeded"
+            ? "testMailAccepted"
+            : "testMailUnconfirmed",
+        );
+    },
+    onError: (_error, { sendToSelf }) =>
+      setNotice(sendToSelf ? "testMailUnconfirmed" : "testFailed"),
   });
 
   if (academy && !online) return <Notice>{t("academyOnline")}</Notice>;
@@ -289,11 +303,41 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
     }
   }
 
-  /** Save first, then ask the internal relay to perform a no-message protocol handshake. */
-  function runTest(event: FormEvent, protocol: Protocol) {
+  function credentialsNeedAttention(current: MailDraft) {
+    return (["smtp", "imap"] as const).some((protocol) => {
+      if (academy && protocol === "imap") return false;
+      const { enabled, username, password } = current[protocol];
+      const hasUsername = Boolean(username.trim());
+      const hasPassword = Boolean(password);
+      if (!enabled) return hasUsername || hasPassword;
+      return (
+        hasUsername !== hasPassword ||
+        (!hasUsername && !configuration.data?.[protocol].credentials_configured)
+      );
+    });
+  }
+
+  /** Do not contact the provider until any changes have been confirmed by a save. */
+  async function runTest(
+    event: FormEvent<HTMLButtonElement>,
+    request: MailTest,
+  ) {
     event.preventDefault();
+    if (!draft || !event.currentTarget.form?.reportValidity()) return;
     setNotice(null);
-    test.mutate(protocol);
+    if (edits) {
+      if (credentialsNeedAttention(draft)) {
+        setNotice("incompleteCredentials");
+        return;
+      }
+      try {
+        await save.mutateAsync();
+      } catch {
+        // The save handler explains the failure and retains the draft.
+        return;
+      }
+    }
+    test.mutate(request);
   }
 
   const testDisabled = (protocol: Protocol) => {
@@ -350,7 +394,13 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
         <p>{t("connectionScope")}</p>
       </section>
       {notice && (
-        <Notice kind={notice === "saved" ? "success" : "error"}>
+        <Notice
+          kind={
+            notice === "saved" || notice === "testMailAccepted"
+              ? "success"
+              : "error"
+          }
+        >
           {t(notice)}
         </Notice>
       )}
@@ -359,10 +409,14 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
         onSubmit={(event) => {
           event.preventDefault();
           setNotice(null);
+          if (credentialsNeedAttention(draft)) {
+            setNotice("incompleteCredentials");
+            return;
+          }
           save.mutate();
         }}
       >
-        <fieldset disabled={readOnly}>
+        <fieldset disabled={readOnly || save.isPending || test.isPending}>
           <legend>{t("smtp")}</legend>
           <label className="mail-enabled">
             <input
@@ -390,7 +444,13 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
               <select
                 value={draft.smtp.port}
                 onChange={(event) =>
-                  change("smtp", { port: event.currentTarget.value })
+                  change("smtp", {
+                    port: event.currentTarget.value,
+                    security:
+                      event.currentTarget.value === "465"
+                        ? "implicit_tls"
+                        : "starttls",
+                  })
                 }
               >
                 <option value="465">465</option>
@@ -403,6 +463,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 onChange={(event) =>
                   change("smtp", {
                     security: event.currentTarget.value as SecurityMode,
+                    port: ports.smtp[event.currentTarget.value as SecurityMode],
                   })
                 }
               >
@@ -444,6 +505,12 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 type="text"
                 autoComplete="off"
                 maxLength={254}
+                disabled={!draft.smtp.enabled}
+                placeholder={
+                  configuration.data.smtp.credentials_configured
+                    ? t("credentialSaved")
+                    : undefined
+                }
                 value={draft.smtp.username}
                 onChange={(event) =>
                   change("smtp", { username: event.currentTarget.value })
@@ -463,6 +530,12 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 type="password"
                 autoComplete="new-password"
                 maxLength={1024}
+                disabled={!draft.smtp.enabled}
+                placeholder={
+                  configuration.data.smtp.credentials_configured
+                    ? t("credentialSaved")
+                    : undefined
+                }
                 value={draft.smtp.password}
                 onChange={(event) =>
                   change("smtp", { password: event.currentTarget.value })
@@ -476,14 +549,23 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
               type="button"
               variant="secondary"
               disabled={testDisabled("smtp")}
-              onClick={(event) => runTest(event, "smtp")}
+              onClick={(event) => void runTest(event, { protocol: "smtp" })}
             >
               {test.isPending ? t("testing") : t("smtpTest")}
+            </Button>
+            <Button
+              type="button"
+              disabled={testDisabled("smtp")}
+              onClick={(event) =>
+                void runTest(event, { protocol: "smtp", sendToSelf: true })
+              }
+            >
+              {t("sendTestMail")}
             </Button>
           </div>
         </fieldset>
         {!academy && (
-          <fieldset>
+          <fieldset disabled={save.isPending || test.isPending}>
             <legend>{t("imap")}</legend>
             <label className="mail-enabled">
               <input
@@ -511,7 +593,13 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 <select
                   value={draft.imap.port}
                   onChange={(event) =>
-                    change("imap", { port: event.currentTarget.value })
+                    change("imap", {
+                      port: event.currentTarget.value,
+                      security:
+                        event.currentTarget.value === "993"
+                          ? "implicit_tls"
+                          : "starttls",
+                    })
                   }
                 >
                   <option value="993">993</option>
@@ -524,6 +612,9 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                   onChange={(event) =>
                     change("imap", {
                       security: event.currentTarget.value as SecurityMode,
+                      port: ports.imap[
+                        event.currentTarget.value as SecurityMode
+                      ],
                     })
                   }
                 >
@@ -544,6 +635,12 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                   type="text"
                   autoComplete="off"
                   maxLength={254}
+                  disabled={!draft.imap.enabled}
+                  placeholder={
+                    configuration.data.imap.credentials_configured
+                      ? t("credentialSaved")
+                      : undefined
+                  }
                   value={draft.imap.username}
                   onChange={(event) =>
                     change("imap", { username: event.currentTarget.value })
@@ -563,6 +660,12 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                   type="password"
                   autoComplete="new-password"
                   maxLength={1024}
+                  disabled={!draft.imap.enabled}
+                  placeholder={
+                    configuration.data.imap.credentials_configured
+                      ? t("credentialSaved")
+                      : undefined
+                  }
                   value={draft.imap.password}
                   onChange={(event) =>
                     change("imap", { password: event.currentTarget.value })
@@ -576,7 +679,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 type="button"
                 variant="secondary"
                 disabled={testDisabled("imap")}
-                onClick={(event) => runTest(event, "imap")}
+                onClick={(event) => void runTest(event, { protocol: "imap" })}
               >
                 {test.isPending ? t("testing") : t("imapTest")}
               </Button>

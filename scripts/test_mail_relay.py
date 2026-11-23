@@ -276,6 +276,31 @@ class RelaySmtpTests(unittest.TestCase):
             ),
         )
 
+    def test_smtp_self_test_delivers_once_with_claimed_settings_and_fixed_content(self):
+        claim = {
+            "status": "running",
+            "protocol": "smtp",
+            "host": "smtp.example.com",
+            "port": 465,
+            "security": "implicit_tls",
+            "username": "mailbox@example.com",
+            "password": "fictional-upstream-secret",
+            "sender_email": "mailbox@example.com",
+        }
+        self.relay.rpc = Mock(side_effect=[claim, True, {"status": "failed"}])
+        self.relay.deliver = Mock()
+        self.relay.check_smtp = Mock()
+        recipient = "administrator@example.invalid"
+        self.assertEqual(self.relay.test_connection(TEST_ID, recipient)["status"], "succeeded")
+        self.assertEqual(self.relay.test_connection(TEST_ID, recipient)["status"], "failed")
+        self.relay.deliver.assert_called_once()
+        message, address = self.relay.deliver.call_args.args
+        self.assertEqual(address, recipient)
+        self.assertIn(b"Subject: Portal SMTP-Test / SMTP test", message)
+        self.assertNotIn(claim["password"].encode(), message)
+        self.assertEqual(self.relay.deliver.call_args.kwargs["settings"]["sender_email"], claim["sender_email"])
+        self.relay.check_smtp.assert_not_called()
+
     def test_claimed_imap_probe_must_remain_current_through_completion(self):
         claim = {
             "status": "running",
@@ -400,7 +425,7 @@ class RelayControlTests(unittest.TestCase):
                 {"status": "failed", "error_code": "authentication_failed"},
             )
             connection.close()
-            relay.connection_test_http.assert_called_once_with(TEST_ID)
+            relay.connection_test_http.assert_called_once_with(TEST_ID, None)
         finally:
             server.shutdown()
             server.server_close()

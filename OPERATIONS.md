@@ -528,7 +528,7 @@ The bridge rewrites the From/envelope sender to the saved sender address. There 
 
 Sources: [Hostinger email configuration](https://www.hostinger.com/support/1575756-how-to-get-email-account-configuration-details-for-hostinger-email/) and [Hostinger application setup](https://www.hostinger.com/support/4305847-set-up-hostinger-email-on-your-applications-and-devices/).
 
-A saved SMTP test performs TLS, login and `NOOP` only; it does not submit an email. The optional IMAP test performs TLS, login and `NOOP` only; it does not read or modify mailbox contents. These checks establish the current server handshake, not inbox delivery, quotas, provider reputation or a real-recipient delivery witness. Local development and isolated candidates keep Auth messages in Mailpit; the candidate explicitly bypasses the real relay.
+The SMTP and optional IMAP connection checks perform TLS, login and `NOOP`. The separate SMTP test message uses the saved transport and the administrator’s confirmed account address. SMTP success means the provider accepted the message. Check the recipient inbox for actual delivery. Local development and isolated candidates keep Auth messages in Mailpit; the candidate explicitly bypasses the real relay.
 
 <a id="section-notification-mail-operations-configuration-and-activation"></a>
 
