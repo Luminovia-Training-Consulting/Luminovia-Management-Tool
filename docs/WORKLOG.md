@@ -1,6 +1,6 @@
 # 23 November 2026 — Withdrawal notifications in native acceptance
 
-The withdrawal test now verifies that a lecturer with a different topic in the same subject area receives the reopened-offer notice. Its recipient assertion covers every actor created by that test, including the lecturer without matching expertise. The retained-data baseline can contain other eligible lecturers in that area.
+The withdrawal test now verifies that a lecturer with a different topic in the same subject area receives the reopened-offer notice. Its recipient assertion covers every actor created by that test, including the lecturer without matching expertise. The retained-data baseline can contain other eligible lecturers in that area. The withdrawal linter follows the original PL/pgSQL resolver behind the current SQL dispatcher. The isolated PostgreSQL withdrawal checks passed.
 
 A focused real self-host run replayed all 320 migrations, retained identities, private file bytes and accepted financial records, and passed the native withdrawal API suite. It also checked TLS, WebSockets and 50 concurrent claims. This run selected one API suite. The full exact-revision CI remains the release check.
 
