@@ -84,6 +84,7 @@ import {
 } from "./personal-series";
 import { personalSeriesLimit } from "./personal-series-schema";
 import "./personal-series-i18n";
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { canRetryNextPage } from "../../lib/paged-read";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Dialog } from "../../components/ui/dialog";
@@ -675,16 +676,13 @@ export function CalendarPage() {
   const retryGlobalPage = canRetryNextPage(globals);
   const globalsFailed = globals.isError && !retryGlobalPage;
   const calendarPages = globals.data?.pages;
-  const globalRows = useMemo(() => {
-    if (globalsFailed) return [];
-    const indexed = new Map<
-      string,
-      NonNullable<typeof calendarPages>[number]["items"][number]
-    >();
-    for (const page of calendarPages ?? [])
-      for (const event of page.items) indexed.set(event.id, event);
-    return Array.from(indexed.values());
-  }, [calendarPages, globalsFailed]);
+  const globalRows = useMemo(
+    () =>
+      globalsFailed
+        ? []
+        : mergeCursorItems(calendarPages, { preferLast: true }),
+    [calendarPages, globalsFailed],
+  );
   const visibleRange = useRef(range);
   const handleDatesSet = useCallback(
     (info: DatesSetArg) => {
