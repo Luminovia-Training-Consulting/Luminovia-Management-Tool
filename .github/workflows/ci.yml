@@ -215,6 +215,8 @@ jobs:
         if: needs.scope.outputs.profile == 'full'
         timeout-minutes: 10
         run: |
+          # The runner's regional HTTP mirror stalled while fetching WebKit dependencies.
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/ubuntu.sources
           if test "$PORTAL_BROWSER_PROJECT" = desktop-chromium; then
             npx --no-install playwright install-deps chromium webkit
           else
