@@ -243,6 +243,10 @@ For a learner account, management can choose **Kursteilnehmer:in / Participant**
 
 `/client` is the **Kundenportal / Client portal** for an associated client account and authorised platform management. It differs from `/clients`, the internal customer/contact directory. A client sees only its active associated organisations, their course requests and full client fees, confirmed assignment sums and assigned teachers. EUR, AUD and USD remain separate. The request volume and confirmed assignment sum are agreement values, not proof of a bank payment.
 
+In **Unternehmen / Companies**, management can assign existing lecturer accounts to a company or RTO. Company contacts can remove links for their own company under **Eigene Dozierende / Company lecturers**. The lecturer's portal account and existing confirmed assignments remain available. Removing a link revokes eligibility for new company-only assignments.
+
+When the selected company has active assigned lecturers, its course request offers **Nur für eigene Dozierende ausschreiben / List for company lecturers only**. The reviewed publication retains that choice. Other lecturers cannot discover or claim the offer. Company users and authorised staff retain their scoped access.
+
 Choose **Kurs anfragen / Request a course**, select the organisation and enter title/topics, delivery, every intended-zone session and the original-currency full fee. Add whole required teaching units, explicitly choose 45 or 60 minutes per unit, list required documents one per line and enter preparation instructions. Required teaching minutes must fit the actual session time; remaining time may cover breaks. Teaching units do not calculate or change the commercial price. Save and wait for
 confirmation; a request does not reserve a lecturer.
 

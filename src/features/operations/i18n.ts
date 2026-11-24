@@ -5,6 +5,30 @@
 import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  companyLecturers: ["Eigene Dozierende", "Company lecturers"],
+  companyLecturerChoose: ["Dozent:in auswählen", "Choose lecturer"],
+  companyLecturerAdd: ["Dozent:in zuordnen", "Assign lecturer"],
+  companyLecturerRemove: ["Entfernen", "Remove"],
+  companyLecturerRemoveNamed: [
+    "{{name}} aus dem Unternehmen entfernen",
+    "Remove {{name}} from the company",
+  ],
+  companyLecturerEmpty: [
+    "Diesem Unternehmen sind keine Dozierenden zugeordnet.",
+    "No lecturers are assigned to this company.",
+  ],
+  companyLecturerSaved: [
+    "Zuordnung aktualisiert.",
+    "Lecturer membership updated.",
+  ],
+  companyLecturerError: [
+    "Die Zuordnung konnte nicht aktualisiert werden.",
+    "Lecturer membership could not be updated.",
+  ],
+  companyLecturersOnly: [
+    "Nur für eigene Dozierende ausschreiben",
+    "List for company lecturers only",
+  ],
   participantOpenDetails: ["Kurse und Teilnahme", "Courses and attendance"],
   participantDetailsDescription: [
     "Einschreibungen und Anwesenheit für dieses Unternehmen.",

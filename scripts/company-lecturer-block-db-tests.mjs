@@ -529,6 +529,57 @@ for (const edition of [
       assert.equal((await attempt).status, "not_eligible");
       assert.deepEqual(await setBlock(staff, false, 3), entry(false, 4));
     }
+    const roster = (who, company = org) => call(who, "company_lecturer_roster", q(company), "GET");
+    const linkLecturer = (who, remove, target = otherTeacher) =>
+      actor(who, `${gate("set_company_lecturer", "POST")} select public.set_company_lecturer(${q(org)},${q(target)},${remove});`);
+    if (academy) {
+      await assert.rejects(roster(contact), /42501/);
+    } else {
+      const admin = randomUUID();
+      await sql(`insert into auth.users(id,email,email_confirmed_at) values(${q(admin)},'roster-admin@example.invalid',now());
+        insert into public.user_roles(user_id,role) values(${q(admin)},'admin');`);
+      const version = await sql("select coalesce((select version from private.compensation_policy),0)");
+      await call(admin, "configure_compensation_policy", `31,73,${version}`);
+      const requestId = randomUUID();
+      const audienceRequest = {
+        title: "Fictional private teaching offer",
+        delivery_type: "online",
+        time_zone: "Europe/Berlin",
+        gross_amount: 100,
+        gross_total_amount: 100,
+        rate_unit: "fixed_total",
+        currency: "EUR",
+        own_lecturers_only: true,
+        sessions: [{starts_at: date(18), ends_at: date(18.1)}],
+      };
+      const submit = (payload) => call(contact, "create_client_request",
+        `${q(org)},${q(JSON.stringify(payload))},${q(requestId)}`);
+      assert.deepEqual(await roster(contact), {members: [], candidates: [], can_add: false});
+      await assert.rejects(roster(foreign), /42501/);
+      await assert.rejects(submit(audienceRequest), /22023/);
+      await assert.rejects(linkLecturer(contact, false), /42501/);
+      assert.ok((await roster(staff)).candidates.some(({id}) => id === otherTeacher));
+      await assert.rejects(linkLecturer(staff, false, learner), /22023/);
+      await linkLecturer(staff, false);
+      assert.deepEqual((await roster(contact)).members.map(({id}) => id), [otherTeacher]);
+      assert.deepEqual((await roster(contact)).candidates, []);
+      await assert.rejects(submit({...audienceRequest, own_lecturers_only: "true"}), /22023/);
+      const request = await submit(audienceRequest);
+      assert.equal(await submit(audienceRequest), request);
+      await assert.rejects(submit({...audienceRequest, own_lecturers_only: false}), /22023/);
+      const restrictedJob = await call(admin, "publish_client_request", `${q(request)},null,'Reviewed terms',false,null`);
+      assert.equal(await actor(teacher, `select count(*) from public.jobs where id=${q(restrictedJob)}`), "0");
+      assert.equal((await call(otherTeacher, "job_detail", q(restrictedJob))).id, restrictedJob);
+      await assert.rejects(call(teacher, "job_detail", q(restrictedJob)), /42501/);
+      assert.ok(!(await discoverJobs({})).items.some(({id}) => id === restrictedJob));
+      assert.equal((await call(teacher, "claim_job", `${q(restrictedJob)},${q(randomUUID())},1`)).status, "not_eligible");
+      await assert.rejects(linkLecturer(foreign, true), /42501/);
+      await linkLecturer(contact, true);
+      assert.equal((await roster(contact)).members.length, 0);
+      await assert.rejects(call(otherTeacher, "job_detail", q(restrictedJob)), /42501/);
+      assert.equal((await call(otherTeacher, "claim_job", `${q(restrictedJob)},${q(randomUUID())},1`)).status, "not_eligible");
+      console.log("PASS company-only publication, marketplace isolation and live lecturer roster revocation");
+    }
     await sql(
       `update public.client_organisation_memberships set removed_at=clock_timestamp() where user_id=${q(contact)} and organisation_id=${q(org)};`,
     );

@@ -1997,3 +1997,5 @@ Password-provisioned accounts now request a one-time access email after confirme
 Company account details now expose searchable organisation membership management through the existing scoped account API. Run the updated browser and course workflow acceptance on the resulting revision.
 
 The internal course-run cascade covers reviewed owned delivery records. Keep protected inbound references visible and require typed DELETE confirmation. The fictional assigned-course regression passed in local PostgreSQL; live acceptance remains pending.
+
+The internal company and RTO workflow supports a scoped lecturer roster and company-only offer publication on requests. Existing company roles, blocked-lecturer rules and confirmed assignments retain their authority. Browser and hosted acceptance remain pending.

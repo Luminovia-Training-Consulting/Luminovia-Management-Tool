@@ -4,6 +4,10 @@ import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyDispatchSettings } from "../operations/company-dispatch-settings";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
+import {
+  CompanyLecturers,
+  companyLecturersQuery,
+} from "../operations/company-lecturers";
 import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { CompanyIntegrationPicker } from "../operations/company-integrations";
 import {
@@ -22,7 +26,7 @@ import {
   scheduledCoursePhase,
   type CoursePhaseSelection,
 } from "../learning/course-phase";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -146,6 +150,16 @@ function RequestForm({
       sessions: [initial],
     },
   });
+  const organisationId = useWatch({
+    control: form.control,
+    name: "organisation",
+  });
+  const [restrictedOrganisation, setRestrictedOrganisation] = useState("");
+  const roster = useQuery(companyLecturersQuery(actor, organisationId));
+  const showInternalAudience = Boolean(
+    !roster.isError && roster.data?.members.length,
+  );
+  const { t: operations } = useTranslation("operations");
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "sessions",
@@ -160,7 +174,13 @@ function RequestForm({
         throw new Error("invalid_sessions");
       }
       const { organisation, ...rest } = values;
-      const payload = { ...rest, sessions };
+      const payload = {
+        ...rest,
+        sessions,
+        ...(restrictedOrganisation === organisation
+          ? { own_lecturers_only: true }
+          : {}),
+      };
       const cleanedBrief = cleanRequestBrief(brief);
       if (!validRequestBrief(cleanedBrief, sessions))
         throw new Error("invalid_brief");
@@ -198,7 +218,9 @@ function RequestForm({
       >
         <select
           id="request-org"
-          {...form.register("organisation")}
+          {...form.register("organisation", {
+            onChange: () => setRestrictedOrganisation(""),
+          })}
           disabled={save.isPending}
         >
           {organisations.map((org) => (
@@ -208,6 +230,22 @@ function RequestForm({
           ))}
         </select>
       </Field>
+      {showInternalAudience && (
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={restrictedOrganisation === organisationId}
+            disabled={save.isPending}
+            onChange={(event) =>
+              setRestrictedOrganisation(
+                event.target.checked ? organisationId : "",
+              )
+            }
+          />
+          {operations("companyLecturersOnly")}
+        </label>
+      )}
       <Field
         id="request-title"
         label={common("title")}
@@ -789,6 +827,7 @@ export function ClientPortalPage() {
           <div className="section-stack company-operation-sections">
             <CompanyDispatchSettings actor={actor} organisations={orgs.data} />
             <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
+            <CompanyLecturers actor={actor} organisations={orgs.data} />
             {access.data.can_request && !access.data.can_manage_gross && (
               <CompanyIntegrationPicker
                 actor={actor}

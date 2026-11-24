@@ -699,8 +699,16 @@ const clientRequestFields = {
   currency: { enum: [...currencyCodes] },
   rate_unit: rateUnit,
 };
+const companyLecturerOnlyInput = {
+  type: "boolean",
+  description:
+    "Restrict publication to active lecturers assigned to the submitting organisation.",
+};
 const clientRequestInput = {
-  ...object(clientRequestFields),
+  ...object({
+    ...clientRequestFields,
+    own_lecturers_only: companyLecturerOnlyInput,
+  }),
   required: [
     "title",
     "delivery_type",
@@ -1363,6 +1371,18 @@ const profilePaths = Object.fromEntries(
     return [`/rest/v1/rpc/${name}`, { post: { ...operation.post, responses } }];
   }),
 );
+
+const companyLecturerRosterDescription =
+  "Requires organisation management or membership in the selected company. Only organisation management receives potential new lecturers.";
+const companyLecturerList = {
+  type: "array",
+  items: object({ id: uuid, display_name: text }),
+};
+const companyLecturerRosterSchema = object({
+  members: companyLecturerList,
+  candidates: companyLecturerList,
+  can_add: boolean,
+});
 
 const nativePaths = {
   "/rest/v1/rpc/academy_customer_setup": rpc(
@@ -2908,12 +2928,59 @@ const nativePaths = {
           status: clientRequestStatus,
           brief_version: version,
           brief: nullableClientRequestBrief,
-          payload: object(clientRequestFields),
+          payload: {
+            ...object({
+              ...clientRequestFields,
+              own_lecturers_only: companyLecturerOnlyInput,
+            }),
+            required: Object.keys(clientRequestFields),
+          },
           job_id: nullableUuid,
         }),
       }),
     },
     ["p_before"],
+  ),
+  "/rest/v1/rpc/company_lecturer_roster": {
+    get: {
+      operationId: "get_company_lecturer_roster",
+      tags: ["Companies"],
+      summary: "Read the company's own lecturer roster",
+      description: companyLecturerRosterDescription,
+      parameters: [
+        {
+          name: "p_organisation_id",
+          in: "query",
+          required: true,
+          schema: uuid,
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Current lecturer roster",
+          content: json(companyLecturerRosterSchema),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+      },
+    },
+    ...rpc(
+      "native_company_lecturer_roster",
+      "Companies",
+      "Read the company's own lecturer roster",
+      companyLecturerRosterDescription,
+      { p_organisation_id: uuid },
+      companyLecturerRosterSchema,
+    ),
+  },
+  "/rest/v1/rpc/set_company_lecturer": rpc(
+    "native_set_company_lecturer",
+    "Companies",
+    "Assign or remove a company lecturer",
+    "Adding an existing active lecturer requires organisation management. Company contacts may remove a lecturer from their own organisation. This changes membership without granting account roles.",
+    { p_organisation_id: uuid, p_lecturer_id: uuid, p_remove: boolean },
+    { type: "null" },
   ),
   "/rest/v1/rpc/create_client_request_with_brief": rpc(
     "native_create_client_request_with_brief",

@@ -38,6 +38,7 @@ import {
 } from "./data";
 import { CompanyDispatchSettings } from "./company-dispatch-settings";
 import { CompanyPremiumControl } from "./company-premium";
+import { CompanyLecturers } from "./company-lecturers";
 import { CompanyLecturerBlocks } from "./company-lecturer-blocks";
 import { CompanyIntegrations } from "./company-integrations";
 import { CompanyParticipantsPanel } from "./company-participants";
@@ -467,6 +468,13 @@ function ClientWorkspace({
               {!organisation.archived_at && (
                 <CompanyLecturerBlocks
                   key={`lecturer-blocks:${organisation.id}`}
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {!organisation.archived_at && (
+                <CompanyLecturers
+                  key={organisation.id}
                   actor={actor}
                   organisations={[organisation]}
                 />
