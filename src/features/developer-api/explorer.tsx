@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { ApiNavigation } from "./api-navigation";
 import { ApiCatalogue, type ApiDocument } from "./api-catalogue";
 import "./explorer.css";
 import { Button } from "../../components/ui/button";
@@ -79,6 +79,7 @@ function ExplorerSession({
 
   return (
     <>
+      <ApiNavigation />
       <PageHeading
         title={de ? "API-Dokumentation" : "API documentation"}
         description={
@@ -105,14 +106,6 @@ function ExplorerSession({
             : de
               ? "Mit meinem Konto autorisieren"
               : "Authorize with my account"}
-        </Button>
-        <Button asChild variant="secondary">
-          <Link to="/api/swagger">Swagger UI</Link>
-        </Button>
-        <Button asChild variant="secondary">
-          <a href="/api/openapi.json" download>
-            OpenAPI JSON
-          </a>
         </Button>
         {brand.edition !== "internal" && (
           <>

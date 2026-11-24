@@ -310,13 +310,55 @@ export default function PortalRoutes() {
           <Route path="search" element={<PortalSearch />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="client" element={<ClientPortalPage />} />
-          <Route path="my-reviews" element={<MyCourseReviews />} />
+          <Route
+            path="my-reviews"
+            element={
+              <SectionHub kind="courses" current="reviews">
+                <MyCourseReviews />
+              </SectionHub>
+            }
+          />
           <Route path="courses" element={<SectionHub kind="courses" />} />
-          <Route path="readiness" element={<CourseReadinessPage />} />
-          <Route path="readiness/:id" element={<CourseReadinessPage />} />
-          <Route path="delivery" element={<DeliveryPage />} />
-          <Route path="support" element={<SupportDeskPage />} />
-          <Route path="support/:id" element={<SupportDeskPage />} />
+          <Route
+            path="readiness"
+            element={
+              <SectionHub kind="courses" current="readiness">
+                <CourseReadinessPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="readiness/:id"
+            element={
+              <SectionHub kind="courses" current="readiness">
+                <CourseReadinessPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="delivery"
+            element={
+              <SectionHub kind="courses" current="delivery">
+                <DeliveryPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="support"
+            element={
+              <SectionHub kind="assistance" current="support">
+                <SupportDeskPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="support/:id"
+            element={
+              <SectionHub kind="assistance" current="support">
+                <SupportDeskPage />
+              </SectionHub>
+            }
+          />
           <Route
             path="replacements"
             element={<Navigate to="/jobs" replace />}

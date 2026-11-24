@@ -281,6 +281,10 @@ const pairs: Record<string, [string, string]> = {
   admin: ["Verwaltung", "Administration"],
   adminCoursesAssignments: ["Kurse & Aufträge", "Courses & assignments"],
   adminOverview: ["Übersicht", "Overview"],
+  adminOverviewDescription: [
+    "Alle verfügbaren Verwaltungsaufgaben auf einen Blick.",
+    "All available administration tasks at a glance.",
+  ],
   adminDestination_adminCoursesAssignments: [
     "Kursdurchführungen planen, Ausschreibungen erstellen und Dozierende zuweisen.",
     "Schedule course runs, publish assignments and allocate lecturers.",

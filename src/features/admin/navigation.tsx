@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
+import { SectionLink } from "../../components/section-card";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
 import {
   ErrorState,
@@ -77,19 +78,21 @@ export function AdminNavigation() {
   return (
     <>
       {!!links.length && (inAdministration || current) && (
-        <nav className="admin-tabs administration-tabs" aria-label={t("admin")}>
-          <Link
+        <nav className="section-navigation" aria-label={t("admin")}>
+          <SectionLink
             to="/admin"
+            title={t("adminOverview")}
+            description={t("adminOverviewDescription")}
             aria-current={
               pathname === "/admin" && !legacyAssignment ? "page" : undefined
             }
-          >
-            {t("adminOverview")}
-          </Link>
-          {areaLinks.map(([area, { to, label }]) => (
-            <Link
+          />
+          {areaLinks.map(([area, { to, label, description }]) => (
+            <SectionLink
               key={to}
               to={to}
+              title={t(label)}
+              description={t(description)}
               aria-current={
                 pathname === to
                   ? "page"
@@ -98,9 +101,7 @@ export function AdminNavigation() {
                     ? "location"
                     : undefined
               }
-            >
-              {t(label)}
-            </Link>
+            />
           ))}
         </nav>
       )}

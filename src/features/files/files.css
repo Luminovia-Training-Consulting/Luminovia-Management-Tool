@@ -46,7 +46,7 @@
   pointer-events: none;
 }
 
-.file-discovery-search input {
+.file-discovery-search > input[type="search"] {
   width: 100%;
   min-height: 44px;
   padding-inline-start: 2.625rem;

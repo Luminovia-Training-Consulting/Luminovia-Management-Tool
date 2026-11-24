@@ -129,7 +129,7 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
   return (
     <>
       <nav
-        className={scope === "company" ? "admin-tabs" : "finance-navigation"}
+        className={scope === "company" ? "admin-tabs" : "section-navigation"}
         aria-label={t(
           scope === "staff"
             ? "platformFinance"

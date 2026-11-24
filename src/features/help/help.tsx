@@ -6,13 +6,9 @@ import { portalInternalEdition } from "../../lib/installation-brand";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  LifeBuoy,
-  Search,
-} from "lucide-react";
+import { ArrowRight, BookOpen, Search } from "lucide-react";
+import { SectionButton } from "../../components/section-card";
+import { ApiNavigation } from "../developer-api/api-navigation";
 import { Button } from "../../components/ui/button";
 import { Preferences } from "../../components/preferences";
 import { useAcademyBrand } from "../branding/academy-branding";
@@ -211,43 +207,30 @@ export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
             </select>
           </label>
         </div>
-        <div className="help-actions help-shortcuts">
+        <ApiNavigation>
           {topic ? (
-            <Button
-              variant="secondary"
+            <SectionButton
+              title={text(labels.overview)}
+              description={text({
+                de: "Zur Suche und zu allen Anleitungen.",
+                en: "Return to search and all guides.",
+              })}
               onClick={() => {
                 choose();
                 searchInput.current?.focus();
               }}
-            >
-              <ArrowLeft size={17} aria-hidden="true" />
-              {text(labels.overview)}
-            </Button>
+            />
           ) : (
-            <Button
-              variant="secondary"
+            <SectionButton
+              title={text(labels.problems)}
+              description={text({
+                de: "Häufige Fehler Schritt für Schritt beheben.",
+                en: "Troubleshoot common issues step by step.",
+              })}
               onClick={() => choose("troubleshooting")}
-            >
-              <LifeBuoy size={18} aria-hidden="true" />
-              {text(labels.problems)}
-            </Button>
+            />
           )}
-          <Button asChild variant="secondary">
-            <Link to="/api/docs">
-              {i18n.language.startsWith("de")
-                ? "API-Dokumentation"
-                : "API documentation"}
-            </Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link to="/api/swagger">Swagger UI</Link>
-          </Button>
-          <Button asChild variant="ghost">
-            <a href="/api/openapi.json" download>
-              OpenAPI JSON
-            </a>
-          </Button>
-        </div>
+        </ApiNavigation>
         {topic && !selected && !troubleshooting && (
           <p role="status" className="help-info">
             {text(labels.unknown)}

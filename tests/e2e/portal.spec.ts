@@ -134,6 +134,43 @@ test("administration navigation keeps shared workflows together on desktop and m
     await expect(page).toHaveURL(/\/changes$/);
 });
 
+test("section cards remain visible and file search clears its icon on desktop and mobile", async ({page}) => {
+    await login(page, process.env.E2E_ADMIN_EMAIL!);
+    await page.goto("/chats");
+    const forum = page.getByRole("link", {name: "Forum", exact: true});
+    await expect(forum).toBeVisible();
+    await expect(forum).toHaveAccessibleDescription(/diskutiere/i);
+    await forum.click();
+    await expect(forum).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("button", {name: "Diskussionen", exact: true})).toBeVisible();
+
+    await page.goto("/courses");
+    const courseSections = page.getByRole("navigation", {name: "Kursbereiche"});
+    await expect(courseSections.getByRole("button", {name: "Kursbereitschaft"})).toHaveAccessibleDescription(/Kursstart/);
+    await courseSections.getByRole("button", {name: "Durchführung", exact: true}).click();
+    await expect(courseSections.getByRole("button", {name: "Durchführung", exact: true})).toHaveAttribute("aria-current", "page");
+
+    await page.goto("/assistance");
+    await expect(page.getByRole("button", {name: "Support", exact: true})).toHaveAccessibleDescription(/Tickets/);
+    await expect(page.getByRole("button", {name: "Probleme lösen"})).toHaveAccessibleDescription(/Schritt/);
+    await page.getByRole("link", {name: "API-Dokumentation", exact: true}).click();
+    await expect(page.getByRole("link", {name: "API-Dokumentation", exact: true})).toHaveAttribute("aria-current", "page");
+    await page.getByRole("link", {name: "Swagger UI", exact: true}).click();
+    await expect(page.getByRole("link", {name: "Swagger UI", exact: true})).toHaveAttribute("aria-current", "page");
+
+    await page.goto("/files");
+    const search = page.getByRole("searchbox", {name: "Dateien suchen"});
+    await expect(search).toBeVisible();
+    expect(await search.evaluate((input) => {
+        const base = input.getBoundingClientRect();
+        const icon = input.parentElement!.querySelector("svg")!.getBoundingClientRect();
+        return base.left + Number.parseFloat(getComputedStyle(input).paddingLeft) > icon.right;
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth + 1),
+    );
+});
+
 test("staff analytics filters and forecast charts work across viewport sizes", async ({page}) => {
     await login(page, process.env.E2E_ADMIN_EMAIL!);
     await page.goto("/admin/finance/analytics");
@@ -177,7 +214,7 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
             nav.previousElementSibling?.classList.contains("dashboard-metrics"),
         )).toBe(true);
         await page.goto("/finance");
-        await expect(page.locator(".finance-navigation").getByRole("link", {name: "Analysen", exact: true}))
+        await expect(page.getByRole("navigation", {name: "Meine Finanzen", exact: true}).getByRole("link", {name: "Analysen", exact: true}))
             .toHaveAccessibleDescription("Eigene Einsätze und Einnahmen auswerten");
         await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
         await expect(page.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true})).toHaveCount(0);
