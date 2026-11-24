@@ -3,11 +3,13 @@ import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   readPreference,
-  uiLocalChangeEvent,
+  reportUiPreferenceChange,
   writePreference,
 } from "../lib/preferences";
 import { installationBrand } from "../lib/installation-brand";
 import type { UiPreferencesPatch } from "../lib/ui-preferences-api";
+import type { AccountLanguage } from "../lib/account-languages";
+import { LanguageOptions } from "./language-options";
 
 const themeChanged = "luminovia-theme-changed";
 
@@ -66,14 +68,13 @@ export function Preferences({
         aria-label={t("language")}
         value={i18n.language}
         onChange={(e) => {
-          const language = e.target.value as "de" | "en";
-          window.dispatchEvent(new Event(uiLocalChangeEvent));
+          const language = e.target.value as AccountLanguage;
+          reportUiPreferenceChange("language");
           void i18n.changeLanguage(language);
           save({ language });
         }}
       >
-        <option value="de">DE</option>
-        <option value="en">EN</option>
+        <LanguageOptions compact />
       </select>
       <label className="sr-only" htmlFor={`${id}-theme`}>
         {t("theme")}
@@ -83,7 +84,7 @@ export function Preferences({
         aria-label={t("theme")}
         value={theme}
         onChange={(e) => {
-          window.dispatchEvent(new Event(uiLocalChangeEvent));
+          reportUiPreferenceChange("theme");
           writePreference("theme", e.target.value);
           window.dispatchEvent(
             new CustomEvent(themeChanged, { detail: e.target.value }),

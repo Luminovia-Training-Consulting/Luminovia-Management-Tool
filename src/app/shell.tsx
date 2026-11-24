@@ -73,7 +73,12 @@ import {
   loadUiPreferences,
   saveUiPreferences,
 } from "../lib/ui-preferences-api";
-import { uiLocalChangeEvent } from "../lib/preferences";
+import { useSaveUiPreferences } from "../lib/use-save-ui-preferences";
+import {
+  reportUiPreferenceChange,
+  uiLocalChangeEvent,
+  type UiPreferenceField,
+} from "../lib/preferences";
 
 /**
  * Render private navigation and the actor-scoped tour; confirm sign-out before clearing private
@@ -89,6 +94,7 @@ export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const actor = session!.user.id;
+  const { mutateAsync: saveAppearance } = useSaveUiPreferences(actor);
   const navigate = useNavigate();
   const location = useLocation();
   const { attributes: mobileDisclosure, close: closeMobileMore } =
@@ -115,19 +121,22 @@ export function Shell() {
   // A new language must never trigger a read of the value still being saved.
   useEffect(() => {
     let alive = true;
-    let changedLocally = false;
-    const changed = () => {
-      changedLocally = true;
+    const changedLocally = new Set<UiPreferenceField>();
+    const changed = (event: Event) => {
+      changedLocally.add((event as CustomEvent<UiPreferenceField>).detail);
     };
     window.addEventListener(uiLocalChangeEvent, changed);
     void loadUiPreferences()
       .then((saved) => {
-        if (!alive || changedLocally) return;
-        void i18n.changeLanguage(saved.language);
-        window.dispatchEvent(
-          new CustomEvent("luminovia-theme-changed", { detail: saved.theme }),
-        );
-        setCollapsed(saved.sidebar_collapsed);
+        if (!alive) return;
+        if (!changedLocally.has("language"))
+          void i18n.changeLanguage(saved.language);
+        if (!changedLocally.has("theme"))
+          window.dispatchEvent(
+            new CustomEvent("luminovia-theme-changed", { detail: saved.theme }),
+          );
+        if (!changedLocally.has("sidebar_collapsed"))
+          setCollapsed(saved.sidebar_collapsed);
       })
       .catch(() => {});
     return () => {
@@ -167,7 +176,7 @@ export function Shell() {
   const online = useOnline();
 
   function toggleSidebar() {
-    window.dispatchEvent(new Event(uiLocalChangeEvent));
+    reportUiPreferenceChange("sidebar_collapsed");
     setCollapsed((current) => {
       const next = !current;
       try {
@@ -459,7 +468,7 @@ export function Shell() {
             {profile.data?.active && online && !guestOnly && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
-            <Preferences onSave={saveUiPreferences} />
+            <Preferences onSave={saveAppearance} />
             <details className="account-menu" {...accountDisclosure}>
               <summary title={t("profile")}>
                 {limitedAccount ? (

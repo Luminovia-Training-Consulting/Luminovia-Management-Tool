@@ -7,6 +7,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { TimeZoneOptions } from "../../components/time-zone-options";
+import { LanguageOptions } from "../../components/language-options";
 import { Dialog } from "../../components/ui/dialog";
 import { validZone } from "../../lib/dates";
 import "./i18n";
@@ -82,8 +83,7 @@ function Form({
           value={values.locale}
           onChange={(e) => setValues({ ...values, locale: e.target.value })}
         >
-          <option value="de">Deutsch</option>
-          <option value="en">English</option>
+          <LanguageOptions />
         </select>
       </Field>
       <Field id={`${fieldId}-zone`} label={common("timezone")}>

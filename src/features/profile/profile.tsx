@@ -14,6 +14,7 @@ import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
 import { AccountSettings } from "./account-settings";
+import { ProfileLanguage } from "./profile-language";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -54,7 +55,7 @@ const schema = z.object({
 
 /** Validate own profile fields and IANA zone; confirm only a successful update. */
 function ProfileForm({ profile }: { profile: Profile }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const online = useOnline();
   const client = useQueryClient();
   const [done, setDone] = useState(false);
@@ -78,7 +79,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
         bio_de === biography ? {} : { bio_de, bio_en: bio_de };
       const { data, error } = await db()
         .from("profiles")
-        .update({ ...values, ...biographyUpdate, locale: i18n.language })
+        .update({ ...values, ...biographyUpdate })
         .eq("id", profile.id)
         .select("id")
         .single();
@@ -229,6 +230,11 @@ export function ProfilePage() {
           <code>{profile.data.luminovia_user_id}</code>
         </p>
         {guestOnly && <ProfileForm profile={profile.data} />}
+        <ProfileLanguage
+          key={session!.user.id}
+          actor={session!.user.id}
+          locale={profile.data.locale}
+        />
         <AccountSettings email={session!.user.email ?? ""} />
         {participantOnly && (
           <Link className="text-link" to="/api/docs">
@@ -256,6 +262,11 @@ export function ProfilePage() {
         <code>{profile.data.luminovia_user_id}</code>
       </p>
       <AvatarEditor name={profile.data.display_name} />
+      <ProfileLanguage
+        key={session!.user.id}
+        actor={session!.user.id}
+        locale={profile.data.locale}
+      />
       <AccountSettings email={session!.user.email ?? ""} />
       <div className="profile-layout">
         <ProfileForm profile={profile.data} />
@@ -293,7 +304,7 @@ export function ProfilePage() {
                     />
                     <span>
                       <strong>
-                        {i18n.language === "de"
+                        {i18n.language.startsWith("de")
                           ? topic.label_de
                           : topic.label_en}
                         {topic.archived_at && <> ({t("taxonomy:archived")})</>}

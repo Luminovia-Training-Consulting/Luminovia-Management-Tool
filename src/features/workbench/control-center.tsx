@@ -185,7 +185,9 @@ export function ControlCenterPage() {
                   {info.qualifications_expiring.map((item) => (
                     <li key={`${item.user_id}:${item.topic_id}`}>
                       <Link to={`/people/${item.user_id}`}>
-                        {i18n.language === "de" ? item.label_de : item.label_en}
+                        {i18n.language.startsWith("de")
+                          ? item.label_de
+                          : item.label_en}
                       </Link>
                       <p>
                         {dateTime(

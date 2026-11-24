@@ -12,11 +12,13 @@ import {
 import { Preferences } from "../../components/preferences";
 import { Button } from "../../components/ui/button";
 import { installationBrand } from "../../lib/installation-brand";
+import { isAccountLanguage } from "../../lib/account-languages";
 import { useOnline } from "../../lib/online";
 import {
   readPreference,
   uiLocalChangeEvent,
   writePreference,
+  type UiPreferenceField,
 } from "../../lib/preferences";
 import type { UiPreferencesPatch } from "../../lib/ui-preferences-schema";
 import { useAuth } from "../auth/auth-context";
@@ -38,7 +40,9 @@ type Access = "active" | "grace";
 function browserAppearance(language: string) {
   const theme = readPreference("theme");
   return {
-    language: language.startsWith("de") ? ("de" as const) : ("en" as const),
+    language: isAccountLanguage(language)
+      ? language
+      : installationBrand.defaultLanguage,
     theme:
       theme === "light" || theme === "dark" || theme === "system"
         ? theme
@@ -63,7 +67,9 @@ function useSaveAppearance(actor: string) {
       const current = cache.getQueryData<AcademyPersonalSettings>(key);
       return saveAcademyAppearance(
         actor,
-        current?.appearance.version ? patch : { ...visible, ...patch },
+        current?.appearance.version
+          ? patch
+          : { theme: visible.theme, ...patch },
       );
     },
     onSuccess: (appearance) =>
@@ -96,12 +102,17 @@ export function AcademyAppearancePreferences({
     enabled: online,
   });
   const save = useSaveAppearance(actor);
-  const hydration = useRef({ changed: false, ready: false });
+  const hydration = useRef({
+    changed: new Set<UiPreferenceField>(),
+    ready: false,
+  });
 
   useEffect(() => {
-    hydration.current = { changed: false, ready: false };
-    const changed = () => {
-      hydration.current.changed = true;
+    hydration.current = { changed: new Set(), ready: false };
+    const changed = (event: Event) => {
+      hydration.current.changed.add(
+        (event as CustomEvent<UiPreferenceField>).detail,
+      );
     };
     window.addEventListener(uiLocalChangeEvent, changed);
     return () => window.removeEventListener(uiLocalChangeEvent, changed);
@@ -110,8 +121,9 @@ export function AcademyAppearancePreferences({
   useEffect(() => {
     if (!appearance || hydration.current.ready) return;
     hydration.current.ready = true;
-    if (hydration.current.changed || !appearance.version) return;
-    void i18n.changeLanguage(appearance.language);
+    if (!hydration.current.changed.has("language"))
+      void i18n.changeLanguage(appearance.language);
+    if (hydration.current.changed.has("theme") || !appearance.version) return;
     writePreference("theme", appearance.theme);
     window.dispatchEvent(
       new CustomEvent("luminovia-theme-changed", { detail: appearance.theme }),
@@ -288,9 +300,11 @@ export function AcademyPersonalSettingsPage() {
           <dl>
             <dt>{t("language")}</dt>
             <dd>
-              {display.language === "de"
-                ? word("Deutsch", "German")
-                : word("Englisch", "English")}
+              {display.language === "de-CH"
+                ? word("Deutsch (Schweiz)", "German (Switzerland)")
+                : display.language === "de"
+                  ? word("Deutsch", "German")
+                  : word("Englisch", "English")}
             </dd>
             <dt>{t("theme")}</dt>
             <dd>{t(display.theme)}</dd>

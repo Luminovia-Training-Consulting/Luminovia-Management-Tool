@@ -126,7 +126,9 @@ function TopicEditor({
               .filter((parent) => parent.id !== topic?.id)
               .map((parent) => (
                 <option key={parent.id} value={parent.id}>
-                  {i18n.language === "de" ? parent.label_de : parent.label_en}
+                  {i18n.language.startsWith("de")
+                    ? parent.label_de
+                    : parent.label_en}
                 </option>
               ))}
           </select>
@@ -351,20 +353,21 @@ export function TaxonomyPage() {
                   )}
                 </div>
                 <h2>
-                  {i18n.language === "de" ? topic.label_de : topic.label_en}
+                  {i18n.language.startsWith("de")
+                    ? topic.label_de
+                    : topic.label_en}
                 </h2>
                 {parent && (
                   <p className="taxonomy-meta">
                     {t("currentParent", {
-                      name:
-                        i18n.language === "de"
-                          ? parent.label_de
-                          : parent.label_en,
+                      name: i18n.language.startsWith("de")
+                        ? parent.label_de
+                        : parent.label_en,
                     })}
                   </p>
                 )}
                 <p>
-                  {i18n.language === "de"
+                  {i18n.language.startsWith("de")
                     ? topic.description_de
                     : topic.description_en}
                 </p>
@@ -458,7 +461,9 @@ export function TaxonomyPage() {
         >
           <p>
             <strong>
-              {i18n.language === "de" ? archive.label_de : archive.label_en}
+              {i18n.language.startsWith("de")
+                ? archive.label_de
+                : archive.label_en}
             </strong>
           </p>
           {changeArchive.isError && (

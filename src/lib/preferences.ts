@@ -4,7 +4,12 @@
  */
 /** Non-sensitive UI preferences only, never Auth or business-data storage. */
 type Preference = "language" | "theme" | `chat-directory.${string}`;
+export type UiPreferenceField = "language" | "theme" | "sidebar_collapsed";
 export const uiLocalChangeEvent = "luminovia-ui-local-change";
+
+export function reportUiPreferenceChange(field: UiPreferenceField) {
+  window.dispatchEvent(new CustomEvent(uiLocalChangeEvent, { detail: field }));
+}
 
 /**
  * Read a visual preference best-effort; denied/full storage returns null without blocking boot,

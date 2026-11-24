@@ -117,8 +117,14 @@ it.each(["lecturer", "guest", "participant"])(
     });
     let finishSave!: () => void;
     saveUi.mockReturnValue(
-      new Promise<void>((resolve) => {
-        finishSave = resolve;
+      new Promise((resolve) => {
+        finishSave = () =>
+          resolve({
+            language: "en",
+            theme: "system",
+            sidebar_collapsed: false,
+            version: 1,
+          });
       }),
     );
     try {
@@ -139,6 +145,42 @@ it.each(["lecturer", "guest", "participant"])(
     }
   },
 );
+
+it("restores the account language even if the browser theme changed while loading", async () => {
+  access.roles = ["lecturer"];
+  await i18n.changeLanguage("de");
+  let finishLoad!: (value: {
+    language: "de-CH";
+    theme: "dark";
+    sidebar_collapsed: false;
+    version: number;
+  }) => void;
+  loadUi.mockReturnValue(
+    new Promise((resolve) => {
+      finishLoad = resolve;
+    }),
+  );
+  const { user } = setup("/profile");
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Farbschema" }),
+    "light",
+  );
+  await act(async () =>
+    finishLoad({
+      language: "de-CH",
+      theme: "dark",
+      sidebar_collapsed: false,
+      version: 2,
+    }),
+  );
+  expect(screen.getByRole("combobox", { name: "Sprache" })).toHaveValue(
+    "de-CH",
+  );
+  expect(screen.getByRole("combobox", { name: "Farbschema" })).toHaveValue(
+    "light",
+  );
+  await i18n.changeLanguage("de");
+});
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(

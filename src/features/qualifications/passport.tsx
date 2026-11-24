@@ -28,7 +28,7 @@ export function OwnQualificationPassport({ actor }: { actor: string }) {
       const controller = new AbortController();
       pending.current = controller;
       await downloadQualificationPassport(
-        i18n.language === "de" ? "de" : "en",
+        i18n.language.startsWith("de") ? "de" : "en",
         controller.signal,
       );
     },

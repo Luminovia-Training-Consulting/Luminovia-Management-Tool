@@ -121,7 +121,9 @@ function FilterForm({
                     {...register("topic_ids")}
                   />
                   <span>
-                    {i18n.language === "de" ? topic.label_de : topic.label_en}
+                    {i18n.language.startsWith("de")
+                      ? topic.label_de
+                      : topic.label_en}
                     {topic.archived_at ? ` (${common("archived")})` : ""}
                   </span>
                 </label>

@@ -175,7 +175,7 @@ function WikiForm({
               )
               .map((category) => (
                 <option key={category.id} value={category.id}>
-                  {i18n.language === "de"
+                  {i18n.language.startsWith("de")
                     ? category.label_de
                     : category.label_en}
                 </option>
@@ -484,7 +484,9 @@ export function KnowledgeArticles() {
                   ?.filter((item) => !item.archived)
                   .map((item) => (
                     <option key={item.id} value={item.id}>
-                      {i18n.language === "de" ? item.label_de : item.label_en}
+                      {i18n.language.startsWith("de")
+                        ? item.label_de
+                        : item.label_en}
                     </option>
                   ))}
               </select>
@@ -528,7 +530,7 @@ export function KnowledgeArticles() {
                     <span>
                       <strong>{item.title}</strong>
                       <small>
-                        {i18n.language === "de"
+                        {i18n.language.startsWith("de")
                           ? item.category_label_de
                           : item.category_label_en}
                       </small>

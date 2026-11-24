@@ -301,7 +301,9 @@ export function JobDetail() {
                     {job.job_requirements.map((r) => (
                       <span key={r.topic_id} className="badge">
                         {topics.data?.find((t) => t.id === r.topic_id)?.[
-                          i18n.language === "de" ? "label_de" : "label_en"
+                          i18n.language.startsWith("de")
+                            ? "label_de"
+                            : "label_en"
                         ] ?? t("expertise")}
                       </span>
                     ))}

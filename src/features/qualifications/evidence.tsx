@@ -585,7 +585,9 @@ export function OwnQualificationEvidence({
             <option value="">{t("chooseTopic")}</option>
             {topics.map((value) => (
               <option key={value.id} value={value.id}>
-                {i18n.language === "de" ? value.label_de : value.label_en}
+                {i18n.language.startsWith("de")
+                  ? value.label_de
+                  : value.label_en}
               </option>
             ))}
           </select>

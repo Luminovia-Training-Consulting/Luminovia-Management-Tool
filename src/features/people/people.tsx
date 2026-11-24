@@ -67,7 +67,7 @@ export function PeopleDirectory() {
             <option value="">{t("allTopics")}</option>
             {topics.data?.map((item) => (
               <option key={item.id} value={item.id}>
-                {i18n.language === "de" ? item.label_de : item.label_en}
+                {i18n.language.startsWith("de") ? item.label_de : item.label_en}
               </option>
             ))}
           </select>
@@ -263,8 +263,10 @@ export function PersonProfile() {
             <ul>
               {details.topics.map((topic) => (
                 <li key={topic.id}>
-                  {i18n.language === "de" ? topic.label_de : topic.label_en} ·{" "}
-                  {t(topic.verified ? "verified" : "selfDeclared")}
+                  {i18n.language.startsWith("de")
+                    ? topic.label_de
+                    : topic.label_en}{" "}
+                  · {t(topic.verified ? "verified" : "selfDeclared")}
                 </li>
               ))}
             </ul>

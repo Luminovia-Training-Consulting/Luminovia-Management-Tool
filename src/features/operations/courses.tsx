@@ -198,7 +198,9 @@ function CourseContentFields({
                       {...register("topic_ids")}
                     />
                     <span>
-                      {i18n.language === "de" ? topic.label_de : topic.label_en}
+                      {i18n.language.startsWith("de")
+                        ? topic.label_de
+                        : topic.label_en}
                       {topic.archived_at && <> ({t("taxonomy:archived")})</>}
                     </span>
                   </label>
@@ -1724,7 +1726,7 @@ export function CoursesPage() {
                     );
                     return topic ? (
                       <span className="badge" key={topic.id}>
-                        {i18n.language === "de"
+                        {i18n.language.startsWith("de")
                           ? topic.label_de
                           : topic.label_en}
                       </span>

@@ -80,6 +80,7 @@ await withTestDatabase("web_push_test", async ({sql, actor}) => {
         /permission denied/,
     );
     const notice = randomUUID();
+    await sql(`update public.profiles set locale='de-CH' where id=${q(owner)}`);
     await sql(
         `begin;insert into public.notifications(id,user_id,kind,resource_id) values(${q(notice)},${q(owner)},'claim_cancelled',${q(randomUUID())});rollback`,
     );

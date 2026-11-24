@@ -423,7 +423,7 @@ function RequestForm({
                 {...form.register("topic_ids")}
                 disabled={save.isPending}
               />
-              {i18n.language === "de" ? topic.label_de : topic.label_en}
+              {i18n.language.startsWith("de") ? topic.label_de : topic.label_en}
             </label>
           ))}
         </fieldset>

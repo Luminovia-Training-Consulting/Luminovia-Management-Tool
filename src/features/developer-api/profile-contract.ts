@@ -1,5 +1,6 @@
 /** Profile projections share the database's current access and disclosure rules. */
 import { z } from "zod";
+import { accountLanguages } from "../../lib/account-languages.ts";
 import {
   contactPreferencesSchema,
   contactVisibilityInput,
@@ -47,7 +48,7 @@ const visiblePerson = profileDetails
   });
 const managedProfile = z.object({
   display_name: z.string().max(120),
-  locale: z.enum(["de", "en"]),
+  locale: z.enum(accountLanguages),
   time_zone: z.string(),
 });
 const managedProfileInput = managedProfile.extend({ display_name: z.string() });

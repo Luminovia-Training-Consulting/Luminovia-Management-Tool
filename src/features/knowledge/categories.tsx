@@ -154,7 +154,7 @@ export function CategoryManager({
           <option value="">{t("categoryNew")}</option>
           {categories.data?.map((item) => (
             <option key={item.id} value={item.id}>
-              {i18n.language === "de" ? item.label_de : item.label_en}
+              {i18n.language.startsWith("de") ? item.label_de : item.label_en}
               {item.archived ? ` · ${t("archived")}` : ""}
             </option>
           ))}

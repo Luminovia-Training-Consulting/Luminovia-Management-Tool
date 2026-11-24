@@ -134,7 +134,9 @@ export function ForumMetadataEditor({
                   ?.filter((item) => !item.archived)
                   .map((item) => (
                     <option key={item.id} value={item.id}>
-                      {i18n.language === "de" ? item.label_de : item.label_en}
+                      {i18n.language.startsWith("de")
+                        ? item.label_de
+                        : item.label_en}
                     </option>
                   ))}
               </select>

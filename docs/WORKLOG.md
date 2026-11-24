@@ -1,3 +1,9 @@
+# 24 November 2026 — Account default language and Swiss German
+
+Profile settings now save the account's default language through the existing own-account preferences RPC. The header and profile share the confirmed locale, unrelated profile edits preserve it, and sign-in restores it across devices. German (Switzerland) uses Swiss spelling for static translations and Swiss date and number formats. Authored text and stored currencies retain their values. Email and push keep using the compatible German template family.
+
+Verified 151 focused UI and API contract tests, the profile and shell regressions after the final cache change, an isolated PostgreSQL replay for preferences and both notification channels, TypeScript, formatting, targeted lint and a production build with fictional public configuration. Hosted activation requires installation of the new locale migration.
+
 # 24 November 2026 — Main CI acceptance fixes
 
 The assignment release path no longer competes with another draft for the course. Archived offers stay archived. An active offer uses the existing automatic reopening criteria when another draft occupies its course's slot. SQL acceptance verified archived and draft release, an eligible active sibling reopening, unchanged draft count and a reopening notice. API fixtures now represent distinct drafts with valid course links. CodeQL reads Actions run metadata with the existing analysis and SARIF publication enabled.

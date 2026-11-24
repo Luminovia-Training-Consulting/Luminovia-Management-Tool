@@ -492,7 +492,9 @@ function JobForm({
               <Field
                 id="job-location"
                 label={
-                  i18n.language === "de" ? "Ort / Link" : "Location / link"
+                  i18n.language.startsWith("de")
+                    ? "Ort / Link"
+                    : "Location / link"
                 }
               >
                 <input id="job-location" {...register("location")} />
@@ -710,7 +712,9 @@ function JobForm({
                       value={topic.id}
                       {...register("topic_ids")}
                     />
-                    {i18n.language === "de" ? topic.label_de : topic.label_en}
+                    {i18n.language.startsWith("de")
+                      ? topic.label_de
+                      : topic.label_en}
                     {topic.archived_at &&
                       ` (${i18n.getFixedT(i18n.language, "taxonomy")("archived")})`}
                   </label>

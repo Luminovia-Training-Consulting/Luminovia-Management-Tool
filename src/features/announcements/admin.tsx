@@ -208,12 +208,12 @@ function Editor({
         <details>
           <summary>{t("currentPublished")}</summary>
           <h3>
-            {i18n.language === "de"
+            {i18n.language.startsWith("de")
               ? base.published.title_de
               : base.published.title_en}
           </h3>
           <p className="announcement-body">
-            {i18n.language === "de"
+            {i18n.language.startsWith("de")
               ? base.published.body_de
               : base.published.body_en}
           </p>
@@ -391,7 +391,9 @@ function Administration({ actor }: { actor: string }) {
                 {row.has_draft && row.state === "published" && (
                   <span className="badge">{t("hasDraft")}</span>
                 )}
-                <h2>{i18n.language === "de" ? row.title_de : row.title_en}</h2>
+                <h2>
+                  {i18n.language.startsWith("de") ? row.title_de : row.title_en}
+                </h2>
                 <div className="announcement-actions">
                   <Button
                     variant="secondary"

@@ -68,9 +68,9 @@ export function AnnouncementCard({
       <span className="badge">
         {t(item.important ? "important" : "information")}
       </span>
-      <h2>{i18n.language === "de" ? item.title_de : item.title_en}</h2>
+      <h2>{i18n.language.startsWith("de") ? item.title_de : item.title_en}</h2>
       <p className="announcement-body">
-        {i18n.language === "de" ? item.body_de : item.body_en}
+        {i18n.language.startsWith("de") ? item.body_de : item.body_en}
       </p>
       <footer>
         <small>

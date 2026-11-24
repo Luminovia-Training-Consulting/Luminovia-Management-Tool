@@ -148,7 +148,7 @@ it("refreshes the current version after a stale username without overwriting the
   expect(input).toHaveValue("newer.alias");
 });
 
-it("uses one accessible settings control and persists both first-save browser choices", async () => {
+it("uses one accessible settings control and preserves the account language on a first theme save", async () => {
   localStorage.setItem("luminovia.theme", "dark");
   saveAppearance.mockResolvedValue({
     language: "en",
@@ -162,7 +162,6 @@ it("uses one accessible settings control and persists both first-save browser ch
   await user.selectOptions(theme, "light");
   await waitFor(() =>
     expect(saveAppearance).toHaveBeenCalledWith("learner", {
-      language: "en",
       theme: "light",
     }),
   );
@@ -213,7 +212,6 @@ it("does not replace a local selection when an older load completes", async () =
   });
   await waitFor(() =>
     expect(saveAppearance).toHaveBeenCalledWith("learner", {
-      language: "en",
       theme: "dark",
     }),
   );

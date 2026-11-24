@@ -60,6 +60,26 @@ await withTestDatabase("ui_preferences", async ({sql}) => {
     assert.equal(patch.language, "en");
     assert.equal(patch.sidebar_collapsed, true);
     assert.equal(patch.version, 2);
+    const swiss = JSON.parse(await as(lecturer,
+        `select public.save_ui_preferences('{"language":"de-CH"}'::jsonb)`));
+    assertLmsResponse("save_ui_preferences", swiss);
+    assert.deepEqual(await read(lecturer), {
+        language: "de-CH", theme: "light", sidebar_collapsed: true, version: 3,
+    });
+    assert.equal(JSON.parse(await as(lecturer,
+        `select public.save_account_profile('{"display_name":"Fictional lecturer"}'::jsonb)`)).profile.locale, "de-CH");
+    assert.equal((await read(peer)).language, "de");
+    await sql(`update private.delivery_preferences set email_enabled=true where user_id=${q(lecturer)};
+        insert into public.notifications(user_id,kind,resource_id)
+        values (${q(lecturer)}, 'claim_cancelled', ${q(randomUUID())});`);
+    const lease = JSON.parse(await sql(
+        "begin;set local role service_role;select public.lease_notification_emails(1)->0;commit;",
+    ));
+    const delivery = JSON.parse(await sql(
+        `begin;set local role service_role;
+        select public.prepare_notification_email(${q(lease.id)},${q(lease.lease_token)});commit;`,
+    ));
+    assert.equal(delivery?.locale, "de");
     assert.equal((await read(guest)).language, "de");
     await as(
         guest,

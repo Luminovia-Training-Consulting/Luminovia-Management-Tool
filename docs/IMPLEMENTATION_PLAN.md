@@ -19,6 +19,11 @@
 - [x] Preserve assignment release and automatic reopening when another offer already uses the course draft slot. Add PostgreSQL acceptance for archived offers, a published sibling and retained draft.
 - [x] Show the first assigned session and explain who reviews a pending withdrawal. Verify that the requester sees no self-approval action.
 
+## Account default language
+
+- [x] Save German, English or German (Switzerland) in the profile and restore the account choice at sign-in. Preserve authored text and original currencies.
+- [x] Verify account preferences, profile edits, independent account scopes, email and push, and the existing API contracts.
+
 ## Local launcher
 
 - [x] Detect a busy frontend port and an already-running local project before installing dependencies. Report the conflicting port or project and preserve the existing local stack during checkout handoffs.

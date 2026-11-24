@@ -6,6 +6,7 @@ import { installationBrand, portalInternalEdition } from "./installation-brand";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { readPreference, writePreference } from "./preferences";
+import { isAccountLanguage } from "./account-languages";
 
 export const accountIdentifierLabels: [string, string] = portalInternalEdition
   ? ["Luminovia User ID", "Luminovia User ID"]
@@ -637,23 +638,62 @@ const pairs: Record<string, [string, string]> = {
     "Oberflächeneinstellung nicht im Konto gespeichert.",
     "Interface setting was not saved to your account.",
   ],
+  accountLanguage: ["Standardsprache", "Default language"],
+  accountLanguageHelp: [
+    "Diese Sprache gilt für dein Konto, auch wenn du dich auf einem anderen Gerät anmeldest.",
+    "Your account uses this language, including when you sign in on another device.",
+  ],
+  accountLanguageSave: ["Sprache speichern", "Save language"],
+  accountLanguageSaved: [
+    "Standardsprache im Konto gespeichert.",
+    "Default language saved to your account.",
+  ],
 };
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[0]]));
 const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
 const saved = readPreference("language");
-const language =
-  saved === "de" || saved === "en" ? saved : installationBrand.defaultLanguage;
+const language = isAccountLanguage(saved)
+  ? saved
+  : installationBrand.defaultLanguage;
+
+// Derive the Swiss spelling from static UI resources before interpolation so
+// names, authored content and other application data are preserved verbatim.
+function swissSpelling(value: unknown): unknown {
+  if (typeof value === "string")
+    return value.replaceAll("ß", "ss").replaceAll("ẞ", "SS");
+  if (Array.isArray(value)) return value.map(swissSpelling);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([key, text]) => [key, swissSpelling(text)]),
+    );
+  return value;
+}
+
 document.documentElement.lang = language;
 void i18n.use(initReactI18next).init({
-  resources: { de: { translation: de }, en: { translation: en } },
+  resources: {
+    de: { translation: de },
+    en: { translation: en },
+    "de-CH": { translation: swissSpelling(de) as typeof de },
+  },
   lng: language,
   fallbackLng: "de",
   interpolation: {
     escapeValue: false,
     defaultVariables: { academy: installationBrand.name },
   },
+});
+i18n.store.on("added", (language, namespace) => {
+  if (language !== "de") return;
+  i18n.addResourceBundle(
+    "de-CH",
+    namespace,
+    swissSpelling(i18n.getResourceBundle("de", namespace)),
+    true,
+    true,
+  );
 });
 i18n.on("languageChanged", (language) => {
   writePreference("language", language);

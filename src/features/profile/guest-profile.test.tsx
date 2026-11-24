@@ -44,6 +44,7 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
     time_zone: "US/Eastern",
     bio_de: "",
     bio_en: "",
+    locale: "de",
     active: true,
   });
   client.setQueryData(["user-roles", "guest-own"], ["guest"]);
@@ -86,6 +87,9 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   expect(document.querySelector(".profile-privacy-grid")).toBeNull();
   expect(fake.from).not.toHaveBeenCalled();
   expect(await screen.findByDisplayValue("fictional-guest")).toBeVisible();
+  expect(screen.getByRole("combobox", { name: "Standardsprache" })).toHaveValue(
+    "de",
+  );
   expect(fake.rpc.mock.calls).toEqual([["account_username"]]);
   await act(() => i18n.changeLanguage("en"));
   expect(
@@ -96,6 +100,71 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   expect(client.getQueryState(["expertise", "guest-own"])?.fetchStatus).toBe(
     "idle",
   );
+});
+
+it("saves Swiss German as the account language and applies it only after confirmation", async () => {
+  await i18n.changeLanguage("de");
+  let confirmSave!: (response: { data: unknown; error: null }) => void;
+  fake.rpc.mockImplementation((name: string) =>
+    name === "save_ui_preferences"
+      ? new Promise((resolve) => {
+          confirmSave = resolve;
+        })
+      : Promise.resolve({ data: { username: null, version: 0 }, error: null }),
+  );
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  const profileKey = ["profile", "guest-own"];
+  client.setQueryData(profileKey, {
+    id: "guest-own",
+    display_name: "Fictional Guest",
+    time_zone: "Europe/Zurich",
+    locale: "de",
+    active: true,
+  });
+  client.setQueryData(["user-roles", "guest-own"], ["participant"]);
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const select = screen.getByRole("combobox", { name: "Standardsprache" });
+  await user.selectOptions(select, "de-CH");
+  await user.click(screen.getByRole("button", { name: "Sprache speichern" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("save_ui_preferences", {
+      p_patch: { language: "de-CH" },
+    }),
+  );
+  expect(i18n.language).toBe("de");
+  expect(select).toBeDisabled();
+  await act(async () =>
+    confirmSave({
+      data: {
+        language: "de-CH",
+        theme: "system",
+        sidebar_collapsed: false,
+        version: 1,
+      },
+      error: null,
+    }),
+  );
+  expect(
+    await screen.findByText("Standardsprache im Konto gespeichert."),
+  ).toBeVisible();
+  expect(document.documentElement).toHaveAttribute("lang", "de-CH");
+  expect(client.getQueryData(profileKey)).toMatchObject({ locale: "de-CH" });
+  i18n.addResourceBundle("de", "fictional-spelling", {
+    street: "Straße von {{name}}",
+  });
+  expect(i18n.t("fictional-spelling:street", { name: "Groß" })).toBe(
+    "Strasse von Groß",
+  );
+  await i18n.changeLanguage("de");
 });
 
 it("saves a new time zone without overwriting an existing biography in another language", async () => {
@@ -125,6 +194,7 @@ it("saves a new time zone without overwriting an existing biography in another l
     time_zone: "Europe/Berlin",
     bio_de: "Deutscher Profiltext",
     bio_en: "A different English profile",
+    locale: "de",
     active: true,
   };
   client = new QueryClient({
@@ -150,7 +220,6 @@ it("saves a new time zone without overwriting an existing biography in another l
       display_name: "Fictional Guest",
       phone: "",
       time_zone: "Australia/Adelaide",
-      locale: "de",
     }),
   );
 });

@@ -142,7 +142,7 @@ function CreateThread({
             .filter((item) => !item.archived)
             .map((item) => (
               <option key={item.id} value={item.id}>
-                {i18n.language === "de" ? item.label_de : item.label_en}
+                {i18n.language.startsWith("de") ? item.label_de : item.label_en}
               </option>
             ))}
         </select>
@@ -988,7 +988,9 @@ export function ForumPage() {
                 ?.filter((item) => !item.archived)
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {i18n.language === "de" ? item.label_de : item.label_en}
+                    {i18n.language.startsWith("de")
+                      ? item.label_de
+                      : item.label_en}
                   </option>
                 ))}
             </select>
@@ -1020,7 +1022,7 @@ export function ForumPage() {
                     <span>
                       <strong>{thread.title}</strong>
                       <small>
-                        {i18n.language === "de"
+                        {i18n.language.startsWith("de")
                           ? thread.category_label_de
                           : thread.category_label_en}{" "}
                         · {t("replies", { count: Number(thread.post_count) })}

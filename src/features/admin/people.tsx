@@ -56,7 +56,9 @@ function ExpertiseReview({
   const client = useQueryClient();
   const [invalidExpiry, setInvalidExpiry] = useState(false);
   const [saved, setSaved] = useState(false);
-  const label = i18n.language === "de" ? topic.label_de : topic.label_en;
+  const label = i18n.language.startsWith("de")
+    ? topic.label_de
+    : topic.label_en;
   const { register, handleSubmit } = useForm<ExpiryValues>({
     resolver: zodResolver(expirySchema),
     defaultValues: {

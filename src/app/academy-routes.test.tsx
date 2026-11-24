@@ -29,6 +29,7 @@ const fake = vi.hoisted(() => ({
   from: vi.fn(),
   signOut: vi.fn(),
   profile: true,
+  language: "en",
   licence: "active",
   actor: "fictional-admin" as string | null,
   returnedInstallation: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",
@@ -193,6 +194,7 @@ beforeEach(async () => {
     })),
   );
   fake.profile = true;
+  fake.language = "en";
   fake.edition = "customer-self-hosted";
   fake.licence = "active";
   fake.actor = "fictional-admin";
@@ -502,7 +504,11 @@ beforeEach(async () => {
         case "academy_personal_settings":
           data = {
             username: { username: "practice-learner", version: 1 },
-            appearance: { language: "en", theme: "system", version: 0 },
+            appearance: {
+              language: fake.language,
+              theme: "system",
+              version: 0,
+            },
           };
           break;
         case "academy_timetable":
@@ -722,6 +728,8 @@ it.each([
 
 it("keeps German staff access for the managed Academy on a course deep link", async () => {
   fake.edition = "customer-managed";
+  fake.language = "de";
+  fake.publication = { published: false, capacity: null };
   await i18n.changeLanguage("de");
   open(`/courses/${id}/workspace`);
   expect(
@@ -732,7 +740,9 @@ it("keeps German staff access for the managed Academy on a course deep link", as
       "Weise alle Kurstermine einer aktiven Lehrkraft dieser Akademie zu.",
     ),
   ).toBeVisible();
-  expect(screen.getByRole("heading", { name: "Kursfreigabe" })).toBeVisible();
+  expect(
+    await screen.findByRole("heading", { name: "Kursfreigabe" }),
+  ).toBeVisible();
   expect(
     screen.queryByRole("link", {
       name: /Honorar|Vertrag|Rechnung|Auftragsbörse/,
@@ -1229,6 +1239,7 @@ it("reads the same branded inbox in grace without exposing write controls", asyn
 
 it("renders the direct course link read-only in German even if individual resources are marked editable", async () => {
   await i18n.changeLanguage("de");
+  fake.language = "de";
   fake.licence = "grace";
   open(`/courses/${id}/workspace#course-materials`);
   expect(await screen.findByText(/Lizenz-Kulanzfrist/)).toBeVisible();
