@@ -3,7 +3,14 @@
  * fixtures do not prove atomic server allocation.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -138,6 +145,74 @@ function setup(
   );
   return client;
 }
+
+it("opens description and coordinated course dates from the course action row", async () => {
+  const courseId = "ee000000-0000-4000-8000-000000000010";
+  const claimId = "ee000000-0000-4000-8000-000000000011";
+  rpc.mockImplementation((name) => ({
+    abortSignal: async () => ({
+      data:
+        name === "job_related_navigation"
+          ? { course_id: courseId, rooms: [] }
+          : null,
+      error: null,
+    }),
+  }));
+  const client = setup("/jobs/job-a", false, { status: "filled" }, ["admin"]);
+  act(() => {
+    client.setQueryData(["job-lifecycle", "lecturer-a", job.id], {
+      can_manage: true,
+      can_edit: false,
+      can_edit_metadata: true,
+      version: 2,
+      claims: [
+        {
+          id: claimId,
+          status: "confirmed",
+          lecturer_name: "Example Lecturer",
+          created_at: job.created_at,
+          sessions: [],
+          events: [],
+        },
+      ],
+    });
+    client.setQueryData(
+      ["changeable-assignments", "lecturer-a"],
+      [
+        {
+          claim_id: claimId,
+          lecturer_name: "Example Lecturer",
+          schedule_editable: true,
+          shared_schedule_only: true,
+          current: {
+            ...job,
+            job_id: job.id,
+            course_run_id: courseId,
+            sessions: job.job_sessions,
+          },
+        },
+      ],
+    );
+  });
+  const edit = await screen.findByRole("button", {
+    name: "Auftrag bearbeiten",
+  });
+  expect(edit).toHaveClass("button-danger");
+  const toolbar = within(edit.closest(".job-detail-toolbar")! as HTMLElement);
+  expect(
+    await toolbar.findByRole("link", { name: "Kursarbeitsraum öffnen" }),
+  ).toBeVisible();
+  expect(toolbar.getByText("Vergeben")).toBeVisible();
+  await userEvent.click(edit);
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "Auftrag bearbeiten" }),
+  );
+  expect(
+    dialog.getByRole("textbox", { name: "Auftragsbeschreibung" }),
+  ).toHaveValue("Example");
+  expect(await dialog.findByLabelText("Erster Tag")).toHaveValue("2027-01-01");
+  expect(dialog.getByLabelText("Letzter Tag")).toHaveValue("2027-01-10");
+});
 
 describe("safe marketplace interactions", () => {
   it.each(["management", "client", "participant", "admin", "owner"])(
