@@ -1407,24 +1407,6 @@
   min-width: 0;
 }
 
-.chat-composer-help {
-  margin-top: 7px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.chat-composer-help > summary {
-  cursor: pointer;
-  min-height: 24px;
-  line-height: 1.6;
-}
-
-.chat-composer-help > small {
-  display: block;
-  line-height: 1.6;
-  padding-top: 4px;
-}
-
 .chat-composer-actions > small {
   flex: 1 1 150px;
 }

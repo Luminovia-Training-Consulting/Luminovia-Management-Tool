@@ -112,20 +112,6 @@
   font-size: 12px;
 }
 
-.course-catalogue-guide {
-  margin-block: 12px 16px;
-}
-
-.course-catalogue-guide summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.operations-toolbar > .course-catalogue-tab-help {
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 .operations-courses-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

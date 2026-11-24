@@ -381,14 +381,6 @@ const pairs: Record<string, [string, string]> = {
     "Diese Vorlage gehört zu einer veröffentlichten Durchführung oder einem geschützten Auftrag. Lege für neue Inhalte eine weitere Vorlage an.",
     "This template belongs to a published run or a protected teaching offer. Add another template for new content.",
   ],
-  companyCoursesIntro: [
-    "Sieh dir die Kurse deines Unternehmens an und plane neue Durchführungen mit euren Vorlagen.",
-    "View your company’s courses and plan new runs using your templates.",
-  ],
-  companyTemplateHelp: [
-    "Hier findest du die Vorlagen deiner Organisation. Du kannst ihre Inhalte bearbeiten oder damit eine Durchführung mit eigenen Terminen als Entwurf speichern.",
-    "Find your organisation’s templates here. Edit their content or use one to schedule a course run and save it as a draft.",
-  ],
   createAdditionalRunOffer: [
     "Weiteren Auftrag erstellen",
     "Create another assignment",
@@ -614,34 +606,6 @@ const pairs: Record<string, [string, string]> = {
     "The participant operation could not be confirmed.",
   ],
   courses: ["Kurse", "Courses"],
-  coursesIntro: [
-    "Wähle eine Vorlage oder erfasse Inhalte, plane die Termine und bereite bei Bedarf einen Lehrauftrag vor.",
-    "Pick a template or add course content, plan the dates and prepare a teaching offer when needed.",
-  ],
-  courseCatalogueGuide: [
-    "Wie plane ich einen Kurs und schreibe ihn aus?",
-    "How do I plan and advertise a course?",
-  ],
-  courseCatalogueExampleTitle: [
-    "Beispiel „Linux – Praxistag“",
-    "Example: Linux practice day",
-  ],
-  courseCatalogueExample: [
-    "Speichere Shell, Dateirechte und Übungen als Vorlage, wenn du die Inhalte erneut nutzen möchtest. Plane daraus eine Durchführung mit deinem konkreten Praxistag, zum Beispiel Freitag von 9 bis 16 Uhr.",
-    "Save the shell, file permissions and exercises as a template if you want to reuse them. Plan a run for a specific practice day, for example Friday from 9 am to 4 pm.",
-  ],
-  courseCatalogueVisibility: [
-    "Speichere die Durchführung als Entwurf. Wenn du eine Lehrkraft suchst, wähle „Speichern und zum Auftrag“ und veröffentliche anschließend die Ausschreibung in der Stellenbörse.",
-    "Save the course run as a draft. If you need a lecturer, choose “Save and open offer form”, then publish the offer in the marketplace.",
-  ],
-  "courseCatalogueTab.runs": [
-    "Hier stehen konkrete Kurse mit Terminen, Ort und dem Status ihrer Ausschreibung.",
-    "This tab lists scheduled courses with sessions, venue and the status of their teaching offer.",
-  ],
-  "courseCatalogueTab.templates": [
-    "Hier speicherst du wiederverwendbare Kursinhalte wie Titel, Lehrplan und Voraussetzungen. Eine Vorlage kannst du für mehrere Durchführungen mit unterschiedlichen Terminen verwenden.",
-    "Keep reusable course content here, such as the title, syllabus and prerequisites. Use the same template for several runs with different dates.",
-  ],
   courseRunWithoutSessions: [
     "Durchführung ohne Termine",
     "Course run without sessions",

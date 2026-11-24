@@ -279,12 +279,6 @@ export function MessageComposer({
           {t(send.isPending ? "sending" : "send")}
         </Button>
       </div>
-      <details className="chat-composer-help">
-        <summary>{t("composerHelp")}</summary>
-        <small>
-          {t("messageHint")} {t("dropHint")}
-        </small>
-      </details>
       {badDrop && <Notice kind="error">{t("oneFileDrop")}</Notice>}
       {send.isSuccess && <Notice>{t("sent")}</Notice>}
       {send.isError && !empty && <Notice kind="error">{t("sendError")}</Notice>}

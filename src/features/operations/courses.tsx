@@ -1644,7 +1644,6 @@ export function CoursesPage() {
     <>
       <PageHeading
         title={t("courses")}
-        description={t(companyViewer ? "companyCoursesIntro" : "coursesIntro")}
         action={
           (tab === "templates" ? canCreateTemplate : manage) ? (
             <Button
@@ -1667,16 +1666,6 @@ export function CoursesPage() {
           )
         }
       />
-      {manage && (
-        <details className="panel course-catalogue-guide">
-          <summary>{t("courseCatalogueGuide")}</summary>
-          <p>
-            <strong>{t("courseCatalogueExampleTitle")}</strong>{" "}
-            {t("courseCatalogueExample")}
-          </p>
-          <p>{t("courseCatalogueVisibility")}</p>
-        </details>
-      )}
       {manage && tab === "templates" && (
         <TableImport
           label={
@@ -1908,13 +1897,6 @@ export function CoursesPage() {
             </Button>
           )}
         </div>
-        <p className="course-catalogue-tab-help">
-          {t(
-            tab === "templates" && companyViewer
-              ? "companyTemplateHelp"
-              : `courseCatalogueTab.${tab}`,
-          )}
-        </p>
       </section>
       {message && (
         <Notice>
