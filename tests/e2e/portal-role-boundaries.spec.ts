@@ -194,7 +194,25 @@ for (const role of actors) {
       await page.goto(`/finance?claim=${randomUUID()}`);
       if ("landing" in role) {
         await expect(page).toHaveURL(destination);
-        await expect(sidebarLink("/finance")).toHaveCount(0);
+        if (role.primary === "client") {
+          if (isMobile) {
+            await page.locator("details.mobile-more > summary").click();
+            await page.locator('#mobile-shell-navigation a[href="/finance"]').click();
+          } else {
+            await sidebarLink("/finance").click();
+          }
+          await expect(page).toHaveURL(/\/finance\/accounting$/);
+          await expect(
+            page.getByRole("heading", {
+              name: /^(Buchhaltungsexporte|Accounting exports)$/i,
+            }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("button", { name: submitInvoice }),
+          ).toHaveCount(0);
+        } else {
+          await expect(sidebarLink("/finance")).toHaveCount(0);
+        }
       } else {
         const dialog = page.getByRole("dialog", { name: submitInvoice });
         if (teaching) {
