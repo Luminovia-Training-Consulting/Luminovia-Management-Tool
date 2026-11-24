@@ -284,12 +284,12 @@ export const guideModules: GuideModule[] = [
     steps: {
       de: [
         "Öffne einen vorhandenen Chat oder beginne eine Direktnachricht über ein freigegebenes Profil.",
-        "Prüfe die Mitglieder und den Kontext, bevor du Inhalte oder Anhänge teilst.",
+        "Prüfe die Mitglieder und den Kontext, bevor du Inhalte teilst. Du kannst eine Datei ablegen oder über die Dateiauswahl anhängen.",
         "Sende online und warte auf die Bestätigung. Dozierenden- und Teilnehmendenkommunikation haben getrennte Zugänge.",
       ],
       en: [
         "Open an existing chat or start a direct message from an authorised profile.",
-        "Check membership and context before sharing content or attachments.",
+        "Check membership and context before sharing content. Drop one file into the composer or attach it through the file picker.",
         "Send online and wait for confirmation. Lecturer and participant communication have separate access.",
       ],
     },

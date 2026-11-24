@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { RefreshCw, Search } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -28,9 +29,11 @@ import "./i18n";
 
 export function DocumentExplorer({
   actor,
+  archiveAction,
   children,
 }: {
   actor: string;
+  archiveAction: ReactNode;
   children: (
     files: PortalDocument[],
     pending: boolean,
@@ -88,31 +91,47 @@ export function DocumentExplorer({
       : undefined;
   return (
     <>
-      <p className="muted">{t("discoveryHelp")}</p>
-      <div className="file-discovery-filters">
-        <Field id={`${id}-search`} label={t("search")}>
-          <input
-            type="search"
-            maxLength={160}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </Field>
-        <Field id={`${id}-tag`} label={t("tagFilter")} hint={t("exactFilter")}>
-          <input
-            maxLength={60}
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-          />
-        </Field>
-        <div className="file-discovery-folder">
-          <Field
-            id={`${id}-folder`}
-            label={t("folderFilter")}
-            hint={t("exactFilter")}
-          >
+      <section className="file-discovery-toolbar" aria-label={t("search")}>
+        <div className="file-discovery-primary">
+          <div className="file-discovery-search">
+            <Search size={18} aria-hidden="true" />
+            <input
+              aria-label={t("search")}
+              placeholder={t("search")}
+              type="search"
+              maxLength={160}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="file-discovery-actions">
+            {archiveAction}
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              aria-label={t("refreshFiles")}
+              title={t("refreshFiles")}
+              disabled={!online || query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              <RefreshCw size={17} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+        <div className="file-discovery-filters">
+          <Field id={`${id}-tag`} label={t("tagFilter")}>
+            <input
+              maxLength={60}
+              aria-describedby={`${id}-exact-filter`}
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+            />
+          </Field>
+          <Field id={`${id}-folder`} label={t("folderFilter")}>
             <input
               maxLength={80}
+              aria-describedby={`${id}-exact-filter`}
               disabled={unfiled}
               value={folder}
               onChange={(e) => setFolder(e.target.value)}
@@ -126,15 +145,9 @@ export function DocumentExplorer({
             />
             {t("unfiledOnly")}
           </label>
+          <small id={`${id}-exact-filter`}>{t("exactFilter")}</small>
         </div>
-        <Button
-          variant="secondary"
-          disabled={!online || query.isFetching}
-          onClick={() => void query.refetch()}
-        >
-          {t("refreshFiles")}
-        </Button>
-      </div>
+      </section>
       {!online && <Notice kind="error">{t("discoveryOffline")}</Notice>}
       {query.isError && !retryNext ? (
         <ErrorState retry={() => void query.refetch()} />

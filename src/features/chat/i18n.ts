@@ -20,10 +20,6 @@ const pairs: Record<string, [string, string]> = {
     "The linked message is unavailable. You can still load older messages.",
   ],
   jumpToNewMessages: ["Zu neuen Nachrichten", "Jump to new messages"],
-  composerHelp: [
-    "Hinweise zum Schreiben & Anhängen",
-    "Writing & attachment tips",
-  ],
   conversationTools: [
     "Suche, angeheftete Nachrichten & Hinweise",
     "Search, pinned messages & information",
@@ -47,10 +43,6 @@ const pairs: Record<string, [string, string]> = {
   mentionHint: [
     "Wähle bis zu 20 aktuelle Mitglieder. Die erste Erwähnung pro Nachricht benachrichtigt sie auch bei stummem Raum; ihre globalen Einstellungen gelten weiterhin. Getippte @Namen senden keine Erwähnung.",
     "Select up to 20 current members. The first mention per message notifies them even in a muted room; their global preferences still apply. Typed @names do not create mentions.",
-  ],
-  dropHint: [
-    "Eine Datei hier ablegen oder mit der Dateiauswahl anhängen.",
-    "Drop one file here or use the file picker.",
   ],
   oneFileDrop: [
     "Bitte genau eine Datei ablegen.",
@@ -89,13 +81,13 @@ const pairs: Record<string, [string, string]> = {
   clearFilters: ["Filter zurücksetzen", "Clear filters"],
   retryFilters: ["Chatfilter erneut laden", "Reload chat filters"],
   rooms: ["Unterhaltungen", "Conversations"],
+  idleCourseRooms: [
+    "Kurschats ohne Nachrichten",
+    "Course chats without messages",
+  ],
   newMessage: ["Neue Nachricht", "New message"],
   newGroup: ["Gruppe erstellen", "Create group"],
   lecturerLounge: ["Dozierenden-Lounge öffnen", "Open lecturer lounge"],
-  lecturerLoungeHint: [
-    "Ein gemeinsamer Raum ausschließlich für Dozierende.",
-    "A shared space exclusively for lecturers.",
-  ],
   noRooms: ["Hier beginnt der Austausch.", "A conversation starts here."],
   noRoomsHint: [
     "Starte eine Direktnachricht oder öffne einen deiner Kursräume.",
@@ -157,10 +149,6 @@ const pairs: Record<string, [string, string]> = {
   ],
   loadOlder: ["Ältere Nachrichten laden", "Load older messages"],
   message: ["Deine Nachricht", "Your message"],
-  messageHint: [
-    "Nur Mitglieder dieser Unterhaltung können die Nachrichten lesen.",
-    "Only members of this conversation can read its messages.",
-  ],
   messagePrivate: ["Private Direktnachricht", "Private direct message"],
   participantNote: [
     "Dieser Raum ist für den Austausch mit Kursteilnehmenden vorgesehen.",
