@@ -345,44 +345,47 @@ function ClientWorkspace({
         title={t("clients")}
         description={t("clientsIntro")}
         action={
-          <Button
-            onClick={() => {
-              setSaved(false);
-              setOrgEdit(null);
-            }}
-            disabled={!online}
-          >
-            <Plus size={18} />
-            {t("newClient")}
-          </Button>
+          <div className="operations-header-actions">
+            <Button
+              onClick={() => {
+                setSaved(false);
+                setOrgEdit(null);
+              }}
+              disabled={!online}
+            >
+              <Plus size={18} />
+              {t("newClient")}
+            </Button>
+            <TableImport
+              inDialog
+              label={de ? "Firmen importieren" : "Import companies"}
+              filename="companies"
+              columns={[
+                "name",
+                "country",
+                "time_zone",
+                "industry",
+                "city",
+                "tags",
+                "private_notes",
+              ]}
+              example={[
+                "Beispielakademie",
+                "DE",
+                "Europe/Berlin",
+                "Training",
+                "Hamburg",
+                "",
+                "",
+              ]}
+              parse={(row) => orgSchema.parse({ ...row, archived: false })}
+              save={(row, key) =>
+                importTableRow(key, "company", organisationPayload(row))
+              }
+              refresh={refresh}
+            />
+          </div>
         }
-      />
-      <TableImport
-        label={de ? "Firmen importieren" : "Import companies"}
-        filename="companies"
-        columns={[
-          "name",
-          "country",
-          "time_zone",
-          "industry",
-          "city",
-          "tags",
-          "private_notes",
-        ]}
-        example={[
-          "Beispielakademie",
-          "DE",
-          "Europe/Berlin",
-          "Training",
-          "Hamburg",
-          "",
-          "",
-        ]}
-        parse={(row) => orgSchema.parse({ ...row, archived: false })}
-        save={(row, key) =>
-          importTableRow(key, "company", organisationPayload(row))
-        }
-        refresh={refresh}
       />
       {saved && <Notice>{t("saved")}</Notice>}
       <div className="operations-layout company-directory-layout">
@@ -536,49 +539,52 @@ function ClientWorkspace({
             <section className="company-detail-group company-contacts">
               <div className="section-heading">
                 <h3>{t("contacts")}</h3>
-                <Button
-                  variant="secondary"
-                  onClick={() => setContactEdit(null)}
-                  disabled={!online}
-                >
-                  {t("newContact")}
-                </Button>
+                <div className="operations-header-actions">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setContactEdit(null)}
+                    disabled={!online}
+                  >
+                    {t("newContact")}
+                  </Button>
+                  <TableImport
+                    inDialog
+                    key={organisation.id}
+                    label={
+                      de
+                        ? "Kontakte dieser Firma importieren"
+                        : "Import contacts for this company"
+                    }
+                    filename="company-contacts"
+                    columns={["name", "position", "email", "phone", "notes"]}
+                    example={[
+                      "Alex Example",
+                      "Training",
+                      "alex@example.invalid",
+                      "",
+                      "",
+                    ]}
+                    parse={(row) =>
+                      contactSchema.parse({ ...row, archived: false })
+                    }
+                    save={(row, key) =>
+                      importTableRow(key, "contact", row, organisation.id)
+                    }
+                    refresh={async () => {
+                      await Promise.all([
+                        refresh(),
+                        client.invalidateQueries({
+                          queryKey: [
+                            "company-class-directory",
+                            actor,
+                            organisation.id,
+                          ],
+                        }),
+                      ]);
+                    }}
+                  />
+                </div>
               </div>
-              <TableImport
-                key={organisation.id}
-                label={
-                  de
-                    ? "Kontakte dieser Firma importieren"
-                    : "Import contacts for this company"
-                }
-                filename="company-contacts"
-                columns={["name", "position", "email", "phone", "notes"]}
-                example={[
-                  "Alex Example",
-                  "Training",
-                  "alex@example.invalid",
-                  "",
-                  "",
-                ]}
-                parse={(row) =>
-                  contactSchema.parse({ ...row, archived: false })
-                }
-                save={(row, key) =>
-                  importTableRow(key, "contact", row, organisation.id)
-                }
-                refresh={async () => {
-                  await Promise.all([
-                    refresh(),
-                    client.invalidateQueries({
-                      queryKey: [
-                        "company-class-directory",
-                        actor,
-                        organisation.id,
-                      ],
-                    }),
-                  ]);
-                }}
-              />
               <div className="operations-contact-list">
                 {contacts.isPending && <Loading />}
                 {contacts.isError && (
