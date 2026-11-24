@@ -1,5 +1,12 @@
 /** Component authority, consent/version and privacy regressions; actual SQL/HTTP are separate. */
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -49,8 +56,8 @@ const enquiry = {
   id,
   status: "received",
   responsible_id: null,
-  organisation_id: null,
-  course_run_id: null,
+  organisation_id: null as string | null,
+  course_run_id: null as string | null,
   version: 1,
   received_at: "2026-11-16T01:00:00Z",
   updated_at: "2026-11-16T01:00:00Z",
@@ -156,6 +163,61 @@ describe("private connected website enquiry management", () => {
       screen.getByText(/Portal versendet keine E-Mail/),
     ).toBeInTheDocument();
   });
+  it("prefills editable draft text, keeps the incoming message and links to the exact saved course", async () => {
+    const organisation = "44444444-4444-4444-8444-444444444444";
+    const run = "55555555-5555-4555-8555-555555555555";
+    active = { ...enquiry, organisation_id: organisation };
+    state.rpc.mockImplementation((name) => {
+      if (name === "enquiry_context") return response(context);
+      if (name === "enquiry_detail") return response(active);
+      if (name === "manage_enquiry") {
+        active = {
+          ...active,
+          status: "converted",
+          course_run_id: run,
+          version: 2,
+        };
+      }
+      return response(id);
+    });
+    mount();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Kursdurchlauf erstellen" }),
+    );
+    expect(screen.getByLabelText("Kurstitel")).toHaveValue(
+      enquiry.payload.topic,
+    );
+    const description = screen.getByLabelText("Kursbeschreibung");
+    expect(description).toHaveValue(enquiry.payload.message);
+    await user.clear(description);
+    await user.type(description, "Reviewed public course outline");
+    fireEvent.change(screen.getByLabelText("Beginn 1"), {
+      target: { value: "2030-02-04T09:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Ende 1"), {
+      target: { value: "2030-02-04T10:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_enquiry",
+      expect.objectContaining({
+        p_enquiry_id: id,
+        p_expected_version: 1,
+        p_payload: expect.objectContaining({
+          draft: {
+            title: enquiry.payload.topic,
+            description: "Reviewed public course outline",
+          },
+        }),
+      }),
+    );
+    expect(
+      await screen.findByRole("link", { name: "Kursplanung öffnen" }),
+    ).toHaveAttribute("href", `/courses?run=${run}`);
+    expect(screen.getByText(enquiry.payload.message)).toBeVisible();
+  });
+
   it("requires an explicit customer creation confirmation and never reports an unconfirmed mutation as success", async () => {
     mount();
     await screen.findByRole("heading", { name: enquiry.payload.topic });

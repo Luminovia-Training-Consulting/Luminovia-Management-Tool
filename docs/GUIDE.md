@@ -247,6 +247,8 @@ In **Unternehmen / Companies**, management can assign existing lecturer accounts
 
 When the selected company has active assigned lecturers, its course request offers **Nur für eigene Dozierende ausschreiben / List for company lecturers only**. The reviewed publication retains that choice. Other lecturers cannot discover or claim the offer. Company users and authorised staff retain their scoped access. New internal requests skip the pricing fields and the commission and framework contract controls at publication. Confirmed internal assignments do not become earnings or invoices in the portal.
 
+Course and job managers can also choose **Auftrag für die Stellenbörse erstellen / Create marketplace offer** from the saved course run. Choose the company-only audience for an internal assignment, then save and open the publication review. The review reports billing and whether at least one currently eligible lecturer is available for the complete block. It does not reserve a lecturer or expose private calendar data. Saving an internal offer for one run does not restrict other independently billed offers on that run. The course list distinguishes internal publication, marketplace publication and filled positions.
+
 Choose **Kurs anfragen / Request a course**, select the organisation and enter the title and topics, delivery and every session in the intended time zone. Enter the original-currency fee for an external request. Add whole required teaching units, explicitly choose 45 or 60 minutes per unit, list required documents one per line and enter preparation instructions. Required teaching minutes must fit the actual session time; remaining time may cover breaks. Teaching units do not calculate or change the commercial price. Save and wait for
 confirmation; a request does not reserve a lecturer.
 
@@ -3146,13 +3148,14 @@ identity matching remains a human decision; the Portal does not guess membership
 from an email domain or grant access based on a submitted company name.
 
 Conversion additionally requires `courses.manage` and MFA. Management chooses an
-existing course template or explicitly creates one from the enquiry, reviews exact
-sessions/time zone and teaching mode, and confirms. The same transaction calls
+existing course template or reviews the suggested title and description for a new
+company-owned template. The original enquiry stays private and unchanged. It
+then reviews exact sessions, time zone and teaching mode and confirms. The same transaction calls
 the existing `save_course_run`, creates all sessions and marks the enquiry
 Converted. Any invalid/overlapping session rolls back the template/run and enquiry
 change together. Concurrent decisions use reviewed versions and row locks, yielding
 one conversion. The result remains unpublished and has no job or commercial quote;
-normal course/offer planning continues from there. An already converted customer
+the enquiry opens that exact run directly for further planning. An already converted customer
 link is preserved. The separate priced client-request workflow is not silently
 populated with fabricated fees.
 

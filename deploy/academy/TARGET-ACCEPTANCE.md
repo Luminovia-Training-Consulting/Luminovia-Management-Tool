@@ -4,6 +4,20 @@ Use this procedure for one authorised customer-operated or managed installation.
 
 Record each applicable check as **passed**, **failed** or **pending**. Optional delivery channels disabled by the agreed configuration can be marked **disabled by agreement** after their runtime settings are checked. For every pass, retain the evidence listed below. Open normal traffic and enable delivery only with the agreed release approval.
 
+## Local handover rehearsal
+
+Use both Academy editions before evaluating the real installation. The rehearsal owns a fresh loopback stack per edition and requires the locked Node dependencies, local Docker, ClamAV and Chromium. Coordinate with other runs that use the shared local QA resources.
+
+```sh
+node scripts/academy-course-material-rehearsal.mjs --auth-mail --swagger
+PORTAL_DB_CONTAINER=<owned-local-test-db> node scripts/academy-migrations-db-tests.mjs
+python3 -m unittest discover -s deploy/academy -p 'test_*.py'
+```
+
+The HTTP run creates the draft, confirms a teaching assignment, publishes, enrols and saves a learner result using the edition’s real Auth and Data API. It verifies that the wrong roles cannot publish, enrol outside the organisation or read the course, that a learner cannot read the quiz answer key, and that replay returns the original attempt. Exact scanned files, invitation and recovery in Mailpit, and the browser contract checks are reported separately. Use the isolated PostgreSQL fixture to check that an older Academy’s accounts, enrolment, quiz result, chat and file metadata survive the candidate migration. Supply an owned PostgreSQL 17 toolchain via `ACADEMY_RECOVERY_POSTGRES_TEST_BIN` to include a native cold database reopen after encrypted restore.
+
+Keep the local test results with the intended customer’s handover record. Customer DNS, the independent SMTP and webhook destinations, and the serving installation’s retained-data upgrade still need the target checks below.
+
 ## Host preflight before activation
 
 Run the [signed staging plan](README.md#prepare-the-runtime-and-signed-browser) with `--check-host` on the intended host. Save the non-secret report with the exact release. In an isolated rehearsal, verify that a blocked check exits with status 1 without publishing a browser package or starting services. Correct the blocker and repeat on the same runtime and release. Require a verified host report before proceeding.

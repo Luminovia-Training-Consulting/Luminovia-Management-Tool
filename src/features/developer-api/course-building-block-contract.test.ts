@@ -17,7 +17,7 @@ const input = (name: string, body: object) =>
     .safeParse(body).success;
 
 describe("course template and run-backed offer contracts", () => {
-  it("keeps all four operations inside the existing authenticated REST role gates", () => {
+  it("keeps the course authoring operations inside the existing authenticated REST role gates", () => {
     const paths = portalOpenApi(backend, false).paths;
     for (const name of Object.keys(courseBuildingBlockPaths)) {
       expect(paths[name].post).toMatchObject({
@@ -29,6 +29,31 @@ describe("course template and run-backed offer contracts", () => {
         responses: { "200": {}, "403": {} },
       });
     }
+  });
+
+  it("advertises the publication preview on GET and POST with the same scoped result", () => {
+    const path = portalOpenApi(backend, false).paths[
+      `${prefix}course_offer_publication_preview`
+    ];
+    expect(path.get).toMatchObject({
+      parameters: [
+        {
+          in: "query",
+          name: "p_job_id",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      "x-luminovia-rest-gate": {
+        postgresRole: "authenticated",
+        operationalSession: true,
+        participantSession: false,
+        guestSession: false,
+      },
+      responses:
+        courseBuildingBlockPaths[`${prefix}course_offer_publication_preview`]
+          .post.responses,
+    });
   });
 
   it("documents editable template fields separately from source provenance", () => {

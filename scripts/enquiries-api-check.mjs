@@ -228,6 +228,7 @@ await withApiFixture(
         await checked(manage("create_customer", {}, 1, customerKey));
         await checked(manage("create_customer", {}, 1, customerKey));
         organization = (await get()).organisation_id;
+        const draft = {title: "Reviewed website course", description: "Publishable training outline"};
         const starts = new Date(Date.now() + 90 * 86400000).toISOString(),
             ends = new Date(Date.now() + 90 * 86400000 + 3600000).toISOString();
         await checked(
@@ -238,6 +239,7 @@ await withApiFixture(
                     time_zone: "Europe/Berlin",
                     delivery_type: "online",
                     venue: "",
+                    draft,
                     sessions: [{starts_at: starts, ends_at: ends}],
                 },
                 2,
@@ -255,6 +257,12 @@ await withApiFixture(
         );
         template = runRow.template_id;
         assert.equal(runRow.published, false);
+        assert.deepEqual(
+            await checked(service.from("course_templates")
+                .select("title,description,owner_organisation_id")
+                .eq("id", template).single()),
+            {...draft, owner_organisation_id: organization},
+        );
         assert.equal(
             (
                 await checked(

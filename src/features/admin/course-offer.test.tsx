@@ -16,6 +16,13 @@ const mock = vi.hoisted(() => ({
   source: {} as CourseRunJobDefaults,
   gross: true,
   scopedPricing: false,
+  preview: {
+    version: 3,
+    audience: "marketplace",
+    eligible: true,
+    billable: true,
+    ready: true,
+  },
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "admin-actor" } } }),
@@ -64,6 +71,13 @@ beforeEach(async () => {
   mock.source = structuredClone(source);
   mock.gross = true;
   mock.scopedPricing = false;
+  mock.preview = {
+    version: 3,
+    audience: "marketplace",
+    eligible: true,
+    billable: true,
+    ready: true,
+  };
   mock.rpc
     .mockReset()
     .mockImplementation(
@@ -86,6 +100,8 @@ beforeEach(async () => {
             },
             error: null,
           };
+        if (name === "course_offer_publication_preview")
+          return { data: mock.preview, error: null };
         if (name === "job_lifecycle")
           return { data: { version: 3, claims: [] }, error: null };
         if (name === "manage_job_offer")
@@ -312,34 +328,89 @@ it("saves a scoped management override and previews the lecturer fee and platfor
   );
 });
 
-it("allows publishing without additional terms and uses a fresh key for an intentional second offer", async () => {
+it("reviews a saved offer before publication and uses a fresh save key for a second offer", async () => {
   const user = userEvent.setup();
   setup();
-  expect(
-    await screen.findByRole("heading", { name: "Geplante Kurstermine" }),
-  ).toBeVisible();
-  const publish = screen.getByRole("button", {
-    name: "In der Stellenbörse veröffentlichen",
-  });
-  await user.click(publish);
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Weiteren Auftrag für diesen Kurs erstellen",
-    }),
-  );
-  await user.click(
-    screen.getByRole("button", { name: "In der Stellenbörse veröffentlichen" }),
-  );
-  await screen.findByText("Auftrag in der Stellenbörse veröffentlicht.");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Speichern und Ausschreibung prüfen",
+      }),
+    );
+    await screen.findByRole("dialog", { name: "Ausschreibung prüfen" });
+    await user.click(
+      await screen.findByRole("button", {
+        name: "In der Stellenbörse veröffentlichen",
+      }),
+    );
+    await screen.findByText("Auftrag in der Stellenbörse veröffentlicht.");
+    if (attempt === 0) {
+      await user.click(
+        screen.getByRole("button", {
+          name: "Weiteren Auftrag für diesen Kurs erstellen",
+        }),
+      );
+    }
+  }
   const calls = mock.rpc.mock.calls.filter(
     ([name]) => name === "create_course_run_job",
   );
   expect(calls).toHaveLength(2);
-  expect(calls[0][1].p_payload).toMatchObject({
-    terms: "",
-    status: "published",
-  });
+  expect(calls[0][1].p_payload).toMatchObject({ terms: "", status: "draft" });
   expect(calls[1][1].p_client_id).not.toBe(calls[0][1].p_client_id);
+});
+
+it("saves a roster-only draft without prices and requires reviewing its eligibility", async () => {
+  const user = userEvent.setup();
+  mock.source.has_company_lecturers = true;
+  mock.preview = {
+    version: 8,
+    audience: "company",
+    eligible: false,
+    billable: false,
+    ready: true,
+  };
+  setup();
+  await user.click(
+    await screen.findByRole("checkbox", {
+      name: "Nur für eigene Dozierende ausschreiben",
+    }),
+  );
+  expect(
+    screen.queryByLabelText("Voller Auftragspreis gesamt"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText("Gültiger Rahmenvertrag erforderlich"),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Speichern und Ausschreibung prüfen" }),
+  );
+  await screen.findByText(/Aktuell erfüllt keine Lehrkraft/);
+  expect(
+    screen.getByText("Kein Honorar und keine Rechnung im Portal"),
+  ).toBeVisible();
+  const create = mock.rpc.mock.calls.find(
+    ([name]) => name === "create_course_run_job",
+  )?.[1];
+  expect(create?.p_payload).toMatchObject({
+    own_lecturers_only: true,
+    status: "draft",
+  });
+  expect(create?.p_payload).not.toHaveProperty("gross_amount");
+  expect(create?.p_payload).not.toHaveProperty("requires_contract");
+  expect(
+    mock.rpc.mock.calls.some(([name]) => name === "manage_job_offer"),
+  ).toBe(false);
+  await user.click(
+    screen.getByRole("button", {
+      name: "Interne Ausschreibung veröffentlichen",
+    }),
+  );
+  await screen.findByText("Interne Ausschreibung veröffentlicht.");
+  expect(mock.rpc).toHaveBeenCalledWith(
+    "manage_job_offer",
+    expect.objectContaining({ p_expected_version: 8 }),
+  );
 });
 
 it("opens the existing draft when another tab saved it first", async () => {
@@ -371,6 +442,9 @@ it("publishes the saved draft using its ID and version without creating another 
   setup();
   await user.click(
     await screen.findByRole("button", { name: "Als Entwurf speichern" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Ausschreibung prüfen" }),
   );
   await user.click(
     await screen.findByRole("button", {

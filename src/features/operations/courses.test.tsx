@@ -200,6 +200,19 @@ beforeEach(async () => {
       return {
         abortSignal: async () => ({ data: protectedLifecycle, error: null }),
       };
+    if (name === "course_offer_publication_preview")
+      return {
+        abortSignal: async () => ({
+          data: {
+            version: protectedLifecycle.version,
+            audience: "marketplace",
+            billable: true,
+            eligible: true,
+            ready: true,
+          },
+          error: null,
+        }),
+      };
     if (name === "changeable_assignments")
       return { abortSignal: async () => ({ data: [], error: null }) };
     return Promise.resolve({ data: runId, error: null });
@@ -503,7 +516,7 @@ it("opens the organisation field from the marketplace section and continues afte
   await userEvent.click(continueToOffer);
   await waitFor(() =>
     expect(screen.getByTestId("course-route")).toHaveTextContent(
-      `/admin?courseRun=${runId}`,
+      `/courses?offer=${runId}`,
     ),
   );
   expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
@@ -534,7 +547,7 @@ it("links a saved offer draft from the course card without marking it as listed"
   ).not.toBeInTheDocument();
   expect(
     screen.getAllByRole("button", {
-      name: "In der Stellenbörse veröffentlichen",
+      name: "Ausschreibung prüfen",
     }),
   ).toHaveLength(1);
   expect(
@@ -549,8 +562,13 @@ it("treats an independently visible legacy run as a draft without a marketplace 
 });
 
 it.each([
-  ["draft", "In der Stellenbörse veröffentlichen", "published", "Entwurf"],
-  ["published", "Veröffentlichung zurücknehmen", "draft", "Veröffentlicht"],
+  ["draft", "Ausschreibung prüfen", "published", "Entwurf"],
+  [
+    "published",
+    "Veröffentlichung zurücknehmen",
+    "draft",
+    "In der Stellenbörse",
+  ],
 ] as const)(
   "changes a saved %s offer directly from a clean course editor",
   async (status, label, action, badge) => {
@@ -570,6 +588,16 @@ it.each([
     expect(change).toBeDisabled();
     fireEvent.change(venue, { target: { value: originalVenue } });
     await userEvent.click(change);
+    if (action === "published") {
+      const review = await screen.findByRole("dialog", {
+        name: "Ausschreibung prüfen",
+      });
+      await userEvent.click(
+        await within(review).findByRole("button", {
+          name: "In der Stellenbörse veröffentlichen",
+        }),
+      );
+    }
     await waitFor(() => expect(editor).not.toBeInTheDocument());
     expect(state.rpc).toHaveBeenCalledWith("manage_job_offer", {
       p_job_id: job.id,
@@ -626,7 +654,7 @@ it("saves the run before opening the separate marketplace offer form", async () 
   );
   await waitFor(() =>
     expect(screen.getByTestId("course-route")).toHaveTextContent(
-      `/admin?courseRun=${runId}`,
+      `/courses?offer=${runId}`,
     ),
   );
   expect(state.rpc).toHaveBeenCalledWith("save_course_run", {

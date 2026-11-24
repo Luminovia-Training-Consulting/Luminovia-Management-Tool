@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { prepareAcademyInstallation } from "./academy-installation.mjs";
 import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
+import { rehearseCourseHandover } from "./testing/academy-handover-course.mjs";
 
 const [edition, release] = process.argv.slice(2);
 assert.ok(
@@ -153,17 +154,10 @@ const admin = await actor("administrator", "admin");
 const teacher = await actor("teacher", "lecturer");
 const learner = await actor("learner", "participant");
 const outside = await actor("outside", "participant");
-const [organisation, template, run, consent] = Array.from(
-  { length: 4 },
-  randomUUID,
-);
+// Bootstrap only the fictional organisation and accepted company association.
+const [organisation, consent] = Array.from({ length: 2 }, randomUUID);
 sql(`
   insert into public.organisations(id,name) values (${q(organisation)},'Fictional Academy');
-  insert into public.course_templates(id,title) values(${q(template)},'Fictional Workshop');
-  insert into public.course_runs(id,template_id,organisation_id)
-    values (${q(run)},${q(template)},${q(organisation)});
-  insert into public.course_sessions(course_run_id,starts_at,ends_at)
-    values (${q(run)},now()+interval '1 day',now()+interval '25 hours');
   insert into private.company_participant_link_requests
     (id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at)
     select ${q(consent)},${q(organisation)},${q(admin.id)},${q(randomUUID())},luminovia_user_id,id,'accepted',now()+interval '1 day'
@@ -171,19 +165,23 @@ sql(`
   insert into private.company_participant_memberships
     (organisation_id,user_id,status,link_request_id,invited_by,joined_at)
     values (${q(organisation)},${q(learner.id)},'active',${q(consent)},${q(admin.id)},now());
-  insert into public.course_enrolments(course_run_id,user_id,enrolled_by,status)
-    values (${q(run)},${q(learner.id)},${q(admin.id)},'enrolled');
 `);
-const assignment = await request(
-  "/rest/v1/rpc/academy_assign_course_instructor",
+const run = await rehearseCourseHandover({
+  request,
+  organisation,
   admin,
-  {
-    p_course_id: run,
-    p_instructor_id: teacher.id,
-    p_request_id: randomUUID(),
+  teacher,
+  learner,
+  outside,
+  startSession: (id) => {
+    const updated = sql(`with updated as (
+      update public.course_sessions
+      set starts_at=now()-interval '5 minutes', ends_at=now()+interval '55 minutes'
+      where course_run_id=${q(id)} returning id
+    ) select count(*) from updated`);
+    assert.equal(updated, "1", "Only the fictional session has started");
   },
-);
-assert.equal((await json(assignment, 200)).status, "confirmed");
+});
 
 const file = "/functions/v1/files?mode=academy-material";
 const bytes = Buffer.from(
@@ -299,6 +297,10 @@ console.log(
     sha256: digest,
     raw_storage_status: publicObject.status,
     checks: [
+      "native_course_draft_retry",
+      "publication_requires_assigned_instructor",
+      "native_publication_and_enrolment",
+      "scoped_course_progress_and_retry",
       "clamav_clean",
       "exact_http_bytes",
       "same_request_retry",

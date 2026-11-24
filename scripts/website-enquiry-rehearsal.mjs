@@ -1,7 +1,7 @@
 /** Rehearse the built public Website and the native Portal intake on a disposable loopback stack. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash, createPublicKey, randomBytes } from "node:crypto";
+import { createHash, createPublicKey, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import {
   cpSync,
@@ -494,6 +494,54 @@ try {
       ),
     );
 
+    const review = (action, reviewedVersion, fields, request = randomUUID()) =>
+      manager.rpc("manage_enquiry", {
+        p_enquiry_id: id,
+        p_action: action,
+        p_payload: fields,
+        p_expected_version: reviewedVersion,
+        p_request_id: request,
+      });
+    const company = await review("create_customer", detail.data.version, {});
+    assert.equal(company.error, null);
+    const reviewed = await manager.rpc("enquiry_detail", { p_enquiry_id: id });
+    assert.equal(reviewed.error, null);
+    assert.ok(reviewed.data.organisation_id);
+    const draft = {
+      title: reviewed.data.payload.topic,
+      description: "Reviewed course planning outline.",
+    };
+    const start = new Date(Date.now() + 30 * 86400000);
+    const fields = {
+      template_id: "",
+      time_zone: reviewed.data.payload.time_zone,
+      delivery_type: "online",
+      venue: "",
+      sessions: [{
+        starts_at: start.toISOString(),
+        ends_at: new Date(start.getTime() + 3600000).toISOString(),
+      }],
+      draft,
+    };
+    const retry = randomUUID();
+    const converted = await review("convert", reviewed.data.version, fields, retry);
+    assert.equal(converted.error, null);
+    assert.deepEqual(
+      (await review("convert", reviewed.data.version, fields, retry)).data,
+      converted.data,
+    );
+    const saved = await manager.rpc("enquiry_detail", { p_enquiry_id: id });
+    assert.equal(saved.error, null);
+    assert.equal(saved.data.status, "converted");
+    assert.deepEqual(saved.data.payload, detail.data.payload);
+    const run = await service.from("course_runs").select("published,organisation_id,course_templates(title,description,owner_organisation_id)")
+      .eq("id", saved.data.course_run_id).single();
+    assert.equal(run.error, null);
+    assert.deepEqual(run.data, {
+      published: false,
+      organisation_id: reviewed.data.organisation_id,
+      course_templates: {...draft, owner_organisation_id: reviewed.data.organisation_id},
+    });
     await context.close();
   }
   assert.equal(attempts.size, 2);
@@ -514,6 +562,9 @@ try {
         "manager-inbox",
         "manager-notification",
         "lecturer-denied",
+        "company-owned-unpublished-course-draft",
+        "conversion-retry",
+        "private-original-retained",
       ],
     }),
   );

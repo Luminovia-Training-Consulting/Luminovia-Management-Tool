@@ -399,6 +399,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         time_zone: "Europe/Berlin",
         delivery_type: "online",
         venue: "",
+        draft: {title: "Reviewed course title", description: "Reviewed course outline"},
         sessions: [{starts_at: starts, ends_at: ends}],
     };
     await check(
@@ -429,6 +430,13 @@ await withTestDatabase("enquiries_test", async (fixture) => {
                 templates,
             );
             assert.equal(await sql("select count(*) from public.course_runs"), runs);
+            await assert.rejects(
+                manage(manager, id, "convert", {
+                    ...conversion,
+                    draft: {...conversion.draft, contact: payload.email},
+                }, 4),
+                /Invalid enquiry draft fields/,
+            );
             assert.equal((await detail(manager, id)).version, 4);
         },
     );
@@ -468,6 +476,14 @@ await withTestDatabase("enquiries_test", async (fixture) => {
                 "f",
             );
             assert.deepEqual(enquiry.payload, payload);
+            assert.deepEqual(
+                JSON.parse(await sql(`select jsonb_build_object(
+                  'title', template.title, 'description', template.description,
+                  'owner', template.owner_organisation_id)
+                  from public.course_runs run join public.course_templates template on run.template_id=template.id
+                  where run.id='${enquiry.course_run_id}'`)),
+                {...conversion.draft, owner: enquiry.organisation_id},
+            );
             assert.equal(await receive(), id);
             assert.equal(
                 await sql(`select count(*)

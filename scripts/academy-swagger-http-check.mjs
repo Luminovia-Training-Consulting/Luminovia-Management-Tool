@@ -65,15 +65,6 @@ const installationId = z.uuid().parse(capabilities.installation_id);
 const service = createClient(backend, SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-const email = `fictional-swagger-${randomUUID()}@example.invalid`;
-const password = `F!9a-${randomUUID()}`;
-const alias = `swagger-${randomUUID().slice(0, 8)}`;
-const { data: user, error } = await service.auth.admin.createUser({
-  email,
-  password,
-  email_confirm: true,
-});
-assert.equal(error, null, "Create a disposable account");
 const sql = (input) =>
   execFileSync(
     "docker",
@@ -92,9 +83,30 @@ const sql = (input) =>
     ],
     { input, stdio: ["pipe", "pipe", "pipe"], encoding: "utf8" },
   ).trim();
-sql(
-  `insert into public.user_roles(user_id,role) values (${q(user.user.id)},'participant')`,
-);
+/** Keep transport checks and browser locale cases on different test identities.
+ * This preserves the production login budget while exercising the actual account locale. */
+async function createParticipant(label) {
+  const email = `fictional-swagger-${label}-${randomUUID()}@example.invalid`;
+  const password = `F!9a-${randomUUID()}`;
+  const { data, error } = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  assert.equal(error, null, "Create a disposable account");
+  const id = data.user.id;
+  sql(
+    `insert into public.user_roles(user_id,role) values (${q(id)},'participant')`,
+  );
+  return { email, password, id };
+}
+
+const {
+  email,
+  password,
+  id: participant,
+} = await createParticipant("transport");
+const alias = `swagger-${randomUUID().slice(0, 8)}`;
 const signIn = (identifier) =>
   request("/functions/v1/human-login", {
     method: "POST",
@@ -121,7 +133,7 @@ const nativeUser = await checked(
   200,
   "Native Auth confirms identity",
 );
-assert.equal(nativeUser.id, user.user.id);
+assert.equal(nativeUser.id, participant);
 
 const directory = join(process.cwd(), "academy-swagger");
 mkdirSync(directory, { mode: 0o700 });
@@ -205,12 +217,24 @@ const server = await preview({
 let browser;
 try {
   browser = await chromium.launch({ headless: true });
+  const browserUsers = {
+    de: await createParticipant("de"),
+    en: await createParticipant("en"),
+  };
   for (const profile of [
     { name: "desktop", use: { viewport: { width: 1280, height: 900 } } },
     { name: "mobile", use: devices["Pixel 7"] },
   ]) {
     for (const language of ["de", "en"]) {
       for (const theme of ["light", "dark"]) {
+        const actor = browserUsers[language];
+        // Match the saved account preferences to the browser setup so the
+        // post-login hydration cannot switch the test to another locale.
+        sql(`update public.profiles set locale=${q(language)} where id=${q(actor.id)};
+          insert into private.account_ui_preferences(user_id,theme,version)
+          values (${q(actor.id)},${q(theme)},1)
+          on conflict (user_id) do update set theme=excluded.theme,
+            version=private.account_ui_preferences.version+1;`);
         const context = await browser.newContext({
           ...profile.use,
           baseURL: site,
@@ -229,8 +253,8 @@ try {
           await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
           await page
             .locator("#email")
-            .fill(language === "de" ? email.toUpperCase() : email);
-          await page.locator("#password").fill(password);
+            .fill(language === "de" ? actor.email.toUpperCase() : actor.email);
+          await page.locator("#password").fill(actor.password);
           await page.locator("form button[type=submit]").press("Enter");
           await expect(page).toHaveURL(new RegExp(entry + "$"), {
             timeout: 25_000,
@@ -311,6 +335,11 @@ try {
             await context.request.get("/manifest.webmanifest")
           ).json();
           assert.equal(manifest.name, name);
+        } catch (error) {
+          throw new Error(
+            `Academy browser case failed for ${profile.name}/${language}/${theme}`,
+            { cause: error },
+          );
         } finally {
           await context.close();
         }
@@ -368,7 +397,7 @@ try {
     "Participant cannot read audit",
   );
   sql(
-    `insert into public.user_roles(user_id,role) values (${q(user.user.id)},'admin')`,
+    `insert into public.user_roles(user_id,role) values (${q(participant)},'admin')`,
   );
   assert.equal(
     (await callerAudit()).status,
@@ -376,14 +405,14 @@ try {
     "Current role grants authority on the same token",
   );
   sql(
-    `delete from public.user_roles where user_id=${q(user.user.id)} and role='admin'`,
+    `delete from public.user_roles where user_id=${q(participant)} and role='admin'`,
   );
   assert.equal(
     (await callerAudit()).status,
     403,
     "Revocation applies to the same token",
   );
-  sql(`update public.profiles set active=false where id=${q(user.user.id)}`);
+  sql(`update public.profiles set active=false where id=${q(participant)}`);
   assert.equal(
     (await request(ownAlias, { token: currentToken })).status,
     403,

@@ -278,11 +278,88 @@ test("course editor publishes and withdraws the linked marketplace offer", async
         return page.getByRole("dialog", {name: "Bearbeiten"});
     };
     let editor = await openEditor("Entwurf");
-    await editor.getByRole("button", {name: "In der Stellenbörse veröffentlichen"}).click();
+    await editor.getByRole("button", {name: "Ausschreibung prüfen"}).click();
+    await page.getByRole("dialog", {name: "Ausschreibung prüfen"})
+        .getByRole("button", {name: "In der Stellenbörse veröffentlichen"}).click();
+    await expect.poll(async () => (await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("published");
     await expect(editor).toBeHidden();
-    expect((await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("published");
-    editor = await openEditor("Veröffentlicht");
+    editor = await openEditor("In der Stellenbörse");
     await editor.getByRole("button", {name: "Veröffentlichung zurücknehmen"}).click();
+    await expect.poll(async () => (await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("draft");
     await expect(editor).toBeHidden();
-    expect((await service.from("jobs").select("status").eq("id", job).single()).data?.status).toBe("draft");
+});
+
+test("course workspace reviews and publishes a nonbillable company-only offer", async ({page, browser}, testInfo) => {
+    test.setTimeout(90000);
+    const admin = await actor("Fictional internal staffing admin", "admin");
+    const teacher = await actor("Fictional internal staffing lecturer", "lecturer");
+    const outsider = await actor("Fictional external lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const apiAs = async (email: string) => {
+        const client = api(process.env.SUPABASE_ANON_KEY!);
+        const authenticated = await client.auth.signInWithPassword({email, password: process.env.E2E_PASSWORD!});
+        expect(authenticated.error).toBeNull();
+        return client;
+    };
+    const [organisation, template, run] = Array.from({length: 3}, randomUUID);
+    const title = "Fictional team course " + run.slice(0, 8);
+    const starts = DateTime.utc().plus({days: 190});
+    const write = async (table: string, row: object) => {
+        const {error} = await service.from(table).insert(row);
+        expect(error?.message).toBeUndefined();
+    };
+    await write("organisations", {id: organisation, name: title + " company"});
+    await write("course_templates", {id: template, title});
+    await write("course_runs", {id: run, template_id: template, organisation_id: organisation});
+    await write("course_sessions", {
+        course_run_id: run, starts_at: starts.toISO(), ends_at: starts.plus({hours: 2}).toISO(),
+    });
+    const manager = await apiAs(admin.email);
+    expect((await manager.rpc("set_company_lecturer", {
+        p_organisation_id: organisation, p_lecturer_id: teacher.id, p_remove: false,
+    })).error).toBeNull();
+
+    await login(page, admin.email);
+    await page.goto(`/courses?run=${run}`);
+    await page.getByRole("link", {name: "Auftrag für die Stellenbörse erstellen", exact: true}).click();
+    const form = page.getByRole("dialog", {name: "Auftrag für die Stellenbörse erstellen"});
+    await form.getByRole("checkbox", {name: "Nur für eigene Dozierende ausschreiben"}).check();
+    await expect(form.getByLabel("Voller Auftragspreis gesamt")).toHaveCount(0);
+    await form.getByRole("button", {name: "Speichern und Ausschreibung prüfen"}).click();
+    const review = page.getByRole("dialog", {name: "Ausschreibung prüfen"});
+    await expect(review.getByText("Eigene Dozierende des Unternehmens", {exact: true})).toBeVisible();
+    await expect(review.getByText("Kein Honorar und keine Rechnung im Portal", {exact: true})).toBeVisible();
+    await expect(review.getByText(/Mindestens eine geeignete Lehrkraft/)).toBeVisible();
+    await review.getByRole("button", {name: "Interne Ausschreibung veröffentlichen"}).click();
+    await expect(form.getByText("Interne Ausschreibung veröffentlicht.", {exact: true})).toBeVisible();
+    const saved = await service.from("jobs").select("id,status,company_internal")
+        .eq("course_run_id", run).single();
+    expect(saved.error).toBeNull();
+    expect(saved.data).toMatchObject({status: "published", company_internal: true});
+    const job = saved.data!.id;
+    await form.getByRole("button", {name: "Schließen", exact: true}).click();
+    const details = page.getByRole("dialog", {name: title, exact: true});
+    await expect(details.getByRole("link", {name: `Interne Ausschreibung öffnen: ${title}`})).toBeVisible();
+    await details.getByRole("button", {name: "Schließen", exact: true}).click();
+    const card = page.locator(".operations-course").filter({has: page.getByRole("heading", {name: title, exact: true})});
+    await expect(card.getByText("Intern ausgeschrieben", {exact: true})).toBeVisible();
+
+    const unassigned = await apiAs(outsider.email);
+    expect((await unassigned.rpc("job_detail", {p_job_id: job})).error?.code).toBe("42501");
+    const context = await browser.newContext({
+        baseURL: process.env.E2E_BASE_URL!, viewport: testInfo.project.use.viewport,
+        isMobile: testInfo.project.use.isMobile, hasTouch: testInfo.project.use.hasTouch,
+    });
+    try {
+        const lecturerPage = await context.newPage();
+        await login(lecturerPage, teacher.email);
+        await lecturerPage.goto(`/jobs/${job}`);
+        await expect(lecturerPage.getByText(/Interner Einsatz für eigene Dozierende/)).toBeVisible();
+        await expect(lecturerPage.locator(".claim-panel .amount")).toHaveCount(0);
+        await lecturerPage.getByRole("checkbox", {name: "Konditionen akzeptieren"}).check();
+        await lecturerPage.getByRole("button", {name: "Auftrag übernehmen"}).click();
+        await expect(lecturerPage.locator(".claim-panel").getByText("Dein Auftrag ist bestätigt. Alle Termine sind reserviert.", {exact: true})).toBeVisible();
+    } finally {
+        await context.close();
+    }
 });

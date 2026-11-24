@@ -247,6 +247,42 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         "manage_course_enrolment",
         `${q(course)},${q(learner)},'enrolled'`,
       );
+      // Keep a real learner result in the historical migration fixture. Changes
+      // to current role checks or quiz projections must preserve the saved attempt.
+      await sql(`insert into public.course_sessions(course_run_id,starts_at,ends_at)
+        values (${q(course)},now()-interval '2 hours',now()-interval '1 hour')`);
+      const activity = (actorId, action, payload, version = 0) =>
+        rpc(
+          actorId,
+          "academy_learning_action",
+          `${q(course)},${q(action)},${q(JSON.stringify(payload))},${version}`,
+        ).then(JSON.parse);
+      await activity(manager, "quiz_config", {
+        questions: [
+          {
+            prompt: "Choose the fictional answer",
+            options: ["A", "B"],
+            correct: 1,
+          },
+        ],
+        published: true,
+        pass_percent: 80,
+        max_attempts: 2,
+      });
+      const quizRequest = randomUUID();
+      const savedQuiz = () =>
+        activity(
+          learner,
+          "quiz_attempt",
+          {
+            answers: [1],
+            request_id: quizRequest,
+          },
+          1,
+        );
+      const quizAttempt = await savedQuiz();
+      assert.equal(quizAttempt.score, 100);
+      assert.equal(quizAttempt.passed, true);
       const room = await rpc(manager, "academy_ensure_course_chat", q(course));
       const submit = () =>
         rpc(
@@ -283,6 +319,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
           [storageObject, "portal-clean", objectPath].join(":"),
         );
         assert.equal(workspace.id, course);
+        assert.equal(workspace.quiz.attempts, 1);
+        assert.equal(workspace.quiz.passed, true);
+        assert.equal(workspace.quiz.last_score, 100);
+        assert.equal(
+          Object.hasOwn(workspace.quiz.questions[0], "correct"),
+          false,
+        );
         assert.equal(enrolment, [course, learner, "enrolled"].join(":"));
         assert.equal(
           await actor(
@@ -296,9 +339,20 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         assert.equal(chat[0].body, body);
         assert.equal(attachment.id, version);
         assert.equal(attachment.sha256, digest);
+        await assert.rejects(
+          rpc(outsider, "course_workspace", q(course)),
+          /42501/,
+        );
         await assert.rejects(history(outsider), /42501/);
         await assert.rejects(file(outsider), /42501/);
-        return { auth, chat, attachment, object, enrolment };
+        return {
+          auth,
+          chat,
+          attachment,
+          object,
+          enrolment,
+          quiz: workspace.quiz,
+        };
       };
 
       const before = await readRetained();
@@ -329,10 +383,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       });
       assert.deepEqual(await readRetained(), before);
       assert.equal(await submit(), message);
+      assert.deepEqual(await savedQuiz(), quizAttempt);
       await apply(ledger);
       assert.deepEqual(await readRetained(), before);
       console.log(
-        `PASS ${edition} upgrade from ef8a724f: retained accounts, enrolment, course chat and exact clean-file metadata; role and idempotency checks`,
+        `PASS ${edition} upgrade from ef8a724f: retained accounts, enrolment, quiz progress, course chat and exact clean-file metadata; role and idempotency checks`,
       );
     },
     { migrationsThrough: "00000000000000" },

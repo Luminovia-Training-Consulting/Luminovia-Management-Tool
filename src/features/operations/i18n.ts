@@ -780,7 +780,17 @@ const pairs: Record<string, [string, string]> = {
     "Speichern und zum Auftrag",
     "Save and open offer form",
   ],
-  marketplaceStatus: ["Stellenbörse", "Marketplace"],
+  marketplaceStatus: ["Ausschreibungsstatus", "Teaching offer status"],
+  listedCompany: ["Intern ausgeschrieben", "Listed for company lecturers"],
+  listedMarketplace: ["In der Stellenbörse", "Listed in the marketplace"],
+  openCompanyOffer: [
+    "Interne Ausschreibung öffnen: {{title}}",
+    "Open internal offer: {{title}}",
+  ],
+  offerEditorDescription: [
+    "Lege die Zielgruppe fest und speichere den Auftrag zur Vorschau.",
+    "Choose the audience and save the teaching offer for publication review.",
+  ],
   offerPermissionRequired: [
     "Für das Anlegen und Veröffentlichen von Ausschreibungen brauchst du die Berechtigung zur Auftragsverwaltung.",
     "Creating and publishing offers requires permission to manage teaching offers.",

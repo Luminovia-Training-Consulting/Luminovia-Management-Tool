@@ -6,7 +6,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
@@ -78,6 +78,12 @@ import { BuildingBlockSources, CourseRunOfferLink } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
+
+const CourseOfferForm = lazy(() =>
+  import("../admin/admin").then(({ CourseOfferForm }) => ({
+    default: CourseOfferForm,
+  })),
+);
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const runSchema = z.object({
@@ -1171,6 +1177,44 @@ function RunForm({
   );
 }
 
+function courseOfferState(run: CourseRun, now: number) {
+  const liveOffers =
+    run.jobs?.filter(
+      ({ status, claim_deadline, job_sessions }) =>
+        status === "published" &&
+        (!claim_deadline || Date.parse(claim_deadline) > now) &&
+        (!job_sessions ||
+          (job_sessions.length > 0 &&
+            job_sessions.every(
+              ({ starts_at }) => Date.parse(starts_at) > now,
+            ))),
+    ) ?? [];
+  const jobs = run.jobs ?? [];
+  const closedReason = jobs.some(({ status }) => status === "filled")
+    ? "marketplaceAssigned"
+    : jobs.some(
+          ({ status, claim_deadline }) =>
+            status === "published" &&
+            claim_deadline &&
+            Date.parse(claim_deadline) <= now,
+        )
+      ? "marketplaceExpired"
+      : jobs.some(
+            ({ status, job_sessions }) =>
+              status === "published" &&
+              job_sessions?.some(
+                ({ starts_at }) => Date.parse(starts_at) <= now,
+              ),
+          )
+        ? "marketplaceStarted"
+        : jobs.some(({ status }) => status === "draft")
+          ? "marketplaceDraft"
+          : jobs.length
+            ? "marketplaceClosed"
+            : "marketplaceMissing";
+  return { liveOffers, closedReason };
+}
+
 /** Combine templates/runs with explicitly requested publication/copy actions. */
 export function CoursesPage() {
   const { t, i18n } = useTranslation("operations");
@@ -1227,6 +1271,7 @@ export function CoursesPage() {
       !template.building_block_source_id);
   const navigate = useNavigate();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
+  const offerRunId = canPrepareOffer ? params.get("offer") : null;
   const workspaceEntitlement = useQuery({
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
     enabled: Boolean(detail && !detail.archived_at),
@@ -1348,6 +1393,29 @@ export function CoursesPage() {
   );
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
+  const offerStatus = (run: CourseRun) => {
+    const { liveOffers, closedReason } = courseOfferState(
+      run,
+      runs.dataUpdatedAt,
+    );
+    return (
+      <>
+        <strong>{t("marketplaceStatus")}</strong>
+        {liveOffers.length
+          ? liveOffers.map((job) => (
+              <Link key={job.id} to={`/jobs/${job.id}`}>
+                {t(
+                  job.company_internal || run.own_lecturers_only
+                    ? "openCompanyOffer"
+                    : "openListedOffer",
+                  { title: job.title },
+                )}
+              </Link>
+            ))
+          : t(closedReason)}
+      </>
+    );
+  };
   const marketplaceAction = (run: CourseRun) => {
     if (!manage) return null;
     const draft = run.jobs?.find(({ status }) => status === "draft");
@@ -1641,41 +1709,10 @@ export function CoursesPage() {
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {
             const template = findTemplate(run);
-            const now = runs.dataUpdatedAt;
-            const liveOffers =
-              run.jobs?.filter(
-                ({ status, claim_deadline, job_sessions }) =>
-                  status === "published" &&
-                  (!claim_deadline || Date.parse(claim_deadline) > now) &&
-                  (!job_sessions ||
-                    (job_sessions.length > 0 &&
-                      job_sessions.every(
-                        ({ starts_at }) => Date.parse(starts_at) > now,
-                      ))),
-              ) ?? [];
-            const jobs = run.jobs ?? [];
-            const closedReason = jobs.some(({ status }) => status === "filled")
-              ? "marketplaceAssigned"
-              : jobs.some(
-                    ({ status, claim_deadline }) =>
-                      status === "published" &&
-                      claim_deadline &&
-                      Date.parse(claim_deadline) <= now,
-                  )
-                ? "marketplaceExpired"
-                : jobs.some(
-                      ({ status, job_sessions }) =>
-                        status === "published" &&
-                        job_sessions?.some(
-                          ({ starts_at }) => Date.parse(starts_at) <= now,
-                        ),
-                    )
-                  ? "marketplaceStarted"
-                  : jobs.some(({ status }) => status === "draft")
-                    ? "marketplaceDraft"
-                    : jobs.length
-                      ? "marketplaceClosed"
-                      : "marketplaceMissing";
+            const { liveOffers, closedReason } = courseOfferState(
+              run,
+              runs.dataUpdatedAt,
+            );
             return (
               <article className="panel operations-course" key={run.id}>
                 <div className="section-heading">
@@ -1685,7 +1722,13 @@ export function CoursesPage() {
                       run.archived_at
                         ? "archive"
                         : liveOffers.length > 0
-                          ? "published"
+                          ? liveOffers.every(
+                              (offer) =>
+                                offer.company_internal ||
+                                run.own_lecturers_only,
+                            )
+                            ? "listedCompany"
+                            : "listedMarketplace"
                           : closedReason === "marketplaceDraft" ||
                               closedReason === "marketplaceMissing"
                             ? "draft"
@@ -1698,14 +1741,7 @@ export function CoursesPage() {
                 <h2>{template?.title ?? t("template")}</h2>
                 {manage && (
                   <div className="course-marketplace-state">
-                    <strong>{t("marketplaceStatus")}</strong>
-                    {liveOffers.length > 0
-                      ? liveOffers.map((job) => (
-                          <Link key={job.id} to={`/jobs/${job.id}`}>
-                            {t("openListedOffer", { title: job.title })}
-                          </Link>
-                        ))
-                      : t(closedReason)}
+                    {offerStatus(run)}
                     {marketplaceAction(run)}
                   </div>
                 )}
@@ -1931,7 +1967,7 @@ export function CoursesPage() {
             setRunEdit(undefined);
             setSavedRun(savedId);
             if (offerRun) {
-              navigate(`/admin?courseRun=${encodeURIComponent(offerRun)}`);
+              navigate(`/courses?offer=${encodeURIComponent(offerRun)}`);
               return;
             }
             setTab(result === "template" ? "templates" : "runs");
@@ -2053,7 +2089,21 @@ export function CoursesPage() {
         {duplicate.isError && <Notice kind="error">{t("error")}</Notice>}
       </Dialog>
       <Dialog
-        open={Boolean(detail)}
+        open={Boolean(offerRunId)}
+        onOpenChange={(open) => {
+          if (!open) setParams({ run: offerRunId ?? "" }, { replace: true });
+        }}
+        title={t("createRunOffer")}
+        description={t("offerEditorDescription")}
+      >
+        {offerRunId && (
+          <Suspense fallback={<Loading />}>
+            <CourseOfferForm runId={offerRunId} />
+          </Suspense>
+        )}
+      </Dialog>
+      <Dialog
+        open={Boolean(detail) && !offerRunId}
         onOpenChange={(open) => {
           if (!open) setParams({}, { replace: true });
         }}
@@ -2101,7 +2151,12 @@ export function CoursesPage() {
                 }
               />
             </div>
-            {marketplaceAction(detail)}
+            {manage && (
+              <div className="course-marketplace-state">
+                {offerStatus(detail)}
+                {marketplaceAction(detail)}
+              </div>
+            )}
             {!detail.archived_at && (
               <div className="page-actions">
                 {workspaceEntitlement.isPending ? (

@@ -354,6 +354,19 @@ await withApiFixture(
         };
         const activeDraft = await checked(admin.client.rpc("create_course_run_job", draftArgs));
         assert.equal(await checked(admin.client.rpc("create_course_run_job", draftArgs)), activeDraft);
+        const previewArgs = {p_job_id: activeDraft};
+        const publicationPreview = await checked(
+            admin.client.rpc("course_offer_publication_preview", previewArgs),
+        );
+        assert.deepEqual(
+            await checked(admin.client.rpc("course_offer_publication_preview", previewArgs, {get: true})),
+            publicationPreview,
+        );
+        assert.equal(publicationPreview.audience, "marketplace");
+        assert.equal(publicationPreview.billable, true);
+        const forbiddenPreview = await teacher.client.rpc("course_offer_publication_preview", previewArgs, {get: true});
+        assert.equal(forbiddenPreview.status, 403);
+        assert.equal(forbiddenPreview.error?.code, "42501");
         const duplicateDraft = await manager.client.rpc("create_course_run_job", {
             p_course_run_id: draftRun,
             p_payload: {...fee(draftSource.source_revision, false), status: "draft"},

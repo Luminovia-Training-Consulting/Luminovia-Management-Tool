@@ -44,6 +44,8 @@ const courseRunFields = {
   prerequisites: z.string(),
   organisation_id: id.nullable(),
   customer_name: z.string(),
+  company_only_course: z.boolean().optional(),
+  has_company_lecturers: z.boolean().optional(),
   delivery_type: z.enum(["online", "onsite"]),
   location: z.string(),
   time_zone: z.string(),
@@ -86,7 +88,7 @@ export const courseOfferRateUnitSchema = z.enum([
   "fixed_total",
 ]);
 const amount = z.number().min(0.01).max(9999999999.99).multipleOf(0.01);
-const offerFields = {
+const commonOfferFields = {
   source_revision: sourceRevision,
   title: templateFields.title
     .regex(/\S/)
@@ -106,10 +108,7 @@ const offerFields = {
     .describe(
       "Number of lecturer positions. Each quoted amount covers one position for the complete shared schedule.",
     ),
-  currency: courseOfferCurrencySchema,
-  rate_unit: courseOfferRateUnitSchema,
   terms: z.string().max(10000).optional(),
-  requires_contract: z.boolean().optional().meta({ default: true }),
   status: z
     .enum(["draft", "published"])
     .nullable()
@@ -118,6 +117,24 @@ const offerFields = {
   claim_deadline: dateTime.nullable().optional(),
 };
 
+const offerFields = {
+  ...commonOfferFields,
+  currency: courseOfferCurrencySchema,
+  rate_unit: courseOfferRateUnitSchema,
+  requires_contract: z.boolean().optional().meta({ default: true }),
+  own_lecturers_only: z.literal(false).optional(),
+};
+const internalOfferPayload = z.strictObject({
+  ...commonOfferFields,
+  own_lecturers_only: z.literal(true),
+});
+export const courseOfferPublicationPreviewSchema = z.strictObject({
+  version: z.int().positive(),
+  audience: z.enum(["marketplace", "company"]),
+  billable: z.boolean(),
+  eligible: z.boolean(),
+  ready: z.boolean(),
+});
 const commissionOfferPayload = z.strictObject({
   ...offerFields,
   gross_amount: amount,
@@ -130,7 +147,8 @@ const legacyNetOfferPayload = z.strictObject({
 });
 export type CourseRunOfferPayload =
   | z.input<typeof commissionOfferPayload>
-  | z.input<typeof legacyNetOfferPayload>;
+  | z.input<typeof legacyNetOfferPayload>
+  | z.input<typeof internalOfferPayload>;
 
 const runJobFields = { p_course_run_id: id, p_client_id: id };
 export const createCourseRunJobRequestSchema = z.union([
@@ -149,5 +167,10 @@ export const createCourseRunJobRequestSchema = z.union([
     ...runJobFields,
     p_payload: legacyNetOfferPayload,
     p_platform_percent: z.literal(50).nullable().optional(),
+  }),
+  z.strictObject({
+    ...runJobFields,
+    p_payload: internalOfferPayload,
+    p_platform_percent: z.null().optional(),
   }),
 ]);

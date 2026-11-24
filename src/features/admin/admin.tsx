@@ -106,7 +106,11 @@ function JobForm({
   const fullFinance = Boolean(pricing.data?.can_manage_gross);
   const scopedPricing = Boolean(pricing.data?.can_manage_own_course_pricing);
   const [commission, setCommission] = useState("");
-  const gross = fullFinance || (scopedPricing && commission !== "");
+  const [internalOnly, setInternalOnly] = useState(
+    Boolean(courseRun?.company_only_course),
+  );
+  const gross =
+    !internalOnly && (fullFinance || (scopedPricing && commission !== ""));
   const percent = gross ? parseCourseCommission(commission) : null;
   const commissionArg = percent === null ? {} : { p_platform_percent: percent };
   const organisations = useQuery({
@@ -120,6 +124,7 @@ function JobForm({
   const [invalidTime, setInvalidTime] = useState(false);
   const [done, setDone] = useState(false);
   const [publishedDraft, setPublishedDraft] = useState(false);
+  const [reviewOnSave, setReviewOnSave] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const {
     register,
@@ -134,6 +139,12 @@ function JobForm({
       courseRun
         ? schema.extend({
             description: courseTemplateFormSchema.shape.description,
+            amount: internalOnly
+              ? z.union([z.number(), z.nan()])
+              : schema.shape.amount,
+            total_amount: internalOnly
+              ? z.union([z.number(), z.nan()])
+              : schema.shape.total_amount,
           })
         : schema.extend({ terms: schema.shape.terms.min(1) }),
     ),
@@ -246,16 +257,20 @@ function JobForm({
           ...(values.description !== courseRun.description
             ? { description: values.description }
             : {}),
-          currency: values.currency,
-          rate_unit: values.rate_unit,
           terms: values.terms,
-          requires_contract: values.requires_contract,
           claim_deadline: deadline,
           status: publish ? "published" : "draft",
           ...(capacity > 1 ? { capacity } : {}),
-          ...(gross
-            ? { gross_amount: amount, gross_total_amount: total_amount }
-            : { amount, total_amount }),
+          ...(internalOnly
+            ? { own_lecturers_only: true as const }
+            : {
+                currency: values.currency,
+                rate_unit: values.rate_unit,
+                requires_contract: values.requires_contract,
+                ...(gross
+                  ? { gross_amount: amount, gross_total_amount: total_amount }
+                  : { amount, total_amount }),
+              }),
         };
         const signature = JSON.stringify([
           courseRun.course_run_id,
@@ -343,9 +358,10 @@ function JobForm({
     <form
       className="panel admin-form"
       noValidate
-      onSubmit={handleSubmit((values) =>
-        create.mutate(courseRun ? { ...values, publish: false } : values),
-      )}
+      onSubmit={handleSubmit((values) => {
+        setReviewOnSave(false);
+        create.mutate(courseRun ? { ...values, publish: false } : values);
+      })}
     >
       <h2>{courseRun ? courseText("fromCourse") : t("createJob")}</h2>
       {courseRun && (
@@ -580,114 +596,142 @@ function JobForm({
             {...register("capacity", { valueAsNumber: true })}
           />
         </Field>
-        {(fullFinance || scopedPricing) && (
-          <CourseCommissionField
-            id="job-course-commission"
-            value={commission}
-            onChange={(value) => {
-              setCommission(value);
-              if (!courseRun) setDone(false);
-            }}
-            netWhenBlank={!fullFinance}
-            disabled={create.isPending}
-          />
-        )}
-        <div className="form-row">
-          <Field
-            id="job-amount"
-            label={gross ? priceText("grossRate") : t("amount")}
-            error={Boolean(errors.amount)}
-          >
-            <input
-              id="job-amount"
-              type="number"
-              min="0"
-              step="0.01"
-              {...register("amount", {
-                valueAsNumber: true,
-                onChange: (event) => {
-                  if (getValues("rate_unit") === "fixed_total")
-                    setValue("total_amount", Number(event.target.value));
-                },
-              })}
-            />
-          </Field>
-          <Field id="job-currency" label={t("currency")}>
-            <select id="job-currency" {...register("currency")}>
-              {currencyCodes.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="job-unit" label={t("unit")}>
-            <select
-              id="job-unit"
-              {...register("rate_unit", {
-                onChange: (event) => {
-                  if (event.target.value === "fixed_total")
-                    setValue("amount", getValues("total_amount"));
-                },
-              })}
-            >
-              {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
-                (unit) => (
-                  <option key={unit} value={unit}>
-                    {t(unit)}
-                  </option>
-                ),
-              )}
-            </select>
-          </Field>
-          <Field
-            id="job-total"
-            label={gross ? priceText("grossTotal") : t("total")}
-            error={Boolean(errors.total_amount)}
-          >
-            <input
-              id="job-total"
-              type="number"
-              min="0"
-              step="0.01"
-              {...register("total_amount", {
-                valueAsNumber: true,
-                onChange: (event) => {
-                  if (getValues("rate_unit") === "fixed_total")
-                    setValue("amount", Number(event.target.value));
-                },
-              })}
-            />
-          </Field>
-        </div>
-        {Number.isFinite(Number(watchedCapacity)) &&
-          Number(watchedCapacity) >= 1 &&
-          Number.isFinite(Number(watchedTotal)) && (
-            <p className="job-life-budget">
-              <strong>
-                {lifeText(gross ? "maxGrossBudget" : "maxNetBudget")}:{" "}
-                {money(
-                  (Math.round(Number(watchedTotal) * 100) *
-                    Number(watchedCapacity)) /
-                    100,
-                  watchedCurrency,
-                  i18n.language,
-                )}
-              </strong>
-            </p>
-          )}
-        {gross && (
+        {courseRun && (
           <>
-            <RoleFeePreview
-              gross={Number(watchedTotal)}
-              grossRate={watchedRate}
-              access={pricing.data}
-              currency={watchedCurrency}
-              platformPercent={percent}
-            />
-            <p className="muted commercial-small">
-              {priceText("splitHint")} {priceText("feeBasis")}
-            </p>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={internalOnly}
+                disabled={
+                  !courseRun.has_company_lecturers ||
+                  courseRun.company_only_course ||
+                  create.isPending
+                }
+                onChange={(event) => setInternalOnly(event.target.checked)}
+              />
+              {courseText("companyOnly")}
+            </label>
+            {!courseRun.has_company_lecturers && (
+              <p className="muted">{courseText("companyRosterNeeded")}</p>
+            )}
+            {internalOnly && <p>{priceText("internalStaffing")}</p>}
+          </>
+        )}
+        {!internalOnly && (
+          <>
+            {(fullFinance || scopedPricing) && (
+              <CourseCommissionField
+                id="job-course-commission"
+                value={commission}
+                onChange={(value) => {
+                  setCommission(value);
+                  if (!courseRun) setDone(false);
+                }}
+                netWhenBlank={!fullFinance}
+                disabled={create.isPending}
+              />
+            )}
+            <div className="form-row">
+              <Field
+                id="job-amount"
+                label={gross ? priceText("grossRate") : t("amount")}
+                error={Boolean(errors.amount)}
+              >
+                <input
+                  id="job-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register("amount", {
+                    valueAsNumber: true,
+                    onChange: (event) => {
+                      if (getValues("rate_unit") === "fixed_total")
+                        setValue("total_amount", Number(event.target.value));
+                    },
+                  })}
+                />
+              </Field>
+              <Field id="job-currency" label={t("currency")}>
+                <select id="job-currency" {...register("currency")}>
+                  {currencyCodes.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="job-unit" label={t("unit")}>
+                <select
+                  id="job-unit"
+                  {...register("rate_unit", {
+                    onChange: (event) => {
+                      if (event.target.value === "fixed_total")
+                        setValue("amount", getValues("total_amount"));
+                    },
+                  })}
+                >
+                  {[
+                    "per_day",
+                    "per_teaching_unit",
+                    "per_hour",
+                    "fixed_total",
+                  ].map((unit) => (
+                    <option key={unit} value={unit}>
+                      {t(unit)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                id="job-total"
+                label={gross ? priceText("grossTotal") : t("total")}
+                error={Boolean(errors.total_amount)}
+              >
+                <input
+                  id="job-total"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register("total_amount", {
+                    valueAsNumber: true,
+                    onChange: (event) => {
+                      if (getValues("rate_unit") === "fixed_total")
+                        setValue("amount", Number(event.target.value));
+                    },
+                  })}
+                />
+              </Field>
+            </div>
+            {Number.isFinite(Number(watchedCapacity)) &&
+              Number(watchedCapacity) >= 1 &&
+              Number.isFinite(Number(watchedTotal)) && (
+                <p className="job-life-budget">
+                  <strong>
+                    {lifeText(gross ? "maxGrossBudget" : "maxNetBudget")}:{" "}
+                    {money(
+                      (Math.round(Number(watchedTotal) * 100) *
+                        Number(watchedCapacity)) /
+                        100,
+                      watchedCurrency,
+                      i18n.language,
+                    )}
+                  </strong>
+                </p>
+              )}
+            {gross && (
+              <>
+                <RoleFeePreview
+                  gross={Number(watchedTotal)}
+                  grossRate={watchedRate}
+                  access={pricing.data}
+                  currency={watchedCurrency}
+                  platformPercent={percent}
+                />
+                <p className="muted commercial-small">
+                  {priceText("splitHint")} {priceText("feeBasis")}
+                </p>
+              </>
+            )}
           </>
         )}
         <Field
@@ -735,10 +779,12 @@ function JobForm({
             {...register("claim_deadline")}
           />
         </Field>
-        <label className="checkbox-label">
-          <input type="checkbox" {...register("requires_contract")} />
-          {t("contractRequired")}
-        </label>
+        {!internalOnly && (
+          <label className="checkbox-label">
+            <input type="checkbox" {...register("requires_contract")} />
+            {t("contractRequired")}
+          </label>
+        )}
       </fieldset>
       {courseRun ? (
         !done && (
@@ -748,11 +794,12 @@ function JobForm({
               disabled={
                 !online || Number.isNaN(percent) || create.isPending || done
               }
-              onClick={handleSubmit((values) =>
-                create.mutate({ ...values, publish: true }),
-              )}
+              onClick={handleSubmit((values) => {
+                setReviewOnSave(true);
+                create.mutate({ ...values, publish: false });
+              })}
             >
-              {courseText("publishOffer")}
+              {courseText("saveAndReview")}
             </Button>
             <Button
               type="submit"
@@ -807,7 +854,9 @@ function JobForm({
             : courseRun &&
                 create.error.message === "course_run_customer_required"
               ? courseText("customerRequired")
-              : t(invalidTime ? "invalidTime" : "error")}
+              : create.error.message === "course_offer_roster_required"
+                ? courseText("companyRosterNeeded")
+                : t(invalidTime ? "invalidTime" : "error")}
         </Notice>
       )}
       {done && (
@@ -815,7 +864,9 @@ function JobForm({
           {courseRun
             ? courseText(
                 create.variables?.publish || publishedDraft
-                  ? "publishedOffer"
+                  ? internalOnly
+                    ? "publishedCompanyOffer"
+                    : "publishedOffer"
                   : "savedOfferDraft",
               )
             : t("jobSaved")}
@@ -826,6 +877,7 @@ function JobForm({
           {courseRun && !create.variables?.publish && !publishedDraft && (
             <PublishOfferDraft
               jobId={createdId}
+              reviewOnMount={reviewOnSave}
               onPublished={() => setPublishedDraft(true)}
             />
           )}

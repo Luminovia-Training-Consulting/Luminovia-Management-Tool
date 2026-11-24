@@ -88,6 +88,38 @@ describe("institution enquiry and support OpenAPI", () => {
     ).toBe(false);
   });
 
+  it("accepts reviewed course text or an existing template as separate conversion options", () => {
+    const payload = {
+      delivery_type: "online",
+      time_zone: "Europe/Berlin",
+      sessions: [
+        {
+          starts_at: "2041-01-01T09:00:00+01:00",
+          ends_at: "2041-01-01T10:00:00+01:00",
+        },
+      ],
+    };
+    const convert = (body: object) =>
+      accepts("manage_enquiry", {
+        ...request,
+        p_enquiry_id: uuid,
+        p_action: "convert",
+        p_payload: { ...payload, ...body },
+      });
+    const draft = {
+      title: "Reviewed title",
+      description: "Reviewed course outline",
+    };
+    expect(convert({ template_id: uuid })).toBe(true);
+    expect(convert({ draft })).toBe(true);
+    expect(convert({})).toBe(true);
+    expect(convert({ template_id: uuid, draft })).toBe(false);
+    expect(
+      convert({ draft: { ...draft, contact: "contact@example.invalid" } }),
+    ).toBe(false);
+    expect(convert({ draft: { ...draft, title: " " } })).toBe(false);
+  });
+
   it("retains bounded support creation, exact attachment input and the observed conflict and budget responses", () => {
     expect(
       accepts("create_support_ticket", {

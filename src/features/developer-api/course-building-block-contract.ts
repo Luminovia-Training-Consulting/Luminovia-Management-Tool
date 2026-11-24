@@ -7,6 +7,7 @@ import {
 import {
   courseRecordId,
   courseRunJobDefaultsSchema,
+  courseOfferPublicationPreviewSchema,
   courseTemplatePayloadSchema,
   createCourseRunJobRequestSchema,
   jobBuildingBlockReferenceSchema,
@@ -43,6 +44,14 @@ function operation(
   };
 }
 
+const publicationPreview = operation(
+  "previewCourseOfferPublication",
+  "Review a draft teaching offer before publication",
+  "Requires both course and job management and a course-backed draft. Returns the publication version, audience, billing mode, readiness and whether any lecturer meets the current whole-block conditions. Lecturer identities and private availability details are not returned. Version and publication prerequisites are checked again on publication.",
+  z.strictObject({ p_job_id: courseRecordId }),
+  courseOfferPublicationPreviewSchema,
+);
+
 export const courseBuildingBlockPaths = {
   "/rest/v1/rpc/save_course_template": operation(
     "saveCourseTemplate",
@@ -62,10 +71,34 @@ export const courseBuildingBlockPaths = {
     z.strictObject({ p_course_run_id: courseRecordId }),
     courseRunJobDefaultsSchema,
   ),
+  "/rest/v1/rpc/course_offer_publication_preview": {
+    ...publicationPreview,
+    get: {
+      operationId: "getCourseOfferPublicationPreview",
+      tags: publicationPreview.post.tags,
+      summary: publicationPreview.post.summary,
+      description: publicationPreview.post.description,
+      "x-luminovia-rest-gate": {
+        postgresRole: "authenticated",
+        operationalSession: true,
+        participantSession: false,
+        guestSession: false,
+      },
+      parameters: [
+        {
+          in: "query",
+          name: "p_job_id",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: publicationPreview.post.responses,
+    },
+  },
   "/rest/v1/rpc/create_course_run_job": operation(
     "createCourseRunJob",
     "Create one administrative offer from an existing course run",
-    "Requires current course and job management, a linked current customer, and one to sixty future non-overlapping sessions. Supply the source_revision from the reviewed preview. The server copies the persisted template, customer, topics and exact session references. Set capacity to 1–20 lecturer positions on the same schedule. Fees are per position. Accounts with finance.gross.read supply gross values with an optional platform share. Authorised Management can supply gross values with an explicit platform share for its own offers. Other authorised accounts supply legacy net values. Fixed-total values must agree. A deadline requires an explicit offset and may be no later than the first session. Additional terms are optional. A course run has at most one active draft. Edit or publish the existing draft before creating another offer. Reuse p_client_id for the same actor and unchanged request. Returns the job ID.",
+    "Requires current course and job management, a linked current customer, and one to sixty future non-overlapping sessions. Supply the source_revision from the reviewed preview. The server copies the persisted template, customer, topics and exact session references. Set capacity to 1–20 lecturer positions on the same schedule. Fees are per position. Accounts with finance.gross.read supply gross values with an optional platform share. Authorised Management can supply gross values with an explicit platform share for its own offers. Other authorised accounts supply legacy net values. For an internal assignment, use own_lecturers_only=true without pricing or contract inputs. The company's assigned lecturers are the audience and the portal creates no billable agreement. Fixed-total values must agree. A deadline requires an explicit offset and may be no later than the first session. Additional terms are optional. A course run has at most one active draft. Edit or publish the existing draft before creating another offer. Reuse p_client_id for the same actor and unchanged request. Returns the job ID.",
     createCourseRunJobRequestSchema,
     courseRecordId,
     "Invalid financial terms, deadline, source or request identity. A stale preview returns course_run_source_changed.",

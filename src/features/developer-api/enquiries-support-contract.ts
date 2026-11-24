@@ -47,6 +47,16 @@ function filters<T extends readonly [string, ...string[]]>(statuses: T) {
   ]);
 }
 
+const enquirySchedule = {
+  time_zone: z.string().min(1),
+  delivery_type: z.enum(["online", "onsite"]),
+  venue: z.string().nullable().optional(),
+  sessions: z
+    .array(z.strictObject({ starts_at: instant, ends_at: instant }))
+    .min(1)
+    .max(60),
+};
+
 const enquiryCommands = {
   status: z.strictObject({
     status: z.enum(["reviewing", "awaiting_customer", "closed"]),
@@ -55,16 +65,22 @@ const enquiryCommands = {
   assign: z.strictObject({ user_id: optionalId }),
   link_customer: z.strictObject({ organisation_id: id }),
   create_customer: noBody,
-  convert: z.strictObject({
-    template_id: optionalId,
-    time_zone: z.string().min(1),
-    delivery_type: z.enum(["online", "onsite"]),
-    venue: z.string().nullable().optional(),
-    sessions: z
-      .array(z.strictObject({ starts_at: instant, ends_at: instant }))
-      .min(1)
-      .max(60),
-  }),
+  convert: z.union([
+    z.strictObject({
+      ...enquirySchedule,
+      template_id: id,
+    }),
+    z.strictObject({
+      ...enquirySchedule,
+      template_id: z.union([z.literal(""), z.null()]).optional(),
+      draft: z
+        .strictObject({
+          title: text(200),
+          description: z.string().max(12000),
+        })
+        .optional(),
+    }),
+  ]),
   note: z.strictObject({ note: text(4000) }),
 } satisfies Record<EnquiryAction, z.ZodType>;
 
@@ -232,7 +248,7 @@ export const enquiriesSupportPaths = {
     "manageInstitutionEnquiry",
     "Institution enquiries",
     "Apply a reviewed enquiry action",
-    "Requires current organisation management. Conversion additionally requires course management, an already linked customer and a valid non-overlapping schedule in an IANA time zone. Conversion creates an unpublished course. Every action returns the enquiry ID. Read the detail for the linked course ID. Reuse the request ID only for the identical action, payload and reviewed version.",
+    "Requires current organisation management. Conversion additionally requires course management, an already linked customer and a valid non-overlapping schedule in an IANA time zone. Conversion creates an unpublished course. Send a template ID or reviewed draft text. If neither is provided, the original topic and message become the draft. Every action returns the enquiry ID. Read the detail for the linked course ID. Reuse the request ID only for the identical action, payload and reviewed version.",
     commands("p_enquiry_id", enquiryCommands),
     id,
     { conflict: true, budget: "The enquiry version limit has been reached." },

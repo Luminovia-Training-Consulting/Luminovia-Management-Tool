@@ -185,6 +185,10 @@ function EnquiryForm({
     enquiry.organisation_id ?? "",
   );
   const [template, setTemplate] = useState("");
+  const [courseTitle, setCourseTitle] = useState(enquiry.payload.topic);
+  const [courseDescription, setCourseDescription] = useState(
+    enquiry.payload.message,
+  );
   const [zone, setZone] = useState(enquiry.payload.time_zone);
   const [delivery, setDelivery] = useState(
     enquiry.payload.delivery_type === "onsite" ? "onsite" : "online",
@@ -214,6 +218,12 @@ function EnquiryForm({
                 : action === "convert"
                   ? {
                       template_id: template,
+                      ...(!template && {
+                        draft: {
+                          title: courseTitle.trim(),
+                          description: courseDescription,
+                        },
+                      }),
                       time_zone: zone,
                       delivery_type: delivery,
                       venue,
@@ -334,6 +344,32 @@ function EnquiryForm({
               ))}
             </select>
           </Field>
+          {!template && (
+            <>
+              <Field id="enquiry-course-title" label={t("courseTitle")}>
+                <input
+                  required
+                  maxLength={200}
+                  value={courseTitle}
+                  disabled={save.isPending}
+                  onChange={(event) => setCourseTitle(event.target.value)}
+                />
+              </Field>
+              <Field
+                id="enquiry-course-description"
+                label={t("courseDescription")}
+              >
+                <textarea
+                  maxLength={12000}
+                  rows={4}
+                  value={courseDescription}
+                  disabled={save.isPending}
+                  onChange={(event) => setCourseDescription(event.target.value)}
+                />
+              </Field>
+              <p className="muted">{t("courseDraftHelp")}</p>
+            </>
+          )}
           <Field id="enquiry-zone" label={t("timeZone")}>
             <input
               required
@@ -426,7 +462,8 @@ function EnquiryForm({
           !online ||
           save.isPending ||
           ((action === "status" || action === "note") && !reason.trim()) ||
-          (action === "link_customer" && !organisation)
+          (action === "link_customer" && !organisation) ||
+          (action === "convert" && !template && !courseTitle.trim())
         }
       >
         {t("save")}
@@ -573,7 +610,10 @@ function EnquiryDetail({
           ))}
         </div>
         {row.course_run_id && (
-          <Link className="text-link" to="/courses">
+          <Link
+            className="text-link"
+            to={`/courses?run=${encodeURIComponent(row.course_run_id)}`}
+          >
             {t("link")}
             <ArrowRight size={18} aria-hidden="true" />
           </Link>

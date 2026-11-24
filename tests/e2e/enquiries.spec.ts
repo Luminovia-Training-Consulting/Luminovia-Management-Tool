@@ -171,6 +171,10 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                     .getByRole("button", {name: "Kursdurchlauf erstellen", exact: true})
                     .click();
                 const form = page.getByRole("dialog");
+                await expect(form.getByLabel("Kurstitel")).toHaveValue(payload.topic);
+                const courseDescription = form.getByLabel("Kursbeschreibung");
+                await expect(courseDescription).toHaveValue(payload.message);
+                await courseDescription.fill("Reviewed course outline for the company.");
                 const start = new Date(Date.now() + 90 * 86400000);
                 start.setUTCHours(9, 0, 0, 0);
                 const end = new Date(start.getTime() + 3600000);
@@ -196,6 +200,15 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 await expect(
                     page.getByText(payload.message, {exact: true}),
                 ).toBeVisible();
+                const runId = await sql(
+                    `select course_run_id from private.website_enquiries where id='${id}'`,
+                );
+                await page.getByRole("link", {name: "Kursplanung öffnen", exact: true}).click();
+                await expect(page).toHaveURL(new RegExp(`/courses\\?run=${runId}$`));
+                const course = page.getByRole("dialog", {name: payload.topic});
+                await expect(course).toBeVisible();
+                await expect(course.getByRole("button", {name: "Bearbeiten", exact: true})).toBeEnabled();
+                await page.goto(`/enquiries/${id}`);
                 await page.getByLabel("Sprache", {exact: true}).selectOption("en");
                 await page.getByLabel("Theme", {exact: true}).selectOption("dark");
                 await accessible(page);

@@ -196,7 +196,7 @@ export function CourseRunOfferLink({ runId }: { runId: string }) {
   const { t } = useTranslation("operations");
   return (
     <Button asChild variant="secondary">
-      <Link to={`/admin?courseRun=${runId}`}>{t("createRunOffer")}</Link>
+      <Link to={`/courses?offer=${runId}`}>{t("createRunOffer")}</Link>
     </Button>
   );
 }

@@ -5,6 +5,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
+import { academyAuthMailLink } from "./academy-auth-mail-link.mjs";
 
 assert.equal(process.env.PORTAL_TEST_MODE, "1", "Disposable rehearsal only.");
 const config = readFileSync("supabase/config.toml", "utf8");
@@ -60,7 +61,7 @@ async function post(path, body, token) {
     body: JSON.stringify(body),
   });
 }
-async function mail(email, previous) {
+async function mail(email, previous, action) {
   for (let attempt = 0; attempt < 50; attempt++) {
     const inbox = await getMailbox("/api/v1/messages");
     const matches = inbox.messages.filter(
@@ -71,11 +72,12 @@ async function mail(email, previous) {
     if (matches.length) {
       assert.equal(matches.length, 1, "Exactly one new message per operation.");
       const message = await getMailbox("/api/v1/message/" + matches[0].ID);
-      const link = /href="([^"]+)"/.exec(message.HTML)?.[1];
-      assert.ok(link, "The bilingual message contains its own callback link.");
       assert.match(message.HTML, /Lernportal \/ Learning portal/);
       assert.doesNotMatch(message.HTML + message.Subject, /Luminovia/);
-      return { id: message.ID, href: new URL(link.replaceAll("&amp;", "&")) };
+      return {
+        id: message.ID,
+        href: academyAuthMailLink(message.HTML, ...action),
+      };
     }
     await delay(200);
   }
@@ -149,10 +151,12 @@ assert.equal(
   "The same invitation must be recognised on retry.",
 );
 assert.deepEqual(await retry.json(), account);
-const received = await mail(email);
-assert.equal(received.href.origin, origin);
-assert.equal(received.href.pathname, "/auth/callback");
-assert.equal(received.href.searchParams.get("type"), "invite");
+const received = await mail(email, undefined, [
+  origin,
+  "/auth/callback",
+  "invite",
+  "token_hash",
+]);
 const inviteToken = received.href.searchParams.get("token_hash");
 assert.ok(inviteToken, "The invitation provides a one-time token hash.");
 
@@ -195,9 +199,12 @@ assert.equal(
   200,
   "Request native email recovery.",
 );
-const recovery = await mail(email, received.id);
-assert.equal(recovery.href.origin, base);
-assert.equal(recovery.href.pathname, "/auth/v1/verify");
+const recovery = await mail(email, received.id, [
+  base,
+  "/auth/v1/verify",
+  "recovery",
+  "token",
+]);
 const confirmation = await fetch(recovery.href, {
   redirect: "manual",
   signal: AbortSignal.timeout(15_000),

@@ -183,7 +183,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await expect(companyDialog.getByLabel("Organisation", {exact: true})).toBeFocused();
     await companyDialog.getByLabel("Organisation", {exact: true}).selectOption(org);
     await companyDialog.getByRole("button", {name: "Speichern und zum Auftrag", exact: true}).click();
-    await expect(page).toHaveURL(new RegExp(`/admin\\?courseRun=${run.id}`));
+    await expect(page).toHaveURL(new RegExp(`/courses\\?offer=${run.id}`));
     await expect(
         page.getByRole("heading", {name: "Auftrag aus diesem Kurs", exact: true}),
     ).toBeVisible();
@@ -204,9 +204,10 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await page
         .getByLabel("Gültiger Rahmenvertrag erforderlich", {exact: true})
         .uncheck();
-    await page
-        .getByRole("button", {name: "In der Stellenbörse veröffentlichen", exact: true})
-        .click();
+    await page.getByRole("button", {name: "Speichern und Ausschreibung prüfen", exact: true}).click();
+    const offerReview = page.getByRole("dialog", {name: "Ausschreibung prüfen"});
+    await expect(offerReview.getByText("Lehrauftrag mit Abrechnung", {exact: true})).toBeVisible();
+    await offerReview.getByRole("button", {name: "In der Stellenbörse veröffentlichen", exact: true}).click();
     await expect(
         page.getByRole("link", {name: "Erstellten Auftrag öffnen", exact: true}),
     ).toBeVisible();

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
+import {setTimeout as delay} from "node:timers/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 import {renderCatalogueSql} from "./course-catalogue.mjs";
 import {assertLmsResponse} from "./testing/premium-lms-contract.mjs";
@@ -12,6 +13,7 @@ const wire = portalOpenApi("https://portal.example.invalid").paths;
 const reviewedArguments = {
     save_course_template: ([p_id, p_payload]) => ({p_id, p_payload}),
     course_run_job_defaults: ([p_course_run_id]) => ({p_course_run_id}),
+    course_offer_publication_preview: ([p_job_id]) => ({p_job_id}),
     create_course_run_job: ([p_course_run_id, p_payload, p_platform_percent, p_client_id]) =>
         ({p_course_run_id, p_payload, p_platform_percent, p_client_id}),
     job_building_block_reference: ([p_job_id]) => ({p_job_id}),
@@ -991,6 +993,67 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
             );
         },
     );
+    await check("Direct internal staffing is scoped per offer, with an aggregate versioned publication preview", async () => {
+        const ownTemplate = await rpc("admin", "save_course_template", [null, {
+            title: "Fictional internal staffing", topic_ids: [],
+        }]);
+        const ownRun = await createRun(ownTemplate, 91);
+        const defaults = await rpc("admin", "course_run_job_defaults", [ownRun]);
+        assert.equal(defaults.has_company_lecturers, false);
+        const position = { source_revision: defaults.source_revision, own_lecturers_only: true, status: "draft" };
+        await assert.rejects(rpc("admin", "create_course_run_job", [ownRun, position, null, randomUUID()]), /course_offer_roster_required/);
+        const assigned = randomUUID();
+        await sql(`insert into auth.users(id,email) values(${q(assigned)},'staffing-linked@example.invalid');
+          insert into public.user_roles(user_id,role) values(${q(assigned)},'lecturer');`);
+        await rpc("admin", "set_company_lecturer", [org, assigned, false]);
+        const request = randomUUID();
+        const internal = await rpc("admin", "create_course_run_job", [ownRun, position, null, request]);
+        assert.equal(await rpc("admin", "create_course_run_job", [ownRun, position, null, request]), internal);
+        const before = await rpc("admin", "course_offer_publication_preview", [internal]);
+        assert.deepEqual(before, {
+            version: Number(await sql(`select lifecycle_version from public.jobs where id=${q(internal)}`)),
+            audience: "company", billable: false, eligible: true, ready: true,
+        });
+        await assert.rejects(actor(assigned, `select public.course_offer_publication_preview(${q(internal)})`), /42501/);
+        // A claim may already hold the lecturer lock while publication has
+        // the job row. A waiting roster update must leave the company unlocked.
+        const advisory = `pg_catalog.hashtextextended(${q(assigned)},0)`;
+        const claimLock = sql(`begin; select pg_advisory_xact_lock(${advisory}); select pg_sleep(3); commit;`);
+        let remove;
+        const waitFor = async (condition) => {
+            const deadline = Date.now() + 2000;
+            while (Date.now() < deadline) {
+                if (await sql(condition) === "t") return;
+                await delay(20);
+            }
+            assert.fail("Expected staffing lock was not observed");
+        };
+        try {
+            await waitFor(`select not pg_try_advisory_xact_lock(${advisory})`);
+            remove = rpc("admin", "set_company_lecturer", [org, assigned, true]);
+            await waitFor(`select exists(select 1 from pg_stat_activity
+              where wait_event_type='Lock' and wait_event='advisory'
+                and strpos(query, ${q(assigned)}) > 0
+                and strpos(query, 'public.set_company_lecturer') > 0)`);
+            assert.equal(await sql(`begin; select id from public.organisations
+              where id=${q(org)} for share nowait; rollback;`), org);
+        } finally {
+            await Promise.all([claimLock, remove]);
+        }
+        const removed = await rpc("admin", "course_offer_publication_preview", [internal]);
+        assert.deepEqual(removed, {...before, eligible: false, ready: false});
+        await assert.rejects(rpc("admin", "manage_job_offer", [internal, "published", before.version, randomUUID(), {}]), /course_offer_roster_required/);
+        await rpc("admin", "set_company_lecturer", [org, assigned, false]);
+        await rpc("admin", "manage_job_offer", [internal, "published", before.version, randomUUID(), {}]);
+        const external = await rpc("admin", "create_course_run_job", [ownRun,
+            {...financial(defaults.source_revision), status: "published", requires_contract: false}, null, randomUUID()]);
+        const outsider = randomUUID();
+        await sql(`insert into auth.users(id,email) values(${q(outsider)},'staffing-outsider@example.invalid');
+          insert into public.user_roles(user_id,role) values(${q(outsider)},'lecturer');`);
+        assert.equal(await actor(outsider, `select count(*) from public.jobs where id in (${q(internal)},${q(external)})`), "1");
+        assert.equal(await actor(outsider, `select count(*) from public.jobs where id = ${q(external)}`), "1");
+        assert.equal(await sql(`select count(*) from private.job_commission_offers where job_id = ${q(internal)}`), "0");
+    });
     console.log(
         `\n${count} course building-block curriculum/source/run-offer PostgreSQL checks passed.`,
     );

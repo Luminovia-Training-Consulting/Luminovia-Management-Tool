@@ -59,6 +59,10 @@ const en = {
     "Review the submitted company and contact details above. Confirm to create a new directory organisation and contact from those values. Link an existing organisation when appropriate to avoid duplicates.",
   convertHelp:
     "Review the real teaching dates and time zone. This creates an unpublished course run, with no teaching offer, financial agreement, invoice or outgoing email.",
+  courseTitle: "Course title",
+  courseDescription: "Course description",
+  courseDraftHelp:
+    "Review the suggested text and remove any private details before saving. The original enquiry stays in the management inbox.",
   template: "Course template",
   newTemplate: "Create a template from this enquiry",
   venue: "Venue or meeting information",
@@ -146,6 +150,10 @@ const de: typeof en = {
     "Prüfe die übermittelten Unternehmens- und Kontaktdaten oben. Die Bestätigung legt daraus eine neue Organisation mit Kontaktperson im Verzeichnis an. Ordne gegebenenfalls eine bestehende Organisation zu, um Duplikate zu vermeiden.",
   convertHelp:
     "Prüfe die tatsächlichen Unterrichtstermine und die Zeitzone. Dies erstellt einen unveröffentlichten Kursdurchlauf, ohne Lehrangebot, finanzielle Vereinbarung, Rechnung oder ausgehende E-Mail.",
+  courseTitle: "Kurstitel",
+  courseDescription: "Kursbeschreibung",
+  courseDraftHelp:
+    "Prüfe den vorgeschlagenen Text und entferne vor dem Speichern private Angaben. Die ursprüngliche Anfrage bleibt im Verwaltungspostfach.",
   template: "Kursvorlage",
   newTemplate: "Vorlage aus dieser Anfrage erstellen",
   venue: "Unterrichtsort oder Besprechungsinformationen",
