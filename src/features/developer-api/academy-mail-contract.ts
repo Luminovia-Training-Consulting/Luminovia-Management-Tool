@@ -47,11 +47,13 @@ const transport = {
     })
     .nullable(),
 };
+const smtpPort = z.number().int().min(1).max(65535);
+const smtpSecurity = z.enum(["implicit_tls", "starttls"]);
 const configuration = z.strictObject({
   version: z.number().int().nonnegative(),
   smtp: z.strictObject({
     ...transport,
-    port: z.union([z.literal(465), z.literal(587)]).nullable(),
+    port: smtpPort.nullable(),
     sender_email: z.string().nullable(),
     sender_name: z.string().nullable(),
   }),
@@ -74,22 +76,14 @@ const enabledFields = {
 const smtpDraft = z.union([
   z.strictObject({
     ...enabledFields,
-    port: z.literal(465),
-    security: z.literal("implicit_tls"),
-  }),
-  z.strictObject({
-    ...enabledFields,
-    port: z.literal(587),
-    security: z.literal("starttls"),
+    port: smtpPort,
+    security: smtpSecurity,
   }),
   z.strictObject({
     enabled: z.literal(false),
     host: z.string().max(253).optional(),
-    port: z
-      .union([z.literal(465), z.literal(587)])
-      .nullable()
-      .optional(),
-    security: z.enum(["implicit_tls", "starttls"]).optional(),
+    port: smtpPort.nullable().optional(),
+    security: smtpSecurity.optional(),
     sender_email: z.string().max(254).optional(),
     sender_name: z.string().max(120).optional(),
     ...writeOnly,

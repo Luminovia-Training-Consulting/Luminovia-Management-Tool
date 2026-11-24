@@ -138,12 +138,14 @@ export function FileUpload({
     if (!value) return;
     setError("");
     upload.reset();
+    setProgress(0);
     if (value.size < 1 || value.size > maximumFileSize) {
+      setFile(null);
+      if (input.current) input.current.value = "";
       setError("file_size");
       return;
     }
     setFile(value);
-    setProgress(0);
     clientId.current = crypto.randomUUID();
   };
   return (

@@ -170,6 +170,16 @@
   font-size: 0.95rem;
 }
 
+.job-detail-sections > [tabindex="-1"] {
+  scroll-margin-block-start: 1rem;
+}
+
+.page-actions.job-editor-actions {
+  margin-block: 0 1.25rem;
+  padding-block-end: 1.25rem;
+  border-block-end: 1px solid var(--line);
+}
+
 .job-edit-schedule {
   margin-top: 24px;
   border-top: 1px solid var(--line);

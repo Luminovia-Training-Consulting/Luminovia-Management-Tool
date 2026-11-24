@@ -307,6 +307,9 @@ function ClientWorkspace({
   const [selected, setSelected] = useState<string>();
   const [orgEdit, setOrgEdit] = useState<Organisation | null | undefined>();
   const [contactEdit, setContactEdit] = useState<Contact | null | undefined>();
+  const [orgTrigger, setOrgTrigger] = useState<HTMLButtonElement | null>(null);
+  const [contactTrigger, setContactTrigger] =
+    useState<HTMLButtonElement | null>(null);
   const [saved, setSaved] = useState(false);
   const online = useOnline();
   const visible = (orgs.data ?? []).filter((org) =>
@@ -347,7 +350,8 @@ function ClientWorkspace({
         action={
           <div className="operations-header-actions">
             <Button
-              onClick={() => {
+              onClick={(event) => {
+                setOrgTrigger(event.currentTarget);
                 setSaved(false);
                 setOrgEdit(null);
               }}
@@ -439,7 +443,8 @@ function ClientWorkspace({
                 </div>
                 <Button
                   variant="secondary"
-                  onClick={() => {
+                  onClick={(event) => {
+                    setOrgTrigger(event.currentTarget);
                     setSaved(false);
                     setOrgEdit(organisation);
                   }}
@@ -472,77 +477,16 @@ function ClientWorkspace({
                 </div>
               )}
             </header>
-            <div className="section-stack company-operation-sections">
-              {/* Each panel resets for a new organisation with its own sibling key. */}
-              {premiumSetting && (
-                <CompanyPremiumControl
-                  key={`premium:${organisation.id}`}
-                  actor={actor}
-                  zone={organisation.time_zone}
-                  setting={premiumSetting}
-                  isAdmin={isAdmin}
-                  archived={Boolean(organisation.archived_at)}
-                />
-              )}
-              {!organisation.archived_at && (
-                <CompanyDispatchSettings
-                  actor={actor}
-                  organisations={[organisation]}
-                />
-              )}
-              {!organisation.archived_at && (
-                <CompanyLecturerBlocks
-                  key={`lecturer-blocks:${organisation.id}`}
-                  actor={actor}
-                  organisations={[organisation]}
-                />
-              )}
-              {!organisation.archived_at && (
-                <CompanyLecturers
-                  key={organisation.id}
-                  actor={actor}
-                  organisations={[organisation]}
-                />
-              )}
-              {canManageIntegrations && (
-                <CompanyIntegrations
-                  key={`integrations:${organisation.id}`}
-                  actor={actor}
-                  organisation={organisation.id}
-                  archived={Boolean(organisation.archived_at)}
-                  zone={organisation.time_zone}
-                  canSubscribePremium={
-                    isAdmin && Boolean(premiumSetting?.enabled)
-                  }
-                  canSubscribeAccounting={canSubscribeAccounting}
-                  showWebhooks={canManageWebhooks}
-                />
-              )}
-              {premiumSetting?.enabled && (
-                <CompanyParticipantsPanel
-                  actor={actor}
-                  organisationId={organisation.id}
-                />
-              )}
-            </div>
-            <section className="company-detail-group">
-              <h3>{t("notes")}</h3>
-              {notes.isPending ? (
-                <Loading />
-              ) : notes.isError ? (
-                <ErrorState retry={() => void notes.refetch()} />
-              ) : (
-                <p className="preserve-text">{notes.data || "—"}</p>
-              )}
-              <small className="muted">{t("privateHint")}</small>
-            </section>
             <section className="company-detail-group company-contacts">
               <div className="section-heading">
                 <h3>{t("contacts")}</h3>
                 <div className="operations-header-actions">
                   <Button
                     variant="secondary"
-                    onClick={() => setContactEdit(null)}
+                    onClick={(event) => {
+                      setContactTrigger(event.currentTarget);
+                      setContactEdit(null);
+                    }}
                     disabled={!online}
                   >
                     {t("newContact")}
@@ -629,7 +573,10 @@ function ClientWorkspace({
                     <div className="operations-actions">
                       <Button
                         variant="ghost"
-                        onClick={() => setContactEdit(contact)}
+                        onClick={(event) => {
+                          setContactTrigger(event.currentTarget);
+                          setContactEdit(contact);
+                        }}
                         disabled={!online}
                       >
                         {t("edit")}
@@ -645,6 +592,70 @@ function ClientWorkspace({
                 ))}
               </div>
             </section>
+            <div className="section-stack company-operation-sections">
+              {/* Each panel resets for a new organisation with its own sibling key. */}
+              {premiumSetting && (
+                <CompanyPremiumControl
+                  key={`premium:${organisation.id}`}
+                  actor={actor}
+                  zone={organisation.time_zone}
+                  setting={premiumSetting}
+                  isAdmin={isAdmin}
+                  archived={Boolean(organisation.archived_at)}
+                />
+              )}
+              {!organisation.archived_at && (
+                <CompanyDispatchSettings
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {!organisation.archived_at && (
+                <CompanyLecturerBlocks
+                  key={`lecturer-blocks:${organisation.id}`}
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {!organisation.archived_at && (
+                <CompanyLecturers
+                  key={organisation.id}
+                  actor={actor}
+                  organisations={[organisation]}
+                />
+              )}
+              {canManageIntegrations && (
+                <CompanyIntegrations
+                  key={`integrations:${organisation.id}`}
+                  actor={actor}
+                  organisation={organisation.id}
+                  archived={Boolean(organisation.archived_at)}
+                  zone={organisation.time_zone}
+                  canSubscribePremium={
+                    isAdmin && Boolean(premiumSetting?.enabled)
+                  }
+                  canSubscribeAccounting={canSubscribeAccounting}
+                  showWebhooks={canManageWebhooks}
+                />
+              )}
+              {premiumSetting?.enabled && (
+                <CompanyParticipantsPanel
+                  actor={actor}
+                  organisationId={organisation.id}
+                />
+              )}
+            </div>
+            <section className="company-detail-group">
+              <h3>{t("notes")}</h3>
+              {notes.isPending ? (
+                <Loading />
+              ) : notes.isError ? (
+                <ErrorState retry={() => void notes.refetch()} />
+              ) : (
+                <p className="preserve-text">{notes.data || "—"}</p>
+              )}
+              <small className="muted">{t("privateHint")}</small>
+            </section>
           </section>
         )}
       </div>
@@ -654,6 +665,7 @@ function ClientWorkspace({
           if (!open) setOrgEdit(undefined);
         }}
         title={t(orgEdit ? "editClient" : "newClient")}
+        returnFocusTo={orgTrigger}
         description={t("privateHint")}
       >
         {orgEdit && editNotes.isPending ? (
@@ -687,6 +699,7 @@ function ClientWorkspace({
           if (!open) setContactEdit(undefined);
         }}
         title={t(contactEdit ? "edit" : "newContact")}
+        returnFocusTo={contactTrigger}
         description={t("privateHint")}
       >
         {organisation && (

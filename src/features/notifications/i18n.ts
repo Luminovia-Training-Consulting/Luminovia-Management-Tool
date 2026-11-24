@@ -70,6 +70,7 @@ const de = {
   preferenceHelp:
     "Die Auswahl gilt für neue Meldungen. Buchungs- und Stornierungsbestätigungen bleiben als Nachweis erhalten. Bereits eingegangene Meldungen werden nicht gelöscht.",
   refresh: "Fällige Erinnerungen prüfen",
+  reminderScope: "Was wird bei Erinnerungen geprüft?",
   refreshHelp:
     "Prüft deine bestätigten Termine der nächsten 24 Stunden und Verträge oder Qualifikationen, die in 30 Tagen auslaufen, sowie Aufgaben, die in 24 Stunden fällig oder seit höchstens sieben Tagen überfällig sind. Prüft höchstens einmal pro Minute. Neue Meldungen erscheinen im Portal. Bei aktivierten E-Mail-Hinweisen und eingerichteter Zustellung werden sie zusätzlich für den Versand vorgemerkt.",
   refreshed: "Erinnerungen sind geprüft.",
@@ -201,6 +202,7 @@ const en: Record<keyof typeof de, string> = {
   preferenceHelp:
     "These choices apply to new notifications. Booking and cancellation confirmations remain available as receipts. Existing notifications are not deleted.",
   refresh: "Check due reminders",
+  reminderScope: "What does the reminder check include?",
   refreshHelp:
     "Checks your confirmed sessions in the next 24 hours contracts or qualifications expiring within 30 days, and tasks due within 24 hours or up to seven days overdue. Checks at most once a minute. New updates appear in the portal. With email alerts enabled and delivery configured, they are also queued for email.",
   refreshed: "Reminders checked.",

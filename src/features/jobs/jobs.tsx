@@ -216,7 +216,7 @@ export function JobDetail() {
           </span>
         </div>
         {permissions.data?.includes("jobs.manage") && (
-          <div id="job-pricing">
+          <div id="job-pricing" tabIndex={-1}>
             <JobPricingPanel job={job} />
           </div>
         )}
