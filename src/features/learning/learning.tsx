@@ -996,6 +996,9 @@ function CourseWorkspaceLayout({
     offerPermissions.data?.includes("jobs.manage") &&
     offerPermissions.data.includes("courses.manage");
   const [offerOpen, setOfferOpen] = useState(false);
+  const [offerTrigger, setOfferTrigger] = useState<HTMLButtonElement | null>(
+    null,
+  );
   const queryClient = useQueryClient();
   const online = useOnline();
   const examState = useQuery({
@@ -1070,6 +1073,8 @@ function CourseWorkspaceLayout({
   );
   const classroom = courseClassroom(course);
   const pageTarget = academy || learner ? "/learning" : "/courses";
+  const showManagementActions =
+    __PORTAL_INTERNAL_EDITION__ && !academy && !learner;
 
   // React Router may resolve a deep link before the scoped course data
   // loads. Apply that hash when its destination first becomes available.
@@ -1138,10 +1143,15 @@ function CourseWorkspaceLayout({
           </Button>
         )}
       </header>
-      {__PORTAL_INTERNAL_EDITION__ && !academy && !learner && (
-        <div className="page-actions">
+      {showManagementActions && (canPrepareOffer || hasRegister || editor) && (
+        <div className="page-actions course-room-actions">
           {canPrepareOffer && (
-            <Button onClick={() => setOfferOpen(true)}>
+            <Button
+              onClick={(event) => {
+                setOfferTrigger(event.currentTarget);
+                setOfferOpen(true);
+              }}
+            >
               {t("prepareOffer")}
             </Button>
           )}
@@ -1162,10 +1172,11 @@ function CourseWorkspaceLayout({
           )}
         </div>
       )}
-      {CourseOfferForm && canPrepareOffer && offerOpen && (
+      {CourseOfferForm && canPrepareOffer && (
         <Dialog
           open={offerOpen}
           onOpenChange={setOfferOpen}
+          returnFocusTo={offerTrigger}
           title={t("prepareOffer")}
           description={t("prepareOfferHint")}
         >
@@ -1204,7 +1215,7 @@ function CourseWorkspaceLayout({
               </select>
             </Field>
             {currentSection === "course-overview" &&
-              (learner || hasRegister) && (
+              (learner || (hasRegister && !showManagementActions)) && (
                 <Link
                   to={{
                     search: location.search,

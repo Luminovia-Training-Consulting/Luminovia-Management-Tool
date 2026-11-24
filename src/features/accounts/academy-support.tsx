@@ -22,6 +22,7 @@ import {
   type AcademySupportRequest,
   type AcademySupportReply,
 } from "./academy-support-schema";
+import "./academy-support.css";
 
 async function support(request: AcademySupportRequest) {
   const { data, error } = await db().rpc("academy_support_access", request);
@@ -49,21 +50,23 @@ export function AcademySupportAccessPage() {
         title={word("Befristeter Supportzugriff", "Temporary support access")}
         action={<SignOutButton />}
       />
-      <Preferences />
-      {online && session ? (
-        <SupportAccess
-          key={session.user.id}
-          actor={session.user.id}
-          word={word}
-        />
-      ) : (
-        <Notice>
-          {word(
-            "Online-Verbindung erforderlich.",
-            "Connect to use support access.",
-          )}
-        </Notice>
-      )}
+      <div className="section-stack">
+        <Preferences />
+        {online && session ? (
+          <SupportAccess
+            key={session.user.id}
+            actor={session.user.id}
+            word={word}
+          />
+        ) : (
+          <Notice>
+            {word(
+              "Online-Verbindung erforderlich.",
+              "Connect to use support access.",
+            )}
+          </Notice>
+        )}
+      </div>
     </main>
   );
 }
@@ -99,11 +102,11 @@ function SupportAccess({ actor, word }: { actor: string; word: Localize }) {
   return (
     <>
       {data.can_manage && (
-        <p>
+        <Button asChild variant="ghost">
           <Link to="/administration">
             {word("Zur Akademieverwaltung", "Back to academy administration")}
           </Link>
-        </p>
+        </Button>
       )}
       {data.can_issue && (
         <SupportGrantForm
@@ -115,7 +118,7 @@ function SupportAccess({ actor, word }: { actor: string; word: Localize }) {
       <section className="panel">
         <h2>{word("Freigaben", "Grants")}</h2>
         {data.grants.length ? (
-          <ul>
+          <ul className="academy-support-grants">
             {data.grants.map((grant) => (
               <SupportGrantItem
                 key={grant.id}
@@ -207,7 +210,7 @@ function SupportGrantForm({
         )}
       </p>
       <form onSubmit={submit}>
-        <fieldset disabled={busy}>
+        <fieldset className="academy-support-fields" disabled={busy}>
           <legend>{word("Umfang der Freigabe", "Grant details")}</legend>
           <label>
             {word("E-Mail des Supportkontos", "Support account email")}
@@ -254,7 +257,7 @@ function SupportGrantForm({
               ))}
             </select>
           </label>
-          <label>
+          <label className="checkbox-label academy-support-confirm">
             <input type="checkbox" required />
             {word(
               "Ich erteile diesem Konto den oben gewählten Diagnosezugriff.",
@@ -312,7 +315,11 @@ function SupportGrantItem({
       <div className="form-actions">
         {grant.status === "active" &&
           (administrator ? (
-            <Button disabled={busy} onClick={() => select("revoke")}>
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => select("revoke")}
+            >
               {word("Zugriff widerrufen", "Revoke access")}
             </Button>
           ) : (

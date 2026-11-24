@@ -3,8 +3,8 @@
 # Derived from official self-hosted/v0.8.4; digest pinned. Mailpit and relay SMTP ports bind host LOOPBACK only.
 name: luminovia-supabase
 services:
-  # Internal SMTP bridge for GoTrue and the host notification worker; only the
-  # host's loopback interface receives the worker-specific port.
+  # Share only Auth’s network namespace so SMTP credentials and tokens travel
+  # over its loopback. The relay keeps its own process, volumes and privileges.
   mail-relay:
     image: python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0
     restart: unless-stopped
@@ -18,12 +18,9 @@ services:
       PORTAL_MAIL_RELAY_PASSWORD: ${MAIL_RELAY_PASSWORD:?Set MAIL_RELAY_PASSWORD}
       PORTAL_MAIL_RELAY_CONTROL_TOKEN: ${PORTAL_MAIL_RELAY_CONTROL_TOKEN:?Set PORTAL_MAIL_RELAY_CONTROL_TOKEN}
       PORTAL_MAIL_RELAY_CAPTURE_PENDING: ${PORTAL_MAIL_RELAY_CAPTURE_PENDING:-false}
-    ports:
-      - "127.0.0.1:2526:2526"
+    network_mode: service:auth
     volumes:
       - ../../../scripts/mail-relay.py:/app/mail-relay.py:ro
-    networks:
-      - backend
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=8m
@@ -134,8 +131,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mail-relay:
-        condition: service_started
+    ports:
+      - "127.0.0.1:2526:2526"
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -156,7 +153,7 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
       GOTRUE_MAILER_AUTOCONFIRM: "false"
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
-      GOTRUE_SMTP_HOST: ${PORTAL_AUTH_SMTP_HOST:-${SMTP_HOST}}
+      GOTRUE_SMTP_HOST: "127.0.0.1"
       GOTRUE_SMTP_PORT: ${PORTAL_AUTH_SMTP_PORT:-${SMTP_PORT}}
       GOTRUE_SMTP_USER: ${PORTAL_AUTH_SMTP_USER:-${SMTP_USER}}
       GOTRUE_SMTP_PASS: ${PORTAL_AUTH_SMTP_PASS:-${SMTP_PASS}}
@@ -194,7 +191,8 @@ services:
       GOTRUE_MAILER_SUBJECTS_MFA_FACTOR_ENROLLED_NOTIFICATION: "Authenticator hinzugefügt / Authenticator added"
       GOTRUE_MAILER_SUBJECTS_MFA_FACTOR_UNENROLLED_NOTIFICATION: "Authenticator entfernt / Authenticator removed"
     networks:
-      - backend
+      backend:
+        aliases: [mail-relay]
     mem_limit: 128m
     pids_limit: 256
     logging:
@@ -237,7 +235,8 @@ services:
     command:
       - postgrest
     networks:
-      - backend
+      backend:
+        aliases: [mail-relay]
     mem_limit: 128m
     pids_limit: 256
     logging:
