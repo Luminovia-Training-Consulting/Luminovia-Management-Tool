@@ -517,3 +517,16 @@
   padding: 0.45rem 0.65rem;
   text-align: start;
 }
+
+.course-learning-hub {
+  display: grid;
+  min-width: 0;
+  gap: clamp(14px, 2.2vw, 22px);
+}
+
+.course-learning-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

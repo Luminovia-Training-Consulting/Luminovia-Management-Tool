@@ -1352,17 +1352,22 @@
     font-size: 17px;
   }
 
+  .chat-thread-title > span {
+    overflow-wrap: anywhere;
+  }
+
   .chat-thread-header .chat-room-symbol {
     display: none;
   }
 
   .chat-thread-controls {
-    gap: 1px;
+    gap: 5px;
   }
 
-  .chat-thread-controls .button-icon {
-    width: 38px;
-    min-width: 38px;
+  .chat-thread-controls .button-icon,
+  .chat-thread-header .chat-mobile-back {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .chat-message-scroll {
@@ -1396,8 +1401,8 @@
 .chat-room-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
-  padding-bottom: 5px;
+  gap: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
 
