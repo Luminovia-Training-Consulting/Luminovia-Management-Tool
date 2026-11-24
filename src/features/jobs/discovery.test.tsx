@@ -175,6 +175,61 @@ afterEach(async () => {
   state.roles = ["lecturer"];
   await i18n.changeLanguage("de");
 });
+it("clears unapplied filter edits even on the default URL", async () => {
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Fictional discovery 1" });
+  await user.type(screen.getByRole("searchbox", { name: "Suchtext" }), "draft");
+  await user.click(
+    screen.getByLabelText("Ohne Überschneidung in meinem Kalender"),
+  );
+  await user.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+  expect(screen.getByRole("searchbox", { name: "Suchtext" })).toHaveValue("");
+  expect(
+    screen.getByLabelText("Ohne Überschneidung in meinem Kalender"),
+  ).not.toBeChecked();
+  expect(screen.getByLabelText("route")).toBeEmptyDOMElement();
+});
+
+it("rechecks availability when the same filter is applied again", async () => {
+  setup({ initialEntry: "/?available=1" });
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Fictional discovery 1" });
+  await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+  await waitFor(() => {
+    const requests = state.rpc.mock.calls.filter(
+      ([name]) => name === "job_discovery",
+    );
+    expect(requests).toHaveLength(2);
+    expect(requests[1][1].p_filters).toMatchObject({ available_only: true });
+  });
+});
+
+it("loads a saved view over unapplied edits even when its filters are already active", async () => {
+  setup({
+    views: [
+      {
+        id: job().id,
+        name: "Fictional default view",
+        filters: defaultJobFilters,
+        version: 1,
+        created_at: "2040-01-01T00:00:00Z",
+        updated_at: "2040-01-01T00:00:00Z",
+      },
+    ],
+  });
+  const user = userEvent.setup();
+  await screen.findByRole("option", { name: "Fictional default view" });
+  await user.type(screen.getByRole("searchbox", { name: "Suchtext" }), "draft");
+  await user.selectOptions(
+    screen.getByLabelText("Ansicht auswählen"),
+    job().id,
+  );
+  expect(screen.getByRole("searchbox", { name: "Suchtext" })).toHaveValue("");
+  await user.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+  expect(screen.getByLabelText("Ansicht auswählen")).toHaveValue("");
+});
+
 it("submits combined filters once instead of requesting every typed character and pages only on demand", async () => {
   setup();
   const user = userEvent.setup();

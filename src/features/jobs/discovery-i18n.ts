@@ -42,7 +42,7 @@ const de = {
     "Summe aller tatsächlichen Sitzungsdauern, einschließlich Minutenanteilen.",
   available: "Ohne Überschneidung in meinem Kalender",
   availableHint:
-    "Prüft eigene private Termine, Sperrzeiten und aktive Zuweisungen. Fachgebiete und Verträge werden bei der verbindlichen Übernahme erneut geprüft.",
+    "Zeigt offene zukünftige Aufträge, deren Termine nicht mit deinen privaten Terminen, Sperrzeiten oder aktiven Zuweisungen kollidieren.",
   apply: "Filter anwenden",
   reset: "Filter zurücksetzen",
   more: "Weitere Aufträge laden",
@@ -111,7 +111,7 @@ const en: Record<keyof typeof de, string> = {
   hoursHint: "Sum of actual session durations, including partial hours.",
   available: "No overlap in my calendar",
   availableHint:
-    "Checks your own private events, blocked time and active assignments. Expertise and contracts are rechecked when claiming.",
+    "Shows open upcoming offers whose sessions fit around your private events, blocked time and active assignments.",
   apply: "Apply filters",
   reset: "Reset filters",
   more: "Load more offers",
