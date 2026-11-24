@@ -1672,25 +1672,134 @@ export function CoursesPage() {
       <PageHeading
         title={t("courses")}
         action={
-          (tab === "templates" ? canCreateTemplate : manage) ? (
-            <Button
-              disabled={!online}
-              onClick={() => {
-                if (tab === "templates") setTemplateEdit(null);
-                else {
-                  setInitialTemplateId(undefined);
-                  editRun(null);
+          <div className="operations-header-actions">
+            {(tab === "templates" ? canCreateTemplate : manage) ? (
+              <Button
+                disabled={!online}
+                onClick={() => {
+                  if (tab === "templates") setTemplateEdit(null);
+                  else {
+                    setInitialTemplateId(undefined);
+                    editRun(null);
+                  }
+                }}
+              >
+                <Plus size={17} />
+                {t(tab === "templates" ? "newTemplate" : "newCourse")}
+              </Button>
+            ) : (
+              <Button asChild variant="secondary">
+                <Link to="/learning">{t("translation:myCourses")}</Link>
+              </Button>
+            )}
+            {manage && tab === "templates" && (
+              <TableImport
+                inDialog
+                label={
+                  i18n.language.startsWith("de")
+                    ? "Kursvorlagen importieren"
+                    : "Import course templates"
                 }
-              }}
-            >
-              <Plus size={17} />
-              {t(tab === "templates" ? "newTemplate" : "newCourse")}
-            </Button>
-          ) : (
-            <Button asChild variant="secondary">
-              <Link to="/learning">{t("translation:myCourses")}</Link>
-            </Button>
-          )
+                filename="course-templates"
+                columns={["title", "description", "syllabus", "prerequisites"]}
+                example={[
+                  "Excel Grundlagen",
+                  "Einführung in Tabellen",
+                  "Formatierung und Formeln",
+                  "",
+                ]}
+                parse={(row) =>
+                  templateSchema.parse({
+                    ...row,
+                    topic_ids: [],
+                    archived: false,
+                  })
+                }
+                save={(row, key) => importTableRow(key, "course-template", row)}
+                refresh={() =>
+                  client.invalidateQueries({ queryKey: ["operations"] })
+                }
+              />
+            )}
+            {manage &&
+              tab === "runs" &&
+              templates.data.some((template) => !template.archived_at) && (
+                <TableImport
+                  inDialog
+                  label={
+                    i18n.language.startsWith("de")
+                      ? "Kursentwürfe mit einem Termin importieren"
+                      : "Import course drafts with one session"
+                  }
+                  filename="course-drafts"
+                  columns={[
+                    "template_title",
+                    "company_name",
+                    "time_zone",
+                    "delivery_type",
+                    "venue",
+                    "starts_at",
+                    "ends_at",
+                  ]}
+                  example={[
+                    "Excel Grundlagen",
+                    "",
+                    "Europe/Berlin",
+                    "online",
+                    "",
+                    "2027-01-11T09:00",
+                    "2027-01-11T12:00",
+                  ]}
+                  parse={(row) => {
+                    const matchingTemplates = templates.data.filter(
+                      (item) =>
+                        !item.archived_at &&
+                        item.title === row.template_title.trim(),
+                    );
+                    const companyName = row.company_name.trim();
+                    const companies = orgs.data.filter(
+                      (item) => !item.archived_at && item.name === companyName,
+                    );
+                    if (
+                      matchingTemplates.length !== 1 ||
+                      (companyName && companies.length !== 1)
+                    )
+                      throw new Error("ambiguous course references");
+                    const values = runSchema.parse({
+                      template_id: matchingTemplates[0].id,
+                      organisation_id: companyName ? companies[0].id : "",
+                      time_zone: row.time_zone,
+                      delivery_type: row.delivery_type,
+                      venue: row.venue,
+                      published: false,
+                      archived: false,
+                      sessions: [
+                        { starts_at: row.starts_at, ends_at: row.ends_at },
+                      ],
+                    });
+                    const starts_at = zonedInstantForScheduleEdit(
+                      row.starts_at,
+                      values.time_zone,
+                    );
+                    const ends_at = zonedInstantForScheduleEdit(
+                      row.ends_at,
+                      values.time_zone,
+                    );
+                    if (
+                      !starts_at ||
+                      !ends_at ||
+                      (compareCourseInstants(ends_at, starts_at) ?? 0) <= 0
+                    )
+                      throw new Error("invalid course session");
+                    return { ...values, sessions: [{ starts_at, ends_at }] };
+                  }}
+                  save={(row, key) => importTableRow(key, "course-draft", row)}
+                  refresh={() =>
+                    client.invalidateQueries({ queryKey: ["operations"] })
+                  }
+                />
+              )}
+          </div>
         }
       />
       <section className="panel course-toolbar" aria-label={t("catalogue")}>
@@ -1837,107 +1946,6 @@ export function CoursesPage() {
             </>
           )}
         </div>
-        {manage && tab === "templates" && (
-          <TableImport
-            label={
-              i18n.language.startsWith("de")
-                ? "Kursvorlagen importieren"
-                : "Import course templates"
-            }
-            filename="course-templates"
-            columns={["title", "description", "syllabus", "prerequisites"]}
-            example={[
-              "Excel Grundlagen",
-              "Einführung in Tabellen",
-              "Formatierung und Formeln",
-              "",
-            ]}
-            parse={(row) =>
-              templateSchema.parse({ ...row, topic_ids: [], archived: false })
-            }
-            save={(row, key) => importTableRow(key, "course-template", row)}
-            refresh={() =>
-              client.invalidateQueries({ queryKey: ["operations"] })
-            }
-          />
-        )}
-        {manage &&
-          tab === "runs" &&
-          templates.data.some((template) => !template.archived_at) && (
-            <TableImport
-              label={
-                i18n.language.startsWith("de")
-                  ? "Kursentwürfe mit einem Termin importieren"
-                  : "Import course drafts with one session"
-              }
-              filename="course-drafts"
-              columns={[
-                "template_title",
-                "company_name",
-                "time_zone",
-                "delivery_type",
-                "venue",
-                "starts_at",
-                "ends_at",
-              ]}
-              example={[
-                "Excel Grundlagen",
-                "",
-                "Europe/Berlin",
-                "online",
-                "",
-                "2027-01-11T09:00",
-                "2027-01-11T12:00",
-              ]}
-              parse={(row) => {
-                const matchingTemplates = templates.data.filter(
-                  (item) =>
-                    !item.archived_at &&
-                    item.title === row.template_title.trim(),
-                );
-                const companyName = row.company_name.trim();
-                const companies = orgs.data.filter(
-                  (item) => !item.archived_at && item.name === companyName,
-                );
-                if (
-                  matchingTemplates.length !== 1 ||
-                  (companyName && companies.length !== 1)
-                )
-                  throw new Error("ambiguous course references");
-                const values = runSchema.parse({
-                  template_id: matchingTemplates[0].id,
-                  organisation_id: companyName ? companies[0].id : "",
-                  time_zone: row.time_zone,
-                  delivery_type: row.delivery_type,
-                  venue: row.venue,
-                  published: false,
-                  archived: false,
-                  sessions: [
-                    { starts_at: row.starts_at, ends_at: row.ends_at },
-                  ],
-                });
-                const starts_at = zonedInstantForScheduleEdit(
-                  row.starts_at,
-                  values.time_zone,
-                );
-                const ends_at = zonedInstantForScheduleEdit(
-                  row.ends_at,
-                  values.time_zone,
-                );
-                if (
-                  !starts_at ||
-                  !ends_at ||
-                  (compareCourseInstants(ends_at, starts_at) ?? 0) <= 0
-                )
-                  throw new Error("invalid course session");
-                return { ...values, sessions: [{ starts_at, ends_at }] };
-              }}
-              save={(row, key) => importTableRow(key, "course-draft", row)}
-              refresh={() =>
-                client.invalidateQueries({ queryKey: ["operations"] })
-              }
-            />
-          )}
       </section>
       {message && (
         <Notice>

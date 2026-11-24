@@ -5,7 +5,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
  * reviewed version/request ID; background changes must not silently authorize an action.
  */
-import { type FormEvent, useState } from "react";
+import { lazy, Suspense, type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -41,6 +41,12 @@ import { localSessionTime, resolveJobSessions } from "./session-schedule";
 import { orgQuery } from "../operations/data";
 import { JobClassFeedback } from "../operations/company-class-feedback";
 import { briefingWebUrl } from "./briefing-api";
+
+const AssignmentScheduleForm = lazy(() =>
+  import("../changes/changes").then(({ ChangeForm }) => ({
+    default: ChangeForm,
+  })),
+);
 
 /** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
@@ -136,6 +142,12 @@ export function JobLifecyclePanel({
             </Link>
           </Button>
         ))
+    : [];
+  const scheduleCandidates = candidates.isSuccess
+    ? candidates.data.filter(
+        (candidate) =>
+          candidate.current.job_id === job.id && candidate.schedule_editable,
+      )
     : [];
   const capacity = info.capacity ?? job.capacity ?? 1;
   const maxNetBudget =
@@ -237,7 +249,7 @@ export function JobLifecyclePanel({
     ));
   const editButton = (label: string) => (
     <Button
-      variant="secondary"
+      variant={editButtonTarget ? "danger" : "secondary"}
       disabled={!online || change.isPending}
       onClick={() => {
         change.reset();
@@ -268,7 +280,9 @@ export function JobLifecyclePanel({
       {editButtonTarget && (
         <Dialog
           open={Boolean(editing && canEdit)}
-          onOpenChange={setEditing}
+          onOpenChange={(open) => {
+            if (!change.isPending) setEditing(open);
+          }}
           title={t("editAssignment")}
           description={t("editAssignmentHelp")}
           returnFocusTo={editButtonTarget.querySelector("button")}
@@ -295,10 +309,54 @@ export function JobLifecyclePanel({
                   </a>
                 </Button>
               )}
-            {amendmentActions}
+            {info.can_edit && amendmentActions}
           </div>
           {editForm}
           {changeError}
+          {!info.can_edit && editing && canEdit && (
+            <section
+              className="job-edit-schedule"
+              aria-label={t("deliveryPeriod")}
+            >
+              <h3>{t("deliveryPeriod")}</h3>
+              {scheduleCandidates.length ? (
+                <Suspense fallback={<Loading />}>
+                  <AssignmentScheduleForm
+                    candidates={scheduleCandidates}
+                    rangeEditor
+                    onDone={(id) => {
+                      if (!id) return;
+                      setEditing(false);
+                      void navigate(`/changes/${id}`);
+                    }}
+                  />
+                </Suspense>
+              ) : candidates.isError ? (
+                <ErrorState retry={() => void candidates.refetch()} />
+              ) : candidates.isPending && online && confirmedCount > 0 ? (
+                <Loading />
+              ) : (
+                <>
+                  <p className="muted">{t("scheduleLocked")}</p>
+                  <SessionScroll label={t("deliveryPeriod")}>
+                    <ul className="session-list">
+                      {job.job_sessions.map((slot) => (
+                        <li key={slot.id}>
+                          {dateTime(
+                            slot.starts_at,
+                            i18n.language,
+                            job.time_zone,
+                          )}{" "}
+                          –{" "}
+                          {dateTime(slot.ends_at, i18n.language, job.time_zone)}
+                        </li>
+                      ))}
+                    </ul>
+                  </SessionScroll>
+                </>
+              )}
+            </section>
+          )}
         </Dialog>
       )}
       <div className="job-life-heading">

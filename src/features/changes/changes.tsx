@@ -9,7 +9,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
@@ -41,6 +41,7 @@ import {
 } from "./api";
 import type { AssignmentChangeAction } from "./schema";
 import { useRequest } from "./use-request";
+import { JobDateRange } from "../jobs/session-range";
 import "./i18n";
 import "./changes.css";
 const mutationErrorMessage = new Map([
@@ -94,15 +95,17 @@ const formSchema = z.object({
 const customerFormSchema = formSchema.extend({ terms: z.string().max(12000) });
 /** Edit one captured draft snapshot. Polling does not replace reviewed fields;
  * zoned inputs become explicit instants before the server revalidates them. */
-function ChangeForm({
+export function ChangeForm({
   candidates,
   original,
   initialClaim,
+  rangeEditor = false,
   onDone,
 }: {
   candidates: ChangeCandidate[];
   original?: AssignmentChange;
   initialClaim?: string;
+  rangeEditor?: boolean;
   onDone: (id?: string) => void;
 }) {
   const { t } = useTranslation("changes");
@@ -194,7 +197,12 @@ function ChangeForm({
     resolver: zodResolver(commercialFields ? formSchema : customerFormSchema),
     defaultValues: defaults(source),
   });
-  const { fields, append, remove } = useFieldArray({
+  const sessions = useWatch({
+    control,
+    name: "sessions",
+    disabled: !rangeEditor,
+  });
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
   });
@@ -437,6 +445,30 @@ function ChangeForm({
           )}
           {startedSessions.size > 0 && (
             <p className="muted">{t("sharedStartedSessions")}</p>
+          )}
+          {rangeEditor && startedSessions.size === 0 && (
+            <JobDateRange
+              key={selected}
+              prefix="change"
+              sessions={sessions ?? []}
+              requiredCount={
+                sessionCountEditable ? undefined : source?.sessions.length
+              }
+              disabled={save.isPending || !online}
+              onApply={(next) => {
+                replace(
+                  next.map((slot) => ({
+                    ...slot,
+                    sourceIndex:
+                      sessions?.find(
+                        (session) =>
+                          session.starts_at === slot.starts_at &&
+                          session.ends_at === slot.ends_at,
+                      )?.sourceIndex ?? null,
+                  })),
+                );
+              }}
+            />
           )}
           {fields.map((item, index) => {
             const started =

@@ -148,3 +148,31 @@
     grid-row: 1 / span 2;
   }
 }
+
+.job-detail-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block: 16px;
+}
+
+.job-detail-toolbar .page-actions {
+  margin: 0;
+}
+
+.job-detail-toolbar > div:empty {
+  display: none;
+}
+
+.status.job-detail-status {
+  margin-inline-start: auto;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+}
+
+.job-edit-schedule {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}

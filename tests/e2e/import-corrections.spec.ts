@@ -67,10 +67,12 @@ test("course draft import corrects a rejected row and does not duplicate the fir
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/courses");
-  await page
-    .getByText("Kursentwürfe mit einem Termin importieren", { exact: true })
-    .click();
-  await page.getByLabel("CSV- oder XLSX-Datei").setInputFiles({
+  const importName = "Kursentwürfe mit einem Termin importieren";
+  const importDialog = page.getByRole("dialog", { name: importName });
+  await expect(importDialog).toBeHidden();
+  await page.getByRole("button", { name: importName }).click();
+  await expect(importDialog).toBeVisible();
+  await importDialog.getByLabel("CSV- oder XLSX-Datei").setInputFiles({
     name: "fictional-course-drafts.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(content),
