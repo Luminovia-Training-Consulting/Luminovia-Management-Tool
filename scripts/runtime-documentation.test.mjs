@@ -184,9 +184,9 @@ test("public guidance and current catalogue contain no historical customer ident
 });
 
 // The programme's governing AGENTS instructions require these durable source
-// records. Keep the consolidated product docs at the root and permit only the
-// specifically required records beneath docs/.
-test("documentation keeps only the required project records under docs", async () => {
+// records. Keep the consolidated product docs at the root and retain an
+// explicit inventory of project records and published materials under docs/.
+test("documentation retains the approved project records and published materials", async () => {
     const requiredRecords = new Set([
         "CONTRIBUTOR_RIGHTS_AGREEMENT_DRAFT.md",
         "IMPLEMENTATION_PLAN.md",
@@ -198,6 +198,7 @@ test("documentation keeps only the required project records under docs", async (
         "UI_ACCEPTANCE_20261117.md",
         "WORKLOG.md",
         "customer-handoff",
+        "sales",
     ]);
     const deliveredRecords = (await readdir("docs")).sort();
     assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
@@ -206,6 +207,12 @@ test("documentation keeps only the required project records under docs", async (
         "CUSTOMER-LICENCE.de.md",
         "OPERATIONS-AND-SUPPORT.de.md",
         "README.md",
+    ]);
+    assert.deepEqual((await readdir("docs/sales")).sort(), [
+        "luminovia-flyer-de.pdf",
+        "luminovia-flyer-en.pdf",
+        "luminovia-sales-deck-de.pptx",
+        "luminovia-sales-deck-en.pptx",
     ]);
     const generator = await readFile(
         "scripts/generate-api-reference.mjs",
