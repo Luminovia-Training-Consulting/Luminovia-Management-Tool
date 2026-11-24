@@ -34,8 +34,8 @@ export interface ClientRequest {
   delivery_type: "online" | "onsite";
   location: string;
   time_zone: string;
-  gross_amount: number;
-  gross_total_amount: number;
+  gross_amount: number | null;
+  gross_total_amount: number | null;
   currency: CurrencyCode;
   rate_unit: string;
   sessions: { starts_at: string; ends_at: string }[];

@@ -341,26 +341,34 @@ export function JobDetail() {
         </div>
         {!companyDispatchOnly && (
           <aside className="claim-panel panel">
-            <p className="eyebrow">
-              {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
-            </p>
-            <div className="amount">
-              {terms.total_amount === null
-                ? i18n.getFixedT(
-                    i18n.language,
-                    "platform",
-                  )("privateCompensation")
-                : money(terms.total_amount, terms.currency, i18n.language)}
-            </div>
-            <p>
-              {terms.amount !== null && (
-                <>
-                  {money(terms.amount, terms.currency, i18n.language)}{" "}
-                  {t(terms.rate_unit)}
-                </>
-              )}
-            </p>
-            <small>{lifeText("positionFeeHint")}</small>
+            {job.company_internal ? (
+              <p>
+                {i18n.getFixedT(i18n.language, "platform")("internalStaffing")}
+              </p>
+            ) : (
+              <>
+                <p className="eyebrow">
+                  {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
+                </p>
+                <div className="amount">
+                  {terms.total_amount === null
+                    ? i18n.getFixedT(
+                        i18n.language,
+                        "platform",
+                      )("privateCompensation")
+                    : money(terms.total_amount, terms.currency, i18n.language)}
+                </div>
+                <p>
+                  {terms.amount !== null && (
+                    <>
+                      {money(terms.amount, terms.currency, i18n.language)}{" "}
+                      {t(terms.rate_unit)}
+                    </>
+                  )}
+                </p>
+                <small>{lifeText("positionFeeHint")}</small>
+              </>
+            )}
             <hr />
             <h2>{t(ownClaim ? "termsSnapshot" : "terms")}</h2>
             <p className="preserve-text">{terms.terms}</p>
@@ -404,8 +412,8 @@ export function JobDetail() {
                     !online ||
                     claim.isPending ||
                     job.status !== "published" ||
-                    job.amount === null ||
-                    job.total_amount === null
+                    (!job.company_internal &&
+                      (job.amount === null || job.total_amount === null))
                   }
                 >
                   {t(claim.isPending ? "claiming" : "claim")}

@@ -240,7 +240,7 @@ export function JobLifecyclePanel({
           })}
         </span>
       </div>
-      {info.can_manage && (
+      {info.can_manage && !job.company_internal && (
         <p>
           {maxNetBudget !== null && (
             <strong>

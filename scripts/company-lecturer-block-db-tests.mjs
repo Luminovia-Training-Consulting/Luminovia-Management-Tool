@@ -545,10 +545,6 @@ for (const edition of [
         title: "Fictional private teaching offer",
         delivery_type: "online",
         time_zone: "Europe/Berlin",
-        gross_amount: 100,
-        gross_total_amount: 100,
-        rate_unit: "fixed_total",
-        currency: "EUR",
         own_lecturers_only: true,
         sessions: [{starts_at: date(18), ends_at: date(18.1)}],
       };
@@ -573,11 +569,38 @@ for (const edition of [
       await assert.rejects(call(teacher, "job_detail", q(restrictedJob)), /42501/);
       assert.ok(!(await discoverJobs({})).items.some(({id}) => id === restrictedJob));
       assert.equal((await call(teacher, "claim_job", `${q(restrictedJob)},${q(randomUUID())},1`)).status, "not_eligible");
+      const detail = await call(otherTeacher, "job_detail", q(restrictedJob));
+      assert.equal(detail.company_internal, true);
+      assert.equal(detail.amount, null);
+      assert.equal(detail.total_amount, null);
+      assert.equal(detail.requires_contract, false);
+      const requestView = JSON.parse(await actor(contact, `${gate("client_requests", "GET")} select jsonb_agg(row) from public.client_requests(${q(org)}) row;`));
+      const requestRow = requestView.find(row => row.id === request);
+      assert.equal(requestRow.gross_amount, null);
+      assert.equal(requestRow.gross_total_amount, null);
+      assert.equal(await sql(`select count(*) from private.job_commission_offers where job_id=${q(restrictedJob)}`), "0");
+      const priceFiltered = await call(otherTeacher, "job_discovery", `'{"currency":"EUR","min_total":1}',null,50`);
+      assert.ok(!priceFiltered.items.some(({id}) => id === restrictedJob));
+      assert.equal(await call(admin, "publish_client_request", `${q(request)},50,'Reviewed terms',true,null`), restrictedJob);
+      await assert.rejects(call(admin, "set_job_commission", `${q(restrictedJob)},100,100,50`), /22023|23514/);
       await assert.rejects(linkLecturer(foreign, true), /42501/);
       await linkLecturer(contact, true);
       assert.equal((await roster(contact)).members.length, 0);
       await assert.rejects(call(otherTeacher, "job_detail", q(restrictedJob)), /42501/);
       assert.equal((await call(otherTeacher, "claim_job", `${q(restrictedJob)},${q(randomUUID())},1`)).status, "not_eligible");
+      await linkLecturer(staff, false);
+      const operation = randomUUID();
+      const internalClaim = await call(otherTeacher, "claim_job", `${q(restrictedJob)},${q(operation)},${detail.terms_version}`);
+      assert.equal(internalClaim.status, "confirmed");
+      assert.equal(await sql(`select count(*) from private.claim_revenue_ledger where claim_id=${q(internalClaim.claim_id)}`), "0");
+      const earnings = JSON.parse(await actor(otherTeacher, `${gate("finance_earnings", "GET")} select coalesce(jsonb_agg(row),'[]') from public.finance_earnings(false) row;`));
+      assert.ok(!earnings.some(row => row.claim_id === internalClaim.claim_id));
+      await assert.rejects(sql(`insert into public.invoice_items(claim_id, invoice_id) values(${q(internalClaim.claim_id)}, ${q(randomUUID())})`), /Internal company assignments are not billed/);
+      await assert.rejects(sql(`insert into private.invoice_review_requests(claim_id, requested_by, request_id, reason) values(${q(internalClaim.claim_id)}, ${q(otherTeacher)}, ${q(randomUUID())}, 'partial_delivery')`), /Internal company assignments are not billed/);
+      console.log("PASS internal company acceptance has neither payout, commission nor invoicing");
+      await linkLecturer(contact, true);
+      assert.equal((await call(otherTeacher, "job_detail", q(restrictedJob))).id, restrictedJob);
+      assert.equal((await call(otherTeacher, "claim_job", `${q(restrictedJob)},${q(operation)},${detail.terms_version}`)).claim_id, internalClaim.claim_id);
       console.log("PASS company-only publication, marketplace isolation and live lecturer roster revocation");
     }
     await sql(

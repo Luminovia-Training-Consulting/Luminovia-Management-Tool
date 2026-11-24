@@ -50,12 +50,15 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       <div className="job-card-bottom">
         <div>
           <strong>
-            {job.total_amount === null
-              ? priceText("privateCompensation")
-              : money(job.total_amount, job.currency, i18n.language)}
+            {job.company_internal
+              ? priceText("internalStaffing")
+              : job.total_amount === null
+                ? priceText("privateCompensation")
+                : money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
-            {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}
+            {!job.company_internal &&
+              `${priceText("lecturerShare")} · ${lifeText("perPosition")} · `}
             {t("sessionCount", { count: job.job_sessions.length })}
             {(job.capacity ?? 1) > 1 &&
               ` · ${job.capacity} ${lifeText("positions")}`}

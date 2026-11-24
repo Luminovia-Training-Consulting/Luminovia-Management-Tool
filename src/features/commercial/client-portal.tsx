@@ -78,30 +78,45 @@ import "../operations/i18n";
 import "./platform.css";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
-const schema = z.object({
-  organisation: z.string().uuid(),
-  title: z.string().trim().min(1).max(200),
-  description: z.string().max(10000),
-  delivery_type: z.enum(["online", "onsite"]),
-  location: z.string().max(500),
-  time_zone: z.string().refine(validZone),
-  gross_amount: z.number().positive().max(1000000),
-  gross_total_amount: z.number().positive().max(1000000),
-  currency: z.enum(currencyCodes),
-  rate_unit: z.enum([
-    "per_day",
-    "per_teaching_unit",
-    "per_hour",
-    "fixed_total",
-  ]),
-  topic_ids: z.array(z.string().uuid()),
-  sessions: z
-    .array(
-      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
-    )
-    .min(1)
-    .max(60),
-});
+const priceAmount = z.number().positive().max(1000000);
+
+const schema = z
+  .object({
+    organisation: z.string().uuid(),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().max(10000),
+    delivery_type: z.enum(["online", "onsite"]),
+    location: z.string().max(500),
+    time_zone: z.string().refine(validZone),
+    own_lecturers_only: z.boolean(),
+    gross_amount: z.union([z.number(), z.nan()]),
+    gross_total_amount: z.union([z.number(), z.nan()]),
+    currency: z.enum(currencyCodes),
+    rate_unit: z.enum([
+      "per_day",
+      "per_teaching_unit",
+      "per_hour",
+      "fixed_total",
+    ]),
+    topic_ids: z.array(z.string().uuid()),
+    sessions: z
+      .array(
+        z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
+      )
+      .min(1)
+      .max(60),
+  })
+  .superRefine((values, ctx) => {
+    if (values.own_lecturers_only) return;
+    for (const field of ["gross_amount", "gross_total_amount"] as const) {
+      if (!priceAmount.safeParse(values[field]).success)
+        ctx.addIssue({
+          code: "custom",
+          path: [field],
+          message: "Invalid price",
+        });
+    }
+  });
 
 /** Create an organization-bound course request from local schedule/price drafts. */
 function RequestForm({
@@ -140,6 +155,7 @@ function RequestForm({
       delivery_type: "online",
       location: "",
       time_zone: zone,
+      own_lecturers_only: false,
       gross_amount: 800,
       gross_total_amount: 800,
       currency: "EUR",
@@ -152,7 +168,10 @@ function RequestForm({
     control: form.control,
     name: "organisation",
   });
-  const [restrictedOrganisation, setRestrictedOrganisation] = useState("");
+  const internalOnly = useWatch({
+    control: form.control,
+    name: "own_lecturers_only",
+  });
   const roster = useQuery(companyLecturersQuery(actor, organisationId));
   const showInternalAudience = Boolean(
     !roster.isError && roster.data?.members.length,
@@ -171,13 +190,21 @@ function RequestForm({
         setInvalidSessions(true);
         throw new Error("invalid_sessions");
       }
-      const { organisation, ...rest } = values;
+      const {
+        organisation,
+        own_lecturers_only,
+        gross_amount,
+        gross_total_amount,
+        currency,
+        rate_unit,
+        ...rest
+      } = values;
       const payload = {
         ...rest,
         sessions,
-        ...(restrictedOrganisation === organisation
-          ? { own_lecturers_only: true }
-          : {}),
+        ...(own_lecturers_only
+          ? { own_lecturers_only }
+          : { gross_amount, gross_total_amount, currency, rate_unit }),
       };
       const cleanedBrief = cleanRequestBrief(brief);
       if (!validRequestBrief(cleanedBrief, sessions))
@@ -217,7 +244,7 @@ function RequestForm({
         <select
           id="request-org"
           {...form.register("organisation", {
-            onChange: () => setRestrictedOrganisation(""),
+            onChange: () => form.setValue("own_lecturers_only", false),
           })}
           disabled={save.isPending}
         >
@@ -228,21 +255,24 @@ function RequestForm({
           ))}
         </select>
       </Field>
-      {showInternalAudience && (
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            role="switch"
-            checked={restrictedOrganisation === organisationId}
-            disabled={save.isPending}
-            onChange={(event) =>
-              setRestrictedOrganisation(
-                event.target.checked ? organisationId : "",
-              )
-            }
-          />
-          {operations("companyLecturersOnly")}
-        </label>
+      {roster.isSuccess && (
+        <>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              role="switch"
+              {...form.register("own_lecturers_only")}
+              disabled={save.isPending || !showInternalAudience}
+            />
+            {operations("companyLecturersOnly")}
+          </label>
+          {!showInternalAudience && (
+            <p className="muted commercial-small">
+              {operations("companyLecturerEmpty")}
+            </p>
+          )}
+          {internalOnly && <p>{t("internalStaffing")}</p>}
+        </>
       )}
       <Field
         id="request-title"
@@ -365,87 +395,89 @@ function RequestForm({
           {t("addSession")}
         </Button>
       </fieldset>
-      <div className="form-row">
-        <Field
-          id="request-rate"
-          label={t("grossRate")}
-          error={Boolean(form.formState.errors.gross_amount)}
-        >
-          <input
+      {!internalOnly && (
+        <div className="form-row">
+          <Field
             id="request-rate"
-            type="number"
-            min="0"
-            step="0.01"
-            {...form.register("gross_amount", {
-              valueAsNumber: true,
-              onChange: (event) => {
-                if (form.getValues("rate_unit") === "fixed_total")
-                  form.setValue(
-                    "gross_total_amount",
-                    Number(event.target.value),
-                  );
-              },
-            })}
-            disabled={save.isPending}
-          />
-        </Field>
-        <Field
-          id="request-total"
-          label={t("grossTotal")}
-          error={Boolean(form.formState.errors.gross_total_amount)}
-        >
-          <input
+            label={t("grossRate")}
+            error={Boolean(form.formState.errors.gross_amount)}
+          >
+            <input
+              id="request-rate"
+              type="number"
+              min="0"
+              step="0.01"
+              {...form.register("gross_amount", {
+                valueAsNumber: true,
+                onChange: (event) => {
+                  if (form.getValues("rate_unit") === "fixed_total")
+                    form.setValue(
+                      "gross_total_amount",
+                      Number(event.target.value),
+                    );
+                },
+              })}
+              disabled={save.isPending}
+            />
+          </Field>
+          <Field
             id="request-total"
-            type="number"
-            min="0.01"
-            step="0.01"
-            {...form.register("gross_total_amount", {
-              valueAsNumber: true,
-              onChange: (event) => {
-                if (form.getValues("rate_unit") === "fixed_total")
-                  form.setValue("gross_amount", Number(event.target.value));
-              },
-            })}
-            disabled={save.isPending}
-          />
-        </Field>
-        <Field id="request-currency" label={common("currency")}>
-          <select
-            id="request-currency"
-            {...form.register("currency")}
-            disabled={save.isPending}
+            label={t("grossTotal")}
+            error={Boolean(form.formState.errors.gross_total_amount)}
           >
-            {currencyCodes.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="request-unit" label={common("unit")}>
-          <select
-            id="request-unit"
-            {...form.register("rate_unit", {
-              onChange: (event) => {
-                if (event.target.value === "fixed_total")
-                  form.setValue(
-                    "gross_amount",
-                    form.getValues("gross_total_amount"),
-                  );
-              },
-            })}
-            disabled={save.isPending}
-          >
-            {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
-              (unit) => (
-                <option key={unit} value={unit}>
-                  {common(unit)}
+            <input
+              id="request-total"
+              type="number"
+              min="0.01"
+              step="0.01"
+              {...form.register("gross_total_amount", {
+                valueAsNumber: true,
+                onChange: (event) => {
+                  if (form.getValues("rate_unit") === "fixed_total")
+                    form.setValue("gross_amount", Number(event.target.value));
+                },
+              })}
+              disabled={save.isPending}
+            />
+          </Field>
+          <Field id="request-currency" label={common("currency")}>
+            <select
+              id="request-currency"
+              {...form.register("currency")}
+              disabled={save.isPending}
+            >
+              {currencyCodes.map((code) => (
+                <option key={code} value={code}>
+                  {code}
                 </option>
-              ),
-            )}
-          </select>
-        </Field>
-      </div>
+              ))}
+            </select>
+          </Field>
+          <Field id="request-unit" label={common("unit")}>
+            <select
+              id="request-unit"
+              {...form.register("rate_unit", {
+                onChange: (event) => {
+                  if (event.target.value === "fixed_total")
+                    form.setValue(
+                      "gross_amount",
+                      form.getValues("gross_total_amount"),
+                    );
+                },
+              })}
+              disabled={save.isPending}
+            >
+              {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
+                (unit) => (
+                  <option key={unit} value={unit}>
+                    {common(unit)}
+                  </option>
+                ),
+              )}
+            </select>
+          </Field>
+        </div>
+      )}
       {topics.isError ? (
         <ErrorState retry={() => void topics.refetch()} />
       ) : (
@@ -542,22 +574,31 @@ function RequestCard({
         <span className="badge">{t(statusKey)}</span>
       </div>
       <p className="preserve-text">{request.description}</p>
+      {request.gross_total_amount === null && <p>{t("internalStaffing")}</p>}
       <dl className="commercial-facts">
-        <dt>{t("grossTotal")}</dt>
-        <dd>
-          <strong>
-            {money(
-              Number(request.gross_total_amount),
-              request.currency,
-              i18n.language,
-            )}
-          </strong>
-        </dd>
-        <dt>{common("unit")}</dt>
-        <dd>
-          {money(Number(request.gross_amount), request.currency, i18n.language)}{" "}
-          · {common(request.rate_unit)}
-        </dd>
+        {request.gross_total_amount !== null && (
+          <>
+            <dt>{t("grossTotal")}</dt>
+            <dd>
+              <strong>
+                {money(
+                  Number(request.gross_total_amount),
+                  request.currency,
+                  i18n.language,
+                )}
+              </strong>
+            </dd>
+            <dt>{common("unit")}</dt>
+            <dd>
+              {money(
+                Number(request.gross_amount),
+                request.currency,
+                i18n.language,
+              )}{" "}
+              · {common(request.rate_unit)}
+            </dd>
+          </>
+        )}
         <dt>{common("delivery")}</dt>
         <dd>
           {common(request.delivery_type)} · {request.location}
@@ -642,7 +683,11 @@ function RequestCard({
         open={publishing}
         onOpenChange={setPublishing}
         title={t("publishRequest")}
-        description={t("publishHint")}
+        description={t(
+          request.gross_total_amount === null
+            ? "internalStaffing"
+            : "publishHint",
+        )}
       >
         {publishing && (
           <PublishClientRequest

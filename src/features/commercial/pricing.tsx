@@ -475,7 +475,8 @@ export function PublishClientRequest({
   const client = useQueryClient();
   const access = useQuery(commissionAccessQuery(actor));
   const [commission, setCommission] = useState("");
-  const percent = parseCourseCommission(commission);
+  const internal = request.gross_total_amount === null;
+  const percent = internal ? null : parseCourseCommission(commission);
   const [terms, setTerms] = useState("");
   const [contract, setContract] = useState(true);
   const publish = useMutation({
@@ -486,7 +487,7 @@ export function PublishClientRequest({
         p_request_id: request.id,
         p_platform_percent: percent,
         p_terms: terms.trim(),
-        p_requires_contract: contract,
+        p_requires_contract: !internal && contract,
         p_claim_deadline: null,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
@@ -508,7 +509,7 @@ export function PublishClientRequest({
         publish.mutate();
       }}
     >
-      {access.data?.can_manage_gross && (
+      {!internal && access.data?.can_manage_gross && (
         <CourseCommissionField
           id="publish-course-commission"
           value={commission}
@@ -516,13 +517,15 @@ export function PublishClientRequest({
           disabled={publish.isPending}
         />
       )}
-      <RoleFeePreview
-        gross={Number(request.gross_total_amount)}
-        grossRate={Number(request.gross_amount)}
-        access={access.data}
-        currency={request.currency}
-        platformPercent={percent}
-      />
+      {!internal && (
+        <RoleFeePreview
+          gross={Number(request.gross_total_amount)}
+          grossRate={Number(request.gross_amount)}
+          access={access.data}
+          currency={request.currency}
+          platformPercent={percent}
+        />
+      )}
       <Field id="publish-client-terms" label={common("terms")}>
         <textarea
           id="publish-client-terms"
@@ -533,15 +536,17 @@ export function PublishClientRequest({
           disabled={publish.isPending}
         />
       </Field>
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={contract}
-          onChange={(event) => setContract(event.target.checked)}
-          disabled={publish.isPending}
-        />
-        {common("contractRequired")}
-      </label>
+      {!internal && (
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={contract}
+            onChange={(event) => setContract(event.target.checked)}
+            disabled={publish.isPending}
+          />
+          {common("contractRequired")}
+        </label>
+      )}
       <div className="form-actions">
         <Button
           disabled={

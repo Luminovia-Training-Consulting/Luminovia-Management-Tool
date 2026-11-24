@@ -120,6 +120,7 @@ export const jobSchema = z.object({
   created_at: instant,
   urgent_reopened_at: instant.nullable().optional(),
   dispatch_only: z.boolean().optional(),
+  company_internal: z.boolean().optional(),
   job_sessions: z.array(
     z.object({
       id: z.uuid(),

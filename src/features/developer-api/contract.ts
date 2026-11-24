@@ -694,30 +694,39 @@ const clientRequestFields = {
   time_zone: { ...text, default: "Europe/Berlin" },
   sessions: courseRunRequest.properties.sessions,
   topic_ids: { type: "array", items: uuid, maxItems: 100, default: [] },
-  gross_amount: proposedAmount,
-  gross_total_amount: proposedAmount,
+  gross_amount: { ...proposedAmount, minimum: 0 },
+  gross_total_amount: { ...proposedAmount, minimum: 0 },
   currency: { enum: [...currencyCodes] },
   rate_unit: rateUnit,
 };
 const companyLecturerOnlyInput = {
   type: "boolean",
   description:
-    "Restrict publication to active lecturers assigned to the submitting organisation.",
+    "Restrict a new request to the organisation’s active assigned lecturers. The resulting internal assignment has no portal compensation, commission, contract requirement or invoices.",
 };
 const clientRequestInput = {
   ...object({
     ...clientRequestFields,
     own_lecturers_only: companyLecturerOnlyInput,
   }),
-  required: [
-    "title",
-    "delivery_type",
-    "sessions",
-    "gross_amount",
-    "gross_total_amount",
-    "currency",
-    "rate_unit",
-  ],
+  required: ["title", "delivery_type", "sessions"],
+  if: {
+    required: ["own_lecturers_only"],
+    properties: { own_lecturers_only: { const: true } },
+  },
+  then: {
+    properties: {
+      gross_amount: { type: "number", minimum: 0 },
+      gross_total_amount: { type: "number", minimum: 0 },
+    },
+  },
+  else: {
+    required: ["gross_amount", "gross_total_amount", "currency", "rate_unit"],
+    properties: {
+      gross_amount: proposedAmount,
+      gross_total_amount: proposedAmount,
+    },
+  },
 };
 const clientRequestDocument = {
   version_id: uuid,
@@ -2860,15 +2869,15 @@ const nativePaths = {
     "native_client_requests",
     "Courses",
     "List the current company course requests",
-    "Returns up to 500 requests in the caller's current company or authorised finance scope. An optional organisation ID narrows this scope. Amounts and their currency refer to the requested or saved company quote.",
+    "Returns up to 500 requests in the caller's current company or authorised finance scope. An optional organisation ID narrows this scope. Amounts refer to the requested or saved company quote, or are null for internal staffing.",
     { p_organisation_id: nullableUuid },
     {
       type: "array",
       maxItems: 500,
       items: object({
         ...clientRequestFields,
-        gross_amount: { type: "number" },
-        gross_total_amount: { type: "number" },
+        gross_amount: { type: ["number", "null"] },
+        gross_total_amount: { type: ["number", "null"] },
         id: uuid,
         organisation_id: uuid,
         organisation_name: text,

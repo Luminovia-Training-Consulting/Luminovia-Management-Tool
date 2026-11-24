@@ -109,6 +109,10 @@ const pairs: Record<string, [string, string]> = {
   organisations: ["Organisation", "Organisation"],
   allOrganisations: ["Alle Organisationen", "All organisations"],
   chooseOrganisation: ["Organisation auswählen", "Choose an organisation"],
+  internalStaffing: [
+    "Interner Einsatz für eigene Dozierende. Die Abrechnung erfolgt außerhalb des Portals.",
+    "Internal assignment for company lecturers. Any payroll is handled outside the portal.",
+  ],
   newRequest: ["Kurs anfragen", "Request a course"],
   requestHint: [
     "Diese Anfrage reserviert noch keine Lehrkraft. Luminovia prüft und veröffentlicht das Angebot separat.",

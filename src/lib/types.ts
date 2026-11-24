@@ -50,6 +50,7 @@ export interface JobSession {
 export interface Job {
   capacity?: number;
   capacity_basis?: "single_position" | "per_position";
+  company_internal?: boolean;
   id: string;
   title: string;
   description: string;

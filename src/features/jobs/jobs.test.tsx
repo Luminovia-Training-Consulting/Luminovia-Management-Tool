@@ -173,6 +173,25 @@ describe("safe marketplace interactions", () => {
     },
   );
 
+  it("lets company lecturers accept an internal assignment without displaying a rate", async () => {
+    const user = userEvent.setup();
+    setup("/jobs/job-a", false, {
+      company_internal: true,
+      amount: null,
+      total_amount: null,
+    });
+    expect(
+      screen.getByText(/Interner Einsatz für eigene Dozierende/),
+    ).toBeVisible();
+    expect(screen.queryByText("Honorar geschützt")).not.toBeInTheDocument();
+    const accept = screen.getByRole("button", { name: "Auftrag übernehmen" });
+    expect(accept).toBeDisabled();
+    await user.click(
+      screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    expect(accept).toBeEnabled();
+  });
+
   it("gives a mixed management and lecturer account teaching actions while its teaching role remains assigned", async () => {
     const client = setup("/jobs/job-a", false, {}, ["management", "lecturer"]);
     const user = userEvent.setup();
