@@ -1574,12 +1574,17 @@ export function CoursesPage() {
           )}
         </div>
       );
-    if (run.archived_at || run.jobs?.length) return null;
+    if (run.archived_at) return null;
     if (!canPrepareOffer)
       return <p className="muted">{t("offerPermissionRequired")}</p>;
     const company = organisationsById.get(run.organisation_id ?? "");
     if (company && !company.archived_at)
-      return <CourseRunOfferLink runId={run.id} />;
+      return (
+        <CourseRunOfferLink
+          runId={run.id}
+          additional={Boolean(run.jobs?.length)}
+        />
+      );
     if (!orgs.data.some((org) => !org.archived_at)) {
       return (
         <>

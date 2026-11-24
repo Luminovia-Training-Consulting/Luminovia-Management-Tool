@@ -389,6 +389,10 @@ const pairs: Record<string, [string, string]> = {
     "Hier findest du die Vorlagen deiner Organisation. Du kannst ihre Inhalte bearbeiten oder damit eine Durchführung mit eigenen Terminen als Entwurf speichern.",
     "Find your organisation’s templates here. Edit their content or use one to schedule a course run and save it as a draft.",
   ],
+  createAdditionalRunOffer: [
+    "Weiteren Auftrag erstellen",
+    "Create another assignment",
+  ],
   createRunOffer: [
     "Auftrag für die Stellenbörse erstellen",
     "Create marketplace offer",

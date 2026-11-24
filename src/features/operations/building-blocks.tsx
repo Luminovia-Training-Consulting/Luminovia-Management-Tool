@@ -192,11 +192,19 @@ export function BuildingBlockSources({
 }
 
 /** Offer the authorized entry point for an offer derived from this specific course run. */
-export function CourseRunOfferLink({ runId }: { runId: string }) {
+export function CourseRunOfferLink({
+  runId,
+  additional = false,
+}: {
+  runId: string;
+  additional?: boolean;
+}) {
   const { t } = useTranslation("operations");
   return (
     <Button asChild variant="secondary">
-      <Link to={`/courses?offer=${runId}`}>{t("createRunOffer")}</Link>
+      <Link to={`/courses?offer=${runId}`}>
+        {t(additional ? "createAdditionalRunOffer" : "createRunOffer")}
+      </Link>
     </Button>
   );
 }

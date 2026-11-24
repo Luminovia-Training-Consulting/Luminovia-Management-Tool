@@ -147,7 +147,15 @@ export function NotificationRow({
     <li
       className={`notification-row ${item.read_at ? "" : "notification-unread"}`}
     >
-      <strong>{t(knownKinds.has(item.kind) ? item.kind : "activity")}</strong>
+      <strong>
+        {t(
+          item.assignment_replaced
+            ? "lecturerReplaced"
+            : knownKinds.has(item.kind)
+              ? item.kind
+              : "activity",
+        )}
+      </strong>
       {item.title && <p>{item.title}</p>}
       <small>{dateTime(item.created_at, i18n.language, zone)}</small>
       {item.href ? (

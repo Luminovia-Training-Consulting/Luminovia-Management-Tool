@@ -241,6 +241,11 @@ await withTestDatabase(
       /42501/,
     );
     // The marketplace deadline has elapsed while the course is still in the future.
+    const siblingDraft = randomUUID();
+    await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,
+      amount,total_amount,currency,rate_unit,terms)
+      values(${q(siblingDraft)},${q(run)},'Parallel draft','Fictional College','online','draft',
+        50,50,'EUR','fixed_total','Fictional parallel terms')`);
     const deadline = "2025-01-01 09:00:00+00";
     await sql(
       `update public.jobs set claim_deadline = ${q(deadline)} where id = ${q(job)}`,
@@ -312,6 +317,23 @@ await withTestDatabase(
       (${q(replacement)}::uuid, 'claim_confirmed', ${q(result.claim_id)}::uuid)
     )`),
       "2",
+    );
+    assert.equal(
+      await sql(`select status from public.jobs where id = ${q(siblingDraft)}`),
+      "draft",
+    );
+    const formerInbox = await rpc(former, "notification_inbox");
+    assert.equal(
+      formerInbox.items.find(({ kind }) => kind === "claim_cancelled")
+        .assignment_replaced,
+      true,
+    );
+    const replacementInbox = await rpc(replacement, "notification_inbox");
+    assert.equal(
+      replacementInbox.items.some(
+        ({ assignment_replaced }) => assignment_replaced,
+      ),
+      false,
     );
     await assert.rejects(briefing(former), /42501/);
     assert.equal(

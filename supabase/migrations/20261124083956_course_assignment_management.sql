@@ -2,11 +2,11 @@ begin;
 
 -- Prefer the course's deliberately selected contact; otherwise use the most
 -- recently added active contact for the same company. Never copy directory notes.
-create function private.course_job_contact(p_run_id uuid)
+create function private.course_job_contact(p_run_id uuid, p_organisation_id uuid default null)
 returns jsonb language sql stable set search_path = '' as $$
   select jsonb_build_object('name', contact.name, 'email', contact.email, 'phone', contact.phone)
   from public.course_runs run
-  join public.organisations organisation on organisation.id = run.organisation_id
+  join public.organisations organisation on organisation.id = coalesce(p_organisation_id, run.organisation_id)
   join public.organisation_contacts contact on contact.organisation_id = organisation.id
   left join private.course_workspace_settings settings on settings.run_id = run.id
   where run.id = p_run_id and organisation.archived_at is null and contact.archived_at is null
@@ -14,7 +14,7 @@ returns jsonb language sql stable set search_path = '' as $$
   limit 1
 $$;
 
-revoke all on function private.course_job_contact(uuid) from public, anon, authenticated, service_role;
+revoke all on function private.course_job_contact(uuid,uuid) from public, anon, authenticated, service_role;
 
 create or replace function private.job_dispatch_projection(p_job public.jobs)
 returns jsonb language plpgsql stable set search_path = '' as $$
@@ -59,6 +59,19 @@ begin
         and contact.archived_at is null
     ) end,
     'contact_options',case when$new$);
+end;
+$migration$;
+
+-- Match the class editor's contact preview to the applied inheritance rule.
+do $migration$
+declare
+  definition text := pg_get_functiondef('private.job_dispatch_options(uuid,uuid)'::regprocedure);
+  marker constant text := 'private.dispatch_contact(p_organisation_id)';
+begin
+  if cardinality(string_to_array(definition, marker)) <> 2 then
+    raise exception 'Expected the job dispatch contact preview';
+  end if;
+  execute replace(definition, marker, 'private.course_job_contact(job.course_run_id, p_organisation_id)');
 end;
 $migration$;
 
@@ -266,6 +279,8 @@ begin
   end;
 
   replacement := (result->>'claim_id')::uuid;
+  insert into public.claim_events(claim_id, actor_id, event_type)
+    values (source.id, actor, 'substituted_out');
   insert into private.job_lifecycle_requests(actor_id, request_id, payload, result)
     values (actor, p_request_id, payload, replacement);
   insert into public.audit_events(actor_id, action, resource_id, details)
@@ -310,6 +325,29 @@ begin
       select jsonb_agg(claim.id order by claim.id) from public.job_claims claim
       where claim.job_id = j.id and private.can_replace_job_lecturer(claim)
     ), '[]'::jsonb) else '[]'::jsonb end$new$);
+end;
+$migration$;
+
+-- Keep the cancellation category, delivery preferences and deduplication. The
+-- recipient's inbox can explain the substitution without exposing the new claim.
+do $migration$
+declare
+  definition text := pg_get_functiondef('private.notification_target(text,uuid)'::regprocedure);
+  marker constant text := 'else private.notification_target_before_calendar_invitation(p_kind, p_resource) end';
+begin
+  if cardinality(string_to_array(definition, marker)) <> 2 then
+    raise exception 'Expected the current notification projection';
+  end if;
+  execute replace(definition, marker, $new$
+    when p_kind = 'claim_cancelled' then coalesce((
+      select jsonb_build_object('href', null, 'title', job.title, 'assignment_replaced', true)
+      from public.job_claims claim
+      join public.jobs job on job.id = claim.job_id
+      where claim.id = p_resource and claim.lecturer_id = auth.uid()
+        and exists (select 1 from public.claim_events event
+          where event.claim_id = claim.id and event.event_type = 'substituted_out')
+    ), private.notification_target_before_calendar_invitation(p_kind, p_resource))
+    $new$ || marker);
 end;
 $migration$;
 

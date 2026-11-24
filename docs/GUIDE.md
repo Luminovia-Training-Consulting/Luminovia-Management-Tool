@@ -1382,7 +1382,7 @@ Use **Auftrag anzeigen / View assignment** on an existing course offer, includin
 
 A saved job contact takes precedence over the course's selected contact. With both fields empty, the assignment shows the company's newest active contact. Inherited details are available to current managers and confirmed lecturers. They remain separate from the editable job contact. Clearing the course selection restores automatic company contact selection for linked assignments.
 
-To replace a lecturer, open **Dozent:in wechseln / Replace lecturer** beside their confirmed claim and select an eligible replacement. The entire future unbilled block transfers in one transaction. A conflict keeps the original assignment in place. On confirmation, the former lecturer receives a cancellation notice and the replacement receives an assignment confirmation. The original accepted terms remain in the claim history.
+To replace a lecturer, open **Dozent:in wechseln / Replace lecturer** beside their confirmed claim and select an eligible replacement. The entire future unbilled block transfers in one transaction. A conflict keeps the original assignment in place. On confirmation, the former lecturer sees that another lecturer is taking over and the replacement receives an assignment confirmation. The original accepted terms remain in the claim history.
 
 Building-block/template discussions are attached to the actual reusable template, so teaching notes persist across runs of that template. Job discussions remain attached to the individual job. These are teaching-team discussions; clients/learners do not receive their bodies. Course enrolment, invoices and private commercial/DM/calendar boundaries remain independent and enforced.
 
