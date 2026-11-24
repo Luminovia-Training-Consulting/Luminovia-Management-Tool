@@ -1,8 +1,12 @@
 /** Person actions target the selected account and require explicit server-confirmed changes. */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  notifyManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { PersonManagementActions } from "./person-actions";
@@ -51,9 +55,13 @@ function mount(id = "target") {
   );
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
-  client?.clear();
+  await client.cancelQueries();
+  client.clear();
+  await act(async () => {
+    await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+  });
   vi.clearAllMocks();
   fake.permissions = ["users.manage"];
   fake.active = true;
@@ -86,6 +94,9 @@ it("keeps self blocking unavailable", async () => {
   expect(
     screen.getByRole("link", { name: "Profil bearbeiten" }),
   ).toHaveAttribute("href", "/profile");
+  await waitFor(() =>
+    expect(client.getQueryData(["permissions"])).toEqual(["users.manage"]),
+  );
   expect(
     screen.queryByRole("button", { name: "Zugang sperren" }),
   ).not.toBeInTheDocument();
