@@ -8,11 +8,10 @@ import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-suppor
 
 /** Normalize equivalent Postgres timestamptz spellings and row order for exact interval checks. */
 function canonicalIntervals(
-    rows: ReadonlyArray<{job_id: string; starts_at: string; ends_at: string}>,
+    rows: ReadonlyArray<{starts_at: string; ends_at: string}>,
 ) {
     return rows
-        .map(({job_id, starts_at, ends_at}) => ({
-            job_id,
+        .map(({starts_at, ends_at}) => ({
             starts_at: Date.parse(starts_at),
             ends_at: Date.parse(ends_at),
         }))
@@ -189,7 +188,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
         const pendingSessions = await checked(
             owner
                 .from("assignment_sessions")
-                .select("job_id,starts_at,ends_at,released_at")
+                .select("starts_at,ends_at,released_at")
                 .eq("claim_id", claim.claim_id),
             {requireData: true},
         );
@@ -248,7 +247,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
         const rejectedSessions = await checked(
             owner
                 .from("assignment_sessions")
-                .select("job_id,starts_at,ends_at,released_at")
+                .select("starts_at,ends_at,released_at")
                 .eq("claim_id", claim.claim_id),
             {requireData: true},
         );
