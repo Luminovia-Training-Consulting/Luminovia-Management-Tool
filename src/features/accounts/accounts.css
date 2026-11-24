@@ -16,3 +16,15 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.account-directory-count {
+  margin: 0.75rem 0 0;
+}
+
+.account-directory > .admin-form + .panel {
+  margin-block-start: 0;
+}
+
+.account-directory .account-list-actions {
+  margin-inline-start: auto;
+}

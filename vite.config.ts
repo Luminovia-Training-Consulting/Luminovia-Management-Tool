@@ -271,12 +271,7 @@ export default defineConfig(({ mode }) => {
         // service worker; the interface offers the update to the user.
         registerType: "prompt",
         ...(internal && {
-          includeAssets: [
-            "icons/icon-*.png",
-            "icons/maskable-*.png",
-            "brand/*.woff2",
-            "brand/*.webp",
-          ],
+          includeAssets: ["icons/icon-*.png", "brand/*.woff2", "brand/*.webp"],
         }),
         manifest: internal ? webManifest : false,
         workbox: {
@@ -290,6 +285,9 @@ export default defineConfig(({ mode }) => {
             // The link used by Safari stays available on the origin. Only
             // cache the manifest icons needed by the installable app shell.
             "icons/apple-touch-icon.png",
+            // The internal manifest uses the same source for both 512 px
+            // purposes. Keep the old URL for existing clients without caching it twice.
+            ...(internal ? ["icons/maskable-512.png"] : []),
             "**/explorer-*.{js,css}",
             "**/portal-explorer-*.{js,css}",
             "**/academy-explorer-*.{js,css}",

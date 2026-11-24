@@ -13,7 +13,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { ControlCenterPage } from "./control-center";
-import { financePeriodSchema } from "./finance-api";
+import { financePeriodSchema, type ControlCenter } from "./finance-api";
 import { ForecastExport } from "./forecast-export";
 
 const fake = vi.hoisted(() => ({
@@ -106,6 +106,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   client.clear();
+  vi.unstubAllGlobals();
 });
 
 function mount(view: React.ReactNode) {
@@ -154,6 +155,72 @@ it("renders scoped Control Center findings and scenario controls without exposin
   expect(
     screen.getByText("Ratings appear only after at least three responses."),
   ).toBeVisible();
+});
+
+it("keeps a compact request queue and searches across its entire permitted result set", async () => {
+  const user = userEvent.setup();
+  let reportIntersection: IntersectionObserverCallback | undefined;
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        reportIntersection = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const scrollToMore = () =>
+    act(() => {
+      expect(reportIntersection).toBeDefined();
+      reportIntersection!(
+        [{ isIntersecting: true }] as IntersectionObserverEntry[],
+        {} as IntersectionObserver,
+      );
+    });
+  const control = fake.responses.control_center as ControlCenter;
+  control.requests = Array.from({ length: 25 }, (_, index) => ({
+    id: `c3000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    organisation_id: teacher,
+    organisation_name:
+      index === 24 ? "Fictional partner academy" : "Fictional academy",
+    title: `Fictional request ${index + 1}`,
+    status: "submitted",
+    job_id: index === 24 ? job : null,
+    created_at: "2020-01-20T14:00:00Z",
+  }));
+  mount(<ControlCenterPage />);
+  const queue = within(
+    await screen.findByRole("region", { name: "Unternehmensanfragen" }),
+  );
+  expect(
+    queue.getByRole("group", { name: "Unternehmensanfragen" }),
+  ).toHaveAttribute("tabindex", "0");
+  expect(queue.getAllByRole("listitem")).toHaveLength(8);
+  expect(queue.getByRole("status")).toHaveTextContent("8 von 25 Anfragen");
+  const initialSearch = queue.getByRole("searchbox", {
+    name: "Anfragen nach Titel oder Unternehmen suchen",
+  });
+  await user.type(initialSearch, "partner");
+  expect(queue.getAllByRole("listitem")).toHaveLength(1);
+  expect(queue.getByText("Fictional request 25")).toBeVisible();
+  expect(queue.getByRole("link", { name: "Auftrag öffnen" })).toHaveAttribute(
+    "href",
+    `/jobs/${job}`,
+  );
+  await user.clear(initialSearch);
+  expect(queue.getAllByRole("listitem")).toHaveLength(8);
+  scrollToMore();
+  expect(queue.getByRole("status")).toHaveTextContent("16 von 25 Anfragen");
+  scrollToMore();
+  expect(queue.getByRole("status")).toHaveTextContent("24 von 25 Anfragen");
+  await user.click(
+    queue.getByRole("button", { name: "Weitere Anfragen anzeigen" }),
+  );
+  expect(queue.getAllByRole("listitem")).toHaveLength(25);
+  expect(
+    queue.getAllByRole("link", { name: "Anfragen verwalten" })[0],
+  ).toHaveAttribute("href", "/client");
 });
 
 // The forecast table deliberately overflows on narrow screens. Its wrapper

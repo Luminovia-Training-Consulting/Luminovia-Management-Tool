@@ -155,6 +155,22 @@ it("shows scoped metrics and queries the chosen company, date, status, search an
       }),
     ),
   );
+  await user.type(screen.getByRole("searchbox"), " unapplied");
+  await user.click(screen.getByRole("button", { name: "Reset filters" }));
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+  expect(screen.getByLabelText("Course status")).toHaveValue("all");
+  await waitFor(() =>
+    expect(rpc).toHaveBeenLastCalledWith(
+      "learning_analytics_report",
+      expect.objectContaining({
+        p_scope: "company",
+        p_organisation_id: organisation,
+        p_search: "",
+        p_status: "all",
+        p_page: 1,
+      }),
+    ),
+  );
 });
 
 it("does not request a course report when the account has no reporting scope", async () => {

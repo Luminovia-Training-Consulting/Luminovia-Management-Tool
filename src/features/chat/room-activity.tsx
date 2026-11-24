@@ -1,5 +1,7 @@
 /** Display only the already-authorized last message instant in the reader's profile zone. */
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
+import { dateTime } from "../../lib/dates";
 import i18n from "../../lib/i18n";
 
 for (const [language, value] of [
@@ -14,7 +16,7 @@ for (const [language, value] of [
     true,
   );
 
-export function RoomActivity({
+export const RoomActivity = memo(function RoomActivity({
   instant,
   zone,
 }: {
@@ -25,11 +27,12 @@ export function RoomActivity({
   if (!instant || !zone) return null;
   let text: string;
   try {
-    text = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
-      dateStyle: "short",
-      timeStyle: "short",
-      timeZone: zone,
-    }).format(new Date(instant));
+    text = dateTime(
+      instant,
+      i18n.resolvedLanguage ?? i18n.language,
+      zone,
+      "short",
+    );
   } catch {
     // Do not replace an unknown timestamp or unconfirmed zone with a misleading value.
     return null;
@@ -39,4 +42,4 @@ export function RoomActivity({
       {t("lastMessage")}: <time dateTime={instant}>{text}</time>
     </small>
   );
-}
+});

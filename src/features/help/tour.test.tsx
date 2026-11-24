@@ -330,14 +330,14 @@ describe("live portal guidance", () => {
     }
     expect(
       permittedTourModules(["management"], ["users.manage"]).some(
-        (module) => module.path === "/admin/people",
+        (module) => module.id === "admin-people",
       ),
     ).toBe(false);
     expect(
       permittedTourModules(
         ["management"],
         ["users.manage", "qualifications.verify"],
-      ).some((module) => module.path === "/admin/people"),
+      ).some((module) => module.id === "admin-people"),
     ).toBe(true);
   });
 });

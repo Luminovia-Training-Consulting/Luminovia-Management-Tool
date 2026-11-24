@@ -817,3 +817,39 @@ Deno.test("a corrected company invitation can send only a claimed original class
         "claim_company_participant_invitation", "send", "rejected", "finish_company_participant_invitation",
     ]);
 });
+
+Deno.test("password-based account creation logs the access mail outcome without passing its address to audit", async () => {
+    for (const requested of [true, false]) {
+        const seen: Array<{name: string; args: unknown}> = [];
+        const {handler, request} = fixture({
+            rpc: async (_token, name) => {
+                assert.equal(name, "reserve_account_creation");
+                return {data: {status: "reserved", creation_id: key}};
+            },
+            createAccount: async () => id,
+            completeAccount: async () => {},
+            removeCreatedAccount: async () => {},
+            sendAccountAccess: async (email) => {
+                assert.equal(email, "new-account@example.invalid");
+                if (!requested) throw new Error("fictional mail transport failure");
+            },
+            privilegedRpc: async (name, args) => {
+                seen.push({name, args});
+                return {data: null};
+            },
+        });
+        const response = await handler(request("v1/users", "POST", {
+            role: "lecturer",
+            email: "new-account@example.invalid",
+            display_name: "Fictional account",
+            idempotency_key: key,
+            password: "Fictional-Strong-2026!",
+        }));
+        assert.equal(response.status, 201);
+        assert.equal((await response.json()).access_email, requested ? "requested" : "failed");
+        assert.deepEqual(seen, [{
+            name: "_record_account_access_mail",
+            args: {p_creation_id: key, p_requested: requested},
+        }]);
+    }
+});

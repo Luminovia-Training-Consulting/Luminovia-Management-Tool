@@ -610,7 +610,7 @@ await withApiFixture(
             [],
         );
         const reopeningAudit = await checked(
-            admin.client
+            service
                 .from("audit_events")
                 .select("actor_id,details")
                 .eq("resource_id", job)

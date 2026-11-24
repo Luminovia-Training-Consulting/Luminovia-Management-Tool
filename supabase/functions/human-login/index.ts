@@ -20,6 +20,9 @@ Deno.serve(createHumanLoginHandler({
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const result = await client.auth.signInWithPassword({ email, password });
+    if (result.error?.status === 429) return "rate_limited";
+    if (result.error && (!result.error.status || result.error.status >= 500))
+      throw new Error("auth_unavailable");
     const session = result.data.session;
     return result.error || !session ? null : {
       access_token: session.access_token,
@@ -30,6 +33,7 @@ Deno.serve(createHumanLoginHandler({
   },
   active: async (userId) => {
     const result = await service.rpc("human_login_profile_active", { p_user_id: userId });
-    return !result.error && result.data === true;
+    if (result.error) throw new Error("profile_check_unavailable");
+    return result.data === true;
   },
 }, allowedOrigins));

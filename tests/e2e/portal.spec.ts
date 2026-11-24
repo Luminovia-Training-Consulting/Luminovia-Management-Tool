@@ -6,7 +6,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {actor, assertPasswordOnly} from "./helpers/accounts-support";
+import {actor, api, assertPasswordOnly, checked} from "./helpers/accounts-support";
 
 const configured = Boolean(
     process.env.SUPABASE_URL &&
@@ -82,6 +82,194 @@ async function a11y(page: Page) {
     }));
     expect(violations).toEqual([]);
 }
+
+test("administration navigation keeps shared workflows together on desktop and mobile", async ({page}, testInfo) => {
+    await login(page, process.env.E2E_ADMIN_EMAIL!);
+    await page.goto("/admin");
+    await expect(page.getByRole("heading", {name: "Verwaltung", exact: true})).toBeVisible();
+    const mobile = testInfo.project.name.includes("mobile");
+    const more = page.getByLabel("Mehr", {exact: true});
+    if (mobile) await more.click();
+    const mainMenu = mobile ? page.locator(".mobile-more") : page.locator(".sidebar");
+    await expect(mainMenu.getByRole("link", {name: "Verwaltung", exact: true})).toBeVisible();
+    await expect(mainMenu.getByRole("link", {name: "Chat", exact: true})).toBeVisible();
+    await expect(mainMenu.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
+    for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
+        await expect(mainMenu.getByRole("link", {name, exact: true})).toHaveCount(0);
+    if (mobile) await more.press("Escape");
+
+    const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
+    await expect(sections.getByRole("link", {name: /^Plattformfinanzen(?: |$)/})).toBeVisible();
+    await sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Unternehmen(?! & Personen)/})).toBeVisible();
+    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
+    await page.getByRole("link", {name: /^Dozierende(?: |$)/}).click();
+    await expect(page).toHaveURL(/\/people$/);
+    await expect(page.getByRole("heading", {name: "Dozierende", exact: true})).toBeVisible();
+    await expect(sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/})).toHaveAttribute("aria-current", "location");
+
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Leitstand(?: |$)/})).toHaveAttribute("href", "/control-center");
+    await expect(page.getByRole("link", {name: /^Themen & Tools(?: |$)/})).toHaveAttribute("href", "/topics");
+    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveAccessibleName(/Vertragsdokumente zuordnen und Bestätigungen nachverfolgen/);
+    await page.getByRole("link", {name: /^Leitstand(?: |$)/}).click();
+    const dates = page.locator(".finance-period");
+    const until = dates.locator('input[type="date"]').last();
+    const show = dates.getByRole("button", {name: "Zeitraum anzeigen", exact: true});
+    await expect(show).toBeVisible();
+    if (!mobile) {
+        const fieldBox = (await until.boundingBox())!;
+        const buttonBox = (await show.boundingBox())!;
+        expect(Math.abs(fieldBox.y + fieldBox.height - buttonBox.y - buttonBox.height)).toBeLessThan(2);
+    }
+    await show.click();
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await page.getByRole("link", {name: /^Verträge(?: |$)/}).click();
+    await expect(page).toHaveURL(/\/contracts$/);
+    await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await page.getByRole("link", {name: /^Auftragsänderungen(?: |$)/}).click();
+    await expect(page).toHaveURL(/\/changes$/);
+});
+
+test("section cards remain visible and file search clears its icon on desktop and mobile", async ({page}) => {
+    await login(page, process.env.E2E_ADMIN_EMAIL!);
+    await page.goto("/chats");
+    const forum = page.getByRole("link", {name: /^Forum(?: |$)/});
+    await expect(forum).toBeVisible();
+    await expect(forum).toHaveAccessibleName(/diskutiere/i);
+    await forum.click();
+    await expect(forum).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("button", {name: /^Diskussionen(?: |$)/})).toBeVisible();
+
+    await page.goto("/courses");
+    const courseSections = page.getByRole("navigation", {name: "Kursbereiche"});
+    await expect(courseSections.getByRole("button", {name: /^Kursbereitschaft(?: |$)/})).toHaveAccessibleName(/Kursstart/);
+    await courseSections.getByRole("button", {name: /^Durchführung(?: |$)/}).click();
+    await expect(courseSections.getByRole("button", {name: /^Durchführung(?: |$)/})).toHaveAttribute("aria-current", "page");
+
+    await page.goto("/assistance");
+    await expect(page.getByRole("button", {name: /^Support(?: |$)/})).toHaveAccessibleName(/Tickets/);
+    await expect(page.getByRole("button", {name: /^Probleme lösen(?: |$)/})).toHaveAccessibleName(/Schritt/);
+    await page.getByRole("link", {name: /^API-Dokumentation(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^API-Dokumentation(?: |$)/})).toHaveAttribute("aria-current", "page");
+    await page.getByRole("link", {name: /^Swagger UI(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Swagger UI(?: |$)/})).toHaveAttribute("aria-current", "page");
+
+    await page.goto("/files");
+    const search = page.getByRole("searchbox", {name: "Dateien suchen"});
+    await expect(search).toBeVisible();
+    expect(await search.evaluate((input) => {
+        const base = input.getBoundingClientRect();
+        const icon = input.parentElement!.querySelector("svg")!.getBoundingClientRect();
+        return base.left + Number.parseFloat(getComputedStyle(input).paddingLeft) > icon.right;
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth + 1),
+    );
+});
+
+test("staff analytics filters and forecast charts work across viewport sizes", async ({page}) => {
+    await login(page, process.env.E2E_ADMIN_EMAIL!);
+    await page.goto("/admin/finance/analytics");
+    await expect(page.getByRole("heading", {name: "Analysen", exact: true})).toBeVisible();
+    await page.getByLabel("Zeitraum", {exact: true}).selectOption("previousQuarter");
+    const timeline = page.locator("section").filter({has: page.getByRole("heading", {name: "Bestätigte Aufträge", exact: true})});
+    await timeline.getByLabel("Zeige im Auftragsdiagramm").selectOption("past");
+    await expect(timeline.locator(".analytics-key").getByText("Vergangen", {exact: true})).toBeVisible();
+    await expect(timeline.locator(".analytics-key").getByText("Bevorstehend", {exact: true})).toHaveCount(0);
+    const financial = page.locator("section").filter({has: page.getByRole("heading", {name: "Finanzverlauf", exact: true})});
+    await financial.getByLabel("Darstellung").selectOption("cumulative");
+    await expect(financial.getByText("Kumulierte Werte als Tabelle")).toBeVisible();
+    const forecast = page.locator("section").filter({has: page.getByRole("heading", {name: "Vorschau für offene Aufträge", exact: true})});
+    await forecast.getByLabel("Vorschauzeitraum").selectOption("30");
+    await expect(forecast.getByRole("heading", {name: "Erwarteter Umsatz", exact: true})).toBeVisible();
+    await expect(forecast.getByRole("heading", {name: "Dozentenkosten im Monatsverlauf", exact: true})).toBeVisible();
+    const revenue = forecast.getByRole("heading", {name: "Erwarteter Umsatz", exact: true}).locator("..");
+    await expect(revenue.getByText("Monatswerte als Tabelle")).toBeVisible();
+    await expect(revenue.locator("canvas")).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Erfasste Zahlungen im Monatsverlauf"})).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth + 1),
+    );
+    await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
+    await expect(page.getByLabel("Zeitraum", {exact: true})).toHaveValue("around");
+    await page.goto("/admin/finance");
+    await expect(page.getByRole("heading", {name: "Erwarteter Umsatz", exact: true})).toBeVisible();
+    await expect(page.getByRole("link", {name: "Umsatz-Analytics öffnen"})).toHaveAttribute("href", "/admin/finance/analytics");
+});
+
+test("dual-role finance keeps personal and platform reports separate", async ({page}) => {
+    const manager = await actor("Fictional finance lecturer", "management");
+    const control = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    try {
+        await checked(control.from("user_roles").insert({user_id: manager.id, role: "lecturer"}));
+        await login(page, manager.email);
+        await page.goto("/");
+        const shortcuts = page.getByRole("navigation", {name: "Direkt weiter", exact: true});
+        await expect(shortcuts).toBeVisible();
+        expect(await shortcuts.evaluate((nav) =>
+            nav.previousElementSibling?.classList.contains("dashboard-metrics"),
+        )).toBe(true);
+        await page.goto("/finance");
+        await expect(page.getByRole("navigation", {name: "Meine Finanzen", exact: true}).getByRole("link", {name: /^Analysen(?: |$)/}))
+            .toHaveAccessibleName(/Eigene Einsätze und Einnahmen auswerten/);
+        await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
+        await expect(page.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true})).toHaveCount(0);
+        const personalReport = page.waitForRequest((request) =>
+            new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
+        );
+        await page.getByRole("navigation", {name: "Meine Finanzen", exact: true})
+            .getByRole("link", {name: /^Analysen(?: |$)/}).click();
+        expect((await personalReport).postDataJSON()).toMatchObject({p_scope: "personal"});
+        await page.goto("/admin/finance");
+        await expect(page.getByRole("heading", {name: "Plattformfinanzen", exact: true})).toBeVisible();
+        const finance = page.getByRole("main").getByRole("navigation", {name: "Plattformfinanzen", exact: true});
+        const staffReport = page.waitForRequest((request) =>
+            new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
+        );
+        await finance.getByRole("link", {name: /^Analysen(?: |$)/}).click();
+        expect((await staffReport).postDataJSON()).toMatchObject({p_scope: "staff"});
+        await expect(page.getByLabel("Ansicht", {exact: true})).toHaveCount(0);
+        await finance.getByRole("link", {name: /^Buchhaltung und Exporte(?: |$)/}).click();
+        const source = page.getByLabel("Rechnungsquelle", {exact: true});
+        await expect(source).toHaveValue("lecturer_all");
+        await expect(source.locator('option[value="own"]')).toHaveCount(0);
+    } finally {
+        await checked(control.auth.admin.deleteUser(manager.id));
+    }
+});
+
+test("finance earnings render the next batch when their own list is scrolled", async ({page}) => {
+    const lecturer = await actor("Fictional finance paging lecturer", "lecturer");
+    await login(page, lecturer.email);
+    const earnings = Array.from({length: 25}, (_, index) => ({
+        claim_id: randomUUID(),
+        job_id: randomUUID(),
+        lecturer_id: lecturer.id,
+        lecturer_name: lecturer.name,
+        title: `Fictional paged earnings ${index + 1}`,
+        customer_name: "Fictional finance academy",
+        starts_at: "2057-05-06T08:00:00Z",
+        ends_at: "2057-05-06T09:00:00Z",
+        amount: 120,
+        rate_unit: "fixed_total",
+        total_amount: 120,
+        currency: "EUR",
+        stage: "expected",
+        invoice_id: null,
+    }));
+    await page.route("**/rest/v1/rpc/finance_earnings", route => route.fulfill({json: earnings}));
+    await page.goto("/finance");
+    const region = page.getByRole("region", {name: "Vereinbarte Honorare", exact: true});
+    await expect(region.getByRole("row")).toHaveCount(13);
+    await region.scrollIntoViewIfNeeded();
+    await region.evaluate(el => el.scrollTop = el.scrollHeight);
+    await expect(region.getByRole("row")).toHaveCount(25);
+    await region.evaluate(el => el.scrollTop = el.scrollHeight);
+    await expect(region.getByRole("row")).toHaveCount(26);
+    await expect(region.getByText("Fictional paged earnings 25", {exact: true})).toBeVisible();
+});
 
 test("private routes require real authentication and login is accessible", async ({
                                                                                       page,
@@ -501,10 +689,10 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
     await page.getByRole("button", {name: "Abmelden", exact: true}).click();
     await adminSession(page);
     await page.goto("/admin/people");
-    await page
-        .getByRole("searchbox", {name: "Personen suchen", exact: true})
-        .fill("Lea Sommer");
-    await page.getByRole("button", {name: /Lea Sommer/}).click();
+    await expect(page).toHaveURL(/\/people$/);
+    await page.locator("#people-search").fill("Lea Sommer");
+    await page.getByRole("link", {name: "Lea Sommer", exact: true}).click();
+    await page.getByRole("button", {name: "Qualifikationen und Nachweise", exact: true}).click();
     const review = page.getByRole("form", {
         name: "Expertise prüfen: Wireshark",
         exact: true,
@@ -532,11 +720,11 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
         .getByRole("button", {name: "Zugang sperren", exact: true})
         .click();
     const confirm = page.getByRole("dialog", {
-        name: "Portalzugriff sperren?",
+        name: "Zugang sperren",
         exact: true,
     });
     await confirm
-        .getByRole("button", {name: "Zugang sperren", exact: true})
+        .getByRole("button", {name: "Kontostatus bestätigen", exact: true})
         .click();
     await expect(confirm).not.toBeVisible();
     await expect
@@ -556,11 +744,11 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
         .getByRole("button", {name: "Zugang aktivieren", exact: true})
         .click();
     const restore = page.getByRole("dialog", {
-        name: "Portalzugriff aktivieren?",
+        name: "Zugang aktivieren",
         exact: true,
     });
     await restore
-        .getByRole("button", {name: "Zugang aktivieren", exact: true})
+        .getByRole("button", {name: "Kontostatus bestätigen", exact: true})
         .click();
     await expect(restore).not.toBeVisible();
     await expect

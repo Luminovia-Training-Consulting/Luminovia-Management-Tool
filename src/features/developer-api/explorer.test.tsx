@@ -92,10 +92,9 @@ it("shows the academy RPCs and full JSON download, with live requests off until 
         path.startsWith("/functions/v1/portal-api/v1/"),
     ),
   ).toBe(true);
-  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
-    "href",
-    "/api/openapi.json",
-  );
+  expect(
+    screen.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }),
+  ).toHaveAttribute("href", "/api/openapi.json");
   for (const [name, href] of [
     ["Business workflows (JSON)", "/api/workflows.json"],
     ["TypeScript", "/api/client.ts"],
@@ -222,10 +221,9 @@ it("filters operations by method and path without changing the downloaded catalo
   expect(
     Object.keys(latest().spec.paths["/functions/v1/accounts/v1/me"] as object),
   ).toEqual(["get"]);
-  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
-    "href",
-    "/api/openapi.json",
-  );
+  expect(
+    screen.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }),
+  ).toHaveAttribute("href", "/api/openapi.json");
   expect(latest().supportedSubmitMethods).toEqual([]);
 });
 
@@ -320,10 +318,9 @@ it("keeps large catalogues bounded and searches beyond the visible page", async 
   expect(
     screen.queryByRole("button", { name: "Previous page" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Swagger UI" })).toHaveAttribute(
-    "href",
-    "/api/swagger",
-  );
+  expect(
+    screen.getByRole("link", { name: /^Swagger UI(?: |$)/ }),
+  ).toHaveAttribute("href", "/api/swagger");
 });
 
 it("ranks HTTP endpoints first and keeps per-method totals stable across pages", async () => {

@@ -60,7 +60,7 @@ const de = {
   more: "Weitere Meldungen laden",
   inbox: "Alle Benachrichtigungen",
   preferences: "Benachrichtigungen einstellen",
-  settings: "Einstellungen",
+  settings: "Persönliche Einstellungen",
   settingsHelp:
     "Lege fest, welche zusätzlichen Meldungen du künftig im Portal erhältst.",
   chat: "Neue Chatnachrichten",
@@ -192,7 +192,7 @@ const en: Record<keyof typeof de, string> = {
   more: "Load more notifications",
   inbox: "All notifications",
   preferences: "Notification preferences",
-  settings: "Settings",
+  settings: "Personal settings",
   settingsHelp:
     "Choose which additional notifications you receive in the portal from now on.",
   chat: "New chat messages",

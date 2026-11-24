@@ -1639,6 +1639,15 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           security: credentials,
         },
       },
+      "/rest/v1/rpc/clear_administration_activity": {
+        post: {
+          ...administrationAuditPaths[
+            "/rest/v1/rpc/clear_administration_activity"
+          ].post,
+          security: credentials,
+          "x-portal-licence": "active",
+        },
+      },
       ...humanAuthPaths,
     }),
     webhooks: { companyCourseEvent: companyCourseWebhook },

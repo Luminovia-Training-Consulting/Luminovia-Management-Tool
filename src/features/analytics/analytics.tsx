@@ -1,6 +1,8 @@
+import { financeRoots, type FinanceScope } from "../../app/finance-access";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { currencyCodes } from "../../lib/currencies";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,13 +14,13 @@ import {
 import { Button } from "../../components/ui/button";
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { useAuth } from "../auth/auth-context";
-import { forecastQuery } from "../workbench/finance-api";
+import RevenueForecast from "./revenue-forecast";
 import { analyticsAccessQuery, analyticsReportQuery } from "./api";
 import {
   analyticsPreset,
+  type AnalyticsPreset,
   analyticsUntil,
   type AnalyticsPeriod,
-  type AnalyticsPreset,
 } from "./period";
 import { ReportPanels } from "./report-panels";
 import {
@@ -26,12 +28,7 @@ import {
   type AnalyticsAccess,
   type AnalyticsCurrency,
 } from "./schema";
-import {
-  PeriodForm,
-  ReportingPeriodSelect,
-  ScenarioProbability,
-  Totals,
-} from "./report-ui";
+import { PeriodForm, ReportingPeriodSelect } from "./report-ui";
 import {
   hasLearningAnalytics,
   learningAnalyticsAccessQuery,
@@ -43,29 +40,41 @@ import "./learning-i18n";
 function AnalyticsView({
   actor,
   access,
+  fixedScope,
 }: {
   actor: string;
   access: AnalyticsAccess;
+  fixedScope?: FinanceScope;
 }) {
   const { t } = useTranslation("analytics");
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = searchParams.get("scope");
   const [companyId, setCompanyId] = useState("");
   const [staffCompanyId, setStaffCompanyId] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [dateFormVersion, resetDateForm] = useState(0);
   const [preset, setPreset] = useState<AnalyticsPreset>("around");
   const [customPeriod, setCustomPeriod] = useState<AnalyticsPeriod | null>(
     null,
   );
   const [currency, setCurrency] = useState<AnalyticsCurrency>("EUR");
   const companies = access.organisations.filter((item) => item.company);
-  const scopes = analyticsScopes.filter((scope) =>
-    scope === "company" ? companies.length > 0 : access[scope],
+  const scopes = analyticsScopes.filter(
+    (scope) =>
+      (!fixedScope || fixedScope === scope) &&
+      (scope === "company" ? companies.length > 0 : access[scope]),
   );
-  const defaultScope = access.staff ? "staff" : scopes[0];
+  const defaultScope = scopes.includes("staff") ? "staff" : scopes[0];
   const scope = scopes.find((item) => item === requestedScope) ?? defaultScope;
   const company = companies.find(({ id }) => id === companyId) ?? companies[0];
   const staffCompany = access.organisations.find(
     ({ id }) => id === staffCompanyId,
+  );
+  const companyNeedle = companySearch.trim().toLocaleLowerCase();
+  const staffOptions = access.organisations.filter(
+    ({ id, name }) =>
+      id === staffCompany?.id ||
+      name.toLocaleLowerCase().includes(companyNeedle),
   );
   const zone =
     (scope === "company" ? company?.time_zone : access.time_zone) ?? "UTC";
@@ -87,6 +96,23 @@ function AnalyticsView({
     enabled: Boolean(scope && analyticsUntil(period)),
   });
   if (!scope) return <p className="panel">{t("unavailable")}</p>;
+  const selectedCurrency = query.data?.months.some(
+    (month) => month.currencies[currency],
+  )
+    ? currency
+    : (currencyCodes.find((code) =>
+        query.data?.months.some((month) => month.currencies[code]),
+      ) ?? currency);
+
+  function resetFilters() {
+    setCompanyId("");
+    setStaffCompanyId("");
+    setCompanySearch("");
+    setPreset("around");
+    setCustomPeriod(null);
+    setCurrency("EUR");
+    resetDateForm((version) => version + 1);
+  }
 
   return (
     <>
@@ -96,7 +122,10 @@ function AnalyticsView({
             <Field id="analytics-scope" label={t("scope")}>
               <select
                 value={scope}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setPreset("around");
+                  setCustomPeriod(null);
+                  resetDateForm((version) => version + 1);
                   setSearchParams(
                     (previous) => {
                       const next = new URLSearchParams(previous);
@@ -104,8 +133,8 @@ function AnalyticsView({
                       return next;
                     },
                     { replace: true },
-                  )
-                }
+                  );
+                }}
               >
                 {scopes.map((item) => (
                   <option key={item} value={item}>
@@ -129,6 +158,16 @@ function AnalyticsView({
               </select>
             </Field>
           )}
+          {scope === "staff" && access.organisations.length > 8 && (
+            <Field id="analytics-company-search" label={t("companySearch")}>
+              <input
+                type="search"
+                value={companySearch}
+                maxLength={120}
+                onChange={(event) => setCompanySearch(event.target.value)}
+              />
+            </Field>
+          )}
           {scope === "staff" && access.organisations.length > 0 && (
             <Field id="analytics-staff-company" label={t("organisation")}>
               <select
@@ -136,7 +175,10 @@ function AnalyticsView({
                 onChange={(event) => setStaffCompanyId(event.target.value)}
               >
                 <option value="">{t("allOrganisations")}</option>
-                {access.organisations.map(({ id, name }) => (
+                {staffOptions.length === 0 && (
+                  <option disabled>{t("noCompanyMatches")}</option>
+                )}
+                {staffOptions.map(({ id, name }) => (
                   <option key={id} value={id}>
                     {name}
                   </option>
@@ -147,36 +189,48 @@ function AnalyticsView({
           <ReportingPeriodSelect
             preset={preset}
             custom={Boolean(customPeriod)}
+            staff={scope === "staff"}
             onChange={(value) => {
               setPreset(value);
               setCustomPeriod(null);
             }}
           />
         </div>
-        <PeriodForm
-          key={`${period.from}/${period.through}`}
-          period={period}
-          onApply={setCustomPeriod}
-        />
-        <p className="analytics-muted">{t("timeZone", { zone })}</p>
+        <details className="analytics-data">
+          <summary>{t("customDates")}</summary>
+          <PeriodForm
+            key={`${period.from}/${period.through}/${dateFormVersion}`}
+            period={period}
+            onApply={setCustomPeriod}
+          />
+        </details>
+        <div className="analytics-filter-footer">
+          <p className="analytics-muted">{t("timeZone", { zone })}</p>
+          <Button type="button" variant="ghost" onClick={resetFilters}>
+            {t("resetFilters")}
+          </Button>
+        </div>
       </section>
       {query.isPending && <Loading />}
       {query.isError && <ErrorState retry={() => void query.refetch()} />}
       {query.isSuccess && (
         <ReportPanels
+          key={dateFormVersion}
           scenario={
+            scope === "staff" &&
             query.data.can_model_pipeline &&
-            !(scope === "staff" && organisation) && (
-              <ScenarioPanel
+            !organisation && (
+              <RevenueForecast
                 actor={actor}
                 zone={query.data.time_zone}
-                currency={currency}
+                currency={selectedCurrency}
               />
             )
           }
           report={query.data}
+          staff={scope === "staff"}
           companyFiltered={scope === "staff" && Boolean(organisation)}
-          currency={currency}
+          currency={selectedCurrency}
           setCurrency={setCurrency}
         />
       )}
@@ -184,87 +238,7 @@ function AnalyticsView({
   );
 }
 
-function ScenarioPanel({
-  actor,
-  zone,
-  currency,
-}: {
-  actor: string;
-  zone: string;
-  currency: AnalyticsCurrency;
-}) {
-  const { t, i18n } = useTranslation("analytics");
-  const { format } = new Intl.NumberFormat(
-    i18n.resolvedLanguage ?? i18n.language,
-    {
-      style: "currency",
-      currency,
-    },
-  );
-  const [probability, setProbability] = useState(0.5);
-  const now = DateTime.now().setZone(zone);
-  const period = {
-    from: now.toISODate() ?? "",
-    until: now.plus({ days: 90 }).toISODate() ?? "",
-  };
-  const forecast = useQuery(
-    forecastQuery(
-      actor,
-      period,
-      probability,
-      Boolean(period.from && period.until),
-    ),
-  );
-  const months = forecast.data?.months.filter(
-    (month) => month.currency === currency,
-  );
-  const unknown =
-    months?.reduce(
-      (sum, row) => sum + row.pipeline_cost_unknown_positions,
-      0,
-    ) ?? 0;
-  const cost = months?.reduce(
-    (sum, row) => sum + (row.pipeline_lecturer_cost_known ?? 0),
-    0,
-  );
-  const gross = months?.reduce(
-    (sum, row) => sum + (row.pipeline_gross_known ?? 0),
-    0,
-  );
-
-  return (
-    <section className="panel">
-      <h2>{t("scenario")}</h2>
-      <p className="analytics-muted">{t("scenarioBasis")}</p>
-      <ScenarioProbability value={probability} onChange={setProbability} />
-      {forecast.isPending && <Loading />}
-      {forecast.isError && <ErrorState retry={() => void forecast.refetch()} />}
-      {forecast.isSuccess && (
-        <Totals
-          items={[
-            {
-              label: t("scenarioFees"),
-              value:
-                unknown && probability > 0
-                  ? t("notAvailable")
-                  : format(cost ?? 0),
-            },
-            ...(forecast.data.gross_authorized
-              ? [{ label: t("scenarioGross"), value: format(gross ?? 0) }]
-              : []),
-          ]}
-        />
-      )}
-      {unknown > 0 && (
-        <p className="analytics-muted">
-          {t("unknownPipeline", { count: unknown })}
-        </p>
-      )}
-    </section>
-  );
-}
-
-export function AnalyticsPage() {
+export function AnalyticsPage({ scope }: { scope?: FinanceScope } = {}) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const actor = session?.user.id ?? "";
@@ -277,16 +251,25 @@ export function AnalyticsPage() {
     ...analyticsAccessQuery(actor),
     enabled: Boolean(actor && portalInternalEdition),
   });
+  const canSeeLearning =
+    learning.isSuccess &&
+    (scope === "company"
+      ? learning.data.organisations.some(({ company }) => company)
+      : scope
+        ? learning.data[scope]
+        : hasLearningAnalytics(learning.data));
   return (
     <div className="portal-analytics">
       <PageHeading
         title={t("analytics")}
         description={t("analytics:description")}
       />
-      {online && learning.isSuccess && hasLearningAnalytics(learning.data) && (
+      {online && canSeeLearning && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/finance/analytics/learning">
+            <Link
+              to={`${financeRoots[scope ?? "personal"]}/analytics/learning`}
+            >
               {t("learningAnalytics:title")}
             </Link>
           </Button>
@@ -298,7 +281,12 @@ export function AnalyticsPage() {
         ) : access.isError ? (
           <ErrorState retry={() => void access.refetch()} />
         ) : (
-          <AnalyticsView key={actor} actor={actor} access={access.data} />
+          <AnalyticsView
+            key={actor}
+            actor={actor}
+            access={access.data}
+            fixedScope={scope}
+          />
         )
       ) : (
         <p className="panel">{t("analytics:unavailable")}</p>

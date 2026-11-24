@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery } from "../../lib/queries";
 import { dateTime, money } from "../../lib/dates";
+import { useLoadOnIntersection } from "../../lib/use-load-on-intersection";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
@@ -14,7 +15,11 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
-import { controlCenterQuery, forecastQuery } from "./finance-api";
+import {
+  controlCenterQuery,
+  forecastQuery,
+  type ControlCenter,
+} from "./finance-api";
 import { FinancePeriodFilter } from "./finance-period";
 import { ForecastExport } from "./forecast-export";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
@@ -37,6 +42,113 @@ function Section({
       <h2>{title}</h2>
       <p className="muted">{t("visible", { count })}</p>
       {count ? children : <p>{t("noItems")}</p>}
+    </section>
+  );
+}
+
+const REQUEST_BATCH_SIZE = 8;
+
+function CompanyRequestQueue({
+  requests,
+  timeZone,
+}: {
+  requests: ControlCenter["requests"];
+  timeZone: string;
+}) {
+  const { t, i18n } = useTranslation("financeOps");
+  const [search, setSearch] = useState("");
+  const [visibleCount, setVisibleCount] = useState(REQUEST_BATCH_SIZE);
+  const term = search.trim().toLocaleLowerCase(i18n.language);
+  const matches = term
+    ? requests.filter((request) =>
+        [request.title, request.organisation_name].some((value) =>
+          value.toLocaleLowerCase(i18n.language).includes(term),
+        ),
+      )
+    : requests;
+  const hasMore = visibleCount < matches.length;
+  const showMore = () =>
+    setVisibleCount((current) =>
+      Math.min(current + REQUEST_BATCH_SIZE, matches.length),
+    );
+  const footer = useLoadOnIntersection<HTMLDivElement>({
+    enabled: hasMore,
+    onIntersect: showMore,
+    pageKey: `${term}:${visibleCount}`,
+    rootMargin: "0px",
+  });
+
+  return (
+    <section className="panel" aria-label={t("requests")}>
+      <h2>{t("requests")}</h2>
+      {(requests.length > REQUEST_BATCH_SIZE || search) && (
+        <Field id="control-request-search" label={t("searchRequests")}>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setVisibleCount(REQUEST_BATCH_SIZE);
+            }}
+          />
+        </Field>
+      )}
+      <p className="muted" role="status">
+        {t("visibleRequests", {
+          count: Math.min(visibleCount, matches.length),
+          total: matches.length,
+        })}
+      </p>
+      {!matches.length ? (
+        <p>
+          {term && requests.length ? t("noMatchingRequests") : t("noItems")}
+        </p>
+      ) : (
+        <>
+          <div
+            className="control-request-scroll"
+            role="group"
+            aria-label={t("requests")}
+            tabIndex={0}
+          >
+            <ul role="list">
+              {matches.slice(0, visibleCount).map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span className="muted">
+                      {item.organisation_name} ·{" "}
+                      <time dateTime={item.created_at}>
+                        {dateTime(item.created_at, i18n.language, timeZone)}
+                      </time>
+                    </span>
+                  </div>
+                  <Link to={item.job_id ? `/jobs/${item.job_id}` : "/client"}>
+                    {item.job_id ? t("openJob") : t("manageRequests")}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {hasMore && (
+              <div
+                className="control-request-sentinel"
+                ref={footer}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          {hasMore && (
+            <Button
+              className="control-request-more"
+              type="button"
+              variant="secondary"
+              onClick={showMore}
+            >
+              {t("moreRequests")}
+            </Button>
+          )}
+        </>
+      )}
     </section>
   );
 }
@@ -153,21 +265,16 @@ export function ControlCenterPage() {
                   ))}
                 </ul>
               </Section>
-              <Section title={t("requests")} count={info.requests.length}>
-                <ul>
-                  {info.requests.map((item) => (
-                    <li key={item.id}>
-                      <strong>{item.title}</strong>
-                      <p>{item.organisation_name}</p>
-                      <Link
-                        to={item.job_id ? `/jobs/${item.job_id}` : "/client"}
-                      >
-                        {item.job_id ? t("openJob") : t("requests")}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
+              <CompanyRequestQueue
+                key={JSON.stringify([
+                  actor,
+                  boundary,
+                  period.from,
+                  period.until,
+                ])}
+                requests={info.requests}
+                timeZone={info.time_zone}
+              />
               <Section
                 title={t("contracts_expiring")}
                 count={info.contracts_expiring.length}

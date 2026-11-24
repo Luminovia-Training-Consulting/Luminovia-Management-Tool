@@ -182,7 +182,13 @@ afterEach(() => {
 });
 
 /** Mount real commercial queries with a fresh actor-scoped cache per test. */
-function view(initialEntries = ["/"], roles = ["lecturer"]) {
+function view(
+  initialEntries = ["/"],
+  roles = ["lecturer"],
+  scope: "personal" | "staff" = roles.includes("management")
+    ? "staff"
+    : "personal",
+) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity, gcTime: 0 },
@@ -195,12 +201,32 @@ function view(initialEntries = ["/"], roles = ["lecturer"]) {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
-        <FinancePage />
+        <FinancePage scope={scope} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return client;
 }
+
+it("pages accepted earnings within their own region", async () => {
+  earnings = Array.from({ length: 25 }, (_, index) =>
+    earning(`batch-${index + 1}`),
+  );
+  view();
+  const list = within(
+    await screen.findByRole("region", { name: "Vereinbarte Honorare" }),
+  );
+  expect(list.getAllByRole("row")).toHaveLength(13);
+  const loadMore = () =>
+    list.getByRole("button", { name: "Weitere Einträge laden" });
+  await userEvent.click(loadMore());
+  expect(list.getAllByRole("row")).toHaveLength(25);
+  await userEvent.click(loadMore());
+  expect(list.getAllByRole("row")).toHaveLength(26);
+  expect(
+    list.queryByRole("button", { name: "Weitere Einträge laden" }),
+  ).not.toBeInTheDocument();
+});
 
 it("hides cached monthly earnings when the server no longer permits the read", async () => {
   const client = view();
@@ -249,8 +275,10 @@ it("opens the invoice form from an accepted-course deep link and keeps future cl
 it.each(["management", "client", "participant", "admin", "owner"])(
   "does not open the invoice upload from a direct claim link for %s without a teaching role",
   async (role) => {
-    view(["/finance?claim=eur-a"], [role]);
-    await screen.findByRole("heading", { name: "FICTIONAL-001" });
+    view(["/finance?claim=eur-a"], [role], "personal");
+    await screen.findByRole("heading", { name: "Meine Finanzen" });
+    expect(screen.queryByRole("heading", { name: "FICTIONAL-001" })).toBeNull();
+    expect(calls("finance_earnings")).toHaveLength(0);
     expect(
       screen.queryByRole("button", { name: "Rechnung einreichen" }),
     ).not.toBeInTheDocument();
@@ -398,6 +426,37 @@ describe("invoice confirmation and safe retry", () => {
       p_due_on: "2024-02-29",
       p_claim_ids: ["eur-a"],
     });
+  });
+
+  it("opens the invoice form with only the selected completed course preselected", async () => {
+    earnings.push({
+      ...earning("future"),
+      invoice_eligible_at: "2099-01-01T00:00:00Z",
+    });
+    view();
+    const course = await screen.findByRole("row", {
+      name: /Fictional course eur-a/,
+    });
+    const future = screen.getByRole("row", { name: /Fictional course future/ });
+    expect(
+      within(future).queryByRole("button", {
+        name: "Für diesen Kurs abrechnen",
+      }),
+    ).toBeNull();
+    await userEvent.click(
+      await within(course).findByRole("button", {
+        name: "Für diesen Kurs abrechnen",
+      }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Rechnung einreichen" }),
+    );
+    expect(
+      dialog.getByRole("checkbox", { name: /Fictional course eur-a/ }),
+    ).toBeChecked();
+    expect(
+      dialog.getByRole("checkbox", { name: /Fictional course aud-a/ }),
+    ).not.toBeChecked();
   });
 
   it("requires explicit removal when a manually selected assignment becomes unavailable during editing", async () => {
@@ -612,7 +671,7 @@ describe("invoice confirmation and safe retry", () => {
 describe("recorded payment confirmation and validation", () => {
   it("preserves input after a lost response and retries the identical payment without confirming it early", async () => {
     state.mutate.mockRejectedValueOnce(new TypeError("Network response lost"));
-    view();
+    view(["/admin/finance"], ["management"]);
     const { dialog, fields, submit } = await paymentForm();
     expect(fields.getByLabelText("Zahlungsbetrag (EUR)")).toHaveValue("100.00");
     await userEvent.click(submit);
@@ -644,7 +703,7 @@ describe("recorded payment confirmation and validation", () => {
       data: null,
       error: { code: "42501", message: "permission_revoked" },
     });
-    view();
+    view(["/admin/finance"], ["management"]);
     const { fields, submit } = await paymentForm();
     await userEvent.click(submit);
     await fields.findByRole("alert");
@@ -665,7 +724,7 @@ describe("recorded payment confirmation and validation", () => {
   it.each(["0", "100.01"])(
     "rejects payment amount %s outside the outstanding balance before making a request",
     async (amount) => {
-      view();
+      view(["/admin/finance"], ["management"]);
       const { fields, submit } = await paymentForm();
       fireEvent.change(fields.getByLabelText("Zahlungsbetrag (EUR)"), {
         target: { value: amount },
@@ -682,7 +741,7 @@ describe("recorded payment confirmation and validation", () => {
   it.each(["2030-03-31T02:30", "2030-10-27T02:30"])(
     "refuses nonexistent or ambiguous Berlin payment time %s",
     async (paidAt) => {
-      view();
+      view(["/admin/finance"], ["management"]);
       const { fields, submit } = await paymentForm();
       fireEvent.change(
         fields.getByLabelText("Zahlungszeitpunkt (Europe/Berlin)"),
@@ -699,7 +758,7 @@ describe("recorded payment confirmation and validation", () => {
 
   it("does not close or confirm a payment when the server supplies no identifier", async () => {
     state.mutate.mockResolvedValue({ data: null, error: null });
-    view();
+    view(["/admin/finance"], ["management"]);
     const { fields, dialog, submit } = await paymentForm();
     await userEvent.click(submit);
     expect(await fields.findByRole("alert")).toHaveTextContent(
@@ -710,6 +769,20 @@ describe("recorded payment confirmation and validation", () => {
 });
 
 describe("finance capability and connection boundaries", () => {
+  it("never loads platform earnings or payment controls in a dual-role account's own overview", async () => {
+    view(["/finance"], ["management", "lecturer"], "personal");
+    await screen.findByRole("heading", { name: "FICTIONAL-001" });
+    expect(
+      screen.queryByRole("button", { name: "Zahlung eintragen" }),
+    ).toBeNull();
+    expect(calls("finance_earnings")).toEqual([
+      ["finance_earnings", { p_all: false }],
+    ]);
+    expect(calls("invoice_records")).toEqual([
+      ["invoice_records", { p_all: false }],
+    ]);
+  });
+
   it("does not offer management actions or request all-lecturer data for an ordinary lecturer", async () => {
     access.can_manage_finance = false;
     view();
@@ -861,7 +934,7 @@ it("lets finance approve the agreement, gross final amount, and actual deadline"
       error: null,
     }),
   );
-  view();
+  view(["/admin/finance"], ["management"]);
   await userEvent.click(
     await screen.findByRole("button", { name: "Rechnungsserie öffnen" }),
   );
@@ -917,7 +990,7 @@ it("labels a zero-balance close as fully credited and offers no payment action",
       gross_amount: 50,
     },
   ];
-  view();
+  view(["/admin/finance"], ["management"]);
   expect(await screen.findAllByText("Vollständig verrechnet")).not.toHaveLength(
     0,
   );
@@ -1167,7 +1240,11 @@ it("opens the matching management dialogue from an authorized finance notice", a
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
-  expect(screen.getByLabelText("Alle Dozierenden anzeigen")).not.toBeChecked();
+  expect(screen.queryByLabelText("Alle Dozierenden anzeigen")).toBeNull();
+  expect(calls("finance_earnings")).not.toContainEqual([
+    "finance_earnings",
+    { p_all: false },
+  ]);
 });
 
 it("keeps a management link out of a lecturer's own finance scope", async () => {

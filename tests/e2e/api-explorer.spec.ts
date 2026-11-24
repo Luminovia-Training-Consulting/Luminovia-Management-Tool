@@ -48,7 +48,7 @@ test("a failed Swagger import leaves the portal usable and reload recovers", asy
     "Die API-Dokumentation konnte nicht geladen werden.",
   );
   await expect(
-    page.getByRole("link", { name: "OpenAPI JSON" }),
+    page.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }),
   ).toHaveAttribute("href", "/api/openapi.json");
   await expect(page.getByRole("link", { name: "Zum Portal" })).toHaveAttribute(
     "href",
@@ -137,7 +137,7 @@ test("Swagger and OpenAPI links remain usable while browsing and returning to th
   );
   await login(page, account.email);
   await openExplorer(page);
-  await page.getByRole("link", { name: "Swagger UI", exact: true }).click();
+  await page.getByRole("link", { name: /^Swagger UI(?: |$)/ }).click();
   await expect(page).toHaveURL(/\/api\/swagger$/);
   await expect(
     page.getByRole("heading", { name: "Swagger UI", exact: true }),
@@ -161,7 +161,7 @@ test("Swagger and OpenAPI links remain usable while browsing and returning to th
   expect(operations).toBeGreaterThan(0);
   expect(operations).toBeLessThanOrEqual(24);
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: "OpenAPI JSON" }).click();
+  await page.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }).click();
   expect((await download).suggestedFilename()).toBe("openapi.json");
 
   const methods = page.getByRole("group", { name: "HTTP-Methoden" });
@@ -197,7 +197,7 @@ test("Swagger and OpenAPI links remain usable while browsing and returning to th
   await expect(
     page.getByRole("button", { name: "Anfragen deaktivieren" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Swagger UI", exact: true }).click();
+  await page.getByRole("link", { name: /^Swagger UI(?: |$)/ }).click();
   await page.getByRole("link", { name: "Zum Portal" }).click();
   await expect(page).toHaveURL(/\/$/);
 });

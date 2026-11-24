@@ -4,7 +4,15 @@
  * transferred upload bytes alone do not confirm scan clearance.
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  memo,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   focusManager,
   useMutation,
@@ -462,7 +470,7 @@ export function DocumentDetails({
 }
 
 /** Keep captured dialogs independent of filtered lists while revalidating their exact targets. */
-function DocumentList({
+const DocumentList = memo(function DocumentList({
   files,
   pending = false,
   verificationEpoch,
@@ -535,10 +543,18 @@ function DocumentList({
   const [revokedAt, setRevokedAt] = useState<Record<string, number>>({});
   // Returning to another already-observed filter cache is not a renewed grant.
   // Only a genuinely newer successful response may restore quarantined rows.
-  const visibleFiles = files.filter(
-    (file) =>
-      !Object.hasOwn(revokedAt, file.id) ||
-      currentRevision > revokedAt[file.id],
+  const visibleFiles = useMemo(
+    () =>
+      files.filter(
+        (file) =>
+          !Object.hasOwn(revokedAt, file.id) ||
+          currentRevision > revokedAt[file.id],
+      ),
+    [files, currentRevision, revokedAt],
+  );
+  const fileSize = useMemo(
+    () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
+    [i18n.language],
   );
   const discardTarget = (id: string) => {
     setRevokedAt((previous) => ({ ...previous, [id]: epochs.revision }));
@@ -635,10 +651,7 @@ function DocumentList({
               )}
               <small>
                 {t(file.kind)} · {t(file.scope)} ·{" "}
-                {(file.size_bytes / 1024).toLocaleString(i18n.language, {
-                  maximumFractionDigits: 1,
-                })}{" "}
-                KB
+                {fileSize.format(file.size_bytes / 1024)} KB
               </small>
               <span className={`file-status status-${file.status}`}>
                 {t(file.status)}
@@ -948,7 +961,7 @@ function DocumentList({
       )}
     </>
   );
-}
+});
 
 /** Bind files to a specific business context using the shared upload/list contract. */
 export function SubjectDocuments({

@@ -82,6 +82,7 @@ async function initializeDatabase(
     await sql(`create database ${database} template ${template}`, "postgres");
     await sql(
         `create schema auth;create schema extensions;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,created_at timestamptz default clock_timestamp());
+  create table auth.audit_log_entries(instance_id uuid,id uuid primary key,payload json,created_at timestamptz,ip_address varchar(64) not null default '');
   create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;
   create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;
   grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`,

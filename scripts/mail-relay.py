@@ -215,6 +215,7 @@ class MailRelay:
             "claim_mail_connection_test",
             "complete_mail_connection_test",
             "authorize_academy_notification_email",
+            "record_auth_mail_activity",
         }:
             raise RelayFailure("configuration_unavailable")
         request = urllib.request.Request(
@@ -264,6 +265,13 @@ class MailRelay:
     def current_transport(self) -> dict[str, Any]:
         """Load the enabled sender credentials from Vault on demand; never cache secret material."""
         return self.check_transport(self.rpc("get_mail_delivery_transport", {}))
+
+    def record_auth_mail_outcome(self, outcome: str) -> None:
+        """Record the relay outcome without passing the envelope or message to the audit log."""
+        try:
+            self.rpc("record_auth_mail_activity", {"p_outcome": outcome})
+        except RelayFailure:
+            LOG.warning("Auth mail outcome could not be recorded")
 
     def test_connection(self, test_id: str, recipient: str | None = None) -> dict[str, Any]:
         """Claim a version-bound test and record the outcome of the handshake or self-test message."""
@@ -483,6 +491,10 @@ class MailRelay:
         sender_accepted = False
         recipient: str | None = None
 
+        async def report_auth_mail(outcome: str) -> None:
+            if auth_listener:
+                await asyncio.to_thread(self.record_auth_mail_outcome, outcome)
+
         async def reply(text: str) -> None:
             writer.write((text + "\r\n").encode("ascii"))
             await writer.drain()
@@ -647,6 +659,8 @@ class MailRelay:
                             delivery = asyncio.to_thread(self.deliver, bytes(data), recipient)
                         await asyncio.wait_for(delivery, timeout=self.config.command_timeout)
                     except DeliveryUncertain:
+                        writer.close()
+                        await report_auth_mail("uncertain")
                         return
                     except AcademyScopeRejected:
                         await reply("550 5.7.1 Notification no longer authorized")
@@ -655,14 +669,22 @@ class MailRelay:
                         continue
                     except RelayFailure as error:
                         LOG.warning("upstream mail delivery failed code=%s", error.code)
-                        await reply("451 4.3.0 Mail transport temporarily unavailable")
+                        try:
+                            await reply("451 4.3.0 Mail transport temporarily unavailable")
+                        finally:
+                            await report_auth_mail("failed")
                         sender_accepted = False
                         recipient = None
                         continue
                     except asyncio.TimeoutError:
                         # The upstream provider may have accepted DATA; closing avoids claiming safe retry.
+                        writer.close()
+                        await report_auth_mail("uncertain")
                         return
-                    await reply("250 2.0.0 Message accepted")
+                    try:
+                        await reply("250 2.0.0 Message accepted")
+                    finally:
+                        await report_auth_mail("accepted")
                     sender_accepted = False
                     recipient = None
                     continue

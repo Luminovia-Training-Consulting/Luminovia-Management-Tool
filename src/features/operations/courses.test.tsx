@@ -129,6 +129,7 @@ function renderCourses({
   lifecycle = protectedLifecycle,
   changeCandidates = [] as ChangeCandidate[],
   path = "/courses",
+  coldStart = false,
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -150,15 +151,17 @@ function renderCourses({
     ["building-blocks", blocks],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
-  client.setQueryData(
-    runsQuery(
-      actor,
-      permissions.includes("courses.manage") &&
-        permissions.includes("jobs.manage"),
-    ).queryKey,
-    runs,
-  );
-  client.setQueryData(["permissions", actor], permissions);
+  if (!coldStart) {
+    client.setQueryData(
+      runsQuery(
+        actor,
+        permissions.includes("courses.manage") &&
+          permissions.includes("jobs.manage"),
+      ).queryKey,
+      runs,
+    );
+    client.setQueryData(["permissions", actor], permissions);
+  }
   client.setQueryData(["user-roles", actor], roles);
   client.setQueryData(["client-organisations", actor], organisations);
   client.setQueryData(["topics"], topics);
@@ -293,6 +296,7 @@ it("filters the visible course list by time without requiring administrative per
     })),
   });
 
+  await user.click(screen.getByText("Filter", { selector: "summary" }));
   const period = await screen.findByRole("combobox", {
     name: "Kurse nach Zeitraum filtern",
   });
@@ -407,7 +411,7 @@ it.each([
     templates: [{ ...template, owner_organisation_id: companyId }],
   });
   await userEvent.click(
-    await screen.findByRole("link", { name: "Kursvorlagen öffnen" }),
+    await screen.findByRole("button", { name: "Vorlagen" }),
   );
   expect(screen.getByTestId("course-route")).toHaveTextContent(
     "/courses?tab=templates",
@@ -562,6 +566,9 @@ it("links a saved offer draft from the course card without marking it as listed"
       name: "Auftrag für die Stellenbörse erstellen",
     }),
   ).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByText("Weitere Aktionen", { selector: "summary" }),
+  );
   expect(
     screen.getAllByRole("button", {
       name: "Ausschreibung prüfen",
@@ -1752,7 +1759,34 @@ it("loads a course beyond the first thousand results within the actor scope", as
   expect(state.from).toHaveBeenCalledTimes(5);
 });
 
-it("limits large course lists to one page while search still reaches the last course", async () => {
+it("waits for permissions before requesting the selected course projection", async () => {
+  let finishPermissions!: (result: { data: string[]; error: null }) => void;
+  const response = new Promise<{ data: string[]; error: null }>((resolve) => {
+    finishPermissions = resolve;
+  });
+  state.rpc.mockImplementationOnce(() => response);
+  const client = renderCourses({ coldStart: true, runs: [run] });
+
+  expect(state.rpc).toHaveBeenCalledWith("get_my_permissions");
+  expect(state.from).not.toHaveBeenCalledWith("course_runs");
+
+  await act(async () => {
+    finishPermissions({
+      data: ["courses.manage", "jobs.manage"],
+      error: null,
+    });
+  });
+  expect(
+    await screen.findByRole("button", { name: "Kurs ansehen" }),
+  ).toBeVisible();
+  expect(
+    state.from.mock.calls.filter(([table]) => table === "course_runs"),
+  ).toHaveLength(1);
+  expect(client.getQueryData(runsQuery(actor, false).queryKey)).toBeUndefined();
+  expect(client.getQueryData(runsQuery(actor, true).queryKey)).toEqual([run]);
+});
+
+it("appends batches and still searches the entire course catalogue", async () => {
   const templates = Array.from({ length: 1001 }, (_, index) => ({
     ...template,
     id: `template-${index}`,
@@ -1763,20 +1797,31 @@ it("limits large course lists to one page while search still reaches the last co
     id: `run-${index}`,
     template_id: id,
   }));
+  const sessionParses = vi.spyOn(Date, "parse");
+  const parsedSessionStarts = () =>
+    sessionParses.mock.calls.filter(
+      ([value]) => value === run.course_sessions[0].starts_at,
+    ).length;
   renderCourses({ runs, templates });
 
   expect(screen.getAllByRole("button", { name: "Kurs ansehen" })).toHaveLength(
     24,
   );
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
   expect(
     screen.queryByRole("heading", { name: "Catalogue course 25" }),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Nächste Seite" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Weitere Kurse laden" }),
+  );
   expect(
     screen.getByRole("heading", { name: "Catalogue course 25" }),
   ).toBeVisible();
-  expect(screen.getByText("25–48 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("48 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Catalogue course 1" }),
+  ).toBeVisible();
 
   fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
     target: { value: "Catalogue course 1001" },
@@ -1791,10 +1836,76 @@ it("limits large course lists to one page while search still reaches the last co
   fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
     target: { value: "" },
   });
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
   await userEvent.click(screen.getByRole("button", { name: "Vorlagen" }));
   expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
+});
+
+it("prioritizes published courses and makes dated drafts separately filterable", async () => {
+  const past = {
+    ...template,
+    id: "past-template",
+    title: "Past fictional draft",
+  };
+  const live = {
+    ...template,
+    id: "live-template",
+    title: "Published fictional course",
+  };
+  state.accountRequest.mockResolvedValue({
+    can_admin: true,
+    kinds: ["course_run"],
+  });
+  renderCourses({
+    templates: [past, live, template],
+    runs: [
+      {
+        ...run,
+        id: "past-draft",
+        template_id: past.id,
+        course_sessions: [
+          {
+            id: "past-session",
+            starts_at: "2001-01-02T08:00:00Z",
+            ends_at: "2001-01-02T09:00:00Z",
+          },
+        ],
+      },
+      { ...run, id: "live-run", template_id: live.id, published: true },
+      run,
+    ],
+  });
+  const headings = () =>
+    screen
+      .getAllByRole("article")
+      .map(
+        (entry) => within(entry).getByRole("heading", { level: 2 }).textContent,
+      );
+  expect(headings()).toEqual([live.title, template.title, past.title]);
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
+  expect(screen.getByRole("option", { name: "Entwürfe (2)" })).toBeVisible();
+  await userEvent.selectOptions(
+    screen.getByLabelText("Planungsstatus"),
+    "planning",
+  );
+  expect(headings()).toEqual([template.title, past.title]);
+  const card = screen.getAllByRole("article")[0];
+  expect(card.querySelector(".course-card-more")).not.toHaveAttribute("open");
+  await userEvent.click(
+    within(card).getByText("Weitere Aktionen", { selector: "summary" }),
+  );
+  const remove = within(card).getByRole("button", {
+    name: `Löschen: ${template.title}`,
+  });
+  const archive = within(card).getByRole("button", {
+    name: "Archivieren",
+  });
+  expect(
+    archive.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });
 
 it("still opens a course detail from a bookmark outside the first page", async () => {
@@ -1864,6 +1975,9 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
   expect(
     actions.getByRole("link", { name: "Auftrag ansehen" }),
   ).toHaveAttribute("href", `/jobs/${jobId}`);
+  await userEvent.click(
+    actions.getByText("Weitere Aktionen", { selector: "summary" }),
+  );
   expect(
     actions.getByRole("link", { name: "Weiteren Auftrag erstellen" }),
   ).toHaveAttribute("href", `/courses?offer=${runId}`);
@@ -1879,6 +1993,7 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
     screen.getByRole("heading", { name: openTemplate.title }),
   ).toBeVisible();
 
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
   const lecturerFilter = screen.getByRole("combobox", { name: "Dozent:in" });
   await userEvent.selectOptions(lecturerFilter, "current-lecturer");
   expect(
@@ -1937,6 +2052,9 @@ it("opens company-scoped planning and keeps drafts with no published offer visib
       },
     ],
   });
+  await userEvent.click(
+    screen.getByText("Filter (1)", { selector: "summary" }),
+  );
   const status = screen.getByRole("combobox", { name: "Planungsstatus" });
   expect(screen.getByRole("combobox", { name: "Unternehmen" })).toHaveValue(
     companyId,
@@ -1995,18 +2113,19 @@ it("shows all company and internal course statuses with distinct company and cre
   const courses = screen
     .getAllByRole("article")
     .map((article) => within(article));
-  expect(courses[0].getByText("Entwurf", { exact: true })).toBeVisible();
-  expect(courses[0].getByText("Vom Unternehmen erstellt")).toBeVisible();
-  expect(courses[1].getByText("Veröffentlicht", { exact: true })).toBeVisible();
+  expect(courses[1].getByText("Entwurf", { exact: true })).toBeVisible();
+  expect(courses[1].getByText("Vom Unternehmen erstellt")).toBeVisible();
+  expect(courses[0].getByText("Veröffentlicht", { exact: true })).toBeVisible();
   expect(
-    courses[1].getByText(organisation.name, { exact: true }),
+    courses[0].getByText(organisation.name, { exact: true }),
   ).toBeVisible();
   expect(
-    courses[1].getByText("Von Admin oder Management erstellt"),
+    courses[0].getByText("Von Admin oder Management erstellt"),
   ).toBeVisible();
   expect(courses[2].getByText("Archiviert", { exact: true })).toBeVisible();
   expect(courses[2].getByText("Herkunft unbekannt")).toBeVisible();
 
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
   const filter = screen.getByRole("combobox", { name: "Planungsstatus" });
   await userEvent.selectOptions(filter, "archived");
   expect(screen.getAllByRole("article")).toHaveLength(1);

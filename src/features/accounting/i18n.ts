@@ -43,6 +43,7 @@ const de = {
   title: "Buchhaltungsexporte",
   description:
     "Originalwährungen, dokumentierte Rechnungen und nachvollziehbare Exportstände.",
+  submitOwnInvoice: "Kursrechnung einreichen",
   source: "Rechnungsquelle",
   own: "Meine Dozierendenrechnungen",
   lecturer_all: "Alle Dozierendenrechnungen",
@@ -221,6 +222,7 @@ const en: typeof de = {
   title: "Accounting exports",
   description:
     "Original currencies, recorded invoices and auditable export snapshots.",
+  submitOwnInvoice: "Submit a course invoice",
   source: "Invoice source",
   own: "My lecturer invoices",
   lecturer_all: "All lecturer invoices",

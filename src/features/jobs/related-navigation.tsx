@@ -23,10 +23,12 @@ export function JobRelatedNavigation({
   actor,
   jobId,
   afterWorkspace,
+  showReadiness = false,
 }: {
   actor: string;
   jobId: string;
   afterWorkspace?: ReactNode;
+  showReadiness?: boolean;
 }) {
   const { t } = useTranslation("jobRelated");
   const query = useQuery({
@@ -68,6 +70,13 @@ export function JobRelatedNavigation({
         <Button asChild variant="secondary">
           <Link to={`/courses/${related.course_id}/workspace`}>
             {t("course")}
+          </Link>
+        </Button>
+      )}
+      {showReadiness && related?.course_id && (
+        <Button asChild variant="secondary">
+          <Link to={`/readiness/${related.course_id}`}>
+            {t("courseReadiness", { ns: "translation" })}
           </Link>
         </Button>
       )}

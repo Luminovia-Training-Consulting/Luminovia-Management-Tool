@@ -51,7 +51,8 @@ it("shows a safe current preview and removes it when the server reports it unava
     <MessageBubble
       actor="viewer"
       message={{ ...parent, id: "reply", body: "A reply", reply }}
-      now={0}
+      editable
+      online
       zone="UTC"
     />
   );

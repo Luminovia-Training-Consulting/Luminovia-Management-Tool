@@ -1,25 +1,35 @@
 import { DateTime } from "luxon";
 
 export type AnalyticsPeriod = { from: string; through: string };
-export type AnalyticsPreset = "around" | "historyYear" | "nextQuarter";
+export const analyticsPresets = [
+  "around",
+  "historyYear",
+  "nextQuarter",
+] as const;
+export const staffAnalyticsPresets = ["yearToDate", "previousQuarter"] as const;
+export type AnalyticsPreset =
+  (typeof analyticsPresets)[number] | (typeof staffAnalyticsPresets)[number];
 
 export function analyticsPreset(
   preset: AnalyticsPreset,
   now: DateTime,
 ): AnalyticsPeriod {
   const month = now.startOf("month");
-  const from =
-    preset === "historyYear"
-      ? month.minus({ months: 11 })
-      : preset === "nextQuarter"
-        ? now
-        : month.minus({ months: 5 });
-  const through =
-    preset === "historyYear"
-      ? now
-      : preset === "nextQuarter"
-        ? now.plus({ days: 89 })
-        : month.plus({ months: 7 }).minus({ days: 1 });
+  const quarter = now.startOf("quarter");
+  const ranges = {
+    around: [
+      month.minus({ months: 5 }),
+      month.plus({ months: 7 }).minus({ days: 1 }),
+    ],
+    historyYear: [month.minus({ months: 11 }), now],
+    nextQuarter: [now, now.plus({ days: 89 })],
+    yearToDate: [now.startOf("year"), now],
+    previousQuarter: [
+      quarter.minus({ quarters: 1 }),
+      quarter.minus({ days: 1 }),
+    ],
+  };
+  const [from, through] = ranges[preset];
   return { from: from.toISODate() ?? "", through: through.toISODate() ?? "" };
 }
 

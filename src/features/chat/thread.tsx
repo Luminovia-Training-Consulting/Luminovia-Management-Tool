@@ -7,8 +7,10 @@ import { canRetryNextPage } from "../../lib/paged-read";
 import { orderedCursorRows } from "../../lib/cursor-rows";
 import {
   Fragment,
+  useCallback,
   useEffect,
   useEffectEvent,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -40,7 +42,6 @@ import {
   NextPageError,
   Notice,
 } from "../../components/common";
-import { DocumentAttachment } from "../files/document-attachment";
 import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
@@ -51,8 +52,10 @@ import { useTopicMessagePins } from "./topic-message-pins-api";
 import { messageDay, messageDayLabel } from "./message-days";
 import "./message-days.css";
 import { useChatRealtime } from "./realtime";
-import type { ChatRoom } from "./types";
+import type { ChatMessage, ChatRoom } from "./types";
 import "./i18n";
+
+const olderHistoryThreshold = 120;
 
 /** Bind history, read state, search, Realtime and attachments to one active room. */
 export function ChatThread({
@@ -97,6 +100,14 @@ export function ChatThread({
   const [jumpFailed, setJumpFailed] = useState(false);
   const [jumpId, setJumpId] = useState<string | null>(null);
   const threadElement = useRef<HTMLElement>(null);
+  const historyElement = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
+  const olderAnchor = useRef<{
+    message: HTMLElement;
+    contentTop: number;
+    pageCount: number;
+    search: string;
+  } | null>(null);
   const [following, setFollowing] = useState(true);
   const [linkedTarget, setLinkedTarget] = useState<string | null>(null);
   const [newMessages, setNewMessages] = useState(false);
@@ -106,6 +117,67 @@ export function ChatThread({
   });
   const retryOlder = canRetryNextPage(messages);
   const historyUnavailable = messages.isError && !retryOlder;
+  const pageCount = messages.data?.pages.length ?? 0;
+  const canLoadOlder =
+    online &&
+    !revoked &&
+    !jumping &&
+    !historyUnavailable &&
+    !messages.isFetchingNextPage &&
+    messages.hasNextPage;
+  const loadOlder = async () => {
+    const pane = historyElement.current;
+    const message = pane?.querySelector<HTMLElement>("[data-message-id]");
+    if (!canLoadOlder || olderAnchor.current || !pane || !message) return;
+    const anchor = {
+      message,
+      contentTop:
+        message.getBoundingClientRect().top -
+        pane.getBoundingClientRect().top +
+        pane.scrollTop,
+      pageCount,
+      search,
+    };
+    olderAnchor.current = anchor;
+    setFollowing(false);
+    let result = await messages.fetchNextPage({ cancelRefetch: false });
+    // A Realtime refresh can replace this request or already be in progress.
+    // Continue once from the refreshed cursor if no older page was appended.
+    if (
+      olderAnchor.current === anchor &&
+      historyElement.current === pane &&
+      result.isSuccess &&
+      result.hasNextPage &&
+      result.data.pages.length === pageCount
+    ) {
+      result = await result.fetchNextPage({ cancelRefetch: false });
+    }
+    if (
+      olderAnchor.current === anchor &&
+      (result.isError || (result.data?.pages.length ?? 0) <= pageCount)
+    )
+      olderAnchor.current = null;
+  };
+  useLayoutEffect(() => {
+    const anchor = olderAnchor.current;
+    if (!anchor) return;
+    if (anchor.search !== search) {
+      olderAnchor.current = null;
+      return;
+    }
+    if (pageCount <= anchor.pageCount) return;
+    olderAnchor.current = null;
+    const pane = historyElement.current;
+    if (pane?.contains(anchor.message)) {
+      // Preserve the current viewport even if the reader moved during the request.
+      const contentTop =
+        anchor.message.getBoundingClientRect().top -
+        pane.getBoundingClientRect().top +
+        pane.scrollTop;
+      pane.scrollTop += contentTop - anchor.contentTop;
+      lastScrollTop.current = pane.scrollTop;
+    }
+  }, [pageCount, search]);
   const ordered = useMemo(
     () => orderedCursorRows(messages.data?.pages, "ascending"),
     [messages.data?.pages],
@@ -129,6 +201,16 @@ export function ChatThread({
     return rows;
   }, [ordered, language, zone]);
   const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
+  const replyToMessage = useCallback(
+    (target: ChatMessage) => setReplyId(target.id),
+    [],
+  );
+  const canPin =
+    room.kind === "topic" &&
+    topicPins.query.isSuccess &&
+    !topicPins.query.isFetching &&
+    online &&
+    status === "connected";
   const latest = ordered[ordered.length - 1];
   // Jump only to history that has just been fetched through the existing ACL-checked RPC.
   // Bound one action to 20 pages; another click may continue where it stopped.
@@ -168,7 +250,8 @@ export function ChatThread({
     ].find((element) => element.dataset.messageId === jumpId);
     if (item) {
       item.scrollIntoView({ block: "center" });
-      item.focus();
+      lastScrollTop.current = historyElement.current?.scrollTop ?? 0;
+      item.focus({ preventScroll: true });
       setJumpId(null);
     }
   }, [jumpId, ordered]);
@@ -181,7 +264,6 @@ export function ChatThread({
     return () => clearTimeout(request);
   }, [messageId, messages.isSuccess, online, revoked]);
   const marked = useRef("");
-  const end = useRef<HTMLDivElement>(null);
   // Room management is not a blanket administrator read bypass for private DMs.
   // The UI follows distinct room types; the server checks each action again.
   const canManage =
@@ -250,14 +332,20 @@ export function ChatThread({
     mark,
   ]);
   const previousLatest = useRef("");
+  const showLatest = useCallback(() => {
+    const pane = historyElement.current;
+    if (pane) {
+      pane.scrollTop = pane.scrollHeight;
+      lastScrollTop.current = pane.scrollTop;
+    }
+  }, []);
   useEffect(() => {
     if (!latest || latest.id === previousLatest.current || search) return;
     const initial = !previousLatest.current;
     previousLatest.current = latest.id;
-    if (following && (!initial || !messageId))
-      end.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
+    if (following && (!initial || !messageId)) showLatest();
     else if (!initial) setNewMessages(true);
-  }, [latest, search, following, messageId]);
+  }, [latest, search, following, messageId, showLatest]);
   const mute = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -436,12 +524,20 @@ export function ChatThread({
       )}
       <div
         className="chat-message-scroll"
+        ref={historyElement}
+        role="region"
+        aria-label={t("messageHistory")}
+        tabIndex={0}
         onScroll={(event) => {
           const area = event.currentTarget;
+          const movedUp = area.scrollTop < lastScrollTop.current;
+          lastScrollTop.current = area.scrollTop;
           const isAtEnd =
             area.scrollHeight - area.scrollTop - area.clientHeight <= 12;
           setFollowing(isAtEnd);
           if (isAtEnd) setNewMessages(false);
+          if (movedUp && area.scrollTop <= olderHistoryThreshold && !retryOlder)
+            void loadOlder();
         }}
         aria-busy={messages.isFetching && !messages.isFetchingNextPage}
       >
@@ -451,26 +547,28 @@ export function ChatThread({
           <ErrorState retry={() => void messages.refetch()} />
         ) : (
           <>
-            {retryOlder ? (
-              <NextPageError
-                retry={() =>
-                  void messages.fetchNextPage({ cancelRefetch: false })
-                }
-                disabled={!online || messages.isFetching}
-              />
-            ) : (
-              messages.hasNextPage && (
-                <div className="chat-load-older">
+            {(retryOlder || messages.hasNextPage) && (
+              <div className="chat-load-older">
+                {retryOlder ? (
+                  <NextPageError
+                    retry={() => void loadOlder()}
+                    disabled={!canLoadOlder}
+                  />
+                ) : (
                   <Button
+                    type="button"
                     variant="secondary"
                     size="sm"
-                    disabled={messages.isFetchingNextPage || !online}
-                    onClick={() => void messages.fetchNextPage()}
+                    aria-disabled={!canLoadOlder}
+                    onClick={() => void loadOlder()}
                   >
                     {t("loadOlder")}
                   </Button>
-                </div>
-              )
+                )}
+                <span className="sr-only" role="status">
+                  {messages.isFetchingNextPage ? t("loadingOlder") : ""}
+                </span>
+              </div>
             )}
             {ordered.length === 0 ? (
               <div className="chat-thread-empty">
@@ -490,41 +588,31 @@ export function ChatThread({
                     <MessageBubble
                       message={message}
                       highlighted={message.id === linkedTarget}
-                      onReply={(target) => setReplyId(target.id)}
-                      topicPin={
-                        room.kind === "topic" &&
-                        message.can_moderate &&
-                        topicPins.query.isSuccess &&
-                        !topicPins.query.isFetching &&
-                        online &&
-                        status === "connected"
-                          ? {
-                              pinned: pinnedIds.has(message.id),
-                              disabled: topicPins.toggle.isPending,
-                              toggle: () =>
-                                topicPins.toggle.mutate({
-                                  id: message.id,
-                                  pinned: !pinnedIds.has(message.id),
-                                }),
-                            }
+                      onReply={replyToMessage}
+                      pinned={
+                        canPin && message.can_moderate
+                          ? pinnedIds.has(message.id)
                           : undefined
                       }
+                      pinPending={
+                        canPin && message.can_moderate
+                          ? topicPins.toggle.isPending
+                          : undefined
+                      }
+                      onTogglePin={topicPins.toggle.mutate}
                       actor={actor}
-                      now={now}
                       zone={zone}
-                      attachment={
-                        message.document_id && !message.deleted_at ? (
-                          <DocumentAttachment
-                            documentId={message.document_id}
-                          />
-                        ) : undefined
+                      online={online}
+                      editable={
+                        message.sender_id === actor &&
+                        !message.deleted_at &&
+                        now - Date.parse(message.created_at) < 15 * 60_000
                       }
                     />
                   </Fragment>
                 ))}
               </ol>
             )}
-            <div ref={end} />
           </>
         )}
       </div>
@@ -546,7 +634,7 @@ export function ChatThread({
         <Button
           variant="secondary"
           onClick={() => {
-            end.current?.scrollIntoView({ block: "nearest" });
+            showLatest();
             setFollowing(true);
             setNewMessages(false);
           }}

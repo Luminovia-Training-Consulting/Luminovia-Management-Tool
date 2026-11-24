@@ -36,12 +36,15 @@ vi.mock("../files/api", () => ({
 }));
 /** Seed only the current actor's cache; no mocked business mutation is accepted
  * as evidence that a server-side invoice or export was created. */
-function show(gross = false, companyView = false) {
+function show(gross = false, companyView = false, personalView = false) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
       mutations: { retry: false },
     },
+  });
+  client.setQueryData(["commercial-access", "teacher"], {
+    can_submit_invoice: true,
   });
   client.setQueryData([...accountingKeys.all("teacher"), "access"], {
     can_export_all_lecturers: false,
@@ -53,13 +56,30 @@ function show(gross = false, companyView = false) {
     pageParams: [null],
   });
   client.setQueryData(
+    [...accountingKeys.all("teacher"), "invoices", "customer"],
+    {
+      pages: [{ items: [], has_more: false }],
+      pageParams: [null],
+    },
+  );
+  client.setQueryData(
     [...accountingKeys.all("teacher"), "customer-claims"],
     [],
   );
   const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <AccountingPage preferCustomer={companyView} />
+        <AccountingPage
+          scope={
+            personalView
+              ? "personal"
+              : companyView
+                ? "company"
+                : gross
+                  ? "staff"
+                  : "personal"
+          }
+        />
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -105,6 +125,25 @@ it("does not expose customer registration, gross data or management export to or
   ).toBeDisabled();
   expect(rpc).not.toHaveBeenCalled();
 });
+it("does not expose platform data or actions in the personal export tab of a dual-role account", () => {
+  show(true, false, true);
+  expect(screen.queryByLabelText("Rechnungsquelle")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Kursrechnung einreichen" }),
+  ).toHaveAttribute("href", "/finance?invoice=new");
+  expect(
+    screen.queryByRole("option", { name: "Unternehmensrechnungen" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Abrechnungsjournal" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: "Externe Rechnung an ein Unternehmen erfassen",
+    }),
+  ).toBeNull();
+});
+
 it("distinguishes a fully credited closing invoice from a payment", async () => {
   const { client } = show();
   const closingInvoice = {
