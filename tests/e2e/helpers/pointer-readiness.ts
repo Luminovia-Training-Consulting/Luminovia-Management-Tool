@@ -6,7 +6,7 @@
 import {expect, type Locator} from "@playwright/test";
 
 /** Read the browser's actual viewport/hit target without changing application state. */
-async function pointerGeometry(target: Locator) {
+async function pointerGeometry(target: Locator, timeout: number) {
     return target.evaluate((node) => {
         const rect = node.getBoundingClientRect();
         const x = rect.x + rect.width / 2;
@@ -39,29 +39,41 @@ async function pointerGeometry(target: Locator) {
             documentWidth: document.documentElement.scrollWidth,
             clientWidth: document.documentElement.clientWidth,
         };
-    });
+    }, undefined, {timeout});
 }
 
 /**
- * Scroll once, then require the real centre hit target before the unchanged
+ * Scroll the current element, then require its real centre hit target before the
  * ordinary click. Reject horizontal overflow too: mobile Chromium can expand
  * innerWidth while retaining a narrower visual viewport, misplacing input.
- * This retries only a read-only assertion, never an action or
- * business request. A covered control must fail; no force-click or timeout boost.
+ * A rerender may replace the element while scrolling. Re-resolve the locator
+ * without repeating any click or business request.
  */
 export async function assertPointerReady(
     target: Locator,
     label: string,
     {timeout = 10_000}: { timeout?: number } = {},
 ) {
+    const probeTimeout = Math.min(timeout, 1000);
     let last: Awaited<ReturnType<typeof pointerGeometry>> | undefined;
     try {
-        await target.scrollIntoViewIfNeeded();
         await expect
             .poll(
                 async () => {
-                    last = await pointerGeometry(target);
-                    return last.ready;
+                    try {
+                        await target.scrollIntoViewIfNeeded({timeout: probeTimeout});
+                        last = await pointerGeometry(target, probeTimeout);
+                        return last.ready;
+                    } catch (error) {
+                        if (
+                            error instanceof Error &&
+                            (error.name === "TimeoutError" ||
+                                error.message.includes("Element is not attached to the DOM"))
+                        ) {
+                            return false;
+                        }
+                        throw error;
+                    }
                 },
                 {timeout, message: `Unobstructed pointer target: ${label}`},
             )
