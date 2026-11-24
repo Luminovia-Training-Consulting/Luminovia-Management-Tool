@@ -121,6 +121,7 @@ function BriefingContent({
     return (
       <section
         id="job-briefing"
+        tabIndex={-1}
         className="panel job-briefing"
         aria-label={t("title")}
       >
@@ -224,6 +225,7 @@ function BriefingContent({
   return (
     <section
       id="job-briefing"
+      tabIndex={-1}
       className="panel job-briefing"
       aria-label={t("title")}
     >

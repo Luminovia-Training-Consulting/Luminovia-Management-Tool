@@ -795,14 +795,22 @@ export function ChangeRequestsPage() {
         }
       />
       <p className="muted">{t("scopeHint")}</p>
-      <TextLink to="/delivery">{t("deliveryEvidence")}</TextLink>
+      <div className="page-actions">
+        {selected && (
+          <Button asChild variant="ghost">
+            <Link to="/changes">
+              <ArrowLeft size={16} aria-hidden="true" />
+              {t("overview")}
+            </Link>
+          </Button>
+        )}
+        <Button asChild variant="secondary">
+          <Link to="/delivery">{t("deliveryEvidence")}</Link>
+        </Button>
+      </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
       {selected ? (
-        <>
-          <Link to="/changes" className="text-link">
-            <ArrowLeft size={16} aria-hidden="true" />
-            {t("overview")}
-          </Link>
+        <div className="section-stack">
           <section className="panel changes-summary">
             <span className={`badge changes-status-${selected.status}`}>
               {t(
@@ -817,22 +825,31 @@ export function ChangeRequestsPage() {
               </p>
             )}
             <p className="changes-authored">{selected.reason}</p>
-            <TextLink to={`/jobs/${selected.original.job_id}`}>
-              {t("source")}
-            </TextLink>
-            {selected.can_edit && (
-              <Button
-                variant="secondary"
-                disabled={!online}
-                onClick={() => setEdit(selected)}
-              >
-                {t("edit")}
+            <div className="changes-controls">
+              <Button asChild variant="ghost">
+                <Link to={`/jobs/${selected.original.job_id}`}>
+                  {t("source")}
+                </Link>
               </Button>
-            )}
+              {selected.can_edit && (
+                <Button
+                  variant="secondary"
+                  disabled={!online}
+                  onClick={() => setEdit(selected)}
+                >
+                  {t("edit")}
+                </Button>
+              )}
+            </div>
           </section>
-          <section className="panel" aria-label={t("comparison")}>
-            <h2>{t("comparison")}</h2>
-            <div className="changes-comparison">
+          <section className="panel">
+            <h2 id="change-comparison-title">{t("comparison")}</h2>
+            <div
+              className="changes-comparison"
+              role="region"
+              aria-labelledby="change-comparison-title"
+              tabIndex={0}
+            >
               <table>
                 <thead>
                   <tr>
@@ -908,7 +925,7 @@ export function ChangeRequestsPage() {
               ))}
             </ol>
           </section>
-        </>
+        </div>
       ) : (
         <>
           <div className="changes-cards">

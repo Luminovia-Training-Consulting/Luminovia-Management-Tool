@@ -1,0 +1,39 @@
+.academy-support-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.75rem 1rem;
+  min-inline-size: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.academy-support-fields > :where(label:not(.academy-support-confirm)) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.academy-support-fields > :where(.academy-support-confirm, button) {
+  grid-column: 1 / -1;
+}
+
+.academy-support-fields > button {
+  justify-self: start;
+  max-inline-size: 100%;
+  white-space: normal;
+}
+
+.academy-support-grants {
+  list-style: none;
+  padding: 0;
+}
+
+.academy-support-grants > li {
+  overflow-wrap: anywhere;
+}
+
+.academy-support-grants > li + li {
+  margin-block-start: 1rem;
+  border-top: 1px solid var(--line);
+  padding-block-start: 1rem;
+}

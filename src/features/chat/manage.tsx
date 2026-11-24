@@ -440,42 +440,45 @@ export function MembersPanel({
                   )}
                 </span>
                 {canManage &&
-                  room.kind === "participant_course" &&
-                  member.user_id !== room.owner_id && (
-                    <Button
-                      variant="ghost"
-                      disabled={!online || origin.isPending}
-                      onClick={() => {
-                        origin.reset();
-                        setOriginPerson({
-                          id: member.user_id,
-                          name: member.display_name || t("unnamed"),
-                        });
-                      }}
-                    >
-                      {t("resolveOrigin")}
-                    </Button>
-                  )}
-                {canManage &&
                   member.user_id !== room.owner_id &&
-                  member.user_id !== actor && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t("removeMember", {
-                        name: member.display_name || t("unnamed"),
-                      })}
-                      disabled={!online || change.isPending}
-                      onClick={() => {
-                        change.reset();
-                        setRemove({
-                          id: member.user_id,
-                          name: member.display_name || t("unnamed"),
-                        });
-                      }}
-                    >
-                      <X size={17} />
-                    </Button>
+                  (room.kind === "participant_course" ||
+                    member.user_id !== actor) && (
+                    <div className="chat-member-actions">
+                      {room.kind === "participant_course" && (
+                        <Button
+                          variant="ghost"
+                          disabled={!online || origin.isPending}
+                          onClick={() => {
+                            origin.reset();
+                            setOriginPerson({
+                              id: member.user_id,
+                              name: member.display_name || t("unnamed"),
+                            });
+                          }}
+                        >
+                          {t("resolveOrigin")}
+                        </Button>
+                      )}
+                      {member.user_id !== actor && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("removeMember", {
+                            name: member.display_name || t("unnamed"),
+                          })}
+                          disabled={!online || change.isPending}
+                          onClick={() => {
+                            change.reset();
+                            setRemove({
+                              id: member.user_id,
+                              name: member.display_name || t("unnamed"),
+                            });
+                          }}
+                        >
+                          <X size={17} />
+                        </Button>
+                      )}
+                    </div>
                   )}
               </li>
             ))}
