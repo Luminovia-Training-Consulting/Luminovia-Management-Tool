@@ -5,6 +5,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  matchPath,
   Navigate,
   NavLink,
   Outlet,
@@ -50,6 +51,7 @@ import {
   hasJobStaffRole,
   hasTeachingRole,
 } from "../features/auth/internal-capabilities";
+import { administrationLinks } from "../features/admin/navigation-links";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { useSignOut } from "../features/auth/sign-out-state";
@@ -209,9 +211,13 @@ export function Shell() {
   const clientPortalAccess = roles.data?.includes("client") ?? false;
   const learnerAccess = roles.data?.includes("participant") ?? false;
   const financeAccess = financeWorkspaceAccess(roles.data, permissions.data);
-  const manage = Boolean(
-    permissions.data?.includes("jobs.manage") ||
-    permissions.data?.includes("announcements.manage"),
+  const administration = administrationLinks(
+    roles.data,
+    permissions.data,
+    profile.data?.active === true && !roles.isError && !permissions.isError,
+  );
+  const inAdministrationSection = administration.some(({ to, end }) =>
+    matchPath({ path: to, end: end ?? false }, location.pathname),
   );
   const navigation = participantOnly
     ? [
@@ -222,7 +228,7 @@ export function Shell() {
     : guestOnly
       ? [
           { to: "/profile", icon: UserRound, label: "profile" },
-          { to: "/settings", icon: Settings2, label: "settings" },
+          { to: "/settings", icon: Settings2, label: "personalSettings" },
           { to: "/assistance", icon: BookOpen, label: "helpSupport" },
         ]
       : [
@@ -250,13 +256,13 @@ export function Shell() {
                 { to: "/my-reviews", icon: FileCheck2, label: "myReviews" },
               ]
             : []),
-          ...(permissions.data?.includes("organisations.manage")
-            ? [{ to: "/clients", icon: Building2, label: "companies" }]
-            : []),
           { to: "/people", icon: Users, label: "staffDirectory" },
-          { to: "/chats", icon: MessagesSquare, label: "communication" },
+          { to: "/chats", icon: MessagesSquare, label: "chats" },
           { to: "/files", icon: FolderOpen, label: "files" },
-          ...(teaching || permissions.data?.includes("contracts.read")
+          ...(!administration.some(({ to }) => to === "/contracts") &&
+          (teaching ||
+            permissions.data?.includes("contracts.read") ||
+            permissions.data?.includes("contracts.manage"))
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
             : []),
           ...(portalInternalEdition &&
@@ -274,7 +280,8 @@ export function Shell() {
                 },
               ]
             : []),
-          ...(staff || clientPortalAccess
+          ...(!administration.some(({ to }) => to === "/changes") &&
+          (staff || clientPortalAccess)
             ? [{ to: "/changes", icon: FileCheck2, label: "assignmentChanges" }]
             : []),
           ...(clientPortalAccess
@@ -282,11 +289,16 @@ export function Shell() {
             : []),
           { to: "/assistance", icon: BookOpen, label: "helpSupport" },
           { to: "/topics", icon: BookOpen, label: "topics" },
-          ...(manage
-            ? [{ to: "/admin", icon: Settings2, label: "admin" }]
+          ...(administration.length
+            ? [
+                {
+                  to: "/admin",
+                  icon: Settings2,
+                  label: "admin",
+                  sectionActive: inAdministrationSection,
+                },
+              ]
             : []),
-          { to: "/settings", icon: Settings2, label: "settings" },
-          { to: "/profile", icon: UserRound, label: "profile" },
         ];
   /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
   function showRailTooltip(label: string, element: HTMLElement) {
@@ -401,9 +413,7 @@ export function Shell() {
           <span>{t(collapsed ? "expand" : "collapse")}</span>
         </Button>
         <PortalNavigation
-          items={navigation.filter(
-            ({ to }) => guestOnly || !["/settings", "/profile"].includes(to),
-          )}
+          items={navigation}
           ariaLabel={t("menu")}
           ariaDescribedBy="sidebar-nav-tooltip"
           collapsed={collapsed}
@@ -499,7 +509,7 @@ export function Shell() {
               <div className="account-menu-panel">
                 <NavLink to="/profile">{t("profile")}</NavLink>
                 {!participantOnly && (
-                  <NavLink to="/settings">{t("settings")}</NavLink>
+                  <NavLink to="/settings">{t("personalSettings")}</NavLink>
                 )}
                 <button
                   type="button"

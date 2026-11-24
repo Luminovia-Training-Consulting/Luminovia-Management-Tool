@@ -115,11 +115,10 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
 
 /** One workspace with stable URLs for rooms and discussion threads. */
 export function CommunicationWorkspace() {
-  const { i18n } = useTranslation();
+  const { t } = useTranslation();
   const actor = useAuth().session!.user.id;
   const knowledge = useQuery(knowledgeAccessQuery(actor));
   const forum = useMatch("/chats/forum");
-  const de = i18n.language.startsWith("de");
 
   if (forum && knowledge.isPending) return <Loading />;
   if (forum && knowledge.isError)
@@ -130,12 +129,9 @@ export function CommunicationWorkspace() {
   return (
     <>
       {knowledge.data?.can_author && (
-        <nav
-          className="admin-tabs"
-          aria-label={de ? "Austausch" : "Communication"}
-        >
+        <nav className="admin-tabs" aria-label={t("chats")}>
           <NavLink to="/chats" end>
-            Chats
+            {t("chats")}
           </NavLink>
           <NavLink to="/chats/forum" end>
             Forum

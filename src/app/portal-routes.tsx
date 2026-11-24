@@ -338,7 +338,6 @@ export default function PortalRoutes() {
             path="courses/:id/workspace"
             element={<CourseWorkspacePage />}
           />
-          <Route path="contracts" element={<ContractsPage />} />
           <Route path="finance" element={<FinanceWorkspace />}>
             <Route index element={<FinancePage />} />
             <Route path="accounting" element={<FinanceAccounting />} />
@@ -360,8 +359,6 @@ export default function PortalRoutes() {
             path="accounting"
             element={<LegacyFinanceRoute to="/finance/accounting" />}
           />
-          <Route path="changes" element={<ChangeRequestsPage />} />
-          <Route path="changes/:id" element={<ChangeRequestsPage />} />
           <Route path="wiki" element={<LegacyWikiRoute />} />
           <Route path="assistance" element={<SectionHub kind="assistance" />} />
           <Route path="forum" element={<LegacyForumRoute />} />
@@ -392,17 +389,25 @@ export default function PortalRoutes() {
             element={<Navigate to="/settings" replace />}
           />
           <Route path="auth/password" element={<PasswordRecovery />} />
-          <Route path="admin" element={<AdminNavigation />}>
-            <Route index element={<AdminPage />} />
-            <Route path="people" element={<PeopleAdminPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="accounts" element={<AccountsPage />} />
-            <Route path="mail" element={<AdminMailPage />} />
-            <Route path="white-label" element={<WhiteLabelSetupPage />} />
-            <Route path="reset" element={<PlatformResetPage />} />
-            <Route path="deletions" element={<DeletionsPage />} />
-            <Route path="audit" element={<AdminAuditPage />} />
-            <Route path="announcements" element={<AdminAnnouncementsPage />} />
+          <Route element={<AdminNavigation />}>
+            <Route path="contracts" element={<ContractsPage />} />
+            <Route path="changes" element={<ChangeRequestsPage />} />
+            <Route path="changes/:id" element={<ChangeRequestsPage />} />
+            <Route path="admin">
+              <Route index element={<AdminPage />} />
+              <Route path="people" element={<PeopleAdminPage />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="accounts" element={<AccountsPage />} />
+              <Route path="mail" element={<AdminMailPage />} />
+              <Route path="white-label" element={<WhiteLabelSetupPage />} />
+              <Route path="reset" element={<PlatformResetPage />} />
+              <Route path="deletions" element={<DeletionsPage />} />
+              <Route path="audit" element={<AdminAuditPage />} />
+              <Route
+                path="announcements"
+                element={<AdminAnnouncementsPage />}
+              />
+            </Route>
           </Route>
         </Route>
       </Route>

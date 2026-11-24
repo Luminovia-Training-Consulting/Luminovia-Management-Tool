@@ -23,6 +23,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
+import { AdminNavigation } from "../features/admin/navigation";
 import { Shell } from "./shell";
 import i18n from "../lib/i18n";
 
@@ -31,6 +32,7 @@ const { signOut, access, refetchPermissions, refetchRoles, loadUi, saveUi } =
     signOut: vi.fn(),
     access: {
       failed: false,
+      permissionsLoading: false,
       roles: [] as string[],
       permissions: [] as string[],
     },
@@ -76,8 +78,11 @@ vi.mock("@tanstack/react-query", async (original) => {
                     as_of: "2026-11-15T12:00:00Z",
                   } satisfies InboxPage)
                 : [],
-      isPending: false,
-      isSuccess: !access.failed,
+      isPending:
+        options.queryKey[0] === "permissions" && access.permissionsLoading,
+      isSuccess:
+        !access.failed &&
+        !(options.queryKey[0] === "permissions" && access.permissionsLoading),
       isError:
         access.failed &&
         ["permissions", "user-roles"].includes(options.queryKey[0]),
@@ -94,6 +99,7 @@ afterEach(() => {
   localStorage.removeItem("luminovia.sidebar-collapsed");
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
+  access.permissionsLoading = false;
   access.roles = [];
   access.permissions = [];
   vi.clearAllMocks();
@@ -204,6 +210,13 @@ function setup(
             <Route element={<Shell />}>
               <Route index element={<p>Private workspace</p>} />
               <Route path="settings" element={settings} />
+              <Route element={<AdminNavigation />}>
+                <Route path="admin" element={<NavigationTarget />} />
+                <Route path="admin/clients" element={<NavigationTarget />} />
+                <Route path="changes" element={<NavigationTarget />} />
+                <Route path="changes/:id" element={<NavigationTarget />} />
+                <Route path="contracts" element={<NavigationTarget />} />
+              </Route>
               <Route path="calendar" element={<NavigationTarget />} />
               <Route path="profile" element={<NavigationTarget />} />
               <Route path="api/docs" element={<NavigationTarget />} />
@@ -358,6 +371,68 @@ it.each(["admin", "management"])(
   },
 );
 
+it.each(["admin", "management"])(
+  "groups contracts, changes and companies for %s and keeps deep links",
+  async (role) => {
+    access.roles = [role];
+    access.permissions = [
+      "jobs.manage",
+      "contracts.manage",
+      "organisations.manage",
+    ];
+    const { user } = setup("/changes/fictional?filter=open", false);
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(sidebar.getByRole("link", { name: "Verwaltung" })).toHaveClass(
+      "active",
+    );
+    for (const name of ["Verträge", "Auftragsänderungen", "Unternehmen"])
+      expect(sidebar.queryByRole("link", { name })).toBeNull();
+    expect(sidebar.getByRole("link", { name: "Chat" })).toHaveAttribute(
+      "href",
+      "/chats",
+    );
+
+    const sections = within(document.querySelector(".administration-tabs")!);
+    expect(
+      sections.getByRole("link", { name: "Auftragsänderungen" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(sections.getByRole("link", { name: "Unternehmen" })).toHaveAttribute(
+      "href",
+      "/admin/clients",
+    );
+    await user.click(sections.getByRole("link", { name: "Verträge" }));
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/contracts",
+    );
+  },
+);
+
+it("keeps contracts and assignment changes directly accessible to lecturers", () => {
+  access.roles = ["lecturer"];
+  setup("/contracts", false);
+  const sidebar = within(screen.getByRole("complementary"));
+  expect(sidebar.getByRole("link", { name: "Verträge" })).toHaveAttribute(
+    "href",
+    "/contracts",
+  );
+  expect(
+    sidebar.getByRole("link", { name: "Auftragsänderungen" }),
+  ).toHaveAttribute("href", "/changes");
+  expect(screen.queryByRole("navigation", { name: "Verwaltung" })).toBeNull();
+});
+
+it("waits for current permissions before choosing the default administration section", async () => {
+  access.roles = ["management"];
+  access.permissionsLoading = true;
+  const { rerender } = setup("/admin");
+  expect(screen.getByLabelText("Fixture location")).toHaveTextContent("/admin");
+  access.permissionsLoading = false;
+  rerender();
+  expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+    "/changes",
+  );
+});
+
 it("hides the Control Center without its current management permission", () => {
   access.roles = ["management"];
   access.permissions = ["announcements.manage"];
@@ -403,16 +478,25 @@ describe("native mobile More navigation", () => {
     expect(summary).toHaveFocus();
   });
 
-  it("keeps account and settings routes reachable in the complete mobile disclosure", async () => {
+  it("keeps profile and personal settings together in the account menu", async () => {
     const { user } = setup();
     const summary = screen.getByLabelText("Mehr");
     await user.click(summary);
     const menu = summary.closest("details")!;
     expect(
-      within(menu).getByRole("link", { name: "Einstellungen" }),
+      within(menu).queryByRole("link", { name: "Persönliche Einstellungen" }),
+    ).toBeNull();
+    expect(
+      within(menu).queryByRole("link", { name: "Mein Profil" }),
+    ).toBeNull();
+    const account =
+      document.querySelector<HTMLDetailsElement>(".account-menu")!;
+    await user.click(account.querySelector("summary")!);
+    expect(
+      within(account).getByRole("link", { name: "Persönliche Einstellungen" }),
     ).toHaveAttribute("href", "/settings");
     expect(
-      within(menu).getByRole("link", { name: "Mein Profil" }),
+      within(account).getByRole("link", { name: "Mein Profil" }),
     ).toHaveAttribute("href", "/profile");
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
     expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
