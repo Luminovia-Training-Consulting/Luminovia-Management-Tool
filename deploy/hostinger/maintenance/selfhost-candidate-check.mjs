@@ -180,14 +180,19 @@ export function assertCandidateConfiguration(configuration, scope) {
     );
     assert.deepEqual(Object.keys(configuration.networks), ["backend"]);
     assert.equal(configuration.networks.backend.name, scope.network);
-    for (const service of Object.values(configuration.services)) {
+    for (const [name, service] of Object.entries(configuration.services)) {
         assert(
             immutable.test(service.image),
             "Candidate images must be immutable.",
         );
         assert.equal(service.labels[ownershipLabel], scope.project);
-        assert(!service.privileged && !service.network_mode && !service.pid);
-        assert.deepEqual(Object.keys(service.networks), ["backend"]);
+        assert(!service.privileged && !service.pid);
+        if (name === "mail-relay" && service.network_mode === "service:auth")
+            assert(!service.networks);
+        else {
+            assert(!service.network_mode);
+            assert.deepEqual(Object.keys(service.networks), ["backend"]);
+        }
         for (const port of service.ports ?? []) {
             assert.equal(
                 port.host_ip,
@@ -218,10 +223,18 @@ export function assertCandidateConfiguration(configuration, scope) {
         assert.equal(volume.labels[ownershipLabel], scope.project);
         assert(!volume.external);
     }
-    assert.equal(
-        configuration.services.auth.environment.GOTRUE_SMTP_HOST,
-        "mailpit",
-    );
+    const candidateRelay = configuration.services["mail-relay"];
+    const candidateAuth = configuration.services.auth.environment;
+    if (candidateRelay.network_mode === "service:auth") {
+        assert.equal(candidateAuth.GOTRUE_SMTP_HOST, "127.0.0.1");
+        assert.equal(candidateAuth.GOTRUE_SMTP_PORT, "2525");
+        assert.equal(candidateRelay.environment.PORTAL_MAIL_RELAY_CAPTURE_PENDING, "true");
+        assert(candidateAuth.GOTRUE_SMTP_USER && candidateAuth.GOTRUE_SMTP_PASS);
+        assert(candidateAuth.GOTRUE_SMTP_USER === candidateRelay.environment.PORTAL_MAIL_RELAY_USERNAME);
+        assert(candidateAuth.GOTRUE_SMTP_PASS === candidateRelay.environment.PORTAL_MAIL_RELAY_PASSWORD);
+    } else {
+        assert.equal(candidateAuth.GOTRUE_SMTP_HOST, "mailpit");
+    }
     assert.equal(
         configuration.services.mailpit.environment.MP_SMTP_AUTH_ACCEPT_ANY,
         "true",
@@ -734,7 +747,7 @@ export async function checkCandidate({
         generated.server.PORTAL_DOMAIN = "candidate.invalid";
         generated.server.PORTAL_WWW_DIR = join(scratch, "www");
         generated.server.PORTAL_MAIL_TEMPLATE_ORIGIN = "http://web:8080";
-        // Candidate Auth messages are captured by Mailpit and never reach the real SMTP relay.
+        // Candidate Auth messages stay in Mailpit without any external SMTP provider.
         generated.server.SMTP_HOST = "mailpit";
         generated.server.SMTP_PORT = "1025";
         generated.server.SMTP_USER = "";
@@ -809,6 +822,18 @@ export async function checkCandidate({
                 networks: {backend: {external: true, name: scope.network}},
                 volumes: {},
             };
+            // Exercise GoTrue through the real relay for candidates with the
+            // shared loopback setup. Baseline versions retain direct capture.
+            const relay = configuration.services["mail-relay"];
+            if (relay.network_mode === "service:auth") {
+                relay.environment.PORTAL_MAIL_RELAY_CAPTURE_PENDING = "true";
+                Object.assign(configuration.services.auth.environment, {
+                    GOTRUE_SMTP_HOST: "127.0.0.1",
+                    GOTRUE_SMTP_PORT: "2525",
+                    GOTRUE_SMTP_USER: generated.server.MAIL_RELAY_USERNAME,
+                    GOTRUE_SMTP_PASS: generated.server.MAIL_RELAY_PASSWORD,
+                });
+            }
             for (const config of rendered)
                 for (const [name] of Object.entries(config.volumes ?? {}))
                     configuration.volumes[name] = {

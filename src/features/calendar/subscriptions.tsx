@@ -18,6 +18,7 @@ import {
   subscriptionsQuery,
 } from "./subscriptions-api";
 import "./subscriptions-i18n";
+import "./subscriptions.css";
 
 function isConflict(error: unknown) {
   return (
@@ -154,33 +155,37 @@ export function CalendarSubscriptions({
       ) : !query.data.length ? (
         <p>{t("empty")}</p>
       ) : (
-        <ul>
+        <ul className="calendar-subscription-list">
           {query.data.map((item) => (
             <li key={item.id}>
-              <strong>{item.label}</strong>
-              <p>
-                {item.revoked_at
-                  ? t("revoked")
-                  : `${t("expiry")}: ${dateTime(item.expires_at, i18n.language, zone)}`}
-              </p>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!online || revoke.isPending}
-                onClick={() => setEditor(item)}
-              >
-                {t("edit")}
-              </Button>{" "}
-              {!item.revoked_at && (
+              <div className="calendar-subscription-summary">
+                <strong>{item.label}</strong>
+                <p className="muted">
+                  {item.revoked_at
+                    ? t("revoked")
+                    : `${t("expiry")}: ${dateTime(item.expires_at, i18n.language, zone)}`}
+                </p>
+              </div>
+              <div className="calendar-subscription-actions">
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="secondary"
                   disabled={!online || revoke.isPending}
-                  onClick={() => revoke.mutate(item)}
+                  onClick={() => setEditor(item)}
                 >
-                  {t("revoke")}
+                  {t("edit")}
                 </Button>
-              )}
+                {!item.revoked_at && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!online || revoke.isPending}
+                    onClick={() => revoke.mutate(item)}
+                  >
+                    {t("revoke")}
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -191,7 +196,7 @@ export function CalendarSubscriptions({
         </Notice>
       )}
       {url && (
-        <div className="panel">
+        <div className="panel calendar-subscription-secret">
           <Notice>{t("saved")}</Notice>
           <Field id="calendar-secret-address" label={t("address")}>
             <input
@@ -202,25 +207,27 @@ export function CalendarSubscriptions({
               value={url}
             />
           </Field>
-          <Button
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(url)
-                .then(() => setCopied(true))
-                .catch(() => setCopied(false))
-            }
-          >
-            {t("copy")}
-          </Button>{" "}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setUrl(null);
-              setCopied(false);
-            }}
-          >
-            {t("hide")}
-          </Button>
+          <div className="calendar-subscription-actions">
+            <Button
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(url)
+                  .then(() => setCopied(true))
+                  .catch(() => setCopied(false))
+              }
+            >
+              {t("copy")}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setUrl(null);
+                setCopied(false);
+              }}
+            >
+              {t("hide")}
+            </Button>
+          </div>
           {copied && <Notice>{t("copied")}</Notice>}
         </div>
       )}

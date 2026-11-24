@@ -40,7 +40,7 @@ const de = {
   invitationUnknown:
     "Der Status der E-Mail-Einladungen ist derzeit nicht verfügbar.",
   connectionScope:
-    "Der Verbindungstest prüft TLS und die Anmeldung. Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
+    "Der Verbindungstest prüft TLS und die Anmeldung beim Mailanbieter. Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
   description:
     "SMTP wird für Authentifizierung und Portalbenachrichtigungen gemeinsam verwendet. Zugangsdaten werden nur verschlüsselt gespeichert und nie erneut angezeigt.",
   academyDescription:
@@ -55,6 +55,8 @@ const de = {
   host: "Server",
   port: "Port",
   security: "TLS-Verfahren",
+  hostingerDefault: "Hostinger · SSL/TLS (465)",
+  hostingerAlternative: "Hostinger · STARTTLS (587)",
   implicitTls: "Implizites TLS",
   startTls: "STARTTLS",
   senderEmail: "Absender-E-Mail",
@@ -134,7 +136,7 @@ const en: typeof de = {
     "The server blocks email invitations. Check the installation's invitation setting.",
   invitationUnknown: "The email invitation status is currently unavailable.",
   connectionScope:
-    "The connection test checks TLS and authentication. A test email goes to the verified email address of your portal account.",
+    "The connection test checks TLS and authentication with the mail provider. A test email goes to the verified email address of your portal account.",
   description:
     "SMTP is shared by Auth and portal notifications. Credentials are stored encrypted and are never displayed again.",
   academyDescription:
@@ -148,6 +150,8 @@ const en: typeof de = {
   host: "Server",
   port: "Port",
   security: "TLS mode",
+  hostingerDefault: "Hostinger · SSL/TLS (465)",
+  hostingerAlternative: "Hostinger · STARTTLS (587)",
   implicitTls: "Implicit TLS",
   startTls: "STARTTLS",
   senderEmail: "Sender email",

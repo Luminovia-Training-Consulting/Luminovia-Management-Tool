@@ -202,12 +202,13 @@ try {
         );
         assert.equal(service.healthcheck.timeout, "5s");
         assert.equal(service.healthcheck.retries, 3);
-        if (name === "mailpit" || name === "mail-relay") {
+        if (name === "mailpit" || name === "auth") {
             assert.equal(service.ports.length, 1);
             assert.equal(service.ports[0].host_ip, "127.0.0.1");
             assert.equal(service.ports[0].target, name === "mailpit" ? 8025 : 2526);
         } else assert(!service.ports?.length, "Unexpected host-port publication.");
         if (name === "mail-relay") {
+            assert.equal(service.network_mode, "service:auth");
             assert.equal(
                 service.image,
                 "python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0",
@@ -251,7 +252,7 @@ try {
     assert.equal(auth.GOTRUE_MFA_WEB_AUTHN_ENROLL_ENABLED, "false");
     assert.equal(auth.GOTRUE_MFA_WEB_AUTHN_VERIFY_ENABLED, "false");
     assert.equal(auth.GOTRUE_MAILER_AUTOCONFIRM, "false");
-    assert.equal(auth.GOTRUE_SMTP_HOST, "mail-relay");
+    assert.equal(auth.GOTRUE_SMTP_HOST, "127.0.0.1");
     assert.equal(auth.GOTRUE_SMTP_PORT, "2525");
     assert.equal(auth.GOTRUE_SMTP_USER, server.MAIL_RELAY_USERNAME);
     assert.equal(auth.GOTRUE_SMTP_PASS, server.MAIL_RELAY_PASSWORD);

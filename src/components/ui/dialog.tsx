@@ -27,7 +27,12 @@ export function Dialog({
 }) {
   const { t } = useTranslation();
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (next || !closeDisabled) onOpenChange(next);
+      }}
+    >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay" />
         <DialogPrimitive.Content
@@ -39,18 +44,22 @@ export function Dialog({
             }
           }}
         >
-          <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
-          <DialogPrimitive.Description>
-            {description}
-          </DialogPrimitive.Description>
-          <DialogPrimitive.Close
-            className="dialog-close"
-            aria-label={t("close")}
-            disabled={closeDisabled}
-          >
-            <X size={20} />
-          </DialogPrimitive.Close>
-          {children}
+          <header className="dialog-header">
+            <div>
+              <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Description>
+                {description}
+              </DialogPrimitive.Description>
+            </div>
+            <DialogPrimitive.Close
+              className="dialog-close"
+              aria-label={t("close")}
+              disabled={closeDisabled}
+            >
+              <X size={20} aria-hidden="true" />
+            </DialogPrimitive.Close>
+          </header>
+          <div className="dialog-body">{children}</div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
