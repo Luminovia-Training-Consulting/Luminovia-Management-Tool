@@ -11,6 +11,7 @@ const en = {
     "Applying the period keeps existing times within these dates and replaces sessions outside them. Adjust the times for each day below.",
   applyRange: "Apply date range",
   invalidRange: "Choose a period with 1 to 60 sessions.",
+  rangeCountMismatch: "Choose a range with exactly {{count}} sessions.",
   deliveryPeriod: "Delivery period",
   manageAttachments: "Manage job attachments",
   scheduleLocked:
@@ -122,6 +123,7 @@ const de: typeof en = {
     "Beim Übernehmen bleiben die Uhrzeiten innerhalb des Zeitraums erhalten. Termine außerhalb entfallen. Die Uhrzeiten kannst du unten für jeden Tag ändern.",
   applyRange: "Zeitraum übernehmen",
   invalidRange: "Wähle einen Zeitraum mit 1 bis 60 Terminen.",
+  rangeCountMismatch: "Wähle einen Zeitraum mit genau {{count}} Terminen.",
   deliveryPeriod: "Durchführungszeitraum",
   manageAttachments: "Auftragsdateien verwalten",
   scheduleLocked:
