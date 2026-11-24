@@ -47,7 +47,13 @@ it("confirms personal-only scope and keeps the dialog open until the server resp
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <MessageBubble message={message} actor="viewer" zone="UTC" now={0} />
+        <MessageBubble
+          message={message}
+          actor="viewer"
+          zone="UTC"
+          editable
+          online
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -79,7 +85,13 @@ it("keeps personal hiding unconfirmed when the server rejects it", async () => {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <MessageBubble message={message} actor="viewer" zone="UTC" now={0} />
+        <MessageBubble
+          message={message}
+          actor="viewer"
+          zone="UTC"
+          editable
+          online
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );

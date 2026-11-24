@@ -1057,7 +1057,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "admin-people",
-    path: "/admin/people",
+    path: "/people#people-search",
     title: {
       de: "Zugänge & Qualifikationsprüfung",
       en: "Access & qualification review",
@@ -1068,12 +1068,12 @@ export const guideModules: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne die betreffende Person und prüfe ihren aktuellen Kontostatus.",
+        "Öffne unter Dozierende das Profil und wähle Qualifikationen und Nachweise.",
         "Vergleiche angegebene Expertise mit dem Nachweis und einem gegebenenfalls erforderlichen Ablaufdatum.",
         "Bestätige die Prüfung oder sperre einen Zugang nur im vorgesehenen berechtigten Ablauf.",
       ],
       en: [
-        "Open the person and check their current account status.",
+        "Open the lecturer’s profile and select Qualifications and evidence.",
         "Compare declared expertise with evidence and any required expiry date.",
         "Confirm verification or suspend access only through the authorised workflow.",
       ],
@@ -1105,8 +1105,7 @@ export const guideModules: GuideModule[] = [
   {
     id: "audit",
     path: "/admin/audit",
-    permission: "audit.read",
-    title: { de: "Administrationsprotokoll", en: "Administration log" },
+    title: { de: "Verwaltungsprotokoll", en: "Administration log" },
     summary: {
       de: "Prüfe freigegebene Verwaltungsereignisse mit aktuellem Auditrecht.",
       en: "Review authorised administrative events with current audit permission.",
@@ -1115,12 +1114,12 @@ export const guideModules: GuideModule[] = [
       de: [
         "Wähle einen zulässigen Zeitraum und die benötigte Ereignisart.",
         "Prüfe die erlaubten Metadaten und lade bei Bedarf weitere Ergebnisse.",
-        "Nutze die Historie zur Klärung eines Ablaufs; sie ist kein Zugriff auf private Nachrichten oder Dokumentinhalte.",
+        "Das Protokoll umfasst die letzten 30 Tage. In der Administration kannst du es nach Bestätigung leeren.",
       ],
       en: [
         "Choose an allowed date range and event type.",
         "Review permitted metadata and load more results when needed.",
-        "Use history to investigate a workflow; it does not grant access to private messages or document contents.",
+        "The log covers the last 30 days. Administrators can clear it after confirming.",
       ],
     },
     problem: {

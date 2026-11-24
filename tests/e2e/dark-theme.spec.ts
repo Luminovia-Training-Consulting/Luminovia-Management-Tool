@@ -57,7 +57,7 @@ test("dark workspace maintains contrast and a usable layout across the main scre
   await page.goto("/api/swagger");
   const documentation = page.locator(".standalone-swagger");
   await expect(
-    documentation.getByRole("link", { name: "OpenAPI JSON" }),
+    documentation.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(documentation.locator(".opblock-tag").first()).toBeVisible();

@@ -1,7 +1,6 @@
 /** Shared entry points for related workflows, retaining server-scoped module data. */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import {
-  NavLink,
   Navigate,
   Outlet,
   useLocation,
@@ -9,13 +8,17 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { SectionButton, SectionLink } from "../components/section-card";
 import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../features/auth/auth-context";
 import { isGuestOnly } from "../features/auth/guest-navigation";
-import { hasJobStaffRole } from "../features/auth/internal-capabilities";
+import {
+  hasJobStaffRole,
+  hasTeachingRole,
+} from "../features/auth/internal-capabilities";
 import { knowledgeAccessQuery } from "../features/knowledge/api";
-import { userRolesQuery } from "../lib/queries";
+import { permissionsQuery, userRolesQuery } from "../lib/queries";
 
 const Courses = lazy(() =>
   import("../features/operations/courses").then((m) => ({
@@ -48,30 +51,102 @@ const Reviews = lazy(() =>
     default: m.MyCourseReviews,
   })),
 );
+const Delivery = lazy(() =>
+  import("../features/changes/delivery").then((m) => ({
+    default: m.DeliveryPage,
+  })),
+);
 const sections = {
   courses: [
-    ["catalogue", "Kurse", "Courses", Courses],
-    ["readiness", "Kursbereitschaft", "Readiness", Readiness],
-    ["reviews", "Dozent:innen bewerten", "Review lecturers", Reviews],
+    [
+      "catalogue",
+      "Kurse",
+      "Courses",
+      Courses,
+      "Durchführungen und Vorlagen verwalten.",
+      "Manage course runs and templates.",
+    ],
+    [
+      "readiness",
+      "Kursbereitschaft",
+      "Readiness",
+      Readiness,
+      "Prüfe, was vor dem Kursstart noch offen ist.",
+      "Check what is still needed before a course starts.",
+    ],
+    [
+      "delivery",
+      "Durchführung",
+      "Delivery",
+      Delivery,
+      "Unterrichtstermine und Nachweise einsehen.",
+      "View teaching sessions and delivery records.",
+    ],
+    [
+      "reviews",
+      "Dozent:innen bewerten",
+      "Review lecturers",
+      Reviews,
+      "Feedback zu abgeschlossenen Kursen abgeben.",
+      "Give feedback on completed courses.",
+    ],
   ],
   assistance: [
-    ["help", "Hilfe & FAQ", "Help & FAQ", Help],
-    ["support", "Support", "Support", Support],
+    [
+      "help",
+      "Hilfe & FAQ",
+      "Help & FAQ",
+      Help,
+      "Anleitungen und Antworten finden.",
+      "Find guides and answers.",
+    ],
+    [
+      "support",
+      "Support",
+      "Support",
+      Support,
+      "Tickets erstellen und Antworten verfolgen.",
+      "Create tickets and follow replies.",
+    ],
   ],
 } as const;
 
-export function SectionHub({ kind }: { kind: keyof typeof sections }) {
+export function SectionHub({
+  kind,
+  current,
+  children,
+}: {
+  kind: keyof typeof sections;
+  current?: string;
+  children?: ReactNode;
+}) {
   const { i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
   const actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
+  const permissions = useQuery({
+    ...permissionsQuery(actor),
+    enabled: kind === "courses",
+  });
   const staff = hasJobStaffRole(roles.data);
+  const de = i18n.language.startsWith("de");
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const items = sections[kind].filter((item) => {
     if (isGuestOnly(roles.data))
       return kind === "assistance" && item[0] === "help";
-    if (kind === "courses" && item[0] === "readiness") return Boolean(staff);
+    if (item[0] === "readiness") return Boolean(staff);
+    if (item[0] === "delivery")
+      return (
+        hasTeachingRole(roles.data) ||
+        roles.data?.includes("client") ||
+        (permissions.isSuccess &&
+          permissions.data.some(
+            (permission) =>
+              permission === "courses.manage" ||
+              permission === "finance.manage",
+          ))
+      );
     return (
       item[0] !== "reviews" ||
       roles.data?.some((role) => ["client", "owner", "admin"].includes(role))
@@ -79,35 +154,47 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   });
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
-  if (!selected) return <Navigate to="/profile" replace />;
+  if (!selected) return children ?? <Navigate to="/profile" replace />;
   const Page = selected[3];
   return (
     <>
       <nav
-        className="admin-tabs"
-        aria-label={i18n.language.startsWith("de") ? "Bereiche" : "Sections"}
+        className="section-navigation"
+        aria-label={
+          kind === "courses"
+            ? de
+              ? "Kursbereiche"
+              : "Course sections"
+            : de
+              ? "Hilfebereiche"
+              : "Help sections"
+        }
       >
-        {items.map((item) => (
-          <button
-            key={item[0]}
-            className={
-              item === selected
-                ? "button button-primary"
-                : "button button-secondary"
-            }
-            aria-current={item === selected ? "page" : undefined}
-            onClick={() => setParams({ section: item[0] })}
-          >
-            {item[i18n.language.startsWith("de") ? 1 : 2]}
-          </button>
-        ))}
+        {items.map(([id, german, english, , descriptionDe, descriptionEn]) => {
+          const props = {
+            title: de ? german : english,
+            description: de ? descriptionDe : descriptionEn,
+            "aria-current":
+              (current ?? selected[0]) === id ? ("page" as const) : undefined,
+          };
+          return current ? (
+            <SectionLink key={id} {...props} to={`/${kind}?section=${id}`} />
+          ) : (
+            <SectionButton
+              key={id}
+              {...props}
+              onClick={() => setParams({ section: id })}
+            />
+          );
+        })}
       </nav>
       <Suspense fallback={<Loading />}>
-        {kind === "assistance" && selected[0] === "help" ? (
-          <Help embedded />
-        ) : (
-          <Page />
-        )}
+        {children ??
+          (kind === "assistance" && selected[0] === "help" ? (
+            <Help embedded />
+          ) : (
+            <Page />
+          ))}
       </Suspense>
     </>
   );
@@ -115,11 +202,11 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
 
 /** One workspace with stable URLs for rooms and discussion threads. */
 export function CommunicationWorkspace() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const de = i18n.language.startsWith("de");
   const actor = useAuth().session!.user.id;
   const knowledge = useQuery(knowledgeAccessQuery(actor));
   const forum = useMatch("/chats/forum");
-  const de = i18n.language.startsWith("de");
 
   if (forum && knowledge.isPending) return <Loading />;
   if (forum && knowledge.isError)
@@ -129,19 +216,30 @@ export function CommunicationWorkspace() {
 
   return (
     <>
-      {knowledge.data?.can_author && (
-        <nav
-          className="admin-tabs"
-          aria-label={de ? "Austausch" : "Communication"}
-        >
-          <NavLink to="/chats" end>
-            Chats
-          </NavLink>
-          <NavLink to="/chats/forum" end>
-            Forum
-          </NavLink>
-        </nav>
-      )}
+      <nav className="section-navigation" aria-label={t("chats")}>
+        <SectionLink
+          to="/chats"
+          title={t("chats")}
+          description={
+            de
+              ? "Öffne Direktnachrichten, Gruppen und Kurschats."
+              : "Open direct messages, groups and course chats."
+          }
+          aria-current={forum ? undefined : "page"}
+        />
+        {knowledge.isSuccess && knowledge.data.can_author && (
+          <SectionLink
+            to="/chats/forum"
+            title="Forum"
+            description={
+              de
+                ? "Diskutiere im Team und lies Fachartikel."
+                : "Join team discussions and read articles."
+            }
+            aria-current={forum ? "page" : undefined}
+          />
+        )}
+      </nav>
       <Outlet />
     </>
   );
@@ -163,31 +261,33 @@ export function CommunicationForum() {
     <>
       {canReadArticles && (
         <nav
-          className="admin-tabs"
+          className="section-navigation"
           aria-label={de ? "Forum-Inhalte" : "Forum content"}
         >
-          <button
-            className={
-              articles ? "button button-secondary" : "button button-primary"
+          <SectionButton
+            title={de ? "Diskussionen" : "Discussions"}
+            description={
+              de
+                ? "Fragen stellen und Erfahrungen austauschen."
+                : "Ask questions and share experiences."
             }
             aria-current={!articles ? "page" : undefined}
             onClick={() => {
               if (articles) setParams({});
             }}
-          >
-            {de ? "Diskussionen" : "Discussions"}
-          </button>
-          <button
-            className={
-              articles ? "button button-primary" : "button button-secondary"
+          />
+          <SectionButton
+            title={de ? "Fachartikel" : "Articles"}
+            description={
+              de
+                ? "Wissen zu Kursen und zur Portalnutzung nachlesen."
+                : "Read about courses and using the portal."
             }
             aria-current={articles ? "page" : undefined}
             onClick={() => {
               if (!articles) setParams({ view: "articles" });
             }}
-          >
-            {de ? "Fachartikel" : "Articles"}
-          </button>
+          />
         </nav>
       )}
       <Suspense fallback={<Loading />}>

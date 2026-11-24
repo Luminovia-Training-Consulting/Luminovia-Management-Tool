@@ -19,7 +19,8 @@ test("bounded server discovery, saved-view persistence and private actor boundar
         suffix = randomUUID().slice(0, 8),
         prefix = `Fictional discovery UI ${suffix}`,
         name = `Fictional personal view ${suffix}`,
-        renamed = `Fictional renamed view ${suffix}`;
+        renamed = `Fictional renamed view ${suffix}`,
+        conflictId = randomUUID();
     const rows = Array.from({length: 65}, (_, n) => ({
         id: randomUUID(),
         title: `${prefix} ${String(n).padStart(3, "0")}`,
@@ -55,6 +56,22 @@ test("bounded server discovery, saved-view persistence and private actor boundar
         ).not.toHaveAttribute("open");
         await page.getByText(/^(Filter & Ansichten|Filters & views)$/).click();
         await expect(page.locator(".jobs-grid")).toBeVisible();
+        const search = page.getByRole("searchbox", {name: "Suchtext", exact: true});
+        const calendar = page.getByLabel("Ohne Überschneidung in meinem Kalender");
+        await search.fill("Unapplied fictional text");
+        await calendar.check();
+        await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
+        await expect(search).toHaveValue("");
+        await expect(calendar).not.toBeChecked();
+
+        if (testInfo.project.name === "mobile-chromium") {
+            const view = await page.getByLabel("Ansicht auswählen", {exact: true}).boundingBox();
+            const save = await page.getByRole("button", {name: "Angewendete Filter speichern", exact: true}).boundingBox();
+            expect(view).not.toBeNull();
+            expect(save).not.toBeNull();
+            expect(save!.y).toBeGreaterThan(view!.y + view!.height);
+        }
+
         const initialRequests: number[] = [];
         const listener = (request: { url: () => string }) => {
             if (request.url().includes("/rpc/job_discovery"))
@@ -87,9 +104,9 @@ test("bounded server discovery, saved-view persistence and private actor boundar
         await expect(page.locator(".jobs-grid>.job-card").first()).toContainText(
             `${prefix} 064`,
         );
-        await page
-            .getByRole("button", {name: "Weitere Aufträge laden", exact: true})
-            .click();
+        await page.locator(".jobs-grid>.job-card").last().evaluate((card) => {
+            card.scrollIntoView({block: "start"});
+        });
         await expect(
             page.getByText("65 Aufträge geladen", {exact: true}),
         ).toBeVisible();
@@ -188,6 +205,32 @@ test("bounded server discovery, saved-view persistence and private actor boundar
                 .getByRole("option", {name: renamed, exact: true}),
         ).toHaveCount(0);
         page.off("request", listener);
+
+        // An unchanged URL must still recheck the current private calendar.
+        const available = page.getByLabel("No overlap in my calendar", {exact: true});
+        const apply = page.getByRole("button", {name: "Apply filters", exact: true});
+        await available.check();
+        await apply.click();
+        await expect(page).toHaveURL(/available=1/);
+        await expect(page.locator(".jobs-grid>.job-card").first()).toContainText(prefix);
+        await checked(service.from("personal_events").insert({
+            id: conflictId,
+            user_id: teacher.id,
+            title: "Fictional calendar conflict",
+            starts_at: "2060-04-01T08:30:00Z",
+            ends_at: "2060-04-01T09:30:00Z",
+        }));
+        const waitForAvailability = () => page.waitForResponse((r) =>
+            r.url().includes("/rpc/job_discovery") &&
+            r.status() === 200 &&
+            r.request().postDataJSON()?.p_filters?.available_only === true,
+        );
+        await Promise.all([waitForAvailability(), apply.click()]);
+        await expect(page.locator(".jobs-grid>.job-card")).toHaveCount(0);
+        await checked(service.from("personal_events").delete().eq("id", conflictId));
+        await Promise.all([waitForAvailability(), apply.click()]);
+        await expect(page.locator(".jobs-grid>.job-card").first()).toContainText(prefix);
+
         const learnerContext = await browser.newContext();
         try {
             const learnerPage = await learnerContext.newPage();
@@ -209,6 +252,7 @@ test("bounded server discovery, saved-view persistence and private actor boundar
         }
     } finally {
         await other.close();
+        await checked(service.from("personal_events").delete().eq("id", conflictId));
         // The complete canonical project is disposable. Remove own public fixtures as
         // well so this workflow can run independently without leaving catalogue rows.
         await checked(

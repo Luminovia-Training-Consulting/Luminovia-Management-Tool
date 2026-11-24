@@ -483,10 +483,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             path: `.local/screenshots/${testInfo.project.name}-lecturer-net-invoice.png`,
             fullPage: true,
         });
-        await ownerPage.goto("/finance");
-        await ownerPage
-            .getByLabel("Alle Dozierenden anzeigen", {exact: true})
-            .check();
+        await ownerPage.goto("/admin/finance");
         const ownerInvoice = ownerPage.locator("article").filter({
             has: ownerPage.getByRole("heading", {name: number, exact: true}),
         });

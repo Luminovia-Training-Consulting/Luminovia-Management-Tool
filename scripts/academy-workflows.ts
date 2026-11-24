@@ -26,7 +26,7 @@ const groups = {
       "Lizenz, Supportfreigaben und Protokoll",
       "Licence, support grants and audit",
     ],
-    "readAcademyLicenceReceipt academySupportAccess native_admin_audit_events",
+    "readAcademyLicenceReceipt academySupportAccess native_admin_audit_events native_clear_administration_activity",
   ],
   mail: [
     [

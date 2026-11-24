@@ -15,8 +15,14 @@ await withApiFixture(async ({ actor, url, recoveryEndpoints }) => {
       headers: { apikey: key, "Content-Type": "application/json" },
       body: JSON.stringify({ identifier, password }),
     });
-  for (const identifier of [user.email, user.email.toUpperCase()]) {
-    const response = await signIn(identifier, process.env.E2E_PASSWORD);
+  const signedIn = await Promise.all(
+    [user.email, user.email.toUpperCase(), user.email].map((identifier) =>
+      signIn(identifier, process.env.E2E_PASSWORD),
+    ),
+  );
+  const sessions = [];
+  const sessionIds = new Set();
+  for (const response of signedIn) {
     assert.equal(
       response.status,
       200,
@@ -30,9 +36,17 @@ await withApiFixture(async ({ actor, url, recoveryEndpoints }) => {
     );
     const client = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { Authorization: `Bearer ${session.access_token}` } },
     });
-    const { data, error } = await client.auth.getUser(session.access_token);
+    const installed = await client.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+    assert.ok(installed.data.session && !installed.error, "A fresh device can install its own session");
+    const claims = JSON.parse(Buffer.from(session.access_token.split(".")[1], "base64url").toString());
+    assert.match(claims.session_id, /^[a-f0-9-]{36}$/i);
+    sessionIds.add(claims.session_id);
+    sessions.push(client);
+    const { data, error } = await client.auth.getUser();
     assert.equal(
       Boolean(error),
       false,
@@ -46,6 +60,20 @@ await withApiFixture(async ({ actor, url, recoveryEndpoints }) => {
     const retired = await client.rpc("account_username");
     assert.ok(retired.error, "The old alias endpoint must be inaccessible");
   }
+  assert.equal(sessionIds.size, 3, "Concurrent password exchanges create independent sessions");
+  const refresh = async (client) => {
+    const result = await client.auth.refreshSession();
+    assert.ok(!result.error && result.data.user?.id === user.id, "This device can refresh its session");
+    return result.data.session.refresh_token;
+  };
+  await Promise.all(sessions.map(refresh));
+  const [first, ...others] = sessions;
+  const revoked = await refresh(first);
+  assert.equal((await first.auth.signOut({ scope: "local" })).error, null);
+  const rejected = await first.auth.refreshSession({ refresh_token: revoked });
+  assert.ok(rejected.error, "The signed-out device's token can no longer refresh");
+  await Promise.all(others.map(refresh));
+  console.log("PASS three concurrent native sessions refresh independently after device-only sign-out");
   assert.equal((await signIn(alias, process.env.E2E_PASSWORD)).status, 401);
   for (const identifier of [alias, "missing-" + randomUUID().slice(0, 8)]) {
     const response = await signIn(identifier, "FictionalWrongPassword42!");

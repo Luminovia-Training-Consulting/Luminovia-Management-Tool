@@ -38,6 +38,8 @@ WRITERS = ["auth", "rest", "realtime", "storage", "api-gw", "functions"]
 MAX_ARCHIVE = 64 * 1024 * 1024
 MAX_UNPACKED = 512 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
+# Match the UTF-16 string length used by package.mjs.
+MAX_RELEASE_PATH = 250
 MIN_FREE = 2 * 1024 * 1024 * 1024
 CONTROLLER = "deploy/hostinger/updates/updater.py"
 REBOOT_PENDING = Path("/run/luminovia-reboot-pending")
@@ -118,7 +120,14 @@ def read_environment(path):
 
 # Limit archive targets to the known app tree; reject private paths and traversal.
 def allowed_path(name):
-    if not isinstance(name, str) or not name or "\\" in name or "\x00" in name:
+    if (
+        not isinstance(name, str)
+        or not name
+        or len(name) > MAX_RELEASE_PATH
+        or len(name.encode("utf-16-le", errors="surrogatepass")) > 2 * MAX_RELEASE_PATH
+        or "\\" in name
+        or "\x00" in name
+    ):
         return False
     path = PurePosixPath(name)
     if path.is_absolute() or any(part in ("", ".", "..") for part in name.split("/")):
@@ -283,7 +292,14 @@ def visible_sql(source):
             else:
                 raise UpdateError("invalid_migration_sql")
             result.append(" ")
-        elif source[index] == "$" and (match := re.match(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$", source[index:])):
+        # PostgreSQL treats a dollar delimiter immediately after an identifier
+        # as part of that identifier. Recognize a quote opener only at a token
+        # boundary so an identifier suffix cannot hide later SQL from policy.
+        elif (
+            source[index] == "$"
+            and (index == 0 or not (source[index - 1].isalnum() or source[index - 1] in "_$"))
+            and (match := re.match(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$", source[index:]))
+        ):
             delimiter = match.group()
             end = source.find(delimiter, index + len(delimiter))
             if end < 0:

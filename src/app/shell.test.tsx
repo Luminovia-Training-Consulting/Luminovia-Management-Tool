@@ -23,6 +23,10 @@ import {
   useNavigate,
 } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
+import {
+  AdminNavigation,
+  AdministrationSection,
+} from "../features/admin/navigation";
 import { Shell } from "./shell";
 import i18n from "../lib/i18n";
 
@@ -31,6 +35,7 @@ const { signOut, access, refetchPermissions, refetchRoles, loadUi, saveUi } =
     signOut: vi.fn(),
     access: {
       failed: false,
+      permissionsLoading: false,
       roles: [] as string[],
       permissions: [] as string[],
     },
@@ -76,8 +81,11 @@ vi.mock("@tanstack/react-query", async (original) => {
                     as_of: "2026-11-15T12:00:00Z",
                   } satisfies InboxPage)
                 : [],
-      isPending: false,
-      isSuccess: !access.failed,
+      isPending:
+        options.queryKey[0] === "permissions" && access.permissionsLoading,
+      isSuccess:
+        !access.failed &&
+        !(options.queryKey[0] === "permissions" && access.permissionsLoading),
       isError:
         access.failed &&
         ["permissions", "user-roles"].includes(options.queryKey[0]),
@@ -94,6 +102,7 @@ afterEach(() => {
   localStorage.removeItem("luminovia.sidebar-collapsed");
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
+  access.permissionsLoading = false;
   access.roles = [];
   access.permissions = [];
   vi.clearAllMocks();
@@ -204,6 +213,25 @@ function setup(
             <Route element={<Shell />}>
               <Route index element={<p>Private workspace</p>} />
               <Route path="settings" element={settings} />
+              <Route element={<AdminNavigation />}>
+                <Route path="admin" element={<AdministrationSection />} />
+                <Route
+                  path="admin/operations"
+                  element={<AdministrationSection area="operations" />}
+                />
+                <Route
+                  path="admin/directory"
+                  element={<AdministrationSection area="directory" />}
+                />
+                <Route
+                  path="admin/platform"
+                  element={<AdministrationSection area="platform" />}
+                />
+                <Route path="admin/clients" element={<NavigationTarget />} />
+                <Route path="changes" element={<NavigationTarget />} />
+                <Route path="changes/:id" element={<NavigationTarget />} />
+                <Route path="contracts" element={<NavigationTarget />} />
+              </Route>
               <Route path="calendar" element={<NavigationTarget />} />
               <Route path="profile" element={<NavigationTarget />} />
               <Route path="api/docs" element={<NavigationTarget />} />
@@ -303,7 +331,7 @@ describe("server-confirmed logout", () => {
     expect(client.getQueryData(["private", "actor"])).toBe(
       "Owned private data",
     );
-    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
     complete({ error: null });
     await waitFor(() => expect(screen.getByText("Login screen")).toBeVisible());
   });
@@ -339,25 +367,118 @@ it("guest-only navigation exposes own profile/settings/help and no operational c
   expect(document.querySelector(".portal-tour")).toBeNull();
 });
 it.each(["admin", "management"])(
-  "shows the Control Center to %s with jobs.manage",
-  (role) => {
+  "moves operational and lecturer links out of the %s sidebar",
+  async (role) => {
     access.roles = [role];
-    access.permissions = ["jobs.manage"];
-    setup("/courses", false);
-    expect(screen.getByText("Live courses route")).toBeVisible();
-    expect(screen.getByRole("search")).toBeVisible();
-    expect(document.querySelector(".account-menu")).toBeInTheDocument();
+    access.permissions = ["jobs.manage", "taxonomy.manage"];
+    const { user } = setup("/courses", false);
+    const sidebar = within(screen.getByRole("complementary"));
+    for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
+      expect(sidebar.queryByRole("link", { name })).toBeNull();
+    await user.click(sidebar.getByRole("link", { name: "Verwaltung" }));
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Verwaltung" })).getByRole(
+        "link",
+        { name: /^Kursbetrieb(?: |$)/ },
+      ),
+    );
     expect(
-      screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
-    ).toBeNull();
-    expect(
-      within(screen.getByRole("complementary")).getByRole("link", {
-        name: "Leitstand",
-      }),
+      screen.getByRole("link", { name: /^Leitstand(?: |$)/ }),
     ).toHaveAttribute("href", "/control-center");
+    expect(
+      screen.getByRole("link", { name: /^Themen & Tools(?: |$)/ }),
+    ).toHaveAttribute("href", "/topics");
   },
 );
 
+it.each(["admin", "management"])(
+  "groups contracts, changes and companies for %s and keeps deep links",
+  async (role) => {
+    access.roles = [role];
+    access.permissions = [
+      "jobs.manage",
+      "contracts.manage",
+      "organisations.manage",
+      "users.manage",
+      "qualifications.verify",
+    ];
+    const { user } = setup("/changes/fictional?filter=open", false);
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(sidebar.getByRole("link", { name: "Verwaltung" })).toHaveClass(
+      "active",
+    );
+    for (const name of ["Verträge", "Auftragsänderungen", "Unternehmen"])
+      expect(sidebar.queryByRole("link", { name })).toBeNull();
+    expect(sidebar.getByRole("link", { name: "Chat" })).toHaveAttribute(
+      "href",
+      "/chats",
+    );
+
+    const sections = within(
+      screen.getByRole("navigation", { name: "Verwaltung" }),
+    );
+    expect(
+      sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
+    ).toHaveAttribute("aria-current", "location");
+    await user.click(
+      sections.getByRole("link", { name: /^Unternehmen & Personen(?: |$)/ }),
+    );
+    expect(
+      screen.getByRole("link", { name: /^Unternehmen(?! & Personen)/ }),
+    ).toHaveAttribute("href", "/admin/clients");
+    expect(
+      screen.getByRole("link", { name: /^Dozierende(?: |$)/ }),
+    ).toHaveAttribute("href", "/people");
+    expect(screen.queryByRole("link", { name: /^Verträge(?: |$)/ })).toBeNull();
+    await user.click(
+      sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
+    );
+    await user.click(screen.getByRole("link", { name: /^Verträge(?: |$)/ }));
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/contracts",
+    );
+  },
+);
+
+it("keeps contracts and assignment changes directly accessible to lecturers", () => {
+  access.roles = ["lecturer"];
+  setup("/contracts", false);
+  const sidebar = within(screen.getByRole("complementary"));
+  expect(sidebar.getByRole("link", { name: "Verträge" })).toHaveAttribute(
+    "href",
+    "/contracts",
+  );
+  expect(
+    sidebar.getByRole("link", { name: "Auftragsänderungen" }),
+  ).toHaveAttribute("href", "/changes");
+  expect(screen.queryByRole("navigation", { name: "Verwaltung" })).toBeNull();
+  expect(sidebar.getByRole("link", { name: "Dozierende" })).toHaveAttribute(
+    "href",
+    "/people",
+  );
+  expect(sidebar.getByRole("link", { name: "Themen & Tools" })).toHaveAttribute(
+    "href",
+    "/topics",
+  );
+});
+
+it("keeps the overview in place and exposes only available areas after permissions load", () => {
+  access.roles = ["management"];
+  access.permissionsLoading = true;
+  const { rerender } = setup("/admin");
+  expect(screen.queryByRole("heading", { name: "Verwaltung" })).toBeNull();
+  access.permissionsLoading = false;
+  rerender();
+  expect(screen.getByRole("heading", { name: "Verwaltung" })).toBeVisible();
+  const nav = within(screen.getByRole("navigation", { name: "Verwaltung" }));
+  expect(nav.getByRole("link", { name: /^Kursbetrieb(?: |$)/ })).toBeVisible();
+  expect(
+    nav.getByRole("link", { name: /^Unternehmen & Personen(?: |$)/ }),
+  ).toBeVisible();
+  expect(
+    nav.queryByRole("link", { name: /^Plattformbetrieb(?: |$)/ }),
+  ).toBeNull();
+});
 it("hides the Control Center without its current management permission", () => {
   access.roles = ["management"];
   access.permissions = ["announcements.manage"];
@@ -403,16 +524,25 @@ describe("native mobile More navigation", () => {
     expect(summary).toHaveFocus();
   });
 
-  it("keeps account and settings routes reachable in the complete mobile disclosure", async () => {
+  it("keeps profile and personal settings together in the account menu", async () => {
     const { user } = setup();
     const summary = screen.getByLabelText("Mehr");
     await user.click(summary);
     const menu = summary.closest("details")!;
     expect(
-      within(menu).getByRole("link", { name: "Einstellungen" }),
+      within(menu).queryByRole("link", { name: "Persönliche Einstellungen" }),
+    ).toBeNull();
+    expect(
+      within(menu).queryByRole("link", { name: "Mein Profil" }),
+    ).toBeNull();
+    const account =
+      document.querySelector<HTMLDetailsElement>(".account-menu")!;
+    await user.click(account.querySelector("summary")!);
+    expect(
+      within(account).getByRole("link", { name: "Persönliche Einstellungen" }),
     ).toHaveAttribute("href", "/settings");
     expect(
-      within(menu).getByRole("link", { name: "Mein Profil" }),
+      within(account).getByRole("link", { name: "Mein Profil" }),
     ).toHaveAttribute("href", "/profile");
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
     expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
@@ -552,16 +682,13 @@ it("allows a participant's signed-in API explorer route", () => {
   );
 });
 
-it.each(["/jobs/fictional-offer", "/finance?claim=fictional-claim"])(
-  "routes company-only requests for %s back to the company workspace",
-  async (path) => {
-    access.roles = ["client"];
-    setup(path, false);
-    expect(await screen.findByText("Live company route")).toBeVisible();
-    expect(screen.queryByText("Live job detail route")).not.toBeInTheDocument();
-    expect(screen.queryByText("Live finance route")).not.toBeInTheDocument();
-  },
-);
+it("routes a company-only job request back to the company workspace", async () => {
+  access.roles = ["client"];
+  setup("/jobs/fictional-offer", false);
+  expect(await screen.findByText("Live company route")).toBeVisible();
+  expect(screen.queryByText("Live job detail route")).not.toBeInTheDocument();
+  expect(screen.queryByText("Live finance route")).not.toBeInTheDocument();
+});
 
 it("opens a valid job detail ID for the company-scoped server projection", async () => {
   access.roles = ["client"];
@@ -574,8 +701,8 @@ it("uses one finance link for company invoices and analytics", () => {
   setup("/client", false);
   const sidebar = screen.getByRole("complementary", { name: "Menü" });
   expect(
-    within(sidebar).getByRole("link", { name: "Finanzen" }),
-  ).toHaveAttribute("href", "/finance");
+    within(sidebar).getByRole("link", { name: "Unternehmensfinanzen" }),
+  ).toHaveAttribute("href", "/client/finance");
   expect(within(sidebar).queryByRole("link", { name: "Analysen" })).toBeNull();
   expect(
     within(sidebar).queryByRole("link", { name: "Buchhaltung und Exporte" }),

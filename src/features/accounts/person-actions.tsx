@@ -93,13 +93,6 @@ export function PersonManagementActions({
           </Link>
         </Button>
       )}
-      {canManage && permissions.data?.includes("qualifications.verify") && (
-        <Button asChild variant="ghost">
-          <Link to={`/admin/people?user=${encodeURIComponent(id)}`}>
-            {t("manageEvidence")}
-          </Link>
-        </Button>
-      )}
       {status.data && (
         <Button
           variant={status.data.active ? "danger" : "secondary"}

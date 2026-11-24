@@ -2,9 +2,20 @@
  * Regressions for authorized audit views, explicit filter/cursor changes and denied access.
  * Controlled responses test UI contracts; actual audit authorization is checked separately.
  */
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  notifyManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { AdminAuditPage } from "./audit";
@@ -12,7 +23,7 @@ import { AdminAuditPage } from "./audit";
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   actor: "audit-admin",
-  allowed: true,
+  permissions: ["audit.read"],
   online: true,
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
@@ -26,7 +37,7 @@ vi.mock("../../lib/queries", () => ({
   }),
   permissionsQuery: (actor: string) => ({
     queryKey: ["permissions", actor],
-    queryFn: async () => (state.allowed ? ["audit.read"] : []),
+    queryFn: async () => state.permissions,
   }),
 }));
 vi.mock("../../lib/online", () => ({
@@ -76,16 +87,20 @@ function mount() {
 
 beforeEach(async () => {
   state.actor = "audit-admin";
-  state.allowed = true;
+  state.permissions = ["audit.read"];
   state.online = true;
   state.rpc.mockReset();
   state.rpc.mockReturnValue(response(data));
   await i18n.changeLanguage("de");
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await Promise.all(clients.map((client) => client.cancelQueries()));
   for (const client of clients) client.clear();
   clients.length = 0;
+  await act(async () => {
+    await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+  });
   vi.restoreAllMocks();
 });
 describe("connected administration audit reader", () => {
@@ -149,12 +164,147 @@ describe("connected administration audit reader", () => {
     );
   });
   it("never calls the audit API without the current capability", async () => {
-    state.allowed = false;
+    state.permissions = [];
     mount();
     expect(
       await screen.findByText(/Das Protokoll erfordert/),
     ).toBeInTheDocument();
     expect(state.rpc).not.toHaveBeenCalled();
+  });
+  it("allows management to read localized activity while hiding log deletion", async () => {
+    state.permissions = ["audit.activity.read"];
+    const action = "activity.organisation_contacts.deleted";
+    state.rpc.mockReturnValue(
+      response({
+        ...data,
+        can_clear: false,
+        actions: [action],
+        items: [{ ...event, action }],
+      }),
+    );
+    mount();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Unternehmenskontakt gelöscht",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Protokoll leeren" }),
+    ).not.toBeInTheDocument();
+    await act(() => i18n.changeLanguage("en"));
+    expect(
+      screen.getByRole("heading", { name: "Company contact deleted" }),
+    ).toBeInTheDocument();
+  });
+  it("requires explicit admin confirmation and refreshes the full log after clearing", async () => {
+    const cursor = { at: event.created_at, id: event.id };
+    let cleared = false;
+    let finish!: () => void;
+    const pending = new Promise((resolve) => {
+      finish = () => {
+        cleared = true;
+        resolve({ data: { removed: 9 }, error: null });
+      };
+    });
+    state.rpc.mockImplementation((name, args) => {
+      if (name === "clear_administration_activity") return pending;
+      return response({
+        ...data,
+        can_clear: true,
+        items: cleared
+          ? []
+          : args.p_before_id
+            ? [{ ...event, id: "older", actor_name: "Older actor" }]
+            : [event],
+        has_more: !cleared && !args.p_before_id,
+        next_cursor: !cleared && !args.p_before_id ? cursor : null,
+      });
+    });
+    mount();
+    const user = userEvent.setup();
+    await screen.findByText(event.actor_name);
+    await user.selectOptions(
+      screen.getByLabelText("Aktion"),
+      "taxonomy.created",
+    );
+    await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+    await screen.findByText(event.actor_name);
+    await user.click(screen.getByRole("button", { name: "Ältere Seite" }));
+    await screen.findByText("Older actor");
+    const clearLog = screen.getByRole("button", { name: "Protokoll leeren" });
+    await user.click(clearLog);
+    let dialog = screen.getByRole("dialog", {
+      name: "Gesamtes Protokoll leeren?",
+    });
+    expect(dialog).toHaveAccessibleDescription(
+      /unabhängig von den gewählten Filtern/,
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "clear_administration_activity",
+      { p_confirm: true },
+    );
+
+    await user.click(clearLog);
+    dialog = screen.getByRole("dialog", { name: "Gesamtes Protokoll leeren?" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Alle Einträge löschen" }),
+    );
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", {
+          name: "Einträge werden gelöscht …",
+        }),
+      ).toBeDisabled(),
+    );
+    await user.keyboard("{Escape}");
+    expect(dialog).toBeInTheDocument();
+    expect(
+      state.rpc.mock.calls.filter(
+        ([rpc]) => rpc === "clear_administration_activity",
+      ),
+    ).toHaveLength(1);
+
+    await act(() => finish());
+    expect(
+      await screen.findByText("9 Protokolleinträge gelöscht."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/Keine passenden Verwaltungsereignisse/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Older actor")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Neuere Seite" })).toBeDisabled();
+    expect(screen.getByLabelText("Aktion")).toHaveValue("");
+    expect(state.rpc).toHaveBeenLastCalledWith(
+      "admin_audit_events",
+      expect.objectContaining({
+        p_action: "",
+        p_before_at: null,
+        p_before_id: null,
+      }),
+    );
+  });
+  it("reports a failed clear inside the confirmation and preserves the displayed history", async () => {
+    state.rpc.mockImplementation((name) =>
+      name === "clear_administration_activity"
+        ? response(null, { code: "42501", message: "Permission changed" })
+        : response({ ...data, can_clear: true }),
+    );
+    mount();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Protokoll leeren" }),
+    );
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Alle Einträge löschen" }),
+    );
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Das Leeren des Protokolls konnte nicht bestätigt werden.",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    expect(screen.getByText(event.actor_name)).toBeInTheDocument();
   });
   it("retains filter drafts through language changes and only submits on request", async () => {
     mount();

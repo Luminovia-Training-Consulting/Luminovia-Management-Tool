@@ -8,6 +8,7 @@ export type PortalNavigationItem = {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  sectionActive?: boolean;
 };
 
 /** Render only the caller-supplied entries; authorization stays with the caller. */
@@ -43,11 +44,14 @@ export function PortalNavigation({
       aria-label={ariaLabel}
       aria-describedby={collapsed ? ariaDescribedBy : undefined}
     >
-      {items.map(({ to, icon: Icon, label, end }) => (
+      {items.map(({ to, icon: Icon, label, end, sectionActive }) => (
         <NavLink
           key={to}
           to={to}
           end={end ?? to === "/"}
+          className={({ isActive }) =>
+            isActive || sectionActive ? "active" : ""
+          }
           aria-label={collapsed ? renderLabel(label) : undefined}
           aria-describedby={collapsed ? ariaDescribedBy : undefined}
           onMouseEnter={(event) => onItemFocus?.(label, event.currentTarget)}

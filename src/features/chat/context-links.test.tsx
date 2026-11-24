@@ -131,16 +131,17 @@ it("shows the canonical forum link only to actors allowed by knowledge_access", 
   state.canAuthor = true;
   state.roles = ["client"];
   renderPage();
-  expect(await screen.findByRole("link", { name: "Forum" })).toHaveAttribute(
-    "href",
-    "/chats/forum",
-  );
+  expect(
+    await screen.findByRole("link", { name: /^Forum(?: |$)/ }),
+  ).toHaveAttribute("href", "/chats/forum");
 
   cleanup();
   state.canAuthor = false;
   renderPage();
   await screen.findByRole("heading", { name: "Chats" });
-  expect(screen.queryByRole("link", { name: "Forum" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: /^Forum(?: |$)/ }),
+  ).not.toBeInTheDocument();
 });
 
 it("preserves the thread and fragment from a legacy forum link", async () => {
@@ -149,7 +150,7 @@ it("preserves the thread and fragment from a legacy forum link", async () => {
   await screen.findByRole("heading", {
     name: "/chats/forum?thread=fixture#reply",
   });
-  expect(screen.getByRole("link", { name: "Forum" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /^Forum(?: |$)/ })).toHaveAttribute(
     "aria-current",
     "page",
   );
@@ -159,7 +160,9 @@ it("returns to chats when forum access is unavailable", async () => {
   state.canAuthor = false;
   renderPage("/chats/forum?thread=fixture");
   await screen.findByRole("heading", { name: "Chats" });
-  expect(screen.queryByRole("link", { name: "Forum" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: /^Forum(?: |$)/ }),
+  ).not.toBeInTheDocument();
 });
 
 it("filters active or archived chats by category and identity without replacing the open conversation", async () => {

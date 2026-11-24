@@ -27,10 +27,15 @@ export function permittedTourModules(
       return teaching || permissions.includes("contracts.read");
     if (module.path === "/finance")
       return teaching || permissions.includes("finance.manage");
-    if (module.path === "/admin/people")
+    if (module.id === "admin-people")
       return (
         permissions.includes("users.manage") &&
         permissions.includes("qualifications.verify")
+      );
+    if (module.path === "/admin/audit")
+      return (
+        permissions.includes("audit.read") ||
+        permissions.includes("audit.activity.read")
       );
     return (
       (!module.roles || module.roles.some((role) => roles.includes(role))) &&

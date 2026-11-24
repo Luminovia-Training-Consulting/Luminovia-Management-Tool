@@ -3,7 +3,7 @@
  * suggestions and personal widgets. Preview-array length never replaces totals;
  * current roles/capabilities gate the actor-scoped queries.
  */
-import { FinancialSummaryCards } from "../commercial/revenue";
+import { FinancialSummaryCards } from "../commercial/financial-summary-cards";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -28,7 +28,11 @@ import { JobCard } from "../jobs/card";
 import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { dateTime, validZone } from "../../lib/dates";
-import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
+import {
+  DashboardCalendarPreview,
+  DashboardShortcuts,
+  DashboardWidgets,
+} from "./widgets";
 import { DashboardCustomization } from "./personal";
 import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
@@ -136,6 +140,7 @@ export function Dashboard() {
             ))}
         </div>
       )}
+      <DashboardShortcuts staff={staff} clientAccount={clientAccount} />
       {staff ? (
         <div className="dashboard-overview">
           {teaching && jobSummary && (
@@ -205,9 +210,7 @@ export function Dashboard() {
       <DashboardWidgets
         actor={session!.user.id}
         zone={zone}
-        staff={staff}
         teaching={teaching}
-        clientAccount={clientAccount}
         jobCounts={jobSummary?.management ?? undefined}
       />
       {staff && (

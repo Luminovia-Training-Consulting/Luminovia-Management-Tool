@@ -140,13 +140,13 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
         const courseCard = page.getByRole("article").filter({
             has: page.getByRole("heading", {name: "Fictional lifecycle curriculum", exact: true}),
         });
+        await page.getByText("Filter", {exact: true}).click();
         await page.getByRole("combobox", {name: "Dozent:in", exact: true}).selectOption(teacher.id);
         await expect(courseCard.getByText("Auftrag besetzt · Fictional lifecycle lecturer", {exact: true})).toBeVisible();
         await courseCard.getByRole("link", {name: "Auftrag ansehen", exact: true}).click();
         await expect(page).toHaveURL(new RegExp(`/jobs/${job}$`));
         await page.getByRole("button", {name: "Auftrag bearbeiten", exact: true}).click();
         const occupiedEditor = page.getByRole("dialog", {name: "Auftrag bearbeiten"});
-        // The current editor links to the allocation section; the old shortcut label was removed.
         await expect(
             occupiedEditor.getByRole("link", {name: "Klasse und Dozentenzuweisung", exact: true}),
         ).toHaveAttribute("href", "#job-allocation");

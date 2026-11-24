@@ -990,10 +990,8 @@ export function AdminPage() {
         <div className="section-stack">
           <div className="page-actions">
             <Button asChild variant="ghost">
-              <Link to="/admin">
-                {de
-                  ? "Zur Verwaltungsübersicht"
-                  : "Back to administration overview"}
+              <Link to="/admin/assignments">
+                {de ? "Zur Auftragsübersicht" : "Back to assignment overview"}
               </Link>
             </Button>
           </div>
@@ -1007,10 +1005,8 @@ export function AdminPage() {
         <div className="section-stack">
           <div className="page-actions">
             <Button asChild variant="ghost">
-              <Link to="/admin">
-                {de
-                  ? "Zur Verwaltungsübersicht"
-                  : "Back to administration overview"}
+              <Link to="/admin/assignments">
+                {de ? "Zur Auftragsübersicht" : "Back to assignment overview"}
               </Link>
             </Button>
             <Button asChild>
@@ -1060,36 +1056,6 @@ export function AdminPage() {
               </Button>
             </div>
           </section>
-          {permissions.data.includes("users.manage") && (
-            <section className="panel">
-              <h2>{de ? "Dozent:innen & Konten" : "Lecturers & accounts"}</h2>
-              <p>
-                {de
-                  ? "Personen einladen und Profile, Rollen sowie individuelle Honorare an der Person verwalten."
-                  : "Invite people and manage profiles, roles and individual compensation on their records."}
-              </p>
-              <Button asChild variant="secondary">
-                <Link to="/admin/accounts">
-                  {de ? "Konten verwalten" : "Manage accounts"}
-                </Link>
-              </Button>
-            </section>
-          )}
-          {permissions.data.includes("organisations.manage") && (
-            <section className="panel">
-              <h2>{de ? "Unternehmen und Zugänge" : "Companies and access"}</h2>
-              <p>
-                {de
-                  ? "Unternehmen anlegen, dem Kurs zuordnen und berechtigte Unternehmenskonten mit dem Unternehmen verknüpfen. Die Unternehmenszuordnung bestimmt, welche Kurse und Daten das Konto sehen darf."
-                  : "Create companies, link them to courses and link authorised accounts to their company. Company membership determines which courses and data an account can access."}
-              </p>
-              <Button asChild variant="secondary">
-                <Link to="/clients">
-                  {de ? "Unternehmen verwalten" : "Manage companies"}
-                </Link>
-              </Button>
-            </section>
-          )}
         </div>
       )}
     </>

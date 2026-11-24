@@ -23,7 +23,6 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-const now = new Date("2027-01-18T08:05:00Z").getTime();
 const message: ChatMessage = {
   id: "message-a",
   room_id: "room-a",
@@ -49,7 +48,8 @@ function bubble(value: ChatMessage = message, actor = "lecturer-a") {
           message={value}
           actor={actor}
           zone="Europe/Berlin"
-          now={now}
+          editable
+          online
         />
       </MemoryRouter>
     </QueryClientProvider>,

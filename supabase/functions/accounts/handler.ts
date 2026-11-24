@@ -239,15 +239,27 @@ async function deliverCompanyInvitation(deps: AccountDependencies, requestId: st
 
 // Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.
 export function createAccountHandler(deps: AccountDependencies) {
-    async function accessMail(email: string): Promise<{access_email?: "requested" | "failed"}> {
+    async function accessMail(email: string, creationId?: string): Promise<{access_email?: "requested" | "failed"}> {
         if (!deps.sendAccountAccess) return {};
+        let requested = false;
         try {
             await deps.sendAccountAccess(email);
-            return {access_email: "requested"};
+            requested = true;
         } catch {
-            // Account creation has already committed. A mail failure must not roll it back.
-            return {access_email: "failed"};
+            // The account has committed independently of requesting the email.
         }
+        if (creationId && deps.privilegedRpc) {
+            try {
+                const result = await deps.privilegedRpc("_record_account_access_mail", {
+                    p_creation_id: creationId,
+                    p_requested: requested,
+                });
+                if (result.error) console.warn("Account access mail audit write failed");
+            } catch {
+                console.warn("Account access mail audit write failed");
+            }
+        }
+        return {access_email: requested ? "requested" : "failed"};
     }
 
     return async (request: Request): Promise<Response> => {
@@ -705,7 +717,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                     status: "created",
                     creation_id: result.creation_id,
                     user_id: createdId,
-                    ...await accessMail(creation.email),
+                    ...await accessMail(creation.email, result.creation_id),
                 });
             }
             if (path === "/v1/users" && request.method === "GET") {

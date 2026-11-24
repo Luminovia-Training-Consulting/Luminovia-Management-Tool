@@ -1,6 +1,7 @@
 /** Current-actor discovery/detail/dashboard contracts preserve restricted compensation as null. */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { throwPagedReadError } from "../../lib/paged-read";
 import { requireOnline } from "../../lib/online";
 import {
   assignmentCalendarMetadataSchema,
@@ -85,14 +86,14 @@ export const jobDiscoveryQuery = (
     queryKey: ["jobs", "discovery", actor, filters, quoteContext],
     initialPageParam: null as JobCursor | null,
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("job_discovery", {
           p_filters: filters,
           p_cursor: pageParam,
           p_limit: 50,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return discoveryPageSchema.parse(data);
     },
     getNextPageParam: (page) =>

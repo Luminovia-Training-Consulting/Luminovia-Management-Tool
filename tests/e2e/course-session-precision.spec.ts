@@ -92,8 +92,6 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
         expect(before).toEqual(sessions);
 
         await login(page, administrator.email);
-        // Pin the fixture's language before using German edit labels; the
-        // account-scoped UI preference can be English after login.
         await page
             .getByLabel(/^(Language|Sprache)$/, {exact: true})
             .selectOption("de");
@@ -170,7 +168,8 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
         await page.getByLabel("Sprache", {exact: true}).selectOption("en");
         await page.getByLabel("Search", {exact: true}).fill(title);
         await expect(card).toHaveCount(1);
-        await card.getByRole("button", {name: "Edit", exact: true}).click();
+        await card.getByRole("button", {name: "View course", exact: true}).click();
+        await page.getByRole("dialog").getByRole("button", {name: "Edit", exact: true}).click();
         const reopened = page.getByRole("dialog", {name: "Edit", exact: true});
         await expect(
             reopened.getByLabel("Venue / access link", {exact: true}),

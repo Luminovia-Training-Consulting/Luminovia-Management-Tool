@@ -31,7 +31,7 @@ async function accessible(page: Page) {
     ).toBe(true);
 }
 
-test("password-only authentication administrator filters and pages a redacted real audit trail; other roles and revoked access remain denied", async ({
+test("administrators and management can inspect redacted activity with role-appropriate controls", async ({
                                                                                                                                                           page,
                                                                                                                                                           browser,
                                                                                                                                                           context,
@@ -42,10 +42,12 @@ test("password-only authentication administrator filters and pages a redacted re
         label = `Fictional audit actor ${suffix} <script>literal</script>`,
         secret = `PRIVATE audit detail ${suffix}`,
         administrator = await actor(`Fictional audit admin ${suffix}`, "admin"),
+        manager = await actor(`Fictional audit manager ${suffix}`, "management"),
         teacher = await actor(label, "lecturer"),
         ids = Array.from({length: 45}, randomUUID),
         at = new Date(Date.now() - 3600000).toISOString();
     let readerContext: Awaited<ReturnType<typeof browser.newContext>> | undefined;
+    let managerContext: Awaited<ReturnType<typeof browser.newContext>> | undefined;
     try {
         await checked(
             service.from("audit_events").insert(
@@ -65,7 +67,7 @@ test("password-only authentication administrator filters and pages a redacted re
                     "chat.member_added",
                     "availability.created",
                     "contract.executed_version_registered",
-                    "invoice.submitted",
+                    "invoice.private_draft_saved",
                     "job.lifecycle.private_unknown",
                 ].map((action) => ({
                     actor_id: teacher.id,
@@ -79,7 +81,7 @@ test("password-only authentication administrator filters and pages a redacted re
         await page.goto("/admin/audit");
         await expect(
             page.getByRole("heading", {
-                name: "Administrationsprotokoll",
+                name: "Verwaltungsprotokoll",
                 exact: true,
             }),
         ).toBeVisible();
@@ -109,11 +111,17 @@ test("password-only authentication administrator filters and pages a redacted re
         ).toHaveValue(suffix);
         await expect(
             page.getByRole("heading", {
-                name: "Administration audit trail",
+                name: "Administration log",
                 exact: true,
             }),
         ).toBeVisible();
         await page.getByRole("button", {name: "Newer page", exact: true}).click();
+        await expect(page.getByRole("article")).toHaveCount(40);
+        await page.getByRole("button", {name: "Clear log", exact: true}).click();
+        const confirmation = page.getByRole("dialog", {name: "Clear the entire log?"});
+        await expect(confirmation.getByRole("button", {name: "Delete all entries", exact: true})).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(confirmation).toHaveCount(0);
         await expect(page.getByRole("article")).toHaveCount(40);
         await page.getByLabel("Theme", {exact: true}).selectOption("dark");
         await accessible(page);
@@ -121,6 +129,16 @@ test("password-only authentication administrator filters and pages a redacted re
             path: `.local/screenshots/${testInfo.project.name}-admin-audit.png`,
             fullPage: true,
         });
+        managerContext = await browser.newContext();
+        const managerPage = await managerContext.newPage();
+        await login(managerPage, manager.email);
+        await managerPage.goto("/admin/audit");
+        await expect(managerPage.getByRole("heading", {name: "Verwaltungsprotokoll", exact: true})).toBeVisible();
+        await managerPage.getByLabel("Im Protokoll suchen", {exact: true}).fill(suffix);
+        await managerPage.getByLabel("Aktion", {exact: true}).selectOption("taxonomy.created");
+        await managerPage.getByRole("button", {name: "Filter anwenden", exact: true}).click();
+        await expect(managerPage.getByRole("article")).toHaveCount(40);
+        await expect(managerPage.getByRole("button", {name: "Protokoll leeren", exact: true})).toHaveCount(0);
         readerContext = await browser.newContext();
         const reader = await readerContext.newPage();
         await login(reader, teacher.email);
@@ -144,7 +162,8 @@ test("password-only authentication administrator filters and pages a redacted re
     } finally {
         await context.setOffline(false);
         await readerContext?.close();
-        for (const user of [administrator, teacher]) {
+        await managerContext?.close();
+        for (const user of [administrator, manager, teacher]) {
             await checked(
                 service.from("audit_events").delete().eq("actor_id", user.id),
             );

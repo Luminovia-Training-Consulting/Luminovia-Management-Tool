@@ -14,7 +14,7 @@ export function useSignOut(onSignedOut?: () => void) {
     setFailed(false);
     setPending(true);
     try {
-      const { error } = await db().auth.signOut();
+      const { error } = await db().auth.signOut({ scope: "local" });
       if (error) throw error;
       onSignedOut?.();
     } catch {

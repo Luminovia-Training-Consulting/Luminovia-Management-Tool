@@ -24,6 +24,12 @@ test("individual account roles, scoped invitations and linked status management 
     await expect(
         page.getByRole("heading", {name: "Konten & Zugänge", exact: true}),
     ).toBeVisible();
+    const invite = page.getByRole("heading", {name: "Konto einladen", exact: true});
+    await expect(invite).toBeVisible();
+    expect(await invite.evaluate((heading) =>
+        Boolean(heading.closest("form")?.previousElementSibling?.querySelector(".account-directory-count"))
+        && Boolean(heading.closest("form")?.nextElementSibling?.querySelector(".account-list")),
+    )).toBe(true);
     const search = page.getByRole("searchbox", {
         name: "Konten suchen",
         exact: true,
@@ -60,6 +66,7 @@ test("individual account roles, scoped invitations and linked status management 
         // Playwright reports x/y/width/height rather than DOMRect.right.
         expect(groupBox!.x + groupBox!.width).toBeLessThanOrEqual(width + 1);
         expect(deleteBox!.x + deleteBox!.width).toBeLessThanOrEqual(width + 1);
+        expect(Math.abs(deleteBox!.x + deleteBox!.width - groupBox!.x - groupBox!.width)).toBeLessThanOrEqual(1);
         expect(roleBox!.x + roleBox!.width).toBeLessThanOrEqual(width + 1);
         const overlap =
             deleteBox!.x < roleBox!.x + roleBox!.width &&

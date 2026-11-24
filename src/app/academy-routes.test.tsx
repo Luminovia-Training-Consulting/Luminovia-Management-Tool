@@ -868,10 +868,9 @@ it("publishes only academy guides and its own downloadable OpenAPI contract", as
       level: 2,
     }),
   ).toBeVisible();
-  expect(screen.getByRole("link", { name: "OpenAPI JSON" })).toHaveAttribute(
-    "href",
-    "/api/openapi.json",
-  );
+  expect(
+    screen.getByRole("link", { name: /^OpenAPI JSON(?: |$)/ }),
+  ).toHaveAttribute("href", "/api/openapi.json");
   expect(
     screen.queryByRole("link", { name: /Job marketplace/i }),
   ).not.toBeInTheDocument();

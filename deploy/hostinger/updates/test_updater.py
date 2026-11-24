@@ -203,6 +203,29 @@ class ArchiveTests(unittest.TestCase):
             with self.assertRaisesRegex(u.UpdateError, "archive_hash"):
                 u.unpack_verified(archive, bad, Path(directory) / "archive-out")
 
+    def test_manifest_paths_obey_the_package_builder_length_boundary(self):
+        # The fixture isolates the updater parser; no archive extraction or installation writes occur.
+        with tempfile.TemporaryDirectory() as directory:
+            _, manifest, _ = fixture(directory)
+            maximum = copy.deepcopy(manifest)
+            valid_path = "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/"))
+            maximum["files"].append({"path": valid_path, "size": 0, "sha256": sha(b"")})
+            u.validate_manifest(maximum)
+
+            # Supplementary characters use two UTF-16 code units in the packager.
+            unicode_boundary = "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/") - 2) + "😀"
+            self.assertTrue(u.allowed_path(unicode_boundary))
+            self.assertFalse(u.allowed_path(unicode_boundary + "a"))
+
+            for suffix in ("a", "a" * 64 * 1024):
+                with self.subTest(extra_characters=len(suffix)):
+                    oversized = copy.deepcopy(manifest)
+                    oversized["files"][0]["path"] = (
+                        "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/")) + suffix
+                    )
+                    with self.assertRaisesRegex(u.UpdateError, "unsafe_release_path"):
+                        u.validate_manifest(oversized)
+
     def test_package_binds_only_the_known_external_relay_source(self):
         with tempfile.TemporaryDirectory() as directory:
             extra = {"scripts/mail-relay.py": b"print('fictional relay fixture')"}
@@ -254,6 +277,39 @@ class MigrationTests(unittest.TestCase):
         self.assertIn("regexp$'", command)
         self.assertTrue(command.endswith("COMMIT;\n"))
 
+    def test_lexer_ignores_transaction_tokens_in_supported_quoted_regions(self):
+        # Exercise PostgreSQL comments, escaped/doubled string delimiters,
+        # quoted identifiers and tagged dollar bodies without hiding SQL outside them.
+        source = r"""BEGIN;
+-- COMMIT; inside a line comment is inert
+/* outer comment /* nested ROLLBACK; comment */ still inert */
+SELECT 'COMMIT;''still text', E'ROLLBACK;\'still text', "COMMIT;";
+SELECT $body$COMMIT; $inner$ROLLBACK;$inner$ $body$;
+COMMIT;
+"""
+        self.assertEqual(len(u.migration_statements(source)), 2)
+        u.compatible_migration(source)
+        u.reviewed_transaction(source)
+
+    def test_identifier_suffix_cannot_open_a_dollar_quote_and_hide_commit(self):
+        # PostgreSQL requires whitespace between an identifier and a dollar quote.
+        # The classifier must see this actual COMMIT instead of masking it as a body.
+        source = "BEGIN;\nSELECT 1 AS foo$tag$;\nCOMMIT;\nSELECT $tag$body$tag$;\nCOMMIT;\n"
+        with self.assertRaisesRegex(u.UpdateError, "migration_requires_operator_review"):
+            u.compatible_migration(source)
+        with self.assertRaisesRegex(u.UpdateError, "reviewed_migration_transaction_escape"):
+            u.reviewed_transaction(source)
+
+    def test_transaction_control_corpus_covers_start_and_prepared_controls(self):
+        # Prepared transaction controls are transaction escapes even when their
+        # optional PREPARED clause follows the control keyword.
+        commands = ["START TRANSACTION", "COMMIT PREPARED 'x'", "ROLLBACK PREPARED 'x'"]
+        for command in commands:
+            with self.subTest(command=command), self.assertRaises(u.UpdateError):
+                u.compatible_migration("BEGIN;\n" + command + ";\nCOMMIT;\n")
+            with self.subTest(reviewed_command=command), self.assertRaises(u.UpdateError):
+                u.reviewed_transaction("BEGIN;\n" + command + ";\nCOMMIT;\n")
+
     def test_reviewed_and_automatic_paths_preserve_the_same_transaction_envelope(self):
         opening = "-- Fictional migration\nbegin transaction;"
         source = opening + "\nselect ';';\ncommit;\n"
@@ -294,6 +350,88 @@ class MigrationTests(unittest.TestCase):
 
 # GitHub fixtures prove exact current main and immutable release identity; CI status is deliberately not consulted.
 class ReleaseTests(unittest.TestCase):
+    def test_release_redirects_reject_downgrades_and_untrusted_hosts(self):
+        # Exercise the redirect policy directly without making external requests.
+        handler = u.SafeRedirect()
+        request = u.urllib.request.Request(
+            "https://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive"
+        )
+        for target in (
+            "http://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive",
+            "https://attacker.example.invalid/releases/download/fixture/archive",
+        ):
+            with self.subTest(target=target), self.assertRaisesRegex(
+                u.UpdateError, "unsafe_release_redirect"
+            ):
+                handler.redirect_request(request, None, 302, "Found", {}, target)
+
+    def test_release_redirects_allow_the_https_asset_cdn(self):
+        # A real GitHub download may leave github.com for its approved asset CDN.
+        handler = u.SafeRedirect()
+        target = "https://release-assets.githubusercontent.com/fixture/archive"
+        request = u.urllib.request.Request(
+            "https://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive"
+        )
+
+        redirected = handler.redirect_request(
+            request, None, 302, "Found", {}, target
+        )
+
+        self.assertEqual(redirected.full_url, target)
+
+    def test_release_asset_urls_reject_http_and_cross_host_variants(self):
+        # The candidate must use the exact HTTPS repository/tag/asset URL before download.
+        with tempfile.TemporaryDirectory() as directory:
+            updater = u.Updater(instance(directory))
+            tag = "cms-dev-" + COMMIT
+            expected = (
+                "https://github.com/"
+                + u.REPOSITORY
+                + "/releases/download/"
+                + tag
+                + "/cms-release.tar.gz"
+            )
+            release = {
+                "tag_name": tag,
+                "immutable": True,
+                "assets": [
+                    {
+                        "name": name,
+                        "state": "uploaded",
+                        "browser_download_url": (
+                            "https://github.com/"
+                            + u.REPOSITORY
+                            + "/releases/download/"
+                            + tag
+                            + "/"
+                            + name
+                        ),
+                    }
+                    for name in ("cms-release.tar.gz", "cms-release.json")
+                ],
+            }
+
+            def api(path, *, missing_ok=False):
+                if path == "/branches/main":
+                    return {"commit": {"sha": COMMIT}}
+                if path == "/releases/tags/" + tag:
+                    return release
+                if path == "/git/ref/tags/" + tag:
+                    return {"object": {"type": "commit", "sha": COMMIT}}
+                raise AssertionError("Unexpected GitHub API path: " + path)
+
+            updater.api = api
+            for unsafe in (
+                expected.replace("https://", "http://", 1),
+                expected.replace("github.com", "attacker.example.invalid", 1),
+            ):
+                with self.subTest(asset_url=unsafe):
+                    release["assets"][0]["browser_download_url"] = unsafe
+                    with self.assertRaisesRegex(
+                        u.UpdateError, "missing_or_unsafe_release_asset"
+                    ):
+                        updater.candidate()
+
     def test_immutable_current_main_release_is_eligible_without_ci_results(self):
         with tempfile.TemporaryDirectory() as directory:
             updater = u.Updater(instance(directory))

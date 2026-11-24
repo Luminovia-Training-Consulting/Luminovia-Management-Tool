@@ -23,6 +23,7 @@ const auditPage = z.strictObject({
   from: instant,
   to: instant,
   actions: z.array(z.string()),
+  can_clear: z.boolean().optional(),
 });
 
 const query = z.strictObject({
@@ -42,7 +43,7 @@ export const administrationAuditPaths = {
       tags: ["Administrative audit"],
       summary: "Read the 30-day administration audit trail",
       description:
-        "Requires current audit.read authority. The requested half-open date range and cursor query only events retained within the last 30 days. Payments show amounts and currency only with the corresponding current finance authority. Use both fields of next_cursor.",
+        "Requires current administration or management audit authority. The requested half-open date range and cursor query only events retained within the last 30 days. Payments show amounts and currency only with the corresponding current finance authority. Use both fields of next_cursor.",
       requestBody: {
         required: false,
         content: { "application/json": { schema: z.toJSONSchema(query) } },
@@ -60,6 +61,40 @@ export const administrationAuditPaths = {
           description: "The current account cannot read the audit trail",
         },
         "503": { description: "The audit trail is temporarily unavailable" },
+      },
+    },
+  },
+  "/rest/v1/rpc/clear_administration_activity": {
+    post: {
+      operationId: "native_clear_administration_activity",
+      tags: ["Administrative audit"],
+      summary: "Clear the administration activity trail",
+      description:
+        "Permanently clears the 30-day operational trail after explicit confirmation by an active administrator or owner with an active licence where applicable. The call preserves underlying business receipts.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.toJSONSchema(
+              z.strictObject({ p_confirm: z.literal(true) }),
+            ),
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Number of deleted activity entries",
+          content: {
+            "application/json": {
+              schema: z.toJSONSchema(
+                z.strictObject({ removed: z.number().int().nonnegative() }),
+              ),
+            },
+          },
+        },
+        "400": { description: "Explicit confirmation is required" },
+        "401": { description: "An authenticated session is required" },
+        "403": { description: "The current account cannot clear activity" },
       },
     },
   },

@@ -27,7 +27,7 @@ const pairs: Record<string, [string, string]> = {
     "Problem verstehen und nächste Schritte finden",
     "Understand the problem and find next steps",
   ],
-  auditLog: ["Administrationsprotokoll", "Administration log"],
+  auditLog: ["Verwaltungsprotokoll", "Administration log"],
   availability: ["Verfügbarkeit", "Availability"],
   topics: ["Themen & Tools", "Topics & tools"],
   requestCourses: ["Kurse beauftragen", "Commission courses"],
@@ -44,6 +44,38 @@ const pairs: Record<string, [string, string]> = {
   contracts: ["Verträge", "Contracts"],
   finance: ["Finanzen", "Finance"],
   controlCenter: ["Leitstand", "Control Center"],
+  myFinanceOverview: [
+    "Eigene Honorare und Rechnungen",
+    "Your fees and invoices",
+  ],
+  myFinanceExports: [
+    "Rechnungsdaten herunterladen",
+    "Download your invoice records",
+  ],
+  myFinanceAnalytics: [
+    "Eigene Einsätze und Einnahmen auswerten",
+    "Analyse your assignments and earnings",
+  ],
+  platformFinanceOverview: [
+    "Umsatz, Rechnungen und Zahlungen",
+    "Revenue, invoices and payments",
+  ],
+  platformFinanceExports: [
+    "Buchhaltung und Abrechnungsdaten",
+    "Accounting and financial exports",
+  ],
+  platformFinanceAnalytics: [
+    "Kennzahlen, Vergleiche und Prognosen",
+    "Metrics, comparisons and forecasts",
+  ],
+  myFinance: ["Meine Finanzen", "My finances"],
+  myInvoiceExports: ["Rechnungsexporte", "Invoice exports"],
+  companyFinance: ["Unternehmensfinanzen", "Company finances"],
+  platformFinance: ["Plattformfinanzen", "Platform finances"],
+  platformFinanceDescription: [
+    "Finanzübersicht, Buchhaltung, Exporte und Analysen der Plattform",
+    "Platform finance overview, accounting, exports and analytics",
+  ],
   financeOverview: ["Finanzübersicht", "Finance overview"],
   analytics: ["Analysen", "Analytics"],
   accountingExports: ["Buchhaltung und Exporte", "Accounting and exports"],
@@ -59,8 +91,7 @@ const pairs: Record<string, [string, string]> = {
     "No permitted results found.",
   ],
   notificationForum: ["Neue Forum-Antwort", "New forum reply"],
-  chats: ["Chats", "Chats"],
-  communication: ["Austausch", "Communication"],
+  chats: ["Chat", "Chat"],
   files: ["Dateien", "Files"],
   more: ["Mehr", "More"],
   wiki: ["Wiki", "Wiki"],
@@ -69,14 +100,6 @@ const pairs: Record<string, [string, string]> = {
   notificationActivity: ["Neue Aktivität", "New activity"],
   sessionCount_one: ["{{count}} Termin", "{{count}} session"],
   sessionCount_other: ["{{count}} Termine", "{{count}} sessions"],
-  people: ["Personen & Expertise", "People & expertise"],
-  peopleIntro: [
-    "Verwalte den Portalzugriff und prüfe die von Dozierenden angegebenen Qualifikationen.",
-    "Manage portal access and review the expertise declared by lecturers.",
-  ],
-  peopleDirectory: ["Personen", "People"],
-  peopleSearch: ["Personen suchen", "Search people"],
-  peopleCount: ["Treffer: {{count}}", "Results: {{count}}"],
   peopleNoResults: [
     "Keine Personen zu dieser Suche gefunden.",
     "No people match this search.",
@@ -123,7 +146,7 @@ const pairs: Record<string, [string, string]> = {
     "Prüfe die Qualifikationsnachweise vor der Freigabe. Nachweisdateien werden derzeit außerhalb des Portals verwaltet.",
     "Review qualification evidence before verifying expertise. Evidence files are currently managed outside the portal.",
   ],
-  peopleExpertiseTopic: ["Thema auswählen", "Choose a topic"],
+  peopleExpertiseTopic: ["Thema für diese Person", "Topic for this lecturer"],
   peopleExpertiseAdd: ["Expertise hinzufügen", "Add expertise"],
   peopleExpertiseRemove: ["Expertise entfernen", "Remove expertise"],
   peopleExpertiseRevokeFirst: [
@@ -256,8 +279,88 @@ const pairs: Record<string, [string, string]> = {
   ],
   profile: ["Mein Profil", "My profile"],
   admin: ["Verwaltung", "Administration"],
+  adminCoursesAssignments: ["Kurse & Aufträge", "Courses & assignments"],
+  adminOverview: ["Übersicht", "Overview"],
+  adminOverviewDescription: [
+    "Alle verfügbaren Verwaltungsaufgaben auf einen Blick.",
+    "All available administration tasks at a glance.",
+  ],
+  adminDestination_adminCoursesAssignments: [
+    "Kursdurchführungen planen, Ausschreibungen erstellen und Dozierende zuweisen.",
+    "Schedule course runs, publish assignments and allocate lecturers.",
+  ],
+  adminDestination_controlCenter: [
+    "Offene Besetzungen, fehlende Unterlagen und Aufgaben vor Kursbeginn im Blick behalten.",
+    "Track unfilled assignments, missing documents and tasks due before courses start.",
+  ],
+  adminDestination_topics: [
+    "Themen, Werkzeuge und Sprachen für Kurse und Dozierendenprofile pflegen.",
+    "Manage topics, tools and languages used in courses and lecturer profiles.",
+  ],
+  adminDestination_assignmentChanges: [
+    "Änderungen an bestätigten Aufträgen prüfen und Entscheidungen festhalten.",
+    "Review changes to confirmed assignments and record decisions.",
+  ],
+  adminDestination_contracts: [
+    "Vertragsdokumente zuordnen und Bestätigungen nachverfolgen.",
+    "Manage contract documents and track acknowledgements.",
+  ],
+  adminDestination_companies: [
+    "Unternehmen, Ansprechpersonen, Klassen und interne Dozierende verwalten.",
+    "Manage companies, contacts, classes and internal lecturers.",
+  ],
+  adminDestination_staffDirectory: [
+    "Dozierendenprofile und fachliche Schwerpunkte einsehen.",
+    "Browse lecturer profiles and areas of expertise.",
+  ],
+  adminDestination_adminAccounts: [
+    "Konten einladen, Rollen zuweisen und Zugänge verwalten.",
+    "Invite users, assign roles and manage account access.",
+  ],
+  adminDestination_platformFinance: [
+    "Einnahmen, Rechnungen, Abrechnungsexporte und Kennzahlen der Plattform einsehen.",
+    "Review platform revenue, invoices, accounting exports and analytics.",
+  ],
+  adminDestination_announcements: [
+    "Portalweite Mitteilungen verfassen und veröffentlichen.",
+    "Write and publish announcements for the portal.",
+  ],
+  adminDestination_auditLog: [
+    "Administrative Aktionen und Änderungen nachvollziehen.",
+    "Review administrative actions and changes.",
+  ],
+  adminDestination_mailSettings: [
+    "Mailversand konfigurieren und Zustellprobleme bearbeiten.",
+    "Configure outgoing mail and resolve delivery failures.",
+  ],
+  adminDestination_whiteLabel: [
+    "Edition, Lizenz und Darstellung der Kundeninstallation verwalten.",
+    "Manage the edition, licence and branding of a customer installation.",
+  ],
+  adminDestination_fullPlatformReset: [
+    "Die gesamte Installation über den bestätigten Reset-Ablauf zurücksetzen.",
+    "Reset the entire installation through the confirmed reset workflow.",
+  ],
+  adminOperations: ["Kursbetrieb", "Course operations"],
+  adminOperationsDescription: [
+    "Aufträge, Leitstand, Themen und Verträge",
+    "Assignments, Control Center, topics and contracts",
+  ],
+  adminDirectory: ["Unternehmen & Personen", "Companies & people"],
+  adminDirectoryDescription: [
+    "Unternehmen, Dozierende und Benutzerkonten",
+    "Companies, lecturers and user accounts",
+  ],
+  adminPlatform: ["Plattformbetrieb", "Platform operations"],
+  adminPlatformDescription: [
+    "Ankündigungen, Protokoll, Mail und Systemeinstellungen",
+    "Announcements, audit trail, mail and system settings",
+  ],
+  adminAccounts: ["Benutzerkonten", "User accounts"],
+  whiteLabel: ["White Label", "White Label"],
   mailSettings: ["E-Mail-Transport", "Mail transport"],
   settings: ["Einstellungen", "Settings"],
+  personalSettings: ["Persönliche Einstellungen", "Personal settings"],
   login: ["Anmelden", "Sign in"],
   logout: ["Abmelden", "Sign out"],
   signOutFailed: [
@@ -337,6 +440,14 @@ const pairs: Record<string, [string, string]> = {
   loginFailed: [
     "Anmeldung nicht möglich. Bitte prüfe deine Zugangsdaten.",
     "Unable to sign in. Check your credentials.",
+  ],
+  loginRateLimited: [
+    "Zu viele Anmeldeversuche. Bitte warte einige Minuten und versuche es erneut.",
+    "Too many sign-in attempts. Wait a few minutes before trying again.",
+  ],
+  loginUnavailable: [
+    "Die Anmeldung ist vorübergehend nicht verfügbar. Bitte versuche es erneut.",
+    "Sign-in is temporarily unavailable. Please try again.",
   ],
   save: ["Speichern", "Save"],
   saving: ["Wird gespeichert …", "Saving …"],

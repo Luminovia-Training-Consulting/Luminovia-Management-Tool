@@ -94,12 +94,12 @@ function AcademyLogin() {
       />
     );
   return (
-    <>
+    <div className="login-page">
       <div className="login-preferences">
         <Preferences />
       </div>
       <Login footer={<AcademyBrandLinksFooter />} />
-    </>
+    </div>
   );
 }
 
