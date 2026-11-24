@@ -3,7 +3,7 @@
  * manages dialog semantics and focus.
  */
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +26,7 @@ export function Dialog({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const opener = useRef<HTMLElement | null>(null);
   return (
     <DialogPrimitive.Root
       open={open}
@@ -37,10 +38,17 @@ export function Dialog({
         <DialogPrimitive.Overlay className="dialog-overlay" />
         <DialogPrimitive.Content
           className="dialog-content"
+          onOpenAutoFocus={() => {
+            const focused = document.activeElement;
+            opener.current = focused instanceof HTMLElement ? focused : null;
+          }}
           onCloseAutoFocus={(event) => {
-            if (returnFocusTo?.isConnected) {
+            const target = returnFocusTo?.isConnected
+              ? returnFocusTo
+              : opener.current;
+            if (target?.isConnected) {
               event.preventDefault();
-              returnFocusTo.focus();
+              target.focus();
             }
           }}
         >
