@@ -356,7 +356,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
     );
   };
   return (
-    <section className="mail-settings">
+    <section className="mail-settings section-stack">
       <PageHeading
         title={t("title")}
         description={t(academy ? "academyDescription" : "description")}
@@ -424,6 +424,30 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
       >
         <fieldset disabled={readOnly || save.isPending || test.isPending}>
           <legend>{t("smtp")}</legend>
+          {!academy && (
+            <div className="form-actions">
+              {(["implicit_tls", "starttls"] as const).map((security) => (
+                <Button
+                  type="button"
+                  key={security}
+                  variant="secondary"
+                  onClick={() =>
+                    change("smtp", {
+                      host: "smtp.hostinger.com",
+                      port: ports.smtp[security],
+                      security,
+                    })
+                  }
+                >
+                  {t(
+                    security === "implicit_tls"
+                      ? "hostingerDefault"
+                      : "hostingerAlternative",
+                  )}
+                </Button>
+              ))}
+            </div>
+          )}
           <label className="mail-enabled">
             <input
               type="checkbox"
@@ -447,21 +471,18 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
               />
             </Field>
             <Field id="mail-smtp-port" label={t("port")}>
-              <select
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={65535}
+                step={1}
+                required={draft.smtp.enabled}
                 value={draft.smtp.port}
                 onChange={(event) =>
-                  change("smtp", {
-                    port: event.currentTarget.value,
-                    security:
-                      event.currentTarget.value === "465"
-                        ? "implicit_tls"
-                        : "starttls",
-                  })
+                  change("smtp", { port: event.currentTarget.value })
                 }
-              >
-                <option value="465">465</option>
-                <option value="587">587</option>
-              </select>
+              />
             </Field>
             <Field id="mail-smtp-security" label={t("security")}>
               <select
@@ -469,7 +490,6 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
                 onChange={(event) =>
                   change("smtp", {
                     security: event.currentTarget.value as SecurityMode,
-                    port: ports.smtp[event.currentTarget.value as SecurityMode],
                   })
                 }
               >

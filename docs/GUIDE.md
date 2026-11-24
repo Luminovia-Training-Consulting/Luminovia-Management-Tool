@@ -70,6 +70,8 @@ Use `./portal check` for fast local source/coverage/build validation and `./port
 
 At sign-in choose **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour**. [Usage and verification](GUIDE.md#section-tour-and-help).
 
+In a long form dialog, scroll the fields below the heading. The heading and close button stay visible. During saves that disable the close button, the dialog stays open until the request returns.
+
 <a id="section-user-guide-sign-in-and-account-security"></a>
 
 ## Sign in and account security
@@ -2024,7 +2026,7 @@ The notification opens the recipient's exact invitation. They can accept, accept
 
 Set your account default under **Profil → Zeitzone / Profile → Time zone**. Choose an IANA zone from the dropdown and save the profile. The dropdown lists common zones first and groups the other available zones below. The calendar, dashboard schedule and notification timestamps use this zone where they show times in your personal view. When creating a private event, you can choose the time zone in which you entered its local times.
 
-Set the interface under **Profil → Standardsprache / Profile → Default language**. The account restores the saved choice when you sign in, including on another device. **Deutsch (Schweiz)** uses Swiss spelling for translated interface text and Swiss date and number formats. Existing text authored by users keeps its spelling. Changing the language keeps the original currency on financial records.
+Set the interface under **Profil → Standardsprache / Profile → Default language**. Use the adjacent account settings to change your email address or open the password form. On narrow displays, the cards stack. The account restores the saved language when you sign in, including on another device. **Deutsch (Schweiz)** uses Swiss spelling for translated interface text and Swiss date and number formats. Existing text authored by users keeps its spelling. Changing the language keeps the original currency on financial records.
 
 Use **Kalenderanzeige in / Show calendar in** to change how the calendar displays appointments in the current view. **Profilzeitzone / Profile time zone** restores the account default. A zone change keeps the selected calendar date and leaves stored events and their original zones intact. In a repeated hour the calendar labels the UTC offsets. Global event details show both the original event times and the displayed times when the zones differ.
 

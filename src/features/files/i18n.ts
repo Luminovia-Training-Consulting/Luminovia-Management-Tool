@@ -69,6 +69,11 @@ const pairs: Record<string, [string, string]> = {
     "{{name}} will no longer be available. Existing versions are retained for record keeping.",
   ],
   name: ["Dateiname", "File name"],
+  moreActions: ["Weitere Aktionen", "More actions"],
+  moreActionsForFile: [
+    "Weitere Aktionen für {{name}}",
+    "More actions for {{name}}",
+  ],
   versions: ["Versionen", "Versions"],
   version: ["Version {{number}}", "Version {{number}}"],
   clean: ["Geprüft", "Scanned"],

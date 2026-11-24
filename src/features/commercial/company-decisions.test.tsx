@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
@@ -50,7 +56,7 @@ it("shows the deadline and submits rejection only after explicit confirmation", 
     expect.anything(),
   );
   const dialog = screen.getByRole("dialog");
-  await user.click(dialog.querySelector("button:last-child")!);
+  await user.click(within(dialog).getByRole("button", { name: "Ablehnen" }));
   await waitFor(() =>
     expect(fake.rpc).toHaveBeenCalledWith("decide_company_lecturer", {
       p_claim_id: "claim-a",

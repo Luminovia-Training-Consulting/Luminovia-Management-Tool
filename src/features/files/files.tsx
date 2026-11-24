@@ -138,12 +138,14 @@ export function FileUpload({
     if (!value) return;
     setError("");
     upload.reset();
+    setProgress(0);
     if (value.size < 1 || value.size > maximumFileSize) {
+      setFile(null);
+      if (input.current) input.current.value = "";
       setError("file_size");
       return;
     }
     setFile(value);
-    setProgress(0);
     clientId.current = crypto.randomUUID();
   };
   return (
@@ -726,7 +728,10 @@ function DocumentList({
               {(file.owner_id === session!.user.id || canDelete) && (
                 <details open={openMenuId === file.id}>
                   <summary
-                    aria-label={`${t("name")}: ${file.original_name}`}
+                    aria-label={t("moreActionsForFile", {
+                      name: file.original_name,
+                    })}
+                    title={t("moreActions")}
                     onClick={(event) => {
                       // Summary activation also covers Enter/Space. Keeping
                       // the native toggle out of state avoids queued events

@@ -99,6 +99,11 @@
   margin-top: 0;
 }
 
+.support-overview .support-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .support-thread > li,
 .support-history > li {
   padding: 18px 0;
@@ -171,4 +176,28 @@
   .support-overview {
     grid-template-columns: 1fr;
   }
+}
+
+.support-ticket-detail {
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+  min-width: 0;
+}
+
+.support-ticket-detail > .page-heading,
+.support-ticket-detail .support-actions {
+  margin: 0;
+}
+
+.support-ticket-detail .support-back {
+  justify-self: start;
+}
+
+.support-ticket-detail .section-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.support-filters > .field {
+  margin: 0;
 }

@@ -154,14 +154,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-block: 16px;
 }
 
 .job-detail-toolbar .page-actions {
   margin: 0;
 }
 
-.job-detail-toolbar > div:empty {
+.job-detail-toolbar nav > div:empty {
   display: none;
 }
 
@@ -171,8 +170,50 @@
   font-size: 0.95rem;
 }
 
+.job-detail-sections > [tabindex="-1"] {
+  scroll-margin-block-start: 1rem;
+}
+
+.page-actions.job-editor-actions {
+  margin-block: 0 1.25rem;
+  padding-block-end: 1.25rem;
+  border-block-end: 1px solid var(--line);
+}
+
 .job-edit-schedule {
   margin-top: 24px;
   border-top: 1px solid var(--line);
   padding-top: 16px;
+}
+
+.job-detail-sections
+  > :is(
+    .job-lifecycle,
+    .job-briefing,
+    .job-documents,
+    .resource-comments,
+    .changes-linked,
+    .form-actions
+  ) {
+  margin-block: 0;
+}
+
+.job-detail-sections > .panel > h2:first-child {
+  margin-block-start: 0;
+}
+
+.job-detail-toolbar nav {
+  min-width: 0;
+}
+
+.job-detail-toolbar nav:has(> :only-child:empty) {
+  display: none;
+}
+
+.job-detail-toolbar nav > .notice {
+  margin: 0;
+}
+
+.job-detail-content {
+  margin-block-start: clamp(1rem, 2vw, 1.5rem);
 }

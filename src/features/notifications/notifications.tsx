@@ -68,6 +68,7 @@ export function NotificationsPage({
   const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const participantOnly = isParticipantOnly(roles.data);
   const readOnly = academy === "grace";
+  const showReminderActions = !academy && roles.isSuccess && !participantOnly;
   const sensitive = Boolean(academy) || participantOnly;
   const query = useInfiniteQuery({
     ...notificationInboxQuery(actor, unreadOnly),
@@ -127,62 +128,78 @@ export function NotificationsPage({
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
-      {!academy && (
-        <div className="panel notification-category-panel">
-          <CategorySelector value={category} onChange={setCategory} />
-          <p className="notification-filter-scope">{t("loadedScope")}</p>
+      <section className="panel inbox-tools" aria-label={t("readFilter")}>
+        {!academy && (
+          <div className="notification-category-panel">
+            <CategorySelector value={category} onChange={setCategory} />
+            <p className="notification-filter-scope">{t("loadedScope")}</p>
+          </div>
+        )}
+        <div className="inbox-toolbar">
+          <div className="inbox-read-filter">
+            <label htmlFor="inbox-filter">{t("readFilter")}</label>
+            <select
+              id="inbox-filter"
+              value={unreadOnly ? "unread" : "all"}
+              onChange={(event) =>
+                setUnreadOnly(event.target.value === "unread")
+              }
+            >
+              <option value="all">{t("all")}</option>
+              <option value="unread">{t("unread")}</option>
+            </select>
+            {first && (
+              <span role="status">
+                {t("count", { count: first.unread_count })}
+              </span>
+            )}
+          </div>
+          <div className="inbox-toolbar-actions">
+            {!readOnly && (
+              <Button
+                variant="secondary"
+                disabled={!first || !canMark || mark.isPending}
+                onClick={() =>
+                  mark.mutate(
+                    category === "all"
+                      ? { ids: null, before: first!.as_of, read: true }
+                      : {
+                          ids: visibleItems
+                            .filter((item) => !item.read_at)
+                            .map((item) => item.id),
+                          before: null,
+                          read: true,
+                        },
+                  )
+                }
+              >
+                {t(category === "all" ? "markAll" : "markCategoryVisible")}
+              </Button>
+            )}
+            {showReminderActions && (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={!online || refresh.isPending}
+                  onClick={() => refresh.mutate()}
+                >
+                  {t("refresh")}
+                </Button>
+                <Button asChild variant="ghost">
+                  <Link to="/settings">{t("preferences")}</Link>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      )}
-      <div className="panel inbox-toolbar">
-        <label htmlFor="inbox-filter">{t("readFilter")}</label>
-        <select
-          id="inbox-filter"
-          value={unreadOnly ? "unread" : "all"}
-          onChange={(event) => setUnreadOnly(event.target.value === "unread")}
-        >
-          <option value="all">{t("all")}</option>
-          <option value="unread">{t("unread")}</option>
-        </select>
-        {first && (
-          <span role="status">{t("count", { count: first.unread_count })}</span>
+        {showReminderActions && (
+          <details className="inbox-reminders">
+            <summary>{t("reminderScope")}</summary>
+            <p>{t("refreshHelp")}</p>
+          </details>
         )}
-        {!readOnly && (
-          <Button
-            variant="secondary"
-            disabled={!first || !canMark || mark.isPending}
-            onClick={() =>
-              mark.mutate(
-                category === "all"
-                  ? { ids: null, before: first!.as_of, read: true }
-                  : {
-                      ids: visibleItems
-                        .filter((item) => !item.read_at)
-                        .map((item) => item.id),
-                      before: null,
-                      read: true,
-                    },
-              )
-            }
-          >
-            {t(category === "all" ? "markAll" : "markCategoryVisible")}
-          </Button>
-        )}
-        {!academy && roles.isSuccess && !participantOnly && (
-          <Link to="/settings">{t("preferences")}</Link>
-        )}
-      </div>
-      {!academy && roles.isSuccess && !participantOnly && (
-        <section className="panel inbox-reminders">
-          <Button
-            disabled={!online || refresh.isPending}
-            onClick={() => refresh.mutate()}
-          >
-            {t("refresh")}
-          </Button>
-          <p>{t("refreshHelp")}</p>
-          {refresh.isSuccess && <Notice>{t("refreshed")}</Notice>}
-        </section>
-      )}
+        {refresh.isSuccess && <Notice>{t("refreshed")}</Notice>}
+      </section>
       {(mark.isError || refresh.isError) && (
         <Notice kind="error">{t("error")}</Notice>
       )}
@@ -373,9 +390,11 @@ export function SettingsPage() {
         <summary>
           {de ? "Ruhezeiten & Zustellung" : "Quiet hours & delivery"}
         </summary>
-        <QuietHoursSettings />
-        <DeliverySettings actor={actor} />
-        <PushSettings key={actor} actor={actor} />
+        <div className="section-stack notification-delivery-stack">
+          <QuietHoursSettings />
+          <DeliverySettings actor={actor} />
+          <PushSettings key={actor} actor={actor} />
+        </div>
       </details>
       <details
         className="panel settings-section"

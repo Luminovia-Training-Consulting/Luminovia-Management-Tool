@@ -40,27 +40,43 @@ export function PersonContact({
         <>
           {!email && !phone && <p className="muted">{t("none")}</p>}
           {email && (
-            <div>
+            <div className="person-contact-row">
               <p>{email}</p>
-              <CopyContact key={`email:${email}`} value={email} kind="email" />
-              {emailLink && (
-                <a href={emailLink}>
-                  <Mail size={17} aria-hidden="true" />
-                  {t("write")}
-                </a>
-              )}
+              <div className="person-contact-actions">
+                {emailLink && (
+                  <Button asChild variant="secondary">
+                    <a href={emailLink}>
+                      <Mail size={17} aria-hidden="true" />
+                      {t("write")}
+                    </a>
+                  </Button>
+                )}
+                <CopyContact
+                  key={`email:${email}`}
+                  value={email}
+                  kind="email"
+                />
+              </div>
             </div>
           )}
           {phone && (
-            <div>
+            <div className="person-contact-row">
               <p>{phone}</p>
-              <CopyContact key={`phone:${phone}`} value={phone} kind="phone" />
-              {phoneLink && (
-                <a href={phoneLink}>
-                  <Phone size={17} aria-hidden="true" />
-                  {t("call")}
-                </a>
-              )}
+              <div className="person-contact-actions">
+                {phoneLink && (
+                  <Button asChild variant="secondary">
+                    <a href={phoneLink}>
+                      <Phone size={17} aria-hidden="true" />
+                      {t("call")}
+                    </a>
+                  </Button>
+                )}
+                <CopyContact
+                  key={`phone:${phone}`}
+                  value={phone}
+                  kind="phone"
+                />
+              </div>
             </div>
           )}
         </>

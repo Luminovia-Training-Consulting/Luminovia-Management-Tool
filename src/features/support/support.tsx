@@ -282,8 +282,8 @@ function TicketList({
                     <Link to={`/support/${ticket.id}`}>{ticket.title}</Link>
                   </h2>
                   <p className="muted">
-                    {t("requester")}: {ticket.requester_name} ·{" "}
-                    {ticket.mine && t("mine")}
+                    {t("requester")}: {ticket.requester_name}
+                    {ticket.mine && ` · ${t("mine")}`}
                   </p>
                   <time dateTime={ticket.updated_at}>
                     {dateTime(ticket.updated_at, i18n.language, "UTC")} · UTC
@@ -299,22 +299,26 @@ function TicketList({
             ))}
           </ul>
           {!tickets.data.items.length && <p className="panel">{t("empty")}</p>}
-          <div className="support-actions">
-            <Button
-              variant="secondary"
-              disabled={!cursor || tickets.isFetching || !online}
-              onClick={() => setCursor(null)}
-            >
-              {t("first")}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!tickets.data.has_more || tickets.isFetching || !online}
-              onClick={() => setCursor(tickets.data.next_cursor)}
-            >
-              {t("older")}
-            </Button>
-          </div>
+          {(cursor || tickets.data.has_more) && (
+            <div className="support-actions">
+              <Button
+                variant="secondary"
+                disabled={!cursor || tickets.isFetching || !online}
+                onClick={() => setCursor(null)}
+              >
+                {t("first")}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={
+                  !tickets.data.has_more || tickets.isFetching || !online
+                }
+                onClick={() => setCursor(tickets.data.next_cursor)}
+              >
+                {t("older")}
+              </Button>
+            </div>
+          )}
         </>
       )}
       {context.can_manage && (
@@ -707,8 +711,8 @@ function TicketDetail({
               ? "related"
               : action;
   return (
-    <>
-      <Link className="text-link" to="/support">
+    <div className="support-ticket-detail">
+      <Link className="text-link support-back" to="/support">
         {t("back")}
       </Link>
       <PageHeading
@@ -736,60 +740,64 @@ function TicketDetail({
             <dt>{t("priority")}</dt>
             <dd>{t(row.priority)}</dd>
           </dl>
-        </div>
-      </section>
-      <div className="support-actions">
-        {!["resolved", "closed"].includes(row.status) && (
-          <Button
-            disabled={!online}
-            onClick={() => setEditing({ action: "reply", ticket: row })}
-          >
-            <MessageSquare size={18} aria-hidden="true" />
-            {t("send")}
-          </Button>
-        )}
-        {row.can_manage && (
-          <>
-            {!["resolved", "closed"].includes(row.status) && (
-              <Button
-                variant="secondary"
-                disabled={!online}
-                onClick={() =>
-                  setEditing({ action: "internal_note", ticket: row })
-                }
-              >
-                {t("note")}
-              </Button>
-            )}
-            {(["status", "assign", "priority", "links"] as const)
-              .filter(
-                (action) =>
-                  action !== "status" || supportNextStatuses(row.status).length,
-              )
-              .map((action) => (
+          {(row.can_manage || row.can_reopen) && (
+            <div className="support-actions">
+              {row.can_manage &&
+                (["status", "assign", "priority", "links"] as const)
+                  .filter(
+                    (action) =>
+                      action !== "status" ||
+                      supportNextStatuses(row.status).length,
+                  )
+                  .map((action) => (
+                    <Button
+                      key={action}
+                      variant="secondary"
+                      disabled={!online}
+                      onClick={() => setEditing({ action, ticket: row })}
+                    >
+                      {t(title(action))}
+                    </Button>
+                  ))}
+              {row.can_reopen && (
                 <Button
-                  key={action}
                   variant="secondary"
                   disabled={!online}
-                  onClick={() => setEditing({ action, ticket: row })}
+                  onClick={() => setEditing({ action: "reopen", ticket: row })}
                 >
-                  {t(title(action))}
+                  {t("reopen")}
                 </Button>
-              ))}
-          </>
-        )}
-        {row.can_reopen && (
-          <Button
-            variant="secondary"
-            disabled={!online}
-            onClick={() => setEditing({ action: "reopen", ticket: row })}
-          >
-            {t("reopen")}
-          </Button>
-        )}
-      </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
       <section className="panel">
-        <h2>{t("conversation")}</h2>
+        <div className="section-heading">
+          <h2>{t("conversation")}</h2>
+          {!["resolved", "closed"].includes(row.status) && (
+            <div className="support-actions">
+              <Button
+                disabled={!online}
+                onClick={() => setEditing({ action: "reply", ticket: row })}
+              >
+                <MessageSquare size={18} aria-hidden="true" />
+                {t("send")}
+              </Button>
+              {row.can_manage && (
+                <Button
+                  variant="secondary"
+                  disabled={!online}
+                  onClick={() =>
+                    setEditing({ action: "internal_note", ticket: row })
+                  }
+                >
+                  {t("note")}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
         {row.messages.length ? (
           <ol className="support-thread">
             {row.messages.map((message) => (
@@ -912,7 +920,7 @@ function TicketDetail({
           />
         )}
       </Dialog>
-    </>
+    </div>
   );
 }
 

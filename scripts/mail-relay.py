@@ -116,9 +116,14 @@ def valid_external_host(host: str) -> bool:
     return True
 
 
+def valid_port(port: Any) -> bool:
+    """Accept exactly one numeric TCP port; protocol and TLS are checked by callers."""
+    return type(port) is int and 1 <= port <= 65535
+
+
 def resolve_public_addresses(host: str, port: int) -> list[tuple[int, int, int, tuple[Any, ...]]]:
     """Resolve once and retain only globally routable addresses for pinned socket connects."""
-    if not valid_external_host(host) or port not in (143, 465, 587, 993):
+    if not valid_external_host(host) or not valid_port(port):
         raise RelayFailure("configuration_unavailable")
     try:
         records = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
@@ -131,7 +136,7 @@ def resolve_public_addresses(host: str, port: int) -> list[tuple[int, int, int, 
             ip = ipaddress.ip_address(address[0])
         except ValueError:
             continue
-        if ip.is_global:
+        if ip.is_global and not ip.is_multicast:
             public.append((family, socktype, protocol, address))
     if not public:
         raise RelayFailure("connect_failed")
@@ -244,7 +249,10 @@ class MailRelay:
         if (
                 not valid_external_host(host)
                 or not isinstance(username, str)
-                or not MAILBOX_PATTERN.fullmatch(username)
+                or not username
+                or len(username) > 254
+                or any(ord(char) < 32 or ord(char) > 126 for char in username)
+                or (data.get("protocol") == "imap" and not MAILBOX_PATTERN.fullmatch(username))
                 or not isinstance(password, str)
                 or not password
                 or len(password) > 1024
@@ -316,7 +324,7 @@ class MailRelay:
     def smtp_session(self, settings: dict[str, Any], *, verify_implicit_greeting=False):
         """Own the pinned TLS connection and translate provider failures without exposing responses."""
         host, port, security = settings.get("host"), settings.get("port"), settings.get("security")
-        if port not in (465, 587) or security not in ("implicit_tls", "starttls"):
+        if not valid_port(port) or security not in ("implicit_tls", "starttls"):
             raise RelayFailure("configuration_unavailable")
         connection: smtplib.SMTP | None = None
         context = ssl.create_default_context()
@@ -429,7 +437,7 @@ class MailRelay:
                 or not MAILBOX_PATTERN.fullmatch(sender)
                 or not isinstance(sender_name, str)
                 or any(ord(char) < 32 or ord(char) == 127 for char in sender_name)
-                or port not in (465, 587)
+                or not valid_port(port)
                 or security not in ("implicit_tls", "starttls")
         ):
             raise RelayFailure("configuration_unavailable")
@@ -752,7 +760,7 @@ async def serve(config: RelayConfig) -> None:
 
     smtp_internal = await asyncio.start_server(
         handle_auth,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=config.smtp_port,
         limit=MAX_COMMAND_BYTES + 2,
         backlog=16,
