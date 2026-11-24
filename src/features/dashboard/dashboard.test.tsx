@@ -472,7 +472,7 @@ describe("role-aware dashboard previews", () => {
     ).toBeVisible();
     expect(
       within(followups).getByRole("link", { name: "Aufträge verwalten" }),
-    ).toHaveAttribute("href", "/admin");
+    ).toHaveAttribute("href", "/admin/assignments");
     expect(
       rpcCalls("contract_records").every(
         (call) => JSON.stringify(call.args) === '[{"p_all":false}]',

@@ -18,6 +18,7 @@ import {
   Routes,
   useOutletContext,
   useParams,
+  useSearchParams,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
@@ -26,7 +27,11 @@ import { PortalAccess } from "../features/auth/portal-access";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
-import { AdminNavigation } from "../features/admin/navigation";
+import {
+  AdminNavigation,
+  AdministrationSection,
+} from "../features/admin/navigation";
+import { isAssignmentRequest } from "../features/admin/navigation-links";
 import { Shell } from "./shell";
 import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
@@ -394,7 +399,20 @@ export default function PortalRoutes() {
             <Route path="changes" element={<ChangeRequestsPage />} />
             <Route path="changes/:id" element={<ChangeRequestsPage />} />
             <Route path="admin">
-              <Route index element={<AdminPage />} />
+              <Route index element={<AdministrationIndex />} />
+              <Route
+                path="operations"
+                element={<AdministrationSection area="operations" />}
+              />
+              <Route
+                path="directory"
+                element={<AdministrationSection area="directory" />}
+              />
+              <Route
+                path="platform"
+                element={<AdministrationSection area="platform" />}
+              />
+              <Route path="assignments" element={<AdminPage />} />
               <Route path="people" element={<PeopleAdminPage />} />
               <Route path="clients" element={<ClientsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
@@ -413,6 +431,16 @@ export default function PortalRoutes() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+/** Preserve assignment links published before the administration overview. */
+function AdministrationIndex() {
+  const [params] = useSearchParams();
+  return isAssignmentRequest(params) ? (
+    <AdminPage />
+  ) : (
+    <AdministrationSection />
   );
 }
 

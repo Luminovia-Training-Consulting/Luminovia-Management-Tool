@@ -615,13 +615,13 @@ export function PeopleAdminPage() {
   )
     return (
       <>
-        <PageHeading title={t("people")} />
+        <PageHeading title={t("adminLecturers")} />
         <Notice kind="error">{t("noAccess")}</Notice>
       </>
     );
   return (
     <>
-      <PageHeading title={t("people")} description={t("peopleIntro")} />
+      <PageHeading title={t("adminLecturers")} description={t("peopleIntro")} />
       <PeopleDirectory actorId={actorId} />
     </>
   );

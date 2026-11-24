@@ -86,37 +86,32 @@ async function a11y(page: Page) {
 test("administration navigation keeps shared workflows together on desktop and mobile", async ({page}, testInfo) => {
     await login(page, process.env.E2E_ADMIN_EMAIL!);
     await page.goto("/admin");
-    await expect(page.getByRole("heading", {name: "Kurse & Aufträge verwalten", exact: true})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Verwaltung", exact: true})).toBeVisible();
     const mobile = testInfo.project.name.includes("mobile");
-    const menu = page.locator(".administration-menu");
     const more = page.getByLabel("Mehr", {exact: true});
     if (mobile) await more.click();
     const mainMenu = mobile ? page.locator(".mobile-more") : page.locator(".sidebar");
     await expect(mainMenu.getByRole("link", {name: "Verwaltung", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Chat", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
-    await expect(mainMenu.getByRole("link", {name: "Auftragsänderungen", exact: true})).toHaveCount(0);
+    if (mobile) await more.press("Escape");
 
-    const summary = menu.locator("summary");
-    if (mobile) {
-        await more.press("Escape");
-        await summary.focus();
-        await summary.press("Enter");
-    } else {
-        await expect(menu).toBeHidden();
-    }
     const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
-    await expect(sections.getByRole("link", {name: "Unternehmen", exact: true})).toBeVisible();
-    await sections.getByRole("link", {name: "Verträge", exact: true}).click();
+    await expect(sections.getByRole("link")).toHaveCount(4);
+    await sections.getByRole("link", {name: "Unternehmen & Personen", exact: true}).click();
+    await expect(page.getByRole("link", {name: "Unternehmen", exact: true})).toBeVisible();
+    await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
+    await page.getByRole("link", {name: "Dozierende & Expertise", exact: true}).click();
+    await expect(page).toHaveURL(/\/admin\/people$/);
+    await expect(page.getByRole("heading", {name: "Dozierende & Expertise", exact: true})).toBeVisible();
+    await expect(sections.getByRole("link", {name: "Unternehmen & Personen", exact: true})).toHaveAttribute("aria-current", "location");
+
+    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
+    await page.getByRole("link", {name: "Verträge", exact: true}).click();
     await expect(page).toHaveURL(/\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
-    if (mobile) {
-        await expect(menu).not.toHaveAttribute("open");
-        await expect(summary).toBeFocused();
-        await expect(summary).toContainText("Verträge");
-        await summary.click();
-    }
-    await sections.getByRole("link", {name: "Auftragsänderungen", exact: true}).click();
+    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
+    await page.getByRole("link", {name: "Auftragsänderungen", exact: true}).click();
     await expect(page).toHaveURL(/\/changes$/);
 });
 

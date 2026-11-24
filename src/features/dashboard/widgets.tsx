@@ -377,7 +377,7 @@ export function DashboardWidgets({
                   </li>
                   <li>{t("expiringJobs", { count: jobCounts.expired })}</li>
                 </ul>
-                <TextLink to="/admin">{t("manageJobs")}</TextLink>
+                <TextLink to="/admin/assignments">{t("manageJobs")}</TextLink>
               </section>
             ) : null,
         }}

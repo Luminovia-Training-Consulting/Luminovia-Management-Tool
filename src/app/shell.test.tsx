@@ -23,7 +23,10 @@ import {
   useNavigate,
 } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
-import { AdminNavigation } from "../features/admin/navigation";
+import {
+  AdminNavigation,
+  AdministrationSection,
+} from "../features/admin/navigation";
 import { Shell } from "./shell";
 import i18n from "../lib/i18n";
 
@@ -211,7 +214,19 @@ function setup(
               <Route index element={<p>Private workspace</p>} />
               <Route path="settings" element={settings} />
               <Route element={<AdminNavigation />}>
-                <Route path="admin" element={<NavigationTarget />} />
+                <Route path="admin" element={<AdministrationSection />} />
+                <Route
+                  path="admin/operations"
+                  element={<AdministrationSection area="operations" />}
+                />
+                <Route
+                  path="admin/directory"
+                  element={<AdministrationSection area="directory" />}
+                />
+                <Route
+                  path="admin/platform"
+                  element={<AdministrationSection area="platform" />}
+                />
                 <Route path="admin/clients" element={<NavigationTarget />} />
                 <Route path="changes" element={<NavigationTarget />} />
                 <Route path="changes/:id" element={<NavigationTarget />} />
@@ -379,6 +394,8 @@ it.each(["admin", "management"])(
       "jobs.manage",
       "contracts.manage",
       "organisations.manage",
+      "users.manage",
+      "qualifications.verify",
     ];
     const { user } = setup("/changes/fictional?filter=open", false);
     const sidebar = within(screen.getByRole("complementary"));
@@ -392,15 +409,26 @@ it.each(["admin", "management"])(
       "/chats",
     );
 
-    const sections = within(document.querySelector(".administration-tabs")!);
-    expect(
-      sections.getByRole("link", { name: "Auftragsänderungen" }),
-    ).toHaveAttribute("aria-current", "page");
-    expect(sections.getByRole("link", { name: "Unternehmen" })).toHaveAttribute(
+    const sections = within(
+      screen.getByRole("navigation", { name: "Verwaltung" }),
+    );
+    expect(sections.getByRole("link", { name: "Kursbetrieb" })).toHaveAttribute(
+      "aria-current",
+      "location",
+    );
+    await user.click(
+      sections.getByRole("link", { name: "Unternehmen & Personen" }),
+    );
+    expect(screen.getByRole("link", { name: "Unternehmen" })).toHaveAttribute(
       "href",
       "/admin/clients",
     );
-    await user.click(sections.getByRole("link", { name: "Verträge" }));
+    expect(
+      screen.getByRole("link", { name: "Dozierende & Expertise" }),
+    ).toHaveAttribute("href", "/admin/people");
+    expect(screen.queryByRole("link", { name: "Verträge" })).toBeNull();
+    await user.click(sections.getByRole("link", { name: "Kursbetrieb" }));
+    await user.click(screen.getByRole("link", { name: "Verträge" }));
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/contracts",
     );
@@ -421,18 +449,21 @@ it("keeps contracts and assignment changes directly accessible to lecturers", ()
   expect(screen.queryByRole("navigation", { name: "Verwaltung" })).toBeNull();
 });
 
-it("waits for current permissions before choosing the default administration section", async () => {
+it("keeps the overview in place and exposes only available areas after permissions load", () => {
   access.roles = ["management"];
   access.permissionsLoading = true;
   const { rerender } = setup("/admin");
-  expect(screen.getByLabelText("Fixture location")).toHaveTextContent("/admin");
+  expect(screen.queryByRole("heading", { name: "Verwaltung" })).toBeNull();
   access.permissionsLoading = false;
   rerender();
-  expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
-    "/changes",
-  );
+  expect(screen.getByRole("heading", { name: "Verwaltung" })).toBeVisible();
+  const nav = within(screen.getByRole("navigation", { name: "Verwaltung" }));
+  expect(nav.getByRole("link", { name: "Kursbetrieb" })).toBeVisible();
+  expect(
+    nav.queryByRole("link", { name: "Unternehmen & Personen" }),
+  ).toBeNull();
+  expect(nav.queryByRole("link", { name: "Plattformbetrieb" })).toBeNull();
 });
-
 it("hides the Control Center without its current management permission", () => {
   access.roles = ["management"];
   access.permissions = ["announcements.manage"];
