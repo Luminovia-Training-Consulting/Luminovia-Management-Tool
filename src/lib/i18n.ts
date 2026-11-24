@@ -338,6 +338,14 @@ const pairs: Record<string, [string, string]> = {
     "Anmeldung nicht möglich. Bitte prüfe deine Zugangsdaten.",
     "Unable to sign in. Check your credentials.",
   ],
+  loginRateLimited: [
+    "Zu viele Anmeldeversuche. Bitte warte einige Minuten und versuche es erneut.",
+    "Too many sign-in attempts. Wait a few minutes before trying again.",
+  ],
+  loginUnavailable: [
+    "Die Anmeldung ist vorübergehend nicht verfügbar. Bitte versuche es erneut.",
+    "Sign-in is temporarily unavailable. Please try again.",
+  ],
   save: ["Speichern", "Save"],
   saving: ["Wird gespeichert …", "Saving …"],
   saved: ["Gespeichert.", "Saved."],

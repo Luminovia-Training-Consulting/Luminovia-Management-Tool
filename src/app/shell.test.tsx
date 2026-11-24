@@ -303,7 +303,7 @@ describe("server-confirmed logout", () => {
     expect(client.getQueryData(["private", "actor"])).toBe(
       "Owned private data",
     );
-    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
     complete({ error: null });
     await waitFor(() => expect(screen.getByText("Login screen")).toBeVisible());
   });

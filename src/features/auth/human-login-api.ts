@@ -1,20 +1,26 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "../../lib/supabase";
 
-/** Exchange an email and password for one native Supabase Auth session. */
+/** Exchange credentials and install an independent native Auth session. */
 export async function signInHuman(identifier: string, password: string) {
   const { data, error } = await db().functions.invoke("human-login", {
     body: { identifier, password },
   });
+  if (error instanceof FunctionsHttpError) {
+    const status = error.context.status;
+    if (status === 429) return "loginRateLimited";
+    if (status === 400 || status === 401) return "loginFailed";
+  }
   if (
     error ||
     !data ||
     typeof data.access_token !== "string" ||
     typeof data.refresh_token !== "string"
   )
-    throw new Error("login_failed");
+    return "loginUnavailable";
   const session = await db().auth.setSession({
     access_token: data.access_token,
     refresh_token: data.refresh_token,
   });
-  if (session.error || !session.data.session) throw new Error("login_failed");
+  return session.error || !session.data.session ? "loginUnavailable" : null;
 }
