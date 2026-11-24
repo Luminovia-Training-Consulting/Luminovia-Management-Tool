@@ -275,7 +275,7 @@ When editing an unlocked course schedule in the portal or a dedicated Academy, c
 
 For separate drafts from the same template, open **Kursserie planen / Plan a course series**. Enter a first possible start date and use **Starttage wiederholen / Repeat start dates** to fill empty date slots and add more runs, up to 12. Each run keeps its own class, delivery mode and venue. Review the final teaching dates and room/class conflicts before saving the drafts.
 
-In the internal portal, **Kurse & Durchführungen / Courses & delivery** shows up to 24 matching runs or templates per page. Switch views above the filters. Search covers the whole accessible list. To import records, open the import control below the filters in the selected view. Use the page controls to browse, or open a course directly from its existing link.
+In the internal portal, **Kurse & Durchführungen / Courses & delivery** shows up to 24 matching runs or templates per page. Switch views above the filters. Search covers the whole accessible list. To import records, open the import dialog next to the create action in the selected view. Use the page controls to browse, or open a course directly from its existing link.
 
 Open `/learning` and choose a currently permitted course. `/courses/:id/workspace` assembles different authorised views for current course management, confirmed assigned lecturers, enrolled/completed learners and linked customer organisations. A link is not an access grant; cancellation/removal/suspension can make a previously available page or download unavailable.
 
