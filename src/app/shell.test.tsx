@@ -2,7 +2,7 @@
  * Regressions for navigation, search and confirmed or failed sign-out. SDK/DOM fixtures isolate
  * the shell; real Auth and permission acceptance remain separate.
  */
-import { lazy, type ReactNode, Suspense } from "react";
+import { lazy, type ReactNode, StrictMode, Suspense } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -203,6 +203,7 @@ function setup(
   path = "/",
   initiallyCollapsed = true,
   settings: ReactNode = <NavigationTarget />,
+  strict = false,
 ) {
   if (initiallyCollapsed)
     localStorage.setItem("luminovia.sidebar-collapsed", "true");
@@ -260,11 +261,13 @@ function setup(
       </MemoryRouter>
     </QueryClientProvider>
   );
-  const view = render(tree());
+  const renderTree = () =>
+    strict ? <StrictMode>{tree()}</StrictMode> : tree();
+  const view = render(renderTree());
   return {
     client,
     user: userEvent.setup(),
-    rerender: () => view.rerender(tree()),
+    rerender: () => view.rerender(renderTree()),
   };
 }
 
@@ -644,6 +647,29 @@ describe("Royal workspace sidebar preference", () => {
     expect(
       banner.querySelector(".notification-menu summary"),
     ).toBeInTheDocument();
+  });
+
+  it("renders a collapsed rail hint without rerendering the shell queries", async () => {
+    const { user } = setup();
+    observeQuery.mockClear();
+    await user.hover(
+      screen.getByRole("button", { name: "Navigation ausklappen" }),
+    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Navigation ausklappen",
+    );
+    expect(observeQuery).not.toHaveBeenCalled();
+  });
+
+  it("persists a sidebar click only once under Strict Mode", async () => {
+    const { user } = setup("/", true, undefined, true);
+    await user.click(
+      screen.getByRole("button", { name: "Navigation ausklappen" }),
+    );
+    expect(saveUi).toHaveBeenCalledExactlyOnceWith({
+      sidebar_collapsed: false,
+    });
+    expect(localStorage.getItem("luminovia.sidebar-collapsed")).toBe("false");
   });
 
   it("shows the collapsed rail toggle hint on keyboard focus", async () => {

@@ -38,7 +38,10 @@ import {
   Users,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
-import { PortalNavigation } from "../components/portal-navigation";
+import {
+  PortalNavigation,
+  type PortalNavigationItem,
+} from "../components/portal-navigation";
 import { useDismissibleDisclosure } from "../components/use-dismissible-disclosure";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import {
@@ -107,11 +110,6 @@ export function Shell() {
   const { attributes: accountDisclosure } = useDismissibleDisclosure(
     location.key,
   );
-  const [railTooltip, setRailTooltip] = useState<{
-    label: string;
-    top: number;
-    left: number;
-  } | null>(null);
   const client = useQueryClient();
   // Start with the labelled workspace navigation; remember the user's own choice.
   const [collapsed, setCollapsed] = useState(() => {
@@ -174,20 +172,21 @@ export function Shell() {
   const online = useOnline();
 
   function toggleSidebar() {
+    const collapsedNext = !collapsed;
     reportUiPreferenceChange("sidebar_collapsed");
-    setCollapsed((current) => {
-      const next = !current;
-      try {
-        localStorage.setItem("luminovia.sidebar-collapsed", String(next));
-      } catch {
-        // Keep the current shell usable when browser storage is unavailable.
-      }
-      setUiSaveFailed(false);
-      void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
-        setUiSaveFailed(true),
+    setCollapsed(collapsedNext);
+    try {
+      localStorage.setItem(
+        "luminovia.sidebar-collapsed",
+        String(collapsedNext),
       );
-      return next;
-    });
+    } catch {
+      // Keep the current shell usable when browser storage is unavailable.
+    }
+    setUiSaveFailed(false);
+    void saveUiPreferences({ sidebar_collapsed: collapsedNext }).catch(() =>
+      setUiSaveFailed(true),
+    );
   }
 
   const profileDenied =
@@ -297,17 +296,6 @@ export function Shell() {
               ]
             : []),
         ];
-  /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
-  function showRailTooltip(label: string, element: HTMLElement) {
-    if (!collapsed) return;
-    const bounds = element.getBoundingClientRect();
-    setRailTooltip({
-      label: t(label),
-      top: bounds.top + bounds.height / 2,
-      left: bounds.right + 8,
-    });
-  }
-
   // Paused role reads cannot replace the existing actor-scoped offline schedule
   // fallback or conceal a profile already known to be inactive/missing.
   if (online && !profileDenied && !profile.isError && roles.isPending)
@@ -340,102 +328,13 @@ export function Shell() {
       <a className="skip-link" href="#main">
         {t("skip")}
       </a>
-      <aside className="sidebar" aria-label={t("menu")}>
-        <NavLink className="sidebar-brand" to="/">
-          <img src={installationBrand.mark} alt="" />
-          {portalInternalEdition ? (
-            <span>
-              {installationBrand.shortName} <small>Portal</small>
-            </span>
-          ) : (
-            <span className="installation-brand-name">
-              {installationBrand.shortName}
-            </span>
-          )}
-        </NavLink>
-        <Button
-          variant="ghost"
-          className="collapse-button"
-          aria-label={t(collapsed ? "expand" : "collapse")}
-          aria-expanded={!collapsed}
-          aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
-          onClick={(event) => {
-            // When collapsing, the click itself does not trigger another focus or
-            // hover event, so place the newly relevant keyboard/mouse hint now.
-            const willCollapse = !collapsed;
-            toggleSidebar();
-            if (willCollapse) {
-              const bounds = event.currentTarget.getBoundingClientRect();
-              setRailTooltip({
-                label: t("expand"),
-                top: bounds.top + bounds.height / 2,
-                left: bounds.right + 8,
-              });
-            } else {
-              setRailTooltip(null);
-            }
-          }}
-          onMouseEnter={(event) =>
-            showRailTooltip(
-              collapsed ? "expand" : "collapse",
-              event.currentTarget,
-            )
-          }
-          onMouseLeave={() => setRailTooltip(null)}
-          onFocus={(event) =>
-            showRailTooltip(
-              collapsed ? "expand" : "collapse",
-              event.currentTarget,
-            )
-          }
-          onBlur={() => setRailTooltip(null)}
-        >
-          {collapsed ? (
-            <PanelLeftOpen size={20} />
-          ) : (
-            <PanelLeftClose size={20} />
-          )}
-          <span>{t(collapsed ? "expand" : "collapse")}</span>
-        </Button>
-        <PortalNavigation
-          items={navigation}
-          ariaLabel={t("menu")}
-          ariaDescribedBy="sidebar-nav-tooltip"
-          collapsed={collapsed}
-          renderLabel={t}
-          onItemFocus={(label, element) => showRailTooltip(label, element)}
-          onItemMouseLeave={(event) => {
-            if (document.activeElement !== event.currentTarget)
-              setRailTooltip(null);
-          }}
-          onItemBlur={(event) => {
-            if (!event.currentTarget.matches(":hover")) setRailTooltip(null);
-          }}
-        />
-        <div className="sidebar-bottom">
-          <Button
-            variant="ghost"
-            className="sidebar-signout"
-            onClick={() => void logout()}
-            aria-label={t("logout")}
-            aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
-            title={collapsed ? t("logout") : undefined}
-            onMouseEnter={(event) =>
-              showRailTooltip("logout", event.currentTarget)
-            }
-            onMouseLeave={(event) => {
-              if (document.activeElement !== event.currentTarget)
-                setRailTooltip(null);
-            }}
-            onFocus={(event) => showRailTooltip("logout", event.currentTarget)}
-            onBlur={() => setRailTooltip(null)}
-            disabled={signoutPending}
-          >
-            <LogOut size={18} aria-hidden="true" />
-            <span>{t("logout")}</span>
-          </Button>
-        </div>
-      </aside>
+      <Sidebar
+        collapsed={collapsed}
+        navigation={navigation}
+        onToggle={toggleSidebar}
+        onSignout={() => void logout()}
+        signoutPending={signoutPending}
+      />
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
           {!limitedAccount && (
@@ -589,6 +488,139 @@ export function Shell() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+/** Keep tooltip interactions local to the rail so they do not render the workspace. */
+function Sidebar({
+  collapsed,
+  navigation,
+  onToggle,
+  onSignout,
+  signoutPending,
+}: {
+  collapsed: boolean;
+  navigation: PortalNavigationItem[];
+  onToggle: () => void;
+  onSignout: () => void;
+  signoutPending: boolean;
+}) {
+  const { t } = useTranslation();
+  const [railTooltip, setRailTooltip] = useState<{
+    label: string;
+    top: number;
+    left: number;
+  } | null>(null);
+  /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
+  function showRailTooltip(label: string, element: HTMLElement) {
+    if (!collapsed) return;
+    const bounds = element.getBoundingClientRect();
+    setRailTooltip({
+      label: t(label),
+      top: bounds.top + bounds.height / 2,
+      left: bounds.right + 8,
+    });
+  }
+
+  return (
+    <>
+      <aside className="sidebar" aria-label={t("menu")}>
+        <NavLink className="sidebar-brand" to="/">
+          <img src={installationBrand.mark} alt="" />
+          {portalInternalEdition ? (
+            <span>
+              {installationBrand.shortName} <small>Portal</small>
+            </span>
+          ) : (
+            <span className="installation-brand-name">
+              {installationBrand.shortName}
+            </span>
+          )}
+        </NavLink>
+        <Button
+          variant="ghost"
+          className="collapse-button"
+          aria-label={t(collapsed ? "expand" : "collapse")}
+          aria-expanded={!collapsed}
+          aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+          onClick={(event) => {
+            // When collapsing, the click itself does not trigger another focus or
+            // hover event, so place the newly relevant keyboard/mouse hint now.
+            const willCollapse = !collapsed;
+            onToggle();
+            if (willCollapse) {
+              const bounds = event.currentTarget.getBoundingClientRect();
+              setRailTooltip({
+                label: t("expand"),
+                top: bounds.top + bounds.height / 2,
+                left: bounds.right + 8,
+              });
+            } else {
+              setRailTooltip(null);
+            }
+          }}
+          onMouseEnter={(event) =>
+            showRailTooltip(
+              collapsed ? "expand" : "collapse",
+              event.currentTarget,
+            )
+          }
+          onMouseLeave={() => setRailTooltip(null)}
+          onFocus={(event) =>
+            showRailTooltip(
+              collapsed ? "expand" : "collapse",
+              event.currentTarget,
+            )
+          }
+          onBlur={() => setRailTooltip(null)}
+        >
+          {collapsed ? (
+            <PanelLeftOpen size={20} />
+          ) : (
+            <PanelLeftClose size={20} />
+          )}
+          <span>{t(collapsed ? "expand" : "collapse")}</span>
+        </Button>
+        <PortalNavigation
+          items={navigation}
+          ariaLabel={t("menu")}
+          ariaDescribedBy="sidebar-nav-tooltip"
+          collapsed={collapsed}
+          renderLabel={t}
+          onItemFocus={(label, element) => showRailTooltip(label, element)}
+          onItemMouseLeave={(event) => {
+            if (document.activeElement !== event.currentTarget)
+              setRailTooltip(null);
+          }}
+          onItemBlur={(event) => {
+            if (!event.currentTarget.matches(":hover")) setRailTooltip(null);
+          }}
+        />
+        <div className="sidebar-bottom">
+          <Button
+            variant="ghost"
+            className="sidebar-signout"
+            onClick={onSignout}
+            aria-label={t("logout")}
+            aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+            title={collapsed ? t("logout") : undefined}
+            onMouseEnter={(event) =>
+              showRailTooltip("logout", event.currentTarget)
+            }
+            onMouseLeave={(event) => {
+              if (document.activeElement !== event.currentTarget)
+                setRailTooltip(null);
+            }}
+            onFocus={(event) => showRailTooltip("logout", event.currentTarget)}
+            onBlur={() => setRailTooltip(null)}
+            disabled={signoutPending}
+          >
+            <LogOut size={18} aria-hidden="true" />
+            <span>{t("logout")}</span>
+          </Button>
+        </div>
+      </aside>
       {collapsed &&
         railTooltip &&
         createPortal(
@@ -602,6 +634,6 @@ export function Shell() {
           </span>,
           document.body,
         )}
-    </div>
+    </>
   );
 }
