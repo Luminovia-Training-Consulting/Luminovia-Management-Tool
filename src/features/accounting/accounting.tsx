@@ -317,7 +317,7 @@ function CustomerInvoiceForm({
           <FileCheck2 size={18} aria-hidden="true" /> {document.original_name}
         </p>
       )}
-      <label className="accounting-pick">
+      <label className="accounting-pick accounting-review">
         <input
           type="checkbox"
           checked={checked}

@@ -1,6 +1,6 @@
 /** Canonical disposable browser journey: register scanned fictional customer
  * evidence, record an actual-payment fixture and download authorized exports. */
-import { test, expect, type Download } from "@playwright/test";
+import { test, expect, type Download, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -57,6 +57,15 @@ async function contents(download: Download) {
   const path = await download.path();
   if (!path) throw new Error("Download bytes required");
   return readFileSync(path);
+}
+
+async function confirmEvidence(dialog: Locator, label: string, mobile: boolean) {
+  const control = dialog.getByRole("checkbox", { name: label, exact: true });
+  const text = dialog.getByText(label, { exact: true });
+  await expect(control).toBeEnabled();
+  if (mobile) await text.tap();
+  else await text.click();
+  await expect(control).toBeChecked();
 }
 
 test("customer invoice PDF, credit evidence, payment totals and exports stay private and bilingual", async ({
@@ -190,12 +199,11 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await expect(
     form.getByText("Fictional issued invoice.pdf", { exact: true }),
   ).toBeVisible({ timeout: 90000 });
-  await form
-    .getByRole("checkbox", {
-      name: "Ich habe Nummer, Daten, Betrag und Währung mit dieser ausgestellten PDF abgeglichen.",
-      exact: true,
-    })
-    .check();
+  await confirmEvidence(
+    form,
+    "Ich habe Nummer, Daten, Betrag und Währung mit dieser ausgestellten PDF abgeglichen.",
+    isMobile,
+  );
   await form
     .getByRole("button", { name: "Rechnung dokumentieren", exact: true })
     .click();
@@ -268,22 +276,16 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await expect(
     credit.getByText("Fictional issued credit note.pdf", { exact: true }),
   ).toBeVisible({ timeout: 90000 });
-  const reviewLabel =
-    "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.";
-  const confirmCredit = credit.getByRole("checkbox", {
-    name: reviewLabel,
-    exact: true,
-  });
   const saveCredit = credit.getByRole("button", {
     name: "Gutschriftbeleg erfassen",
     exact: true,
   });
   await expect(saveCredit).toBeDisabled();
-  const reviewText = credit.getByText(reviewLabel, { exact: true });
-  await expect(confirmCredit).toBeEnabled();
-  if (isMobile) await reviewText.tap();
-  else await reviewText.click();
-  await expect(confirmCredit).toBeChecked();
+  await confirmEvidence(
+    credit,
+    "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.",
+    isMobile,
+  );
   await expect(saveCredit).toBeEnabled();
   await saveCredit.click();
   await expect(
@@ -399,11 +401,11 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await settlement
     .getByLabel("Referenz der ausgeführten Rückzahlung", { exact: true })
     .fill(refundReference);
-  await settlement
-    .getByRole("checkbox", {
-      name: "Ich bestätige, dass die Rückzahlung bereits ausgeführt wurde.",
-    })
-    .check();
+  await confirmEvidence(
+    settlement,
+    "Ich bestätige, dass die Rückzahlung bereits ausgeführt wurde.",
+    isMobile,
+  );
   await settlement
     .getByRole("button", { name: "Rückzahlung dokumentieren", exact: true })
     .click();

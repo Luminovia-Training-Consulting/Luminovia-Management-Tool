@@ -333,7 +333,7 @@ function SettlementJournal({
           />
         </Field>
         {isRefund && (
-          <label className="accounting-pick">
+          <label className="accounting-pick accounting-review">
             <input
               type="checkbox"
               checked={confirmed}
