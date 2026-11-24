@@ -146,7 +146,10 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
         await expect(page).toHaveURL(new RegExp(`/jobs/${job}$`));
         await page.getByRole("button", {name: "Auftrag bearbeiten", exact: true}).click();
         const occupiedEditor = page.getByRole("dialog", {name: "Auftrag bearbeiten"});
-        await expect(occupiedEditor.getByRole("link", {name: /Termine oder Honorar für/})).toBeVisible();
+        // The current editor links to the allocation section; the old shortcut label was removed.
+        await expect(
+            occupiedEditor.getByRole("link", {name: "Klasse und Dozentenzuweisung", exact: true}),
+        ).toHaveAttribute("href", "#job-allocation");
         await occupiedEditor.getByLabel("Auftragstitel", {exact: true}).fill("Fictional revised lifecycle block");
         await page.screenshot({path: `.local/screenshots/${testInfo.project.name}-filled-assignment-editor.png`});
         await occupiedEditor.getByRole("button", {name: "Auftrag speichern", exact: true}).click();
