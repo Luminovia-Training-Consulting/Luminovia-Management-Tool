@@ -17,7 +17,7 @@ import {
   savedAttentionSchema,
   zeroVersion,
 } from "../notifications/schema.ts";
-import { nativeDownloadPaths } from "./native-contract.ts";
+import type { nativeDownloadPaths } from "./native-contract.ts";
 
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
@@ -231,9 +231,13 @@ const devicePaths = {
   ),
 };
 
-export const notificationCredentialPaths = Object.fromEntries(
-  Object.entries(devicePaths).map(([path, { post }]) => [
-    path,
-    { post: { ...nativeDownloadPaths[path].post, ...post } },
-  ]),
-);
+export function notificationCredentialPaths(
+  nativePaths: ReturnType<typeof nativeDownloadPaths>,
+) {
+  return Object.fromEntries(
+    Object.entries(devicePaths).map(([path, { post }]) => [
+      path,
+      { post: { ...nativePaths[path].post, ...post } },
+    ]),
+  );
+}

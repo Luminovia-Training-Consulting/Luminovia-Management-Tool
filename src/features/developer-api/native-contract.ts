@@ -189,4 +189,6 @@ function buildNativePaths(explorer: boolean) {
 }
 
 export const nativeExplorerPaths = buildNativePaths(true);
-export const nativeDownloadPaths = buildNativePaths(false);
+export function nativeDownloadPaths() {
+  return buildNativePaths(false);
+}
