@@ -204,11 +204,11 @@ for (const role of actors) {
         if (role.primary === "client") {
           if (isMobile) {
             await page.locator("details.mobile-more > summary").click();
-            await page.locator('#mobile-shell-navigation a[href="/finance"]').click();
+            await page.locator('#mobile-shell-navigation a[href="/client/finance"]').click();
           } else {
-            await sidebarLink("/finance").click();
+            await sidebarLink("/client/finance").click();
           }
-          await expect(page).toHaveURL(/\/finance\/accounting$/);
+          await expect(page).toHaveURL(/\/client\/finance\/accounting$/);
           await expect(
             page.getByRole("heading", {
               name: /^(Buchhaltungsexporte|Accounting exports)$/i,
@@ -228,9 +228,15 @@ for (const role of actors) {
             .getByRole("button", { name: /^(Schließen|Close)$/i })
             .click();
         }
+        await expect(page).toHaveURL(
+          teaching ? /\/finance\?claim=/ : /\/admin\/finance\?claim=/,
+        );
         await expect(
           page.getByRole("heading", {
-            name: /^(Honorare & Rechnungen|Earnings & invoices)$/i,
+            level: 1,
+            name: teaching
+              ? /^(Meine Finanzen|My finances)$/i
+              : /^(Plattformfinanzen|Platform finances)$/i,
           }),
         ).toBeVisible();
         await expect(
