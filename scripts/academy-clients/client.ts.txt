@@ -10,7 +10,7 @@ type JSONValue = string | number | boolean | null | JSONValue[] | {
 export type AcademyRequest = {
   credentials?: Credentials;
   query?: Readonly<Record<string, string | number | boolean>>;
-  signal?: AbortSignal;
+@@PATH_INPUT@@  signal?: AbortSignal;
 } & (
   | { mediaType?: "application/json"; body?: JSONValue }
   | { mediaType: "image/png"; body: Blob }
@@ -60,7 +60,7 @@ export function request(operationId: OperationId, input: AcademyRequest = {}): P
   const operation = operations[operationId];
   const baseUrl: string = installation.baseUrl;
   if (baseUrl === "/") throw new Error("Academy API base is unavailable.");
-  const url = new URL(baseUrl + operation.path);
+@@PATH_CODE@@  const url = new URL(baseUrl + @@OPERATION_PATH@@);
   const query = input.query ?? {};
   for (const key of operation.requiredQuery as readonly string[]) {
     if (!Object.hasOwn(query, key)) throw new Error("Missing query parameter: " + key);

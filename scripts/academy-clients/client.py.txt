@@ -60,7 +60,7 @@ _MISSING = object()
 
 
 def request(operation_id, *, api_key=None, access_token=None, integration_key=None,
-            query=None, body=_MISSING, content_type="application/json", timeout=30):
+            query=None, @@PATH_INPUT@@body=_MISSING, content_type="application/json", timeout=30):
     """Return the exact HTTP status and bytes. No redirects or automatic retries."""
     operation = OPERATIONS.get(operation_id)
     if not operation:
@@ -68,7 +68,7 @@ def request(operation_id, *, api_key=None, access_token=None, integration_key=No
     base = INSTALLATION["baseUrl"]
     if base == "/":
         raise ValueError("Academy API base is unavailable.")
-    query = query or {}
+@@PATH_CODE@@    query = query or {}
     for name in operation["requiredQuery"]:
         if name not in query:
             raise ValueError("Missing query parameter: " + name)
@@ -79,7 +79,7 @@ def request(operation_id, *, api_key=None, access_token=None, integration_key=No
         name: str(value).lower() if isinstance(value, bool) else value
         for name, value in query.items()
     })
-    url = base + operation["path"] + ("?" + query_string if query_string else "")
+    url = base + @@OPERATION_PATH@@ + ("?" + query_string if query_string else "")
     headers = _headers(operation["credentials"], api_key, access_token, integration_key)
     if operation["originHeader"]:
         parsed = urllib.parse.urlsplit(base)

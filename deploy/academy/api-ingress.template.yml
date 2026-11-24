@@ -30,6 +30,23 @@ static_resources:
                               path: "/functions/v1/accounts/v1/academy/company-invitations",
                             }
                           route: { cluster: academy-api-gateway, timeout: 150s }
+                        # The template fixes the route structure. The short
+                        # regex validates the UUID within Envoy's RE2 budget.
+                        - match:
+                            path_match_policy:
+                              name: envoy.path.match.uri_template
+                              typed_config:
+                                "@type": type.googleapis.com/envoy.extensions.path.match.uri_template.v3.UriTemplateMatchConfig
+                                path_template: /functions/v1/accounts/v1/academy/invitations/{id=*}/retry
+                            headers:
+                              - name: ":path"
+                                string_match:
+                                  safe_regex:
+                                    regex: '.*/[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}/retry'
+                              - name: ":method"
+                                string_match:
+                                  safe_regex: { regex: "POST|OPTIONS" }
+                          route: { cluster: academy-api-gateway, timeout: 150s }
                         - match: { path: "/functions/v1/company-integration" }
                           route: { cluster: academy-api-gateway, timeout: 150s }
                         - match:
@@ -68,7 +85,10 @@ static_resources:
                             query_parameters:
                               - name: mode
                                 string_match:
-                                  safe_regex: { regex: "academy-pwa-(?:icon|manifest|image)" }
+                                  safe_regex:
+                                    {
+                                      regex: "academy-pwa-(?:icon|manifest|image)",
+                                    }
                           route: { cluster: academy-api-gateway, timeout: 150s }
                         - match: { path: "/functions/v1/human-login" }
                           route: { cluster: academy-api-gateway, timeout: 150s }

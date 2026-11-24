@@ -83,7 +83,14 @@ const blockedApi = [
   "/functions/v1/files/extra",
   "/storage/v1/object/public/portal-documents/fixture.pdf",
 ];
+const invitationRetry =
+  "/functions/v1/accounts/v1/academy/invitations/4f252e76-30c0-4890-9b44-351c754ca240/retry";
 const apiMethodProbes = [
+  [invitationRetry, "POST", 200],
+  [invitationRetry, "OPTIONS", 200],
+  [invitationRetry, "GET", 404],
+  [invitationRetry + "/extra", "POST", 404],
+  [invitationRetry.replace("4f252e76", "invalid"), "POST", 404],
   ["/functions/v1/portal-api/v1/save_course_exam_schedule", "PUT", 200],
   ["/functions/v1/portal-api/v1/remove_course_exam_pdf", "DELETE", 200],
   ["/functions/v1/portal-api/v1/course_workspace", "OPTIONS", 200],

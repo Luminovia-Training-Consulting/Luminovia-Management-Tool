@@ -110,6 +110,59 @@ test("generated Academy clients bind installation, scope credentials and expose 
       /Undocumented query parameter/,
     );
 
+    const invitationId = identities[0][1];
+    const invitationPath =
+      "/backend/functions/v1/accounts/v1/academy/invitations/" +
+      invitationId +
+      "/retry";
+    const requestsBeforeInvalidPath = received.length;
+    for (const path of [
+      undefined,
+      { id: "not-a-uuid" },
+      { id: invitationId, extra: invitationId },
+    ])
+      assert.throws(
+        () => sdk.request("retryAcademyInvitationDelivery", { path }),
+        /path parameter/,
+      );
+    assert.equal(received.length, requestsBeforeInvalidPath);
+    const credentials = { apiKey, accessToken: accountToken };
+    const responseForRetry = await sdk.request(
+      "retryAcademyInvitationDelivery",
+      {
+        credentials,
+        path: { id: invitationId },
+        body: { request_id: invitationId, email: "fictional@example.invalid" },
+      },
+    );
+    assert.equal(responseForRetry.status, 200);
+    assert.equal(received.at(-1).url, invitationPath);
+    assert.equal(received.at(-1).method, "POST");
+    await run("python3", [
+      "-I",
+      "-c",
+      `
+import runpy, sys
+request = runpy.run_path(sys.argv[1])["request"]
+for path in (None, {"id": "not-a-uuid"}, {"id": sys.argv[2], "extra": sys.argv[2]}):
+    try:
+        request("retryAcademyInvitationDelivery", path_params=path)
+    except ValueError as problem:
+        assert "path parameter" in str(problem)
+    else:
+        raise AssertionError("Invalid path parameters were accepted")
+response = request("retryAcademyInvitationDelivery", api_key="sb_publishable_fictional",
+                   access_token=sys.argv[3], path_params={"id": sys.argv[2]},
+                   body={"request_id": sys.argv[2], "email": "fictional@example.invalid"})
+assert response.status == 200
+`,
+      pythonPath,
+      invitationId,
+      accountToken,
+    ]);
+    assert.equal(received.at(-1).url, invitationPath);
+    assert.equal(received.at(-1).method, "POST");
+
     const binary = new Blob([Uint8Array.of(1, 2, 3)], { type: "image/png" });
     await sdk.request("uploadAcademyCourseMaterial", {
       credentials: { apiKey, accessToken: accountToken, integrationKey },
@@ -258,4 +311,24 @@ test("an additive contract keeps existing client operations and exposes deprecat
       }),
     /dedicated Academy/,
   );
+});
+
+test("rejects path templates without a matching required UUID parameter", () => {
+  const [edition, installationId] = identities[0];
+  const api = academyOpenApi("https://example.invalid/backend", {
+    edition,
+    installationId,
+    name: "Fictional Academy",
+  });
+  const path = "/functions/v1/accounts/v1/academy/invitations/{id}/retry";
+  const operation = api.paths[path].post;
+  for (const parameter of [
+    { ...operation.parameters[0], required: false },
+    { ...operation.parameters[0], name: "other" },
+    { ...operation.parameters[0], schema: { type: "string" } },
+  ]) {
+    const invalid = structuredClone(api);
+    invalid.paths[path].post.parameters = [parameter];
+    assert.throws(() => academyClientAssets(invalid), /Unsupported.*operation/);
+  }
 });
