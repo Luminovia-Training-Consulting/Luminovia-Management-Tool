@@ -1,4 +1,6 @@
-import type { FinanceScope } from "../../app/finance-access";
+import { financeRoots, type FinanceScope } from "../../app/finance-access";
+import { Link } from "react-router-dom";
+import { commercialAccessQuery } from "../commercial/api";
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
@@ -522,6 +524,10 @@ export function AccountingPage({
   const online = useOnline();
   const client = useQueryClient();
   const access = useQuery(accountingAccessQuery(actor));
+  const submission = useQuery({
+    ...commercialAccessQuery(actor),
+    enabled: scope === "personal",
+  });
   const [selectedSource, setSource] = useState<AccountingSource>();
   const sources: AccountingSource[] = [];
   if (scope === "personal") sources.push("own");
@@ -530,7 +536,7 @@ export function AccountingPage({
   if (scope !== "personal" && access.data?.can_export_customer)
     sources.push("customer");
   const source =
-    selectedSource ?? sources[0] ?? (scope === "personal" ? "own" : "customer");
+    scope === "personal" ? "own" : (selectedSource ?? sources[0] ?? "customer");
   const canManageCustomer =
     scope === "staff" && access.data?.can_manage_customer_invoices === true;
   const [selected, setSelected] = useState<string[]>([]);
@@ -627,59 +633,73 @@ export function AccountingPage({
               <Plus size={18} aria-hidden="true" />
               {t("register")}
             </Button>
+          ) : scope === "personal" &&
+            submission.isSuccess &&
+            submission.data.can_submit_invoice ? (
+            <Button asChild>
+              <Link to={`${financeRoots.personal}?invoice=new`}>
+                <Plus size={18} aria-hidden="true" />
+                {t("submitOwnInvoice")}
+              </Link>
+            </Button>
           ) : undefined
         }
       />
       <p className="accounting-hint">{t("original")}</p>
       <p className="accounting-hint">{t("taxUnknown")}</p>
-      <div className="accounting-toolbar">
-        <label className="accounting-source-label" htmlFor="accounting-source">
-          {t("source")}
-        </label>
-        <select
-          id="accounting-source"
-          value={source}
-          disabled={exportRecords.isPending}
-          onChange={(e) => {
-            setSource(e.target.value as AccountingSource);
-            setSelected([]);
-            setSnapshot(null);
-            setSaved(false);
-          }}
-        >
-          {(sources.includes(source) ? sources : [source, ...sources]).map(
-            (item) => (
-              <option
-                key={item}
-                value={item}
-                disabled={!sources.includes(item)}
-              >
-                {t(item)}
-              </option>
-            ),
-          )}
-        </select>
-        <div className="accounting-toolbar-actions">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              retry.clear();
+      {scope !== "personal" && (
+        <div className="accounting-toolbar">
+          <label
+            className="accounting-source-label"
+            htmlFor="accounting-source"
+          >
+            {t("source")}
+          </label>
+          <select
+            id="accounting-source"
+            value={source}
+            disabled={exportRecords.isPending}
+            onChange={(e) => {
+              setSource(e.target.value as AccountingSource);
+              setSelected([]);
               setSnapshot(null);
-              void client.invalidateQueries({
-                queryKey: accountingKeys.all(actor),
-              });
+              setSaved(false);
             }}
           >
-            {t("refresh")}
-          </Button>
-          {scope === "staff" &&
-            (canManageCustomer || access.data.can_export_all_lecturers) && (
-              <SettlementJournalButton
-                key={`${actor}:${canManageCustomer}:${access.data.can_export_all_lecturers}`}
-              />
+            {(sources.includes(source) ? sources : [source, ...sources]).map(
+              (item) => (
+                <option
+                  key={item}
+                  value={item}
+                  disabled={!sources.includes(item)}
+                >
+                  {t(item)}
+                </option>
+              ),
             )}
+          </select>
+          <div className="accounting-toolbar-actions">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                retry.clear();
+                setSnapshot(null);
+                void client.invalidateQueries({
+                  queryKey: accountingKeys.all(actor),
+                });
+              }}
+            >
+              {t("refresh")}
+            </Button>
+            {scope === "staff" &&
+              (canManageCustomer || access.data.can_export_all_lecturers) && (
+                <SettlementJournalButton
+                  key={`${actor}:${canManageCustomer}:${access.data.can_export_all_lecturers}`}
+                />
+              )}
+          </div>
         </div>
-      </div>
+      )}
       {!online && <Notice kind="error">{t("offline")}</Notice>}
       {saved && <Notice>{t("saved")}</Notice>}
       {(exportRecords.isError || pdf.isError) && (

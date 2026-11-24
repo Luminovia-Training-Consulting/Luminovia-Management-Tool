@@ -154,6 +154,7 @@ const pairs: Record<string, [string, string]> = {
   rejected: ["Abgelehnt", "Rejected"],
   cancelled: ["Storniert", "Cancelled"],
   invoices: ["Rechnungen", "Invoices"],
+  submitCourseInvoice: ["Für diesen Kurs abrechnen", "Invoice this course"],
   createInvoice: ["Rechnung einreichen", "Submit invoice"],
   invoiceHint: [
     "Wähle deine Aufträge und das zugehörige Rechnungs-PDF. Der Gesamtbetrag wird aus den bestätigten Auftragskonditionen übernommen.",

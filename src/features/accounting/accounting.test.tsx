@@ -43,6 +43,9 @@ function show(gross = false, companyView = false, personalView = false) {
       mutations: { retry: false },
     },
   });
+  client.setQueryData(["commercial-access", "teacher"], {
+    can_submit_invoice: true,
+  });
   client.setQueryData([...accountingKeys.all("teacher"), "access"], {
     can_export_all_lecturers: false,
     can_manage_customer_invoices: gross,
@@ -124,7 +127,10 @@ it("does not expose customer registration, gross data or management export to or
 });
 it("does not expose platform data or actions in the personal export tab of a dual-role account", () => {
   show(true, false, true);
-  expect(document.getElementById("accounting-source")).toHaveValue("own");
+  expect(screen.queryByLabelText("Rechnungsquelle")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Kursrechnung einreichen" }),
+  ).toHaveAttribute("href", "/finance?invoice=new");
   expect(
     screen.queryByRole("option", { name: "Unternehmensrechnungen" }),
   ).toBeNull();

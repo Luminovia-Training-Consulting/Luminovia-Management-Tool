@@ -388,8 +388,14 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     await dialog.getByRole("button", {name: "Schließen", exact: true}).click();
     await finishAcceptedJob(eur, 3);
     await finishAcceptedJob(aud, 2);
-    await page.reload();
-    await page.getByRole("button", {name: "Rechnung einreichen", exact: true}).click();
+    await page.goto("/finance/accounting");
+    await expect(page.getByLabel("Rechnungsquelle", {exact: true})).toHaveCount(0);
+    await page.getByRole("link", {name: "Kursrechnung einreichen", exact: true}).click();
+    await expect(dialog.getByRole("checkbox", {name: new RegExp(eur.title)})).not.toBeChecked();
+    await dialog.getByRole("button", {name: "Schließen", exact: true}).click();
+    await page.getByRole("row").filter({hasText: eur.title})
+        .getByRole("button", {name: "Für diesen Kurs abrechnen", exact: true}).click();
+    await expect(dialog.getByRole("checkbox", {name: new RegExp(eur.title)})).toBeChecked();
     const number = `=QA-${randomUUID().slice(0, 8)}`;
     await dialog.getByLabel("Rechnungsnummer", {exact: true}).fill(number);
     const issueField = dialog.getByLabel("Rechnungsdatum", {exact: true});
@@ -398,7 +404,6 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     }).minus({days: 1});
     await issueField.fill(issueDate.toISODate()!);
     await expect(dialog.getByLabel("Fällig am", {exact: true})).toHaveValue("");
-    await dialog.getByRole("checkbox", {name: new RegExp(eur.title)}).check();
     await expect(
         dialog.getByRole("checkbox", {name: new RegExp(aud.title)}),
     ).toBeDisabled();

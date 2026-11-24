@@ -96,6 +96,14 @@ const invoiceSchema = z.object({
   due: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
 });
 
+function invoiceReady(row: EarningRecord, now: number) {
+  return (
+    !row.invoice_review_required &&
+    row.invoice_eligible_at !== null &&
+    DateTime.fromISO(row.invoice_eligible_at).toMillis() <= now
+  );
+}
+
 /** Link a clean invoice PDF version to selected accepted assignments checked by the server. */
 function SubmitInvoice({
   actor,
@@ -143,13 +151,8 @@ function SubmitInvoice({
         row.lecturer_id === actor &&
         !seriesClaims.has(row.claim_id),
     ) ?? [];
-  const eligible = ownCandidates.filter(
-    (row) =>
-      !row.invoice_review_required &&
-      row.invoice_eligible_at !== null &&
-      DateTime.fromISO(row.invoice_eligible_at).toMillis() <=
-        DateTime.now().toMillis(),
-  );
+  const now = DateTime.now().toMillis();
+  const eligible = ownCandidates.filter((row) => invoiceReady(row, now));
   const reviewRequired = ownCandidates.filter(
     (row) => row.invoice_review_required,
   );
@@ -250,61 +253,6 @@ function SubmitInvoice({
         submit.mutate(values);
       })}
     >
-      <Field
-        id="invoice-number"
-        label={t("invoiceNumber")}
-        error={Boolean(form.formState.errors.number)}
-      >
-        <input
-          id="invoice-number"
-          {...form.register("number")}
-          maxLength={80}
-          disabled={submit.isPending}
-        />
-      </Field>
-      <div className="form-row">
-        <Field
-          id="invoice-issued"
-          label={t("issued")}
-          error={Boolean(form.formState.errors.issued)}
-        >
-          <input
-            id="invoice-issued"
-            type="date"
-            {...form.register("issued")}
-            disabled={submit.isPending}
-          />
-        </Field>
-        <Field
-          id="invoice-due"
-          label={t("due")}
-          error={Boolean(form.formState.errors.due)}
-          hint={
-            !exception && defaultDue
-              ? t("invoiceDueDefault", {
-                  date: formatUtcDate(defaultDue, i18n.language),
-                })
-              : undefined
-          }
-        >
-          {exception ? (
-            <input
-              id="invoice-due"
-              type="date"
-              value={exception.due_on}
-              readOnly
-            />
-          ) : (
-            <input
-              id="invoice-due"
-              type="date"
-              {...form.register("due")}
-              min={issued}
-              disabled={submit.isPending}
-            />
-          )}
-        </Field>
-      </div>
       {exception ? (
         <p>
           <strong>{exception.title}</strong> ·{" "}
@@ -386,6 +334,61 @@ function SubmitInvoice({
           ))}
         </fieldset>
       )}
+      <Field
+        id="invoice-number"
+        label={t("invoiceNumber")}
+        error={Boolean(form.formState.errors.number)}
+      >
+        <input
+          id="invoice-number"
+          {...form.register("number")}
+          maxLength={80}
+          disabled={submit.isPending}
+        />
+      </Field>
+      <div className="form-row">
+        <Field
+          id="invoice-issued"
+          label={t("issued")}
+          error={Boolean(form.formState.errors.issued)}
+        >
+          <input
+            id="invoice-issued"
+            type="date"
+            {...form.register("issued")}
+            disabled={submit.isPending}
+          />
+        </Field>
+        <Field
+          id="invoice-due"
+          label={t("due")}
+          error={Boolean(form.formState.errors.due)}
+          hint={
+            !exception && defaultDue
+              ? t("invoiceDueDefault", {
+                  date: formatUtcDate(defaultDue, i18n.language),
+                })
+              : undefined
+          }
+        >
+          {exception ? (
+            <input
+              id="invoice-due"
+              type="date"
+              value={exception.due_on}
+              readOnly
+            />
+          ) : (
+            <input
+              id="invoice-due"
+              type="date"
+              {...form.register("due")}
+              min={issued}
+              disabled={submit.isPending}
+            />
+          )}
+        </Field>
+      </div>
       {series ? (
         <InvoiceSeriesSummary entry={series} />
       ) : (
@@ -980,11 +983,13 @@ function EarningsTable({
   manager,
   zone,
   manageSeries,
+  invoiceAction,
 }: {
   rows: EarningRecord[];
   manager: boolean;
   zone: string;
   manageSeries?: (row: EarningRecord) => void;
+  invoiceAction?: (row: EarningRecord) => React.ReactNode;
 }) {
   const { t, i18n } = useTranslation("commercial");
   return (
@@ -1010,6 +1015,7 @@ function EarningsTable({
               <td>
                 <strong>{row.title}</strong>
                 <small>{row.customer_name}</small>
+                {invoiceAction?.(row)}
                 {manageSeries && (
                   <Button
                     size="sm"
@@ -1053,6 +1059,14 @@ export function FinancePage({
   const { session } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedClaimId = searchParams.get("claim") ?? undefined;
+  const requestedInvoice = searchParams.get("invoice") === "new";
+  const clearInvoiceLink = () => {
+    if (!searchParams.has("claim") && !requestedInvoice) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("claim");
+    if (requestedInvoice) next.delete("invoice");
+    setSearchParams(next, { replace: true });
+  };
   const actor = session!.user.id;
   const online = useOnline();
   const access = useQuery(commercialAccessQuery(actor));
@@ -1109,7 +1123,7 @@ export function FinancePage({
   const selectedSeries =
     selectedException && "kind" in selectedException ? selectedException : null;
   const submitting = Boolean(
-    canSubmit && (openedInvoiceForm || requestedClaimId),
+    canSubmit && (openedInvoiceForm || requestedClaimId || requestedInvoice),
   );
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatus, setInvoiceStatus] = useState("");
@@ -1299,6 +1313,29 @@ export function FinancePage({
                 manager={effectiveAll}
                 zone={zone}
                 manageSeries={manager ? setManageSeries : undefined}
+                invoiceAction={
+                  canSubmit && seriesRecords.isSuccess
+                    ? (row) =>
+                        row.lecturer_id === actor &&
+                        !row.invoice_id &&
+                        !seriesClaims.has(row.claim_id) &&
+                        invoiceReady(row, DateTime.now().toMillis()) ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={!online}
+                            onClick={() => {
+                              setSelectedException(null);
+                              const next = new URLSearchParams(searchParams);
+                              next.set("claim", row.claim_id);
+                              setSearchParams(next);
+                            }}
+                          >
+                            {t("submitCourseInvoice")}
+                          </Button>
+                        ) : null
+                    : undefined
+                }
               />
             ) : (
               <p className="muted">{t("noEarnings")}</p>
@@ -1454,11 +1491,7 @@ export function FinancePage({
         onOpenChange={(open) => {
           setSubmitting(open);
           if (!open) setSelectedException(null);
-          if (!open && searchParams.has("claim")) {
-            const next = new URLSearchParams(searchParams);
-            next.delete("claim");
-            setSearchParams(next, { replace: true });
-          }
+          if (!open) clearInvoiceLink();
         }}
         title={t(
           selectedSeries
@@ -1488,11 +1521,7 @@ export function FinancePage({
             onDone={() => {
               setSubmitting(false);
               setSelectedException(null);
-              if (searchParams.has("claim")) {
-                const next = new URLSearchParams(searchParams);
-                next.delete("claim");
-                setSearchParams(next, { replace: true });
-              }
+              clearInvoiceLink();
             }}
           />
         )}

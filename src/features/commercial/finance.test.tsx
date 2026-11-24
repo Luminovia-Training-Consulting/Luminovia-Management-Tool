@@ -408,6 +408,37 @@ describe("invoice confirmation and safe retry", () => {
     });
   });
 
+  it("opens the invoice form with only the selected completed course preselected", async () => {
+    earnings.push({
+      ...earning("future"),
+      invoice_eligible_at: "2099-01-01T00:00:00Z",
+    });
+    view();
+    const course = await screen.findByRole("row", {
+      name: /Fictional course eur-a/,
+    });
+    const future = screen.getByRole("row", { name: /Fictional course future/ });
+    expect(
+      within(future).queryByRole("button", {
+        name: "Für diesen Kurs abrechnen",
+      }),
+    ).toBeNull();
+    await userEvent.click(
+      await within(course).findByRole("button", {
+        name: "Für diesen Kurs abrechnen",
+      }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Rechnung einreichen" }),
+    );
+    expect(
+      dialog.getByRole("checkbox", { name: /Fictional course eur-a/ }),
+    ).toBeChecked();
+    expect(
+      dialog.getByRole("checkbox", { name: /Fictional course aud-a/ }),
+    ).not.toBeChecked();
+  });
+
   it("requires explicit removal when a manually selected assignment becomes unavailable during editing", async () => {
     earnings.push(earning("eur-b"));
     const client = view();
