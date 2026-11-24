@@ -353,9 +353,9 @@ class RelaySmtpTests(unittest.TestCase):
     def test_smtp_probe_authenticates_only_after_starttls_and_fresh_greeting(self):
         settings = {
             "host": "smtp.example.com",
-            "port": 587,
+            "port": 2525,
             "security": "starttls",
-            "username": "mailbox@example.com",
+            "username": "fictional-provider-login",
             "password": "fictional-upstream-secret",
         }
         for after_tls in (250, 421):
@@ -364,7 +364,7 @@ class RelaySmtpTests(unittest.TestCase):
                 connection.ehlo.side_effect = [(250, b""), (after_tls, b"")]
                 connection.noop.return_value = (250, b"")
                 with (
-                    patch.object(relay_module, "PinnedSMTP", return_value=connection),
+                    patch.object(relay_module, "PinnedSMTP", return_value=connection) as connector,
                     patch.object(relay_module.ssl, "create_default_context") as context,
                 ):
                     calls = [call.ehlo(), call.has_extn("starttls"),
@@ -376,6 +376,9 @@ class RelaySmtpTests(unittest.TestCase):
                     else:
                         with self.assertRaisesRegex(relay_module.RelayFailure, "protocol_failed"):
                             self.relay.check_smtp(settings)
+                    connector.assert_called_once_with(
+                        "smtp.example.com", 2525, timeout=self.relay.config.connect_timeout
+                    )
                     self.assertEqual(connection.mock_calls, [*calls, call.close()])
 
 

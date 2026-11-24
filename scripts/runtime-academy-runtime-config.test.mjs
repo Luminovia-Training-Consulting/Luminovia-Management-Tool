@@ -284,7 +284,7 @@ test(
         "api-ingress": ingress,
       } = withProfiles.services;
       assert.equal(auth.environment.GOTRUE_SITE_URL, identity.portal_origin);
-      assert.equal(auth.environment.GOTRUE_SMTP_HOST, "mail-relay");
+      assert.equal(auth.environment.GOTRUE_SMTP_HOST, "127.0.0.1");
       assert.equal(
         withCapture.services.auth.environment.GOTRUE_SMTP_HOST,
         "mailpit",
@@ -441,7 +441,7 @@ test(
         `${identity.portal_origin}/mail-templates/authenticator-${action.toLowerCase()}.html`,
       );
     }
-    assert.equal(enabled.GOTRUE_SMTP_HOST, "mail-relay");
+    assert.equal(enabled.GOTRUE_SMTP_HOST, "127.0.0.1");
     assert.equal(capture.GOTRUE_SMTP_HOST, "mailpit");
   },
 );

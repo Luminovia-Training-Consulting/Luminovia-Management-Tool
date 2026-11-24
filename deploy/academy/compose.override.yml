@@ -3,7 +3,6 @@
 name: ${COMPOSE_PROJECT_NAME:?Set the generated academy Compose name}
 services:
   mail-relay:
-    ports: !reset []
     environment:
       PORTAL_MAIL_RELAY_ACADEMY_NOTIFICATIONS: "true"
   notification-mail:
@@ -40,6 +39,7 @@ services:
     profiles: ["mail-capture"]
     ports: !reset []
   auth:
+    ports: !reset []
     environment:
       GOTRUE_MAILER_SUBJECTS_INVITE: "Einladung zur Akademie / Academy invitation"
       GOTRUE_MAILER_SUBJECTS_RECOVERY: "Passwort zurücksetzen / Reset password"
