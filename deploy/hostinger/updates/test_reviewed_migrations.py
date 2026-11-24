@@ -243,6 +243,80 @@ class ReviewedFileTests(unittest.TestCase):
 
 
 class ReviewedLifecycleTests(unittest.TestCase):
+    def test_bound_plan_tampering_and_live_input_drift_fail_before_backup_or_sql(self):
+        """Only an intact, fresh plan for live inputs may reach checkpoint or SQL."""
+        plan_mutations = [
+            ({"root": "/different-instance"}, "instance"),
+            ({"repository": "different-repository"}, "instance"),
+            ({"branch": "different-branch"}, "instance"),
+            ({"fromCommit": COMMIT}, "commit"),
+            ({"targetCommit": OLD}, "commit"),
+            ({"manifestSha256": "e" * 64}, "manifest"),
+            ({"archiveSha256": "e" * 64}, "manifest"),
+            ({"historySha256": "e" * 64}, "history"),
+            ({"applied": []}, "history"),
+            ({"pending": []}, "pending"),
+        ]
+        for changed, expected in plan_mutations:
+            with self.subTest(changed=changed), reviewed_fixture() as (
+                updater,
+                archive,
+                _manifest,
+                path,
+                plan,
+                manifest_path,
+            ):
+                path.write_text(json.dumps(dict(plan, **changed)), encoding="utf8")
+                with self.assertRaisesRegex(u.UpdateError, expected):
+                    updater.once(
+                        package=archive,
+                        manifest_path=manifest_path,
+                        reviewed_migration_plan=path,
+                    )
+                self.assertNotIn("backup", updater.calls)
+                self.assertNotIn("consume-plan", updater.calls)
+                self.assertEqual(updater.sql_sources, [])
+                self.assertFalse(updater.maintenance.exists())
+
+        live_input_changes = ["expired", "archive-bytes", "installed-history"]
+        for changed in live_input_changes:
+            with self.subTest(changed=changed), reviewed_fixture() as (
+                updater,
+                archive,
+                _manifest,
+                path,
+                plan,
+                manifest_path,
+            ):
+                if changed == "expired":
+                    issued = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)
+                    expired = issued + dt.timedelta(minutes=5)
+                    path.write_text(
+                        json.dumps(
+                            dict(
+                                plan,
+                                createdAt=issued.isoformat(),
+                                expiresAt=expired.isoformat(),
+                            )
+                        ),
+                        encoding="utf8",
+                    )
+                elif changed == "archive-bytes":
+                    Path(archive).write_bytes(Path(archive).read_bytes() + b"tampered")
+                else:
+                    updater.history[OLD_VERSION] += "-- installed history drift\n"
+
+                with self.assertRaises(u.UpdateError):
+                    updater.once(
+                        package=archive,
+                        manifest_path=manifest_path,
+                        reviewed_migration_plan=path,
+                    )
+                self.assertNotIn("backup", updater.calls)
+                self.assertNotIn("consume-plan", updater.calls)
+                self.assertEqual(updater.sql_sources, [])
+                self.assertFalse(updater.maintenance.exists())
+
     def test_plan_expiring_during_final_network_check_cannot_be_consumed(self):
         with reviewed_fixture() as (updater, archive, _manifest, path, plan, manifest_path), contextlib.ExitStack() as cleanup:
             expired = dt.datetime.fromisoformat(plan["expiresAt"]) + dt.timedelta(seconds=1)
