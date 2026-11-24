@@ -21,11 +21,16 @@ await withApiFixture(
             owner.client.rpc("admin_audit_events"),
             "Password-only owner audit access",
         );
-        for (const who of [manager, teacher])
-            assert.equal(
-                (await who.client.rpc("admin_audit_events")).error?.code,
-                "42501",
-            );
+        await checked(manager.client.rpc("admin_audit_events"), "Management audit access");
+        assert.equal((await teacher.client.rpc("admin_audit_events")).error?.code, "42501");
+        assert.equal(
+            (await manager.client.rpc("clear_administration_activity", {p_confirm: true})).error?.code,
+            "42501",
+        );
+        assert.equal(
+            (await administrator.client.rpc("clear_administration_activity", {p_confirm: false})).error?.code,
+            "22023",
+        );
         await checked(
             teacher.client.auth.updateUser({
                 data: {role: "admin", permissions: ["audit.read"]},
@@ -67,7 +72,6 @@ await withApiFixture(
                     "availability.created",
                     "chat.member_added",
                     "contract.executed_version_registered",
-                    "invoice.submitted",
                     "job.lifecycle.unknown",
                 ].map((action) => ({
                     actor_id: teacher.id,
@@ -129,7 +133,7 @@ await withApiFixture(
         assert.equal(
             (
                 await administrator.client.rpc("admin_audit_events", {
-                    p_action: "invoice.submitted",
+                    p_action: "contract.executed_version_registered",
                 })
             ).error?.code,
             "22023",

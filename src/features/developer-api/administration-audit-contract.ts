@@ -63,4 +63,38 @@ export const administrationAuditPaths = {
       },
     },
   },
+  "/rest/v1/rpc/clear_administration_activity": {
+    post: {
+      operationId: "native_clear_administration_activity",
+      tags: ["Administrative audit"],
+      summary: "Clear the administration activity trail",
+      description:
+        "Permanently clears the 30-day operational trail after explicit confirmation by an active internal administrator or owner. The call preserves underlying business receipts.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.toJSONSchema(
+              z.strictObject({ p_confirm: z.literal(true) }),
+            ),
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Number of deleted activity entries",
+          content: {
+            "application/json": {
+              schema: z.toJSONSchema(
+                z.strictObject({ removed: z.number().int().nonnegative() }),
+              ),
+            },
+          },
+        },
+        "400": { description: "Explicit confirmation is required" },
+        "401": { description: "An authenticated session is required" },
+        "403": { description: "The current account cannot clear activity" },
+      },
+    },
+  },
 };

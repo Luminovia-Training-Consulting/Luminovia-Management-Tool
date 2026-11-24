@@ -526,11 +526,11 @@ extension. No scheduler, real email or push is implied. See [Announcements](GUID
 
 ## Administrative audit reader
 
-At `/admin/audit`, Owner/Administration with current `audit.read` can inspect the administrative log. Dedicated Academy admins open **Administrationsprotokoll / Administration audit trail** from **Verwaltung / Administration**. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
+At `/admin/audit`, Owner, Administration and Management with current `audit.read` can inspect the administrative log. Dedicated Academy admins open **Administrationsprotokoll / Administration audit trail** from **Verwaltung / Administration**. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
 
 The view covers reviewed setup changes, temporary support grants, customer enquiries, administrative account changes, deletions, approved file transfers and payment events. File receipts record the action and resource identifier. Payment amounts require the corresponding finance authority. Private messages, file contents, secrets and bank references remain outside the view.
 
-Entries stop appearing exactly 30 days after the event and are removed from the operational journal by a scheduled database cleanup. Accounting records and workflow receipts have their own lifecycles. A resource UUID is not a link or permission grant. See [Administration audit](GUIDE.md#section-admin-audit).
+The log records structured activity such as account creation, invitations, access email requests, mail delivery outcomes, changes to courses, teaching assignments, billing and company settings. Entries expire from the view after 30 days and the scheduled database cleanup removes expired rows. In the internal installation, an active Owner or Administrator can use **Protokoll leeren / Clear audit trail** and confirm permanent removal of the operational entries. Accounting records and workflow receipts have their own lifecycles. A resource UUID is not a link or permission grant. See [Administration audit](GUIDE.md#section-admin-audit).
 
 <a id="section-user-guide-search-and-remaining-scope"></a>
 

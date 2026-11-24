@@ -1,13 +1,14 @@
 /**
- * Read-only administrative audit view with explicitly applied filters. Keep drafts separate from
+ * Administrative audit view with explicitly applied filters. Keep drafts separate from
  * the active query so date edits do not trigger uncontrolled history requests.
  */
 import { type FormEvent, useId, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import {
   ErrorState,
   Field,
@@ -23,12 +24,22 @@ import {
   auditEventsQuery,
   type AuditFilter,
   auditRange,
+  type AuditPage,
+  clearAdministrationActivity,
 } from "./api";
 import "./i18n";
 import "./audit.css";
 
 /** Apply filters deliberately and follow server-provided tuple cursors instead of loading all audit events. */
-function AuditReader({ actor, zone }: { actor: string; zone: string }) {
+function AuditReader({
+  actor,
+  zone,
+  canClear = false,
+}: {
+  actor: string;
+  zone: string;
+  canClear?: boolean;
+}) {
   const { t, i18n } = useTranslation("adminAudit"),
     online = useOnline(),
     id = useId();
@@ -54,6 +65,25 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
     enabled: online,
   });
   const [actions, setActions] = useState<string[]>([]);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const cache = useQueryClient();
+  const clear = useMutation({
+    mutationFn: clearAdministrationActivity,
+    retry: false,
+    onSuccess: async () => {
+      const queryKey = ["admin-audit", actor];
+      await cache.cancelQueries({ queryKey });
+      cache.setQueriesData<AuditPage>(
+        { queryKey },
+        (value) =>
+          value && { ...value, items: [], has_more: false, next_cursor: null },
+      );
+      setCursors([null]);
+      setPageIndex(0);
+      setConfirmClear(false);
+      await cache.invalidateQueries({ queryKey });
+    },
+  });
   // The reviewed action vocabulary comes from the server, never from a wider
   // raw audit query. Deriving options avoids effects or background refetches.
   const options = page.data?.actions ?? actions;
@@ -76,6 +106,36 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
     <>
       <Notice>{t("privacy")}</Notice>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
+      {clear.isSuccess && <Notice>{t("cleared")}</Notice>}
+      {canClear && (
+        <Dialog
+          open={confirmClear}
+          onOpenChange={setConfirmClear}
+          closeDisabled={clear.isPending}
+          title={t("clearTitle")}
+          description={t("clearDescription")}
+        >
+          {clear.isError && <Notice kind="error">{t("clearFailed")}</Notice>}
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={clear.isPending}
+              onClick={() => setConfirmClear(false)}
+            >
+              {t("cancelClear")}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={!online || clear.isPending}
+              onClick={() => clear.mutate()}
+            >
+              {t(clear.isPending ? "clearing" : "confirmClear")}
+            </Button>
+          </div>
+        </Dialog>
+      )}
       <form className="panel audit-filters" onSubmit={apply}>
         <Field id={`${id}-from`} label={t("from")}>
           <input
@@ -108,7 +168,10 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
             <option value="">{t("all")}</option>
             {options.map((action) => (
               <option key={action} value={action}>
-                {t(`groups.${action.split(".")[0]}`)} · {action}
+                {t(`groups.${action.split(".")[0]}`, {
+                  defaultValue: t("other"),
+                })}{" "}
+                · {action}
               </option>
             ))}
           </select>
@@ -133,6 +196,19 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
           >
             {t("refresh")}
           </Button>
+          {canClear && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || clear.isPending}
+              onClick={() => {
+                clear.reset();
+                setConfirmClear(true);
+              }}
+            >
+              {t("clearTitle")}
+            </Button>
+          )}
         </div>
       </form>
       {invalid && <Notice kind="error">{t("rangeError")}</Notice>}
@@ -151,7 +227,11 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
                 <li key={entry.id}>
                   <article className="panel audit-entry">
                     <div>
-                      <h2>{t(`groups.${entry.action.split(".")[0]}`)}</h2>
+                      <h2>
+                        {t(`groups.${entry.action.split(".")[0]}`, {
+                          defaultValue: t("other"),
+                        })}
+                      </h2>
                       <code>{entry.action}</code>
                       <p>
                         <time dateTime={entry.created_at}>
@@ -289,7 +369,12 @@ export function AdminAuditPage() {
       ) : !permissions.data.includes("audit.read") ? (
         <Notice kind="error">{t("denied")}</Notice>
       ) : (
-        <AuditReader key={actor} actor={actor} zone={profile.data.time_zone} />
+        <AuditReader
+          key={actor}
+          actor={actor}
+          zone={profile.data.time_zone}
+          canClear={permissions.data.includes("audit.clear")}
+        />
       )}
     </>
   );

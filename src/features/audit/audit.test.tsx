@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   actor: "audit-admin",
   allowed: true,
+  canClear: false,
   online: true,
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
@@ -26,7 +27,10 @@ vi.mock("../../lib/queries", () => ({
   }),
   permissionsQuery: (actor: string) => ({
     queryKey: ["permissions", actor],
-    queryFn: async () => (state.allowed ? ["audit.read"] : []),
+    queryFn: async () =>
+      state.allowed
+        ? ["audit.read", ...(state.canClear ? ["audit.clear"] : [])]
+        : [],
   }),
 }));
 vi.mock("../../lib/online", () => ({
@@ -77,6 +81,7 @@ function mount() {
 beforeEach(async () => {
   state.actor = "audit-admin";
   state.allowed = true;
+  state.canClear = false;
   state.online = true;
   state.rpc.mockReset();
   state.rpc.mockReturnValue(response(data));
@@ -269,4 +274,38 @@ describe("connected administration audit reader", () => {
       screen.getByRole("button", { name: "Aktualisieren" }),
     ).toBeDisabled();
   });
+});
+
+it("requires separate administrator capability and explicit confirmation to empty the activity trail", async () => {
+  state.canClear = true;
+  let cleared = false;
+  state.rpc.mockImplementation((name) => {
+    if (name === "clear_administration_activity") {
+      cleared = true;
+      return response({ removed: 1 });
+    }
+    return response(cleared ? { ...data, items: [] } : data);
+  });
+  mount();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Protokoll leeren" }),
+  );
+  expect(screen.getByRole("dialog")).toBeVisible();
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "clear_administration_activity",
+    expect.anything(),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Alle Einträge löschen" }),
+  );
+  expect(
+    await screen.findByText("Das Verwaltungsprotokoll wurde geleert."),
+  ).toBeVisible();
+  expect(state.rpc).toHaveBeenCalledWith("clear_administration_activity", {
+    p_confirm: true,
+  });
+  expect(
+    screen.queryByText("Fictional actor <script>literal</script>"),
+  ).not.toBeInTheDocument();
 });

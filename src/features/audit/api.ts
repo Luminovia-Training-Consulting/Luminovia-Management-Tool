@@ -97,3 +97,12 @@ export const auditEventsQuery = (
     staleTime: 0,
     retry: false,
   });
+
+/** Clear the operational trail only after explicit administrator confirmation. */
+export async function clearAdministrationActivity() {
+  requireOnline();
+  const { error } = await db().rpc("clear_administration_activity", {
+    p_confirm: true,
+  });
+  if (error) throw error;
+}
