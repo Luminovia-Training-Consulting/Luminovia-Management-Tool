@@ -66,7 +66,7 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
             "0 ungelesen",
         );
         await page
-            .getByRole("combobox", {name: "Benachrichtigungen", exact: true})
+            .getByRole("combobox", {name: "Lesestatus", exact: true})
             .selectOption("unread");
         await expect(
             page.getByText("Hier gibt es gerade keine Meldungen.", {exact: true}),

@@ -16,6 +16,7 @@
 
 ## Assignment withdrawal
 
+- [x] Preserve assignment release and automatic reopening when another offer already uses the course draft slot. Add PostgreSQL acceptance for archived offers, a published sibling and retained draft.
 - [x] Show the first assigned session and explain who reviews a pending withdrawal. Verify that the requester sees no self-approval action.
 
 ## Local launcher

@@ -2,6 +2,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {DateTime} from "luxon";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
@@ -246,6 +247,15 @@ test("Premium exam switching and scanned bytes follow real access across two com
 }, info) => {
     test.setTimeout(150_000);
     const f = await fixture({premium: false});
+    // Preserve the earlier attendance row while this exam is currently open
+    // within the course schedule. Timed papers cannot be shared as untimed files.
+    const examTitle = `Fictional timed exam ${f.token}`;
+    const examNow = Date.now();
+    const starts = new Date(examNow - 10 * 60000).toISOString();
+    const ends = new Date(examNow + 50 * 60000).toISOString();
+    await checked(f.service.from("course_sessions").insert({
+        course_run_id: f.run, starts_at: starts, ends_at: ends,
+    }));
     const other = await fixture({premium: false, sharedLearner: f.learner});
     const togglePremium = async (target: typeof f, enabled: boolean, version: number) => {
         const result = await checked(target.adminClient.rpc("set_company_premium", {
@@ -273,6 +283,14 @@ test("Premium exam switching and scanned bytes follow real access across two com
             p_status: "enrolled",
         }));
     }
+    await checked(company.rpc("save_course_exam_schedule", {
+        p_run_id: f.run, p_title: examTitle,
+        p_visible_from: starts, p_starts_at: starts, p_ends_at: ends,
+        p_pass_percent: 50, p_version: 0,
+    }));
+    await checked(company.rpc("set_course_exam_required", {
+        p_run_id: f.run, p_required: false, p_expected_version: 1,
+    }));
     const attendanceNote = "Fictional reviewed attendance";
     await checked(company.rpc("save_course_session_attendance", {
         p_run_id: f.run, p_session_id: f.session, p_user_id: f.learner.id,
@@ -366,6 +384,7 @@ test("Premium exam switching and scanned bytes follow real access across two com
         await expect(chat.getByText(messageA, {exact: true})).toBeVisible();
         await login(companyPage, f.client.email);
         await companyPage.goto(workspace + "#course-register");
+        await companyAttendance.getByLabel("Kurstermin", {exact: true}).selectOption(f.session);
         await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
         await companyPage.goto(workspace + "#course-exam");
         await expect(
@@ -384,19 +403,19 @@ test("Premium exam switching and scanned bytes follow real access across two com
         const bytes = accountingTestPdf();
         const paper = `Fictional exam ${f.token}.pdf`;
         await upload(companyPage, paper, bytes);
-        await expect(examRegion(companyPage).getByText(paper, {exact: true})).toBeVisible({
+        await expect(examRegion(companyPage).getByText(examTitle, {exact: true})).toBeVisible({
             timeout: 45_000,
         });
         const [published] = (await exams()).documents;
         expect(published.name).toBe(paper);
         await page.goto(workspace + "#course-exam");
-        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(page).getByText(examTitle, {exact: true})).toBeVisible();
         const downloaded = page.waitForEvent("download");
         await examRegion(page)
             .getByRole("button", {name: "PDF herunterladen", exact: true})
             .click();
         const download = await downloaded;
-        expect(download.suggestedFilename()).toBe(paper);
+        expect(download.suggestedFilename()).toBe(`${examTitle}.pdf`);
         expect(await readFile((await download.path())!)).toEqual(bytes);
 
         await login(teacher, f.teacher.email);
@@ -422,13 +441,13 @@ test("Premium exam switching and scanned bytes follow real access across two com
         expect(restricted.audience).toBe("exam_staff");
         expect((await requestPaper(restricted.id)).status()).toBe(403);
         await companyPage.reload();
-        await expect(examRegion(companyPage).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(companyPage).getByText(examTitle, {exact: true})).toBeVisible();
         await expect(examRegion(companyPage).getByText(answer, {exact: true})).toHaveCount(0);
         expect((await exams()).documents.map((document: {id: string}) => document.id)).toEqual([
             published.id,
         ]);
         await changeRequirement(teacher, false);
-        await expect(examRegion(teacher).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(teacher).getByText(examTitle, {exact: true})).toBeVisible();
         const hidden = await requestPaper(published.id);
         expect(hidden.status()).toBe(403);
         expect(await hidden.json()).toMatchObject({error: "document_unavailable"});
@@ -437,7 +456,7 @@ test("Premium exam switching and scanned bytes follow real access across two com
         await expect(examRegion(page)).toHaveCount(0);
         await changeRequirement(teacher, true);
         await page.reload();
-        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        await expect(examRegion(page).getByText(examTitle, {exact: true})).toBeVisible();
         await expect(examRegion(page).getByText(answer, {exact: true})).toHaveCount(0);
 
         await page.context().setOffline(true);
@@ -470,7 +489,10 @@ test("Premium exam switching and scanned bytes follow real access across two com
         expect((await learner.rpc("course_chat_messages", {p_room_id: roomA})).error?.code).toBe("42501");
         expect((await register(company)).error?.code).toBe("42501");
         await companyPage.reload();
-        await expect(companyPage.getByRole("heading", {name: "Lernarbeitsbereich deaktiviert", exact: true})).toBeVisible();
+        await expect(companyPage.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
+        await expect(companyPage.getByRole("status")).toContainText(
+            "Das Lernmodul dieses Unternehmens ist derzeit deaktiviert.",
+        );
         await expect(companyAttendance).toHaveCount(0);
         await expect(examRegion(companyPage)).toHaveCount(0);
 
@@ -479,13 +501,14 @@ test("Premium exam switching and scanned bytes follow real access across two com
         await expect(page.getByRole("heading", {name: f.title, exact: true})).toHaveCount(0);
         await page.getByRole("link", {name: other.title, exact: true}).click();
         await expect(page.getByRole("heading", {name: other.title, exact: true})).toBeVisible();
+        await page.goto(`/courses/${other.run}/workspace#course-chat`);
         await expect(chat.getByText(messageB, {exact: true})).toBeVisible();
         await expect(chat.getByText(messageA, {exact: true})).toHaveCount(0);
         const reply = "Fictional learner reply while company A is OFF";
         await chat.getByRole("textbox", {name: "Nachricht", exact: true}).fill(reply);
         await chat.getByRole("button", {name: "Nachricht senden", exact: true}).click();
         await expect(chat.getByText(reply, {exact: true})).toBeVisible();
-        await expect(examRegion(page).getByText(paper, {exact: true})).toHaveCount(0);
+        await expect(examRegion(page).getByText(examTitle, {exact: true})).toHaveCount(0);
         expect(await enrolments()).toEqual(originalEnrolments);
 
         await togglePremium(f, true, 2);
@@ -498,13 +521,17 @@ test("Premium exam switching and scanned bytes follow real access across two com
         expect((await checked(register(company), {requireData: true})).rows).toEqual(attendanceBefore.rows);
         expect(await enrolments()).toEqual(originalEnrolments);
         await companyPage.reload();
+        await companyPage.goto(workspace + "#course-register");
+        await companyAttendance.getByLabel("Kurstermin", {exact: true}).selectOption(f.session);
         await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
         await page.goto("/learning");
         for (const target of [f, other]) {
             await expect(page.getByRole("heading", {name: target.title, exact: true})).toBeVisible();
         }
         await page.getByRole("link", {name: f.title, exact: true}).click();
-        await expect(examRegion(page).getByText(paper, {exact: true})).toBeVisible();
+        await page.goto(workspace + "#course-exam");
+        await expect(examRegion(page).getByText(examTitle, {exact: true})).toBeVisible();
+        await page.goto(workspace + "#course-chat");
         await expect(chat.getByText(messageA, {exact: true})).toBeVisible();
     } finally {
         await companyContext.close();
@@ -538,14 +565,14 @@ async function enrolmentOptions(service: ReturnType<typeof api>, organisation: s
         name: "Fictional separate training company",
     }));
 
-    const course = async (title: string, company = organisation) => {
+    const course = async (title: string, company = organisation, published = true) => {
         const template = randomUUID();
         const id = randomUUID();
         const sessions = [randomUUID(), randomUUID()];
         await checked(service.from("course_templates").insert({id: template, title}));
         await checked(service.from("course_runs").insert({
             id, template_id: template, organisation_id: company,
-            time_zone: "Australia/Brisbane", published: true,
+            time_zone: "Australia/Brisbane", published,
         }));
         const first = Date.now() + 4 * 86400000;
         await checked(service.from("course_sessions").insert(
@@ -564,13 +591,14 @@ async function enrolmentOptions(service: ReturnType<typeof api>, organisation: s
         third: await course("Fictional batch documentation"),
         stale: await course("Fictional batch retired option"),
         foreign: await course("Fictional foreign-only course", foreignOrganisation),
+        draft: await course("Fictional unpublished-only course", organisation, false),
     };
 }
 
 test("Premium company multi-course enrolment is confirmed atomically across real browser roles", async ({page, browser}) => {
     test.setTimeout(120000);
     const f = await fixture({upcoming: true});
-    const {first, second, third, stale, foreign} = await enrolmentOptions(f.service, f.org);
+    const {first, second, third, stale, foreign, draft} = await enrolmentOptions(f.service, f.org);
     const learner = api(process.env.SUPABASE_ANON_KEY!);
     await checked(learner.auth.signInWithPassword({email: f.learner.email, password: process.env.E2E_PASSWORD!}));
     const profile = await checked(
@@ -612,7 +640,9 @@ test("Premium company multi-course enrolment is confirmed atomically across real
     await openCourses();
     await expect(choice(first)).toBeVisible();
     await expect(choice(foreign)).toHaveCount(0);
-    await expect(choice(f)).toHaveCount(0);
+    await expect(choice(draft)).toHaveCount(0);
+    // A filled offer publishes this option to the owning company's picker.
+    await expect(choice(f)).toBeVisible();
     await choice(first).check();
     const search = dialog.getByRole("searchbox", {name: "Kurse nach Titel suchen", exact: true});
     await search.fill(second.title);
@@ -930,10 +960,14 @@ test("company meeting link, instructor checklist and clocked class attendance", 
         expect(Date.parse(row.departure_at)).toBeGreaterThanOrEqual(Date.parse(row.arrival_at));
 
         await page.goto(workspace + "#course-register");
+        await page.reload();
         await page.getByText("Anwesenheitsverlauf", {exact: true}).click();
         await expect(page.getByText(/Klasse Fictional live class · 1/)).toBeVisible();
         await expect(page.getByRole("region", {name: "Anwesenheitsverlauf"}).getByRole("row").filter({hasText: f.learner.name})).toBeVisible();
-        await expect(page.getByLabel("Ankunft (optional)", {exact: true})).not.toHaveValue("");
+        const localTime = (instant: string) => DateTime.fromISO(instant, {zone: "Europe/Berlin"})
+            .toFormat("yyyy-MM-dd'T'HH:mm");
+        await expect(page.getByLabel("Ankunft (optional)", {exact: true})).toHaveValue(localTime(row.arrival_at));
+        await expect(page.getByLabel("Ende der Anwesenheit (optional)", {exact: true})).toHaveValue(localTime(row.departure_at));
     } finally {
         await context.close();
     }

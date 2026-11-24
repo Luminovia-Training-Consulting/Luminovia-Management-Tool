@@ -168,14 +168,17 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog.getByRole("checkbox", {name: "Linux", exact: true}).check();
     await dialog.getByRole("button", {name: "Als Vorlage speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
-    await page.getByRole("button", {name: "Durchführungen", exact: true}).click();
-    await page
-        .getByRole("button", {name: "Kurs anlegen", exact: true})
+    await page.getByRole("button", {name: "Vorlagen", exact: true}).click();
+    const templateCard = page.locator("article").filter({
+        has: page.getByRole("heading", {name: title, exact: true}),
+    });
+    await templateCard
+        .getByRole("button", {name: "Aus Vorlage erstellen", exact: true})
         .click();
-    dialog = page.getByRole("dialog");
-    await dialog
-        .getByLabel("Kursvorlage", {exact: true})
-        .selectOption({label: title});
+    dialog = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+    await expect(
+        dialog.getByLabel("Kursvorlage", {exact: true}).locator("option:checked"),
+    ).toHaveText(title);
     await dialog
         .getByLabel("Organisation", {exact: true})
         .selectOption({label: company});

@@ -132,7 +132,7 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
             p_payload: {time_zone: "Europe/Berlin", venue: changedVenue, sessions},
         });
         await expect(dialog).toBeHidden();
-        await expect(page.getByText("Gespeichert.", {exact: true})).toBeVisible();
+        await expect(page.getByRole("status").filter({hasText: "Gespeichert."})).toBeVisible();
 
         const stored = await checked(
             client

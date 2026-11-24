@@ -15,7 +15,12 @@ test("reports invitation and relay switches only to current mail administrators"
     "Der Server erlaubt E-Mail-Einladungen.",
   );
   await expect(settings).toContainText("Der Mail-Relay fehlt.");
-  await expect(settings).toContainText("ohne E-Mail-Versand");
+  await expect(settings).toContainText(
+    "Der Verbindungstest prüft TLS und die Anmeldung.",
+  );
+  await expect(settings).toContainText(
+    "Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
+  );
 
   const client = api(process.env.SUPABASE_ANON_KEY!);
   await checked(

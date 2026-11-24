@@ -1,3 +1,11 @@
+# 24 November 2026 — Main CI acceptance fixes
+
+The assignment release path no longer competes with another draft for the course. Archived offers stay archived. An active offer uses the existing automatic reopening criteria when another draft occupies its course's slot. SQL acceptance verified archived and draft release, an eligible active sibling reopening, unchanged draft count and a reopening notice. API fixtures now represent distinct drafts with valid course links. CodeQL reads Actions run metadata with the existing analysis and SARIF publication enabled.
+
+A database index now supports template-to-run lookups during course access checks. The desktop staff profile journey reproduced an eight-second PostgreSQL statement timeout in the Courses view and passed three consecutive Chromium runs after the index, with its original assertions and permissions.
+
+Updated browser assertions to exercise the current labels, routes, protected file actions and dated register selections. Expanded the application browser time budget after desktop hit the old aggregate limit. The existing test inventory and built PWA stage remain. Focused Mobile Chromium confirmed the original assignment cancellation and briefing visibility paths.
+
 # 23 November 2026 — Consistent scrollable schedules
 
 The shared schedule box keeps long dates inside job details, assignment history, course details, course rooms, offer previews and company requests. The editable date rows in course, offer and company request forms use the same scroll limit. The surrounding date range and time-zone information remains visible where shown by each view.

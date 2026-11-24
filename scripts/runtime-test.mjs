@@ -540,7 +540,7 @@ try {
             "Desktop and mobile browsers",
             ["--grep-invert", "built PWA"],
             {},
-            45 * 60 * 1000 * browserProjects.length,
+            65 * 60 * 1000 * browserProjects.length,
         );
         // The required parallel Typecheck gate covers these exact source bytes.
         await step("Production build", "npx", ["--no-install", "vite", "build"]);

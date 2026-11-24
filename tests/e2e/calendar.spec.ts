@@ -330,7 +330,8 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
 test("global calendar reveals published events and opens the precise published course without exposing private appointments or drafts", async ({
                                                                                                                                                    page,
                                                                                                                                                }) => {
-    const owner = await actor("Global calendar reader", "lecturer");
+    const owner = await actor("Global calendar course manager", "management");
+    const prospect = await actor("Global calendar prospective lecturer", "lecturer");
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const suffix = randomUUID().slice(0, 8);
     const published = `Published calendar ${suffix}`;
@@ -382,10 +383,13 @@ test("global calendar reveals published events and opens the precise published c
             ends_at: interval.ends_at,
         }),
     );
-    const reader = await signedIn(owner);
+    const unaffiliated = await signedIn(prospect);
+    expect(await checked(
+        unaffiliated.from("course_runs").select("id").eq("id", run),
+    )).toEqual([]);
     expect(
         await checked(
-            reader
+            unaffiliated
                 .from("global_events")
                 .select("title")
                 .in("title", [published, draft]),
@@ -393,6 +397,7 @@ test("global calendar reveals published events and opens the precise published c
     ).toEqual([{title: published}]);
     await login(page, owner.email);
     await page.goto("/calendar");
+    await page.locator(".calendar-panel").getByRole("button", {name: "Termine", exact: true}).click();
     await expect(
         page.locator(".fc-event").filter({hasText: privateTitle}),
     ).toBeVisible();
@@ -577,11 +582,17 @@ test("selects an appointment directly on the calendar using mouse or touch and w
     const last = first.plus({days: 2});
     const end = last.plus({days: 1});
     const day = (date: DateTime) => panel.locator(`[data-date="${date.toISODate()}"] .fc-daygrid-day-frame`);
+    // The three-day range can cross a week boundary. Place the lower cell first
+    // so raw desktop pointer coordinates do not fall below the viewport.
+    await day(last).scrollIntoViewIfNeeded();
     await day(first).scrollIntoViewIfNeeded();
     const center = async (date: DateTime) => {
         const box = await day(date).boundingBox();
         if (!box) throw Error("Expected visible calendar day.");
-        return {x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2)};
+        const point = {x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2)};
+        expect(point.y).toBeGreaterThan(0);
+        expect(point.y).toBeLessThan(await page.evaluate(() => window.innerHeight));
+        return point;
     };
     const dialog = page.getByRole("dialog", {name: "Privaten Termin hinzufügen", exact: true});
     const startPoint = await center(first);

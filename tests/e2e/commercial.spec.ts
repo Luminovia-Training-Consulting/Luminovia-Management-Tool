@@ -322,8 +322,12 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         registered_by: administrator.id,
     });
     await adminPage
-        .getByLabel("Alle Dozierenden anzeigen", {exact: true})
-        .check();
+        .getByRole("button", {name: "Alle Dozierenden anzeigen", exact: true})
+        .click();
+    await expect(adminPage).toHaveURL(/\/contracts$/);
+    await expect(
+        adminPage.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true}),
+    ).toBeChecked();
     await expect(
         adminPage.getByRole("heading", {name: title, exact: true}),
     ).toBeVisible();

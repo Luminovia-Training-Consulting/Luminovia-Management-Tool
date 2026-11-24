@@ -332,10 +332,10 @@ test("only the application browser command receives a budget for both serial pro
     assert.ok(
         result.calls.indexOf(discovery[0]) < result.calls.indexOf(browser[0]),
     );
-    assert.equal(browser[0].timeoutMs, 5400000);
+    assert.equal(browser[0].timeoutMs, 7800000);
     assert.ok(browser[0].signal instanceof AbortSignal);
     assert.equal(
-        result.calls.filter((call) => call.timeoutMs === 5400000).length,
+        result.calls.filter((call) => call.timeoutMs === 7800000).length,
         1,
     );
     const stages = result.calls.filter(
@@ -343,7 +343,7 @@ test("only the application browser command receives a budget for both serial pro
     );
     assert.ok(stages.length > 10);
     for (const stage of stages)
-        assert.equal(stage.timeoutMs, stage === browser[0] ? 5400000 : 1200000);
+        assert.equal(stage.timeoutMs, stage === browser[0] ? 7800000 : 1200000);
 });
 
 test("a browser deadline still fails acceptance, skips build/PWA and performs owned cleanup", async () => {

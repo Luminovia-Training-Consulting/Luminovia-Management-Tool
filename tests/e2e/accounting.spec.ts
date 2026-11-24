@@ -277,7 +277,12 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     exact: true,
   });
   await expect(saveCredit).toBeDisabled();
+  // A long mobile dialog scrolls independently. Bring the review control
+  // into its viewport before Chromium calculates the pointer target.
+  await confirmCredit.scrollIntoViewIfNeeded();
+  await expect(confirmCredit).toBeInViewport();
   await confirmCredit.check();
+  await expect(confirmCredit).toBeChecked();
   await saveCredit.click();
   await expect(
     credit.getByRole("status").filter({ hasText: "Gutschriftbeleg erfasst." }),

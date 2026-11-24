@@ -118,17 +118,19 @@ await withApiFixture(
                         id: duplicate,
                         course_run_id: runs[0],
                         title: `Hidden duplicate ${suffix}`,
+                        // Related historic offers still share the course binding.
+                        status: "archived",
                     },
                     {
                         id: standalone,
                         course_run_id: null,
                         title: `Hidden standalone ${suffix}`,
+                        status: "draft",
                     },
                 ].map((row) => ({
                     ...row,
                     customer_name: label,
                     delivery_type: "online",
-                    status: "draft",
                     amount: 25,
                     total_amount: 100,
                     currency: "EUR",
@@ -139,7 +141,7 @@ await withApiFixture(
                     created_by: admin.id,
                 })),
             ),
-            "Create duplicate-run and standalone offers",
+            "Create one archived same-course offer and one standalone draft",
         );
         await checked(
             service.from("course_sessions").insert({

@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      # The CodeQL upload also reads workflow-run metadata.
+      actions: read
       contents: read
       security-events: write
     strategy:

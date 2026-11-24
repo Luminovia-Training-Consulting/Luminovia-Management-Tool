@@ -399,13 +399,14 @@ try {
         foreignOrganisation = randomUUID();
     const template = randomUUID(),
         ownRun = randomUUID(),
+        retainedOwnRun = randomUUID(),
         foreignRun = randomUUID();
     const ownJob = randomUUID(),
         retainedOwnJob = randomUUID(),
         foreignJob = randomUUID();
     organisations.push(ownOrganisation, foreignOrganisation);
     templates.push(template);
-    runs.push(ownRun, foreignRun);
+    runs.push(ownRun, retainedOwnRun, foreignRun);
     jobs.push(ownJob, retainedOwnJob, foreignJob);
     await checked(
         service.from("organisations").insert([
@@ -430,6 +431,11 @@ try {
         service.from("course_runs").insert([
             {id: ownRun, template_id: template, organisation_id: ownOrganisation},
             {
+                id: retainedOwnRun,
+                template_id: template,
+                organisation_id: ownOrganisation,
+            },
+            {
                 id: foreignRun,
                 template_id: template,
                 organisation_id: foreignOrganisation,
@@ -441,7 +447,7 @@ try {
         service.from("jobs").insert(
             [
                 {id: ownJob, course_run_id: ownRun},
-                {id: retainedOwnJob, course_run_id: ownRun},
+                {id: retainedOwnJob, course_run_id: retainedOwnRun},
                 {id: foreignJob, course_run_id: foreignRun},
             ].map((job) => ({
                 ...job,

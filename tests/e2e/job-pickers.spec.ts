@@ -93,7 +93,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
                     title: `${prefix} hidden commercial ${index}`,
                     customer_name: prefix,
                     delivery_type: "online",
-                    status: "draft",
+                    status: row.id === duplicate ? "archived" : "draft",
                     amount: 50,
                     total_amount: 100,
                     currency: "EUR",

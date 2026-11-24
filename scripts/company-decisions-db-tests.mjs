@@ -453,6 +453,21 @@ await withTestDatabase("company_decision", async ({sql, actor}) => {
             status,
         );
     }
+    const liveSibling = randomUUID(), liveClaim = randomUUID();
+    await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
+      values ('${liveSibling}','${run}','Assigned sibling','Fictional firm','online','filled',100,'EUR','fixed_total',100,'Example terms');
+      insert into public.job_sessions(job_id,starts_at,ends_at)
+      values ('${liveSibling}',now()+interval '45 days',now()+interval '45 days 1 hour');
+      insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)
+      values ('${liveClaim}','${liveSibling}','${teacher}',gen_random_uuid(),100,'EUR','fixed_total',100,'Example terms',1);
+      insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+      select '${liveClaim}','${teacher}',starts_at,ends_at from public.job_sessions where job_id='${liveSibling}';`);
+    await actor(manager, `select public.cancel_job_assignment('${liveClaim}','Fictional future cancellation','${randomUUID()}')`);
+    assert.equal(await sql(`select status from public.job_claims where id='${liveClaim}'`), "cancelled");
+    assert.equal(await sql(`select status from public.jobs where id='${liveSibling}'`), "published");
+    assert.equal(await sql(`select count(*) from public.jobs where course_run_id='${run}' and status='draft'`), "1");
+    assert.equal(await sql(`select count(*) > 0 from public.notifications where resource_id='${liveSibling}' and kind='job_reopened'`), "t");
+    console.log("Assignment release reopens an eligible offer without replacing its sibling draft.");
     console.log(
         "Company releases future draft and archived assignments without publishing the offer.",
     );

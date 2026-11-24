@@ -424,7 +424,7 @@ test("admin uses password-only access and publishes a five-session job through t
     await page.goto(`/jobs/${publishedId}`);
     await expect(page.getByRole("heading", {name: title, exact: true})).toBeVisible();
     await expect(page.getByRole("heading", {name: "Durchführungszeitraum", exact: true})).toBeVisible();
-    await expect(page.getByRole("heading", {name: "Dateizentrale", exact: true})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Auftragsdateien", exact: true})).toBeVisible();
 
     // Account invitations live on their own current-authority administration page.
     await page.goto("/admin/accounts");

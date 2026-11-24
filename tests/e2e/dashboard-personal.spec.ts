@@ -218,7 +218,13 @@ test("personal cards and teaching preparation persist in the real account across
         }),
     ).toBeVisible();
     await expect(
-        teaching.getByRole("link", {name: "Agreed daily V1.pdf", exact: true}),
+        teaching.getByRole("button", {name: "Agreed daily V1.pdf herunterladen", exact: true}),
+    ).toBeEnabled();
+    await expect(
+        teaching.getByRole("link", {
+            name: "Kursbereich und alle freigegebenen Fassungen öffnen",
+            exact: true,
+        }),
     ).toHaveAttribute("href", `/courses/${run}/workspace`);
     await expect(
         teaching.getByText("Private daily note never shown", {exact: true}),
