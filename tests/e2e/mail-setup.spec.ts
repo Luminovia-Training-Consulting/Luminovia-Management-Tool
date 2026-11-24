@@ -28,7 +28,7 @@ test("reports invitation and relay switches only to current mail administrators"
   );
   await expect(settings).toContainText("Der Mail-Relay fehlt.");
   await expect(settings).toContainText(
-    "Der Verbindungstest prüft TLS und die Anmeldung.",
+    "Der Verbindungstest prüft TLS und die Anmeldung beim Mailanbieter.",
   );
   await expect(settings).toContainText(
     "Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
