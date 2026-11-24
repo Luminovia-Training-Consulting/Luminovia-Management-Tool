@@ -269,7 +269,7 @@ export function CustomerCreditNotes({
         </Field>
         {upload.isPending && <Loading />}
         {document && <p>{document.original_name}</p>}
-        <label className="accounting-pick">
+        <label className="accounting-pick accounting-credit-review">
           <input
             type="checkbox"
             required

@@ -91,6 +91,14 @@
   display: grid;
   gap: 0.25rem;
 }
+.accounting-credit-review {
+  align-items: center;
+  min-block-size: 44px;
+  cursor: pointer;
+}
+.accounting-credit-review input {
+  inline-size: 18px;
+}
 .accounting-claims {
   max-height: 20rem;
   overflow: auto;

@@ -268,8 +268,10 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
   await expect(
     credit.getByText("Fictional issued credit note.pdf", { exact: true }),
   ).toBeVisible({ timeout: 90000 });
+  const reviewLabel =
+    "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.";
   const confirmCredit = credit.getByRole("checkbox", {
-    name: "Ich habe den ausgestellten PDF-Beleg, die Originalrechnung und den Betrag geprüft.",
+    name: reviewLabel,
     exact: true,
   });
   const saveCredit = credit.getByRole("button", {
@@ -277,12 +279,12 @@ test("customer invoice PDF, credit evidence, payment totals and exports stay pri
     exact: true,
   });
   await expect(saveCredit).toBeDisabled();
-  // A long mobile dialog scrolls independently. Bring the review control
-  // into its viewport before Chromium calculates the pointer target.
-  await confirmCredit.scrollIntoViewIfNeeded();
-  await expect(confirmCredit).toBeInViewport();
-  await confirmCredit.check();
+  const reviewText = credit.getByText(reviewLabel, { exact: true });
+  await expect(confirmCredit).toBeEnabled();
+  if (isMobile) await reviewText.tap();
+  else await reviewText.click();
   await expect(confirmCredit).toBeChecked();
+  await expect(saveCredit).toBeEnabled();
   await saveCredit.click();
   await expect(
     credit.getByRole("status").filter({ hasText: "Gutschriftbeleg erfasst." }),
