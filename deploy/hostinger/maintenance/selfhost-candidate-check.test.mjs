@@ -11,7 +11,23 @@ import {createServer} from "node:net";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
-import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
+import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, baselineFixtureMigrations, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
+
+test("only the exact broken final baseline migration is deferred during fictional provisioning", () => {
+    const old = "20261124055710_support_chf_currency.sql";
+    const broken = "20261124062130_course_run_creation_origin.sql";
+    const repair = "20261124072614_protect_course_run_origin_for_service_writes.sql";
+    const unknown = "20261124072615_additional_baseline_schema.sql";
+    const previousBaseline = [old];
+    const repairedBaseline = [old, broken, repair, unknown];
+    assert.equal(baselineFixtureMigrations(previousBaseline), previousBaseline);
+    assert.deepEqual(baselineFixtureMigrations([old, broken]), [old]);
+    assert.equal(baselineFixtureMigrations(repairedBaseline), repairedBaseline);
+    assert.throws(
+        () => baselineFixtureMigrations([old, broken, unknown]),
+        /requires the exact final baseline migration/,
+    );
+});
 
 test("crash diagnostics retain a safe primary signal ahead of a recovery-error flood", () => {
     const secret = "fictional-candidate-password-12345";

@@ -517,6 +517,22 @@ export function financialProbeReceipt(output, phase) {
     return result;
 }
 
+const originalCourseOriginMigration = "20261124062130_course_run_creation_origin.sql";
+const repairedCourseOriginMigration = "20261124072614_protect_course_run_origin_for_service_writes.sql";
+
+/** Provision fictional records before the exact historical trigger that blocked service-role inserts. */
+export function baselineFixtureMigrations(migrations) {
+    if (!migrations.includes(originalCourseOriginMigration) ||
+        migrations.includes(repairedCourseOriginMigration))
+        return migrations;
+    assert.equal(
+        migrations.at(-1),
+        originalCourseOriginMigration,
+        "The historical course-origin provisioning exception requires the exact final baseline migration.",
+    );
+    return migrations.slice(0, -1);
+}
+
 // Start owned Compose resources, verify data before/after upgrading, and clean up only resources covered by the ownership contract.
 export async function checkCandidate({
                                          baselineRoot,
@@ -912,10 +928,11 @@ export async function checkCandidate({
         await sql(
             "CREATE SCHEMA IF NOT EXISTS supabase_migrations; CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations(version text PRIMARY KEY, statements text[], name text);",
         );
-        const replay = async () => {
-            const migrations = readdirSync(join(scratch, "supabase/migrations"))
+        const readMigrationNames = () =>
+            readdirSync(join(scratch, "supabase/migrations"))
                 .filter((name) => /^\d{14}_[a-z0-9_]+\.sql$/.test(name))
                 .sort();
+        const replay = async (migrations = readMigrationNames()) => {
             assert(
                 migrations.length >= 14,
                 "Complete application history is required.",
@@ -963,7 +980,9 @@ export async function checkCandidate({
                 assert.equal(hash(record.source), hash(sources.get(record.version)));
             return migrations;
         };
-        let migrations = await replay();
+        const baselineMigrations = readMigrationNames();
+        const fixtureMigrations = baselineFixtureMigrations(baselineMigrations);
+        let migrations = await replay(fixtureMigrations);
         await sql("NOTIFY pgrst,'reload schema';");
         const fixtureEnvironment = {
             SUPABASE_URL: "https://127.0.0.1:" + ports.api,
@@ -1001,6 +1020,11 @@ export async function checkCandidate({
             env: childEnvironment,
             timeout: 240000,
         });
+        if (fixtureMigrations !== baselineMigrations) {
+            console.log("Candidate: completing the exact baseline migration history after fictional provisioning.");
+            migrations = await replay(baselineMigrations);
+            await sql("NOTIFY pgrst,'reload schema';");
+        }
         const probe = join(
             root,
             "deploy/hostinger/maintenance/candidate-upgrade-probe.mjs",

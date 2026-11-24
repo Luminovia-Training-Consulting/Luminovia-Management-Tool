@@ -509,6 +509,16 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         assert.equal(await readOrigin(otherClient, companyRun), "");
         await sql(`update public.course_runs set creation_origin='staff' where id=${q(companyRun)}`);
         assert.equal(await readOrigin(ids.admin, companyRun), "company");
+        // The local fixture and trusted imports write directly as service_role.
+        // An organisation and a supplied value cannot establish a human origin.
+        const imported = randomUUID();
+        assert.equal(await sql(`begin; set local role service_role;
+          set local request.jwt.claims='{"role":"service_role"}';
+          insert into public.course_runs(id,template_id,organisation_id,creation_origin)
+          values(${q(imported)},${q(own)},${q(org)},'staff') returning creation_origin;
+          rollback`), "unknown");
+        assert.equal(await sql(`select has_function_privilege('service_role',
+          'private.has_permission(text)', 'EXECUTE')`), "f");
         await assert.rejects(
             sql(`insert into public.course_runs(template_id,organisation_id) values(${q(own)},${q(otherOrg)})`),
             /belongs to another company/,
