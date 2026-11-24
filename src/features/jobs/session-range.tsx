@@ -12,11 +12,13 @@ export function JobDateRange({
   sessions,
   onApply,
   disabled,
+  requiredCount,
 }: {
   prefix: string;
   sessions: SessionWindow[];
   onApply: (sessions: SessionWindow[]) => void;
   disabled?: boolean;
+  requiredCount?: number;
 }) {
   const { t } = useTranslation("jobLifecycle");
   const dates = sessions
@@ -25,7 +27,7 @@ export function JobDateRange({
     .sort();
   const [from, setFrom] = useState(dates[0] ?? "");
   const [through, setThrough] = useState(dates.at(-1) ?? "");
-  const [invalid, setInvalid] = useState(false);
+  const [error, setError] = useState<"invalidRange" | "rangeCountMismatch">();
   return (
     <div className="job-date-range">
       <div className="form-row">
@@ -37,7 +39,7 @@ export function JobDateRange({
             disabled={disabled}
             onChange={(event) => {
               setFrom(event.target.value);
-              setInvalid(false);
+              setError(undefined);
             }}
           />
         </Field>
@@ -50,7 +52,7 @@ export function JobDateRange({
             disabled={disabled}
             onChange={(event) => {
               setThrough(event.target.value);
-              setInvalid(false);
+              setError(undefined);
             }}
           />
         </Field>
@@ -62,13 +64,18 @@ export function JobDateRange({
         disabled={disabled || !from || !through}
         onClick={() => {
           const next = sessionsForDateRange(from, through, sessions);
-          setInvalid(!next);
-          if (next) onApply(next);
+          if (!next) return setError("invalidRange");
+          if (requiredCount !== undefined && next.length !== requiredCount)
+            return setError("rangeCountMismatch");
+          setError(undefined);
+          onApply(next);
         }}
       >
         {t("applyRange")}
       </Button>
-      {invalid && <Notice kind="error">{t("invalidRange")}</Notice>}
+      {error && (
+        <Notice kind="error">{t(error, { count: requiredCount })}</Notice>
+      )}
     </div>
   );
 }
