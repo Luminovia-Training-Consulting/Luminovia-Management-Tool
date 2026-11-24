@@ -2,7 +2,6 @@
  * React's shared binding to native Supabase session state. Auth events outrank a late initial
  * lookup; identity changes clear private queries before rendering the new actor.
  */
-/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   type ReactNode,
@@ -99,4 +98,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 /** Read the session/loading/error state maintained by the shared AuthProvider. */
+// eslint-disable-next-line react-refresh/only-export-components -- The shared hook belongs with the provider API, but is not a refreshable component.
 export const useAuth = () => useContext(AuthContext);
