@@ -145,7 +145,10 @@ async function runFixture({
             if (path.endsWith("supabase/functions/invites"))
                 return [file("index.ts"), file("index_test.ts")];
             if (path.endsWith("deploy/hostinger"))
-                return ["reviewed-migrations.test.mjs"];
+                return [
+                    "reviewed-backup.test.mjs",
+                    "reviewed-migrations.test.mjs",
+                ];
             if (path.endsWith("deploy/hostinger/updates"))
                 return ["package.test.mjs"];
             if (path.endsWith("deploy/hostinger/scanner")) return ["scan.test.mjs"];
@@ -450,6 +453,7 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
         "unittest",
         "deploy/academy",
         "deploy/hostinger/updates/package.test.mjs",
+        "deploy/hostinger/reviewed-backup.test.mjs",
         "--gateway-routing",
         "deploy/hostinger/selfhost/course-documents.test.mjs",
         "scripts/hostinger-caddy-check.mjs",
