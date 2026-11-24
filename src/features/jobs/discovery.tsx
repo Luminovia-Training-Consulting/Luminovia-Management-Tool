@@ -1,8 +1,10 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { LoadMore } from "../../components/load-more";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist } from "./lifecycle-extra";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
@@ -28,6 +30,7 @@ import {
   ErrorState,
   Field,
   Loading,
+  NextPageError,
   Notice,
   PageHeading,
 } from "../../components/common";
@@ -62,6 +65,7 @@ function FilterForm({
   const {
     register,
     handleSubmit,
+    reset,
     control,
     formState: { errors },
   } = useForm<z.input<typeof jobFiltersSchema>, unknown, JobFilters>({
@@ -254,6 +258,16 @@ function FilterForm({
       )}
       <div className="discovery-actions">
         <Button type="submit">{t("apply")}</Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => {
+            reset(defaultJobFilters);
+            apply(defaultJobFilters);
+          }}
+        >
+          {t("reset")}
+        </Button>
       </div>
     </form>
   );
@@ -261,12 +275,16 @@ function FilterForm({
 
 function SavedViews({
   actor,
+  editorRevision,
   filters,
+  search,
   select,
 }: {
   actor: string;
+  editorRevision: number;
   filters: JobFilters | null;
-  select: (f: JobFilters) => void;
+  search: string;
+  select: (params: URLSearchParams) => void;
 }) {
   const { t } = useTranslation("jobDiscovery"),
     client = useQueryClient();
@@ -304,8 +322,10 @@ function SavedViews({
     );
   return (
     <SavedViewEditor
+      key={editorRevision}
       actor={actor}
       filters={filters}
+      search={search}
       select={select}
       views={views.data}
       refreshing={views.isFetching}
@@ -322,6 +342,7 @@ function SavedViews({
 function SavedViewEditor({
   actor,
   filters,
+  search,
   select,
   views,
   refreshing,
@@ -331,7 +352,8 @@ function SavedViewEditor({
 }: {
   actor: string;
   filters: JobFilters | null;
-  select: (f: JobFilters) => void;
+  search: string;
+  select: (params: URLSearchParams) => void;
   views: SavedJobView[];
   refreshing: boolean;
   refreshError: boolean;
@@ -368,7 +390,10 @@ function SavedViewEditor({
       if (isDatabasePermissionDenied(error)) onDenied();
     },
   });
-  const selectedView = views.find((v) => v.id === selected);
+  const selectedView = views.find(
+    (view) =>
+      view.id === selected && filterParams(view.filters).toString() === search,
+  );
   const open = (mode: "create" | "rename" | "remove") => {
     mutation.reset();
     // Each genuinely new dialog is a new operation. Retries inside that dialog
@@ -380,14 +405,14 @@ function SavedViewEditor({
   return (
     <section className="discovery-views" aria-label={t("saved")}>
       {refreshError && <ErrorState retry={() => void refresh()} />}
-      <div className="discovery-actions">
+      <div className="discovery-view-controls">
         <Field id="discovery-view" label={t("choose")}>
           <select
-            value={selected}
+            value={selectedView?.id ?? ""}
             onChange={(e) => {
-              setSelected(e.target.value);
               const view = views.find((v) => v.id === e.target.value);
-              if (view) select(view.filters);
+              setSelected(view?.id ?? "");
+              if (view) select(filterParams(view.filters));
             }}
           >
             <option value="">{t("choose")}</option>
@@ -398,38 +423,40 @@ function SavedViewEditor({
             ))}
           </select>
         </Field>
-        <Button
-          variant="secondary"
-          disabled={!online || !filters || views.length >= 20}
-          onClick={() => open("create")}
-        >
-          {t("saveNew")}
-        </Button>
-        {selectedView && (
-          <>
-            <Button
-              variant="ghost"
-              disabled={!online}
-              onClick={() => open("rename")}
-            >
-              {t("rename")}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={!online}
-              onClick={() => open("remove")}
-            >
-              {t("remove")}
-            </Button>
-          </>
-        )}
-        <Button
-          variant="ghost"
-          disabled={!online || refreshing}
-          onClick={() => void refresh()}
-        >
-          {t("reload")}
-        </Button>
+        <div className="discovery-actions">
+          <Button
+            variant="secondary"
+            disabled={!online || !filters || views.length >= 20}
+            onClick={() => open("create")}
+          >
+            {t("saveNew")}
+          </Button>
+          {selectedView && (
+            <>
+              <Button
+                variant="ghost"
+                disabled={!online}
+                onClick={() => open("rename")}
+              >
+                {t("rename")}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={!online}
+                onClick={() => open("remove")}
+              >
+                {t("remove")}
+              </Button>
+            </>
+          )}
+          <Button
+            variant="ghost"
+            disabled={!online || refreshing}
+            onClick={() => void refresh()}
+          >
+            {t("reload")}
+          </Button>
+        </div>
       </div>
       {mutation.isSuccess && !editing && <Notice>{t("viewDone")}</Notice>}
       <Dialog
@@ -496,8 +523,11 @@ export function JobDiscovery() {
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const [params, setParams] = useSearchParams();
+  const search = params.toString();
+  const [editorRevision, resetViewEditor] = useState(0);
+  const [draftRevision, resetDraft] = useState(0);
   const sickDayReleased = useLocation().state?.sickDayReleased === true;
-  const parsed = filtersFromParams(params),
+  const parsed = useMemo(() => filtersFromParams(params), [params]),
     filters = parsed.success ? parsed.data : null;
   const query = useInfiniteQuery({
     ...jobDiscoveryQuery(
@@ -507,13 +537,33 @@ export function JobDiscovery() {
     ),
     enabled: staff && Boolean(filters),
   });
-  const items = [
-    ...new Map(
-      (query.data?.pages ?? [])
-        .flatMap((p) => p.items)
-        .map((item) => [item.id, item]),
-    ).values(),
-  ];
+  const applyFilters = (next: JobFilters) => {
+    resetViewEditor((revision) => revision + 1);
+    const nextParams = filterParams(next);
+    // Confirm again against the current calendar even if the URL stays the same.
+    if (nextParams.toString() === search) void query.refetch();
+    else setParams(nextParams, { replace: true, preventScrollReset: true });
+  };
+  const selectView = (nextParams: URLSearchParams) => {
+    // The form key changes with the URL. Reload it explicitly for the same URL.
+    if (nextParams.toString() === search)
+      resetDraft((revision) => revision + 1);
+    else setParams(nextParams, { preventScrollReset: true });
+  };
+  const retryNextPage = canRetryNextPage(query);
+  const loadNextPage = () => {
+    if (!query.isFetching) void query.fetchNextPage({ cancelRefetch: false });
+  };
+  const pages = query.data?.pages;
+  const items = useMemo(() => {
+    const indexed = new Map<
+      string,
+      NonNullable<typeof pages>[number]["items"][number]
+    >();
+    for (const page of pages ?? [])
+      for (const item of page.items) indexed.set(item.id, item);
+    return Array.from(indexed.values());
+  }, [pages]);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   if (!staff)
@@ -533,21 +583,18 @@ export function JobDiscovery() {
         <summary>{t("filterOptions")}</summary>
         <div className="discovery-filter-content">
           <FilterForm
-            key={params.toString()}
+            key={`${search}:${draftRevision}`}
             initial={filters ?? filterDraftFromParams(params)}
-            apply={(f) => setParams(filterParams(f), { replace: true })}
+            apply={applyFilters}
           />
           <SavedViews
             key={actor}
             actor={actor}
             filters={filters}
-            select={(f) => setParams(filterParams(f))}
+            editorRevision={editorRevision}
+            search={search}
+            select={selectView}
           />
-          <div className="discovery-actions">
-            <Button variant="ghost" onClick={() => setParams({})}>
-              {t("reset")}
-            </Button>
-          </div>
           <p className="muted">{t("feeHelp")}</p>
         </div>
       </details>
@@ -563,7 +610,7 @@ export function JobDiscovery() {
         </Notice>
       ) : query.isPending ? (
         <Loading />
-      ) : query.isError ? (
+      ) : query.isError && !retryNextPage ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : (
         <>
@@ -580,13 +627,16 @@ export function JobDiscovery() {
               <p>{common("noJobsHint")}</p>
             </div>
           )}
-          {query.hasNextPage ? (
-            <Button
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
+          {retryNextPage ? (
+            <NextPageError retry={loadNextPage} disabled={query.isFetching} />
+          ) : query.hasNextPage ? (
+            <LoadMore
+              disabled={query.isFetching}
+              onLoad={loadNextPage}
+              pageKey={search}
             >
               {t("more")}
-            </Button>
+            </LoadMore>
           ) : (
             items.length > 0 && <p>{t("complete")}</p>
           )}

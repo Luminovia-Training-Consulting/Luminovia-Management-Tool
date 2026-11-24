@@ -932,14 +932,21 @@ export async function checkCandidate({
         await compose(["up", "-d", "--wait", "--wait-timeout", "600"], {
             timeout: 660000,
         });
+        const authContainer = await owned(await compose(["ps", "-q", "auth"]));
         for (const name of expectedServices) {
             const id = await compose(["ps", "-q", name]),
                 value = await owned(id);
             assert.equal(value.State.Status, "running");
             if (name !== "web") assert.equal(value.State.Health.Status, "healthy");
-            assert.deepEqual(Object.keys(value.NetworkSettings.Networks), [
-                scope.network,
-            ]);
+            if (configuration.services[name].network_mode === "service:auth") {
+                // A loopback relay shares the owned Auth namespace and has no
+                // separate network endpoints in Docker inspect.
+                assert.equal(name, "mail-relay");
+                assert.equal(value.HostConfig.NetworkMode, "container:" + authContainer.Id);
+                assert.deepEqual(Object.keys(value.NetworkSettings.Networks ?? {}), []);
+            } else {
+                assert.deepEqual(Object.keys(value.NetworkSettings.Networks), [scope.network]);
+            }
             for (const bindings of Object.values(value.HostConfig.PortBindings ?? {}))
                 for (const binding of bindings ?? [])
                     assert.equal(binding.HostIp, "127.0.0.1");

@@ -138,7 +138,10 @@ it("renders derived requirements as literal authored text and excludes inapplica
     await screen.findByRole("heading", { name: data[0].title }),
   ).toBeVisible();
   expect(container.querySelector("script")).toBeNull();
-  expect(screen.getByText("75 % bereit")).toBeVisible();
+  expect(screen.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "75",
+  );
   expect(screen.getByText("Nicht erforderlich", { exact: true })).toBeVisible();
   expect(
     screen.getByText(data[0].settings.instructions, { exact: true }),

@@ -4,6 +4,8 @@ import { Field } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import {
   analyticsUntil,
+  analyticsPresets,
+  staffAnalyticsPresets,
   type AnalyticsPeriod,
   type AnalyticsPreset,
 } from "./period";
@@ -77,18 +79,21 @@ export function PeriodForm({
   );
 }
 
-const presets = ["around", "historyYear", "nextQuarter"] as const;
-
 export function ReportingPeriodSelect({
   preset,
   custom,
+  staff = false,
   onChange,
 }: {
   preset: AnalyticsPreset;
   custom: boolean;
+  staff?: boolean;
   onChange: (value: AnalyticsPreset) => void;
 }) {
   const { t } = useTranslation("analytics");
+  const presets = staff
+    ? [...analyticsPresets, ...staffAnalyticsPresets]
+    : analyticsPresets;
   return (
     <Field id="analytics-period" label={t("period")}>
       <select

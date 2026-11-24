@@ -400,6 +400,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       );
     await assert.rejects(activity(participant), /42501/);
     const audit = activitySchema.parse(JSON.parse(await activity(admin)));
+    const managementAudit = activitySchema.parse(JSON.parse(await activity(manager)));
+    assert.equal(audit.can_clear, true);
+    assert.equal(managementAudit.can_clear, false);
+    assert.deepEqual(managementAudit.items, audit.items);
     assert.equal(audit.items.length, 1);
     assert.equal(audit.items[0].resource_id, terms.installation_id);
     assert.deepEqual(audit.items[0].changed_fields, [
@@ -412,6 +416,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       JSON.stringify(audit),
       /Fictional Academy Portal|support\.example/,
     );
+    const clearActivity = (who, method = "POST") => actor(who,
+      `set local request.path='/rpc/clear_administration_activity'; set local request.method=${q(method)};
+       select public.require_portal_access(); select public.clear_administration_activity(true);`,
+    );
+    const clearSchema = z.fromJSONSchema(
+      paths["/rest/v1/rpc/clear_administration_activity"].post.responses["200"]
+        .content["application/json"].schema,
+    );
+    await assert.rejects(clearActivity(participant), /42501/);
+    await assert.rejects(clearActivity(manager), /42501/);
+    await assert.rejects(clearActivity(admin, "GET"), /42501/);
+    const cleared = clearSchema.parse(JSON.parse(await clearActivity(admin)));
+    assert.ok(cleared.removed >= 1);
+    assert.deepEqual(activitySchema.parse(JSON.parse(await activity(manager))).items, []);
+    assert.equal(await sql("select count(*) from public.audit_events where action='academy.white_label.changed'"), "1");
+    const recordAuthMail = (method) => sql(`begin; set local role service_role;
+      set local request.method=${q(method)}; set local request.path='/rpc/record_auth_mail_activity';
+      select public.require_portal_access(); select public.record_auth_mail_activity('accepted'); commit;`);
+    await assert.rejects(recordAuthMail("GET"), /42501/);
+    await recordAuthMail("POST");
+    assert.equal(await sql("select count(*) from private.administration_activity where action='mail.auth.accepted'"), "1");
 
     const grace = {
       ...terms,
@@ -429,6 +454,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(await readLinks(), combinedLinks);
     await assert.rejects(saveLinks(admin, 4), /42501/);
     await assert.rejects(saveCombined(admin, 4, 4), /42501/);
+    const graceAudit = activitySchema.parse(JSON.parse(await activity(admin)));
+    assert.equal(graceAudit.can_clear, false);
+    await assert.rejects(clearActivity(admin), /42501/);
     assert.deepEqual(
       JSON.parse(
         await sql(`select jsonb_agg(details order by (details->>'version')::int)

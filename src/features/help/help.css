@@ -137,16 +137,6 @@
   min-width: 0;
 }
 
-.help-shortcuts {
-  margin-bottom: 1.5rem;
-  column-gap: 0.5rem;
-  row-gap: 0.25rem;
-}
-
-.help-shortcuts .button {
-  min-height: 44px;
-}
-
 .help-article,
 .help-recovery {
   padding: clamp(1rem, 3vw, 2rem);

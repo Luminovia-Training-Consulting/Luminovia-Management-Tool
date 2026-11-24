@@ -54,3 +54,18 @@ Deno.test("rate cap, disallowed origin and malformed payload do not issue sessio
   assertEquals((await handler(new Request("https://example.invalid/human-login", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{"}))).status, 400);
   assertEquals(calls, 0);
 });
+
+Deno.test("Auth throttling and transient infrastructure failures have distinct safe responses", async () => {
+  const rateLimited = createHumanLoginHandler(deps({signIn: async () => "rate_limited"}), []);
+  const unavailable = createHumanLoginHandler(deps({
+    active: async () => { throw new Error("private database detail"); },
+  }), []);
+  for (const [handler, status, error] of [
+    [rateLimited, 429, "rate_limited"],
+    [unavailable, 503, "login_unavailable"],
+  ] as const) {
+    const response = await handler(post("lead@example.invalid", "Valid42!"));
+    assertEquals(response.status, status);
+    assertEquals(await response.json(), {error});
+  }
+});

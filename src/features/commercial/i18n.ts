@@ -123,6 +123,11 @@ const pairs: Record<string, [string, string]> = {
     "Beträge bleiben in ihrer Originalwährung. Es erfolgt keine Umrechnung.",
     "Amounts remain in their original currency. No conversion is applied.",
   ],
+  moreFinanceRows: ["Weitere Einträge laden", "Load more entries"],
+  financeRowsCount: [
+    "{{shown}} von {{total}} Einträgen angezeigt",
+    "Showing {{shown}} of {{total}} entries",
+  ],
   earnings: ["Vereinbarte Honorare", "Accepted earnings"],
   expected: ["Erwartet", "Expected"],
   invoiceReviewStage: ["Prüfung erforderlich", "Review required"],
@@ -154,6 +159,7 @@ const pairs: Record<string, [string, string]> = {
   rejected: ["Abgelehnt", "Rejected"],
   cancelled: ["Storniert", "Cancelled"],
   invoices: ["Rechnungen", "Invoices"],
+  submitCourseInvoice: ["Für diesen Kurs abrechnen", "Invoice this course"],
   createInvoice: ["Rechnung einreichen", "Submit invoice"],
   invoiceHint: [
     "Wähle deine Aufträge und das zugehörige Rechnungs-PDF. Der Gesamtbetrag wird aus den bestätigten Auftragskonditionen übernommen.",

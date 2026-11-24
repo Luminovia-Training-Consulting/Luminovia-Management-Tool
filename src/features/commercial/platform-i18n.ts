@@ -223,6 +223,10 @@ const pairs: Record<string, [string, string]> = {
     "Auftragsvolumen & Plattformerlöse",
     "Assignment volume & platform revenue",
   ],
+  revenueSearch: [
+    "Aufträge, Unternehmen oder Dozierende suchen",
+    "Search assignments, companies or lecturers",
+  ],
   revenueHint: [
     "Angebotsvolumen und angenommene Konditionen getrennt, jeweils in der Originalwährung.",
     "Offer volume and accepted terms shown separately, in the original currency.",

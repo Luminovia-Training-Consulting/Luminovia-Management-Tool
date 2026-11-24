@@ -39,7 +39,9 @@ vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: fake.actor } } }),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
-vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
+vi.mock("../commercial/financial-summary-cards", () => ({
+  FinancialSummaryCards: () => null,
+}));
 
 const clients: QueryClient[] = [];
 
@@ -246,9 +248,7 @@ function setup(onlyWidgets = false, sharedObserver = false) {
           <DashboardWidgets
             actor={fake.actor}
             zone="Europe/Berlin"
-            staff={fake.roles.includes("lecturer")}
             teaching={fake.roles.includes("lecturer")}
-            clientAccount={fake.roles.includes("client")}
             jobCounts={
               (
                 fake.rpcData.job_dashboard as {
@@ -472,7 +472,7 @@ describe("role-aware dashboard previews", () => {
     ).toBeVisible();
     expect(
       within(followups).getByRole("link", { name: "Aufträge verwalten" }),
-    ).toHaveAttribute("href", "/admin");
+    ).toHaveAttribute("href", "/admin/assignments");
     expect(
       rpcCalls("contract_records").every(
         (call) => JSON.stringify(call.args) === '[{"p_all":false}]',

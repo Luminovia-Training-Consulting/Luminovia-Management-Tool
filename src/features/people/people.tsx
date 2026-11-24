@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
 import { UnavailablePerson } from "../accounts/unavailable-person";
+import { PersonExpertise } from "../accounts/person-expertise";
 import { PersonManagementActions } from "../accounts/person-actions";
 import { Avatar } from "../profile/avatar";
 import { PersonContact } from "./person-contact";
@@ -274,6 +275,7 @@ export function PersonProfile() {
             )}
           </section>
         </div>
+        <PersonExpertise id={id} />
         <section className="panel">
           <h2>{t("courses")}</h2>
           <Field id="profile-course-state" label={t("state")}>

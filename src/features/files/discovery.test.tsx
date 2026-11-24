@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import {
   focusManager,
+  onlineManager,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -25,12 +26,6 @@ const state = vi.hoisted(() => ({
   exact: vi.fn(),
   online: true,
   roles: ["lecturer"],
-}));
-vi.mock("../../lib/online", () => ({
-  useOnline: () => state.online,
-  requireOnline: () => {
-    if (!state.online) throw Error("offline");
-  },
 }));
 const actor = "47000000-0000-4000-8000-000000000001";
 vi.mock("../auth/auth-context", () => ({
@@ -91,6 +86,7 @@ const documents = Array.from({ length: 1001 }, (_, n) => ({
 const clients: QueryClient[] = [];
 beforeEach(async () => {
   state.online = true;
+  vi.spyOn(navigator, "onLine", "get").mockImplementation(() => state.online);
   state.roles = ["lecturer"];
   state.reads.mockReset();
   state.exact.mockReset();
@@ -102,10 +98,12 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
   for (const client of clients) client.clear();
   clients.length = 0;
   window.history.replaceState({}, "", "/");
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 function response(data: unknown, error: unknown = null) {
@@ -364,7 +362,7 @@ it("retains stale drafts and disables offline organisation changes", async () =>
       ? response({ items: [item()], has_more: false, next_cursor: null })
       : response(null, { code: "PT409" }),
   );
-  const view = mount();
+  mount();
   await screen.findByText(item().original_name);
   const user = userEvent.setup();
   await user.click(
@@ -381,13 +379,7 @@ it("retains stale drafts and disables offline organisation changes", async () =>
   ).toBeInTheDocument();
   expect(screen.getByLabelText("Eigene Tags")).toHaveValue("Keep draft");
   state.online = false;
-  view.rerender(
-    <QueryClientProvider client={clients[0]}>
-      <MemoryRouter>
-        <FilesPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  act(() => window.dispatchEvent(new Event("offline")));
   expect(
     screen.getByRole("button", { name: "Eigene Ordnung speichern" }),
   ).toBeDisabled();

@@ -36,6 +36,7 @@ const labels = {
   running: ["Läuft", "In progress"],
   finished: ["Beendet", "Finished"],
   archived: ["Archiviert", "Archived"],
+  resetFilters: ["Filter zurücksetzen", "Reset filters"],
   search: ["Kurs oder Klasse suchen", "Search course or class"],
   applySearch: ["Suchen", "Search"],
   zone: ["Zeitzone der Auswertung: {{zone}}", "Report time zone: {{zone}}"],

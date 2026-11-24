@@ -445,6 +445,7 @@
 .chat-message-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-anchor: none;
   min-height: 120px;
   padding: 20px 24px;
   background: var(--paper);
@@ -670,6 +671,10 @@
   display: flex;
   justify-content: center;
   margin-bottom: 18px;
+}
+
+.chat-load-older .button[aria-disabled="true"] {
+  opacity: 0.65;
 }
 
 /* Keep the retained draft, upload state and send controls in one composer. */

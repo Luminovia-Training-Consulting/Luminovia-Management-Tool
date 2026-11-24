@@ -2,9 +2,10 @@
  * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
  * confirmed server rows; payment reversals require their own auditable action.
  */
+import { FinanceRows } from "./finance-rows";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -81,6 +82,8 @@ import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
 
+const RevenueForecast = lazy(() => import("../analytics/revenue-forecast"));
+
 /** Refresh live invoice projections after a confirmed financial mutation. */
 async function refreshInvoiceViews(client: QueryClient, actor: string) {
   await Promise.all([
@@ -95,6 +98,14 @@ const invoiceSchema = z.object({
   issued: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   due: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
 });
+
+function invoiceReady(row: EarningRecord, now: number) {
+  return (
+    !row.invoice_review_required &&
+    row.invoice_eligible_at !== null &&
+    DateTime.fromISO(row.invoice_eligible_at).toMillis() <= now
+  );
+}
 
 /** Link a clean invoice PDF version to selected accepted assignments checked by the server. */
 function SubmitInvoice({
@@ -143,13 +154,8 @@ function SubmitInvoice({
         row.lecturer_id === actor &&
         !seriesClaims.has(row.claim_id),
     ) ?? [];
-  const eligible = ownCandidates.filter(
-    (row) =>
-      !row.invoice_review_required &&
-      row.invoice_eligible_at !== null &&
-      DateTime.fromISO(row.invoice_eligible_at).toMillis() <=
-        DateTime.now().toMillis(),
-  );
+  const now = DateTime.now().toMillis();
+  const eligible = ownCandidates.filter((row) => invoiceReady(row, now));
   const reviewRequired = ownCandidates.filter(
     (row) => row.invoice_review_required,
   );
@@ -250,61 +256,6 @@ function SubmitInvoice({
         submit.mutate(values);
       })}
     >
-      <Field
-        id="invoice-number"
-        label={t("invoiceNumber")}
-        error={Boolean(form.formState.errors.number)}
-      >
-        <input
-          id="invoice-number"
-          {...form.register("number")}
-          maxLength={80}
-          disabled={submit.isPending}
-        />
-      </Field>
-      <div className="form-row">
-        <Field
-          id="invoice-issued"
-          label={t("issued")}
-          error={Boolean(form.formState.errors.issued)}
-        >
-          <input
-            id="invoice-issued"
-            type="date"
-            {...form.register("issued")}
-            disabled={submit.isPending}
-          />
-        </Field>
-        <Field
-          id="invoice-due"
-          label={t("due")}
-          error={Boolean(form.formState.errors.due)}
-          hint={
-            !exception && defaultDue
-              ? t("invoiceDueDefault", {
-                  date: formatUtcDate(defaultDue, i18n.language),
-                })
-              : undefined
-          }
-        >
-          {exception ? (
-            <input
-              id="invoice-due"
-              type="date"
-              value={exception.due_on}
-              readOnly
-            />
-          ) : (
-            <input
-              id="invoice-due"
-              type="date"
-              {...form.register("due")}
-              min={issued}
-              disabled={submit.isPending}
-            />
-          )}
-        </Field>
-      </div>
       {exception ? (
         <p>
           <strong>{exception.title}</strong> ·{" "}
@@ -386,6 +337,61 @@ function SubmitInvoice({
           ))}
         </fieldset>
       )}
+      <Field
+        id="invoice-number"
+        label={t("invoiceNumber")}
+        error={Boolean(form.formState.errors.number)}
+      >
+        <input
+          id="invoice-number"
+          {...form.register("number")}
+          maxLength={80}
+          disabled={submit.isPending}
+        />
+      </Field>
+      <div className="form-row">
+        <Field
+          id="invoice-issued"
+          label={t("issued")}
+          error={Boolean(form.formState.errors.issued)}
+        >
+          <input
+            id="invoice-issued"
+            type="date"
+            {...form.register("issued")}
+            disabled={submit.isPending}
+          />
+        </Field>
+        <Field
+          id="invoice-due"
+          label={t("due")}
+          error={Boolean(form.formState.errors.due)}
+          hint={
+            !exception && defaultDue
+              ? t("invoiceDueDefault", {
+                  date: formatUtcDate(defaultDue, i18n.language),
+                })
+              : undefined
+          }
+        >
+          {exception ? (
+            <input
+              id="invoice-due"
+              type="date"
+              value={exception.due_on}
+              readOnly
+            />
+          ) : (
+            <input
+              id="invoice-due"
+              type="date"
+              {...form.register("due")}
+              min={issued}
+              disabled={submit.isPending}
+            />
+          )}
+        </Field>
+      </div>
       {series ? (
         <InvoiceSeriesSummary entry={series} />
       ) : (
@@ -980,102 +986,112 @@ function EarningsTable({
   manager,
   zone,
   manageSeries,
+  invoiceAction,
 }: {
   rows: EarningRecord[];
   manager: boolean;
   zone: string;
   manageSeries?: (row: EarningRecord) => void;
+  invoiceAction?: (row: EarningRecord) => React.ReactNode;
 }) {
   const { t, i18n } = useTranslation("commercial");
   return (
-    <div
-      className="commercial-table-scroll"
-      role="region"
-      aria-label={t("earnings")}
-      tabIndex={0}
-    >
-      <table className="commercial-table">
-        <thead>
-          <tr>
-            <th>{t("assignment")}</th>
-            {manager && <th>{t("lecturer")}</th>}
-            <th>{t("dates")}</th>
-            <th>{t("total")}</th>
-            <th>{t("status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.claim_id}>
-              <td>
-                <strong>{row.title}</strong>
-                <small>{row.customer_name}</small>
-                {manageSeries && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    type="button"
-                    onClick={() => manageSeries(row)}
-                  >
-                    {t("invoiceSeriesManage")}
-                  </Button>
-                )}
-              </td>
-              {manager && <td>{row.lecturer_name}</td>}
-              <td>
-                {dateTime(row.starts_at, i18n.language, zone)}
-                <small>{dateTime(row.ends_at, i18n.language, zone)}</small>
-              </td>
-              <td>
-                {money(Number(row.total_amount), row.currency, i18n.language)}
-              </td>
-              <td>
-                <span className={`badge commercial-status-${row.stage}`}>
-                  {row.stage === "review"
-                    ? t("invoiceReviewStage")
-                    : t(row.stage)}
-                </span>
-              </td>
+    <FinanceRows label={t("earnings")} total={rows.length}>
+      {(shown) => (
+        <table className="commercial-table">
+          <thead>
+            <tr>
+              <th>{t("assignment")}</th>
+              {manager && <th>{t("lecturer")}</th>}
+              <th>{t("dates")}</th>
+              <th>{t("total")}</th>
+              <th>{t("status")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.slice(0, shown).map((row) => (
+              <tr key={row.claim_id}>
+                <td>
+                  <strong>{row.title}</strong>
+                  <small>{row.customer_name}</small>
+                  {invoiceAction?.(row)}
+                  {manageSeries && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      type="button"
+                      onClick={() => manageSeries(row)}
+                    >
+                      {t("invoiceSeriesManage")}
+                    </Button>
+                  )}
+                </td>
+                {manager && <td>{row.lecturer_name}</td>}
+                <td>
+                  {dateTime(row.starts_at, i18n.language, zone)}
+                  <small>{dateTime(row.ends_at, i18n.language, zone)}</small>
+                </td>
+                <td>
+                  {money(Number(row.total_amount), row.currency, i18n.language)}
+                </td>
+                <td>
+                  <span className={`badge commercial-status-${row.stage}`}>
+                    {row.stage === "review"
+                      ? t("invoiceReviewStage")
+                      : t(row.stage)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </FinanceRows>
   );
 }
 
 /** Combine permissions, fees, invoices, export and payment actions for the current actor. */
-export function FinancePage() {
+export function FinancePage({
+  scope = "personal",
+}: { scope?: "personal" | "staff" } = {}) {
   const { t, i18n } = useTranslation("commercial");
   const platformText = useTranslation("platform").t;
   const { session } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedClaimId = searchParams.get("claim") ?? undefined;
+  const requestedInvoice = searchParams.get("invoice") === "new";
+  const clearInvoiceLink = () => {
+    if (!searchParams.has("claim") && !requestedInvoice) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("claim");
+    if (requestedInvoice) next.delete("invoice");
+    setSearchParams(next, { replace: true });
+  };
   const actor = session!.user.id;
   const online = useOnline();
   const access = useQuery(commercialAccessQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
+  const teaching =
+    scope === "personal" && roles.isSuccess && hasTeachingRole(roles.data);
   const canSubmit =
-    roles.isSuccess &&
-    hasTeachingRole(roles.data) &&
-    access.isSuccess &&
-    access.data.can_submit_invoice;
+    teaching && access.isSuccess && access.data.can_submit_invoice;
   const profile = useQuery(profileQuery(actor));
-  const manager = access.data?.can_manage_finance ?? false;
-  const [all, setAll] = useState(false);
+  const manager =
+    scope === "staff" && access.isSuccess && access.data.can_manage_finance;
+  const mayRead = access.isSuccess && (manager || teaching);
   const linkedClaim = z.uuid().safeParse(searchParams.get("series"));
   const linkedSeriesId =
     access.isSuccess && manager && linkedClaim.success
       ? linkedClaim.data
       : null;
-  const effectiveAll = manager && (all || linkedSeriesId !== null);
+  const effectiveAll = manager;
   const earnings = useQuery({
     ...earningsQuery(actor, effectiveAll),
-    enabled: !access.isPending,
+    enabled: mayRead,
   });
   const invoices = useQuery({
     ...invoicesQuery(actor, effectiveAll),
-    enabled: !access.isPending,
+    enabled: mayRead,
   });
   const [openedInvoiceForm, setSubmitting] = useState(false);
   const [selectedException, setSelectedException] = useState<
@@ -1107,7 +1123,7 @@ export function FinancePage() {
   const selectedSeries =
     selectedException && "kind" in selectedException ? selectedException : null;
   const submitting = Boolean(
-    canSubmit && (openedInvoiceForm || requestedClaimId),
+    canSubmit && (openedInvoiceForm || requestedClaimId || requestedInvoice),
   );
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatus, setInvoiceStatus] = useState("");
@@ -1133,7 +1149,11 @@ export function FinancePage() {
   return (
     <>
       <PageHeading
-        title={t("finance")}
+        title={
+          scope === "staff"
+            ? t("platformFinance", { ns: "translation" })
+            : t("myFinance", { ns: "translation" })
+        }
         description={t("financeIntro")}
         action={
           canSubmit && (
@@ -1151,8 +1171,13 @@ export function FinancePage() {
         }
       />
       <div className="section-stack finance-overview">
-        <RevenuePanel />
-        {access.isSuccess && trendQuery.isSuccess && (
+        {manager && (
+          <Suspense fallback={<Loading />}>
+            <RevenueForecast actor={actor} zone={zone} compact />
+          </Suspense>
+        )}
+        {scope === "staff" && <RevenuePanel />}
+        {mayRead && trendQuery.isSuccess && (
           <FinanceTrendChart
             earnings={earnings.data ?? []}
             invoices={invoices.data ?? []}
@@ -1182,7 +1207,7 @@ export function FinancePage() {
             }}
           />
         )}
-        {seriesRecords.isError && (
+        {(effectiveAll || canSubmit) && seriesRecords.isError && (
           <ErrorState retry={() => void seriesRecords.refetch()} />
         )}
         {manager && (
@@ -1192,26 +1217,13 @@ export function FinancePage() {
           </>
         )}
         {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
-        <div className="finance-scope-controls">
-          {manager && (
-            <label className="checkbox-label finance-scope-toggle">
-              <input
-                type="checkbox"
-                checked={effectiveAll}
-                onChange={(event) => {
-                  setAll(event.target.checked);
-                  if (!event.target.checked && linkedSeriesId) closeSeries();
-                }}
-              />
-              {t("allPeople")}
-            </label>
-          )}
-          <p className="muted commercial-small">
-            {t("originalCurrency")} {t("invoiceBasis")}
-          </p>
-        </div>
+        <p className="muted commercial-small">
+          {t("originalCurrency")} {t("invoiceBasis")}
+        </p>
       </div>
-      {access.isPending || earnings.isPending || invoices.isPending ? (
+      {access.isPending ||
+      roles.isPending ||
+      (mayRead && (earnings.isPending || invoices.isPending)) ? (
         <Loading />
       ) : access.isError || earnings.isError || invoices.isError ? (
         <ErrorState
@@ -1221,7 +1233,7 @@ export function FinancePage() {
             void invoices.refetch();
           }}
         />
-      ) : (
+      ) : mayRead && earnings.isSuccess && invoices.isSuccess ? (
         <>
           {summaries.length ? (
             <div className="commercial-currency-grid">
@@ -1306,6 +1318,29 @@ export function FinancePage() {
                 manager={effectiveAll}
                 zone={zone}
                 manageSeries={manager ? setManageSeries : undefined}
+                invoiceAction={
+                  canSubmit && seriesRecords.isSuccess
+                    ? (row) =>
+                        row.lecturer_id === actor &&
+                        !row.invoice_id &&
+                        !seriesClaims.has(row.claim_id) &&
+                        invoiceReady(row, DateTime.now().toMillis()) ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={!online}
+                            onClick={() => {
+                              setSelectedException(null);
+                              const next = new URLSearchParams(searchParams);
+                              next.set("claim", row.claim_id);
+                              setSearchParams(next);
+                            }}
+                          >
+                            {t("submitCourseInvoice")}
+                          </Button>
+                        ) : null
+                    : undefined
+                }
               />
             ) : (
               <p className="muted">{t("noEarnings")}</p>
@@ -1445,7 +1480,7 @@ export function FinancePage() {
             )}
           </section>
         </>
-      )}
+      ) : null}
       {seriesDialog && (
         <ManageInvoiceSeries
           key={seriesDialog.claim_id}
@@ -1461,11 +1496,7 @@ export function FinancePage() {
         onOpenChange={(open) => {
           setSubmitting(open);
           if (!open) setSelectedException(null);
-          if (!open && searchParams.has("claim")) {
-            const next = new URLSearchParams(searchParams);
-            next.delete("claim");
-            setSearchParams(next, { replace: true });
-          }
+          if (!open) clearInvoiceLink();
         }}
         title={t(
           selectedSeries
@@ -1495,11 +1526,7 @@ export function FinancePage() {
             onDone={() => {
               setSubmitting(false);
               setSelectedException(null);
-              if (searchParams.has("claim")) {
-                const next = new URLSearchParams(searchParams);
-                next.delete("claim");
-                setSearchParams(next, { replace: true });
-              }
+              clearInvoiceLink();
             }}
           />
         )}

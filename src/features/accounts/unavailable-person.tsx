@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { ErrorState, Loading, PageHeading } from "../../components/common";
+import { PersonExpertise } from "./person-expertise";
 import { PersonManagementActions } from "./person-actions";
 import "./i18n";
 
@@ -36,6 +37,7 @@ export function UnavailablePerson({
       <div className="page-actions people-profile-actions">
         <PersonManagementActions id={id} name={managed.data.display_name} />
       </div>
+      <PersonExpertise id={id} />
     </>
   );
 }

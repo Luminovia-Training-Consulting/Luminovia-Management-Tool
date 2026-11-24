@@ -291,7 +291,14 @@ def visible_sql(source):
             else:
                 raise UpdateError("invalid_migration_sql")
             result.append(" ")
-        elif source[index] == "$" and (match := re.match(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$", source[index:])):
+        # PostgreSQL treats a dollar delimiter immediately after an identifier
+        # as part of that identifier. Recognize a quote opener only at a token
+        # boundary so an identifier suffix cannot hide later SQL from policy.
+        elif (
+            source[index] == "$"
+            and (index == 0 or not (source[index - 1].isalnum() or source[index - 1] in "_$"))
+            and (match := re.match(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$", source[index:]))
+        ):
             delimiter = match.group()
             end = source.find(delimiter, index + len(delimiter))
             if end < 0:

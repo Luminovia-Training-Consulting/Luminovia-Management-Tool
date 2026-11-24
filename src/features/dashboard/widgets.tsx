@@ -328,16 +328,12 @@ function TeachingDayDetails({ actor }: { actor: string }) {
 export function DashboardWidgets({
   actor,
   zone,
-  staff,
   teaching,
-  clientAccount,
   jobCounts,
 }: {
   actor: string;
   zone: string;
-  staff: boolean;
   teaching: boolean;
-  clientAccount: boolean;
   jobCounts?: { drafts: number; expired: number; upcoming: number };
 }) {
   const { t } = useTranslation("dashboard");
@@ -345,53 +341,59 @@ export function DashboardWidgets({
   const manage =
     !permissions.isError && Boolean(permissions.data?.includes("jobs.manage"));
   return (
-    <>
-      <PersonalizedWidgets
-        actor={actor}
-        widgets={{
-          teaching_day: teaching ? (
-            <TeachingDayDetails key={actor} actor={actor} />
+    <PersonalizedWidgets
+      actor={actor}
+      widgets={{
+        teaching_day: teaching ? (
+          <TeachingDayDetails key={actor} actor={actor} />
+        ) : null,
+        activity: <Activity actor={actor} zone={zone} />,
+        contracts: teaching ? (
+          <PendingContracts actor={actor} zone={zone} />
+        ) : null,
+        files: <RecentDocuments actor={actor} zone={zone} />,
+        followups:
+          manage && jobCounts ? (
+            <section
+              className="panel dashboard-widget dashboard-followups"
+              aria-label={t("followUps")}
+            >
+              <div className="section-heading">
+                <h2>{t("followUps")}</h2>
+                <ListChecks size={22} aria-hidden="true" />
+              </div>
+              <p className="muted dashboard-widget-hint">{t("followUpHint")}</p>
+              <ul className="dashboard-preview-list">
+                <li>{t("draftJobs", { count: jobCounts.drafts })}</li>
+                <li>{t("upcomingUnfilled", { count: jobCounts.upcoming })}</li>
+                <li>{t("expiringJobs", { count: jobCounts.expired })}</li>
+              </ul>
+              <TextLink to="/admin/assignments">{t("manageJobs")}</TextLink>
+            </section>
           ) : null,
-          activity: <Activity actor={actor} zone={zone} />,
-          contracts: teaching ? (
-            <PendingContracts actor={actor} zone={zone} />
-          ) : null,
-          files: <RecentDocuments actor={actor} zone={zone} />,
-          followups:
-            manage && jobCounts ? (
-              <section
-                className="panel dashboard-widget dashboard-followups"
-                aria-label={t("followUps")}
-              >
-                <div className="section-heading">
-                  <h2>{t("followUps")}</h2>
-                  <ListChecks size={22} aria-hidden="true" />
-                </div>
-                <p className="muted dashboard-widget-hint">
-                  {t("followUpHint")}
-                </p>
-                <ul className="dashboard-preview-list">
-                  <li>{t("draftJobs", { count: jobCounts.drafts })}</li>
-                  <li>
-                    {t("upcomingUnfilled", { count: jobCounts.upcoming })}
-                  </li>
-                  <li>{t("expiringJobs", { count: jobCounts.expired })}</li>
-                </ul>
-                <TextLink to="/admin">{t("manageJobs")}</TextLink>
-              </section>
-            ) : null,
-        }}
-      />
-      <nav className="panel dashboard-shortcuts" aria-label={t("shortcuts")}>
-        <strong>{t("shortcuts")}</strong>
-        <Link to={staff ? "/jobs" : clientAccount ? "/client" : "/courses"}>
-          {t(staff ? "jobs" : clientAccount ? "client" : "courses")}
-        </Link>
-        {staff && clientAccount && <Link to="/client">{t("client")}</Link>}
-        <Link to="/profile">{t("profile")}</Link>
-        <Link to="/notifications">{t("notifications")}</Link>
-        <Link to="/settings">{t("settings")}</Link>
-      </nav>
-    </>
+      }}
+    />
+  );
+}
+
+export function DashboardShortcuts({
+  staff,
+  clientAccount,
+}: {
+  staff: boolean;
+  clientAccount: boolean;
+}) {
+  const { t } = useTranslation("dashboard");
+  return (
+    <nav className="panel dashboard-shortcuts" aria-label={t("shortcuts")}>
+      <strong>{t("shortcuts")}</strong>
+      <Link to={staff ? "/jobs" : clientAccount ? "/client" : "/courses"}>
+        {t(staff ? "jobs" : clientAccount ? "client" : "courses")}
+      </Link>
+      {staff && clientAccount && <Link to="/client">{t("client")}</Link>}
+      <Link to="/profile">{t("profile")}</Link>
+      <Link to="/notifications">{t("notifications")}</Link>
+      <Link to="/settings">{t("settings")}</Link>
+    </nav>
   );
 }

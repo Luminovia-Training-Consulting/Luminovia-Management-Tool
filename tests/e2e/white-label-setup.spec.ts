@@ -23,9 +23,9 @@ test("admin saves Academy settings only for an active company member", async ({p
     try {
         await checked(service.from("organisations").insert({id: organisation, name: companyName}));
         await login(page, admin.email);
-        await page.goto("/admin");
-        await expect(page.getByRole("link", {name: "White Label", exact: true})).toBeVisible();
-        await page.getByRole("link", {name: "White Label", exact: true}).click();
+        await page.goto("/admin/platform");
+        await expect(page.getByRole("link", {name: /^White Label(?: |$)/})).toBeVisible();
+        await page.getByRole("link", {name: /^White Label(?: |$)/}).click();
         const open = page.getByRole("switch", {name: "White-Label-Einrichtung öffnen"});
         await expect(open).not.toBeChecked();
         await open.press("Space");
@@ -93,7 +93,7 @@ test("admin saves Academy settings only for an active company member", async ({p
             await login(managerPage, manager.email);
             await managerPage.goto("/admin/white-label");
             await expect(managerPage.getByText(/nur für aktive Administratoren und Owner/)).toBeVisible();
-            await expect(managerPage.getByRole("link", {name: "White Label", exact: true})).toHaveCount(0);
+            await expect(managerPage.getByRole("link", {name: /^White Label(?: |$)/})).toHaveCount(0);
             await expect(managerPage.getByRole("switch", {name: "White-Label-Einrichtung öffnen"})).toHaveCount(0);
         } finally {
             await managerContext.close();

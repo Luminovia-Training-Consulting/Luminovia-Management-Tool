@@ -16,8 +16,8 @@ import {
   Outlet,
   Route,
   Routes,
-  useOutletContext,
   useParams,
+  useSearchParams,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
@@ -26,23 +26,55 @@ import { PortalAccess } from "../features/auth/portal-access";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
-import { AdminNavigation } from "../features/admin/navigation";
+import {
+  AdminNavigation,
+  AdministrationSection,
+} from "../features/admin/navigation";
+import { isAssignmentRequest } from "../features/admin/navigation-links";
 import { Shell } from "./shell";
 import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
 import { isConfigured } from "../lib/supabase";
 import { Button } from "../components/ui/button";
-import { Dashboard } from "../features/dashboard/dashboard";
-import { WelcomeGuidePage } from "../features/onboarding/welcome";
-import { ChangeRequestsPage } from "../features/changes/changes";
-import { JobDetail } from "../features/jobs/jobs";
-import { JobDiscovery } from "../features/jobs/discovery";
-import { ProfilePage } from "../features/profile/profile";
-// Job/profile widgets already load this module; another lazy wrapper only adds
-// a loading boundary and cannot produce an independent route chunk.
-import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
+
+const Dashboard = lazy(() =>
+  import("../features/dashboard/dashboard").then((module) => ({
+    default: module.Dashboard,
+  })),
+);
+const WelcomeGuidePage = lazy(() =>
+  import("../features/onboarding/welcome").then((module) => ({
+    default: module.WelcomeGuidePage,
+  })),
+);
+const ChangeRequestsPage = lazy(() =>
+  import("../features/changes/changes").then((module) => ({
+    default: module.ChangeRequestsPage,
+  })),
+);
+const JobDetail = lazy(() =>
+  import("../features/jobs/jobs").then((module) => ({
+    default: module.JobDetail,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import("../features/profile/profile").then((module) => ({
+    default: module.ProfilePage,
+  })),
+);
+const FilesPage = lazy(() =>
+  import("../features/files/files").then((module) => ({
+    default: module.FilesPage,
+  })),
+);
+
+const JobDiscovery = lazy(() =>
+  import("../features/jobs/discovery").then((module) => ({
+    default: module.JobDiscovery,
+  })),
+);
 
 const StandaloneSwagger = lazy(() =>
   import("../features/developer-api/standalone-swagger").then((module) => ({
@@ -178,11 +210,6 @@ const AccountingPage = lazy(() =>
   })),
 );
 
-function FinanceAccounting() {
-  const { preferCustomer } = useOutletContext<{ preferCustomer: boolean }>();
-  return <AccountingPage preferCustomer={preferCustomer} />;
-}
-
 const ClientsPage = lazy(() =>
   import("../features/operations/clients").then((module) => ({
     default: module.ClientsPage,
@@ -246,12 +273,6 @@ const CalendarPage = lazy(() =>
   })),
 );
 
-const PeopleAdminPage = lazy(() =>
-  import("../features/admin/people").then((module) => ({
-    default: module.PeopleAdminPage,
-  })),
-);
-
 const AdminPage = lazy(() =>
   import("../features/admin/admin").then((module) => ({
     default: module.AdminPage,
@@ -280,12 +301,12 @@ export default function PortalRoutes() {
       <Route
         path="/login"
         element={
-          <>
+          <div className="login-page">
             <div className="login-preferences">
               <Preferences />
             </div>
             <Login />
-          </>
+          </div>
         }
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
@@ -312,15 +333,55 @@ export default function PortalRoutes() {
           <Route path="search" element={<PortalSearch />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="client" element={<ClientPortalPage />} />
-          <Route path="people" element={<PeopleDirectory />} />
-          <Route path="people/:id" element={<PersonProfile />} />
-          <Route path="my-reviews" element={<MyCourseReviews />} />
+          <Route
+            path="my-reviews"
+            element={
+              <SectionHub kind="courses" current="reviews">
+                <MyCourseReviews />
+              </SectionHub>
+            }
+          />
           <Route path="courses" element={<SectionHub kind="courses" />} />
-          <Route path="readiness" element={<CourseReadinessPage />} />
-          <Route path="readiness/:id" element={<CourseReadinessPage />} />
-          <Route path="delivery" element={<DeliveryPage />} />
-          <Route path="support" element={<SupportDeskPage />} />
-          <Route path="support/:id" element={<SupportDeskPage />} />
+          <Route
+            path="readiness"
+            element={
+              <SectionHub kind="courses" current="readiness">
+                <CourseReadinessPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="readiness/:id"
+            element={
+              <SectionHub kind="courses" current="readiness">
+                <CourseReadinessPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="delivery"
+            element={
+              <SectionHub kind="courses" current="delivery">
+                <DeliveryPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="support"
+            element={
+              <SectionHub kind="assistance" current="support">
+                <SupportDeskPage />
+              </SectionHub>
+            }
+          />
+          <Route
+            path="support/:id"
+            element={
+              <SectionHub kind="assistance" current="support">
+                <SupportDeskPage />
+              </SectionHub>
+            }
+          />
           <Route
             path="replacements"
             element={<Navigate to="/jobs" replace />}
@@ -333,19 +394,42 @@ export default function PortalRoutes() {
             path="timesheets"
             element={<Navigate to="/finance" replace />}
           />
-          <Route path="control-center" element={<ControlCenterPage />} />
           <Route
             path="courses/:id/workspace"
             element={<CourseWorkspacePage />}
           />
-          <Route path="contracts" element={<ContractsPage />} />
-          <Route path="finance" element={<FinanceWorkspace />}>
+          <Route path="finance" element={<FinanceWorkspace scope="personal" />}>
             <Route index element={<FinancePage />} />
-            <Route path="accounting" element={<FinanceAccounting />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route
+              path="accounting"
+              element={<AccountingPage key="personal" scope="personal" />}
+            />
+            <Route
+              path="analytics"
+              element={<AnalyticsPage key="personal" scope="personal" />}
+            />
             <Route
               path="analytics/learning"
-              element={<LearningAnalyticsPage />}
+              element={
+                <LearningAnalyticsPage key="personal" scope="personal" />
+              }
+            />
+          </Route>
+          <Route
+            path="client/finance"
+            element={<FinanceWorkspace scope="company" />}
+          >
+            <Route
+              path="accounting"
+              element={<AccountingPage key="company" scope="company" />}
+            />
+            <Route
+              path="analytics"
+              element={<AnalyticsPage key="company" scope="company" />}
+            />
+            <Route
+              path="analytics/learning"
+              element={<LearningAnalyticsPage key="company" scope="company" />}
             />
           </Route>
           <Route
@@ -360,8 +444,6 @@ export default function PortalRoutes() {
             path="accounting"
             element={<LegacyFinanceRoute to="/finance/accounting" />}
           />
-          <Route path="changes" element={<ChangeRequestsPage />} />
-          <Route path="changes/:id" element={<ChangeRequestsPage />} />
           <Route path="wiki" element={<LegacyWikiRoute />} />
           <Route path="assistance" element={<SectionHub kind="assistance" />} />
           <Route path="forum" element={<LegacyForumRoute />} />
@@ -382,7 +464,6 @@ export default function PortalRoutes() {
               </SwaggerRoute>
             }
           />
-          <Route path="topics" element={<TaxonomyPage />} />
           <Route
             path="availability"
             element={<Navigate to="/calendar" replace />}
@@ -392,22 +473,94 @@ export default function PortalRoutes() {
             element={<Navigate to="/settings" replace />}
           />
           <Route path="auth/password" element={<PasswordRecovery />} />
-          <Route path="admin" element={<AdminNavigation />}>
-            <Route index element={<AdminPage />} />
-            <Route path="people" element={<PeopleAdminPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="accounts" element={<AccountsPage />} />
-            <Route path="mail" element={<AdminMailPage />} />
-            <Route path="white-label" element={<WhiteLabelSetupPage />} />
-            <Route path="reset" element={<PlatformResetPage />} />
-            <Route path="deletions" element={<DeletionsPage />} />
-            <Route path="audit" element={<AdminAuditPage />} />
-            <Route path="announcements" element={<AdminAnnouncementsPage />} />
+          <Route element={<AdminNavigation />}>
+            <Route path="people" element={<PeopleDirectory />} />
+            <Route path="people/:id" element={<PersonProfile />} />
+            <Route path="control-center" element={<ControlCenterPage />} />
+            <Route path="topics" element={<TaxonomyPage />} />
+            <Route path="contracts" element={<ContractsPage />} />
+            <Route path="changes" element={<ChangeRequestsPage />} />
+            <Route path="changes/:id" element={<ChangeRequestsPage />} />
+            <Route path="admin">
+              <Route index element={<AdministrationIndex />} />
+              <Route
+                path="operations"
+                element={<AdministrationSection area="operations" />}
+              />
+              <Route
+                path="directory"
+                element={<AdministrationSection area="directory" />}
+              />
+              <Route
+                path="platform"
+                element={<AdministrationSection area="platform" />}
+              />
+              <Route
+                path="finance"
+                element={<FinanceWorkspace scope="staff" />}
+              >
+                <Route
+                  index
+                  element={<FinancePage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="accounting"
+                  element={<AccountingPage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="analytics"
+                  element={<AnalyticsPage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="analytics/learning"
+                  element={<LearningAnalyticsPage key="staff" scope="staff" />}
+                />
+              </Route>
+              <Route path="assignments" element={<AdminPage />} />
+              <Route path="people" element={<LegacyLecturersRoute />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="accounts" element={<AccountsPage />} />
+              <Route path="mail" element={<AdminMailPage />} />
+              <Route path="white-label" element={<WhiteLabelSetupPage />} />
+              <Route path="reset" element={<PlatformResetPage />} />
+              <Route path="deletions" element={<DeletionsPage />} />
+              <Route path="audit" element={<AdminAuditPage />} />
+              <Route
+                path="announcements"
+                element={<AdminAnnouncementsPage />}
+              />
+            </Route>
           </Route>
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+/** Keep bookmarks for the former separate expertise directory working. */
+function LegacyLecturersRoute() {
+  const [params] = useSearchParams();
+  const id = params.get("user");
+  return (
+    <Navigate
+      replace
+      to={
+        id && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id)
+          ? `/people/${id}?expertise=1`
+          : "/people"
+      }
+    />
+  );
+}
+
+/** Preserve assignment links published before the administration overview. */
+function AdministrationIndex() {
+  const [params] = useSearchParams();
+  return isAssignmentRequest(params) ? (
+    <AdminPage />
+  ) : (
+    <AdministrationSection />
   );
 }
 

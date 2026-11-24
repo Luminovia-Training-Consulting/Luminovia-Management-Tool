@@ -51,13 +51,14 @@ export function Login({ footer }: { footer?: ReactNode } = {}) {
     setFailed(false);
     if (!online) return;
     try {
-      await signInHuman(values.email, values.password);
-      return;
+      const failure = await signInHuman(values.email, values.password);
+      if (!failure) return;
+      setFailed(true);
+      setMessage(failure);
     } catch {
-      // Transport/storage failures may reject instead of returning an Auth error.
+      setFailed(true);
+      setMessage("loginUnavailable");
     }
-    setFailed(true);
-    setMessage("loginFailed");
   }
 
   async function recovery() {
