@@ -5,13 +5,25 @@
  */
 import { useSyncExternalStore } from "react";
 
-/** Subscribe to the two browser network events and return their matching cleanup. */
+const listeners = new Set<() => void>();
+
+function notifyConnectivity() {
+  for (const listener of listeners) listener();
+}
+
+/** Share one browser listener pair regardless of the number of mounted controls. */
 const subscribe = (callback: () => void) => {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
+  if (!listeners.size) {
+    window.addEventListener("online", notifyConnectivity);
+    window.addEventListener("offline", notifyConnectivity);
+  }
+  listeners.add(callback);
   return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
+    listeners.delete(callback);
+    if (!listeners.size) {
+      window.removeEventListener("online", notifyConnectivity);
+      window.removeEventListener("offline", notifyConnectivity);
+    }
   };
 };
 /** Observe online/offline events through useSyncExternalStore with the corresponding unsubscribe. */

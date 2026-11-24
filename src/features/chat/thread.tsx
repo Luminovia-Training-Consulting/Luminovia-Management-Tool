@@ -42,7 +42,6 @@ import {
   NextPageError,
   Notice,
 } from "../../components/common";
-import { DocumentAttachment } from "../files/document-attachment";
 import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
@@ -53,7 +52,7 @@ import { useTopicMessagePins } from "./topic-message-pins-api";
 import { messageDay, messageDayLabel } from "./message-days";
 import "./message-days.css";
 import { useChatRealtime } from "./realtime";
-import type { ChatRoom } from "./types";
+import type { ChatMessage, ChatRoom } from "./types";
 import "./i18n";
 
 const olderHistoryThreshold = 120;
@@ -202,6 +201,16 @@ export function ChatThread({
     return rows;
   }, [ordered, language, zone]);
   const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
+  const replyToMessage = useCallback(
+    (target: ChatMessage) => setReplyId(target.id),
+    [],
+  );
+  const canPin =
+    room.kind === "topic" &&
+    topicPins.query.isSuccess &&
+    !topicPins.query.isFetching &&
+    online &&
+    status === "connected";
   const latest = ordered[ordered.length - 1];
   // Jump only to history that has just been fetched through the existing ACL-checked RPC.
   // Bound one action to 20 pages; another click may continue where it stopped.
@@ -579,34 +588,25 @@ export function ChatThread({
                     <MessageBubble
                       message={message}
                       highlighted={message.id === linkedTarget}
-                      onReply={(target) => setReplyId(target.id)}
-                      topicPin={
-                        room.kind === "topic" &&
-                        message.can_moderate &&
-                        topicPins.query.isSuccess &&
-                        !topicPins.query.isFetching &&
-                        online &&
-                        status === "connected"
-                          ? {
-                              pinned: pinnedIds.has(message.id),
-                              disabled: topicPins.toggle.isPending,
-                              toggle: () =>
-                                topicPins.toggle.mutate({
-                                  id: message.id,
-                                  pinned: !pinnedIds.has(message.id),
-                                }),
-                            }
+                      onReply={replyToMessage}
+                      pinned={
+                        canPin && message.can_moderate
+                          ? pinnedIds.has(message.id)
                           : undefined
                       }
+                      pinPending={
+                        canPin && message.can_moderate
+                          ? topicPins.toggle.isPending
+                          : undefined
+                      }
+                      onTogglePin={topicPins.toggle.mutate}
                       actor={actor}
-                      now={now}
                       zone={zone}
-                      attachment={
-                        message.document_id && !message.deleted_at ? (
-                          <DocumentAttachment
-                            documentId={message.document_id}
-                          />
-                        ) : undefined
+                      online={online}
+                      editable={
+                        message.sender_id === actor &&
+                        !message.deleted_at &&
+                        now - Date.parse(message.created_at) < 15 * 60_000
                       }
                     />
                   </Fragment>

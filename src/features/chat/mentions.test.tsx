@@ -167,7 +167,8 @@ describe("structured conversation mentions", () => {
         message={message}
         actor="author"
         zone="Europe/Berlin"
-        now={Date.parse("2035-01-01T08:01:00Z")}
+        editable
+        online
       />,
     );
     await user.click(
@@ -202,7 +203,8 @@ describe("structured conversation mentions", () => {
         message={current}
         actor="author"
         zone="UTC"
-        now={Date.parse("2035-01-01T08:01:00Z")}
+        editable
+        online
       />
     );
     const page = view(bubble(message));
@@ -247,7 +249,8 @@ describe("structured conversation mentions", () => {
         message={{ ...message, can_moderate: true }}
         actor="moderator"
         zone="UTC"
-        now={0}
+        editable
+        online
       />,
     );
     expect(
@@ -279,7 +282,15 @@ describe("structured conversation mentions", () => {
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("denied"));
     vi.spyOn(navigator.clipboard, "writeText").mockImplementation(writeText);
-    view(<MessageBubble message={message} actor="author" zone="UTC" now={0} />);
+    view(
+      <MessageBubble
+        message={message}
+        actor="author"
+        zone="UTC"
+        editable
+        online
+      />,
+    );
     await user.click(
       screen.getByRole("button", { name: "Nachrichtentext kopieren" }),
     );
@@ -299,7 +310,8 @@ describe("structured conversation mentions", () => {
         message={{ ...message, deleted_at: "2035-01-01T08:02:00Z" }}
         actor="author"
         zone="UTC"
-        now={0}
+        editable
+        online
       />,
     );
     expect(

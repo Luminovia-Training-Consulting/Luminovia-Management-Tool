@@ -36,16 +36,39 @@ import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
 import { isConfigured } from "../lib/supabase";
 import { Button } from "../components/ui/button";
-import { Dashboard } from "../features/dashboard/dashboard";
-import { WelcomeGuidePage } from "../features/onboarding/welcome";
-import { ChangeRequestsPage } from "../features/changes/changes";
-import { JobDetail } from "../features/jobs/jobs";
-import { ProfilePage } from "../features/profile/profile";
-// Job/profile widgets already load this module; another lazy wrapper only adds
-// a loading boundary and cannot produce an independent route chunk.
-import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
+
+const Dashboard = lazy(() =>
+  import("../features/dashboard/dashboard").then((module) => ({
+    default: module.Dashboard,
+  })),
+);
+const WelcomeGuidePage = lazy(() =>
+  import("../features/onboarding/welcome").then((module) => ({
+    default: module.WelcomeGuidePage,
+  })),
+);
+const ChangeRequestsPage = lazy(() =>
+  import("../features/changes/changes").then((module) => ({
+    default: module.ChangeRequestsPage,
+  })),
+);
+const JobDetail = lazy(() =>
+  import("../features/jobs/jobs").then((module) => ({
+    default: module.JobDetail,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import("../features/profile/profile").then((module) => ({
+    default: module.ProfilePage,
+  })),
+);
+const FilesPage = lazy(() =>
+  import("../features/files/files").then((module) => ({
+    default: module.FilesPage,
+  })),
+);
 
 const JobDiscovery = lazy(() =>
   import("../features/jobs/discovery").then((module) => ({

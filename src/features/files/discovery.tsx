@@ -1,5 +1,5 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -70,10 +70,11 @@ export function DocumentExplorer({
   }, [search, tag, folder, unfiled]);
   const options = documentDiscoveryQuery(actor, filters);
   const query = useInfiniteQuery({
-      ...options,
-      enabled: online,
-    }),
-    rows = discoveredDocuments(query.data?.pages);
+    ...options,
+    enabled: online,
+  });
+  const pages = query.data?.pages;
+  const rows = useMemo(() => discoveredDocuments(pages), [pages]);
   const retryNext = canRetryNextPage(query);
   // Query-state counters advance even if structurally shared data or the clock
   // stays equal. A pending key is not a successful authorisation epoch.
@@ -156,12 +157,7 @@ export function DocumentExplorer({
           {/* Keep captured dialogs mounted while this filter loads, without
               retaining rows from a different query key. Errors above still
               unmount the entire child and discard protected metadata. */}
-          {children(
-            query.isPending ? [] : rows,
-            query.isPending,
-            epoch,
-            renewalEpoch,
-          )}
+          {children(rows, query.isPending, epoch, renewalEpoch)}
           {query.isPending ? (
             <Loading />
           ) : (

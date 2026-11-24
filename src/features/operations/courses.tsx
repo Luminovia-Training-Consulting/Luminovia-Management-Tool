@@ -10,6 +10,7 @@ import "../taxonomy/i18n";
 import {
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -1299,6 +1300,9 @@ export function CoursesPage() {
   });
   const runs = useQuery({
     ...runsQuery(actor, canPrepareOffer),
+    // Choose the projection once permissions resolve. Otherwise staff first
+    // download the basic catalogue and then request it again with assignments.
+    enabled: permissions.isSuccess,
     refetchInterval: manage ? false : 10000,
     refetchOnMount: manage ? true : "always",
   });
@@ -1319,7 +1323,7 @@ export function CoursesPage() {
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
-  const company = manage ? (params.get("company") ?? "") : "";
+  const company = manage ? `${params.get("company") ?? ""}` : "";
   const setCourseView = (view: Record<string, string>, replace = false) =>
     setParams(company ? { ...view, company } : view, { replace });
   const selectedRunStatus =
@@ -1406,16 +1410,23 @@ export function CoursesPage() {
       ).sort((a, b) => a[1].localeCompare(b[1], i18n.language)),
     [assignmentsByRun, i18n.language],
   );
-  const organisationName = (id: string | null | undefined) =>
-    id
-      ? (organisationsById.get(id)?.name ??
-        (companyViewer ? companyOrganisationsById.get(id)?.name : undefined))
-      : undefined;
-  const canManageTemplate = (template: Template) =>
-    manage ||
-    companyOrganisations.some(
-      ({ id }) => id === template.owner_organisation_id,
-    );
+  const organisationName = useCallback(
+    (id: string | null | undefined) =>
+      id
+        ? (organisationsById.get(id)?.name ??
+          (companyViewer ? companyOrganisationsById.get(id)?.name : undefined))
+        : undefined,
+    [organisationsById, companyViewer, companyOrganisationsById],
+  );
+  const canManageTemplate = useCallback(
+    (template: Template) =>
+      manage ||
+      Boolean(
+        companyViewer &&
+        companyOrganisationsById.has(template.owner_organisation_id ?? ""),
+      ),
+    [manage, companyViewer, companyOrganisationsById],
+  );
   const canEditTemplate = (template: Template) =>
     manage ||
     (canManageTemplate(template) &&
@@ -1494,15 +1505,108 @@ export function CoursesPage() {
       setMessage(t("copied"));
     },
   });
-  if (
-    templates.isPending ||
-    runs.isPending ||
-    orgs.isPending ||
-    topics.isPending ||
-    permissions.isPending ||
-    (manage && blocks.isPending)
-  )
-    return <Loading />;
+  const needle = search.toLowerCase();
+  const indexedRuns = useMemo(
+    () =>
+      (runs.data ?? []).map((run) => ({
+        run,
+        status: courseRunStatus(run),
+        phase: scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt),
+      })),
+    [runs.data, runs.dataUpdatedAt],
+  );
+  const { filteredRuns, draftCount } = useMemo(() => {
+    if (tab !== "runs") return { filteredRuns: [], draftCount: 0 };
+    let draftCount = 0;
+    const groups: (typeof indexedRuns)[] = [[], [], [], []];
+    for (const entry of indexedRuns) {
+      const { run, status } = entry;
+      const assignments = assignmentsByRun.get(run.id) ?? [];
+      if (
+        (!manage && run.archived_at) ||
+        (company && run.organisation_id !== company) ||
+        (onlyAssignedRuns && !assignments.length) ||
+        (canPrepareOffer &&
+          lecturer &&
+          !assignments.some(({ lecturers }) =>
+            lecturers.some(({ id }) => id === lecturer),
+          )) ||
+        (phase !== "all" && entry.phase !== phase)
+      )
+        continue;
+      if (needle) {
+        const template = templatesById.get(run.template_id);
+        const searchText = [
+          template?.title,
+          template?.description,
+          organisationName(run.organisation_id),
+          run.venue,
+          ...(canPrepareOffer
+            ? assignments.flatMap(({ lecturers }) =>
+                lecturers.map(({ name }) => name),
+              )
+            : []),
+        ];
+        if (!searchText.join(" ").toLowerCase().includes(needle)) continue;
+      }
+      if (status === "planning") draftCount++;
+      if (
+        selectedRunStatus !== "all" &&
+        !onlyAssignedRuns &&
+        status !== selectedRunStatus
+      )
+        continue;
+      const rank =
+        status === "published"
+          ? 0
+          : status === "archived"
+            ? 3
+            : entry.phase === "completed"
+              ? 2
+              : 1;
+      groups[rank].push(entry);
+    }
+    return { filteredRuns: groups.flat(), draftCount };
+  }, [
+    tab,
+    indexedRuns,
+    assignmentsByRun,
+    manage,
+    company,
+    onlyAssignedRuns,
+    canPrepareOffer,
+    lecturer,
+    phase,
+    needle,
+    templatesById,
+    organisationName,
+    selectedRunStatus,
+  ]);
+  const visibleTemplates = useMemo(
+    () => (templates.data ?? []).filter(canManageTemplate),
+    [templates.data, canManageTemplate],
+  );
+  const blockCodes = useMemo(
+    () => new Map(blocks.data?.map((block) => [block.id, block.code])),
+    [blocks.data],
+  );
+  const filteredTemplates = useMemo(
+    () =>
+      tab === "templates" && needle
+        ? visibleTemplates.filter((template) =>
+            [
+              template.title,
+              template.description,
+              template.syllabus,
+              blockCodes.get(template.building_block_id ?? ""),
+            ]
+              .join(" ")
+              .toLowerCase()
+              .includes(needle),
+          )
+        : visibleTemplates,
+    [tab, needle, visibleTemplates, blockCodes],
+  );
   if (
     templates.isError ||
     runs.isError ||
@@ -1515,74 +1619,24 @@ export function CoursesPage() {
       <ErrorState
         retry={() => {
           void templates.refetch();
-          void runs.refetch();
+          if (permissions.isSuccess) void runs.refetch();
           void orgs.refetch();
           void topics.refetch();
           void permissions.refetch();
-          void blocks.refetch();
+          if (manage) void blocks.refetch();
         }}
       />
     );
+  if (
+    templates.isPending ||
+    runs.isPending ||
+    orgs.isPending ||
+    topics.isPending ||
+    permissions.isPending ||
+    (manage && blocks.isPending)
+  )
+    return <Loading />;
   const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
-  const needle = search.toLowerCase();
-  const matchingRuns =
-    tab === "runs"
-      ? runs.data.filter((run) => {
-          const assignments = assignmentsByRun.get(run.id) ?? [];
-          if (
-            (!manage && run.archived_at) ||
-            (company && run.organisation_id !== company) ||
-            (onlyAssignedRuns && !assignments.length) ||
-            (canPrepareOffer &&
-              lecturer &&
-              !assignments.some(({ lecturers }) =>
-                lecturers.some(({ id }) => id === lecturer),
-              )) ||
-            (phase !== "all" &&
-              scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) !==
-                phase)
-          )
-            return false;
-          if (!needle) return true;
-          const template = findTemplate(run);
-          return [
-            template?.title,
-            template?.description,
-            organisationName(run.organisation_id),
-            run.venue,
-            ...(canPrepareOffer
-              ? assignments.flatMap(({ lecturers }) =>
-                  lecturers.map(({ name }) => name),
-                )
-              : []),
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle);
-        })
-      : [];
-  const courseStatusRank = { published: 0, planning: 1, archived: 3 };
-  const rankedRuns = matchingRuns.map((run) => {
-    const status = courseRunStatus(run);
-    const pastDraft =
-      status === "planning" &&
-      scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) ===
-        "completed";
-    return { run, status, rank: courseStatusRank[status] + Number(pastDraft) };
-  });
-  const draftCount = rankedRuns.filter(
-    ({ status }) => status === "planning",
-  ).length;
-  const filteredRuns = rankedRuns
-    .filter(
-      ({ status }) =>
-        selectedRunStatus === "all" ||
-        onlyAssignedRuns ||
-        status === selectedRunStatus,
-    )
-    .sort((first, second) => first.rank - second.rank)
-    .map(({ run }) => run);
-  const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
   const offerStatus = (run: CourseRun, compact = false) => {
     const { liveOffers, closedReason } = courseOfferState(
@@ -1703,23 +1757,6 @@ export function CoursesPage() {
   const templateBlock = blocks.data?.find(
     (block) => block.id === templateDetail?.building_block_id,
   );
-  const blockCodes = new Map(
-    blocks.data?.map((block) => [block.id, block.code]),
-  );
-  const filteredTemplates =
-    tab === "templates" && needle
-      ? visibleTemplates.filter((template) =>
-          [
-            template.title,
-            template.description,
-            template.syllabus,
-            blockCodes.get(template.building_block_id ?? ""),
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle),
-        )
-      : visibleTemplates;
   const total = tab === "runs" ? filteredRuns.length : filteredTemplates.length;
   const shownCount = Math.min(visibleList.count, total);
   const canPlanSeries =
@@ -2065,14 +2102,13 @@ export function CoursesPage() {
         </div>
       ) : tab === "runs" ? (
         <div className="operations-courses-grid">
-          {filteredRuns.slice(0, shownCount).map((run) => {
+          {filteredRuns.slice(0, shownCount).map(({ run, status }) => {
             const template = findTemplate(run);
             const jobs = run.jobs ?? [];
             const { liveOffers, closedReason } = courseOfferState(
               run,
               runs.dataUpdatedAt,
             );
-            const status = courseRunStatus(run);
             const customer =
               organisationName(run.organisation_id) ?? t("noCustomer");
             return (

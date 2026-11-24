@@ -4,7 +4,7 @@
  * mutations under current membership and resource state.
  */
 import { useRequestKey } from "../../lib/request-key";
-import { Fragment, type ReactNode, useState } from "react";
+import { Fragment, memo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,10 +22,11 @@ import {
 } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { dateTime } from "../../lib/dates";
-import { requireOnline, useOnline } from "../../lib/online";
+import { requireOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
+import { DocumentAttachment } from "../files/document-attachment";
 import { chatKeys } from "./api";
 import { MentionPicker } from "./mentions";
 import type { ChatMention, ChatMessage } from "./types";
@@ -67,30 +68,33 @@ export function MessageText({ body }: { body: string }) {
 }
 
 /** Display message/reaction/edit controls and await the corresponding RPC before confirming changes. */
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   highlighted,
   actor,
   zone,
-  attachment,
-  now,
+  editable,
+  online,
   onReply,
-  topicPin,
+  pinned,
+  pinPending,
+  onTogglePin,
 }: {
   message: ChatMessage;
   highlighted?: boolean;
   actor: string;
   zone: string;
-  attachment?: ReactNode;
-  now: number;
+  editable: boolean;
+  online: boolean;
   onReply?: (message: ChatMessage) => void;
-  topicPin?: { pinned: boolean; disabled: boolean; toggle: () => void };
+  pinned?: boolean;
+  pinPending?: boolean;
+  onTogglePin?: (input: { id: string; pinned: boolean }) => void;
 }) {
   const { t, i18n } = useTranslation("chat");
   const common = useTranslation().t;
   const pinText = useTranslation("topicMessagePins").t;
   const client = useQueryClient();
-  const online = useOnline();
   const [editing, setEditing] = useState(false);
   const [editingVersion, setEditingVersion] = useState(
     message.content_version ?? 1,
@@ -105,10 +109,7 @@ export function MessageBubble({
   );
   const editRequest = useRequestKey();
   const own = message.sender_id === actor;
-  const canEdit =
-    own &&
-    !message.deleted_at &&
-    now - new Date(message.created_at).getTime() < 15 * 60_000;
+  const canEdit = own && !message.deleted_at && editable;
   const form = useForm<z.infer<typeof editSchema>>({
     resolver: zodResolver(editSchema),
     defaultValues: { body: message.body },
@@ -245,7 +246,9 @@ export function MessageBubble({
                 ))}
               </ul>
             )}
-            {attachment}
+            {message.document_id && (
+              <DocumentAttachment documentId={message.document_id} />
+            )}
             <div className="chat-message-footer">
               <div
                 className="chat-reactions"
@@ -333,17 +336,19 @@ export function MessageBubble({
                     })}
                   </div>
                 </details>
-                {topicPin && (
+                {pinned !== undefined && onTogglePin && (
                   <Button
                     variant="ghost"
                     size="icon"
                     type="button"
-                    aria-label={pinText(topicPin.pinned ? "unpin" : "pin")}
-                    aria-pressed={topicPin.pinned}
-                    disabled={topicPin.disabled}
-                    onClick={topicPin.toggle}
+                    aria-label={pinText(pinned ? "unpin" : "pin")}
+                    aria-pressed={pinned}
+                    disabled={pinPending}
+                    onClick={() =>
+                      onTogglePin({ id: message.id, pinned: !pinned })
+                    }
                   >
-                    {topicPin.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                    {pinned ? <PinOff size={15} /> : <Pin size={15} />}
                   </Button>
                 )}
                 <Button
@@ -496,4 +501,4 @@ export function MessageBubble({
       </Dialog>
     </li>
   );
-}
+});

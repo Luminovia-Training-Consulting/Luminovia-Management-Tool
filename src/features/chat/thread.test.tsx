@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { ChatThread } from "./thread";
+import * as dates from "../../lib/dates";
 import type { ChatMessage, ChatRoom } from "./types";
 
 const { rpc } = vi.hoisted(() => ({
@@ -173,6 +174,25 @@ function populatedThread(messageId?: string, messageCount = 1) {
   const view = render(element());
   return { client, view, element };
 }
+
+it("keeps an open transcript stable while editing the search input", () => {
+  const formatMessageTime = vi.spyOn(dates, "dateTime");
+  populatedThread(undefined, 80);
+  expect(screen.getByText("Fictional message 79")).toBeVisible();
+  expect(formatMessageTime.mock.calls.length).toBeGreaterThanOrEqual(80);
+
+  fireEvent.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
+  formatMessageTime.mockClear();
+  const search = screen.getByRole("searchbox", {
+    name: "Nachrichten durchsuchen",
+  });
+  fireEvent.change(search, { target: { value: "Fictional" } });
+  expect(search).toHaveValue("Fictional");
+  expect(screen.getByText("Fictional message 79")).toBeVisible();
+  expect(formatMessageTime).not.toHaveBeenCalled();
+});
 
 const olderMessage = {
   ...latestMessage,

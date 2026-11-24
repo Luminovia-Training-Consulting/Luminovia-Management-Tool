@@ -4,7 +4,7 @@ import { canRetryNextPage } from "../../lib/paged-read";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist } from "./lifecycle-extra";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
@@ -527,7 +527,7 @@ export function JobDiscovery() {
   const [editorRevision, resetViewEditor] = useState(0);
   const [draftRevision, resetDraft] = useState(0);
   const sickDayReleased = useLocation().state?.sickDayReleased === true;
-  const parsed = filtersFromParams(params),
+  const parsed = useMemo(() => filtersFromParams(params), [params]),
     filters = parsed.success ? parsed.data : null;
   const query = useInfiniteQuery({
     ...jobDiscoveryQuery(
@@ -554,13 +554,16 @@ export function JobDiscovery() {
   const loadNextPage = () => {
     if (!query.isFetching) void query.fetchNextPage({ cancelRefetch: false });
   };
-  const items = [
-    ...new Map(
-      (query.data?.pages ?? [])
-        .flatMap((p) => p.items)
-        .map((item) => [item.id, item]),
-    ).values(),
-  ];
+  const pages = query.data?.pages;
+  const items = useMemo(() => {
+    const indexed = new Map<
+      string,
+      NonNullable<typeof pages>[number]["items"][number]
+    >();
+    for (const page of pages ?? [])
+      for (const item of page.items) indexed.set(item.id, item);
+    return Array.from(indexed.values());
+  }, [pages]);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   if (!staff)

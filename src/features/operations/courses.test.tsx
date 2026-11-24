@@ -129,6 +129,7 @@ function renderCourses({
   lifecycle = protectedLifecycle,
   changeCandidates = [] as ChangeCandidate[],
   path = "/courses",
+  coldStart = false,
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -150,15 +151,17 @@ function renderCourses({
     ["building-blocks", blocks],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
-  client.setQueryData(
-    runsQuery(
-      actor,
-      permissions.includes("courses.manage") &&
-        permissions.includes("jobs.manage"),
-    ).queryKey,
-    runs,
-  );
-  client.setQueryData(["permissions", actor], permissions);
+  if (!coldStart) {
+    client.setQueryData(
+      runsQuery(
+        actor,
+        permissions.includes("courses.manage") &&
+          permissions.includes("jobs.manage"),
+      ).queryKey,
+      runs,
+    );
+    client.setQueryData(["permissions", actor], permissions);
+  }
   client.setQueryData(["user-roles", actor], roles);
   client.setQueryData(["client-organisations", actor], organisations);
   client.setQueryData(["topics"], topics);
@@ -1756,6 +1759,33 @@ it("loads a course beyond the first thousand results within the actor scope", as
   expect(state.from).toHaveBeenCalledTimes(5);
 });
 
+it("waits for permissions before requesting the selected course projection", async () => {
+  let finishPermissions!: (result: { data: string[]; error: null }) => void;
+  const response = new Promise<{ data: string[]; error: null }>((resolve) => {
+    finishPermissions = resolve;
+  });
+  state.rpc.mockImplementationOnce(() => response);
+  const client = renderCourses({ coldStart: true, runs: [run] });
+
+  expect(state.rpc).toHaveBeenCalledWith("get_my_permissions");
+  expect(state.from).not.toHaveBeenCalledWith("course_runs");
+
+  await act(async () => {
+    finishPermissions({
+      data: ["courses.manage", "jobs.manage"],
+      error: null,
+    });
+  });
+  expect(
+    await screen.findByRole("button", { name: "Kurs ansehen" }),
+  ).toBeVisible();
+  expect(
+    state.from.mock.calls.filter(([table]) => table === "course_runs"),
+  ).toHaveLength(1);
+  expect(client.getQueryData(runsQuery(actor, false).queryKey)).toBeUndefined();
+  expect(client.getQueryData(runsQuery(actor, true).queryKey)).toEqual([run]);
+});
+
 it("appends batches and still searches the entire course catalogue", async () => {
   const templates = Array.from({ length: 1001 }, (_, index) => ({
     ...template,
@@ -1767,12 +1797,18 @@ it("appends batches and still searches the entire course catalogue", async () =>
     id: `run-${index}`,
     template_id: id,
   }));
+  const sessionParses = vi.spyOn(Date, "parse");
+  const parsedSessionStarts = () =>
+    sessionParses.mock.calls.filter(
+      ([value]) => value === run.course_sessions[0].starts_at,
+    ).length;
   renderCourses({ runs, templates });
 
   expect(screen.getAllByRole("button", { name: "Kurs ansehen" })).toHaveLength(
     24,
   );
   expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
   expect(
     screen.queryByRole("heading", { name: "Catalogue course 25" }),
   ).not.toBeInTheDocument();
@@ -1801,9 +1837,11 @@ it("appends batches and still searches the entire course catalogue", async () =>
     target: { value: "" },
   });
   expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
   await userEvent.click(screen.getByRole("button", { name: "Vorlagen" }));
   expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
   expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(parsedSessionStarts()).toBe(1001);
 });
 
 it("prioritizes published courses and makes dated drafts separately filterable", async () => {

@@ -1,4 +1,5 @@
 /** Actor-authorized marketplace card; hidden compensation never becomes a zero-price offer. */
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
@@ -10,13 +11,26 @@ import "./card.css";
 import "../commercial/platform-i18n";
 
 /** Render the server's current quote and earliest session without inferring protected prices. */
-export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
+export const JobCard = memo(function JobCard({
+  job,
+  index = 0,
+}: {
+  job: Job;
+  index?: number;
+}) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
   const priceText = useTranslation("platform").t;
-  const first = [...job.job_sessions].sort((a, b) =>
-    a.starts_at.localeCompare(b.starts_at),
-  )[0];
+  const first = job.job_sessions.reduce<
+    Job["job_sessions"][number] | undefined
+  >(
+    (earliest, session) =>
+      !earliest ||
+      Date.parse(session.starts_at) < Date.parse(earliest.starts_at)
+        ? session
+        : earliest,
+    undefined,
+  );
   return (
     <article className={`job-card accent-${index % 4}`}>
       <div className="job-card-top">
@@ -70,4 +84,4 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       </div>
     </article>
   );
-}
+});
