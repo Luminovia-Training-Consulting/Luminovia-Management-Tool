@@ -77,6 +77,7 @@ test("profile picture is rasterised, scanned, retained across reload and visible
             .select("document_version_id")
             .eq("user_id", teacher.id)
             .single(),
+        {requireData: true},
     );
     const version = await checked(
         service
@@ -84,11 +85,13 @@ test("profile picture is rasterised, scanned, retained across reload and visible
             .select("object_path,scanner_version,mime_type")
             .eq("id", selected.document_version_id)
             .single(),
+        {requireData: true},
     );
     expect(version.scanner_version).toMatch(/^ClamAV /);
     expect(version.mime_type).toBe("image/png");
     const stored = await checked(
         service.storage.from("portal-clean").download(version.object_path),
+        {requireData: true},
     );
     const bytes = Buffer.from(await stored.arrayBuffer());
     const metadata = await sharp(bytes).metadata();

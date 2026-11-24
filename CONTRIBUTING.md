@@ -24,6 +24,8 @@ npm ci
 
 `check` runs fast quality/coverage/build checks. `start` preserves ordinary local data. `test` owns a separate disposable stack for actual database/API/browser/PWA acceptance; it must never target ordinary development or hosted data. `stop` preserves development volumes. Use focused unit/component checks while editing and the complete command for changes to behavior or infrastructure. Explain checks not run and any first failure; a written test or browser discovery is not executed acceptance.
 
+`npm run typecheck` uses strict TypeScript projects for the application, Node/Playwright configuration, browser journey specs and helpers, and the public-help Playwright configuration. It checks browser test code without running those journeys; the isolated `test` command remains the functional browser gate.
+
 `./portal github` previews latest main separately; `./portal github test` verifies that source rather than your uncommitted edits. Coordinate the shared QA lock and never terminate foreign services.
 
 Use `npm ci` and the lockfile. Dependency updates must preserve compatible peer families; do not add unrelated upgrades or use blanket `audit fix --force`.

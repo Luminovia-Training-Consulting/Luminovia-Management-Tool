@@ -214,6 +214,7 @@ test("customer records teaching units, revises the brief, shares scanned bytes a
         deleteRequests(org);
         const docs = await checked(
             service.from("documents").select("id").eq("owner_id", customer.id),
+            {requireData: true},
         );
         for (const document of docs) {
             const versions = await checked(
@@ -221,6 +222,7 @@ test("customer records teaching units, revises the brief, shares scanned bytes a
                     .from("document_versions")
                     .select("object_path")
                     .eq("document_id", document.id),
+                {requireData: true},
             );
             const paths = versions.map((v) => v.object_path);
             await checked(service.storage.from("portal-clean").remove(paths));

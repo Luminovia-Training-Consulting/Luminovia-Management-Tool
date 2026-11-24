@@ -36,9 +36,9 @@ test("a complete learning programme unlocks its next course and produces whole-p
     service.from("organisations").insert({ id: organisation, name }),
   );
   await enablePremiumAndLinkParticipant({
-    admin: { client: managerClient },
-    company: { client: managerClient },
-    learner: { client: learnerClient, id: learner.id },
+    admin: { ...manager, client: managerClient },
+    company: { ...manager, client: managerClient },
+    learner: { ...learner, client: learnerClient },
     organisation,
     service,
     checked,

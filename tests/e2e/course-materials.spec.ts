@@ -70,7 +70,10 @@ const courseFile = (page: Page, name: string) => courseFiles(page).getByRole("li
 });
 const withdrawName = "Aus Kurs entfernen";
 
-async function upload(page: Page, name: string, bytes: Buffer, audience: "staff" | "participants") {
+/** Share fixtures only with audiences accepted by the course selector and server action. */
+type CourseResourceAudience = "all" | "staff" | "client" | "participants";
+
+async function upload(page: Page, name: string, bytes: Buffer, audience: CourseResourceAudience) {
     const files = courseFiles(page);
     await files.getByLabel("Datei auswählen", {exact: true}).setInputFiles({name, mimeType: "text/plain", buffer: bytes});
     await files.locator("#upload-resource-audience").selectOption(audience);
@@ -177,7 +180,7 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
         await unavailable(companyPage, company.accessToken, participantResource.id);
         const sharedCompanyName = `Fictional-company-visible-${f.suffix}.txt`;
         const sharedCompanyBytes = Buffer.from(`Fictional file shared by lecturer ${f.suffix}`);
-        await upload(page, sharedCompanyName, sharedCompanyBytes, "all");
+        await upload(page, sharedCompanyName, sharedCompanyBytes, "client");
         await companyPage.reload();
         const companyFile = courseFile(companyPage, sharedCompanyName);
         const companyDownload = companyPage.waitForEvent("download");

@@ -122,13 +122,20 @@ for (const role of actors) {
             .locator("select")
             .last()
             .evaluate((control) => {
+              if (!(control instanceof HTMLSelectElement)) {
+                throw new TypeError("The theme preference must be a select");
+              }
+              // Measure an unconstrained clone while attached, then always
+              // remove it so a failed layout read cannot alter the page.
               const natural = control.cloneNode(true) as HTMLSelectElement;
               natural.style.position = "absolute";
               natural.style.maxWidth = "none";
               control.after(natural);
-              const fits = control.offsetWidth >= natural.offsetWidth;
-              natural.remove();
-              return fits;
+              try {
+                return control.offsetWidth >= natural.offsetWidth;
+              } finally {
+                natural.remove();
+              }
             });
           expect(fitsTheme).toBe(true);
           const avatar = await page
