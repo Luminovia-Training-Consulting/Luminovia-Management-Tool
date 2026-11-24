@@ -12,6 +12,8 @@ import {
   ArrowDown,
   ArrowUp,
   BellOff,
+  ChevronDown,
+  GraduationCap,
   MessageCirclePlus,
   MessagesSquare,
   Pin,
@@ -104,6 +106,7 @@ function ChatDirectory({ actor }: { actor: string }) {
   const permissions = useQuery(permissionsQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
+  const [showIdleCourseRooms, setShowIdleCourseRooms] = useState(false);
   const [filter, setFilter] = useState(() => readDirectory(actor));
   const showArchived = filter.archived;
   function changeFilter(changes: Partial<DirectoryPreference>) {
@@ -314,6 +317,25 @@ function ChatDirectory({ actor }: { actor: string }) {
         (a.pinned && b.pinned ? (a.pinOrder ?? 0) - (b.pinOrder ?? 0) : 0),
     );
   const hasFilter = Boolean(needle || category || filter.unread);
+  const idleCourseRooms = new Set(
+    !hasFilter && !showArchived
+      ? filtered
+          .filter(
+            (room) =>
+              (room.kind === "lecturer_course" ||
+                room.kind === "participant_course") &&
+              room.id !== selectedId &&
+              !room.pinned &&
+              !room.last_message_at &&
+              !room.manual_unread &&
+              !room.unread_count,
+          )
+          .map(({ id }) => id)
+      : [],
+  );
+  const visibleRooms = showIdleCourseRooms
+    ? filtered
+    : filtered.filter(({ id }) => !idleCourseRooms.has(id));
   return (
     <section
       className={`chat-page ${selectedId ? "chat-page-has-selection" : ""}`}
@@ -346,7 +368,7 @@ function ChatDirectory({ actor }: { actor: string }) {
             <div className="chat-directory-heading">
               <h2>{t("rooms")}</h2>
               <span className="badge" aria-live="polite">
-                {filtered.length}
+                {visibleRooms.length}
               </span>
             </div>
             <div className="chat-room-search">
@@ -448,6 +470,20 @@ function ChatDirectory({ actor }: { actor: string }) {
             </div>
           </div>
           <div className="chat-directory-results">
+            {idleCourseRooms.size > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="chat-course-room-toggle"
+                aria-expanded={showIdleCourseRooms}
+                onClick={() => setShowIdleCourseRooms((open) => !open)}
+              >
+                <GraduationCap size={17} aria-hidden="true" />
+                <span>{t("idleCourseRooms")}</span>
+                <span className="badge">{idleCourseRooms.size}</span>
+                <ChevronDown size={15} aria-hidden="true" />
+              </Button>
+            )}
             {lecturer && !hasFilter && !showArchived && (
               <button
                 className="chat-lounge"
@@ -456,10 +492,7 @@ function ChatDirectory({ actor }: { actor: string }) {
                 disabled={!online || general.isPending}
               >
                 <span aria-hidden="true">✳</span>
-                <span>
-                  <strong>{t("lecturerLounge")}</strong>
-                  <small>{t("lecturerLoungeHint")}</small>
-                </span>
+                <strong>{t("lecturerLounge")}</strong>
               </button>
             )}
             {general.isError && (
@@ -478,9 +511,9 @@ function ChatDirectory({ actor }: { actor: string }) {
               <Loading />
             ) : rooms.isError ? (
               <ErrorState retry={() => void rooms.refetch()} />
-            ) : filtered.length ? (
+            ) : visibleRooms.length ? (
               <ul className="chat-room-list">
-                {filtered.map((room) => (
+                {visibleRooms.map((room) => (
                   <li key={room.id} className="chat-room-row">
                     <button
                       type="button"
@@ -659,7 +692,7 @@ function ChatDirectory({ actor }: { actor: string }) {
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : idleCourseRooms.size === 0 ? (
               <div className="chat-list-empty">
                 <MessagesSquare size={28} />
                 {hasFilter ? (
@@ -688,7 +721,7 @@ function ChatDirectory({ actor }: { actor: string }) {
                   </>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </aside>
         <div className="chat-conversation">

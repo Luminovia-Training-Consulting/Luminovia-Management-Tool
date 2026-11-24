@@ -81,13 +81,13 @@ const pairs: Record<string, [string, string]> = {
   clearFilters: ["Filter zurücksetzen", "Clear filters"],
   retryFilters: ["Chatfilter erneut laden", "Reload chat filters"],
   rooms: ["Unterhaltungen", "Conversations"],
+  idleCourseRooms: [
+    "Kurschats ohne Nachrichten",
+    "Course chats without messages",
+  ],
   newMessage: ["Neue Nachricht", "New message"],
   newGroup: ["Gruppe erstellen", "Create group"],
   lecturerLounge: ["Dozierenden-Lounge öffnen", "Open lecturer lounge"],
-  lecturerLoungeHint: [
-    "Ein gemeinsamer Raum ausschließlich für Dozierende.",
-    "A shared space exclusively for lecturers.",
-  ],
   noRooms: ["Hier beginnt der Austausch.", "A conversation starts here."],
   noRoomsHint: [
     "Starte eine Direktnachricht oder öffne einen deiner Kursräume.",

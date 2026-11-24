@@ -2,7 +2,6 @@ import i18n from "../../lib/i18n";
 
 const entries = {
   inbox: ["Gruppeneinladungen", "Group invitations"],
-  empty: ["Keine offenen Einladungen.", "No pending invitations."],
   from: ["Eingeladen von {{name}}", "Invited by {{name}}"],
   accept: ["Annehmen", "Accept"],
   reject: ["Ablehnen", "Reject"],

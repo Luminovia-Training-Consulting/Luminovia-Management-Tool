@@ -1088,8 +1088,11 @@ export function FilesPage() {
         }
       />
       <section className="panel">
-        <ArchivedPersonalMaterials actor={session!.user.id} />
-        <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
+        <DocumentExplorer
+          key={session!.user.id}
+          actor={session!.user.id}
+          archiveAction={<ArchivedPersonalMaterials actor={session!.user.id} />}
+        >
           {(rows, pending, epoch, renewalEpoch) => (
             <DocumentList
               files={rows}

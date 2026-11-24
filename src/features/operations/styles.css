@@ -537,3 +537,67 @@
   border-radius: 10px;
   overflow-wrap: anywhere;
 }
+
+.course-toolbar {
+  container-type: inline-size;
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.course-toolbar-header,
+.course-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-toolbar-header {
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.course-toolbar-header .segmented {
+  flex-wrap: wrap;
+}
+
+.course-toolbar-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.course-toolbar-filters .field {
+  min-width: 0;
+  margin: 0;
+}
+
+.course-toolbar > details.panel {
+  justify-self: start;
+  max-width: 100%;
+  padding: 8px 12px;
+  box-shadow: none;
+}
+
+.course-toolbar > details.panel[open] {
+  justify-self: stretch;
+}
+
+.course-toolbar > details.panel > summary {
+  cursor: pointer;
+}
+
+@container (max-width: 32rem) {
+  .course-toolbar-filters > .field:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (min-width: 55rem) {
+  .course-toolbar-filters:has(> :nth-child(5)) {
+    grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(0, 1fr));
+  }
+}
