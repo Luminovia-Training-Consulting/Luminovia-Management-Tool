@@ -1375,3 +1375,137 @@ it("opens the existing unpublished global event editor with the selected period 
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   client.clear();
 });
+
+it("reviews weekly personal instants before dispatch and retries with the same request identity", async () => {
+  const series = "63b06d60-945f-4fa9-b476-ade6b07cbe89";
+  const writes: unknown[] = [];
+  state.rpc.mockImplementation(async (name, payload) => {
+    if (name === "create_my_personal_event_series") {
+      writes.push(payload);
+      return writes.length === 1
+        ? { data: null, error: { code: "503" } }
+        : { data: { series_id: series, created: 2 }, error: null };
+    }
+    return { data: [], error: null };
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Privaten Termin hinzufügen" }),
+  );
+  const editor = within(
+    screen.getByRole("dialog", { name: "Privaten Termin hinzufügen" }),
+  );
+  await user.type(editor.getByLabelText("Titel"), "Fictional recurring event");
+  fireEvent.change(editor.getByLabelText("Beginn"), {
+    target: { value: "2030-03-25T09:00" },
+  });
+  fireEvent.change(editor.getByLabelText("Ende"), {
+    target: { value: "2030-03-25T10:00" },
+  });
+  await user.selectOptions(editor.getByLabelText("Wiederholung"), "weekly");
+  fireEvent.change(editor.getByLabelText("Anzahl der Termine"), {
+    target: { value: "2" },
+  });
+  await user.click(editor.getByRole("button", { name: "Terminserie prüfen" }));
+  const review = within(
+    await screen.findByRole("dialog", { name: "Terminserie prüfen" }),
+  );
+  expect(review.getAllByRole("listitem")).toHaveLength(2);
+  expect(writes).toHaveLength(0);
+  await user.click(
+    review.getByRole("button", { name: "Terminserie speichern" }),
+  );
+  expect(await review.findByRole("alert")).toHaveTextContent(
+    "Die Terminserie konnte nicht bestätigt werden.",
+  );
+  await user.click(
+    review.getByRole("button", { name: "Terminserie speichern" }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(writes).toHaveLength(2);
+  expect(writes[0]).toEqual(writes[1]);
+  expect(writes[0]).toEqual({
+    p_request_id: expect.any(String),
+    p_title: "Fictional recurring event",
+    p_description: "",
+    p_meeting_url: "",
+    p_time_zone: "Europe/Berlin",
+    p_occurrences: [
+      {
+        starts_at: "2030-03-25T08:00:00.000Z",
+        ends_at: "2030-03-25T09:00:00.000Z",
+      },
+      {
+        starts_at: "2030-04-01T07:00:00.000Z",
+        ends_at: "2030-04-01T08:00:00.000Z",
+      },
+    ],
+  });
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  client.clear();
+});
+
+it("offers an independent confirmed action to cancel only future occurrences", async () => {
+  const series = "63b06d60-945f-4fa9-b476-ade6b07cbe89";
+  state.events = [
+    {
+      id: "existing-recurrence",
+      title: "Fictional series appointment",
+      starts_at: "2030-03-25T08:00:00.000Z",
+      ends_at: "2030-03-25T09:00:00.000Z",
+      time_zone: "Europe/Berlin",
+      recurrence_series_id: series,
+    },
+  ];
+  const name = "Künftige Serientermine löschen";
+  state.rpc.mockImplementation(async (operation) => ({
+    data: operation === "cancel_my_future_personal_events" ? 3 : [],
+    error: null,
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.click(await screen.findByText("Fictional series appointment"));
+  await user.click(screen.getByRole("button", { name }));
+  const review = within(
+    await screen.findByRole("dialog", {
+      name: "Künftige Termine dieser Serie löschen?",
+    }),
+  );
+  expect(
+    review.getByText(/Vergangene und bereits begonnene Termine/),
+  ).toBeVisible();
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "cancel_my_future_personal_events",
+    expect.anything(),
+  );
+  await user.click(review.getByRole("button", { name }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(state.rpc).toHaveBeenCalledWith("cancel_my_future_personal_events", {
+    p_series_id: series,
+  });
+  expect(state.deleteEvent).not.toHaveBeenCalled();
+  client.clear();
+});

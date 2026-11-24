@@ -7,15 +7,17 @@ import { Button } from "../../components/ui/button";
 import { zonedInstant, zonedInstantForEdit } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import type { LocalScheduleEntry } from "../../lib/recurrence";
 import {
   academyDraftScheduleInput,
   academyDraftScheduleReceipt,
 } from "./academy-draft-schema";
 import { courseHubQuery, courseWorkspaceKey } from "./api";
+import { CourseSessionRecurrence } from "./course-session-recurrence";
 import "./i18n";
 
 type Schedule = ReturnType<typeof academyDraftScheduleReceipt.parse>;
-type SessionInput = {
+type SessionInput = LocalScheduleEntry & {
   key: string;
   original: Schedule["sessions"][number] | null;
 };
@@ -108,8 +110,14 @@ function DraftScheduleForm({
   const prefix = useId();
   const focus = useRef<string>(undefined);
   const [invalid, setInvalid] = useState(false);
+  const [timeZone, setTimeZone] = useState(initial.time_zone);
   const [sessions, setSessions] = useState<SessionInput[]>(() =>
-    initial.sessions.map((item) => ({ key: item.id, original: item })),
+    initial.sessions.map((item) => ({
+      key: item.id,
+      original: item,
+      starts_at: localTime(item.starts_at, initial.time_zone),
+      ends_at: localTime(item.ends_at, initial.time_zone),
+    })),
   );
   const save = useMutation({
     mutationFn: async (
@@ -130,9 +138,9 @@ function DraftScheduleForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const read = (name: string) => String(form.get(name) ?? "").trim();
-    const zone = read("time_zone");
+    const zone = timeZone.trim();
     const instant = (item: SessionInput, field: "starts_at" | "ends_at") => {
-      const input = read(`${item.key}-${field}`);
+      const input = item[field];
       return item.original && zone === initial.time_zone
         ? zonedInstantForEdit(
             input,
@@ -169,7 +177,12 @@ function DraftScheduleForm({
           label={t("academyTimeZone")}
           hint={t("academyDraftWallTimeHint")}
         >
-          <input name="time_zone" defaultValue={initial.time_zone} required />
+          <input
+            name="time_zone"
+            value={timeZone}
+            onChange={(event) => setTimeZone(event.currentTarget.value)}
+            required
+          />
         </Field>
         <Field id={`${prefix}-delivery`} label={t("academyDelivery")}>
           <select name="delivery_type" defaultValue={initial.delivery_type}>
@@ -197,11 +210,15 @@ function DraftScheduleForm({
                   name={`${item.key}-${field}`}
                   type="datetime-local"
                   required
-                  defaultValue={
-                    item.original
-                      ? localTime(item.original[field], initial.time_zone)
-                      : ""
-                  }
+                  value={item[field]}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    setSessions((rows) =>
+                      rows.map((row) =>
+                        row.key === item.key ? { ...row, [field]: value } : row,
+                      ),
+                    );
+                  }}
                   ref={(input) => {
                     if (
                       input &&
@@ -231,6 +248,21 @@ function DraftScheduleForm({
             </Button>
           </fieldset>
         ))}
+        <CourseSessionRecurrence
+          anchor={sessions[sessions.length - 1]}
+          zone={timeZone}
+          sessionCount={sessions.length}
+          disabled={save.isPending}
+          onAppend={(entries) => {
+            const rows = entries.map((entry) => ({
+              ...entry,
+              key: crypto.randomUUID(),
+              original: null,
+            }));
+            focus.current = rows[0]?.key;
+            setSessions((items) => [...items, ...rows]);
+          }}
+        />
         <div className="academy-draft-actions form-actions">
           <Button
             type="button"
@@ -239,7 +271,10 @@ function DraftScheduleForm({
             onClick={() => {
               const key = crypto.randomUUID();
               focus.current = key;
-              setSessions((items) => [...items, { key, original: null }]);
+              setSessions((items) => [
+                ...items,
+                { key, original: null, starts_at: "", ends_at: "" },
+              ]);
             }}
           >
             {t("academyAddSession")}

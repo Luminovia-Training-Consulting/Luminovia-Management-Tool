@@ -1,6 +1,5 @@
 import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
-import { isAcademyExplorerRequest } from "./request-boundary.ts";
 import {
   isPortalHttpAliasRequest,
   portalHttpAliasPrefix,
@@ -140,6 +139,11 @@ import {
   globalEventSchema,
   globalEventsPageSchema,
 } from "../calendar/publications-schema.ts";
+import {
+  cancelledPersonalSeriesCount,
+  createPersonalSeriesInput,
+  personalSeriesReceipt,
+} from "../calendar/personal-series-schema.ts";
 import { courseDestinationsSchema } from "../learning/destinations-schema.ts";
 import {
   attendanceRegisterSchema,
@@ -2177,6 +2181,25 @@ const nativePaths = {
       },
     },
     z.toJSONSchema(calendarImportReceipt),
+  ),
+  "/rest/v1/rpc/create_my_personal_event_series": rpc(
+    "createMyPersonalEventSeries",
+    "Calendar",
+    "Save a reviewed private appointment series",
+    "Saves the current account’s appointments atomically. Rejects conflicts with confirmed assignments. For a retry, reuse the same request ID and payload.",
+    {
+      p_request_id: uuid,
+      ...z.toJSONSchema(createPersonalSeriesInput).properties,
+    },
+    z.toJSONSchema(personalSeriesReceipt),
+  ),
+  "/rest/v1/rpc/cancel_my_future_personal_events": rpc(
+    "cancelMyFuturePersonalEvents",
+    "Calendar",
+    "Delete future private appointments in my series",
+    "Deletes future appointments in an owned series and returns the deletion count. Started appointments are retained.",
+    { p_series_id: uuid },
+    z.toJSONSchema(cancelledPersonalSeriesCount),
   ),
   "/rest/v1/rpc/get_my_calendar_color_preferences": rpc(
     "readMyCalendarColours",
@@ -4989,6 +5012,14 @@ export function portalOpenApi(
       : academyExplorerOpenApi(backend, brand);
 }
 
+/** The signed-in internal browser only needs its interactive document. */
+export function internalExplorerDocument(
+  backend: string,
+  brand: InstallationBrand,
+) {
+  return internalOpenApi(backend, false, brand);
+}
+
 const interactivePaths = withPortalHttpAliases(
   Object.fromEntries(
     Object.entries(paths).filter(([path]) => !legacyHandover.has(path)),
@@ -5089,7 +5120,6 @@ export function isDocumentedRequest(
   rawUrl: string,
   method: string,
   backend: string,
-  brand?: InstallationBrand,
 ) {
   const target = URL.parse(rawUrl, backend.replace(/\/+$/, "") + "/");
   const base = URL.parse(backend);
@@ -5105,14 +5135,6 @@ export function isDocumentedRequest(
   const prefix = base.pathname.replace(/\/+$/, "");
   if (!target.pathname.startsWith(prefix + "/")) return false;
   const route = target.pathname.slice(prefix.length);
-  if (brand && brand.edition !== "internal") {
-    const operations = academyExplorerOpenApi(backend, brand).paths;
-    return isAcademyExplorerRequest(
-      { url: target.href, method },
-      backend,
-      operations,
-    );
-  }
   if (route.startsWith(portalHttpAliasPrefix))
     return isPortalHttpAliasRequest(target, route, verb, interactivePaths);
   if (legacyHandover.has(route)) return false;

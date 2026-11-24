@@ -8,8 +8,10 @@ import { Button } from "../../components/ui/button";
 import { zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import type { LocalScheduleEntry } from "../../lib/recurrence";
 import { CourseSeriesForm } from "../operations/course-series";
 import { courseHubQuery } from "./api";
+import { CourseSessionRecurrence } from "./course-session-recurrence";
 import {
   academyDraftOptions,
   academyDraftPayload,
@@ -25,7 +27,12 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
   const [organisationQuery, setOrganisationQuery] = useState("");
   const [templateQuery, setTemplateQuery] = useState("");
   const [newTemplate, setNewTemplate] = useState(false);
-  const [sessions, setSessions] = useState(() => [crypto.randomUUID()]);
+  const [timeZone, setTimeZone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+  const [sessions, setSessions] = useState<
+    (LocalScheduleEntry & { id: string })[]
+  >(() => [{ id: crypto.randomUUID(), starts_at: "", ends_at: "" }]);
   const [invalid, setInvalid] = useState(false);
   const lastRequest = useRef<{ content: string; id: string }>(undefined);
   const sessionToFocus = useRef<string>(undefined);
@@ -83,14 +90,14 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const value = (name: string) => String(form.get(name) ?? "").trim();
-    const timeZone = value("time_zone");
+    const zone = timeZone.trim();
     const payload = academyDraftPayload.safeParse({
-      time_zone: timeZone,
+      time_zone: zone,
       venue: value("venue"),
       delivery_type: value("delivery_type"),
-      sessions: sessions.map((id) => ({
-        starts_at: zonedInstant(value(`start-${id}`), timeZone),
-        ends_at: zonedInstant(value(`end-${id}`), timeZone),
+      sessions: sessions.map(({ starts_at, ends_at }) => ({
+        starts_at: zonedInstant(starts_at, zone),
+        ends_at: zonedInstant(ends_at, zone),
       })),
     });
     save.reset();
@@ -111,6 +118,18 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
       p_template_title: newTemplate ? value("new_template") : null,
       p_payload: payload.data,
     });
+  }
+
+  function updateSession(
+    id: string,
+    field: keyof LocalScheduleEntry,
+    value: string,
+  ) {
+    setSessions((items) =>
+      items.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item,
+      ),
+    );
   }
 
   if (!online || options.isError || options.data === null) return null;
@@ -205,7 +224,8 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
             <input
               id="academy-draft-zone"
               name="time_zone"
-              defaultValue={Intl.DateTimeFormat().resolvedOptions().timeZone}
+              value={timeZone}
+              onChange={(event) => setTimeZone(event.currentTarget.value)}
               required
             />
           </Field>
@@ -222,7 +242,7 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
           <Field id="academy-draft-venue" label={t("academyVenue")}>
             <input id="academy-draft-venue" name="venue" maxLength={500} />
           </Field>
-          {sessions.map((id, index) => (
+          {sessions.map(({ id, starts_at, ends_at }, index) => (
             <fieldset key={id} className="academy-draft-session">
               <legend>{t("sessionNumber", { number: index + 1 })}</legend>
               <Field id={`start-${id}`} label={t("academySessionStart")}>
@@ -230,6 +250,10 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
                   id={`start-${id}`}
                   name={`start-${id}`}
                   type="datetime-local"
+                  value={starts_at}
+                  onChange={(event) =>
+                    updateSession(id, "starts_at", event.currentTarget.value)
+                  }
                   required
                   ref={(input) => {
                     if (input && sessionToFocus.current === id) {
@@ -244,6 +268,10 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
                   id={`end-${id}`}
                   name={`end-${id}`}
                   type="datetime-local"
+                  value={ends_at}
+                  onChange={(event) =>
+                    updateSession(id, "ends_at", event.currentTarget.value)
+                  }
                   required
                 />
               </Field>
@@ -253,9 +281,12 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
                   variant="secondary"
                   onClick={() => {
                     // Keep focus in the schedule after its focused row unmounts.
-                    sessionToFocus.current =
-                      sessions[index + 1] ?? sessions[index - 1];
-                    setSessions((items) => items.filter((item) => item !== id));
+                    sessionToFocus.current = (
+                      sessions[index + 1] ?? sessions[index - 1]
+                    )?.id;
+                    setSessions((items) =>
+                      items.filter((item) => item.id !== id),
+                    );
                   }}
                 >
                   {t("academyRemoveSession", { number: index + 1 })}
@@ -263,6 +294,20 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
               )}
             </fieldset>
           ))}
+          <CourseSessionRecurrence
+            anchor={sessions[sessions.length - 1]}
+            zone={timeZone}
+            sessionCount={sessions.length}
+            disabled={disabled}
+            onAppend={(entries) => {
+              const rows = entries.map((entry) => ({
+                ...entry,
+                id: crypto.randomUUID(),
+              }));
+              sessionToFocus.current = rows[0]?.id;
+              setSessions((items) => [...items, ...rows]);
+            }}
+          />
           {invalid && (
             <Notice kind="error">{t("academyDraftTimesInvalid")}</Notice>
           )}
@@ -277,7 +322,10 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
               onClick={() => {
                 const id = crypto.randomUUID();
                 sessionToFocus.current = id;
-                setSessions((items) => [...items, id]);
+                setSessions((items) => [
+                  ...items,
+                  { id, starts_at: "", ends_at: "" },
+                ]);
               }}
             >
               {t("academyAddSession")}

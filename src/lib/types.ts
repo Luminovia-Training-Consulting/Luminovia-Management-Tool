@@ -104,4 +104,5 @@ export interface PersonalEvent {
   starts_at: string;
   ends_at: string;
   time_zone: string;
+  recurrence_series_id?: string | null;
 }

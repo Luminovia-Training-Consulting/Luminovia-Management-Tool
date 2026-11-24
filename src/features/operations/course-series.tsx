@@ -1,13 +1,15 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Field, Notice } from "../../components/common";
+import { RecurrenceFields } from "../../components/recurrence-fields";
 import { TimeZoneOptions } from "../../components/time-zone-options";
 import { Button } from "../../components/ui/button";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { useRequestKey } from "../../lib/request-key";
+import type { LocalScheduleEntry, RecurrenceRule } from "../../lib/recurrence";
 import { db } from "../../lib/supabase";
 import {
   courseSeriesClasses,
@@ -23,6 +25,7 @@ type ReviewedRequest = Omit<
   "p_request_id"
 >;
 const week = [1, 2, 3, 4, 5, 6, 7];
+const maxRuns = 12;
 
 export function CourseSeriesForm({
   actor,
@@ -53,10 +56,14 @@ export function CourseSeriesForm({
   const online = useOnline();
   const requestKey = useRequestKey();
   const [organisation, setOrganisation] = useState(defaultOrganisation);
-  const [runKeys, setRunKeys] = useState(() => [
-    crypto.randomUUID(),
-    crypto.randomUUID(),
+  const [runs, setRuns] = useState(() => [
+    { key: crypto.randomUUID(), firstDay: "" },
+    { key: crypto.randomUUID(), firstDay: "" },
   ]);
+  const [start, setStart] = useState("09:00");
+  const [end, setEnd] = useState("17:00");
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
+  const focusRun = useRef<string>(undefined);
   const [zone, setZone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Berlin",
   );
@@ -122,6 +129,32 @@ export function CourseSeriesForm({
     setInvalid(false);
     plan.reset();
   };
+  const existingDates = runs.filter(({ firstDay }) => firstDay);
+  const lastDate = existingDates.reduce(
+    (latest, { firstDay }) => (firstDay > latest ? firstDay : latest),
+    "",
+  );
+
+  function addRepeatedDates(entries: LocalScheduleEntry[]) {
+    const dates = entries
+      .slice(1)
+      .map(({ starts_at }) => starts_at.slice(0, 10));
+    let nextDate = 0;
+    const filled = runs.map((run) =>
+      !run.firstDay && nextDate < dates.length
+        ? { ...run, firstDay: dates[nextDate++] }
+        : run,
+    );
+    const appended = dates
+      .slice(nextDate)
+      .map((firstDay) => ({ key: crypto.randomUUID(), firstDay }));
+    focusRun.current =
+      filled.find((run, index) => run !== runs[index])?.key ?? appended[0]?.key;
+    setRuns([...filled, ...appended]);
+    setRecurrence(null);
+    change();
+  }
+
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!online || plan.isPending) return;
@@ -129,8 +162,8 @@ export function CourseSeriesForm({
     const value = (name: string) => String(form.get(name) ?? "");
     const schedule = {
       days: Number(value("days")),
-      start: value("start"),
-      end: value("end"),
+      start,
+      end,
       weekdays: form.getAll("weekday").map(Number),
       excludedDates: value("excluded"),
       zone,
@@ -139,13 +172,13 @@ export function CourseSeriesForm({
       p_organisation_id: organisation,
       p_template_id: value("template"),
       p_time_zone: zone,
-      p_runs: runKeys.map((key) => ({
+      p_runs: runs.map(({ key, firstDay }) => ({
         delivery_type: value(`${key}-delivery`),
         venue: value(`${key}-venue`).trim(),
         class_id: value(`${key}-class`) || null,
         sessions: courseSeriesSessions({
           ...schedule,
-          firstDay: value(`${key}-date`),
+          firstDay,
         }),
       })),
       p_request_id: null,
@@ -248,7 +281,8 @@ export function CourseSeriesForm({
               id={id("start")}
               name="start"
               type="time"
-              defaultValue="09:00"
+              value={start}
+              onChange={(event) => setStart(event.currentTarget.value)}
               required
             />
           </Field>
@@ -257,7 +291,8 @@ export function CourseSeriesForm({
               id={id("end")}
               name="end"
               type="time"
-              defaultValue="17:00"
+              value={end}
+              onChange={(event) => setEnd(event.currentTarget.value)}
               required
             />
           </Field>
@@ -291,7 +326,7 @@ export function CourseSeriesForm({
           />
         </Field>
         {classes.isError && <Notice kind="error">{t("classError")}</Notice>}
-        {runKeys.map((key, index) => (
+        {runs.map(({ key, firstDay }, index) => (
           <fieldset className="panel" key={key}>
             <legend>{t("run", { number: index + 1 })}</legend>
             <div className="form-row">
@@ -301,6 +336,21 @@ export function CourseSeriesForm({
                   type="date"
                   name={`${key}-date`}
                   required
+                  value={firstDay}
+                  onChange={(event) => {
+                    const date = event.currentTarget.value;
+                    setRuns((items) =>
+                      items.map((item) =>
+                        item.key === key ? { ...item, firstDay: date } : item,
+                      ),
+                    );
+                  }}
+                  ref={(input) => {
+                    if (input && focusRun.current === key) {
+                      focusRun.current = undefined;
+                      input.focus();
+                    }
+                  }}
                 />
               </Field>
               <Field id={id(`${key}-delivery`)} label={t("delivery")}>
@@ -331,12 +381,12 @@ export function CourseSeriesForm({
                 </select>
               </Field>
             </div>
-            {runKeys.length > 2 && (
+            {runs.length > 2 && (
               <Button
                 variant="ghost"
                 type="button"
                 onClick={() => {
-                  setRunKeys((items) => items.filter((item) => item !== key));
+                  setRuns((items) => items.filter((item) => item.key !== key));
                   change();
                 }}
               >
@@ -345,13 +395,31 @@ export function CourseSeriesForm({
             )}
           </fieldset>
         ))}
+        {existingDates.length < maxRuns && (
+          <fieldset>
+            <legend>{t("repeatStartDates")}</legend>
+            <p className="muted">{t("repeatStartDatesHint")}</p>
+            <RecurrenceFields
+              anchor={{
+                starts_at: lastDate ? `${lastDate}T${start}` : "",
+                ends_at: lastDate ? `${lastDate}T${end}` : "",
+              }}
+              zone={zone}
+              value={recurrence}
+              onChange={setRecurrence}
+              max={maxRuns + 1 - existingDates.length}
+              onApply={addRepeatedDates}
+            />
+          </fieldset>
+        )}
         <div className="form-actions">
-          {runKeys.length < 12 && (
+          {runs.length < maxRuns && (
             <Button
               type="button"
               variant="secondary"
               onClick={() => {
-                setRunKeys((items) => [...items, crypto.randomUUID()]);
+                const key = crypto.randomUUID();
+                setRuns((items) => [...items, { key, firstDay: "" }]);
                 change();
               }}
             >
@@ -370,7 +438,7 @@ export function CourseSeriesForm({
           <h3>{t("reviewed")}</h3>
           {reviewed.p_runs.map((run, index) => (
             <details
-              key={runKeys[index]}
+              key={runs[index].key}
               open={
                 !plan.data ||
                 Boolean(

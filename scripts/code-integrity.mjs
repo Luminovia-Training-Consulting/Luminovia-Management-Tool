@@ -205,12 +205,17 @@ export function auditFrontend(root) {
 }
 
 /** Builds the compiler program and symbol resolution for actual source references. */
-function sourceProgram(root, edition) {
+function sourceProgram(root, edition, useBuildEntry = false) {
     const files = filesUnder(join(root, "src")).filter(
         (file) =>
             script.test(file) && !excluded.test(relative(join(root, "src"), file)),
     );
-    const program = ts.createProgram(files, {
+    // The delivered Vite config also calls application code to emit public
+    // artifacts, including OpenAPI. Count its uses without adding its own
+    // declarations to the frontend inventory.
+    const buildEntry = useBuildEntry ? join(root, "vite.config.ts") : null;
+    const hasBuildEntry = buildEntry && existsSync(buildEntry);
+    const program = ts.createProgram(hasBuildEntry ? [...files, buildEntry] : files, {
         target: ts.ScriptTarget.ESNext,
         module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler,
@@ -230,7 +235,8 @@ function sourceProgram(root, edition) {
     const sources = program
         .getSourceFiles()
         .filter((file) => files.includes(file.fileName));
-    return {checker, sources};
+    const buildSource = hasBuildEntry ? program.getSourceFile(buildEntry) : undefined;
+    return {checker, sources, buildSource};
 }
 
 /** Merge the alternative browser builds without requiring a declaration to be used in both. */
@@ -288,7 +294,7 @@ function executesOnLoad(node) {
 }
 
 function scanEditionDeclarations(root, edition) {
-    const {checker, sources} = sourceProgram(root, edition);
+    const {checker, sources, buildSource} = sourceProgram(root, edition, true);
     const bySymbol = new Map();
     const byDeclaration = new Map();
     const roots = new Set();
@@ -342,7 +348,7 @@ function scanEditionDeclarations(root, edition) {
         register(source);
     }
 
-    for (const source of sources) {
+    for (const source of buildSource ? [...sources, buildSource] : sources) {
         function visit(node, owner) {
             // A class's extends expression executes, while generic arguments
             // and implements/interface heritage are erased.
@@ -353,7 +359,7 @@ function scanEditionDeclarations(root, edition) {
                 return;
             }
             if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node)
-                || ts.isExportDeclaration(node) || ts.isExportAssignment(node)
+                || ts.isExportDeclaration(node) || (ts.isExportAssignment(node) && source !== buildSource)
                 || ts.isTypeNode(node)) return;
             owner = byDeclaration.get(node) ?? owner;
             if (ts.isIdentifier(node)) {

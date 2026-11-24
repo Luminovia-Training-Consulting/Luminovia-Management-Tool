@@ -393,3 +393,26 @@ test("terminal splats accept their base and descendants without accepting adjace
         rmSync(fixture, {recursive: true, force: true});
     }
 });
+
+test("counts browser exports used by the production Vite configuration", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-vite-entrypoint-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(join(fixture, "src/main.tsx"), "export {};");
+        writeFileSync(join(fixture, "src/catalogue.ts"), `
+            export function buildDocument() { return "OpenAPI"; }
+            export function disconnected() { return "unused"; }
+        `);
+        writeFileSync(join(fixture, "vite.config.ts"), `
+            import {buildDocument} from "./src/catalogue";
+            export default () => ({document: buildDocument()});
+        `);
+        const exports = scanRuntimeExports(fixture);
+        assert.deepEqual(exports.map(({name, reachable}) => [name, reachable]), [
+            ["buildDocument", true],
+            ["disconnected", false],
+        ]);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
+});

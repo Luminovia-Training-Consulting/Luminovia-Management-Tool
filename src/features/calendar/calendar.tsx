@@ -14,7 +14,7 @@ import {
 import { orgQuery, runsQuery, templatesQuery } from "../operations/data";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -48,7 +48,23 @@ import {
 } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
-import { validZone, zonedInstant, zonedInstantForEdit } from "../../lib/dates";
+import {
+  dateTime,
+  validZone,
+  zonedInstant,
+  zonedInstantForEdit,
+} from "../../lib/dates";
+import { useRequestKey } from "../../lib/request-key";
+import { RecurrenceFields } from "../../components/recurrence-fields";
+import type { RecurrenceRule } from "../../lib/recurrence";
+import {
+  cancelFuturePersonalEvents,
+  preparePersonalSeries,
+  savePersonalSeries,
+  type PersonalSeriesPayload,
+} from "./personal-series";
+import { personalSeriesLimit } from "./personal-series-schema";
+import "./personal-series-i18n";
 import { canRetryNextPage } from "../../lib/paged-read";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Dialog } from "../../components/ui/dialog";
@@ -114,10 +130,23 @@ function EventForm({
   onBusyChange: (busy: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const confirmText = useTranslation("calendarConfirmation").t;
   const detailText = useTranslation("privateCalendarDetails").t;
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const seriesText = useTranslation("personalCalendarSeries").t;
+  const [confirmation, setConfirmation] = useState<"single" | "future" | null>(
+    null,
+  );
+  const [rule, setRule] = useState<RecurrenceRule | null>(null);
+  const [review, setReview] = useState<PersonalSeriesPayload | null>(null);
+  const [reviewTrigger, setReviewTrigger] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const [removeTrigger, setRemoveTrigger] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const [invalidSeries, setInvalidSeries] = useState(false);
+  const request = useRequestKey();
   const client = useQueryClient();
   const online = useOnline();
   const [timeError, setTimeError] = useState(false);
@@ -129,6 +158,7 @@ function EventForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isDirty },
   } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -150,7 +180,12 @@ function EventForm({
           time_zone: draftRange?.time_zone ?? zone,
         },
   });
-  useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
+  const [startsAt, endsAt, eventZone] = useWatch({
+    control,
+    name: ["starts_at", "ends_at", "time_zone"],
+  });
+  const dirty = isDirty || rule !== null;
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   const save = useMutation({
     onMutate: () => onBusyChange(true),
     onSettled: () => onBusyChange(false),
@@ -201,15 +236,33 @@ function EventForm({
       onDone();
     },
   });
+  const saveSeries = useMutation({
+    onMutate: () => onBusyChange(true),
+    onSettled: () => onBusyChange(false),
+    mutationFn: async (payload: PersonalSeriesPayload) => {
+      requireOnline();
+      return savePersonalSeries(
+        request.forInput(JSON.stringify(payload)),
+        payload,
+      );
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["events", userId] });
+      onDone();
+    },
+  });
   const remove = useMutation({
     onMutate: () => onBusyChange(true),
     onSettled: () => onBusyChange(false),
-    mutationFn: async () => {
+    mutationFn: async (scope: "single" | "future") => {
       requireOnline();
+      if (scope === "future" && event?.recurrence_series_id)
+        return cancelFuturePersonalEvents(event.recurrence_series_id);
+      if (!event) throw new Error("No event selected");
       const { data, error } = await db()
         .from("personal_events")
         .delete()
-        .eq("id", event!.id)
+        .eq("id", event.id)
         .eq("user_id", userId)
         .select("id")
         .single();
@@ -220,8 +273,24 @@ function EventForm({
       onDone(true);
     },
   });
+  const busy = save.isPending || remove.isPending || saveSeries.isPending;
+  const prepare = (values: z.infer<typeof schema>) => {
+    if (busy || !online) return;
+    if (!rule || event) {
+      save.mutate(values);
+      return;
+    }
+    setInvalidSeries(false);
+    save.reset();
+    saveSeries.reset();
+    try {
+      setReview(preparePersonalSeries(values, rule));
+    } catch {
+      setInvalidSeries(true);
+    }
+  };
   return (
-    <form onSubmit={handleSubmit((v) => save.mutate(v))} noValidate>
+    <form onSubmit={handleSubmit(prepare)} noValidate>
       <Field id="event-title" label={t("title")} error={Boolean(errors.title)}>
         <input id="event-title" {...register("title")} />
       </Field>
@@ -290,45 +359,139 @@ function EventForm({
           <TimeZoneOptions current={event?.time_zone ?? zone} />
         </select>
       </Field>
+      {!event && (
+        <RecurrenceFields
+          anchor={{ starts_at: startsAt, ends_at: endsAt }}
+          zone={eventZone}
+          value={rule}
+          onChange={(next) => {
+            setRule(next);
+            setInvalidSeries(false);
+          }}
+          max={personalSeriesLimit}
+          disabled={busy}
+        />
+      )}
+      {invalidSeries && <Notice kind="error">{seriesText("invalid")}</Notice>}
+      {event?.recurrence_series_id && <p>{seriesText("occurrence")}</p>}
       {save.isError && (
         <Notice kind="error">{t(timeError ? "invalidTime" : "error")}</Notice>
       )}
       <div className="form-actions">
-        <Button disabled={!online || save.isPending || remove.isPending}>
-          {t("saveEvent")}
+        <Button ref={setReviewTrigger} disabled={!online || busy}>
+          {rule && !event ? seriesText("review") : t("saveEvent")}
         </Button>
         {event && (
           <Button
             type="button"
             variant="danger"
-            disabled={!online || save.isPending || remove.isPending}
-            onClick={() => {
+            disabled={!online || busy}
+            onClick={(event) => {
+              setRemoveTrigger(event.currentTarget);
               remove.reset();
-              setConfirmDelete(true);
+              setConfirmation("single");
             }}
           >
             {t("deleteEvent")}
           </Button>
         )}
+        {event?.recurrence_series_id && (
+          <Button
+            type="button"
+            variant="danger"
+            disabled={!online || busy}
+            onClick={(event) => {
+              setRemoveTrigger(event.currentTarget);
+              remove.reset();
+              setConfirmation("future");
+            }}
+          >
+            {seriesText("cancelFuture")}
+          </Button>
+        )}
       </div>
       <Dialog
-        open={confirmDelete}
+        open={review !== null}
         onOpenChange={(next) => {
-          if (!remove.isPending) setConfirmDelete(next);
+          if (!next && !saveSeries.isPending) setReview(null);
         }}
-        title={confirmText("deleteTitle")}
-        description={confirmText("deleteDescription")}
+        closeDisabled={saveSeries.isPending}
+        returnFocusTo={reviewTrigger}
+        title={seriesText("review")}
+        description={seriesText("reviewHint")}
+      >
+        {review && (
+          <>
+            <ol>
+              {review.p_occurrences.map((slot) => (
+                <li key={slot.starts_at}>
+                  {dateTime(slot.starts_at, i18n.language, review.p_time_zone)}
+                  {" – "}
+                  {dateTime(slot.ends_at, i18n.language, review.p_time_zone)}
+                </li>
+              ))}
+            </ol>
+            {saveSeries.isError && (
+              <Notice kind="error">
+                {seriesText(
+                  (saveSeries.error as { code?: string })?.code === "23P01"
+                    ? "conflict"
+                    : "failed",
+                )}
+              </Notice>
+            )}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={saveSeries.isPending}
+                onClick={() => setReview(null)}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={!online || saveSeries.isPending}
+                onClick={() => saveSeries.mutate(review)}
+              >
+                {seriesText("save")}
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
+      <Dialog
+        open={confirmation !== null}
+        onOpenChange={(next) => {
+          if (!next && !remove.isPending) setConfirmation(null);
+        }}
+        closeDisabled={remove.isPending}
+        returnFocusTo={removeTrigger}
+        title={
+          confirmation === "future"
+            ? seriesText("cancelTitle")
+            : confirmText("deleteTitle")
+        }
+        description={
+          confirmation === "future"
+            ? seriesText("cancelHint")
+            : confirmText("deleteDescription")
+        }
       >
         <p>{event?.title}</p>
         {remove.isError && (
-          <Notice kind="error">{confirmText("deleteFailed")}</Notice>
+          <Notice kind="error">
+            {confirmation === "future"
+              ? seriesText("cancelFailed")
+              : confirmText("deleteFailed")}
+          </Notice>
         )}
         <div className="form-actions">
           <Button
             type="button"
             variant="secondary"
             disabled={remove.isPending}
-            onClick={() => setConfirmDelete(false)}
+            onClick={() => setConfirmation(null)}
           >
             {t("cancel")}
           </Button>
@@ -336,9 +499,13 @@ function EventForm({
             type="button"
             variant="danger"
             disabled={!online || remove.isPending}
-            onClick={() => remove.mutate()}
+            onClick={() => {
+              if (confirmation) remove.mutate(confirmation);
+            }}
           >
-            {t("deleteEvent")}
+            {confirmation === "future"
+              ? seriesText("cancelFuture")
+              : t("deleteEvent")}
           </Button>
         </div>
       </Dialog>

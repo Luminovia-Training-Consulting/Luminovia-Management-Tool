@@ -4,7 +4,11 @@ import {
   type InstallationBrand,
   internalInstallationBrand,
 } from "../../lib/installation-brand";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import {
+  internalExplorerDocument,
+  isDocumentedRequest,
+  portalOpenApi,
+} from "./contract";
 import {
   authorizeDocumentedRequest,
   isAcademyExplorerRequest,
@@ -43,6 +47,12 @@ const who = { user: { id: "fictional" }, access_token: "test-token" };
 const readMe = { url: backend + "/functions/v1/accounts/v1/me", method: "GET" };
 
 describe("API explorer public document and session boundary", () => {
+  it("ships the same interactive document in the internal browser", () => {
+    expect(
+      internalExplorerDocument(backend, internalInstallationBrand),
+    ).toEqual(portalOpenApi(backend, false, internalInstallationBrand));
+  });
+
   it("reuses the deployed account operation contracts without exposing service-only RPCs", () => {
     const spec = portalOpenApi(backend + "/");
     expect(spec.servers).toEqual([{ url: backend }]);

@@ -28,6 +28,7 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CoursePhaseFilter } from "../learning/course-phase-filter";
+import { CourseSessionRecurrence } from "../learning/course-session-recurrence";
 import {
   scheduledCoursePhase,
   type CoursePhaseSelection,
@@ -440,6 +441,10 @@ function RunForm({
   const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
+  });
+  const lastSession = useWatch({
+    control,
+    name: `sessions.${Math.max(fields.length - 1, 0)}`,
   });
   const selectedTemplateId = useWatch({ control, name: "template_id" });
   const zone = useWatch({ control, name: "time_zone" });
@@ -1031,6 +1036,19 @@ function RunForm({
             >
               {t("addSession")}
             </Button>
+            {lastSession && (
+              <CourseSessionRecurrence
+                anchor={lastSession}
+                zone={zone}
+                sessionCount={fields.length}
+                disabled={!online || save.isPending}
+                onAppend={(entries) =>
+                  append(entries, {
+                    focusName: `sessions.${fields.length}.starts_at`,
+                  })
+                }
+              />
+            )}
           </>
         ) : (
           <>

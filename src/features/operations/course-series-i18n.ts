@@ -21,6 +21,11 @@ const messages = {
   ],
   run: ["Durchlauf {{number}}", "Run {{number}}"],
   firstDay: ["Erster möglicher Unterrichtstag", "First possible teaching day"],
+  repeatStartDates: ["Starttage wiederholen", "Repeat start dates"],
+  repeatStartDatesHint: [
+    "Die Wiederholung beginnt beim spätesten eingetragenen Starttag. Sie füllt leere Starttage und ergänzt weitere Durchläufe. Die Terminprüfung berücksichtigt anschließend Unterrichtstage, Ausnahmen, Klassen und Räume.",
+    "Repeats begin at the latest entered start date. They fill empty start dates and add more runs. The schedule review then applies teaching days and exclusions and checks classes and rooms.",
+  ],
   delivery: ["Durchführungsart", "Delivery mode"],
   online: ["Online", "Online"],
   onsite: ["Präsenz", "On site"],

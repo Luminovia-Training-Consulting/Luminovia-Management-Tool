@@ -774,7 +774,7 @@ it("keeps keyboard focus in the course schedule when adding and removing draft s
   expect(firstStart).toHaveValue("2039-01-02T09:00");
 });
 
-it("creates an academy draft from the selected company and preserves its request on a failed reply", async () => {
+it("creates an academy series draft for the selected company and preserves its request on a failed reply", async () => {
   fake.canCreateDraft = true;
   open("/learning");
   const user = userEvent.setup();
@@ -802,6 +802,18 @@ it("creates an academy draft from the selected company and preserves its request
   fireEvent.change(screen.getByLabelText("End", { exact: true }), {
     target: { value: "2039-01-02T10:00" },
   });
+  const draft = within(
+    screen.getByLabelText("Start", { exact: true }).closest("form")!,
+  );
+  await user.selectOptions(draft.getByLabelText("Repeat"), "weekly");
+  fireEvent.change(draft.getByLabelText("Number of appointments"), {
+    target: { value: "2" },
+  });
+  await user.click(draft.getByRole("button", { name: "Add repeats" }));
+  const repeat = within(screen.getByRole("group", { name: "Session 2" }));
+  expect(repeat.getByLabelText("Start")).toHaveValue("2039-01-09T09:00");
+  expect(repeat.getByLabelText("Start")).toHaveFocus();
+  expect(fake.draftAttempts).toBe(0);
   await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
   expect(
     await screen.findByText(/The course draft could not be confirmed/),
@@ -827,6 +839,10 @@ it("creates an academy draft from the selected company and preserves its request
         {
           starts_at: "2039-01-01T23:00:00.000Z",
           ends_at: "2039-01-02T00:00:00.000Z",
+        },
+        {
+          starts_at: "2039-01-08T23:00:00.000Z",
+          ends_at: "2039-01-09T00:00:00.000Z",
         },
       ],
     },
@@ -1108,6 +1124,55 @@ it("edits a draft schedule using its last confirmed revision and stable session 
       delivery_type: "online",
       venue: "Fictional venue update",
       sessions: [{ id: sessionId, starts_at: start, ends_at: end }],
+    },
+  });
+});
+
+it("extends the editable academy draft without replacing its retained session ID", async () => {
+  fake.publication = { published: false, capacity: null };
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Edit draft schedule and venue", { exact: true }),
+  );
+  const first = within(await screen.findByRole("group", { name: "Session 1" }));
+  fireEvent.change(first.getByLabelText("Start"), {
+    target: { value: "2039-01-02T09:00" },
+  });
+  fireEvent.change(first.getByLabelText("End"), {
+    target: { value: "2039-01-02T10:00" },
+  });
+  await user.selectOptions(screen.getByLabelText("Repeat"), "weekly");
+  fireEvent.change(screen.getByLabelText("Number of appointments"), {
+    target: { value: "2" },
+  });
+  await user.click(screen.getByRole("button", { name: "Add repeats" }));
+  const repeat = within(screen.getByRole("group", { name: "Session 2" }));
+  expect(repeat.getByLabelText("Start")).toHaveValue("2039-01-09T09:00");
+  fireEvent.change(repeat.getByLabelText("End"), {
+    target: { value: "2039-01-09T10:15" },
+  });
+  await user.click(screen.getByRole("button", { name: "Save schedule" }));
+  expect(await screen.findByText("Schedule saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("academy_save_draft_schedule", {
+    p_course_id: id,
+    p_expected_revision: 1,
+    p_payload: {
+      time_zone: "Australia/Brisbane",
+      delivery_type: "online",
+      venue: "",
+      sessions: [
+        {
+          id: sessionId,
+          starts_at: "2039-01-01T23:00:00.000Z",
+          ends_at: "2039-01-02T00:00:00.000Z",
+        },
+        {
+          id: null,
+          starts_at: "2039-01-08T23:00:00.000Z",
+          ends_at: "2039-01-09T00:15:00.000Z",
+        },
+      ],
     },
   });
 });

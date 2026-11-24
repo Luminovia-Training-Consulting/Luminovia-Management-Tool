@@ -532,6 +532,10 @@ const pairs: Record<string, [string, string]> = {
     "Remove session {{number}}",
   ],
   academyAddSession: ["Termin hinzufügen", "Add session"],
+  courseSessionRecurrenceHint: [
+    "Die Serie wiederholt den letzten Termin in der Liste. Neue Termine werden angehängt und bleiben einzeln bearbeitbar.",
+    "The series repeats the last session in the list. Added sessions can be edited individually.",
+  ],
   academySaveDraft: ["Entwurf speichern", "Save draft"],
   academyEditDraftSchedule: [
     "Termine und Kursort bearbeiten",

@@ -765,6 +765,53 @@ it("saves a new run as a draft and retries a failed run without duplicating the 
   });
 });
 
+it("appends an editable series to the last course session and preserves the local time over DST", async () => {
+  renderCourses();
+  const user = userEvent.setup();
+  const dialog = await newRun();
+  const form = within(dialog);
+  interval(dialog, "2030-03-17T09:00", "2030-03-17T10:00");
+  await user.click(form.getByRole("button", { name: "Termin ergänzen" }));
+  interval(dialog, "2030-03-24T09:00", "2030-03-24T10:00", 2);
+  await user.selectOptions(form.getByLabelText("Wiederholung"), "weekly");
+  fireEvent.change(form.getByLabelText("Anzahl der Termine"), {
+    target: { value: "2" },
+  });
+  await user.click(
+    form.getByRole("button", { name: "Wiederholungen ergänzen" }),
+  );
+  expect(form.getByLabelText("Beginn 1")).toHaveValue("2030-03-17T09:00");
+  expect(form.getByLabelText("Beginn 2")).toHaveValue("2030-03-24T09:00");
+  expect(form.getByLabelText("Beginn 3")).toHaveValue("2030-03-31T09:00");
+  expect(form.getByLabelText("Beginn 3")).toHaveFocus();
+  expect(state.rpc).not.toHaveBeenCalled();
+  fireEvent.change(form.getByLabelText("Ende 3"), {
+    target: { value: "2030-03-31T10:15" },
+  });
+  await user.click(form.getByRole("button", { name: "Entwurf speichern" }));
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("save_course_run", {
+      p_id: null,
+      p_payload: expect.objectContaining({
+        sessions: [
+          {
+            starts_at: "2030-03-17T08:00:00.000Z",
+            ends_at: "2030-03-17T09:00:00.000Z",
+          },
+          {
+            starts_at: "2030-03-24T08:00:00.000Z",
+            ends_at: "2030-03-24T09:00:00.000Z",
+          },
+          {
+            starts_at: "2030-03-31T07:00:00.000Z",
+            ends_at: "2030-03-31T08:15:00.000Z",
+          },
+        ],
+      }),
+    }),
+  );
+});
+
 describe("course form failure and confirmation boundaries", () => {
   it.each([
     ["nonexistent Berlin time", "2030-03-31T02:30", "2030-03-31T04:00"],
@@ -1177,6 +1224,7 @@ describe("course form failure and confirmation boundaries", () => {
     ).toHaveAttribute("href", `/changes?claim=${claimId}&new=1`);
     expect(dialog.getByLabelText("Ort / Zugangslink")).toBeEnabled();
     expect(dialog.queryByLabelText("Beginn 1")).not.toBeInTheDocument();
+    expect(dialog.queryByLabelText("Wiederholung")).not.toBeInTheDocument();
   });
 
   it("submits permitted linked course changes together with the reviewed offer version", async () => {

@@ -26,13 +26,11 @@ test("course series reviews room collisions and creates independent exact drafts
     .from("organisations")
     .insert({ id: companyId, name: company });
   expect(orgWrite.error).toBeNull();
-  const templateWrite = await service
-    .from("course_templates")
-    .insert({
-      id: templateId,
-      owner_organisation_id: companyId,
-      title: template,
-    });
+  const templateWrite = await service.from("course_templates").insert({
+    id: templateId,
+    owner_organisation_id: companyId,
+    title: template,
+  });
   expect(templateWrite.error).toBeNull();
 
   await page.goto("/login");
@@ -55,7 +53,13 @@ test("course series reviews room collisions and creates independent exact drafts
     .selectOption(templateId);
   await dialog.getByLabel("Zeitzone der Termine").selectOption("Europe/Berlin");
   await dialog.getByLabel("Unterrichtstage je Durchlauf").fill("2");
-  const firstDay = DateTime.utc().plus({ days: 40 }).startOf("week");
+  const firstMonday = (month: DateTime) =>
+    month
+      .startOf("month")
+      .plus({ days: (8 - month.startOf("month").weekday) % 7 });
+  const month = DateTime.utc().plus({ months: 2 });
+  const firstDay = firstMonday(month);
+  const repeatDay = firstMonday(month.plus({ months: 1 }));
   const omitted = firstDay.plus({ days: 1 });
   await dialog.getByLabel("Unterrichtsfreie Daten").fill(omitted.toISODate()!);
   const first = dialog.getByRole("group", { name: "Durchlauf 1", exact: true });
@@ -86,6 +90,19 @@ test("course series reviews room collisions and creates independent exact drafts
   expect(initial.data).toEqual([]);
 
   await second.getByLabel("Raum oder Ort").fill("Room B");
+  const repeat = dialog.getByRole("group", { name: "Starttage wiederholen" });
+  await repeat
+    .getByLabel("Wiederholung", { exact: true })
+    .selectOption("monthly");
+  await repeat.getByLabel("Muster im Monat").selectOption("weekday");
+  await repeat.getByLabel("Anzahl der Termine").fill("2");
+  await repeat.getByRole("button", { name: "Wiederholungen ergänzen" }).click();
+  const third = dialog.getByRole("group", { name: "Durchlauf 3", exact: true });
+  await expect(third.getByLabel("Erster möglicher Unterrichtstag")).toHaveValue(
+    repeatDay.toISODate()!,
+  );
+  await third.getByLabel("Durchführungsart").selectOption("onsite");
+  await third.getByLabel("Raum oder Ort").fill("Room C");
   await dialog
     .getByRole("button", { name: "Termine und Konflikte prüfen" })
     .click();
@@ -113,13 +130,21 @@ test("course series reviews room collisions and creates independent exact drafts
         )
         .sort(),
     })),
-  ).toEqual(
-    ["Room A", "Room B"].map((venue) => ({
+  ).toEqual([
+    ...["Room A", "Room B"].map((venue) => ({
       venue,
       published: false,
       sessions: [firstDay.toISODate(), firstDay.plus({ days: 2 }).toISODate()],
     })),
-  );
+    {
+      venue: "Room C",
+      published: false,
+      sessions: [
+        repeatDay.toISODate(),
+        repeatDay.plus({ days: 1 }).toISODate(),
+      ],
+    },
+  ]);
   await dialog.getByRole("link", { name: "Durchlauf 1 öffnen" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/courses\\?run=${result.data?.[0].id}$`),

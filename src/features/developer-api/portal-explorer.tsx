@@ -1,5 +1,5 @@
 import { internalInstallationBrand } from "../../lib/installation-brand";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { internalExplorerDocument, isDocumentedRequest } from "./contract";
 import { Explorer } from "./explorer";
 
 export function ApiExplorer() {
@@ -15,5 +15,5 @@ export function ApiExplorer() {
 }
 
 function portalExplorerDocument(backend: string) {
-  return portalOpenApi(backend, false, internalInstallationBrand);
+  return internalExplorerDocument(backend, internalInstallationBrand);
 }
