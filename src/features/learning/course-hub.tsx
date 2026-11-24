@@ -33,6 +33,7 @@ import { CoursePhaseFilter } from "./course-phase-filter";
 import { CompanyInvitations } from "./company-invitations";
 import { MaterialLibrary } from "./material-library";
 import { AcademyCourseDraft } from "./academy-draft";
+import { LearningPrograms } from "./learning-programs";
 import "./i18n";
 import "./learning.css";
 
@@ -129,10 +130,12 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const [params] = useSearchParams();
   const materials = params.get("view") === "materials";
   const results = params.get("view") === "results";
-  const dashboard = !materials && !results;
+  const programmes = params.get("view") === "programmes";
+  const dashboard = !materials && !results && !programmes;
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
+    enabled: !programmes,
     staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: 10_000,
@@ -155,6 +158,14 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
             {t("materialLibrary")}
           </Link>
         </Button>
+        <Button asChild variant={programmes ? "default" : "secondary"}>
+          <Link
+            to="/learning?view=programmes"
+            aria-current={programmes ? "page" : undefined}
+          >
+            {t("title", { ns: "learningPrograms" })}
+          </Link>
+        </Button>
         <Button asChild variant={results ? "default" : "secondary"}>
           <Link
             to="/learning?view=results"
@@ -171,7 +182,9 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
       {dashboard && !academy && roles.data?.includes("participant") && (
         <CompanyInvitations actor={actor} />
       )}
-      {results ? (
+      {programmes ? (
+        <LearningPrograms actor={actor} />
+      ) : results ? (
         <PublishedExamResults actor={actor} />
       ) : query.isPending || !query.isFetchedAfterMount ? (
         <Loading />

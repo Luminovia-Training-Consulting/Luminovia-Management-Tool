@@ -2,6 +2,30 @@
 import i18n from "../../lib/i18n";
 
 const de = {
+  deliveryFailures: "Fehlgeschlagene Zustellungen",
+  deliveryFailuresHelp:
+    "Hier stehen die letzten 80 offenen Fehler bei Einladungen und Kursmails.",
+  noDeliveryFailures: "Keine offenen Zustellfehler.",
+  refreshFailures: "Zustellstatus aktualisieren",
+  failedCourseMail: "Kursmail",
+  failedInvitation: "Einladung",
+  recipientUnavailable: "Keine bestätigte Empfängeradresse",
+  recipientRejected: "Empfängeradresse abgewiesen",
+  senderRejected: "Absenderadresse abgewiesen",
+  outcomeUncertain: "Annahme durch den Mailserver unklar",
+  checkBeforeRetry:
+    "Prüfe beim Mailanbieter, ob diese Nachricht bereits angenommen wurde.",
+  correctedRecipient: "Empfängeradresse für die Einladung",
+  verifiedRecipientHint:
+    "Kursmails gehen an die bestätigte Adresse des zugehörigen Kontos. Bei einem Tippfehler muss die betroffene Person ihre Konto-Adresse korrigieren und bestätigen.",
+  retryDelivery: "Zustellung erneut anstoßen",
+  retrying: "Zustellung wird bearbeitet …",
+  retryQueued: "Die Kursmail wurde erneut in die Warteschlange gestellt.",
+  inviteAccepted: "Der Einladungsdienst hat den Versand bestätigt.",
+  inviteChecking:
+    "Der Einladungsversand wird bearbeitet. Prüfe den Zustellstatus erneut.",
+  retryFailed:
+    "Der Wiederholungsversuch wurde nicht bestätigt. Prüfe den aktualisierten Zustellstatus.",
   title: "E-Mail-Transport",
   setupTitle: "Einrichtung prüfen",
   smtpConfigured: "SMTP ist aktiviert und Zugangsdaten sind gespeichert.",
@@ -73,6 +97,30 @@ const de = {
   noPermission: "Für die E-Mail-Verwaltung ist Administration erforderlich.",
 };
 const en: typeof de = {
+  deliveryFailures: "Failed deliveries",
+  deliveryFailuresHelp:
+    "The latest 80 unresolved invitation and course mail failures.",
+  noDeliveryFailures: "No unresolved delivery failures.",
+  refreshFailures: "Refresh delivery status",
+  failedCourseMail: "Course mail",
+  failedInvitation: "Invitation",
+  recipientUnavailable: "No verified recipient address",
+  recipientRejected: "Recipient address rejected",
+  senderRejected: "Sender address rejected",
+  outcomeUncertain: "Mail server acceptance is uncertain",
+  checkBeforeRetry:
+    "Check with the mail provider whether this message was already accepted.",
+  correctedRecipient: "Invitation recipient address",
+  verifiedRecipientHint:
+    "Course mail goes to the verified address of the linked account. To fix a typo, the account holder must correct and confirm their email address.",
+  retryDelivery: "Retry delivery",
+  retrying: "Processing delivery …",
+  retryQueued: "Course mail was put back in the delivery queue.",
+  inviteAccepted: "The invitation service confirmed sending.",
+  inviteChecking:
+    "Invitation delivery is in progress. Check the delivery status again.",
+  retryFailed:
+    "The retry could not be confirmed. Check the updated delivery status.",
   title: "Mail transport",
   setupTitle: "Setup status",
   smtpConfigured: "SMTP is enabled and credentials are stored.",

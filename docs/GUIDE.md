@@ -1544,6 +1544,8 @@ Readiness writes lock the current caller profile before waiting for the course g
 
 ## Authoritative calculation
 
+The course-start panel and Control Center use the same preparation checks. A course manager can assign a responsible course manager and an optional backup. Scheduled courses without an owner appear in the Control Center. The effective deadline is the earlier of the configured preparation deadline and 24 hours before the first session. The installed PostgreSQL scheduler sends in-app reminders to the responsible office up to 24 hours before that deadline and escalates overdue incomplete courses to the configured backup or current management. Draft-only plans are excluded from scheduled alerts. Check the scheduler on the target installation.
+
 No percentage or readiness state can be edited. PostgreSQL recalculates applicable checks from current records for every response. The percentage is the number of complete applicable checks divided by applicable checks, rounded to a whole percentage. Customer organisation and contact are distinct checks so missing contact information is visible.
 
 The checks cover every course session and every required lecturer position, an applicable documented agreement, verified qualifications covering the assignment, clean current teaching materials available to each assigned lecturer, HTTPS meeting or physical venue, active customer/contact records, explicit confirmation of the current schedule, acknowledgements of the current instruction version and required preparation tasks. Mandatory job contract prerequisites cannot be waived in preparation

@@ -97,6 +97,8 @@ const de = {
   contract_expiring: "Vertrag läuft aus",
   activity: "Neue Aktivität",
   support_update: "Neue Supportantwort oder Statusänderung",
+  course_start_due: "Kursstart: Vorbereitung abschließen",
+  course_start_escalated: "Kursstart: Vorbereitung überfällig",
   readiness_task: "Vorbereitungsaufgabe zugewiesen oder geändert",
   website_enquiry: "Neue Schulungsanfrage eingegangen",
   replacement_available: "Passender Ersatzeinsatz verfügbar",
@@ -158,6 +160,8 @@ const en: Record<keyof typeof de, string> = {
   payment_received: "Payment received",
 
   support_update: "New support reply or status change",
+  course_start_due: "Course start: complete preparation",
+  course_start_escalated: "Course start: preparation overdue",
   readiness_task: "Preparation task assigned or changed",
   website_enquiry: "New training enquiry received",
   replacement_available: "Eligible replacement assignment available",

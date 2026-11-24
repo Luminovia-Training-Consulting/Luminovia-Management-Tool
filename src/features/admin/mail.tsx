@@ -19,6 +19,7 @@ import {
   academyMailPaths,
   mailRuntimeStatus,
 } from "../developer-api/academy-mail-contract";
+import { MailDeliveryRecovery } from "./mail-delivery-recovery";
 import "./mail-i18n";
 
 type Protocol = "smtp" | "imap";
@@ -404,6 +405,11 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
           {t(notice)}
         </Notice>
       )}
+      <MailDeliveryRecovery
+        actor={actor}
+        readOnly={readOnly}
+        academy={Boolean(academy)}
+      />
       <form
         className="panel mail-configuration"
         onSubmit={(event) => {

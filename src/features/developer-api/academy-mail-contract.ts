@@ -2,6 +2,7 @@
 import { z } from "zod";
 
 const credentials = [{ apiKey: [], bearerAuth: [] }];
+const internalSecurity = [{ publicApiKey: [], bearerAuth: [] }];
 const tags = ["Local academy SMTP"];
 const json = (schema: z.ZodType) => ({
   "application/json": { schema: z.toJSONSchema(schema) },
@@ -128,7 +129,76 @@ const runtimeStatusOperation = (
     "503": response("Status unavailable", edgeError),
   },
 });
+export const mailDeliveryFailure = z.strictObject({
+  id: z.uuid(),
+  kind: z.enum(["invitation", "course"]),
+  status: z.enum(["failed", "uncertain"]),
+  recipient: z.string().nullable(),
+  failed_at: z.iso.datetime({ offset: true }),
+  created_at: z.iso.datetime({ offset: true }),
+  error_code: z.string().nullable(),
+  retry_allowed: z.boolean(),
+});
+
+const recoveryId = z.strictObject({
+  p_delivery_id: z.uuid(),
+  p_failed_at: z.iso.datetime({ offset: true }),
+  p_request_id: z.uuid(),
+});
+
+function mailRecoveryPaths(academy: boolean) {
+  const prefix = academy ? "academy" : "internal";
+  const operationTags = academy ? tags : ["Mail administration"];
+  const security = academy ? credentials : internalSecurity;
+  return {
+    "/rest/v1/rpc/mail_delivery_failures": {
+      get: {
+        operationId: `${prefix}MailDeliveryFailures`,
+        tags: operationTags,
+        security,
+        ...(academy && { "x-portal-licence": "active-or-grace" }),
+        summary:
+          "Read the latest failed invitation and course email deliveries",
+        description:
+          "Requires current mail administration authority. Returns at most 80 currently unresolved failures and uncertain outcomes, excluding credentials and raw provider responses.",
+        responses: {
+          "200": response(
+            "Recent failed or uncertain deliveries",
+            mailDeliveryFailure.array().max(80),
+          ),
+          "401": response("Authentication required"),
+          "403": forbidden,
+        },
+      },
+    },
+    "/rest/v1/rpc/retry_course_mail_delivery": {
+      post: {
+        operationId: `${prefix}RetryCourseMailDelivery`,
+        tags: operationTags,
+        security,
+        ...(academy && { "x-portal-licence": "active" }),
+        summary: "Requeue one definitively failed course email",
+        description:
+          "Uses the original course event, its current verified account address, current course access and notification settings. Pass the retained failure timestamp and a stable request UUID. Ambiguous SMTP outcomes cannot be requeued.",
+        requestBody: { required: true, content: json(recoveryId) },
+        responses: {
+          "200": response("Durably queued email UUID", z.uuid()),
+          "400": response("Malformed delivery receipt or request identity"),
+          "401": response("Authentication required"),
+          "403": forbidden,
+          "409": response(
+            "Delivery state, access or recipient preferences changed",
+          ),
+        },
+      },
+    },
+  };
+}
+
+export const internalMailRecoveryPaths = mailRecoveryPaths(false);
+
 export const academyMailPaths = {
+  ...mailRecoveryPaths(true),
   "/rest/v1/rpc/get_mail_configuration": {
     post: {
       operationId: "readAcademyMailConfiguration",
@@ -236,7 +306,6 @@ export const academyMailPaths = {
   },
 };
 
-const internalSecurity = [{ publicApiKey: [], bearerAuth: [] }];
 const internalTags = ["Mail transport"];
 const internalForbidden = response(
   "Current mail administration authority required",

@@ -57,7 +57,7 @@ beforeEach(async () => {
     },
   };
   fake.rpc.mockImplementation(
-    async (
+    (
       name: string,
       args?: {
         p_smtp: {
@@ -71,6 +71,8 @@ beforeEach(async () => {
         };
       },
     ) => {
+      if (name === "mail_delivery_failures")
+        return { abortSignal: async () => ({ data: [], error: null }) };
       if (name === "get_mail_configuration")
         return { data: structuredClone(fake.configuration), error: null };
       if (name === "save_mail_configuration" && args) {

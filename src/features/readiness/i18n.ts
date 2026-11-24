@@ -2,6 +2,20 @@
 import i18n from "../../lib/i18n";
 
 const de = {
+  courseStart: "Kursstart-Freigabe",
+  startReady: "Kursstart bereit",
+  startPending: "Vorbereitung offen",
+  startOverdue: "Vorbereitung überfällig",
+  startUnscheduled: "Kursstart ohne Termin",
+  startOwner: "Verantwortlich für den Kursstart",
+  startBackup: "Vertretung bei überfälliger Vorbereitung",
+  startUnassigned: "Noch nicht zugewiesen",
+  startDeadline: "Vorbereitung abschließen bis",
+  startMissing: "Noch offen: {{items}}",
+  startSave: "Zuständigkeit speichern",
+  startSaveError:
+    "Zuständigkeit konnte nicht gespeichert werden. Lade den aktuellen Stand neu.",
+  startNoOpen: "Keine offenen Kursstarts in den nächsten sieben Tagen.",
   title: "Kursbereitschaft",
   intro:
     "Verbindliche Vorbereitung aus den aktuellen Kursdaten. Nur bestätigte Serverdaten zählen.",
@@ -112,6 +126,19 @@ const de = {
     "„Vorbereitung abgeschlossen“ bedeutet: Alle Prüfungen sind erfüllt und die Kurstermine liegen in der Vergangenheit. Dies bestätigt keine Unterrichtsleistung.",
 };
 const en = {
+  courseStart: "Course start clearance",
+  startReady: "Ready to start",
+  startPending: "Preparation open",
+  startOverdue: "Preparation overdue",
+  startUnscheduled: "Course start unscheduled",
+  startOwner: "Responsible for course start",
+  startBackup: "Backup for overdue preparation",
+  startUnassigned: "Unassigned",
+  startDeadline: "Complete preparation by",
+  startMissing: "Still open: {{items}}",
+  startSave: "Save responsibility",
+  startSaveError: "Could not save responsibility. Reload the current version.",
+  startNoOpen: "No open starts in the next seven days.",
   title: "Course readiness",
   intro:
     "Reliable preparation derived from current course records. Only confirmed server data counts.",

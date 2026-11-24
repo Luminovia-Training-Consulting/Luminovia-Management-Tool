@@ -3,6 +3,7 @@
  */
 /** Dependency-injected invitation boundary. All sends require a durable DB reservation first. */
 import {boundedJson, RequestBodyTooLarge} from "../_shared/bounded-body.ts";
+import {definiteInvitationRejection} from "../_shared/invitation-delivery-rejection.ts";
 
 // Validated request with normalized email and an explicit retry key.
 export type InviteBody = {
@@ -20,6 +21,7 @@ export type InviteDependencies = {
     authorize: (token: string) => Promise<boolean>;
     reserve: (token: string, body: InviteBody) => Promise<Reservation>;
     send: (body: InviteBody, redirectTo: string) => Promise<string>;
+    rejectDelivery?: (id: string, definite: boolean) => Promise<void>;
     complete: (
         id: string,
         userId: string | null,
@@ -122,14 +124,12 @@ export function createHandler(deps: InviteDependencies) {
                     body,
                     new URL("/auth/callback", deps.appOrigin).toString(),
                 );
-            } catch {
-                // Uncertain send failures are durably blocked from automatic retry.
-                await deps.complete(
-                    reservation.invitation_id,
-                    null,
-                    body.display_name,
-                    false,
-                );
+            } catch (error) {
+                if (deps.rejectDelivery) {
+                    await deps.rejectDelivery(reservation.invitation_id, definiteInvitationRejection(error));
+                } else {
+                    await deps.complete(reservation.invitation_id, null, body.display_name, false);
+                }
                 return respond(502, {
                     status: "failed",
                     invitation_id: reservation.invitation_id,

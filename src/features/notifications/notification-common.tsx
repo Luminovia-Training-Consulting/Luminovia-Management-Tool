@@ -57,6 +57,8 @@ const knownKinds = new Set([
   "course_quiz_published",
   "course_attendance_updated",
   "course_schedule_changed",
+  "course_start_due",
+  "course_start_escalated",
   "academy_course_enrolled",
   "course_completion_issued",
   "course_completion_revoked",

@@ -10,16 +10,26 @@ import {
 import { Field, Notice } from "./common";
 import { Button } from "./ui/button";
 
+function rejectionCode(cause: unknown) {
+  return cause && typeof cause === "object" && "code" in cause
+    ? cause.code
+    : null;
+}
+
+function definitivelyRejected(cause: unknown) {
+  const code = rejectionCode(cause);
+  return typeof code === "string" && /^(22|23)\d{3}$/.test(code);
+}
+
 function saveFailureReason(cause: unknown, de: boolean) {
-  const code =
-    cause && typeof cause === "object" && "code" in cause ? cause.code : null;
+  const code = rejectionCode(cause);
   if (code === "42501")
     return de ? "Berechtigung fehlt." : "Permission required.";
   if (code === "PT409")
     return de
       ? "Die Importkennung wurde bereits für andere Daten verwendet."
       : "The import key was already used for different data.";
-  if (typeof code === "string" && /^(22|23)\d{3}$/.test(code))
+  if (definitivelyRejected(cause))
     return de
       ? "Die Daten wurden abgelehnt."
       : "The server rejected the row data.";
@@ -56,12 +66,59 @@ export function TableImport<T>({
   const online = useOnline();
   const id = useId();
   const [rows, setRows] = useState<
-    { number: number; cells: string[]; value: T; key: string }[]
+    {
+      number: number;
+      cells: string[];
+      parsed: { valid: true; value: T } | { valid: false };
+      key: string;
+    }[]
   >([]);
   const [status, setStatus] = useState("");
   const [error, setError] = useState(false);
   const [completed, setCompleted] = useState(0);
-  const [failed, setFailed] = useState<number | null>(null);
+  const [failed, setFailed] = useState<{
+    number: number;
+    editable: boolean;
+  } | null>(null);
+  const [batchFailure, setBatchFailure] = useState<
+    "rejected" | "unconfirmed" | null
+  >(null);
+  const [repairable, setRepairable] = useState<Set<number>>(new Set());
+  const invalid = rows.some((row) => !row.parsed.valid);
+
+  function parseCells(cells: string[]): (typeof rows)[number]["parsed"] {
+    try {
+      return {
+        valid: true,
+        value: parse(
+          Object.fromEntries(
+            columns.map((name, index) => [name, cells[index]]),
+          ),
+        ),
+      };
+    } catch {
+      return { valid: false };
+    }
+  }
+
+  function parsedValue(row: (typeof rows)[number]): T {
+    if (!row.parsed.valid) throw new Error("The import row must be corrected");
+    return row.parsed.value;
+  }
+
+  function correctCell(number: number, column: number, value: string) {
+    const nextKey = crypto.randomUUID();
+    setRepairable((previous) => new Set(previous).add(number));
+    setRows((current) =>
+      current.map((row) => {
+        if (row.number !== number) return row;
+        const cells = row.cells.map((cell, index) =>
+          index === column ? value : cell,
+        );
+        return { ...row, cells, key: nextKey, parsed: parseCells(cells) };
+      }),
+    );
+  }
   const [busy, setBusy] = useState(false);
 
   async function prepare(file: File) {
@@ -69,6 +126,8 @@ export function TableImport<T>({
     setRows([]);
     setCompleted(0);
     setFailed(null);
+    setBatchFailure(null);
+    setRepairable(new Set());
     setStatus("");
     setError(false);
     let row = 1;
@@ -86,11 +145,7 @@ export function TableImport<T>({
             number: rowNumber,
             key: crypto.randomUUID(),
             cells,
-            value: parse(
-              Object.fromEntries(
-                columns.map((name, index) => [name, cells[index]]),
-              ),
-            ),
+            parsed: parseCells(cells),
           };
         }),
       );
@@ -131,13 +186,14 @@ export function TableImport<T>({
   }
 
   async function confirm() {
+    if (invalid || !online || busy) return;
     setBusy(true);
     setStatus("");
     setError(false);
     let confirmed = completed;
     try {
       if (saveBatch) {
-        const outcome = await saveBatch(rows.map(({ value }) => value));
+        const outcome = await saveBatch(rows.map(parsedValue));
         setRows([]);
         setStatus(
           de
@@ -147,7 +203,7 @@ export function TableImport<T>({
         return;
       }
       for (const row of rows.slice(confirmed)) {
-        await save(row.value, row.key);
+        await save(parsedValue(row), row.key);
         setFailed(null);
         setCompleted(++confirmed);
       }
@@ -159,6 +215,9 @@ export function TableImport<T>({
     } catch (cause) {
       setError(true);
       if (saveBatch) {
+        setBatchFailure(
+          definitivelyRejected(cause) ? "rejected" : "unconfirmed",
+        );
         setStatus(
           de
             ? "Der Import wurde nicht bestätigt."
@@ -166,7 +225,7 @@ export function TableImport<T>({
         );
       } else {
         const row = rows[confirmed].number;
-        setFailed(row);
+        setFailed({ number: row, editable: definitivelyRejected(cause) });
         const reason = saveFailureReason(cause, de);
         setStatus(
           de
@@ -226,7 +285,7 @@ export function TableImport<T>({
           <details open>
             <summary>{de ? "Vorschau" : "Preview"}</summary>
             <ul>
-              {rows.map(({ number, cells }, index) => (
+              {rows.map(({ number, cells, parsed: { valid } }, index) => (
                 <li key={number}>
                   {number}: {cells.filter(Boolean).join(" · ")}
                   {!saveBatch && " · "}
@@ -236,15 +295,57 @@ export function TableImport<T>({
                         ? de
                           ? "Gespeichert"
                           : "Saved"
-                        : number === failed
+                        : !valid ||
+                            (failed?.number === number && failed.editable)
                           ? de
-                            ? "Bestätigung fehlt"
-                            : "Unconfirmed"
-                          : de
-                            ? "Offen"
-                            : "Pending"}
+                            ? "Korrektur nötig"
+                            : "Correction required"
+                          : number === failed?.number
+                            ? de
+                              ? "Bestätigung fehlt"
+                              : "Unconfirmed"
+                            : de
+                              ? "Offen"
+                              : "Pending"}
                     </small>
                   )}
+                  {index >= completed &&
+                    batchFailure !== "unconfirmed" &&
+                    (!valid ||
+                      batchFailure === "rejected" ||
+                      repairable.has(number) ||
+                      (failed?.editable && failed.number === number)) &&
+                    (failed?.number !== number || failed.editable) && (
+                      <details open={!valid || repairable.has(number)}>
+                        <summary>
+                          {de
+                            ? `Zeile ${number} korrigieren`
+                            : `Correct row ${number}`}
+                        </summary>
+                        <div className="form-grid">
+                          {columns.map((column, field) => {
+                            const fieldId = `${id}-row-${number}-${field}`;
+                            return (
+                              <Field key={column} id={fieldId} label={column}>
+                                <input
+                                  id={fieldId}
+                                  type="text"
+                                  value={cells[field]}
+                                  disabled={busy}
+                                  onChange={(event) =>
+                                    correctCell(
+                                      number,
+                                      field,
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    )}
                 </li>
               ))}
             </ul>
@@ -269,7 +370,7 @@ export function TableImport<T>({
           {completed < rows.length && (
             <Button
               type="button"
-              disabled={!online || busy}
+              disabled={!online || busy || invalid}
               onClick={() => void confirm()}
             >
               {failed !== null

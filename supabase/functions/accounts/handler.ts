@@ -3,6 +3,7 @@
  * injected invitation and confirmed-deletion adapters hold server privileges.
  */
 import {boundedJson} from "../_shared/bounded-body.ts";
+import {definiteInvitationRejection} from "../_shared/invitation-delivery-rejection.ts";
 import type {DeletionResult} from "./deletion-worker.ts";
 
 export const roles = [
@@ -71,6 +72,7 @@ export interface AccountDependencies {
         displayName: string,
         success: boolean,
     ) => Promise<void>;
+    rejectInvitationDelivery?: (id: string, definite: boolean) => Promise<void>;
     executeDeletion?: (
         token: string,
         operationId: string,
@@ -246,7 +248,8 @@ export function createAccountHandler(deps: AccountDependencies) {
         if (!token) return response(401, {error: "authentication_required"});
         try {
             const companyInvitation = path === "/v1/academy/company-invitations";
-            if (path === "/v1/academy/users" || companyInvitation) {
+            const academyRetry = /^\/v1\/academy\/invitations\/([^/]+)\/retry$/.exec(path);
+            if (path === "/v1/academy/users" || companyInvitation || academyRetry) {
                 if (request.method !== "POST") return response(405, {error: "method_not_allowed"});
                 const companyActor = companyInvitation ? await deps.resolveAcademyActor?.(token) : null;
                 if (companyInvitation ? !uuid(companyActor) : !(await deps.authenticateAcademy?.(token)))
@@ -255,6 +258,13 @@ export function createAccountHandler(deps: AccountDependencies) {
                 if (!object(input)) return response(400, {error: "invalid_request"});
                 let course: unknown;
                 let account = input;
+                if (academyRetry) {
+                    if (!uuid(academyRetry[1]) || Object.keys(input).some((key) => key !== "email" && key !== "idempotency_key")) {
+                        return response(400, {error: "invalid_request"});
+                    }
+                    // Only the database can supply invitation metadata for a retry.
+                    account = {...input, mode: "invite", role: "lecturer", organisation_id: null};
+                }
                 if (companyInvitation) {
                     const {course_id, email, display_name, idempotency_key, ...extra} = input;
                     if (!uuid(course_id) || Object.keys(extra).length > 0)
@@ -264,7 +274,7 @@ export function createAccountHandler(deps: AccountDependencies) {
                 }
                 const {mode, password, role, organisation_id, ...metadata} = account;
                 const base = parseInvitation(metadata);
-                if (!base?.display_name ||
+                if (!base || (!academyRetry && !base.display_name) ||
                     (role !== "lecturer" && role !== "participant" && role !== "management" && role !== "client") ||
                     (role === "participant" || role === "client" ? !uuid(organisation_id) : organisation_id !== null) ||
                     (mode !== "password" && mode !== "invite") ||
@@ -273,14 +283,18 @@ export function createAccountHandler(deps: AccountDependencies) {
                 if (!deps.privilegedRpc || !deps.removeCreatedAccount ||
                     (mode === "password" ? !deps.createAccount : !deps.invitationsEnabled))
                     return response(503, {error: mode === "invite" ? "invitations_disabled" : "creation_disabled"});
-                const invitation: Invitation<ProvisionedRole> = {...base, role,
+                let invitation: Invitation<ProvisionedRole> = {...base, role,
                     organisation_id: !companyInvitation && typeof organisation_id === "string" ? organisation_id : null};
                 const requestFields = {
                     p_request_id: invitation.idempotency_key,
                     p_email: invitation.email,
                     p_display_name: invitation.display_name,
                 };
-                const reservation = companyInvitation
+                const reservation = academyRetry
+                    ? await deps.rpc(token, "academy_reserve_invitation_delivery_retry", {
+                        p_invitation_id: academyRetry[1], p_email: invitation.email, p_request_id: invitation.idempotency_key,
+                    })
+                    : companyInvitation
                     ? await deps.privilegedRpc("reserve_academy_company_invitation", {
                         ...requestFields, p_creator: companyActor, p_course_id: course,
                     }) : await deps.rpc(token, "reserve_academy_account", {
@@ -305,6 +319,18 @@ export function createAccountHandler(deps: AccountDependencies) {
 
                 const record = reservation.data;
                 const creationId = record.creation_id;
+                if (academyRetry) {
+                    const recovered = parseInvitation({
+                        email: record.email, display_name: record.display_name, idempotency_key: invitation.idempotency_key,
+                    });
+                    const storedRole = record.role;
+                    if (!recovered?.display_name ||
+                        (storedRole !== "lecturer" && storedRole !== "participant" && storedRole !== "management" && storedRole !== "client") ||
+                        (storedRole === "participant" || storedRole === "client" ? !uuid(record.organisation_id) : record.organisation_id !== null)) {
+                        return response(503, {error: "creation_unavailable"});
+                    }
+                    invitation = {...recovered, role: storedRole, organisation_id: record.organisation_id as string | null};
+                }
                 const receipt = (status: number, userId: string, mail = {}) =>
                     companyInvitation ? requested() : response(status, {status: "created", user_id: userId, ...mail});
                 if (record.status === "created" && uuid(record.user_id)) return receipt(200, record.user_id);
@@ -330,7 +356,15 @@ export function createAccountHandler(deps: AccountDependencies) {
                         if (!completed.error && object(completed.data) &&
                             completed.data.status === "created" && completed.data.user_id === identity)
                             return receipt(201, identity, mode === "password" ? await accessMail(invitation.email) : {});
-                    } catch {
+                    } catch (error) {
+                        if (mode === "invite" && !createdId && definiteInvitationRejection(error)) {
+                            const rejected = await deps.privilegedRpc("academy_reject_invitation_delivery", {
+                                p_creation_id: creationId,
+                            });
+                            if (!rejected.error && rejected.data === true) {
+                                return companyInvitation ? requested() : response(502, {error: "creation_failed"});
+                            }
+                        }
                         // Auth or PostgREST may have committed before the transport failed.
                     }
                 }
@@ -833,44 +867,58 @@ export function createAccountHandler(deps: AccountDependencies) {
                 }
                 return response(202, {status: "requested"});
             }
-            if (path === "/v1/invitations" && request.method === "POST") {
+            const retryInvitation = /^\/v1\/invitations\/([^/]+)\/retry$/.exec(path);
+            if ((path === "/v1/invitations" || retryInvitation) && request.method === "POST") {
                 if (!deps.invitationsEnabled) {
                     return response(503, {error: "invitations_disabled"});
                 }
-                const invitation = parseInvitation(await body(request));
-                if (!invitation) return response(400, {error: "invalid_request"});
+                const input = await body(request);
+                let invitation = parseInvitation(input);
+                if (!invitation ||
+                    (retryInvitation && (!uuid(retryInvitation[1]) ||
+                        !object(input) || Object.keys(input).some((key) => key !== "email" && key !== "idempotency_key")))) {
+                    return response(400, {error: "invalid_request"});
+                }
                 // Complete the shared durable reservation before invoking external delivery.
-                const reserved = await deps.rpc(token, "reserve_account_invitation", {
-                    p_email: invitation.email,
-                    p_display_name: invitation.display_name,
-                    p_role: invitation.role,
-                    p_organisation_id: invitation.organisation_id,
-                    p_idempotency_key: invitation.idempotency_key,
-                });
+                const reserved = retryInvitation
+                    ? await deps.rpc(token, "reserve_invitation_delivery_retry", {
+                        p_invitation_id: retryInvitation[1],
+                        p_email: invitation.email,
+                        p_request_id: invitation.idempotency_key,
+                    })
+                    : await deps.rpc(token, "reserve_account_invitation", {
+                        p_email: invitation.email,
+                        p_display_name: invitation.display_name,
+                        p_role: invitation.role,
+                        p_organisation_id: invitation.organisation_id,
+                        p_idempotency_key: invitation.idempotency_key,
+                    });
                 if (reserved.error) {
                     return response(reserved.error.code === "42501" ? 403 : 400, {
-                        error:
-                            reserved.error.code === "42501"
-                                ? "permission_required"
-                                : "invalid_request",
+                        error: reserved.error.code === "42501" ? "permission_required" : "invalid_request",
                     });
                 }
-                const result = reserved.data as {
-                    status: string;
-                    invitation_id?: string;
-                };
+                if (!object(reserved.data) || typeof reserved.data.status !== "string") {
+                    return response(503, {error: "service_unavailable"});
+                }
+                const {status, invitation_id: invitationId} = reserved.data;
                 // Retries and throttling return existing state without sending another invitation.
-                if (result.status !== "reserved") {
+                if (status !== "reserved") {
                     return response(
-                        result.status === "throttled"
-                            ? 429
-                            : result.status === "idempotency_conflict"
-                                ? 409
-                                : 200,
-                        result,
+                        status === "throttled" ? 429 : status === "idempotency_conflict" ? 409 : 200,
+                        {status, invitation_id: invitationId},
                     );
                 }
-                if (!uuid(result.invitation_id)) {
+                if (retryInvitation) {
+                    invitation = parseInvitation({
+                        email: reserved.data.email,
+                        display_name: reserved.data.display_name,
+                        role: reserved.data.role,
+                        organisation_id: reserved.data.organisation_id,
+                        idempotency_key: invitation.idempotency_key,
+                    });
+                }
+                if (!uuid(invitationId) || !invitation) {
                     return response(503, {error: "service_unavailable"});
                 }
                 let userId: string;
@@ -879,29 +927,17 @@ export function createAccountHandler(deps: AccountDependencies) {
                         invitation,
                         new URL("/auth/callback", deps.appOrigin).toString(),
                     );
-                } catch {
-                    await deps.completeInvitation(
-                        result.invitation_id,
-                        null,
-                        invitation.display_name,
-                        false,
-                    );
-                    return response(502, {
-                        status: "failed",
-                        invitation_id: result.invitation_id,
-                    });
+                } catch (error) {
+                    if (deps.rejectInvitationDelivery) {
+                        await deps.rejectInvitationDelivery(invitationId, definiteInvitationRejection(error));
+                    } else {
+                        await deps.completeInvitation(invitationId, null, invitation.display_name, false);
+                    }
+                    return response(502, {status: "failed", invitation_id: invitationId});
                 }
-                // If completion fails after delivery, keep the reservation so automatic retries cannot duplicate the invitation.
-                await deps.completeInvitation(
-                    result.invitation_id,
-                    userId,
-                    invitation.display_name,
-                    true,
-                );
-                return response(200, {
-                    status: "sent",
-                    invitation_id: result.invitation_id,
-                });
+                // An error finalizing an accepted invite must never release its reservation.
+                await deps.completeInvitation(invitationId, userId, invitation.display_name, true);
+                return response(200, {status: "sent", invitation_id: invitationId});
             }
             return response(404, {error: "not_found"});
         } catch (error) {

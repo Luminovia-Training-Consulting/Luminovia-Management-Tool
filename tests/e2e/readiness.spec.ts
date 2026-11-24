@@ -33,6 +33,7 @@ test("management preparation and assigned lecturer acknowledgements update actua
     test.setTimeout(150000);
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
         manager = await actor("Fictional readiness UI manager", "admin"),
+        backup = await actor("Fictional readiness UI backup", "management"),
         teacher = await actor("Fictional readiness UI lecturer", "lecturer"),
         peer = await actor("Fictional readiness UI outsider", "lecturer");
     const template = randomUUID(),
@@ -118,6 +119,14 @@ test("management preparation and assigned lecturer acknowledgements update actua
             page.getByRole("heading", {name: title, exact: true}),
         ).toBeVisible();
         await expect(page.locator(".readiness-status")).toHaveText("Blockiert");
+        const start = page.getByRole("region", {name: "Kursstart-Freigabe"});
+        await start.getByLabel("Verantwortlich für den Kursstart").selectOption(manager.id);
+        await start.getByLabel("Vertretung bei überfälliger Vorbereitung").selectOption(backup.id);
+        await start.getByRole("button", {name: "Zuständigkeit speichern"}).click();
+        await expect(start.getByRole("button", {name: "Zuständigkeit speichern"})).toBeDisabled();
+        await page.reload();
+        await expect(start.getByLabel("Vertretung bei überfälliger Vorbereitung")).toHaveValue(backup.id);
+
         const configure = page.getByRole("button", {
             name: "Konfiguration bearbeiten",
             exact: true,

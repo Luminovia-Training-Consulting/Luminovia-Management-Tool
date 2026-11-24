@@ -18,6 +18,7 @@ import { controlCenterQuery, forecastQuery } from "./finance-api";
 import { FinancePeriodFilter } from "./finance-period";
 import { ForecastExport } from "./forecast-export";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
+import { CourseStartPanel } from "../readiness/course-start";
 import "./finance-i18n";
 import "./finance.css";
 
@@ -77,6 +78,9 @@ export function ControlCenterPage() {
     <>
       <PageHeading title={t("controlCenter")} description={t("controlHelp")} />
       <FinancePeriodFilter period={period} onChange={setPeriod} />
+      {permissions.data?.includes("courses.manage") && (
+        <CourseStartPanel actor={actor} />
+      )}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (

@@ -91,3 +91,50 @@ it("rejects the whole file before confirmation if a data row has the wrong shape
   expect(screen.queryByRole("button", { name: /create.*records/i })).toBeNull();
   expect(saveBatch).not.toHaveBeenCalled();
 });
+
+it("corrects rejected rows in place and never resubmits an already confirmed row", async () => {
+  const save = vi.fn<(name: string, key: string) => Promise<void>>(
+    async (name) => {
+      if (name === "Rejected") throw { code: "22023" };
+    },
+  );
+  render(
+    <TableImport
+      label="Import"
+      filename="records"
+      columns={["name"]}
+      example={["Example"]}
+      parse={({ name }) => {
+        if (name === "Invalid") throw new Error("invalid");
+        return name;
+      }}
+      save={save}
+      refresh={async () => undefined}
+    />,
+  );
+  fireEvent.click(screen.getByText("Import"));
+  selectCsv("name\nFirst\nRejected\nInvalid");
+  const confirm = await screen.findByRole("button", {
+    name: "Create 3 records",
+  });
+  expect(confirm).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("name"), {
+    target: { value: "Third" },
+  });
+  fireEvent.click(confirm);
+  await screen.findByText(/1 confirmed. Row 3 could not be confirmed/);
+  fireEvent.click(screen.getByText("Correct row 3"));
+  const input = screen
+    .getAllByLabelText("name")
+    .find((item) => (item as HTMLInputElement).value === "Rejected")!;
+  fireEvent.change(input, { target: { value: "Second" } });
+  fireEvent.click(screen.getByRole("button", { name: "Retry pending rows" }));
+  await screen.findByText("Created 3 records.");
+  expect(save.mock.calls.map(([name]) => name)).toEqual([
+    "First",
+    "Rejected",
+    "Second",
+    "Third",
+  ]);
+  expect(save.mock.calls[1][1]).not.toBe(save.mock.calls[2][1]);
+});

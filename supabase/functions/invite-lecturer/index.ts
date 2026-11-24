@@ -32,6 +32,13 @@ Deno.serve(createHandler({
         if (error || !data.user) throw error ?? new Error('Invitation failed');
         return data.user.id;
     },
+    rejectDelivery: async (id, definite) => {
+        const {error} = await service.rpc("complete_invitation_delivery_failure", {
+            p_invitation_id: id,
+            p_definite_rejection: definite,
+        });
+        if (error) throw error;
+    },
     complete: async (id, userId, name, success) => {
         const {error} = await service.rpc('complete_invitation', {p_invitation_id: id, p_user_id: userId, p_display_name: name, p_success: success});
         if (error) throw error;

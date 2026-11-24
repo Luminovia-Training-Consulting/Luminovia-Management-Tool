@@ -36,6 +36,8 @@ const groups: Record<
     "course_quiz_published",
     "course_attendance_updated",
     "course_schedule_changed",
+    "course_start_due",
+    "course_start_escalated",
     "course_completion_issued",
     "course_completion_revoked",
     "delivery_submitted",

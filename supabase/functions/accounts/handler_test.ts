@@ -677,3 +677,94 @@ Deno.test("Static internal OpenAPI is unavailable to customer editions or an una
         assert.match(reply.headers.get("cache-control") ?? "", /no-store/);
     }
 });
+
+Deno.test("corrected invitation binds frozen reservation fields to a single authorized send", async () => {
+    let sent = false;
+    const fixedEmail = "corrected@example.invalid";
+    const { handler, request } = fixture({
+        rpc: async (token, name, args) => {
+            assert.equal(token, "test-token");
+            assert.equal(name, "reserve_invitation_delivery_retry");
+            assert.deepEqual(args, { p_invitation_id: id, p_email: fixedEmail, p_request_id: key });
+            return { data: sent
+                ? {status: "already_sent", invitation_id: key}
+                : {status: "reserved", invitation_id: key, email: fixedEmail, display_name: "Fictional invite",
+                    role: "client", organisation_id: id} };
+        },
+        sendInvitation: async (invitation) => {
+            assert.equal(sent, false);
+            sent = true;
+            assert.deepEqual(invitation, {
+                email: fixedEmail, display_name: "Fictional invite", role: "client",
+                organisation_id: id, idempotency_key: key,
+            });
+            return id;
+        },
+    });
+    const path = `v1/invitations/${id}/retry`;
+    const payload = { email: fixedEmail, idempotency_key: key };
+    assert.equal((await handler(request(path, "POST", {...payload, role: "owner"}))).status, 400);
+    assert.equal((await handler(request(path, "POST", payload))).status, 200);
+    assert.equal((await (await handler(request(path, "POST", payload))).json()).status, "already_sent");
+});
+
+Deno.test("only exact pre-send Auth rejections become retryable", async () => {
+    for (const [error, expected] of [
+        [{status: 429, code: "over_email_send_rate_limit"}, true],
+        [{status: 422, code: "email_address_invalid"}, true],
+        [{status: 502, code: "email_address_invalid"}, false],
+        [new Error("Connection closed after sending"), false],
+    ] as const) {
+        const {handler, request} = fixture({
+            rpc: async () => ({data: {status: "reserved", invitation_id: id}}),
+            sendInvitation: async () => { throw error; },
+            rejectInvitationDelivery: async (invitation, definite) => {
+                assert.equal(invitation, id);
+                assert.equal(definite, expected);
+            },
+        });
+        const response = await handler(request("v1/invitations", "POST", {
+            email: "original@example.invalid", idempotency_key: key,
+        }));
+        assert.equal(response.status, 502);
+        assert.equal((await response.json()).status, "failed");
+    }
+});
+
+Deno.test("Academy retries use the original reviewed organization and normal native account completion", async () => {
+    const email = "academy-fixed@example.invalid";
+    let sends = 0;
+    const {handler, request} = fixture({
+        authenticate: async () => { throw new Error("Internal authentication is unavailable in Academy"); },
+        authenticateAcademy: async () => true,
+        rpc: async (token, operation, args) => {
+            assert.equal(token, "test-token");
+            assert.equal(operation, "academy_reserve_invitation_delivery_retry");
+            assert.deepEqual(args, {p_invitation_id: id, p_email: email, p_request_id: key});
+            return {data: {
+                creation_id: key, status: sends ? "created" : "reserved", user_id: id,
+                email, display_name: "Fictional participant", role: "participant", organisation_id: id,
+            }};
+        },
+        privilegedRpc: async (name, args) => {
+            assert.equal(name, "finish_academy_account");
+            assert.deepEqual(args, {p_creation_id: key, p_user_id: id, p_decision: "complete"});
+            return {data: {status: "created", user_id: id}};
+        },
+        removeCreatedAccount: async () => { throw new Error("No compensating deletion should occur"); },
+        sendInvitation: async (invitation) => {
+            sends++;
+            assert.deepEqual(invitation, {
+                email, display_name: "Fictional participant", role: "participant",
+                organisation_id: id, idempotency_key: key,
+            });
+            return id;
+        },
+    });
+    const endpoint = `v1/academy/invitations/${id}/retry`;
+    const input = {email, idempotency_key: key};
+    assert.equal((await handler(request(endpoint, "POST", {...input, organisation_id: key}))).status, 400);
+    assert.equal((await handler(request(endpoint, "POST", input))).status, 201);
+    assert.equal((await handler(request(endpoint, "POST", input))).status, 200);
+    assert.equal(sends, 1);
+});

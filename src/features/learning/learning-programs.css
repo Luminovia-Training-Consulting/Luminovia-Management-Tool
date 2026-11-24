@@ -1,0 +1,70 @@
+.programme-layout,
+.programme-panel,
+.programme-panel fieldset {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+
+.programme-step,
+.programme-description {
+  overflow-wrap: anywhere;
+}
+.programme-description {
+  white-space: pre-wrap;
+}
+
+.programme-picker,
+.programme-step,
+.programme-roster li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.programme-picker {
+  align-items: end;
+}
+.programme-picker > :first-child {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+.programme-step {
+  justify-content: space-between;
+}
+
+.programme-steps,
+.programme-roster {
+  display: grid;
+  gap: 0.75rem;
+  padding-inline-start: 1.35rem;
+}
+.programme-roster {
+  list-style: none;
+  padding-inline-start: 0;
+}
+.programme-panel progress {
+  inline-size: min(100%, 28rem);
+}
+
+@media print {
+  body:has(.programme-certificate)
+    :has(.programme-certificate)
+    > :not(:has(.programme-certificate), .programme-certificate) {
+    display: none !important;
+  }
+  body:has(.programme-certificate) .programme-certificate {
+    display: block;
+    padding: 1cm;
+    inline-size: 100%;
+    break-inside: avoid;
+    color: #12233c;
+    background: #fff;
+    border: 0;
+    box-shadow: none;
+  }
+  body:has(.programme-certificate) .programme-certificate button {
+    display: none;
+  }
+}

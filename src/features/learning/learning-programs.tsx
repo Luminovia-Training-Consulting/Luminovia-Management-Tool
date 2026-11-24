@@ -1,0 +1,651 @@
+import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import { Button } from "../../components/ui/button";
+import {
+  enrolLearningProgram,
+  learningProgramsKey,
+  learningProgramsQuery,
+  saveLearningProgram,
+  startLearningProgramCourse,
+} from "./learning-program-api";
+import {
+  learningProgramId,
+  saveLearningProgramRequest,
+  type LearningProgramDetail,
+} from "./learning-program-schema";
+import "./learning-program-i18n";
+import "./learning-programs.css";
+
+const programUrl = (id: string) =>
+  `/learning?view=programmes&program=${encodeURIComponent(id)}`;
+
+type PickerOption = { id: string; name: string };
+type Module = { course_id: string | null; title: string };
+
+function ProgramEditor({
+  actor,
+  organisations,
+  program,
+  saved,
+}: {
+  actor: string;
+  organisations: PickerOption[];
+  program?: LearningProgramDetail;
+  saved: (id: string) => void;
+}) {
+  const { t, i18n } = useTranslation("learningPrograms");
+  const [id] = useState(() => program?.id ?? crypto.randomUUID());
+  const [organisation, setOrganisation] = useState(
+    program?.organisation_id ??
+      (organisations.length === 1 ? organisations[0].id : ""),
+  );
+  const [title, setTitle] = useState(program?.title ?? "");
+  const [description, setDescription] = useState(program?.description ?? "");
+  const [sequential, setSequential] = useState(program?.sequential ?? true);
+  const [modules, setModules] = useState<Module[]>(program?.steps ?? []);
+  const [search, setSearch] = useState("");
+  const [choice, setChoice] = useState("");
+  const courses = useQuery({
+    ...learningProgramsQuery(actor, {
+      p_organisation_id: organisation,
+      p_search: search.trim(),
+    }),
+    enabled: Boolean(organisation),
+  });
+  const save = useMutation({
+    mutationFn: saveLearningProgram,
+    onSuccess: saved,
+  });
+  const choices =
+    courses.data?.courses.filter(
+      (item) => !modules.some((step) => step.course_id === item.id),
+    ) ?? [];
+  const selected = choices.find((item) => item.id === choice);
+  const move = (index: number, offset: -1 | 1) => {
+    setModules((previous) => {
+      const next = [...previous];
+      [next[index], next[index + offset]] = [next[index + offset], next[index]];
+      return next;
+    });
+  };
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsed = saveLearningProgramRequest.safeParse({
+      p_program_id: id,
+      p_organisation_id: organisation,
+      p_title: title,
+      p_description: description,
+      p_sequential: sequential,
+      p_course_ids: modules.map((item) => item.course_id),
+      p_archived: program?.archived ?? false,
+      p_expected_version: program?.version ?? 0,
+    });
+    if (parsed.success) save.mutate(parsed.data);
+  }
+
+  return (
+    <form className="panel programme-panel" onSubmit={submit}>
+      <h3>{t(program ? "edit" : "create")}</h3>
+      <fieldset disabled={save.isPending}>
+        {!program && (
+          <Field id="programme-company" label={t("organisation")}>
+            <select
+              id="programme-company"
+              value={organisation}
+              required
+              onChange={(event) => {
+                setOrganisation(event.target.value);
+                setModules([]);
+                setChoice("");
+              }}
+            >
+              <option value="">{t("selectOrganisation")}</option>
+              {organisations.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        <Field id="programme-title" label={t("name")}>
+          <input
+            id="programme-title"
+            value={title}
+            maxLength={140}
+            required
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </Field>
+        <Field id="programme-description" label={t("description")}>
+          <textarea
+            id="programme-description"
+            value={description}
+            maxLength={4000}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </Field>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={sequential}
+            onChange={(event) => setSequential(event.target.checked)}
+          />
+          {t("sequential")}
+        </label>
+        <p>{t("sequentialHint")}</p>
+        <Field id="programme-course-search" label={t("courseSearch")}>
+          <input
+            id="programme-course-search"
+            type="search"
+            maxLength={120}
+            disabled={!organisation}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setChoice("");
+            }}
+          />
+        </Field>
+        {courses.isError ? (
+          <ErrorState retry={() => void courses.refetch()} />
+        ) : organisation && courses.isPending ? (
+          <Loading />
+        ) : (
+          <div className="programme-picker">
+            <Field id="programme-course" label={t("course")}>
+              <select
+                id="programme-course"
+                value={choice}
+                disabled={choices.length === 0}
+                onChange={(event) => setChoice(event.target.value)}
+              >
+                <option value="">{t("selectCourse")}</option>
+                {choices.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.title}
+                    {option.starts_at
+                      ? ` · ${new Date(option.starts_at).toLocaleString(i18n.language)}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!selected || modules.length >= 30}
+              onClick={() => {
+                if (!selected) return;
+                setModules([
+                  ...modules,
+                  { course_id: selected.id, title: selected.title },
+                ]);
+                setChoice("");
+              }}
+            >
+              {t("addCourse")}
+            </Button>
+          </div>
+        )}
+        <h4>{t("selectedCourses")}</h4>
+        <ol className="programme-steps">
+          {modules.map((module, index) => (
+            <li key={module.course_id ?? `unavailable-${index}`}>
+              <div className="programme-step">
+                <strong>{module.title}</strong>
+                <div className="form-actions">
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => move(index, -1)}
+                  >
+                    {t("moveUp")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    disabled={index === modules.length - 1}
+                    onClick={() => move(index, 1)}
+                  >
+                    {t("moveDown")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    onClick={() =>
+                      setModules(
+                        modules.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    {t("remove")}
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <Button
+          type="submit"
+          disabled={
+            !organisation ||
+            !title.trim() ||
+            modules.length < 2 ||
+            modules.some((item) => !item.course_id)
+          }
+        >
+          {t("save")}
+        </Button>
+      </fieldset>
+      {save.isError && <Notice kind="error">{t("saveFailed")}</Notice>}
+    </form>
+  );
+}
+
+function ProgramManager({
+  actor,
+  program,
+  organisations,
+  candidates,
+  refresh,
+}: {
+  actor: string;
+  program: LearningProgramDetail;
+  candidates: (PickerOption & { reference: string })[];
+  organisations: PickerOption[];
+  refresh: () => void;
+}) {
+  const { t } = useTranslation("learningPrograms");
+  const [editing, setEditing] = useState(false);
+  const [participant, setParticipant] = useState("");
+  const [search, setSearch] = useState("");
+  const filtered = useQuery({
+    ...learningProgramsQuery(actor, {
+      p_program_id: program.id,
+      p_search: search.trim(),
+    }),
+    enabled: Boolean(search.trim()),
+  });
+  const people = search.trim() ? (filtered.data?.candidates ?? []) : candidates;
+  const roster = search.trim()
+    ? (filtered.data?.detail?.roster ?? [])
+    : program.roster;
+  const assignment = useMutation({
+    mutationFn: enrolLearningProgram,
+    onSuccess: () => {
+      setParticipant("");
+      refresh();
+    },
+  });
+  const archive = useMutation({
+    mutationFn: saveLearningProgram,
+    onSuccess: refresh,
+  });
+  const ids = (program.steps ?? []).map((step) => step.course_id);
+  const validCandidates = people.some(
+    (candidate) => candidate.id === participant,
+  );
+
+  if (editing && program.can_edit) {
+    return (
+      <>
+        <Button variant="secondary" onClick={() => setEditing(false)}>
+          {t("close")}
+        </Button>
+        <ProgramEditor
+          actor={actor}
+          organisations={organisations}
+          program={program}
+          saved={() => {
+            setEditing(false);
+            refresh();
+          }}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <section className="panel programme-panel">
+        <h3>{t("selectedCourses")}</h3>
+        <ol className="programme-steps">
+          {program.steps?.map((step, index) => (
+            <li key={step.course_id ?? `unavailable-${index}`}>
+              {step.course_id ? (
+                <Link to={`/courses/${step.course_id}/workspace`}>
+                  {step.title}
+                </Link>
+              ) : (
+                step.title
+              )}
+            </li>
+          ))}
+        </ol>
+        {program.can_write && !program.can_edit && <p>{t("orderLocked")}</p>}
+        {program.can_write && (
+          <div className="form-actions">
+            {program.can_edit && (
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                {t("edit")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                archive.isPending || (program.archived && ids.some((id) => !id))
+              }
+              onClick={() => {
+                archive.mutate({
+                  p_program_id: program.id,
+                  p_organisation_id: program.organisation_id,
+                  p_title: program.title,
+                  p_description: program.description,
+                  p_sequential: program.sequential,
+                  p_course_ids: ids,
+                  p_archived: !program.archived,
+                  p_expected_version: program.version,
+                });
+              }}
+            >
+              {t(program.archived ? "restore" : "archive")}
+            </Button>
+          </div>
+        )}
+        {archive.isError && <Notice kind="error">{t("saveFailed")}</Notice>}
+      </section>
+      <section className="panel programme-panel">
+        {program.can_write && !program.archived && <h3>{t("enrolment")}</h3>}
+        <Field id="programme-learner-search" label={t("findParticipant")}>
+          <input
+            type="search"
+            id="programme-learner-search"
+            value={search}
+            maxLength={120}
+            onChange={(event) => {
+              setParticipant("");
+              setSearch(event.target.value);
+            }}
+          />
+        </Field>
+        {filtered.isError && (
+          <ErrorState retry={() => void filtered.refetch()} />
+        )}
+        {program.can_write && !program.archived && (
+          <form
+            className="programme-picker"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (validCandidates)
+                assignment.mutate({
+                  p_program_id: program.id,
+                  p_user_id: participant,
+                  p_expected_version: program.version,
+                });
+            }}
+          >
+            <Field id="programme-learner" label={t("participant")}>
+              <select
+                id="programme-learner"
+                value={participant}
+                onChange={(event) => setParticipant(event.target.value)}
+              >
+                <option value="">{t("selectParticipant")}</option>
+                {people.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name} · {person.reference}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button
+              disabled={!validCandidates || assignment.isPending}
+              type="submit"
+            >
+              {t("enrol")}
+            </Button>
+          </form>
+        )}
+        {assignment.isSuccess && (
+          <Notice kind="success">{t("enrolmentSaved")}</Notice>
+        )}
+        {assignment.isError && (
+          <Notice kind="error">{t("enrolmentFailed")}</Notice>
+        )}
+        <h3>{t("roster")}</h3>
+        {roster?.length ? (
+          <ul className="programme-roster">
+            {roster.map((person) => (
+              <li key={person.id}>
+                <strong>{person.name}</strong>
+                <span>{t("progress", person.progress)}</span>
+                {!person.active && <span>{t("inactive")}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>{t("rosterEmpty")}</p>
+        )}
+      </section>
+    </>
+  );
+}
+
+function LearnerProgram({
+  program,
+  writable,
+  refresh,
+}: {
+  program: LearningProgramDetail;
+  writable: boolean;
+  refresh: () => void;
+}) {
+  const { t, i18n } = useTranslation("learningPrograms");
+  const start = useMutation({
+    mutationFn: startLearningProgramCourse,
+    onSuccess: refresh,
+  });
+  const progress = program.progress;
+  if (!progress) return null;
+  const next = progress.steps.find(
+    (item) => item.state === "ready" || item.state === "in_progress",
+  );
+
+  return (
+    <>
+      <section className="panel programme-panel">
+        <h3>{t("progress", progress)}</h3>
+        <progress
+          aria-label={t("progress", progress)}
+          max={progress.total}
+          value={progress.completed}
+        />
+        {next && (
+          <p>
+            <strong>{t("next")}</strong> · {next.title}
+          </p>
+        )}
+        <ol className="programme-steps">
+          {progress.steps.map((step, index) => (
+            <li key={step.course_id ?? `unavailable-${index}`}>
+              <div className="programme-step">
+                <span>
+                  <strong>{step.title}</strong> · {t(`state.${step.state}`)}
+                </span>
+                {step.can_open && step.course_id && (
+                  <Button asChild variant="secondary">
+                    <Link to={`/courses/${step.course_id}/workspace`}>
+                      {t("courseAction.open")}
+                    </Link>
+                  </Button>
+                )}
+                {step.state === "ready" && writable && step.course_id && (
+                  <Button
+                    type="button"
+                    disabled={start.isPending}
+                    onClick={() =>
+                      start.mutate({
+                        p_program_id: program.id,
+                        p_course_id: step.course_id!,
+                      })
+                    }
+                  >
+                    {t("courseAction.start")}
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+        {start.isError && <Notice kind="error">{t("startFailed")}</Notice>}
+      </section>
+      {progress.completed_at && (
+        <article className="panel programme-panel programme-certificate">
+          <h3>{t("certificate")}</h3>
+          <p>{t("certificateIntro")}</p>
+          <p>
+            <strong>{program.title}</strong> · {program.learner_name}
+          </p>
+          <p>
+            {t("certificateDate", {
+              date: new Date(progress.completed_at).toLocaleDateString(
+                i18n.language,
+              ),
+            })}
+          </p>
+          <ul>
+            {progress.steps.map((step) => (
+              <li key={step.receipt_id}>
+                {step.title} ·{" "}
+                {t("certificateReference", { id: step.receipt_id })}
+              </li>
+            ))}
+          </ul>
+          <Button type="button" onClick={() => window.print()}>
+            {t("print")}
+          </Button>
+        </article>
+      )}
+    </>
+  );
+}
+
+export function LearningPrograms({ actor }: { actor: string }) {
+  const { t } = useTranslation("learningPrograms");
+  const cache = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const parsed = learningProgramId.safeParse(params.get("program"));
+  const id = parsed.success ? parsed.data : undefined;
+  const [creating, setCreating] = useState(false);
+  const query = useQuery({
+    ...learningProgramsQuery(actor, {
+      p_program_id: id,
+      p_search: "",
+    }),
+    refetchOnMount: "always",
+  });
+  const refresh = () => {
+    void cache.invalidateQueries({ queryKey: learningProgramsKey(actor) });
+    void cache.invalidateQueries({ queryKey: ["course-workspaces", actor] });
+  };
+  if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
+  if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+
+  const { programs, organisations, detail, candidates, writable } = query.data;
+  if (detail) {
+    return (
+      <section className="programme-layout">
+        <div>
+          <Button asChild variant="secondary">
+            <Link to="/learning?view=programmes">{t("close")}</Link>
+          </Button>
+        </div>
+        <div>
+          <h2>{detail.title}</h2>
+          {detail.archived && <Notice>{t("archivedHint")}</Notice>}
+          {!writable && <Notice>{t("noWrite")}</Notice>}
+          <p>
+            {detail.organisation_name} ·{" "}
+            {t(detail.sequential ? "ordered" : "openOrder")}
+          </p>
+          {detail.description && (
+            <p className="programme-description">{detail.description}</p>
+          )}
+        </div>
+        {detail.manage && (
+          <ProgramManager
+            key={detail.id}
+            actor={actor}
+            program={detail}
+            candidates={candidates}
+            organisations={organisations}
+            refresh={refresh}
+          />
+        )}
+        {detail.progress && (
+          <LearnerProgram
+            key={`${detail.id}-learner`}
+            program={detail}
+            writable={writable}
+            refresh={refresh}
+          />
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="programme-layout">
+      <div>
+        <h2>{t("title")}</h2>
+        <p>{t("intro")}</p>
+      </div>
+      {organisations.length > 0 &&
+        (creating ? (
+          <ProgramEditor
+            actor={actor}
+            organisations={organisations}
+            saved={(createdId) => {
+              refresh();
+              setCreating(false);
+              setParams({ view: "programmes", program: createdId });
+            }}
+          />
+        ) : (
+          <div>
+            <Button onClick={() => setCreating(true)}>{t("create")}</Button>
+          </div>
+        ))}
+      {programs.length === 0 ? (
+        <p>{t("empty")}</p>
+      ) : (
+        <div className="learning-grid">
+          {programs.map((program) => (
+            <article key={program.id} className="panel learning-card">
+              <h3>{program.title}</h3>
+              <p>{program.organisation_name}</p>
+              {program.archived && (
+                <span className="badge">{t("archived")}</span>
+              )}
+              <Button asChild variant="secondary">
+                <Link
+                  to={programUrl(program.id)}
+                  aria-label={`${t("openProgram")}: ${program.title}`}
+                >
+                  {t("openProgram")}
+                </Link>
+              </Button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}

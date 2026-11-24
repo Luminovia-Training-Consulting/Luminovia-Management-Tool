@@ -30,10 +30,10 @@ const groups = {
   ],
   mail: [
     [
-      "Mailtransport und Verbindungstest",
-      "Mail transport and connection tests",
+      "Mailtransport, Verbindungstest und Zustellfehler",
+      "Mail transport, connection tests and failed deliveries",
     ],
-    "readAcademyMailConfiguration saveAcademyMailConfiguration queueAcademyMailConnectionTest readAcademyMailRuntimeStatus checkAcademyMailConnection",
+    "readAcademyMailConfiguration saveAcademyMailConfiguration queueAcademyMailConnectionTest readAcademyMailRuntimeStatus checkAcademyMailConnection academyMailDeliveryFailures academyRetryCourseMailDelivery retryAcademyInvitationDelivery",
   ],
   notifications: [
     [
@@ -61,7 +61,11 @@ const groups = {
       "Kurse, Entwürfe, Klassen und Stundenplan",
       "Courses, drafts, classes and timetable",
     ],
-    "readAcademyCourseWorkspaceEntitlement readAcademyDraftOptions createAcademyCourseDraft readAcademyDraftSchedule saveAcademyDraftSchedule readAcademyCoursePublication publishAcademyCourse setAcademyCourseCapacity readAcademyCourseClass setAcademyCourseClass readAcademyTimetable listAcademyCourseWorkspaces readAcademyCourseWorkspace setAcademyCourseMeetingLink readAcademyCourseWelcome publishAcademyCourseWelcome",
+    "readAcademyCourseWorkspaceEntitlement readAcademyDraftOptions createAcademyCourseDraft readAcademyDraftSchedule saveAcademyDraftSchedule readAcademyCoursePublication publishAcademyCourse setAcademyCourseCapacity readAcademyCourseClass setAcademyCourseClass readAcademyTimetable listAcademyCourseWorkspaces readAcademyCourseWorkspace setAcademyCourseMeetingLink readAcademyCourseWelcome publishAcademyCourseWelcome listCourseSeriesClasses readCourseSeriesClasses planCourseSeries",
+  ],
+  programmes: [
+    ["Lernprogramme", "Learning programmes"],
+    "getLearningProgrammes readLearningProgrammes saveLearningProgramme enrolLearningProgramme startLearningProgrammeCourse",
   ],
   enrolment: [
     [

@@ -14,6 +14,7 @@ import {
 import {
   internalMailDownload,
   internalMailRead,
+  internalMailRecoveryPaths,
 } from "./academy-mail-contract.ts";
 import { knowledgeDocument, knowledgeSchemas } from "./knowledge-contract.ts";
 import { sessionPaths } from "./session-contract.ts";
@@ -46,6 +47,8 @@ import {
   enquiriesSupportPaths,
   websiteEnquiryIntakePath,
 } from "./enquiries-support-contract.ts";
+import { courseSeriesPaths } from "./course-series-contract.ts";
+import { learningProgramPaths } from "./learning-program-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
@@ -148,6 +151,14 @@ import {
 } from "../learning/course-classes-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
+import {
+  courseStartInput,
+  courseStartResponse,
+} from "../readiness/course-start-schema.ts";
+import {
+  courseCloseoutRequest,
+  courseCloseoutResponse,
+} from "../learning/course-closeout-schema.ts";
 import {
   readinessListSchema,
   readinessReceiptSchema,
@@ -1495,6 +1506,8 @@ const nativePaths = {
   ...fileDiscoveryPaths,
   ...personalPreferencesPaths,
   ...courseBuildingBlockPaths,
+  ...courseSeriesPaths(),
+  ...learningProgramPaths(),
   ...courseEvaluationPaths(false),
   ...companyClassFeedbackPaths,
   ...learningAnalyticsPaths(false),
@@ -2234,6 +2247,78 @@ const nativePaths = {
     "Creates an unpublished copy of the template reference and scheduled sessions and returns its ID.",
     { p_id: uuid },
     uuid,
+  ),
+  "/rest/v1/rpc/course_closeout": {
+    ...rpc(
+      "readCourseCloseoutBody",
+      "Courses",
+      "Review current course closeout exceptions",
+      "Requires internal course management and active company Premium. Lists missing attendance entries, assessment results and enabled submissions without revealing grades or document contents. Returns a review token for the exact current evidence.",
+      { p_course_run_id: uuid },
+      z.toJSONSchema(courseCloseoutResponse),
+    ),
+    get: {
+      operationId: "readCourseCloseout",
+      tags: ["Courses"],
+      summary: "Review current course closeout exceptions",
+      parameters: [
+        { in: "query", name: "p_course_run_id", required: true, schema: uuid },
+      ],
+      responses: {
+        "200": {
+          description:
+            "Current course closeout exceptions and assigned follow-up",
+          content: json(z.toJSONSchema(courseCloseoutResponse)),
+        },
+        "403": {
+          description:
+            "Current internal course management and Premium are required.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/confirm_course_closeout": rpc(
+    "confirmCourseCloseout",
+    "Courses",
+    "Confirm course closeout and assign remaining work",
+    "After the last session ends, submit the current review token and one currently authorised assignee per unresolved category. Confirmation and the follow-up tasks commit together. An identical review retry returns the existing result.",
+    z.toJSONSchema(courseCloseoutRequest).properties!,
+    z.toJSONSchema(courseCloseoutResponse),
+  ),
+  "/rest/v1/rpc/course_start_planning": {
+    ...rpc(
+      "readCourseStartPlanningBody",
+      "Course readiness",
+      "Read current course start status",
+      "Managers can list at-risk published courses starting soon. A current course manager or assigned lecturer can read their own course. Staff IDs and choices are available only to course managers.",
+      { p_course_run_id: nullableUuid },
+      z.toJSONSchema(courseStartResponse),
+      [],
+    ),
+    get: {
+      operationId: "readCourseStartPlanning",
+      tags: ["Course readiness"],
+      summary: "Read the course start queue or one course",
+      parameters: [{ in: "query", name: "p_course_run_id", schema: uuid }],
+      responses: {
+        "200": {
+          description: "Current scoped course start status",
+          content: json(z.toJSONSchema(courseStartResponse)),
+        },
+        "403": {
+          description:
+            "Current course management or a confirmed assignment is required.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/set_course_start_responsibility": rpc(
+    "setCourseStartResponsibility",
+    "Course readiness",
+    "Assign the course start owner and escalation contact",
+    "Requires current course management. Both people must currently manage courses. Submit the last read version. A null backup selects the management fallback.",
+    z.toJSONSchema(courseStartInput).properties!,
+    { type: "integer", minimum: 1 },
   ),
   "/rest/v1/rpc/course_readiness": rpc(
     "courseReadiness",
@@ -4697,6 +4782,7 @@ const paths: Record<string, Record<string, unknown>> = {
   ...nativeExplorerPaths,
   ...accountingPaths,
   ...deliveryEvidencePaths,
+  ...internalMailRecoveryPaths,
   ...Object.fromEntries(
     Object.entries(accountOpenApi.paths).map(([path, methods]) => [
       "/functions/v1/accounts" + path,

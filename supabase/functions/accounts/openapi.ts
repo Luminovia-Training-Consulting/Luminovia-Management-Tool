@@ -561,6 +561,22 @@ export const accountOpenApi = {
                 },
             },
         },
+        "/v1/invitations/{id}/retry": {
+            post: {
+                operationId: "retryAccountInvitationDelivery",
+                summary: "Send a new linked invitation after a definite Auth rejection",
+                description: "Requires current mail and account-role administration. The existing invitation fixes its assigned role, name and organisation. Use the original address or a corrected address and a stable request key. A provider-ambiguous delivery cannot be retried.",
+                parameters: userId,
+                requestBody: jsonBody(record(invitationIdentity)),
+                responses: {
+                    ...invitationHttpErrors,
+                    "200": jsonResponse({anyOf: [sentInvitation, invitationInProgress]}),
+                    "409": jsonResponse(invitationConflict, "A different retry or active invitation already exists."),
+                    "429": jsonResponse(record({status: {const: "throttled"}})),
+                    "502": jsonResponse(record({status: {const: "failed"}, invitation_id: uuid})),
+                },
+            },
+        },
         "/v1/company-participant-invitations": {
             post: {
                 operationId: "inviteCompanyParticipant",

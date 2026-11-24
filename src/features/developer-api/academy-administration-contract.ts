@@ -103,6 +103,68 @@ const roleChange = {
 };
 const companyRole = z.enum(["client", "participant"]);
 
+const academyAccountResponses = {
+  "201": {
+    description: "Confirmed native account creation",
+    content: json(isolatedReceipt),
+  },
+  "200": {
+    description: "Previously confirmed account creation",
+    content: json(isolatedReceipt),
+  },
+  "202": {
+    description: "The request is in progress",
+    content: json(inProgress),
+  },
+  "400": error(
+    "Invalid account request",
+    z.strictObject({ error: z.literal("invalid_request") }),
+  ),
+  "401": error(
+    "Authentication required",
+    z.strictObject({ error: z.literal("authentication_required") }),
+  ),
+  "403": error(
+    "Current local administration authority or an allowed origin is required",
+    z.strictObject({
+      error: z.enum(["permission_required", "origin_not_allowed"]),
+    }),
+  ),
+  "409": error(
+    "Existing account, changed or unavailable request, or all licensed account seats are in use",
+    z.strictObject({
+      error: z.enum(["creation_conflict", "academy_seat_limit"]),
+    }),
+  ),
+  "413": error(
+    "The request body exceeds the allowed size",
+    z.strictObject({ error: z.literal("request_too_large") }),
+  ),
+  "415": error(
+    "The request body must be JSON",
+    z.strictObject({ error: z.literal("json_required") }),
+  ),
+  "429": error(
+    "Account provisioning budget exhausted",
+    z.strictObject({ error: z.literal("creation_rate_limited") }),
+  ),
+  "502": error(
+    "Creation was not confirmed",
+    z.strictObject({ error: z.literal("creation_failed") }),
+  ),
+  "503": error(
+    "The provisioning or invitation service is unavailable",
+    z.strictObject({
+      error: z.enum([
+        "creation_disabled",
+        "creation_unavailable",
+        "invitations_disabled",
+        "service_unavailable",
+      ]),
+    }),
+  ),
+};
+
 export const academyAdministrationPaths = {
   "/rest/v1/rpc/academy_member_roles": {
     post: {
@@ -237,69 +299,39 @@ export const academyAdministrationPaths = {
       security: credentials,
       "x-portal-licence": "active",
       requestBody: { required: true, content: json(accountRequest) },
-      responses: {
-        "201": {
-          description: "Confirmed native account creation",
-          content: json(isolatedReceipt),
+      responses: academyAccountResponses,
+    },
+  },
+  "/functions/v1/accounts/v1/academy/invitations/{id}/retry": {
+    post: {
+      operationId: "retryAcademyInvitationDelivery",
+      tags: ["Local academy administration"],
+      summary: "Send a replacement for a definitively rejected invitation",
+      description:
+        "Requires a current mail administrator and an active installation. The failed reservation supplies the name, role and organisation. Retry with a stable request key and the reviewed address. An uncertain result cannot start a second send.",
+      security: credentials,
+      "x-portal-licence": "active",
+      parameters: [
+        {
+          in: "path",
+          name: "id",
+          required: true,
+          schema: { type: "string", format: "uuid" },
         },
-        "200": {
-          description: "Previously confirmed account creation",
-          content: json(isolatedReceipt),
-        },
-        "202": {
-          description: "The request is in progress",
-          content: json(inProgress),
-        },
-        "400": error(
-          "Invalid account request",
-          z.strictObject({ error: z.literal("invalid_request") }),
-        ),
-        "401": error(
-          "Authentication required",
-          z.strictObject({ error: z.literal("authentication_required") }),
-        ),
-        "403": error(
-          "Current local administration authority or an allowed origin is required",
+      ],
+      requestBody: {
+        required: true,
+        content: json(
           z.strictObject({
-            error: z.enum(["permission_required", "origin_not_allowed"]),
-          }),
-        ),
-        "409": error(
-          "Existing account, changed or unavailable request, or all licensed account seats are in use",
-          z.strictObject({
-            error: z.enum(["creation_conflict", "academy_seat_limit"]),
-          }),
-        ),
-        "413": error(
-          "The request body exceeds the allowed size",
-          z.strictObject({ error: z.literal("request_too_large") }),
-        ),
-        "415": error(
-          "The request body must be JSON",
-          z.strictObject({ error: z.literal("json_required") }),
-        ),
-        "429": error(
-          "Account provisioning budget exhausted",
-          z.strictObject({ error: z.literal("creation_rate_limited") }),
-        ),
-        "502": error(
-          "Creation was not confirmed",
-          z.strictObject({ error: z.literal("creation_failed") }),
-        ),
-        "503": error(
-          "The provisioning or invitation service is unavailable",
-          z.strictObject({
-            error: z.enum([
-              "creation_disabled",
-              "creation_unavailable",
-              "invitations_disabled",
-              "service_unavailable",
-            ]),
+            email: z.email().max(254),
+            idempotency_key: z.uuid(),
           }),
         ),
       },
+      responses: academyAccountResponses,
     },
   },
+
   "/functions/v1/accounts/v1/academy/company-invitations": {
     post: {
       operationId: "requestAcademyCompanyInvitation",

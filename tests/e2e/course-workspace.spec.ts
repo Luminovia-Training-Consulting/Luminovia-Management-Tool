@@ -1248,3 +1248,28 @@ test("company filters live Premium LMS analytics without exposing learners", asy
     await page.getByRole("button", { name: english ? "Search" : "Suchen", exact: true }).click();
     await expect(row).toHaveCount(0);
 });
+
+test("completed Premium course records a named closeout follow-up without resending it", async ({page}) => {
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run,
+        p_user_id: f.learner.id,
+        p_status: "enrolled",
+    }));
+    const {run, manager} = f;
+    await adminLogin(page, manager);
+    await page.goto(`/courses/${run}/workspace#course-closeout`);
+    const closeout = page.locator("#course-closeout");
+    await expect(closeout.getByRole("heading", {name: "Kursabschluss", exact: true})).toBeVisible();
+    await expect(closeout.getByRole("listitem").filter({hasText: "Fictional Müller Μαρία Мария"})).toBeVisible();
+    const accept = closeout.getByRole("button", {name: "Kursabschluss bestätigen"});
+    await expect(accept).toBeDisabled();
+    await page.getByLabel(/Verantwortliche Person · Fehlende Anwesenheitseinträge/).selectOption(manager.id);
+    await accept.click();
+    await expect(page.getByText(/Abschluss bestätigt/)).toBeVisible();
+    await expect(page.getByRole("link", {name: /Fictional course workspace manager.*Offen/})).toHaveAttribute("href", /workbench\?task=/);
+    await page.reload();
+    await expect(page.getByText(/Abschluss bestätigt/)).toBeVisible();
+    await expect(accept).toHaveCount(0);
+});

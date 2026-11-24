@@ -198,9 +198,16 @@ Deno.serve(
                 {redirectTo},
             );
             if (result.error || !result.data.user) {
-                throw new Error("invitation_unavailable");
+                throw result.error ?? new Error("invitation_unavailable");
             }
             return result.data.user.id;
+        },
+        rejectInvitationDelivery: async (id, definite) => {
+            const result = await service.rpc("complete_invitation_delivery_failure", {
+                p_invitation_id: id,
+                p_definite_rejection: definite,
+            });
+            if (result.error) throw new Error("invitation_unavailable");
         },
         completeInvitation: async (id, userId, displayName, success) => {
             const result = await service.rpc("complete_account_invitation", {

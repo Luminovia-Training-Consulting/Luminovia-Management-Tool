@@ -76,6 +76,7 @@ import {
 } from "./data";
 import { BuildingBlockSources, CourseRunOfferLink } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
+import { CourseSeriesForm } from "./course-series";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
 
@@ -1217,7 +1218,7 @@ function courseOfferState(run: CourseRun, now: number) {
 
 /** Combine templates/runs with explicitly requested publication/copy actions. */
 export function CoursesPage() {
-  const { t, i18n } = useTranslation("operations");
+  const { t, i18n } = useTranslation(["operations", "courseSeries"]);
   const { session } = useAuth();
   const actor = session!.user.id;
   const permissions = useQuery(permissionsQuery(actor));
@@ -1248,6 +1249,8 @@ export function CoursesPage() {
   const [showArchivedRuns, setShowArchivedRuns] = useState(false);
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
+  const [seriesTemplate, setSeriesTemplate] = useState<Template | null>();
+  const [seriesBusy, setSeriesBusy] = useState(false);
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
@@ -1653,6 +1656,16 @@ export function CoursesPage() {
           />
         )}
       <div className="page-actions">
+        {canCreateTemplate &&
+          visibleTemplates.some((template) => !template.archived_at) && (
+            <Button
+              variant="secondary"
+              disabled={!online}
+              onClick={() => setSeriesTemplate(null)}
+            >
+              {t("courseSeries:title")}
+            </Button>
+          )}
         {(manage || companyViewer) && tab === "runs" && (
           <Button asChild variant="secondary">
             <Link to="/courses?tab=templates">{t("openTemplateLibrary")}</Link>
@@ -1933,6 +1946,15 @@ export function CoursesPage() {
                     {t("createRunFromTemplate")}
                   </Button>
                 )}
+                {!template.archived_at && (
+                  <Button
+                    variant="secondary"
+                    disabled={!online}
+                    onClick={() => setSeriesTemplate(template)}
+                  >
+                    {t("courseSeries:title")}
+                  </Button>
+                )}
                 {canEditTemplate(template) && (
                   <Button
                     variant="secondary"
@@ -1965,6 +1987,41 @@ export function CoursesPage() {
           ))}
         </div>
       )}
+      <Dialog
+        open={seriesTemplate !== undefined}
+        closeDisabled={seriesBusy}
+        onOpenChange={(open) => {
+          if (!open && !seriesBusy) setSeriesTemplate(undefined);
+        }}
+        title={t("courseSeries:title")}
+        description={t("courseSeries:intro")}
+      >
+        {seriesTemplate !== undefined && (
+          <CourseSeriesForm
+            actor={actor}
+            organisations={planningOrganisations.filter(
+              (organisation) =>
+                !("archived_at" in organisation) || !organisation.archived_at,
+            )}
+            templates={visibleTemplates.filter(
+              (template) => !template.archived_at,
+            )}
+            defaultTemplate={seriesTemplate?.id}
+            defaultOrganisation={
+              seriesTemplate?.owner_organisation_id ??
+              (planningOrganisations.length === 1
+                ? planningOrganisations[0].id
+                : "")
+            }
+            onOpen={() => {
+              setSeriesTemplate(undefined);
+              setSearch("");
+              setPhase("all");
+            }}
+            onBusy={setSeriesBusy}
+          />
+        )}
+      </Dialog>
       <Dialog
         open={templateEdit !== undefined}
         onOpenChange={(open) => {

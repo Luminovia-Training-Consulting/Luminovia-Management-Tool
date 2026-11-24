@@ -320,6 +320,7 @@ const pairs: Record<string, [string, string]> = {
   meetingLinkPublish: ["Meetinglink veröffentlichen", "Publish meeting link"],
   meetingLinkCancel: ["Bearbeitung abbrechen", "Cancel editing"],
   manageCourse: ["Kurs verwalten", "Manage course"],
+  courseCloseout: ["Kursabschluss", "Course closeout"],
   courseReadiness: ["Kursbereitschaft", "Course readiness"],
   unscheduled: ["Termine folgen", "Schedule to follow"],
   openWorkspace: ["Kurs öffnen", "Open course workspace"],

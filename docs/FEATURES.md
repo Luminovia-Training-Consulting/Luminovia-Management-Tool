@@ -37,8 +37,10 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 ## Kurse, Klassen und Premium LMS
 
 - Kursvorlagen, wiederverwendbare Bausteine und konkrete Kursdurchläufe mit Titel, Lerninhalten, Themen, Unternehmen, Ort bzw. Durchführungstyp, Zeitzone und mehreren Terminen. Kursinformationen und Termine als Entwurf erfassen, prüfen und veröffentlichen. Das interne Portal kann Durchläufe mit Lehraufträgen und Unternehmensanfragen verbinden.
+- Kursserien aus einer Vorlage anlegen. Die Terminvorschau berücksichtigt Zeitzone, Unterrichtstage und freie Tage und prüft Räume, Klassen und Überschneidungen. Jeder erzeugte Durchlauf bleibt ein eigener Entwurf.
 - Eigene Kurse nach Status und Zeitraum anzeigen, insbesondere anstehend, laufend, abgeschlossen oder ohne Termin. Klassen bündeln mehrere Kursdurchläufe derselben Organisation. Die Klassenzuordnung allein erzeugt keine Anmeldungen.
 - Lokale Lehrkräfte direkt zuordnen und mehrere Dozierende in einem Kurs einsetzen. Einschreiben, Einladungen, Sammelzuweisungen, Abmeldungen und Abschlussstatus nach Zuständigkeit pflegen. Teilnehmende sehen die eigenen zugewiesenen Kurse und die jeweils freigegebenen Inhalte.
+- Premium-Lernprogramme verbinden mehrere veröffentlichte Kurse in vorgeschriebener Reihenfolge. Die Verwaltung kann Lernende für das Gesamtprogramm anmelden. Teilnehmende sehen Fortschritt, nächste Kurse und den druckbaren Abschlussnachweis nach erfolgreicher Teilnahme.
 - Kursraum mit Übersicht, Willkommensinhalt, Sitzungen, Kurskontakt, Online-Meetinglink und Rollenansicht. Zugeordnete Unternehmenskontakte können den Meetinglink pflegen. Dozierende haben eine Vorbereitungsliste für Termine, Link oder Veranstaltungsort, Material und vereinbarte Vorbereitungspunkte.
 - Kursmaterialien, Vorbereitung, Aufgaben, Hinweise, Empfangsbestätigungen und freigegebene Dateien mit exakter Dateiversion. Die Materialbibliothek bietet Suche und Filter nach Kurs und Kategorie. Lehrteam, Kursverwaltung und berechtigte Unternehmenskontakte können Material in ihrem Bereich bereitstellen. Lernende können freigegebene Dateien wiederfinden, öffnen und herunterladen.
 - Private Teilnehmerabgaben mit Einschaltmöglichkeit je Kurs, gescannten Dateien, Abruf für zuständiges Lehrpersonal und Rücknahme. Kurschat für berechtigte Mitglieder mit gescannten Anhängen. Private Kursnotizen bleiben beim Konto, das sie verfasst hat.
@@ -47,6 +49,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Anwesenheitsverlauf pro Kurs und über zugängliche Durchläufe einer Klasse, mit Statussummen und verifizierten Minuten. CSV/XLSX-Vorlagen und geprüfter Import pro Sitzungsroster, geschützte Anwesenheits- und Teilnahmeberichte sowie Nachweisdateien.
 - Kursfeedback und Bewertungen nach Abschluss zu Lehrkraft, Unternehmen, Schwierigkeit und Klasse, mit Empfängerumfang und geschützter Auswertung. Qualifizierte Lernende können einen Teilnahme- oder Abschlussnachweis als PDF abrufen. Ausgabe, Widerruf und Neuausstellung folgen den gespeicherten Anwesenheits-, Kurs- und gegebenenfalls Quizdaten.
 - Lernanalysen für freigegebene Kurse mit Anmeldungen, Anwesenheit, Abschlüssen, gültigen Nachweisen und geplanter Unterrichtszeit. Im internen Portal ergänzen Kursbereitschaft, Vorbereitung, Leistungsnachweis und Zuständigkeiten die Betriebsansicht.
+- Interner Premium-Kursabschluss für die Verwaltung. Fehlende Anwesenheitseinträge, Prüfungsergebnisse und aktivierte Abgaben prüfen, offene Kategorien zuweisen und den Abschluss mit den Nacharbeiten im Arbeitsbereich dokumentieren.
 
 ## Interne Aufträge, Unternehmen und Kursbetrieb
 
@@ -61,6 +64,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Unternehmensportal für eigene Kurs- und Auftragsanfragen, Lehrbriefing, Kurskontakt, freigegebene Budgets, Entscheidungen, Verlauf und Berichte. Frühere geeignete Kursanfragen mit neuen Terminen als neue Anfrage wiederholen. Andere Unternehmen bleiben durch den Organisationsbereich getrennt.
 - Eigene Ansprechpartner, bestätigte auftragsbezogene Dokumente, Kurshistorie und Schriftverkehr im Berechtigungsbereich. Für externe Website-Anfragen stellt das Portal eine abgesicherte Eingangsschnittstelle und eine Verwaltungswarteschlange mit Zuständigkeit und Verlauf bereit.
 - Interner Control Center für offene Besetzungen, Ausfälle, Unterlagen, Anfragen, Fälligkeiten und berechtigte Ausnahmen. Persönliche Aufgabenbezüge aus Chat und Arbeitsbereichen, wiederverwendbare Bausteine und serverseitige Aufgaben-/Zeitdatensätze mit freigegebenen Vorgängen.
+- Kursstart-Freigabe im Control Center und in der Vorbereitung. Zuständigkeit und Vertretung festlegen, offene Pflichtpunkte und Frist sehen. Vor der Frist erhält die zuständige Person einen Hinweis. Ist die Vorbereitung danach offen, geht eine Meldung an die Vertretung oder Verwaltung.
 
 ## Kalender, Verfügbarkeit und Importe
 
@@ -69,6 +73,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Verfügbarkeit und blockierte Zeiten verwalten. Berechtigte Verwaltung veröffentlicht globale Termine und verschickt zielgruppengerechte Einladungen. Unternehmen sehen die eigenen Kursdaten. Private Termine bleiben beim berechtigten Konto.
 - ICS-Dateien exportieren, eigene Termine aus ICS mit Vorschau und Wiederholungsfenster importieren und Duplikate erkennen. Ein widerrufbarer Nur-Lese-Kalenderlink erlaubt externe Abonnements für freigegebene Termine. ICS-Importe bleiben eigenständige Termine.
 - Unterstützte CSV- und XLSX-Importe mit Vorlagen, Vorschau, Zeilenfehlern und erneuter Verarbeitung offener Zeilen. Dazu gehören im internen Portal Unternehmen, Kontakte, Kurse und Vorlagen, Themen, persönliche Kalendertermine und geeignete Teilnehmende. Der Kursregister-Import verwendet den aktuellen Sitzungsroster.
+- Fehlerhafte Werte im gemeinsamen Tabellenimport direkt korrigieren. Nach bestätigten Einträgen setzt der Import bei der offenen Zeile fort. Bei unklarem Ergebnis bleibt die zuvor gesendete Zeile samt Importkennung für den Wiederholungsversuch erhalten.
 
 ## Kommunikation, Wissensbasis und Dateien
 
@@ -80,6 +85,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Forum unter Kommunikation mit Diskussionen und Fachartikeln, Suchfiltern, Artikelrevisionen und Moderation. Formatierung und Codeblöcke für dokumentierte technische Inhalte. Kommentare an freigegebenen Kursvorlagen und Aufträgen.
 - Internes Support-Postfach mit eigenen Tickets, Status, Priorität, Zuständigkeit, Verlauf, internen Notizen und autorisierten Anhängen. Berechtigte Stellen können Tickets zurückfragen, lösen, schließen oder erneut öffnen. Ankündigungen für ausgewählte Zielgruppen mit Veröffentlichung, Änderungen, Empfangsbestätigung und Verlauf.
 - In-App-Benachrichtigungen mit Kategorien, Ungelesen-Filter, Verlauf, als gelesen markieren und bestätigten Sammelaktionen. Einstellungen für Erinnerungen, Zustellpräferenzen und Ruhezeiten. Je nach Installation optionaler Benachrichtigungsversand per SMTP. In der Academy lassen sich Kursmeldungen zu Einschreibung, Kurschat, Material und eigener Anwesenheit zustellen. Im internen Portal zusätzlich gerätebezogener Web Push auf unterstützten Geräten nach Zustimmung.
+- Administrativer Verlauf für fehlgeschlagene Einladungs- und Kursmails. Definitiv abgelehnte Einladungen an eine geprüfte korrigierte Adresse senden und fehlgeschlagene Kursmails gezielt erneut anstoßen. Unklare Zustellversuche bleiben zur Prüfung sichtbar.
 
 ## Interne Vergütung, Verträge, Rechnungen und Analysen
 

@@ -47,6 +47,7 @@ import {
   readinessTaskInputSchema,
 } from "./schema";
 import "./i18n";
+import { CourseStartPanel } from "./course-start";
 import "./readiness.css";
 
 const flags = [
@@ -426,6 +427,7 @@ function CourseDetail({
           })}
         </p>
       </div>
+      <CourseStartPanel actor={actor} run={course.id} />
       <div className="readiness-detail-grid">
         <section
           className="panel readiness-checklist"

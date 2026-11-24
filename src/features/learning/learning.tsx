@@ -1,3 +1,4 @@
+import { CourseCloseout } from "./course-closeout";
 import { SessionScroll } from "../../components/session-scroll";
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
@@ -1001,6 +1002,12 @@ function CourseWorkspaceLayout({
   );
   const hasRatingSection = hasEvaluations || hasExamGrades;
   const hasRegister = editor && course.sessions.length > 0;
+  const hasCloseout =
+    __PORTAL_INTERNAL_EDITION__ &&
+    !academy &&
+    course.ended &&
+    course.lms_enabled &&
+    course.access.manager;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
   const sections = [
@@ -1017,6 +1024,9 @@ function CourseWorkspaceLayout({
       ? [{ id: "course-register", label: t("workspaceRegister") }]
       : []),
     { id: "course-chat", label: t("courseChat") },
+    ...(hasCloseout
+      ? [{ id: "course-closeout", label: t("courseCloseout") }]
+      : []),
     ...(hasActivities
       ? [{ id: "course-learning", label: t("workspaceActivities") }]
       : []),
@@ -1355,6 +1365,18 @@ function CourseWorkspaceLayout({
                   courseId={course.id}
                 />
               )}
+            </div>
+          )}
+          {hasCloseout && currentSection === "course-closeout" && (
+            <div
+              className={sectionClass("course-closeout")}
+              id="course-closeout"
+            >
+              <CourseCloseout
+                run={course.id}
+                actor={actor}
+                zone={course.time_zone}
+              />
             </div>
           )}
           <div className={sectionClass("course-chat")}>

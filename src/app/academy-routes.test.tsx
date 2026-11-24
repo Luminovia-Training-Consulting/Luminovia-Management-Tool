@@ -782,7 +782,10 @@ it("creates an academy draft from the selected company and preserves its request
     await screen.findByText("Create course draft", { exact: true }),
   );
   await user.selectOptions(
-    screen.getByLabelText("Organisation", { exact: true }),
+    screen.getByLabelText("Organisation", {
+      exact: true,
+      selector: "#academy-draft-company",
+    }),
     learnerId,
   );
   await user.click(screen.getByLabelText("Create a new course template"));
