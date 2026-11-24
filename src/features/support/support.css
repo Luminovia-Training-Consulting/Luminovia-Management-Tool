@@ -172,3 +172,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+.support-ticket-detail {
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+  min-width: 0;
+}
+
+.support-ticket-detail > .page-heading,
+.support-ticket-detail .support-actions {
+  margin: 0;
+}
+
+.support-ticket-detail .support-back {
+  justify-self: start;
+}
+
+.support-ticket-detail .section-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.support-filters > .field {
+  margin: 0;
+}

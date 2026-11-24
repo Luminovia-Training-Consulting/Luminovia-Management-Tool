@@ -252,3 +252,11 @@
     font-size: 11px;
   }
 }
+
+.notification-delivery-stack {
+  margin-block-start: 0.75rem;
+}
+
+.notification-delivery-stack > .attention-settings {
+  margin-block-start: 0;
+}

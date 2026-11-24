@@ -128,66 +128,68 @@ export function WhiteLabelSetupPage() {
           "Prepare a dedicated academy with Premium LMS, its own domain and its own administration.",
         )}
       />
-      <section className="panel">
-        <h2>{word("Kundeninstallation", "Customer installation")}</h2>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            role="switch"
-            checked={preparing}
-            onChange={(event) => setPreparing(event.target.checked)}
-          />
-          {word("White-Label-Einrichtung öffnen", "Open White Label setup")}
-        </label>
-        <p className="muted">
-          {word(
-            "Speichere die Einstellungen beim Unternehmen. Eine laufende Akademie übernimmt Änderungen am Auftritt direkt in ihrer eigenen Verwaltung.",
-            "Save the settings against the company. A running academy applies branding changes directly in its own administration.",
-          )}
-        </p>
-      </section>
-      {preparing &&
-        (companies.isError ? (
-          <ErrorState retry={() => void companies.refetch()} />
-        ) : companies.isPending ? (
-          <Loading />
-        ) : companies.data.length ? (
-          <section className="panel">
-            <Field
-              id="white-label-company"
-              label={word("Unternehmen", "Company")}
-            >
-              <select
-                value={companyId}
-                onChange={(event) => setCompanyId(event.target.value)}
-              >
-                <option value="">
-                  {word("Unternehmen auswählen", "Select a company")}
-                </option>
-                {companies.data.map(({ id, name }) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {company && (
-              <CompanySettings
-                key={company.id}
-                actor={actor}
-                company={company}
-                word={word}
-              />
-            )}
-          </section>
-        ) : (
-          <Notice>
+      <div className="section-stack">
+        <section className="panel">
+          <h2>{word("Kundeninstallation", "Customer installation")}</h2>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={preparing}
+              onChange={(event) => setPreparing(event.target.checked)}
+            />
+            {word("White-Label-Einrichtung öffnen", "Open White Label setup")}
+          </label>
+          <p className="muted">
             {word(
-              "Lege zuerst ein Unternehmen und ein aktives Unternehmens­konto an.",
-              "Create a company and an active company account first.",
+              "Speichere die Einstellungen beim Unternehmen. Eine laufende Akademie übernimmt Änderungen am Auftritt direkt in ihrer eigenen Verwaltung.",
+              "Save the settings against the company. A running academy applies branding changes directly in its own administration.",
             )}
-          </Notice>
-        ))}
+          </p>
+        </section>
+        {preparing &&
+          (companies.isError ? (
+            <ErrorState retry={() => void companies.refetch()} />
+          ) : companies.isPending ? (
+            <Loading />
+          ) : companies.data.length ? (
+            <section className="panel">
+              <Field
+                id="white-label-company"
+                label={word("Unternehmen", "Company")}
+              >
+                <select
+                  value={companyId}
+                  onChange={(event) => setCompanyId(event.target.value)}
+                >
+                  <option value="">
+                    {word("Unternehmen auswählen", "Select a company")}
+                  </option>
+                  {companies.data.map(({ id, name }) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {company && (
+                <CompanySettings
+                  key={company.id}
+                  actor={actor}
+                  company={company}
+                  word={word}
+                />
+              )}
+            </section>
+          ) : (
+            <Notice>
+              {word(
+                "Lege zuerst ein Unternehmen und ein aktives Unternehmens­konto an.",
+                "Create a company and an active company account first.",
+              )}
+            </Notice>
+          ))}
+      </div>
     </>
   );
 }

@@ -1,4 +1,5 @@
 /** Exact server-authorized destinations; revocation errors never retain cached links. */
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -21,9 +22,11 @@ const relatedSchema = z.object({
 export function JobRelatedNavigation({
   actor,
   jobId,
+  afterWorkspace,
 }: {
   actor: string;
   jobId: string;
+  afterWorkspace?: ReactNode;
 }) {
   const { t } = useTranslation("jobRelated");
   const query = useQuery({
@@ -38,32 +41,38 @@ export function JobRelatedNavigation({
     retry: false,
     refetchInterval: 10000,
   });
-  if (query.isPending) return null;
-  if (query.isError)
-    return (
-      <Notice kind="error">
-        {t("unavailable")}{" "}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => void query.refetch()}
-        >
-          {t("retry")}
-        </Button>
-      </Notice>
-    );
-  if (!query.data.course_id && !query.data.rooms.length) return null;
+  const related = query.isSuccess ? query.data : undefined;
+  if (
+    !query.isError &&
+    !afterWorkspace &&
+    !related?.course_id &&
+    !related?.rooms.length
+  )
+    return null;
   return (
     <nav aria-label={t("related")} className="page-actions">
-      {query.data.course_id && (
+      {query.isError && (
+        <Notice kind="error">
+          {t("unavailable")}{" "}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void query.refetch()}
+          >
+            {t("retry")}
+          </Button>
+        </Notice>
+      )}
+      {related?.course_id && (
         <Button asChild variant="secondary">
-          <Link to={`/courses/${query.data.course_id}/workspace`}>
+          <Link to={`/courses/${related.course_id}/workspace`}>
             {t("course")}
           </Link>
         </Button>
       )}
-      {query.data.rooms.map((room) => (
+      {afterWorkspace}
+      {related?.rooms.map((room) => (
         <Button key={room.id} asChild variant="secondary">
           <Link to={`/chats?room=${room.id}`}>{t(room.kind)}</Link>
         </Button>

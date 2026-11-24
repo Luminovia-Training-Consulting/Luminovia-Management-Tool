@@ -181,7 +181,7 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
             page.getByText("1 file loaded", {exact: true}),
         ).toBeVisible();
         await expect(file().getByText(tag, {exact: true})).toBeVisible();
-        await file().getByLabel(`File name: ${name}`, {exact: true}).click();
+        await file().getByLabel(`More actions for ${name}`, {exact: true}).click();
         await file().getByRole("button", {name: "Archive", exact: true}).click();
         const archiveAcknowledged = page.waitForResponse((response) => {
             const request = response.request();
