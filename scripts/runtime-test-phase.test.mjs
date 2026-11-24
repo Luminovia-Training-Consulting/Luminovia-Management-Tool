@@ -29,6 +29,7 @@ async function runFixture({
                               fail = () => false,
                               cancelDuringCleanup = false,
                               inherited = {},
+                              runId = randomBytes(4).toString("hex"),
                               sourceText = "export const fictionalSource = true;\n",
                               mutateBrowserReport = () => {
                               },
@@ -37,6 +38,7 @@ async function runFixture({
         reports = [],
         copies = [],
         removed = [],
+        writes = [],
         messages = [];
     const listeners = new Map();
     let locks = 0,
@@ -111,7 +113,8 @@ async function runFixture({
         rmSync: (path) => removed.push(path),
         symlinkSync() {
         },
-        writeFileSync() {
+        writeFileSync(path, value) {
+            writes.push({path, value});
         },
         assertLocalQaMemory() {},
         localQaTempRoot: () => "/owned-qa",
@@ -159,7 +162,7 @@ async function runFixture({
             ),
         join,
         basename,
-        randomBytes,
+        randomBytes: () => Buffer.from(runId, "hex"),
         availableParallelism: () => 4,
         createHash,
         browserPlan,
@@ -229,6 +232,7 @@ async function runFixture({
         reports,
         copies,
         removed,
+        writes,
         messages,
         error,
         locks,
@@ -763,6 +767,17 @@ test("browser phase gets its own snapshot, retained real services and explicit o
             /docs\/screenshots|playwright-report|test-results/.test(path),
         ),
     );
+});
+
+test("isolated port remapping preserves a project ID containing the original port prefix", async () => {
+    const result = await runFixture({args: ["--phase", "system"], runId: "97c54389"});
+    assert.equal(result.error, undefined);
+    assert.equal(
+        result.writes.find(({path}) => path.endsWith("supabase/config.toml"))?.value,
+        'project_id = "luminovia-portal-test-97c54389"\n[api]\nport = 55321\n',
+    );
+    const seed = result.calls.find(({args}) => args.includes("scripts/local-seed.mjs"));
+    assert.equal(seed.env.PORTAL_DB_CONTAINER, "supabase_db_luminovia-portal-test-97c54389");
 });
 
 test("safe evidence binds identical source bytes to the selected phase without claiming unrun acceptance", async () => {

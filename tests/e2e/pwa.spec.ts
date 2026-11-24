@@ -43,11 +43,13 @@ test("built PWA WebKit activates the app worker and serves an offline deep link"
 
     await context.setOffline(true);
     try {
-        const response = await page.goto("/help");
+        const response = await page.goto("/help?topic=profile");
         expect(response?.status()).toBe(200);
         expect(response?.fromServiceWorker()).toBe(true);
         await expect(page.locator("#help-title")).toBeVisible();
-        await expect(page.getByRole("heading", {level: 2, name: /Profil/})).toBeVisible();
+        await expect(
+            page.getByRole("heading", {level: 2, name: /^(Mein Profil|My profile)$/}),
+        ).toBeVisible();
         const privateReply = await page.evaluate(async () => {
             try {
                 await fetch("/rest/v1/rpc/my_push_devices", {method: "POST"});

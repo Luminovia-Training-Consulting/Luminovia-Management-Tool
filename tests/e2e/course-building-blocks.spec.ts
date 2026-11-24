@@ -331,7 +331,10 @@ test("Company portal authors a template and saves an unpublished run", async ({p
     await run.getByLabel("Beginn 1", {exact: true}).fill("2037-07-06T09:00");
     await run.getByLabel("Ende 1", {exact: true}).fill("2037-07-06T16:00");
     await run.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
-    await expect(page.getByText("Durchführung als Entwurf gespeichert.", {exact: true})).toBeVisible();
+    await expect(run).toBeHidden({timeout: 20000});
+    await expect(
+        page.getByRole("status").filter({hasText: "Durchführung als Entwurf gespeichert."}),
+    ).toBeVisible();
     await expect(page.getByRole("heading", {name: editedTitle, exact: true})).toBeVisible();
     const saved = await checked(service.from("course_runs")
         .select("published,archived_at,course_sessions(id),jobs(id)")

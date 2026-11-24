@@ -150,9 +150,9 @@ try {
     const configPath = join(scratch, "supabase/config.toml");
     let config = readFileSync(configPath, "utf8");
     config = config
-        .replace(/^project_id\s*=\s*"[^"]+"/m, `project_id = "${project}"`)
         .replaceAll("543", "553")
-        .replaceAll(":5173", ":5273");
+        .replaceAll(":5173", ":5273")
+        .replace(/^project_id\s*=\s*"[^"]+"/m, `project_id = "${project}"`);
     if (randomServicePorts) config = await allocateTestServicePorts(config);
     writeFileSync(configPath, config);
     /** Run one required child command; cancellation/failure cannot be recorded as success. */
