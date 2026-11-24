@@ -156,90 +156,93 @@ test("optional external reference and contact are saved, shown after claim and h
         deviceScaleFactor: project.deviceScaleFactor,
         userAgent: project.userAgent,
     });
-    const lecturer = await context.newPage();
-    await login(lecturer, teacher.email);
-    await lecturer.goto(`/jobs/${job}`);
-    const visible = lecturer.getByRole("region", {
-        name: "Kontakt und Auftragsreferenz",
-        exact: true,
-    });
-    await expect(visible.getByText(description, {exact: true})).toBeVisible();
-    await expect(
-        visible.getByText(
-            "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
-            {exact: true},
-        ),
-    ).toBeVisible();
-    await expect(visible.getByText(email, {exact: true})).toHaveCount(0);
-    await expect(
-        visible.getByRole("link", {name: "Originalausschreibung", exact: true}),
-    ).toHaveAttribute("rel", "noopener noreferrer");
-    await lecturer.getByLabel("Konditionen akzeptieren", {exact: true}).check();
-    await lecturer
-        .getByRole("button", {name: "Auftrag übernehmen", exact: true})
-        .click();
-    await expect(
-        visible.getByRole("link", {name: email, exact: true}),
-    ).toBeVisible();
-    await expect(
-        visible.getByRole("link", {name: "+49 40 123456", exact: true}),
-    ).toHaveAttribute("href", "tel:+4940123456");
-    // Lecturers now submit a withdrawal request; management performs this
-    // immediate, reasoned cancellation after reviewing the assignment.
-    await page.goto(`/jobs/${job}`);
-    const managementLifecycle = page.getByRole("region", {
-        name: "Zuweisung und Auftragsverlauf",
-        exact: true,
-    });
-    await managementLifecycle
-        .getByRole("button", {name: "Zuweisung stornieren", exact: true})
-        .click();
-    const cancellation = page.getByRole("dialog");
-    await cancellation
-        .getByLabel("Begründung (5–1000 Zeichen)", {exact: true})
-        .fill("Fictional scheduling change with contact revocation");
-    await cancellation
-        .getByRole("button", {name: "Stornierung bestätigen", exact: true})
-        .click();
-    await expect(cancellation).not.toBeVisible();
-    await lecturer.reload();
-    await expect(visible.getByText(email, {exact: true})).toHaveCount(0);
-    await expect(
-        visible.getByText(
-            "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
-            {exact: true},
-        ),
-    ).toBeVisible();
-    await lecturer.getByLabel("Sprache", {exact: true}).selectOption("en");
-    await lecturer.getByLabel("Theme", {exact: true}).selectOption("dark");
-    await expect(
-        lecturer.getByRole("heading", {
-            name: "Contact and job reference",
+    try {
+        const lecturer = await context.newPage();
+        await login(lecturer, teacher.email);
+        await lecturer.goto(`/jobs/${job}`);
+        const visible = lecturer.getByRole("region", {
+            name: "Kontakt und Auftragsreferenz",
             exact: true,
-        }),
-    ).toBeVisible();
-    await lecturer.evaluate(() => document.fonts.ready);
-    const scan = await new AxeBuilder({page: lecturer})
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-        .analyze();
-    expect(
-        scan.violations.map((issue) => ({
-            id: issue.id,
-            targets: issue.nodes.map((node) => node.target),
-        })),
-    ).toEqual([]);
-    expect(
-        await lecturer.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-    ).toBe(true);
-    await lecturer.screenshot({
-        path: `.local/screenshots/${testInfo.project.name}-job-briefing.png`,
-        fullPage: true,
-    });
-    await testInfo.attach("optional-reference-contact", {
-        body: await lecturer.screenshot({fullPage: true}),
-        contentType: "image/png",
-    });
-    // Playwright closes this additional context with the browser fixture at test teardown.
+        });
+        await expect(visible.getByText(description, {exact: true})).toBeVisible();
+        await expect(
+            visible.getByText(
+                "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
+                {exact: true},
+            ),
+        ).toBeVisible();
+        await expect(visible.getByText(email, {exact: true})).toHaveCount(0);
+        await expect(
+            visible.getByRole("link", {name: "Originalausschreibung", exact: true}),
+        ).toHaveAttribute("rel", "noopener noreferrer");
+        await lecturer.getByLabel("Konditionen akzeptieren", {exact: true}).check();
+        await lecturer
+            .getByRole("button", {name: "Auftrag übernehmen", exact: true})
+            .click();
+        await expect(
+            visible.getByRole("link", {name: email, exact: true}),
+        ).toBeVisible();
+        await expect(
+            visible.getByRole("link", {name: "+49 40 123456", exact: true}),
+        ).toHaveAttribute("href", "tel:+4940123456");
+        // Lecturers now submit a withdrawal request; management performs this
+        // immediate, reasoned cancellation after reviewing the assignment.
+        await page.goto(`/jobs/${job}`);
+        const managementLifecycle = page.getByRole("region", {
+            name: "Zuweisung und Auftragsverlauf",
+            exact: true,
+        });
+        await managementLifecycle
+            .getByRole("button", {name: "Zuweisung stornieren", exact: true})
+            .click();
+        const cancellation = page.getByRole("dialog");
+        await cancellation
+            .getByLabel("Begründung (5–1000 Zeichen)", {exact: true})
+            .fill("Fictional scheduling change with contact revocation");
+        await cancellation
+            .getByRole("button", {name: "Stornierung bestätigen", exact: true})
+            .click();
+        await expect(cancellation).not.toBeVisible();
+        await lecturer.reload();
+        await expect(visible.getByText(email, {exact: true})).toHaveCount(0);
+        await expect(
+            visible.getByText(
+                "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
+                {exact: true},
+            ),
+        ).toBeVisible();
+        await lecturer.getByLabel("Sprache", {exact: true}).selectOption("en");
+        await lecturer.getByLabel("Theme", {exact: true}).selectOption("dark");
+        await expect(
+            lecturer.getByRole("heading", {
+                name: "Contact and job reference",
+                exact: true,
+            }),
+        ).toBeVisible();
+        await lecturer.evaluate(() => document.fonts.ready);
+        const scan = await new AxeBuilder({page: lecturer})
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+            .analyze();
+        expect(
+            scan.violations.map((issue) => ({
+                id: issue.id,
+                targets: issue.nodes.map((node) => node.target),
+            })),
+        ).toEqual([]);
+        expect(
+            await lecturer.evaluate(
+                () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+        ).toBe(true);
+        await lecturer.screenshot({
+            path: `.local/screenshots/${testInfo.project.name}-job-briefing.png`,
+            fullPage: true,
+        });
+        await testInfo.attach("optional-reference-contact", {
+            body: await lecturer.screenshot({fullPage: true}),
+            contentType: "image/png",
+        });
+    } finally {
+        await context.close();
+    }
 });
