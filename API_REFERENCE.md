@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **359 migration files** through version **20261124114415**, containing **586 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `4e4bf98ffc0a0268194fb8d1ab3ee1ecda6a2ae44c14910a0e5724ca365872d7`.
+This reference describes the current repository API. It is generated from a disposable replay of **360 migration files** through version **20261124115000**, containing **586 application public functions** and **53 authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `90cbe99cac31fa41b89fe34beb38211811992e5f40ba3aa8d7466b9a0cf5af18`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local setup](README.md#run-locally). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Validation workflow](CONTRIBUTING.md#set-up-and-check) and current QA results define that evidence.
 

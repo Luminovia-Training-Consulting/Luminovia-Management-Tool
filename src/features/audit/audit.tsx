@@ -171,7 +171,7 @@ function AuditReader({
                 {t(`groups.${action.split(".")[0]}`, {
                   defaultValue: t("other"),
                 })}{" "}
-                · {action}
+                · {t(`actions.${action}`, { defaultValue: action })}
               </option>
             ))}
           </select>
@@ -228,8 +228,13 @@ function AuditReader({
                   <article className="panel audit-entry">
                     <div>
                       <h2>
-                        {t(`groups.${entry.action.split(".")[0]}`, {
-                          defaultValue: t("other"),
+                        {t(`actions.${entry.action}`, {
+                          defaultValue: t(
+                            `groups.${entry.action.split(".")[0]}`,
+                            {
+                              defaultValue: t("other"),
+                            },
+                          ),
                         })}
                       </h2>
                       <code>{entry.action}</code>
@@ -245,7 +250,14 @@ function AuditReader({
                     </div>
                     <dl>
                       <dt>{t("actor")}</dt>
-                      <dd>{entry.actor_name || t("unknownActor")}</dd>
+                      <dd>
+                        {entry.actor_name ||
+                          t(
+                            /^(mail|push|webhook)\.delivery_/.test(entry.action)
+                              ? "automatedDelivery"
+                              : "unknownActor",
+                          )}
+                      </dd>
                       <dt>{t("resource")}</dt>
                       <dd>
                         <code>{entry.resource_id || t("noResource")}</code>

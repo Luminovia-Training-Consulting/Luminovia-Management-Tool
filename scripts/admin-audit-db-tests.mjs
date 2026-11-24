@@ -307,6 +307,63 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
           select public._record_account_access_mail(${q(receipt)}, false);commit;`);
         assert.equal((await read(users.management, "null,null,'account.access_mail_failed'")).items[0]?.resource_id, users.lecturer);
     });
+    await check("Committed imports appear once; denied and rolled-back rows leave no operational entry", async () => {
+        const key = randomUUID(), invalid = randomUUID();
+        const submit = (who, id, payload) =>
+            actor(who, `select public.import_table_row(${q(id)},'course-template',null,${q(payload)}::jsonb)`);
+        const payload = JSON.stringify({title: secret});
+        await Promise.all([submit(users.admin, key, payload), submit(users.admin, key, payload)]);
+        await assert.rejects(submit(users.admin, invalid, "{}"), /22023/);
+        await assert.rejects(submit(users.lecturer, randomUUID(), payload), /42501/);
+        const page = await read(users.management, "null,null,'import.row_applied'");
+        assert.deepEqual(page.items.map((entry) => entry.resource_id), [key]);
+        assert.ok(!JSON.stringify(page).includes(secret));
+    });
+    await check("Attendance receipts, ticket changes and terminal push/webhook outcomes expose only safe metadata", async () => {
+        const ids = Object.fromEntries(["org","key","webhook","delivery","device","notification","push","template","run","session","support"]
+            .map((name) => [name,q(randomUUID())]));
+        await sql(`
+            insert into public.organisations(id,name) values (${ids.org},'Fictional organisation');
+            insert into public.course_templates(id,title) values (${ids.template},'Fictional course');
+            insert into public.course_runs(id,template_id,organisation_id) values (${ids.run},${ids.template},${ids.org});
+            insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+              values (${ids.session},${ids.run},now(),now()+interval '1 hour');
+            insert into private.course_attendance_audit(session_id,user_id,actor_id,new_state,reason)
+              values (${ids.session},${q(users.participant)},${q(users.admin)},jsonb_build_object('staff_note',${q(secret)}),${q(secret)});
+            insert into public.audit_events(actor_id,action,resource_id,details)
+              values (${q(users.admin)},'support.status',${ids.support},jsonb_build_object('body',${q(secret)})),
+                     (${q(users.admin)},'support.internal_note',${ids.support},jsonb_build_object('body',${q(secret)}));
+            insert into private.push_subscriptions(id,user_id,endpoint,p256dh,auth_secret,device_token,label)
+              values (${ids.device},${q(users.participant)},${q(secret)},'fictional',${q(secret)},gen_random_uuid(),'Fictional');
+            insert into public.notifications(id,user_id,kind) values (${ids.notification},${q(users.participant)},'audit_test');
+            insert into private.notification_push_outbox(id,notification_id,subscription_id,occurrence_at)
+              values (${ids.push},${ids.notification},${ids.device},now());
+            insert into private.company_integration_keys(id,organisation_id,label,secret_hash,expires_at)
+              values (${ids.key},${ids.org},'Fictional key',sha256(convert_to(${q(secret)},'UTF8')),now()+interval '1 day');
+            insert into private.company_course_webhooks(id,integration_id,integration_version,destination,signing_secret)
+              values (${ids.webhook},${ids.key},1,'fictional',repeat('0',64));
+            insert into private.company_course_webhook_deliveries(id,event_id,subscription_id,course_id,event_type)
+              values (${ids.delivery},gen_random_uuid(),${ids.webhook},${ids.run},'course.published');
+            update private.notification_push_outbox set state='leased' where id=${ids.push};
+            update private.notification_push_outbox set state='failed' where id=${ids.push};
+            update private.notification_push_outbox set state='failed' where id=${ids.push};
+            update private.company_course_webhook_deliveries set state='pending', attempts=1 where id=${ids.delivery};
+            update private.company_course_webhook_deliveries set state='delivered' where id=${ids.delivery};
+        `);
+        for (const [action, target] of Object.entries({
+            "course.attendance_recorded": ids.session,
+            "support.status": ids.support,
+            "push.delivery_failed": ids.push,
+            "webhook.delivery_delivered": ids.delivery,
+        })) {
+            const page = await read(users.management, `null,null,${q(action)}`);
+            assert.deepEqual(page.items.map((entry) => q(entry.resource_id)), [target]);
+            assert.ok(!JSON.stringify(page).includes(secret));
+        }
+        assert.equal((await read(users.management)).items.some((entry) => entry.action === "support.internal_note"), false);
+        assert.equal(await sql(`select count(*) from private.administration_activity
+            where resource_id in (${ids.push},${ids.delivery})`), "2");
+    });
     await check("Only a current administrator can explicitly clear operational rows", async () => {
         const clear = (who, confirm) => actor(who, `select public.clear_administration_activity(${confirm})`);
         for (const who of [users.management, users.lecturer])

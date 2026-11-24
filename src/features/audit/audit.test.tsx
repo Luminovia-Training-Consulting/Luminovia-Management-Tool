@@ -135,6 +135,31 @@ describe("connected administration audit reader", () => {
     ).toBeInTheDocument();
     expect(state.rpc).toHaveBeenCalledTimes(2);
   });
+  it("shows translated webhook outcomes while preserving the filter identifier", async () => {
+    const action = "webhook.delivery_failed";
+    state.rpc.mockReturnValue(
+      response({
+        ...data,
+        items: [{ ...event, action, actor_name: null }],
+        actions: [action],
+      }),
+    );
+    mount();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Webhook-Zustellung fehlgeschlagen",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Automatische Zustellung")).toBeInTheDocument();
+    await act(() => i18n.changeLanguage("en"));
+    expect(
+      screen.getByRole("option", {
+        name: "Webhooks · Webhook delivery failed",
+      }),
+    ).toHaveValue(action);
+    expect(screen.getByText("Automated delivery")).toBeInTheDocument();
+    expect(screen.getByText(action)).toBeInTheDocument();
+  });
   it("loads safe metadata as literal text and exposes no editing controls", async () => {
     const { container } = mount();
     expect(await screen.findByText(event.actor_name)).toBeInTheDocument();
