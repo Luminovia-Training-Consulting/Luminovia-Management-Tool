@@ -4,10 +4,8 @@ import { useRequestKey } from "../../lib/request-key";
 import { CompanyJobDeletions } from "../deletions/deletions";
 import { CompanyDispatchSettings } from "../operations/company-dispatch-settings";
 import { CompanyParticipantsPanel } from "../operations/company-participants";
-import {
-  CompanyLecturers,
-  companyLecturersQuery,
-} from "../operations/company-lecturers";
+import { CompanyLecturers } from "../operations/company-lecturers";
+import { companyLecturersQuery } from "../operations/data";
 import { CompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { CompanyIntegrationPicker } from "../operations/company-integrations";
 import {

@@ -1,36 +1,12 @@
 import { useState } from "react";
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import { companyLecturersQuery } from "./data";
 import "./i18n";
-
-type Lecturer = { id: string; display_name: string };
-type Roster = { members: Lecturer[]; candidates: Lecturer[]; can_add: boolean };
-
-export const companyLecturersQuery = (actor: string, organisation: string) =>
-  queryOptions({
-    queryKey: ["company-lecturers", actor, organisation],
-    enabled: Boolean(organisation),
-    queryFn: async () => {
-      const { data, error } = await db().rpc(
-        "company_lecturer_roster",
-        {
-          p_organisation_id: organisation,
-        },
-        { get: true },
-      );
-      if (error) throw error;
-      return data as Roster;
-    },
-  });
 
 function RosterPanel({
   actor,

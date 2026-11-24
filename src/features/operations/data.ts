@@ -29,6 +29,26 @@ export const companyPremiumSettingsQuery = (actor: string) =>
     },
   });
 
+type Lecturer = { id: string; display_name: string };
+type Roster = { members: Lecturer[]; candidates: Lecturer[]; can_add: boolean };
+
+export const companyLecturersQuery = (actor: string, organisation: string) =>
+  queryOptions({
+    queryKey: ["company-lecturers", actor, organisation],
+    enabled: Boolean(organisation),
+    queryFn: async () => {
+      const { data, error } = await db().rpc(
+        "company_lecturer_roster",
+        {
+          p_organisation_id: organisation,
+        },
+        { get: true },
+      );
+      if (error) throw error;
+      return data as Roster;
+    },
+  });
+
 /** Business contact in its separately authorized organization context. */
 export interface Contact {
   id: string;
