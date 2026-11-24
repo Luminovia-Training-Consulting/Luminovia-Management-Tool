@@ -1,4 +1,5 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { LoadMore } from "../../components/load-more";
 import { canRetryNextPage } from "../../lib/paged-read";
 import { currencyCodes } from "../../lib/currencies.ts";
@@ -555,15 +556,10 @@ export function JobDiscovery() {
     if (!query.isFetching) void query.fetchNextPage({ cancelRefetch: false });
   };
   const pages = query.data?.pages;
-  const items = useMemo(() => {
-    const indexed = new Map<
-      string,
-      NonNullable<typeof pages>[number]["items"][number]
-    >();
-    for (const page of pages ?? [])
-      for (const item of page.items) indexed.set(item.id, item);
-    return Array.from(indexed.values());
-  }, [pages]);
+  const items = useMemo(
+    () => mergeCursorItems(pages, { preferLast: true }),
+    [pages],
+  );
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   if (!staff)

@@ -2,6 +2,7 @@
  * Validated inbox DTOs, stable cursors and versioned personal preferences. Destinations must be
  * safe internal paths; only confirmed RPCs change read state or refresh reminders.
  */
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { throwPagedReadError } from "../../lib/paged-read";
@@ -11,7 +12,6 @@ import {
   inboxPageSchema,
   notificationPreferencesSchema,
   type InboxPage,
-  type NotificationItem,
   type NotificationPreferences,
 } from "./schema";
 export {
@@ -31,13 +31,7 @@ interface Cursor {
 export function mergeNotificationPages(pages: InboxPage[] | undefined) {
   // Newer pages come first. For overlapping IDs, keep their first occurrence
   // instead of overwriting it with an older read state.
-  const rows = new Map<string, NotificationItem>();
-  for (const page of pages ?? []) {
-    for (const item of page.items) {
-      if (!rows.has(item.id)) rows.set(item.id, item);
-    }
-  }
-  return Array.from(rows.values());
+  return mergeCursorItems(pages);
 }
 
 /** Shared actor keys connect preview/inbox views with targeted read-state revalidation. */

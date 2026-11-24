@@ -1,4 +1,5 @@
 /** Unified discovery renders only server-authorised pages for the current actor. */
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -86,19 +87,10 @@ export function PortalSearch() {
   });
   const retryNext = canRetryNextPage(query);
   const pages = query.data?.pages;
-  const rows = useMemo(() => {
-    const unique = new Map<
-      string,
-      NonNullable<typeof pages>[number]["items"][number]
-    >();
-    for (const page of pages ?? []) {
-      for (const row of page.items) {
-        const key = `${row.kind}:${row.id}`;
-        if (!unique.has(key)) unique.set(key, row);
-      }
-    }
-    return Array.from(unique.values());
-  }, [pages]);
+  const rows = useMemo(
+    () => mergeCursorItems(pages, { key: (row) => `${row.kind}:${row.id}` }),
+    [pages],
+  );
   return (
     <>
       <PageHeading title={t("title")} description={t("hint")} />

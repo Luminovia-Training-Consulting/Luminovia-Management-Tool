@@ -1,5 +1,6 @@
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
@@ -46,33 +47,38 @@ export function JobPicker({
   const selected = !query.isPlaceholderData
     ? (query.data?.pages[0]?.selected ?? null)
     : null;
-  const items = [
-    ...new Map(
-      (query.data?.pages ?? [])
-        .flatMap((page) => page.items)
-        .map((item) => [item.id, item]),
-    ).values(),
-  ];
-  // Keep an authorized selection visible when it is outside a later search page.
-  const sameChoice = (item: JobPickerOption) =>
-    selected &&
-    (purpose === "participant_course"
-      ? item.course_run_id === selected.course_run_id
-      : item.id === selected.id);
-  const pinned = selected && !items.some(sameChoice);
-  const choices = selected
-    ? [selected, ...items.filter((item) => !sameChoice(item))]
-    : items;
-  const choiceLabel = (item: JobPickerOption) =>
-    [
-      item.title,
-      item.customer_name,
-      `${item.starts_at ? dateTime(item.starts_at, i18n.language, item.time_zone) : t("unscheduled")} (${item.time_zone})`,
-      item.course_run_id &&
-        t("runReference", { id: item.course_run_id.slice(-8) }),
-    ]
-      .filter(Boolean)
-      .join(" · ");
+  const pages = query.data?.pages;
+  const items = useMemo(
+    () => mergeCursorItems(pages, { preferLast: true }),
+    [pages],
+  );
+  const language = i18n.language;
+  const { choices, pinned } = useMemo(() => {
+    // Keep an authorized selection visible when it is outside a later search page.
+    const sameChoice = (item: JobPickerOption) =>
+      selected &&
+      (purpose === "participant_course"
+        ? item.course_run_id === selected.course_run_id
+        : item.id === selected.id);
+    const visible = selected
+      ? [selected, ...items.filter((item) => !sameChoice(item))]
+      : items;
+    return {
+      choices: visible.map((item) => ({
+        id: item.id,
+        label: [
+          item.title,
+          item.customer_name,
+          `${item.starts_at ? dateTime(item.starts_at, language, item.time_zone) : t("unscheduled")} (${item.time_zone})`,
+          item.course_run_id &&
+            t("runReference", { id: item.course_run_id.slice(-8) }),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      })),
+      pinned: selected && visible.length > items.length,
+    };
+  }, [items, selected, purpose, language, t]);
   const summaryID = selected ? `${id}-selection` : undefined;
   const refresh = async () => {
     const result = await query.refetch();
@@ -92,8 +98,8 @@ export function JobPicker({
           <input
             type="search"
             value={draft}
-            maxLength={160}
             onChange={(event) => setDraft(event.target.value)}
+            maxLength={160}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -132,14 +138,14 @@ export function JobPicker({
               <option value="">{t("choose")}</option>
               {choices.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {choiceLabel(item)}
+                  {item.label}
                 </option>
               ))}
             </select>
           </Field>
           {selected && (
             <p id={summaryID} className="job-picker-selection muted">
-              {choiceLabel(selected)}
+              {choices[0]?.label}
             </p>
           )}
           {pinned && <p className="muted">{t("selectionHint")}</p>}

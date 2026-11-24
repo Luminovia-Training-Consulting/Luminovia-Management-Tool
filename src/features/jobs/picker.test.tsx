@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import i18n from "../../lib/i18n";
+import * as dates from "../../lib/dates";
 import { JobPicker } from "./picker";
 import { jobPickerQuery } from "./picker-api";
 import { FilesPage } from "../files/files";
@@ -155,6 +156,34 @@ it("loads only explicit bounded pages and applied literal searches without readi
     p_purpose: "job_attachment",
   });
   expect(state.from).not.toHaveBeenCalled();
+});
+it("keeps the loaded choices stable while writing a new search", async () => {
+  const scheduled = { ...first, starts_at: "2040-01-01T08:00:00Z" };
+  state.rpc.mockImplementation(() =>
+    response({
+      items: [scheduled],
+      has_more: false,
+      next_cursor: null,
+      selected: null,
+    }),
+  );
+  const formatDate = vi.spyOn(dates, "dateTime");
+  try {
+    setup(<Harness />);
+    const option = await screen.findByRole("option", {
+      name: /Fictional permitted course/,
+    });
+    expect(formatDate).toHaveBeenCalledTimes(1);
+    await userEvent.type(
+      screen.getByLabelText("Auftrag oder Kurs suchen"),
+      "draft",
+    );
+    expect(option).toBeInTheDocument();
+    expect(formatDate).toHaveBeenCalledTimes(1);
+    expect(state.rpc).toHaveBeenCalledTimes(1);
+  } finally {
+    formatDate.mockRestore();
+  }
 });
 it("revalidates the selected exact ID before exposing the connected operation", async () => {
   let confirm!: (value: { data: unknown; error: null }) => void;

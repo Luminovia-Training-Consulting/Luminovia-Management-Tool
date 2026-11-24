@@ -1,3 +1,4 @@
+import { mergeCursorItems } from "../../lib/cursor-rows";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
@@ -63,10 +64,7 @@ export const documentDiscoveryQuery = (
 export function discoveredDocuments(
   pages: DocumentPage[] | undefined,
 ): PortalDocument[] {
-  const rows = new Map<string, PortalDocument>();
-  for (const page of pages ?? [])
-    for (const row of page.items) if (!rows.has(row.id)) rows.set(row.id, row);
-  return [...rows.values()];
+  return mergeCursorItems(pages);
 }
 
 export async function saveDocumentOrganisation(
