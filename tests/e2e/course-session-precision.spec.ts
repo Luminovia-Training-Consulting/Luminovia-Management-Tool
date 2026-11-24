@@ -92,6 +92,12 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
         expect(before).toEqual(sessions);
 
         await login(page, administrator.email);
+        // Pin the fixture's language before using German edit labels; the
+        // account-scoped UI preference can be English after login.
+        await page
+            .getByLabel(/^(Language|Sprache)$/, {exact: true})
+            .selectOption("de");
+        await expect(page.locator("html")).toHaveAttribute("lang", "de");
         await page.goto("/courses");
         await page.getByLabel("Suchen", {exact: true}).fill(title);
         const card = page.locator(".operations-course").filter({
