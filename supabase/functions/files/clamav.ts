@@ -1,6 +1,7 @@
 /**
  * Edge ClamAV adapter using HTTPS gateway or private TCP. Bound upload/response bytes, time and signature age; failure must not mark a document clean.
  */
+import {webFileBytes} from "../_shared/file-bytes.ts";
 const encoder = new TextEncoder();
 const MAX_SCAN_BYTES = 100 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4096;
@@ -96,7 +97,7 @@ async function scanHttps(
                 "Content-Type": "application/octet-stream",
                 Accept: "application/json",
             },
-            body: new Uint8Array(bytes),
+            body: webFileBytes(bytes),
             redirect: "error",
             credentials: "omit",
             referrerPolicy: "no-referrer",

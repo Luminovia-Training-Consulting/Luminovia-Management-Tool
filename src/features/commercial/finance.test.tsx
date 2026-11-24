@@ -23,7 +23,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { FinancePage } from "./finance";
-import { commercialKeys } from "./api";
+import { commercialKeys, earningsQuery } from "./api";
 import type { CommercialAccess, EarningRecord, InvoiceRecord } from "./types";
 import type { InvoiceException } from "./invoice-exception-schema";
 import type { InvoiceSeriesRecord } from "./invoice-series-schema";
@@ -201,6 +201,25 @@ function view(initialEntries = ["/"], roles = ["lecturer"]) {
   );
   return client;
 }
+
+it("hides cached monthly earnings when the server no longer permits the read", async () => {
+  const client = view();
+  const trend = { name: "Monatliche Entwicklung" };
+  expect(await screen.findByRole("heading", trend)).toBeVisible();
+  const rpc = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name: string, args?: unknown) =>
+    name === "finance_earnings"
+      ? Promise.resolve({ data: null, error: { code: "42501" } })
+      : rpc(name, args),
+  );
+  await act(() =>
+    client.invalidateQueries({
+      queryKey: earningsQuery(actor, false).queryKey,
+    }),
+  );
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(screen.queryByRole("heading", trend)).not.toBeInTheDocument();
+});
 
 it("opens the invoice form from an accepted-course deep link and keeps future claims unselectable", async () => {
   const ready = earning("ready-claim"),

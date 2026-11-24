@@ -46,26 +46,22 @@ export function Dashboard() {
   const clientAccount = Boolean(roles.data?.includes("client"));
   const jobs = useQuery({
     ...jobDashboardQuery(session!.user.id),
-    enabled: staff,
+    enabled: roles.isSuccess && staff,
   });
   const expertise = useQuery({
     ...expertiseQuery(session!.user.id),
-    enabled: teaching,
+    enabled: roles.isSuccess && teaching,
   });
-  if (roles.isPending || (staff && jobs.isPending)) return <Loading />;
-  if (roles.isError || (staff && jobs.isError))
-    return (
-      <ErrorState
-        retry={() => {
-          void roles.refetch();
-          void jobs.refetch();
-        }}
-      />
-    );
-  // Counts are authoritative aggregates, not the length of a truncated preview.
-  const suggested = jobs.data?.suggestions ?? [];
-  const matching = teaching && jobs.data?.matching;
-  const next = jobs.data?.next_assignments ?? [];
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  // Keep independent widgets usable while the authorized job summary loads.
+  const jobSummary = jobs.isSuccess ? jobs.data : undefined;
+  const suggested = jobSummary?.suggestions ?? [];
+  const matching = teaching && jobSummary?.matching;
+  const next = jobSummary?.next_assignments ?? [];
+  const expertiseCount = expertise.isSuccess
+    ? expertise.data.length
+    : undefined;
   const zone =
     profile.data?.time_zone && validZone(profile.data.time_zone)
       ? profile.data.time_zone
@@ -86,39 +82,42 @@ export function Dashboard() {
           key={session!.user.id}
         />
       </header>
-      {staff && (
+      {staff && (jobSummary || (teaching && expertiseCount !== undefined)) && (
         <div className="dashboard-metrics">
           {[
             {
               label: "openJobs",
-              number: jobs.data?.open_count ?? 0,
+              number: jobSummary?.open_count,
               icon: BriefcaseBusiness,
               color: "mint",
               to: "/jobs",
             },
             {
               label: "myAssignments",
-              number: jobs.data?.assignment_count ?? 0,
+              number: jobSummary?.assignment_count,
               icon: GraduationCap,
               color: "peach",
               to: "/calendar",
             },
             {
               label: "nextSessions",
-              number: jobs.data?.next_session_count ?? 0,
+              number: jobSummary?.next_session_count,
               icon: CalendarDays,
               color: "yellow",
               to: "/calendar",
             },
             {
               label: "expertise",
-              number: expertise.data?.length ?? 0,
+              number: expertiseCount,
               icon: Sparkles,
               color: "lilac",
               to: "/profile",
             },
           ]
-            .filter(({ label }) => teaching || label === "openJobs")
+            .filter(
+              ({ label, number }) =>
+                number !== undefined && (teaching || label === "openJobs"),
+            )
             .map(({ label, number, icon: Icon, color, to }) => (
               <Link
                 key={label}
@@ -139,7 +138,7 @@ export function Dashboard() {
       )}
       {staff ? (
         <div className="dashboard-overview">
-          {teaching && (
+          {teaching && jobSummary && (
             <section
               className="panel dashboard-assignments"
               aria-label={dashboard("nextAssignments")}
@@ -205,7 +204,7 @@ export function Dashboard() {
         staff={staff}
         teaching={teaching}
         clientAccount={clientAccount}
-        jobCounts={jobs.data?.management ?? undefined}
+        jobCounts={jobSummary?.management ?? undefined}
       />
       {staff && (
         <div className="dashboard-offers">
@@ -219,7 +218,11 @@ export function Dashboard() {
                 {dashboard("matchingHint")}
               </p>
             )}
-            {suggested.length ? (
+            {jobs.isPending ? (
+              <Loading />
+            ) : jobs.isError ? (
+              <ErrorState retry={() => void jobs.refetch()} />
+            ) : suggested.length ? (
               <div className="dashboard-jobs">
                 {suggested.slice(0, 2).map((job, index) => (
                   <JobCard key={job.id} job={job} index={index} />

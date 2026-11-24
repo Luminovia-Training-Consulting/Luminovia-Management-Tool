@@ -24,24 +24,29 @@ export const chatKeys = {
   messages: (actor: string, room: string) =>
     ["chat-messages", actor, room] as const,
 };
-/** Read the chat_rooms_list server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
+async function readChatRooms() {
+  const { data, error } = await db().rpc("chat_rooms_with_manual_unread");
+  if (error) throw error;
+  return (data ?? []) as ChatRoom[];
+}
+
+/** Pins and personal archives are only needed by the interactive room list. */
 export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
     queryFn: async () => {
       const [rooms, pins, archives] = await Promise.all([
-        db().rpc("chat_rooms_with_manual_unread"),
+        readChatRooms(),
         db().rpc("chat_pinned_rooms"),
         db().rpc("chat_personal_archives"),
       ]);
-      if (rooms.error) throw rooms.error;
       if (pins.error) throw pins.error;
       if (archives.error) throw archives.error;
       const pinOrder = new Map(
         ((pins.data ?? []) as string[]).map((id, order) => [id, order]),
       );
       const archived = new Set((archives.data ?? []) as string[]);
-      return ((rooms.data ?? []) as ChatRoom[]).map((room) => ({
+      return rooms.map((room) => ({
         ...room,
         personal_archived: archived.has(room.id),
         pinned: pinOrder.has(room.id),
@@ -50,6 +55,18 @@ export const chatRoomsQuery = (actor: string) =>
     },
     refetchInterval: 3000,
     staleTime: 1000,
+  });
+
+/** Observe the same invalidation prefix without fetching personal room metadata. */
+export const chatUnreadCountQuery = (actor: string) =>
+  queryOptions({
+    queryKey: [...chatKeys.rooms(actor), "unread-count"],
+    queryFn: async () =>
+      (await readChatRooms()).reduce(
+        (count, room) => count + Number(room.unread_count),
+        0,
+      ),
+    staleTime: 15000,
   });
 const chatFacet = z.object({
   room_id: z.uuid(),

@@ -1,5 +1,6 @@
 /** Protected document boundary: exact caller/origin, finite inputs and a second
  * current-authorization/facts read after rendering or private byte access. */
+import {sha256FileHex, webFileBytes} from "../_shared/file-bytes.ts";
 import {boundedJson} from "../_shared/bounded-body.ts";
 import {renderAttendanceCsv} from "./attendance-csv.ts";
 import {academyPdfBrand} from "./brand.ts";
@@ -241,13 +242,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 if (!objectPath || typeof first.data.sha256 !== "string")
                     return json(403, "document_unavailable");
                 bytes = await dependencies.download(objectPath);
-                const digest = [
-                    ...new Uint8Array(
-                        await crypto.subtle.digest("SHA-256", new Uint8Array(bytes)),
-                    ),
-                ]
-                    .map((value) => value.toString(16).padStart(2, "0"))
-                    .join("");
+                const digest = await sha256FileHex(bytes);
                 if (digest !== first.data.sha256 ||
                     ((kind === "course_chat_attachment" || exactProtectedVersion) &&
                         bytes.length !== first.data.size_bytes)) {
@@ -293,7 +288,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 if (!uuid(actor) || !uuid(resource)) return json(503, "document_unavailable");
                 await dependencies.recordDownload(actor, resource);
             }
-            return new Response(new Uint8Array(bytes), {
+            return new Response(webFileBytes(bytes), {
                 status: 200,
                 headers: {
                     ...headers,

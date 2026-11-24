@@ -1,4 +1,5 @@
 /** Only the authorized job and its catalogue determine the private object path. */
+import {sha256FileHex} from "../_shared/file-bytes.ts";
 type Source = { sha256: string; file_name: string };
 type JobSourceDependencies = {
   select: () => Promise<Source | null>;
@@ -19,10 +20,7 @@ export async function readJobSource(availabilityOnly: boolean, deps: JobSourceDe
   if (!file.size || file.size > 10 * 1024 * 1024)
     return { status: 409 } as const;
   const bytes = await file.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  const actual = Array.from(new Uint8Array(hash), (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("");
+  const actual = await sha256FileHex(bytes);
   if (actual !== source.sha256) return { status: 409 } as const;
 
   const current = await deps.select();

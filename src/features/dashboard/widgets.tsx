@@ -20,7 +20,7 @@ import { TextLink } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { permissionsQuery } from "../../lib/queries";
 import { contractsQuery } from "../commercial/api";
-import { chatRoomsQuery } from "../chat/api";
+import { chatUnreadCountQuery } from "../chat/api";
 import { notificationPreviewQuery } from "../notifications/api";
 import { nextPersonalEventsQuery, recentDocumentsQuery } from "./api";
 import { PersonalizedWidgets, TeachingDayWidget } from "./personal";
@@ -158,24 +158,18 @@ export function DashboardCalendarPreview({
   );
 }
 
-/** Observe shared inbox/room queries without starting another background history fetch. */
+/** Observe the shared inbox and chat unread count without polling their history. */
 function Activity({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   // The same preview key is observed by the shell. Do not add an inbox-history
-  // request or a second timer. Chat list metadata revalidates on normal focus.
+  // request or a second timer.
   const notifications = useQuery({
     ...notificationPreviewQuery(actor),
     // The shell owns the single 30-second poll; this observer only reads its
     // shared cache and performs normal stale focus/reconnect revalidation.
     refetchInterval: false,
   });
-  const rooms = useQuery({
-    ...chatRoomsQuery(actor),
-    refetchInterval: false,
-    staleTime: 15000,
-  });
-  const unread =
-    rooms.data?.reduce((sum, room) => sum + Number(room.unread_count), 0) ?? 0;
+  const unread = useQuery(chatUnreadCountQuery(actor));
   return (
     <section
       className="panel dashboard-widget dashboard-activity"
@@ -213,10 +207,10 @@ function Activity({ actor, zone }: { actor: string; zone: string }) {
           <p className="muted">{t("noNotifications")}</p>
         )}
       </WidgetState>
-      <WidgetState state={rooms}>
+      <WidgetState state={unread}>
         <p className="dashboard-unread">
           <MessageCircle size={17} aria-hidden="true" />
-          {t("unreadMessages", { count: unread })}
+          {t("unreadMessages", { count: unread.data ?? 0 })}
         </p>
       </WidgetState>
       <div className="dashboard-widget-footer">
@@ -313,6 +307,23 @@ function RecentDocuments({ actor, zone }: { actor: string; zone: string }) {
   );
 }
 
+/** Load the detailed course context when the lecturer first opens the disclosure. */
+function TeachingDayDetails({ actor }: { actor: string }) {
+  const { t } = useTranslation("dashboard");
+  const [opened, setOpened] = useState(false);
+  return (
+    <details
+      className="dashboard-teaching-details"
+      onToggle={(event) => {
+        if (event.currentTarget.open) setOpened(true);
+      }}
+    >
+      <summary>{t("teachingDay")}</summary>
+      {opened && <TeachingDayWidget actor={actor} />}
+    </details>
+  );
+}
+
 /** Compose personal previews and capability-aware next actions without a second data store. */
 export function DashboardWidgets({
   actor,
@@ -339,10 +350,7 @@ export function DashboardWidgets({
         actor={actor}
         widgets={{
           teaching_day: teaching ? (
-            <details className="dashboard-teaching-details">
-              <summary>{t("teachingDay")}</summary>
-              <TeachingDayWidget actor={actor} />
-            </details>
+            <TeachingDayDetails key={actor} actor={actor} />
           ) : null,
           activity: <Activity actor={actor} zone={zone} />,
           contracts: teaching ? (

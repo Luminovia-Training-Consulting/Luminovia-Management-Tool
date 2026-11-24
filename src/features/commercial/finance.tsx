@@ -1129,6 +1129,7 @@ export function FinancePage() {
   );
   const summaries = groupedEarnings(earnings.data ?? []);
   const trendSource = manager || canSubmit ? "earnings" : "invoices";
+  const trendQuery = trendSource === "earnings" ? earnings : invoices;
   return (
     <>
       <PageHeading
@@ -1150,7 +1151,7 @@ export function FinancePage() {
         }
       />
       <RevenuePanel />
-      {!earnings.isPending && !invoices.isPending && (
+      {access.isSuccess && trendQuery.isSuccess && (
         <FinanceTrendChart
           earnings={earnings.data ?? []}
           invoices={invoices.data ?? []}

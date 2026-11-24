@@ -4,6 +4,7 @@
  * resource access around Storage reads; qualification evidence has its own
  * exact-version authorization context.
  */
+import {sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
 import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
@@ -162,7 +163,7 @@ Deno.serve(async (request: Request) => {
             const bytes = new Uint8Array(await file.arrayBuffer());
             const mime = await validateFile(bytes, name, file.type);
             if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
-            const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
+            const incomingDigest = await sha256FileHex(bytes);
             const clientId = form.get('client_id');
             if (!uuid(clientId)) return json(400, {error: 'invalid_request'});
             const scope = String(form.get('scope') ?? 'personal');
@@ -276,7 +277,7 @@ Deno.serve(async (request: Request) => {
                 const stored = await service.storage.from('portal-quarantine').download(reservation.object_path);
                 if (stored.error || !stored.data) return json(503, {error: 'upload_failed'});
                 const storedBytes = new Uint8Array(await stored.data.arrayBuffer());
-                const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', storedBytes))).map(b => b.toString(16).padStart(2, '0')).join('');
+                const digest = await sha256FileHex(storedBytes);
                 if (digest !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
                 await validateFile(storedBytes, name, mime);
                 if (kind === 'avatar') await validateAvatar(storedBytes);
@@ -321,7 +322,7 @@ Deno.serve(async (request: Request) => {
                 } else {
                     const existingBytes = await service.storage.from('portal-clean').download(reservation.object_path);
                     if (existingBytes.error || !existingBytes.data) return json(503, {error: 'upload_failed'});
-                    const existingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await existingBytes.data.arrayBuffer()))).map(b => b.toString(16).padStart(2, '0')).join('');
+                    const existingDigest = await sha256FileHex(await existingBytes.data.arrayBuffer());
                     if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
                 }
                 if (protectedUpload) {
@@ -425,7 +426,7 @@ Deno.serve(async (request: Request) => {
                     return result.error || !result.data ? null : new Uint8Array(await result.data.arrayBuffer());
                 },
             });
-            return new Response(new Uint8Array(bytes), {
+            return new Response(webFileBytes(bytes), {
                 headers: {
                     ...headers, 'Content-Type': 'image/png',
                     'Content-Disposition': 'inline; filename="avatar.png"', 'Content-Security-Policy': "default-src 'none'; sandbox"
@@ -454,7 +455,7 @@ Deno.serve(async (request: Request) => {
                 }
             });
             await service.from('audit_events').insert({actor_id: actor, action: 'qualification.evidence_downloaded', resource_id: data.evidence_id});
-            return new Response(new Uint8Array(selected.bytes), {headers: {...headers, 'Content-Type': selected.mime_type, 'Content-Disposition': downloadDisposition(selected.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
+            return new Response(webFileBytes(selected.bytes), {headers: {...headers, 'Content-Type': selected.mime_type, 'Content-Disposition': downloadDisposition(selected.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         }
         if (data.action !== 'download' || !uuid(data.id) || (data.version_id !== undefined && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
         const doc = await visible(data.id);

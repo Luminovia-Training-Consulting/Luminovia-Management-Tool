@@ -292,6 +292,23 @@ await Promise.all(
       assert.equal((await view(learner)).detail.classes, null);
       assert.equal((await view(learner)).detail.roster, null);
 
+      await place(company, colleague, null, 3);
+      assert.deepEqual(await classes(), [groupA(1, 1, 2)]);
+      await place(company, colleague, classA, 4);
+
+      // Unpublishing a course removes access to its content, while a valid
+      // receipt still counts in both the learner and class results.
+      await sql(
+        `update public.course_runs set published=false where id=${q(second)}`,
+      );
+      const hiddenCourseProgress = await progress();
+      assert.equal(hiddenCourseProgress.steps[1].can_open, false);
+      assert.equal(hiddenCourseProgress.completed, 2);
+      assert.deepEqual(await classes(), [groupA(2, 1, 2)]);
+      await sql(
+        `update public.course_runs set published=true where id=${q(second)}`,
+      );
+
       assert.equal((await progress()).steps[1].receipt_id, secondReceipt);
       assert.ok((await progress()).completed_at);
       assert.equal(

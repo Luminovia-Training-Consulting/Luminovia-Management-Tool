@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -21,12 +22,14 @@ import i18n from "../../lib/i18n";
 import { Dashboard } from "./dashboard";
 import { DashboardWidgets } from "./widgets";
 import { notificationPreviewQuery } from "../notifications/api";
+import { chatKeys } from "../chat/api";
 
 const fake = vi.hoisted(() => ({
   actor: "dashboard-a",
   roles: ["lecturer"],
   tables: {} as Record<string, unknown>,
   rpcData: {} as Record<string, unknown>,
+  rpcDelays: {} as Record<string, Promise<void>>,
   errors: {} as Record<string, unknown>,
   calls: [] as { method: string; table: string; args: unknown[] }[],
   rpc: vi.fn(),
@@ -81,6 +84,7 @@ beforeEach(async () => {
   fake.roles = ["lecturer"];
   fake.calls = [];
   fake.errors = {};
+  fake.rpcDelays = {};
   fake.tables = {
     profiles: {
       id: fake.actor,
@@ -176,12 +180,14 @@ beforeEach(async () => {
     const builder = {
       abortSignal: () => builder,
       then: (resolve: (result: unknown) => unknown) =>
-        Promise.resolve({
-          data: name === "job_offers" ? fake.tables.jobs : fake.rpcData[name],
-          error:
-            fake.errors[name] ??
-            (name === "job_offers" ? fake.errors.jobs : null),
-        }).then(resolve),
+        Promise.resolve(fake.rpcDelays[name]).then(() =>
+          resolve({
+            data: name === "job_offers" ? fake.tables.jobs : fake.rpcData[name],
+            error:
+              fake.errors[name] ??
+              (name === "job_offers" ? fake.errors.jobs : null),
+          }),
+        ),
     };
     return builder;
   });
@@ -274,6 +280,65 @@ describe("role-aware dashboard previews", () => {
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
       "Fictional",
     );
+  });
+  it("starts and shows independent previews while the job summary is still pending", async () => {
+    let release!: () => void;
+    fake.rpcDelays.job_dashboard = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
+      job("delayed offer"),
+    ];
+    setup();
+    expect(await screen.findByText("Fictional handout.txt")).toBeVisible();
+    expect(await screen.findByText("My private preparation")).toBeVisible();
+    expect(rpcCalls("job_dashboard")).toHaveLength(1);
+    const offers = screen.getByRole("region", { name: i18n.t("openJobs") });
+    expect(within(offers).getByRole("status")).toBeVisible();
+    expect(
+      within(offers).queryByText(i18n.t("noJobs")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Fictional delayed offer"),
+    ).not.toBeInTheDocument();
+    await act(async () => release());
+    expect(await screen.findByText("Fictional delayed offer")).toBeVisible();
+  });
+  it("a denied job refresh hides the retained offers and retries just the jobs widget", async () => {
+    (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
+      job("previously authorized offer"),
+    ];
+    const { client } = setup();
+    expect(
+      await screen.findByText("Fictional previously authorized offer"),
+    ).toBeVisible();
+    fake.errors.job_dashboard = { code: "42501", message: "revoked" };
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: ["jobs", "dashboard", fake.actor],
+      });
+    });
+    const offers = screen.getByRole("region", { name: i18n.t("openJobs") });
+    expect(await within(offers).findByRole("alert")).toBeVisible();
+    expect(
+      screen.queryByText("Fictional previously authorized offer"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Fictional handout.txt")).toBeVisible();
+    expect(screen.getByText("My private preparation")).toBeVisible();
+
+    delete fake.errors.job_dashboard;
+    fireEvent.click(
+      within(offers).getByRole("button", { name: i18n.t("retry") }),
+    );
+    expect(
+      await screen.findByText("Fictional previously authorized offer"),
+    ).toBeVisible();
+    expect(rpcCalls("job_dashboard")).toHaveLength(3);
+    expect(
+      fake.calls.filter(
+        ({ method, table }) => method === "from" && table === "user_roles",
+      ),
+    ).toHaveLength(1);
   });
   it("accepts a restricted suggestion without inventing a zero-price compensation", async () => {
     (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
@@ -450,11 +515,55 @@ describe("role-aware dashboard previews", () => {
     });
     expect(rpcCalls("notification_inbox")).toHaveLength(2);
     expect(rpcCalls("chat_rooms_with_manual_unread")).toHaveLength(1);
+    expect(rpcCalls("chat_pinned_rooms")).toHaveLength(0);
+    expect(rpcCalls("chat_personal_archives")).toHaveLength(0);
     expect(
       fake.calls.filter(
         (call) => call.method === "from" && call.table === "documents",
       ),
     ).toHaveLength(1);
+  });
+  it("loads the teaching day once it is opened, preserving it across closing and reopening", async () => {
+    fake.rpcData.teaching_day = {
+      day: "2026-11-24",
+      time_zone: "Europe/Berlin",
+      sessions: [],
+    };
+    setup();
+    expect(await screen.findByText("Fictional handout.txt")).toBeVisible();
+    expect(rpcCalls("teaching_day")).toHaveLength(0);
+
+    const summary = screen.getByText("Mein Unterrichtstag", {
+      selector: "summary",
+    });
+    fireEvent.click(summary);
+    const teachingDay = await screen.findByRole("region", {
+      name: "Mein Unterrichtstag",
+    });
+    expect(
+      await within(teachingDay).findByText("2026-11-24 · Europe/Berlin"),
+    ).toBeVisible();
+    expect(rpcCalls("teaching_day")).toHaveLength(1);
+
+    fireEvent.click(summary);
+    expect(teachingDay).not.toBeVisible();
+    fireEvent.click(summary);
+    expect(teachingDay).toBeVisible();
+    expect(rpcCalls("teaching_day")).toHaveLength(1);
+  });
+  it("refreshes the unread count after the same actor's chat cache is invalidated", async () => {
+    const { client } = setup(true);
+    expect(await screen.findByText("3 ungelesene Nachrichten")).toBeVisible();
+    fake.rpcData.chat_rooms_with_manual_unread = [
+      { id: "room-a", title: "Fictional room", unread_count: 1 },
+    ];
+    await client.invalidateQueries({ queryKey: chatKeys.rooms("other-actor") });
+    expect(rpcCalls("chat_rooms_with_manual_unread")).toHaveLength(1);
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: chatKeys.rooms(fake.actor) });
+    });
+    expect(await screen.findByText("1 ungelesene Nachricht")).toBeVisible();
+    expect(rpcCalls("chat_rooms_with_manual_unread")).toHaveLength(2);
   });
   it("language changes preserve cached previews without extra metadata requests", async () => {
     setup(true);

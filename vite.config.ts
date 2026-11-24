@@ -79,7 +79,8 @@ export default defineConfig(({ mode }) => {
   const academyDocument = !internal ? academyOpenApi(backend, brand) : null;
   const openApiDocument =
     academyDocument ?? portalOpenApi(backend, true, brand);
-  const openApi = JSON.stringify(openApiDocument, null, 2) + "\n";
+  const openApi =
+    JSON.stringify(openApiDocument, null, internal ? 0 : 2) + "\n";
   if (academyDocument) {
     assets.set(
       "api/workflows.json",
